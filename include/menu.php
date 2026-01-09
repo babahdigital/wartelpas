@@ -15,7 +15,7 @@
         display: block;      /* Agar punya dimensi lebar/tinggi */
         
         /* ATUR UKURAN LOGO DISINI */              
-        height: 50px;
+        height: 55px;
         
         /* MEMANGGIL GAMBAR DARI FOLDER */
         background-image: url('img/logo.png'); 
@@ -23,7 +23,7 @@
         /* Agar gambar pas dan tidak berulang */
         background-size: contain;   
         background-repeat: no-repeat;
-        margin-top: -15px;    
+        margin-top: -17px;    
     }
 </style>
 
