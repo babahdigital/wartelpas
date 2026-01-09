@@ -1,3 +1,36 @@
+<style>
+    /* 1. Styling untuk Teks dan Container Link */
+    .wartelpas-brand {
+        display: flex;              /* Agar logo dan teks sejajar */
+        align-items: center;        /* Posisi vertikal tengah */
+        font-weight: bold;
+        font-size: 20px;
+        color: #ffffff !important;
+        text-decoration: none;
+    }
+
+    /* 2. INJEKSI GAMBAR (LOGIC UTAMA) */
+    .wartelpas-brand::before {
+        content: "";                /* WAJIB: Ini pemicu agar elemen muncul */
+        display: inline-block;      /* Agar punya dimensi lebar/tinggi */
+        
+        /* ATUR UKURAN LOGO DISINI */
+        width: 35px;                
+        height: 35px;
+        
+        /* MEMANGGIL GAMBAR DARI FOLDER */
+        background-image: url('img/logo.png'); 
+        
+        /* Agar gambar pas dan tidak berulang */
+        background-size: contain;   
+        background-repeat: no-repeat;
+        background-position: center;
+        
+        /* MEMBERI JARAK ANTARA LOGO DAN TEKS */
+        margin-right: 10px;         
+    }
+</style>
+
 <?php
 /*
  *  Copyright (C) 2018 Laksamadi Guko.
@@ -173,7 +206,7 @@ if($idleto != "disable"){
 
 <div id="navbar" class="navbar">
   <div class="navbar-left">
-    <a id="brand" class="text-center" href="javascript:void(0)">MIKHMON</a>
+    <a id="brand" class="text-center wartelpas-brand" href="javascript:void(0)">MIKHMON</a>
 
 <a id="openNav" class="navbar-hover" href="javascript:void(0)"><i class="fa fa-bars"></i></a>
 <a id="closeNav" class="navbar-hover" href="javascript:void(0)"><i class="fa fa-bars"></i></a>
