@@ -173,7 +173,7 @@ if($idleto != "disable"){
 
 <div id="navbar" class="navbar">
   <div class="navbar-left">
-    <a id="brand" class="text-center" href="javascript:void(0)">WARTELPAS</a>
+    <a id="brand" class="text-center" href="javascript:void(0)">MIKHMON</a>
 
 <a id="openNav" class="navbar-hover" href="javascript:void(0)"><i class="fa fa-bars"></i></a>
 <a id="closeNav" class="navbar-hover" href="javascript:void(0)"><i class="fa fa-bars"></i></a>
@@ -362,17 +362,6 @@ include('./info.php');
 </div>
 <script>
 $(document).ready(function(){
-  $(".connect").change(function(){
-    notify("<?= $_connecting ?>");
-    connect(this.value)
-  });
-  $(".stheme").change(function(){
-    notify("<?= $_loading_theme ?>");
-    stheme(this.value)
-  });
-  // --- TAMBAHAN DARI SAYA ---
-  $("#brand").html("WARTELPAS"); 
-  // --------------------------
   $(".connect").change(function(){
     notify("<?= $_connecting ?>");
     connect(this.value)
