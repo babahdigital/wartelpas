@@ -23,7 +23,7 @@
         /* Agar gambar pas dan tidak berulang */
         background-size: contain;   
         background-repeat: no-repeat;
-        background-position: center;      
+        margin-top: -15px;    
     }
 </style>
 
