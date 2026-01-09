@@ -29,9 +29,6 @@ session_start();
       <div class="text-center pd-5">
         <img src="img/logo.png" alt="BabahDigital Logo">
       </div>
-      <div  class="text-center">
-      <span style="font-size: 25px; margin: 10px;">MIKHMON</span>
-      </div>
       <center>
       <form autocomplete="off" action="" method="post">
       <table class="table" style="width:90%">
