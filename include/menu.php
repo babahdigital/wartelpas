@@ -12,11 +12,10 @@
     /* 2. INJEKSI GAMBAR (LOGIC UTAMA) */
     .wartelpas-brand::before {
         content: "";                /* WAJIB: Ini pemicu agar elemen muncul */
-        display: inline-block;      /* Agar punya dimensi lebar/tinggi */
+        display: block;      /* Agar punya dimensi lebar/tinggi */
         
-        /* ATUR UKURAN LOGO DISINI */
-        width: 35px;                
-        height: 35px;
+        /* ATUR UKURAN LOGO DISINI */              
+        height: 50px;
         
         /* MEMANGGIL GAMBAR DARI FOLDER */
         background-image: url('img/logo.png'); 
@@ -24,10 +23,7 @@
         /* Agar gambar pas dan tidak berulang */
         background-size: contain;   
         background-repeat: no-repeat;
-        background-position: center;
-        
-        /* MEMBERI JARAK ANTARA LOGO DAN TEKS */
-        margin-right: 10px;         
+        background-position: center;      
     }
 </style>
 
