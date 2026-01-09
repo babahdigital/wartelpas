@@ -210,14 +210,14 @@ if($idleto != "disable"){
 </div>
  <div class="navbar-right">
   <a id="logout" href="./admin.php?id=logout" ><i class="fa fa-sign-out mr-1"></i> <?= $_logout ?></a>
-  <select class="stheme ses text-right mr-t-10 pd-5">
+  <select class="stheme ses mr-t-10 pd-5">
     <option> <?= $_theme?></option>
     <?php for ($i = 0; $i < count($mtheme); $i++) {
       echo '<option value="'.$url.'&set-theme='.$mtheme[$i],'">'.ucfirst($mtheme[$i]),'</option>';
     }
     ?>
   </select>
-  <select class="slang ses text-right mr-t-10 pd-5">
+  <select class="slang ses mr-t-10 pd-5">
     <option> <?= $language ?></option>
     <?php 
       $fileList = glob('lang/*');
@@ -285,14 +285,14 @@ include('./info.php');
 </div>
  <div class="navbar-right">
   <a id="logout" href="./?hotspot=logout&session=<?= $session; ?>" ><i class="fa fa-sign-out mr-1"></i> <?= $_logout ?></a>
-  <select class="stheme ses text-right mr-t-10 pd-5">
+  <select class="stheme ses mr-t-10 pd-5">
     <option> <?= $_theme ?></option>
     <?php for ($i = 0; $i < count($mtheme); $i++) {
       echo '<option value="'.$url.'&set-theme='.$mtheme[$i],'">'.ucfirst($mtheme[$i]),'</option>';
     }
     ?>
   </select>
-  <select class="connect optfa ses text-right mr-t-10 pd-5">
+  <select class="connect optfa ses mr-t-10 pd-5">
     <option id="MikhmonSession" value="<?= $session; ?>"><?= $hotspotname; ?></option>
       <?php
       foreach (file('./include/config.php') as $line) {
