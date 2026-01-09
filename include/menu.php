@@ -173,7 +173,7 @@ if($idleto != "disable"){
 
 <div id="navbar" class="navbar">
   <div class="navbar-left">
-    <a id="brand" class="text-center" style="visibility: hidden;" href="javascript:void(0)">MIKHMON
+    <a id="brand" class="text-center" href="javascript:void(0)">MIKHMON
       <img src="img/logo.png" style="height: 30px; margin-top: -5px;">
     </a>
 
