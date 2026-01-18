@@ -261,9 +261,35 @@ foreach($active as $a) {
 }
 
 $filtered_data = [];
-$list_blok = [];
+$list_blok = []; // Akan diisi dari SEMUA user, bukan hanya yang di-filter
 $search_terms = array_filter(array_map('trim', preg_split('/[,\s]+/', $req_search)));
 
+// PERBAIKAN 1: Loop pertama untuk mengumpulkan SEMUA blok (tanpa filter)
+foreach($all_users as $u) {
+    $c = $u['comment'] ?? '';
+    $n = $u['name'] ?? '';
+    
+    // Ambil blok dari comment
+    $blok_temp = '';
+    if (preg_match('/(Blok-[A-Za-z0-9]+)/i', $c, $b)) {
+        $blok_temp = strtoupper($b[1]);
+    }
+    
+    // Jika tidak ada di comment, cek database
+    if (empty($blok_temp)) {
+        $hist_temp = get_user_history($n);
+        if ($hist_temp && !empty($hist_temp['blok_name'])) {
+            $blok_temp = $hist_temp['blok_name'];
+        }
+    }
+    
+    // Tambahkan ke list dropdown (untuk semua user, tidak peduli status)
+    if (!empty($blok_temp)) {
+        $list_blok[] = $blok_temp;
+    }
+}
+
+// PERBAIKAN 2: Loop kedua untuk filter dan display
 foreach($all_users as $u) {
     $c = $u['comment'] ?? '';
     $n = $u['name'] ?? '';
@@ -288,52 +314,55 @@ foreach($all_users as $u) {
         $live_data_found = true;
     }
 
-    // 3. Extraksi Blok (Regex Dasar)
+    // 3. Extraksi Blok (Regex dari comment)
     if (preg_match('/(Blok-[A-Za-z0-9]+)/i', $c, $b)) {
         $f_blok = strtoupper($b[1]);
     }
 
     // 4. SYNC DATABASE (PERBAIKAN UTAMA DISINI)
-    // Kita selalu ambil history, tidak peduli dia online atau offline
+    // Selalu ambil history terlebih dahulu
     $hist = get_user_history($n);
 
-    // LOGIKA PERBAIKAN IDENTITAS (BLOK):
-    // Jika Regex gagal dapat blok (misal karena ketimpa status online), ambil dari Database
-    if (empty($f_blok) && $hist && !empty($hist['blok_name'])) {
+    // PERBAIKAN 3: PRIORITAS DATABASE untuk Blok
+    // Jika blok tidak ada di comment ATAU comment sudah dimodifikasi (ada kata RUSAK/INVALID/RETUR)
+    // maka ambil dari database
+    $comment_modified = (stripos($c, 'RUSAK') !== false || 
+                         stripos($c, 'INVALID') !== false || 
+                         stripos($c, 'Audit:') !== false ||
+                         stripos($c, '(Retur)') !== false);
+    
+    if ((empty($f_blok) || $comment_modified) && $hist && !empty($hist['blok_name'])) {
         $f_blok = $hist['blok_name'];
     }
 
     // LOGIKA PERBAIKAN IP & MAC:
     if ($is_active) {
         // Jika ONLINE, paksa ambil IP/MAC Realtime dari Active List
-        // Ini memastikan data yang disimpan ke DB adalah data valid terbaru
-        $f_ip = $activeMap[$n]['address'];
-        $f_mac = $activeMap[$n]['mac-address'];
+        $f_ip = $activeMap[$n]['address'] ?? '-';
+        $f_mac = $activeMap[$n]['mac-address'] ?? '-';
+        
+        // Update database dengan data online terbaru
+        if (!empty($f_blok) || $f_ip != '-') {
+            save_user_history($n, [
+                'date' => $f_date, 'time' => $f_time, 'price' => $f_price,
+                'ip' => $f_ip, 'mac' => $f_mac, 'validity' => $f_val,
+                'blok' => $f_blok, 'raw' => $c
+            ]);
+        }
     } elseif ($hist) {
-        // Jika OFFLINE (dan data live di comment tidak lengkap), ambil IP terakhir dari DB
-        if ($f_ip == '-' || $f_ip == '') $f_ip = $hist['ip_address'];
-        if ($f_mac == '-' || $f_mac == '') $f_mac = $hist['mac_address'];
-        // Jika Blok masih kosong, ambil dari DB
-        if (empty($f_blok)) $f_blok = $hist['blok_name'];
+        // Jika OFFLINE, ambil data terakhir dari database
+        if ($f_ip == '-' || $f_ip == '') $f_ip = $hist['ip_address'] ?? '-';
+        if ($f_mac == '-' || $f_mac == '') $f_mac = $hist['mac_address'] ?? '-';
+        if (empty($f_blok)) $f_blok = $hist['blok_name'] ?? '';
     }
-
-    // 5. SIMPAN KE DB
-    // Simpan jika ada Blok ATAU User sedang Online (punya IP)
-    // Ini menjamin saat Online, IP tersimpan. Saat Offline, Blok terjaga.
-    if (!empty($f_blok) || ($is_active && $f_ip != '-')) {
-        save_user_history($n, [
-            'date' => $f_date, 'time' => $f_time, 'price' => $f_price,
-            'ip' => $f_ip, 'mac' => $f_mac, 'validity' => $f_val,
-            'blok' => $f_blok, 'raw' => $c
-        ]);
-    }
-
-    // --- POPULATE DROPDOWN ---
-    if (!empty($f_blok)) $list_blok[] = $f_blok;
 
     // --- FILTERING ---
     if ($req_prof != 'all' && ($u['profile']??'') != $req_prof) continue;
-    if ($req_comm != '') { if ($f_blok != $req_comm) continue; }
+    
+    // PERBAIKAN 4: Filter Blok yang lebih ketat
+    if ($req_comm != '') { 
+        if (strcasecmp($f_blok, $req_comm) != 0) continue; 
+    }
 
     // Status Calculations
     $bytes = ($u['bytes-in']??0) + ($u['bytes-out']??0);
@@ -346,19 +375,31 @@ foreach($all_users as $u) {
     $has_history = ($f_ip != '-' && $f_ip != '' && !$live_data_found); 
     $is_used = ($is_active || $bytes > 50 || $uptime != '0s' || $has_history);
 
-    // Filter Status
-    if ($req_status == 'ready' && ($is_used || $is_rusak || $is_invalid || $disabled == 'true')) continue;
+    // PERBAIKAN 5: Filter Status yang diperbaiki
+    if ($req_status == 'ready') {
+        // Ready = belum pernah dipakai, tidak rusak, tidak invalid, tidak disabled
+        if ($is_used || $is_rusak || $is_invalid || $disabled == 'true' || $is_retur) continue;
+    }
     if ($req_status == 'online' && !$is_active) continue;
-    if ($req_status == 'used' && !$is_used) continue;
+    if ($req_status == 'used') {
+        // Used = pernah dipakai tapi sekarang offline
+        if (!$is_used || $is_active || $is_rusak || $is_invalid) continue;
+    }
     if ($req_status == 'rusak' && !$is_rusak) continue;
     if ($req_status == 'retur' && !$is_retur) continue;
-    if ($req_status == 'invalid' && (!$is_invalid && $disabled != 'true')) continue;
+    if ($req_status == 'invalid') {
+        // Invalid = ada kata INVALID atau disabled
+        if (!$is_invalid && $disabled != 'true') continue;
+    }
     
     // Search
     if (!empty($search_terms)) {
         $found = false;
         foreach($search_terms as $term) {
-            if (stripos($n, $term) !== false || stripos($c, $term) !== false || stripos($f_ip, $term) !== false || stripos($f_blok, $term) !== false) {
+            if (stripos($n, $term) !== false || 
+                stripos($c, $term) !== false || 
+                stripos($f_ip, $term) !== false || 
+                stripos($f_blok, $term) !== false) {
                 $found = true; break;
             }
         }
@@ -473,11 +514,12 @@ function get_page_url($p) {
                         
                         <select name="status" class="custom-select-solid mid-el" onchange="this.form.submit()" style="flex-basis: 30%;">
                             <option value="all" <?=($req_status=='all'?'selected':'')?>>Status: Semua</option>
-                            <option value="ready" <?=($req_status=='ready'?'selected':'')?>>Hanya Ready</option>
-                            <option value="online" <?=($req_status=='online'?'selected':'')?>>Sedang Online</option>
-                            <option value="used" <?=($req_status=='used'?'selected':'')?>>Sudah Terpakai</option>
-                            <option value="rusak" <?=($req_status=='rusak'?'selected':'')?>>Rusak / Error</option>
-                            <option value="retur" <?=($req_status=='retur'?'selected':'')?>>Hasil Retur</option>
+                            <option value="ready" <?=($req_status=='ready'?'selected':'')?>>🟢 Hanya Ready</option>
+                            <option value="online" <?=($req_status=='online'?'selected':'')?>>🔵 Sedang Online</option>
+                            <option value="used" <?=($req_status=='used'?'selected':'')?>>⚪ Sudah Terpakai</option>
+                            <option value="rusak" <?=($req_status=='rusak'?'selected':'')?>>🟠 Rusak / Error</option>
+                            <option value="retur" <?=($req_status=='retur'?'selected':'')?>>🟣 Hasil Retur</option>
+                            <option value="invalid" <?=($req_status=='invalid'?'selected':'')?>>🔴 Invalid / Disabled</option>
                         </select>
                         
                         <select name="comment" class="custom-select-solid last-el" onchange="this.form.submit()" style="flex-basis: 30%;">
