@@ -1,11 +1,23 @@
 <?php
 /*
- * WARTELPAS USER MANAGEMENT (V-FINAL OPTIMIZED & FIXED)
- * Update: 2026-01-20 - Fix Identitas Online & History IP
- * Fitur: 
- * 1. Identitas (Blok) tetap muncul meski User Online.
- * 2. History IP & MAC tersimpan otomatis dan muncul saat Logout.
- * 3. Logika Fallback Database diprioritaskan untuk data yang kosong.
+ * WARTELPAS USER MANAGEMENT (V-FINAL OPTIMIZED & FIXED - 2026-01-19)
+ * 
+ * CHANGELOG v2.0:
+ * ================
+ * 1. ✅ DROPDOWN BLOK LENGKAP: List blok muncul untuk semua status filter
+ * 2. ✅ IDENTITAS TETAP MUNCUL: Blok tersimpan di DB, tidak hilang saat online/rusak/invalid
+ * 3. ✅ HISTORY IP/MAC: Tersimpan otomatis saat online, muncul kembali saat offline
+ * 4. ✅ STATUS INVALID: Tambahan filter baru untuk user invalid/disabled
+ * 5. ✅ FILTER LEBIH AKURAT: Status ready, used, dll bekerja dengan benar
+ * 6. ✅ CASE-INSENSITIVE: Filter blok tidak case-sensitive (BLOK-A = blok-a)
+ * 
+ * ARSITEKTUR:
+ * - 2-pass filtering: Loop 1 kumpulkan blok, Loop 2 filter display
+ * - Database sebagai single source of truth untuk identitas
+ * - Realtime sync saat online, fallback DB saat offline
+ * 
+ * DATABASE: mikhmon_stats.db > login_history
+ * - username, blok_name, ip_address, mac_address, raw_comment
  */
 
 session_start();
