@@ -1,283 +1,459 @@
 <?php
 /*
- *  Copyright (C) 2018 Laksamadi Guko.
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Copyright (C) 2018 Laksamadi Guko.
+ * Modified by Pak Dul & Gemini AI (2026)
+ * FINAL 18: ALOAD - CLEAN PRO DASHBOARD
+ * - Update: Matikan Load Bar (Pace) khusus halaman Dashboard.
+ * - Update: Live Indicator minimalis di bawah kartu (Stream: Update 10 Detik).
+ * - Fix: AJAX Auto-Refresh mode hening (Global: False).
  */
 session_start();
-// hide all error
 error_reporting(0);
-if (!isset($_SESSION["mikhmon"])) {
-  header("Location:../admin.php?id=login");
-} else {
-// load session MikroTik
-  $session = $_GET['session'];
-  $load = $_GET['load'];
 
-// lang
-include('../include/lang.php');
-include('../lang/'.$langid.'.php');
+$root = dirname(__DIR__); 
 
-// load config
-  include('../include/config.php');
-  include('../include/readcfg.php');
+if (!isset($_SESSION["mikhmon"])) { die(); }
 
-// routeros api
-  include_once('../lib/routeros_api.class.php');
-  include_once('../lib/formatbytesbites.php');
-  $API = new RouterosAPI();
-  $API->debug = false;
+// --- AMBIL PARAMETER ---
+$session = isset($_GET['session']) ? $_GET['session'] : '';
+$load    = isset($_GET['load']) ? $_GET['load'] : '';
+$sess_m  = isset($_GET['m']) ? $_GET['m'] : '';
 
+// --- SET TIMEZONE ---
+if (isset($_SESSION['timezone']) && !empty($_SESSION['timezone'])) {
+    date_default_timezone_set($_SESSION['timezone']);
+}
 
+// --- SET FILTER SESSION ---
+if (!empty($sess_m)) { $_SESSION['filter_month'] = (int)$sess_m; }
+if (!isset($_SESSION['filter_month'])) { $_SESSION['filter_month'] = (int)date("m"); }
+$_SESSION['filter_year'] = (int)date("Y");
 
-  if ($load == "sysresource") {
+// --- INCLUDE LIBRARY ---
+if (file_exists($root . '/include/config.php')) include($root . '/include/config.php');
+if (file_exists($root . '/include/readcfg.php')) include($root . '/include/readcfg.php');
+if (file_exists($root . '/lib/routeros_api.class.php')) include_once($root . '/lib/routeros_api.class.php');
+if (file_exists($root . '/lib/formatbytesbites.php')) include_once($root . '/lib/formatbytesbites.php');
 
-    $API->connect($iphost, $userhost, decrypt($passwdhost));
+session_write_close(); 
 
-// get MikroTik system clock
-    $getclock = $API->comm("/system/clock/print");
-    $clock = $getclock[0];
-    $timezone = $getclock[0]['time-zone-name'];
-    date_default_timezone_set($timezone);
+$API = new RouterosAPI();
+$API->debug = false;
 
-// get system resource MikroTik
-    $getresource = $API->comm("/system/resource/print");
-    $resource = $getresource[0];
+// --- FUNGSI BANTUAN ---
+if (!function_exists('formatDTM')) { function formatDTM($dtm) { return str_replace(["w", "d", "h", "m"], ["w ", "d ", "h ", "m "], $dtm); } }
+if (!function_exists('formatBytes')) { function formatBytes($size, $precision = 2) { if ($size <= 0) return '0 B'; $base = log($size, 1024); $suffixes = array('B', 'KB', 'MB', 'GB', 'TB'); return round(pow(1024, $base - floor($base)), $precision) . ' ' . $suffixes[floor($base)]; } }
+if (!function_exists('normalizeDate')) { 
+    function normalizeDate($d) { 
+        return str_replace(
+            ['januari','februari','maret','april','mei','juni','juli','agustus','september','oktober','november','desember'], 
+            ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'], 
+            strtolower($d)
+        ); 
+    } 
+}
 
-// get routeboard info
-    $getrouterboard = $API->comm("/system/routerboard/print");
-    $routerboard = $getrouterboard[0];
-    ?>
+// =========================================================
+// BAGIAN KHUSUS: LIVE DATA PROVIDER (JSON)
+// =========================================================
+if ($load == "live_data") {
     
-    <div id="r_1" class="row">
-      <div class="col-4">
-        <div class="box bmh-75 box-bordered">
-          <div class="box-group">
-            <div class="box-group-icon"><i class="fa fa-calendar"></i></div>
-              <div class="box-group-area">
-              <span ><?= $_system_date_time ?><br>
-                    <?php 
-                    echo ucfirst($clock['date']) . " " . $clock['time'] . "<br>
-                    ".$_uptime." : " . formatDTM($resource['uptime']);
-                    ?>
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      <div class="col-4">
-        <div class="box bmh-75 box-bordered">
-          <div class="box-group">
-          <div class="box-group-icon"><i class="fa fa-info-circle"></i></div>
-              <div class="box-group-area">
-                <span >
-                    <?php
-                    echo $_board_name." : " . $resource['board-name'] . "<br/>
-                    ".$_model." : " . $routerboard['model'] . "<br/>
-                    Router OS : " . $resource['version'];
-                    ?>
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-    <div class="col-4">
-      <div class="box bmh-75 box-bordered">
-        <div class="box-group">
-          <div class="box-group-icon"><i class="fa fa-server"></i></div>
-              <div class="box-group-area">
-                <span >
-                    <?php
-                    echo $_cpu_load." : " . $resource['cpu-load'] . "%<br/>
-                    ".$_free_memory." : " . formatBytes($resource['free-memory'], 2) . "<br/>
-                    ".$_free_hdd." : " . formatBytes($resource['free-hdd-space'], 2)
-                    ?>
-                </span>
-                </div>
-              </div>
-            </div>
-          </div> 
-      </div>
-
-<?php 
-} else if ($load == "hotspot") {
-
-  $API->connect($iphost, $userhost, decrypt($passwdhost));
-// get & counting hotspot users
-  $countallusers = $API->comm("/ip/hotspot/user/print", array("count-only" => ""));
-  if ($countallusers < 2) {
-    $uunit = "item";
-  } elseif ($countallusers > 1) {
-    $uunit = "items";
-  }
-
-// get & counting hotspot active
-  $counthotspotactive = $API->comm("/ip/hotspot/active/print", array("count-only" => ""));
-  if ($counthotspotactive < 2) {
-    $hunit = "item";
-  } elseif ($counthotspotactive > 1) {
-    $hunit = "items";
-  }
-
-  ?>
+    header('Content-Type: application/json');
     
-            <div id="r_2" class="card">
-              <div class="card-header"><h3><i class="fa fa-wifi"></i> Hotspot</h3></div>
-                <div class="card-body">
-                  <div class="row">
-                    <div class="col-3 col-box-6">
-                      <div class="box bg-blue bmh-75">
-                        <a href="./?hotspot=active&session=<?= $session; ?>">
-                          <h1><?= $counthotspotactive; ?>
-                              <span style="font-size: 15px;"><?= $hunit; ?></span>
-                            </h1>
-                          <div>
-                            <i class="fa fa-laptop"></i> <?= $_hotspot_active ?>
-                          </div>
-                        </a>
-                      </div>
-                    </div>
-                    <div class="col-3 col-box-6">
-                    <div class="box bg-green bmh-75">
-                      <a href="./?hotspot=users&profile=all&session=<?= $session; ?>">
-                            <h1><?= $countallusers; ?>
-                              <span style="font-size: 15px;"><?= $uunit; ?></span>
-                            </h1>
-                      <div>
-                            <i class="fa fa-users"></i> <?= $_hotspot_users ?>
-                          </div>
-                      </a>
-                    </div>
-                  </div>
-                  <div class="col-3 col-box-6">
-                    <div class="box bg-yellow bmh-75">
-                      <a href="./?hotspot-user=add&session=<?= $session; ?>">
-                        <div>
-                          <h1><i class="fa fa-user-plus"></i>
-                              <span style="font-size: 15px;"><?= $_add ?></span>
-                          </h1>
-                        </div>
-                        <div>
-                            <i class="fa fa-user-plus"></i> <?= $_hotspot_users ?>
-                        </div>
-                      </a>
-                    </div>
-                  </div>
-                  <div class="col-3 col-box-6">
-                    <div class="box bg-red bmh-75">
-                      <a href="./?hotspot-user=generate&session=<?= $session; ?>">
-                        <div>
-                          <h1><i class="fa fa-user-plus"></i>
-                              <span style="font-size: 15px;"><?= $_generate ?></span>
-                          </h1>
-                        </div>
-                        <div>
-                            <i class="fa fa-user-plus"></i> <?= $_hotspot_users ?>
-                        </div>
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          </div>
+    $dataResponse = [
+        'active' => 0,
+        'fresh' => 0,
+        'sold' => 0,
+        'traffic' => '0 B',
+        'income' => '0'
+    ];
 
-<?php 
-} else if ($load == "logs") {
+    $countFreshUsers = 0;
+    $counthotspotactive = 0;
+    $liveUserBytes = [];
+    $mikrotikScripts = [];
 
-  $API->connect($iphost, $userhost, decrypt($passwdhost));
-
-  // move hotspot log to disk
-  $getlogging = $API->comm("/system/logging/print", array("?prefix" => "->", ));
-  $logging = $getlogging[0];
-  if ($logging['prefix'] == "->") {
-  } else {
-    $API->comm("/system/logging/add", array("action" => "disk", "prefix" => "->", "topics" => "hotspot,info,debug", ));
-  }
-  
-  // get hotspot log
-  $getlog = $API->comm("/log/print", array("?topics" => "hotspot,info,debug", ));
-  $log = array_reverse($getlog);
-  //$THotspotLog = count($getlog);
-
-  if ($livereport == "disable") {
-    $logh = "457px";
-    $lreport = "style='display:none;'";
-  } else {
-    $logh = "350px";
-    $lreport = "style='display:block;'";
-  }
-
-
-
-  ?>
-  
-              <div id="r_3" class="row">
-              <div class="card">
-                <div class="card-header">
-                  <h3><a href="./?hotspot=log&session=<?= $session; ?>" title="Open Hotspot Log" ><i class="fa fa-align-justify"></i> <?= $_hotspot_log ?></a></h3></div>
-                    <div class="card-body">
-                      <div style="padding: 5px; height: <?= $logh; ?> ;" class="mr-t-10 overflow">
-                        <table class="table table-sm table-bordered table-hover" style="font-size: 12px; td.padding:2px;">
-                          <thead>
-                            <tr>
-                            <th><?= $_time .$THotspotLog; ?></th>
-                            <th><?= $_users ?> (IP)</th>
-                            <th><?= $_messages ?></th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                      
-  <?php
-
-
-  for ($i = 0; $i < 20; $i++) {
-    $mess = explode(":", $log[$i]['message']);
-    $time = $log[$i]['time'];
-    echo "<tr>";
-    if (substr($log[$i]['message'], 0, 2) == "->") {
-      echo "<td>" . $time . "</td>";
-    //echo substr($mess[1], 0,2);
-      echo "<td>";
-      if (count($mess) > 6) {
-        echo $mess[1] . ":" . $mess[2] . ":" . $mess[3] . ":" . $mess[4] . ":" . $mess[5] . ":" . $mess[6];
-      } else {
-        echo $mess[1];
-      }
-      echo "</td>";
-      echo "<td>";
-      if (count($mess) > 6) {
-        echo str_replace("trying to", "", $mess[7] . " " . $mess[8] . " " . $mess[9] . " " . $mess[10]);
-      } else {
-        echo str_replace("trying to", "", $mess[2] . " " . $mess[3] . " " . $mess[4] . " " . $mess[5]);
-      }
-      echo "</td>";
-    } else {
+    if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
+        $allWartelUsers = $API->comm("/ip/hotspot/user/print", array("?server" => "wartel"));
+        foreach ($allWartelUsers as $u) {
+            if (isset($u['uptime']) && ($u['uptime'] == '0s' || $u['uptime'] == '')) { $countFreshUsers++; }
+            $b_in = isset($u['bytes-in']) ? $u['bytes-in'] : 0;
+            $b_out = isset($u['bytes-out']) ? $u['bytes-out'] : 0;
+            $liveUserBytes[$u['name']] = $b_in + $b_out;
+        }
+        $rawActive = $API->comm("/ip/hotspot/active/print", array(".proplist" => "address"));
+        if(is_array($rawActive)) {
+            foreach($rawActive as $act) {
+                if(isset($act['address']) && strpos($act['address'], '172.16.2.') === 0) { $counthotspotactive++; }
+            }
+        }
+        $mikrotikScripts = $API->comm("/system/script/print", array("?comment" => "mikhmon"));
     }
-    echo "</tr>";
-  }
-  ?>
-                        </tbody>
-                      </table>
+
+    $filterMonth = $_SESSION['filter_month'];
+    $filterYear = $_SESSION['filter_year'];
+    
+    $dbFile = $root . '/db_data/mikhmon_stats.db'; 
+    $rawDataMerged = []; 
+    $userStatsMap = [];
+
+    if (file_exists($dbFile)) {
+        try {
+            $db = new PDO('sqlite:' . $dbFile);
+            $resStats = $db->query("SELECT username, bytes_total FROM user_stats");
+            if ($resStats) { foreach($resStats as $row) { $userStatsMap[$row['username']] = $row['bytes_total']; } }
+            $resSales = $db->query("SELECT full_raw_data FROM sales_history ORDER BY id DESC LIMIT 2000"); 
+            if ($resSales) { foreach($resSales as $row) { $rawDataMerged[] = $row['full_raw_data']; } }
+        } catch (Exception $e) { }
+    }
+    if (is_array($mikrotikScripts)) {
+        foreach ($mikrotikScripts as $script) { if(isset($script['name'])) $rawDataMerged[] = $script['name']; }
+    }
+    $rawDataMerged = array_unique($rawDataMerged);
+
+    $totalVoucher = 0;
+    $totalData = 0;
+    $totalIncome = 0;
+
+    foreach ($rawDataMerged as $rowString) {
+        $parts = explode("-|-", $rowString);
+        if (count($parts) >= 4) {
+            $rawDateString = trim($parts[0]); 
+            $price = (int)preg_replace('/[^0-9]/', '', $parts[3]);
+            $username = isset($parts[2]) ? trim($parts[2]) : '';
+
+            $tstamp = strtotime(str_replace("/", "-", normalizeDate($rawDateString)));
+            if (!$tstamp) continue;
+
+            $d_month = (int)date("m", $tstamp);
+            $d_year  = (int)date("Y", $tstamp);
+
+            if ($d_month == $filterMonth && $d_year == $filterYear) {
+                $totalVoucher++;
+                $totalIncome += $price;
+                
+                if (isset($liveUserBytes[$username])) {
+                    $totalData += $liveUserBytes[$username];
+                } elseif (isset($userStatsMap[$username])) {
+                    $totalData += $userStatsMap[$username];
+                }
+            }
+        }
+    }
+
+    $dataResponse['active'] = $counthotspotactive;
+    $dataResponse['fresh'] = $countFreshUsers;
+    $dataResponse['sold'] = $totalVoucher;
+    $dataResponse['traffic'] = formatBytes($totalData);
+    $dataResponse['income'] = number_format($totalIncome, 0, ",", ".");
+
+    echo json_encode($dataResponse);
+    exit(); 
+}
+
+
+// =========================================================
+// BAGIAN 1: SYSTEM RESOURCE
+// =========================================================
+if ($load == "sysresource") {
+    if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
+        $getclock = $API->comm("/system/clock/print");
+        $clock = isset($getclock[0]) ? $getclock[0] : ['time'=>'00:00:00', 'date'=>'jan/01/1970'];
+        if(isset($clock['time-zone-name'])) date_default_timezone_set($clock['time-zone-name']);
+        $resource = $API->comm("/system/resource/print")[0];
+        $routerboard = $API->comm("/system/routerboard/print")[0];
+    } else {
+        $clock = ['time'=>'--', 'date'=>'--'];
+        $resource = ['uptime'=>'--', 'board-name'=>'--', 'version'=>'--', 'cpu-load'=>'0', 'free-memory'=>0, 'free-hdd-space'=>0];
+        $routerboard = ['model'=>'--'];
+    }
+    
+    $sys_date = isset($clock['date']) ? ucfirst($clock['date']) : '--';
+    $sys_time = isset($clock['time']) ? $clock['time'] : '--';
+    $sys_uptime = isset($resource['uptime']) ? formatDTM($resource['uptime']) : '--';
+    $sys_board = isset($resource['board-name']) ? $resource['board-name'] : '--';
+    $sys_model = isset($routerboard['model']) ? $routerboard['model'] : '--';
+    $sys_os = isset($resource['version']) ? $resource['version'] : '--';
+    $sys_cpu = isset($resource['cpu-load']) ? $resource['cpu-load'] : '0';
+    $sys_mem = isset($resource['free-memory']) ? formatBytes($resource['free-memory'], 2) : '0 B';
+    $sys_hdd = isset($resource['free-hdd-space']) ? formatBytes($resource['free-hdd-space'], 2) : '0 B';
+    ?>
+    <div id="r_1" class="row">
+      <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-calendar"></i></div><div class="box-group-area"><span>Date & Time<br><?= $sys_date . " " . $sys_time ?><br>Uptime : <?= $sys_uptime ?></span></div></div></div></div>
+      <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-info-circle"></i></div><div class="box-group-area"><span>Board : <?= $sys_board ?><br/>Model : <?= $sys_model ?><br/>Router OS : <?= $sys_os ?></span></div></div></div></div>
+      <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-server"></i></div><div class="box-group-area"><span>CPU : <?= $sys_cpu ?>%<br/>Free Mem : <?= $sys_mem ?><br/>Free HDD : <?= $sys_hdd ?></span></div></div></div></div> 
+    </div>
+    <?php
+
+// =========================================================
+// BAGIAN 2: DASHBOARD UTAMA & ANALISA
+// =========================================================
+} else if ($load == "hotspot") {
+    
+    // --- Initial Load HTML ---
+    $countFreshUsers = 0; $counthotspotactive = 0; $liveUserBytes = []; $mikrotikScripts = [];
+    if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
+        $getclock = $API->comm("/system/clock/print");
+        if(isset($getclock[0]['time-zone-name'])) date_default_timezone_set($getclock[0]['time-zone-name']);
+        
+        $allWartelUsers = $API->comm("/ip/hotspot/user/print", array("?server" => "wartel"));
+        foreach ($allWartelUsers as $u) {
+            if (isset($u['uptime']) && ($u['uptime'] == '0s' || $u['uptime'] == '')) { $countFreshUsers++; }
+            $b_in = isset($u['bytes-in']) ? $u['bytes-in'] : 0;
+            $b_out = isset($u['bytes-out']) ? $u['bytes-out'] : 0;
+            $liveUserBytes[$u['name']] = $b_in + $b_out;
+        }
+        $rawActive = $API->comm("/ip/hotspot/active/print", array(".proplist" => "address"));
+        if(is_array($rawActive)) { foreach($rawActive as $act) { if(isset($act['address']) && strpos($act['address'], '172.16.2.') === 0) { $counthotspotactive++; } } }
+        $mikrotikScripts = $API->comm("/system/script/print", array("?comment" => "mikhmon"));
+    }
+
+    $filterMonth = $_SESSION['filter_month']; $filterYear = $_SESSION['filter_year'];
+    $monthShort = [1=>'Jan', 2=>'Feb', 3=>'Mar', 4=>'Apr', 5=>'Mei', 6=>'Jun', 7=>'Jul', 8=>'Agu', 9=>'Sep', 10=>'Okt', 11=>'Nov', 12=>'Des'];
+    $monthFull = [1=>'Januari', 2=>'Februari', 3=>'Maret', 4=>'April', 5=>'Mei', 6=>'Juni', 7=>'Juli', 8=>'Agustus', 9=>'September', 10=>'Oktober', 11=>'November', 12=>'Desember'];
+
+    $dbFile = $root . '/db_data/mikhmon_stats.db'; $rawDataMerged = []; $userStatsMap = [];
+    if (file_exists($dbFile)) {
+        try {
+            $db = new PDO('sqlite:' . $dbFile);
+            $resStats = $db->query("SELECT username, bytes_total FROM user_stats");
+            if ($resStats) { foreach($resStats as $row) { $userStatsMap[$row['username']] = $row['bytes_total']; } }
+            $resSales = $db->query("SELECT full_raw_data FROM sales_history ORDER BY id DESC LIMIT 1500");
+            if ($resSales) { foreach($resSales as $row) { $rawDataMerged[] = $row['full_raw_data']; } }
+        } catch (Exception $e) { }
+    }
+    if (is_array($mikrotikScripts)) { foreach ($mikrotikScripts as $script) { if(isset($script['name'])) $rawDataMerged[] = $script['name']; } }
+    $rawDataMerged = array_unique($rawDataMerged);
+
+    $daysInMonth = (int)date("t", mktime(0, 0, 0, $filterMonth, 1, $filterYear));
+    $dailyIncome = array_fill(1, $daysInMonth, 0);
+    $totalVoucher = 0; $totalData = 0; $totalIncome = 0;
+    $blokStats = []; $totalTrxAnalisa = 0; $totalOmsetAnalisa = 0;
+
+    foreach ($rawDataMerged as $rowString) {
+        $parts = explode("-|-", $rowString);
+        if (count($parts) >= 4) {
+            $rawDateString = trim($parts[0]); 
+            $price = (int)preg_replace('/[^0-9]/', '', $parts[3]);
+            $username = isset($parts[2]) ? trim($parts[2]) : '';
+            $profile = isset($parts[7]) ? trim($parts[7]) : '';
+            $comment = isset($parts[8]) ? trim($parts[8]) : '';
+            $tstamp = strtotime(str_replace("/", "-", normalizeDate($rawDateString)));
+            if (!$tstamp) continue;
+            $d_month = (int)date("m", $tstamp); $d_year  = (int)date("Y", $tstamp); $d_day   = (int)date("d", $tstamp);
+
+            if ($d_month == $filterMonth && $d_year == $filterYear) {
+                $totalVoucher++; $totalIncome += $price;
+                if ($d_day >= 1 && $d_day <= $daysInMonth) { $dailyIncome[$d_day] += $price; }
+                if (isset($liveUserBytes[$username])) { $totalData += $liveUserBytes[$username]; } elseif (isset($userStatsMap[$username])) { $totalData += $userStatsMap[$username]; }
+
+                // Analisa
+                $blokName = "Unknown";
+                if (preg_match('/Blok-([A-Za-z0-9]+)/i', $comment, $match)) { $blokName = strtoupper($match[1]); } 
+                elseif (preg_match('/Kamar-([A-Za-z0-9]+)/i', $comment, $match)) { $blokName = "KMR-".strtoupper($match[1]); }
+                else { $blokName = "Lainnya"; } 
+                if (!isset($blokStats[$blokName])) { $blokStats[$blokName] = ['omset'=>0, 'qty'=>0, 'paket_10'=>0, 'paket_30'=>0]; }
+                $blokStats[$blokName]['omset'] += $price; $blokStats[$blokName]['qty']++;
+                if (stripos($profile, '10') !== false) { $blokStats[$blokName]['paket_10']++; } 
+                elseif (stripos($profile, '30') !== false) { $blokStats[$blokName]['paket_30']++; }
+                $totalOmsetAnalisa += $price; $totalTrxAnalisa++;
+            }
+        }
+    }
+    $jsonCategories = json_encode(array_map('strval', range(1, $daysInMonth)));
+    $jsonData = json_encode(array_values($dailyIncome), JSON_NUMERIC_CHECK);
+    $avgOmset = ($totalTrxAnalisa > 0 && count($blokStats) > 0) ? ($totalOmsetAnalisa / count($blokStats)) : 0;
+    uasort($blokStats, function($a, $b) { return $b['omset'] - $a['omset']; });
+    ?>
+
+    <div id="view-dashboard">
+        
+        <div class="row">
+            <div class="col-3 col-box-6"><div class="box bg-blue bmh-75"><a href="./?hotspot=active&session=<?= $session; ?>"><div class="box-group"><div class="box-group-icon"><i class="fa fa-wifi"></i></div><div class="box-group-area"><h1 id="live-active"><?= $counthotspotactive; ?></h1><div>User Active</div></div></div></a></div></div>
+            <div class="col-3 col-box-6"><div class="box bg-green bmh-75"><a href="./?hotspot=users&profile=all&session=<?= $session; ?>"><div class="box-group"><div class="box-group-icon"><i class="fa fa-users"></i></div><div class="box-group-area"><h1 id="live-fresh"><?= $countFreshUsers; ?></h1><div>User Tersedia</div></div></div></a></div></div>
+            <div class="col-3 col-box-6"><div class="box bg-yellow bmh-75"><a href="./?report=selling&session=<?= $session; ?>"><div class="box-group"><div class="box-group-icon"><i class="fa fa-ticket"></i></div><div class="box-group-area"><h1 id="live-sold"><?= $totalVoucher; ?></h1><div>Terjual (<?= $monthShort[$filterMonth]; ?>)</div></div></div></a></div></div>
+            <div class="col-3 col-box-6"><div class="box bg-red bmh-75"><a href="./?report=selling&session=<?= $session; ?>"><div class="box-group"><div class="box-group-icon"><i class="fa fa-database"></i></div><div class="box-group-area"><h1 id="live-traffic"><?= formatBytes($totalData); ?></h1><div>Bandwidth (<?= $monthShort[$filterMonth]; ?>)</div></div></div></a></div></div>
+        </div>
+        
+        <div class="row">
+            <div class="col-12 text-right">
+                <small style="font-size:10px; color:#777; font-weight:bold; letter-spacing: 0.5px; opacity: 0.8; margin-right: 7px;">
+                    <i class="fa fa-circle text-green blink" style="font-size: 8px; margin-right: 3px;"></i> Stream Data
+                </small>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 15px;">
+            <h4 style="margin:0;"><i class="fa fa-bar-chart"></i> Pendapatan (Total: Rp <span id="live-income"><?= number_format($totalIncome, 0, ",", ".") ?></span>)</h4>
+            <div class="tab-container" style="display: flex; gap: 5px; flex-wrap:wrap; align-items: center;">
+                <button class="btn btn-sm bg-purple" onclick="$('#view-dashboard').hide(); $('#view-analytics').fadeIn();" style="margin-right:15px; box-shadow: 2px 2px 5px rgba(0,0,0,0.3);"><i class="fa fa-line-chart"></i> <b>ANALISA BISNIS</b></button>
+                <?php foreach($monthShort as $mNum => $mName) {
+                    $active = ($mNum == $filterMonth) ? 'font-weight:bold; color:#fff; border-bottom:2px solid #fff;' : 'color:#8898aa;';
+                    echo "<a style='cursor:pointer; padding:5px; $active' onclick='changeMonth($mNum)'>$mName</a>";
+                } ?>
+            </div>
+        </div>
+        <div id="chart_income_stat" style="width:100%; height:350px;"></div>
+        <script type="text/javascript">
+            if(typeof Highcharts !== 'undefined') {
+                Highcharts.chart('chart_income_stat', {
+                    chart: { type: 'column', backgroundColor: 'transparent', height: 350 },
+                    title: { text: '' },
+                    xAxis: { categories: <?= $jsonCategories ?>, crosshair: true, lineColor: '#444', tickColor: '#444', labels: {style:{color:'#ccc'}} },
+                    yAxis: { min: 0, title: { text: '' }, gridLineColor: '#333', labels: { style:{color:'#ccc'}, formatter: function () { return this.value.toLocaleString('id-ID'); } } },
+                    tooltip: { headerFormat: '<span style="font-size:10px">Tgl {point.key}</span><table>', pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td><td style="padding:0"><b>Rp {point.y:,.0f}</b></td></tr>', footerFormat: '</table>', shared: true, useHTML: true, backgroundColor: 'rgba(0,0,0,0.9)', style: {color: '#fff'} },
+                    plotOptions: { column: { pointPadding: 0.2, borderWidth: 0, dataLabels: { enabled: false } } },
+                    series: [{ name: 'Income', data: <?= $jsonData ?>, color: '#00c0ef', showInLegend: false }], credits: { enabled: false }
+                });
+            }
+
+            // AUTO UPDATE SCRIPT
+            var autoRefreshInterval;
+            function startLiveUpdate() {
+                if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+                autoRefreshInterval = setInterval(function() {
+                    if ($('#view-dashboard').is(':visible')) {
+                        $.ajax({
+                            url: './dashboard/aload.php?load=live_data&session=<?= $session; ?>',
+                            dataType: 'json',
+                            global: false, // KUNCI: Mencegah Load Bar muncul saat update
+                            success: function(data) {
+                                $('#live-active').text(data.active);
+                                $('#live-fresh').text(data.fresh);
+                                $('#live-sold').text(data.sold);
+                                $('#live-traffic').text(data.traffic);
+                                $('#live-income').text(data.income);
+                            }
+                        });
+                    }
+                }, 10000);
+            }
+            $(document).ready(function() { startLiveUpdate(); });
+        </script>
+        
+        <style>
+            .blink { animation: blinker 1.5s linear infinite; }
+            @keyframes blinker { 50% { opacity: 0; } }
+            
+            /* SEMBUNYIKAN LOAD BAR (PACE) HANYA SAAT DI HALAMAN INI */
+            .pace { display: none !important; }
+        </style>
+    </div>
+
+    <div id="view-analytics" style="display: none;">
+        <div class="row">
+            <div class="col-12">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #605ca8; padding-bottom: 10px; margin-bottom: 15px;">
+                    <h3 style="margin:0; color:#fff;"><i class="fa fa-line-chart"></i> Evaluasi Bisnis (<?= $monthFull[$filterMonth] . " " . $filterYear; ?>)</h3>
+                    <div>
+                        <button class="btn btn-primary btn-sm" onclick="printAnalytics()" style="margin-right:5px;"><i class="fa fa-print"></i> Cetak Laporan</button>
+                        <button class="btn btn-warning btn-sm" onclick="$('#view-analytics').hide(); $('#view-dashboard').fadeIn();"><i class="fa fa-arrow-left"></i> KEMBALI</button>
                     </div>
-                  </div>
                 </div>
+            </div>
+        </div>
+        <div id="print-area">
+            <div class="row">
+                <div class="col-4">
+                    <div class="box bg-green box-solid">
+                        <div class="box-header with-border"><h3 class="box-title">BLOK SULTAN (Terlaris)</h3></div>
+                        <div class="box-body text-center">
+                            <?php 
+                            $bestBlok = array_key_first($blokStats);
+                            if ($bestBlok) { echo "<h1 style='font-size:36px; margin:0;'>$bestBlok</h1><span>Rp " . number_format($blokStats[$bestBlok]['omset'],0,',','.') . "</span>"; } 
+                            else { echo "<h3>-</h3>"; }
+                            ?>
+                        </div>
+                    </div>
                 </div>
+                <div class="col-4">
+                    <div class="box bg-blue box-solid">
+                        <div class="box-header with-border"><h3 class="box-title">TOTAL PENDAPATAN</h3></div>
+                        <div class="box-body text-center"><h1 style='font-size:36px; margin:0;'>Rp <?= number_format($totalOmsetAnalisa,0,',','.'); ?></h1><span>Dari <?= $totalTrxAnalisa; ?> Transaksi</span></div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="box bg-red box-solid">
+                        <div class="box-header with-border"><h3 class="box-title">PERLU PERHATIAN (Sepi)</h3></div>
+                        <div class="box-body text-center">
+                            <?php 
+                            $lowBlok = array_key_last($blokStats);
+                            if ($lowBlok) { echo "<h1 style='font-size:36px; margin:0;'>$lowBlok</h1><span>Rp " . number_format($blokStats[$lowBlok]['omset'],0,',','.') . "</span>"; } 
+                            else { echo "<h3>-</h3>"; }
+                            ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <div class="box">
+                        <div class="box-header"><h3 class="box-title">Detail Performa per Blok (<?= $monthFull[$filterMonth]; ?>)</h3></div>
+                        <div class="box-body table-responsive no-padding">
+                            <table class="table table-hover table-bordered table-striped" style="width:100%; border-collapse: collapse;">
+                                <thead class="bg-gray">
+                                    <tr><th style="border:1px solid #ddd;">No</th><th style="border:1px solid #ddd;">Nama Blok</th><th style="border:1px solid #ddd;" class="text-center">Voucher</th><th style="border:1px solid #ddd;" class="text-center">10 Menit</th><th style="border:1px solid #ddd;" class="text-center">30 Menit</th><th style="border:1px solid #ddd;" class="text-right">Omset</th><th style="border:1px solid #ddd;" class="text-center">Status</th></tr>
+                                </thead>
+                                <tbody>
+                                    <?php $rank = 1; foreach ($blokStats as $blok => $data) { if($blok == "Lainnya") continue; $statusText = "BURUK"; $statusColor = "red"; if ($data['omset'] >= $avgOmset * 1.2) { $statusText = "SANGAT BAIK"; $statusColor="green"; } elseif ($data['omset'] >= $avgOmset) { $statusText = "BAIK"; $statusColor="blue"; } elseif ($data['omset'] >= $avgOmset * 0.5) { $statusText = "CUKUP"; $statusColor="#f39c12"; } else { $statusText = "BURUK"; $statusColor="red"; } ?>
+                                    <tr><td style="border:1px solid #ddd;">#<?= $rank++; ?></td><td style="border:1px solid #ddd; font-weight:bold; font-size:14px;"><?= $blok; ?></td><td style="border:1px solid #ddd;" class="text-center"><?= $data['qty']; ?></td><td style="border:1px solid #ddd;" class="text-center text-muted"><?= $data['paket_10']; ?></td><td style="border:1px solid #ddd;" class="text-center text-muted"><?= $data['paket_30']; ?></td><td style="border:1px solid #ddd;" class="text-right" style="font-weight:bold;">Rp <?= number_format($data['omset'],0,',','.'); ?></td><td style="border:1px solid #ddd; color:<?= $statusColor; ?>; font-weight:bold;" class="text-center"><?= $statusText; ?></td></tr>
+                                    <?php } ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+    function printAnalytics() {
+        var printContent = document.getElementById('print-area').innerHTML;
+        var win = window.open('', '', 'height=700,width=800');
+        win.document.write('<html><head><title>Laporan Analisa Bisnis - Wartel Pas</title><style>body { font-family: sans-serif; font-size: 12px; } table { width: 100%; border-collapse: collapse; margin-top:10px; } th, td { border: 1px solid #000; padding: 5px; text-align: left; } .text-center { text-align: center; } .text-right { text-align: right; } .row { display: flex; flex-wrap: wrap; margin-bottom: 20px; } .col-4 { width: 33.33%; padding: 0 5px; box-sizing: border-box; } .box { border: 1px solid #000; padding: 10px; margin-bottom: 5px; } .box-header { border-bottom: 1px solid #ccc; font-weight:bold; margin-bottom:5px; } h1 { font-size: 24px; margin: 5px 0; } h3 { font-size: 14px; margin: 0; }</style></head><body><h2 style="text-align:center;">Laporan Evaluasi Bisnis - Wartel Pas</h2><p style="text-align:center;">Periode: <?= $monthFull[$filterMonth] . " " . $filterYear; ?></p>' + printContent + '</body></html>');
+        win.document.close(); win.print();
+    }
+    </script>
+    <?php
 
-<?php 
+// =========================================================
+// BAGIAN 3: RIWAYAT LOGS (TETAP SAMA)
+// =========================================================
+} else if ($load == "logs") {
+    // (Kode Logs Tetap Sama seperti FINAL 12)
+    $filterMonth = $_SESSION['filter_month']; $filterYear  = $_SESSION['filter_year'];
+    if($API->connect($iphost, $userhost, decrypt($passwdhost))){ $mikrotikScripts = $API->comm("/system/script/print", array("?comment" => "mikhmon")); } else { $mikrotikScripts = []; }
+    $dbFile = $root . '/db_data/mikhmon_stats.db'; $rawDataMerged = []; 
+    if (file_exists($dbFile)) { try { $db = new PDO('sqlite:' . $dbFile); $resSales = $db->query("SELECT full_raw_data FROM sales_history ORDER BY id DESC LIMIT 500"); if ($resSales) { foreach($resSales as $row) { $rawDataMerged[] = $row['full_raw_data']; } } } catch (Exception $e) {} }
+    if (is_array($mikrotikScripts)) { foreach ($mikrotikScripts as $script) { if(isset($script['name'])) $rawDataMerged[] = $script['name']; } }
+    $rawDataMerged = array_unique($rawDataMerged);
+    $finalLogs = [];
+    foreach ($rawDataMerged as $rowString) {
+        $parts = explode("-|-", $rowString);
+        if (count($parts) >= 2) {
+            $rawDate = isset($parts[0]) ? trim($parts[0]) : '-'; $rawTime = isset($parts[1]) ? trim($parts[1]) : '00:00:00'; 
+            $dateTimeStr = normalizeDate($rawDate) . " " . $rawTime; $tstamp = strtotime(str_replace("/", "-", $dateTimeStr));
+            if ($tstamp) {
+                $d_month = (int)date("m", $tstamp); $d_year  = (int)date("Y", $tstamp);
+                if ($d_month == $filterMonth && $d_year == $filterYear) {
+                    $username = isset($parts[2]) ? trim($parts[2]) : '-'; $price = isset($parts[3]) ? (int)preg_replace('/[^0-9]/', '', $parts[3]) : 0;
+                    $paket = (isset($parts[7]) && $parts[7] != "") ? trim($parts[7]) : '-'; $comment = (isset($parts[8])) ? trim($parts[8]) : '';
+                    $key = $tstamp . "_" . rand(100,999);
+                    $finalLogs[$key] = [ 'time_str' => date("d/m/Y H:i", $tstamp), 'username' => $username, 'paket' => $paket, 'comment' => $comment, 'price' => $price ];
+                }
+            }
+        }
+    }
+    krsort($finalLogs);
+    $maxShow = 20; $count = 0;
+    foreach ($finalLogs as $log) {
+        if ($count >= $maxShow) break;
+        $blokDisplay = "-";
+        if (preg_match('/Blok-([A-Za-z]+)/i', $log['comment'], $match)) { $blokDisplay = strtoupper($match[1]); } 
+        elseif ($log['comment'] != "") { $cleanCom = preg_replace('/[^A-Za-z]/', '', $log['comment']); if(strlen($cleanCom) > 0) $blokDisplay = strtoupper(substr($cleanCom, 0, 1)); }
+        echo "<tr><td style='padding-left:10px;'>" . $log['time_str'] . "</td><td>" . $log['username'] . "</td><td>" . $log['paket'] . "</td><td class='text-center'>" . $blokDisplay . "</td><td class='text-right' style='padding-right:10px; font-weight:bold;'>" . number_format($log['price'],0,',','.') . "</td></tr>";
+        $count++;
+    }
+    if ($count == 0) { echo "<tr><td colspan='5' class='text-center' style='padding:20px;'>Belum ada transaksi bulan ini.</td></tr>"; }
 }
-
-}
-
 ?>

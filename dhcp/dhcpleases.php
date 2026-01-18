@@ -1,61 +1,51 @@
 <?php
 /*
- *  Copyright (C) 2018 Laksamadi Guko.
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Copyright (C) 2018 Laksamadi Guko.
+ * Modified by Pak Dul & Gemini AI (2026) - Wartel Edition
+ * UPDATE: Filter DHCP Leases by IP Segment (172.16.2.x)
  */
 session_start();
 // hide all error
 error_reporting(0);
+
 if (!isset($_SESSION["mikhmon"])) {
 	header("Location:../admin.php?id=login");
 } else {
 
+	// --- UPDATE LOGIC: FILTER BY IP SEGMEN ---
+	// 1. Tarik SEMUA data lease dulu
 	$getlease = $API->comm("/ip/dhcp-server/lease/print");
-	$TotalReg = count($getlease);
-
-	$countlease = $API->comm("/ip/dhcp-server/lease/print", array(
-		"count-only" => "",
-	));
-
+	
+	// 2. Siapkan array penampung
+	$filtered_leases = array();
+	
+	// 3. Filter berdasarkan IP Kepala "172.16.2."
+	foreach ($getlease as $lease) {
+		$addr = isset($lease['address']) ? $lease['address'] : '';
+		
+		// Cek apakah IP diawali dengan "172.16.2."
+		// Jika iya, masukkan ke daftar
+		if (strpos($addr, "172.16.2.") === 0) {
+			$filtered_leases[] = $lease;
+		}
+	}
+	
+	$TotalReg = count($filtered_leases);
+	$countlease = $TotalReg;
 }
 ?>
 <div class="row">
 <div class="col-12">
 <div class="card">
 <div class="card-header">
-	<h3><i class=" fa fa-sitemap"></i> DHCP Leases 
-<?php
-if ($countlease < 2) {
-	echo "$countlease item";
-} elseif ($countlease > 1) {
-	echo "$countlease items";
-};
-echo "</th>";
-?>
-&nbsp;&nbsp; | &nbsp;&nbsp;<i onclick="location.reload();" class="fa fa-refresh pointer" title="Reload data"></i>
-    </h3>
+	<h3><i class="fa fa-list"></i> DHCP Leases (<span class="badge badge-primary"><?= $countlease; ?></span>)</h3>
 </div>
-<div class="card-body">	   
-<div class="w-6">
-    <input id="filterTable" type="text" class="form-control" placeholder="Search..">
-  </div>
-<div class="overflow box-bordered mr-t-10" style="max-height: 75vh">   	   
+<div class="card-body">
+<div class="table-responsive">
 <table id="dataTable" class="table table-bordered table-hover text-nowrap">
   <thead>
   <tr>
-  	<th></th>
+    <th style="width: 40px" class="text-center"><i class="fa fa-info-circle"></i></th>
     <th class="pointer" title="Click to sort"><i class="fa fa-sort"></i> Address</th>
     <th class="pointer" title="Click to sort"><i class="fa fa-sort"></i> MAC Address</th>
     <th class="pointer" title="Click to sort"><i class="fa fa-sort"></i> Server</th>
@@ -67,42 +57,56 @@ echo "</th>";
   </thead>
   <tbody> 
 <?php
-for ($i = 0; $i < $TotalReg; $i++) {
-	$lease = $getlease[$i];
+// Loop data yang sudah difilter by IP
+foreach ($filtered_leases as $lease) {
 	$id = $lease['.id'];
 
-
-	$addr = $lease['address'];
-	$maca = $lease['mac-address'];
-	$server = $lease['server'];
-	$aaddr = $lease['active-address'];
-	$amaca = $lease['active-mac-address'];
-	$ahostname = $lease['host-name'];
-	$status = $lease['status'];
-
+	$addr = isset($lease['address']) ? $lease['address'] : '';
+	$maca = isset($lease['mac-address']) ? $lease['mac-address'] : '';
+	
+	// Tampilan Server
+	$server_raw = isset($lease['server']) ? $lease['server'] : '';
+	$server_display = ($server_raw == "") ? "<i>All (Static)</i>" : $server_raw;
+	
+	$aaddr = isset($lease['active-address']) ? $lease['active-address'] : '';
+	$amaca = isset($lease['active-mac-address']) ? $lease['active-mac-address'] : '';
+	$ahostname = isset($lease['host-name']) ? $lease['host-name'] : '';
+	$status = isset($lease['status']) ? $lease['status'] : '';
 
 	echo "<tr>";
-	echo "</td>";
+	
+	// Kolom Tipe (Dynamic / Static)
 	echo "<td style='text-align:center;'>";
-	if ($lease['dynamic'] == "true") {
-		echo "<b title='D - dynamic'>D</b>";
+	if (isset($lease['dynamic']) && $lease['dynamic'] == "true") {
+		echo "<span class='badge badge-info' title='Dynamic'>D</span>";
 	} else {
-		echo "<b title='S - static'>S</b>";
+		echo "<span class='badge badge-success' title='Static'>S</span>";
 	}
 	echo "</td>";
+
 	echo "<td>" . $addr . "</td>";
 	echo "<td>" . $maca . "</td>";
-	echo "<td>" . $server . "</td>";
-	echo "<td>" . $aaddr . "</a></td>";
+	echo "<td>" . $server_display . "</td>";
+	echo "<td>" . $aaddr . "</td>";
 	echo "<td>" . $amaca . "</td>";
 	echo "<td>" . $ahostname . "</td>";
-	echo "<td>" . $status . "</td>";
+	
+	// Kolom Status
+	echo "<td class='text-center'>";
+	if ($status == "bound") {
+		echo "<span class='badge badge-success'>Bound</span>";
+	} elseif ($status == "waiting") {
+		echo "<span class='badge badge-warning'>Waiting</span>";
+	} else {
+		echo "<span class='badge badge-secondary'>" . $status . "</span>";
+	}
+	echo "</td>";
+	
 	echo "</tr>";
 }
 ?>
   </tbody>
 </table>
-</div>
 </div>
 </div>
 </div>

@@ -1,7 +1,7 @@
 <style>
     /* 1. Styling untuk Teks dan Container Link */
     .wartelpas-brand {
-        display: flex;              /* Agar logo dan teks sejajar */
+        display: flex;             /* Agar logo dan teks sejajar */
         align-items: center;        /* Posisi vertikal tengah */
         font-weight: bold;
         font-size: 20px;
@@ -29,20 +29,20 @@
 
 <?php
 /*
- *  Copyright (C) 2018 Laksamadi Guko.
+ * Copyright (C) 2018 Laksamadi Guko.
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 session_start();
 // hide all error
@@ -65,11 +65,6 @@ if (!isset($_SESSION["mikhmon"])) {
     $susersl = "active";
     $susers = "active";
     $mpage = $_users;
-    $umenu = "menu-open";
-  } elseif ($hotspotuser == "add") {
-    $sadduser = "active";
-    $mpage = $_users;
-    $susers = "active";
     $umenu = "menu-open";
   } elseif ($hotspotuser == "generate") {
     $sgenuser = "active";
@@ -99,10 +94,6 @@ if (!isset($_SESSION["mikhmon"])) {
   } elseif ($minterface == "traffic-monitor") {
     $strafficmonitor = "active";
     $mpage = $_traffic_monitor;  
-  } elseif ($hotspot == "ipbinding" || $hotspot == "binding" || $removeipbinding != "" || $enableipbinding != "" || $disableipbinding != "") {
-    $sipbind = "active";
-    $mpage = $_ip_bindings;
-    $ibmenu = "menu-open";
   } elseif ($hotspot == "template-editor") {
     $ssett = "active";
     $teditor = "active";
@@ -117,16 +108,6 @@ if (!isset($_SESSION["mikhmon"])) {
     $scookies = "active";
     $mpage = $_hotspot_cookies;
     $cmenu = "menu-open";
-  } elseif ($hotspot == "log") {
-    $log = "active";
-    $slog = "active";
-    $mpage = $_hotspot_log;
-    $lmenu = "menu-open";
-  } elseif ($report == "userlog") {
-    $log = "active";
-    $sulog = "active";
-    $mpage = $_user_log;
-    $lmenu = "menu-open";
   } elseif ($ppp == "secrets" || $ppp == "addsecret" || $enablesecr != "" || $disablesecr != "" || $removesecr != "" || $secretbyname != "") {
     $mppp = "active";
     $ssecrets = "active";
@@ -150,6 +131,13 @@ if (!isset($_SESSION["mikhmon"])) {
   } elseif ($report == "selling" || $report == "resume-report") {
     $sselling = "active";
     $mpage = $_report;
+
+  // --- TAMBAHAN BARU: AGAR MENU MENYALA SAAT DIKLIK ---
+  } elseif ($report == "audit_session") {
+      $saudit = "active";
+      $mpage = "Audit Log";
+  // ----------------------------------------------------
+
   } elseif ($userprofile == "add") {
     $suserprof = "active";
     $sadduserprof = "active";
@@ -210,13 +198,7 @@ if($idleto != "disable"){
 </div>
  <div class="navbar-right">
   <a id="logout" href="./admin.php?id=logout" ><i class="fa fa-sign-out mr-1"></i> <?= $_logout ?></a>
-  <select class="stheme ses mr-t-10 pd-5">
-    <option> <?= $_theme?></option>
-    <?php for ($i = 0; $i < count($mtheme); $i++) {
-      echo '<option value="'.$url.'&set-theme='.$mtheme[$i],'">'.ucfirst($mtheme[$i]),'</option>';
-    }
-    ?>
-  </select>
+  
   <select class="slang ses mr-t-10 pd-5">
     <option> <?= $language ?></option>
     <?php 
@@ -258,10 +240,6 @@ $(document).ready(function(){
     notify("<?= $_connecting ?>");
     connect(this.id)
   });
-  $(".stheme").change(function(){
-    notify("<?= $_loading_theme ?>");
-    stheme(this.value)
-  });
   $(".slang").change(function(){
     notify("<?= $_loading ?>");
     stheme(this.value)
@@ -284,117 +262,50 @@ include('./info.php');
 </div>
  <div class="navbar-right">
   <a id="logout" href="./?hotspot=logout&session=<?= $session; ?>" ><i class="fa fa-sign-out mr-1"></i> <?= $_logout ?></a>
-  <select class="stheme ses mr-t-10 pd-5">
-    <option> <?= $_theme ?></option>
-    <?php for ($i = 0; $i < count($mtheme); $i++) {
-      echo '<option value="'.$url.'&set-theme='.$mtheme[$i],'">'.ucfirst($mtheme[$i]),'</option>';
-    }
-    ?>
-  </select>
-  <select class="connect optfa ses mr-t-10 pd-5">
-    <option id="MikhmonSession" value="<?= $session; ?>"><?= $hotspotname; ?></option>
-      <?php
-      foreach (file('./include/config.php') as $line) {
-        $sesname = explode("'", $line)[1];
-        if ($sesname == "" || $sesname== "mikhmon") {
-        } else {
-        if($sesname == $session){
-          echo '<option value="' . $sesname. '">'.$sesname. ' &#x2666;</option>';
-        }else{
-          echo '<option value="' . $sesname. '">'.$sesname. '</option>';
-        }
-        }
-      }
-      ?>
-    
-  </select>
+  
   <a title="Idle Timeout" style="<?= $didleto; ?>"><span style="width:70px;" class="pd-5 radius-3"><i class="fa fa-clock-o mr-1"></i>  <span class="mr-1" id="timer"></span></span></a>
 </div>
 </div>
 
 <div id="sidenav" class="sidenav">
-  <div class="menu text-center align-middle card-header" style="border-radius:0;"><h3><?= $identity; ?></h3></div>
+  
   <a href="./?session=<?= $session; ?>" class="menu <?= $shome; ?>"><i class="fa fa-dashboard"></i> <?= $_dashboard ?></a>
-  <!--hotspot-->
-  <div class="dropdown-btn <?= $susers . $suserprof . $sactive . $shosts . $sipbind . $scookies; ?>"><i class="fa fa-wifi"></i> Hotspot
-    <i class="fa fa-caret-down"></i>
-  </div>
-  <div class="dropdown-container <?= $umenu . $upmenu . $hamenu . $hmenu . $ibmenu . $cmenu; ?>">
-   <!--users--> 
-  <div class="dropdown-btn <?= $susers; ?>"><i class="fa fa-users"></i> <?= $_users ?>
+  
+   <div class="dropdown-btn <?= $susers; ?>"><i class="fa fa-users"></i> <?= $_users ?>
     <i class="fa fa-caret-down"></i>
   </div>
   <div class="dropdown-container <?= $umenu; ?>">
     <a href="./?hotspot=users&profile=all&session=<?= $session; ?>" class="<?= $susersl; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-list "></i> <?= $_user_list ?> </a>
-    <a href="./?hotspot-user=add&session=<?= $session; ?>" class="<?= $sadduser; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus "></i> <?= $_add_user ?> </a>
     <a href="./?hotspot-user=generate&session=<?= $session; ?>" class="<?= $sgenuser; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_generate ?> </a>        
   </div>
-  <!--profile-->
+  
   <div class="dropdown-btn <?= $suserprof; ?>"><i class=" fa fa-pie-chart"></i>  <?= $_user_profile ?>
     <i class="fa fa-caret-down"></i>
   </div>
   <div class="dropdown-container <?= $upmenu; ?>">
     <a href="./?hotspot=user-profiles&session=<?= $session; ?>" class=" <?= $suserprofiles; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-list "></i> <?= $_user_profile_list ?> </a>
     <a href="./?user-profile=add&session=<?= $session; ?>" class=" <?= $sadduserprof; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-plus-square "></i> <?= $_add_user_profile ?> </a>
+  </div>
 
-  </div>
-  <!--active-->
-  <a href="./?hotspot=active&session=<?= $session; ?>" class="menu <?= $sactive; ?>"><i class=" fa fa-wifi"></i> <?= $_hotspot_active ?></a>
-  <!--hosts-->
-  <a href="./?hotspot=hosts&session=<?= $session; ?>" class="menu <?= $shosts; ?>"><i class=" fa fa-laptop"></i> <?= $_hosts ?></a>
-  <!--ip bindings-->
-  <a href="./?hotspot=ipbinding&session=<?= $session; ?>" class="menu <?= $sipbind; ?>"><i class=" fa fa-address-book"></i> <?= $_ip_bindings ?></a>
-  <!--cookies-->
-   <a href="./?hotspot=cookies&session=<?= $session; ?>" class="menu <?= $scookies; ?>"><i class=" fa fa-hourglass"></i> <?= $_hotspot_cookies ?></a>
-  </div>
-  <!--quick print-->
-  <a href="./?hotspot=quick-print&session=<?= $session; ?>" class="menu <?= $squick; ?>"> <i class="fa fa-print"></i> <?= $_quick_print ?> </a>
-  <!--vouchers-->
-  <a href="./?hotspot=users-by-profile&session=<?= $session; ?>" class="menu <?= $susersbp; ?>"> <i class="fa fa-ticket"></i> <?= $_vouchers ?> </a>
-   <!--log-->
-  <div class="dropdown-btn <?= $log; ?>"><i class=" fa fa-align-justify"></i> <?= $_log ?>
+  <div class="dropdown-btn <?= $sactive . $shosts . $scookies; ?>"><i class="fa fa-wifi"></i> Hotspot
     <i class="fa fa-caret-down"></i>
   </div>
-  <div class="dropdown-container <?= $lmenu; ?>">
-    <a href="./?hotspot=log&session=<?= $session; ?>" class="<?= $slog; ?>"> <i class="fa fa-wifi "></i> <?= $_hotspot_log ?> </a>
-    <a href="./?report=userlog&idbl=<?= strtolower(date("M")) . date("Y"); ?>&session=<?= $session; ?>" class=" <?= $sulog; ?>"> <i class="fa fa-users "></i> <?= $_user_log ?> </a>
-  </div>
-  <!--system-->
-  <div class="dropdown-btn <?= $sysmenu; ?>"><i class=" fa fa-gear"></i> <?= $_system ?>
-    <i class="fa fa-caret-down"></i> &nbsp;
-  </div>
-  <div class="dropdown-container <?= $schmenu; ?>">
-    <a href="./?system=scheduler&session=<?= $session; ?>" class="<?= $ssch; ?>"> <i class="fa fa-clock-o "></i> <?= $_system_scheduler ?> </a>
-    <a href="./admin.php?id=reboot&session=<?= $session; ?>" class=""> <i class="fa fa-power-off "></i> <?= $_system_reboot ?> </a>            
-    <a href="./admin.php?id=shutdown&session=<?= $session; ?>" class=""> <i class="fa fa-power-off "></i> <?= $_system_off ?> </a> 
-  </div>
-  <!--dhcp leases-->
-  <a href="./?hotspot=dhcp-leases&session=<?= $session; ?>" class="menu <?= $slease; ?>"><i class=" fa fa-sitemap"></i> <?= $_dhcp_leases ?></a>
-  <!--traffic monitor-->
-  <a href="./?interface=traffic-monitor&session=<?= $session; ?>" class="menu <?= $strafficmonitor; ?>"><i class=" fa fa-area-chart"></i> <?= $_traffic_monitor ?></a>
-  <!--report-->
-  <a href="./?report=selling&idbl=<?= strtolower(date("M")) . date("Y"); ?>&session=<?= $session; ?>" class="menu <?= $sselling; ?>"><i class="nav-icon fa fa-money"></i> <?= $_report ?></a>
-  <!--settings-->
-  <div class="dropdown-btn <?= $ssett; ?>"><i class=" fa fa-gear"></i> <?= $_settings ?> 
-    <i class="fa fa-caret-down"></i> &nbsp;
-  </div>
-  <div class="dropdown-container <?= $settmenu; ?>">
-  <a href="./admin.php?id=settings&session=<?= $session; ?>" class="menu "> <i class="fa fa-gear "></i> <?= $_session_settings ?> </a>
-  <a href="./admin.php?id=sessions" class="menu "> <i class="fa fa-gear "></i> <?= $_admin_settings ?> </a>
-  <a href="./?hotspot=uplogo&session=<?= $session; ?>" class="menu <?= $uplogo; ?>"> <i class="fa fa-upload "></i> <?= $_upload_logo ?> </a>
-  <a href="./?hotspot=template-editor&template=default&session=<?= $session; ?>" class="menu <?= $teditor; ?>"> <i class="fa fa-edit "></i> <?= $_template_editor ?> </a>          
+  <div class="dropdown-container <?= $hamenu . $hmenu . $cmenu; ?>">
+  <a href="./?hotspot=active&session=<?= $session; ?>" class="menu <?= $sactive; ?>"><i class=" fa fa-wifi"></i> <?= $_hotspot_active ?></a>
+  <a href="./?hotspot=hosts&session=<?= $session; ?>" class="menu <?= $shosts; ?>"><i class=" fa fa-laptop"></i> <?= $_hosts ?></a>
+  <a href="./?hotspot=cookies&session=<?= $session; ?>" class="menu <?= $scookies; ?>"><i class=" fa fa-hourglass"></i> <?= $_hotspot_cookies ?></a>
   </div>
 
+  <a href="./?hotspot=dhcp-leases&session=<?= $session; ?>" class="menu <?= $slease; ?>"><i class=" fa fa-sitemap"></i> <?= $_dhcp_leases ?></a>
+
+  <a href="./?report=selling&idbl=<?= strtolower(date("M")) . date("Y"); ?>&session=<?= $session; ?>" class="menu <?= $sselling; ?>"><i class="nav-icon fa fa-money"></i> <?= $_report ?></a>
+  <a href="./?report=audit_session&session=<?= $session; ?>" class="menu <?= $saudit; ?>" style="color: #ffcccc;"><i class="nav-icon fa fa-exclamation-triangle"></i> Audit Log</a>
 </div>
 <script>
 $(document).ready(function(){
   $(".connect").change(function(){
     notify("<?= $_connecting ?>");
     connect(this.value)
-  });
-  $(".stheme").change(function(){
-    notify("<?= $_loading_theme ?>");
-    stheme(this.value)
   });
 });
 </script>
@@ -412,4 +323,3 @@ echo '<div class="main-container">';
   echo '<div class="main-container" style="display:none">';
 }
 ?>
-

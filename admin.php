@@ -1,19 +1,19 @@
 <?php
 /*
- *  Copyright (C) 2018 Laksamadi Guko.
+ * Copyright (C) 2018 Laksamadi Guko.
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 session_start();
 // hide all error
@@ -76,7 +76,33 @@ if ($id == "login" || substr($url, -1) == "p") {
     if ($user == $useradm && $pass == decrypt($passadm)) {
       $_SESSION["mikhmon"] = $user;
 
-        echo "<script>window.location='./admin.php?id=sessions'</script>";
+      // MODIFIKASI: Deteksi Router Otomatis
+      // Baca file config untuk mencari session router yang tersedia
+      $lines = file('./include/config.php');
+      $first_session = "";
+      foreach ($lines as $line) {
+          // Cari baris yang mengandung $data['namasession']
+          if (strpos($line, '$data') !== false) {
+              $parts = explode("'", $line);
+              if (isset($parts[1])) {
+                  $s_name = $parts[1];
+                  // Lewati session default 'mikhmon', cari nama router user
+                  if ($s_name != "mikhmon" && $s_name != "") {
+                      $first_session = $s_name;
+                      break; // Stop jika sudah ketemu satu
+                  }
+              }
+          }
+      }
+
+      if ($first_session != "") {
+          // Jika ada router, langsung connect ke Dashboard
+          echo "<script>window.location='./admin.php?id=connect&session=" . $first_session . "'</script>";
+      } else {
+          // Jika belum ada router, tetap masuk ke menu Settings
+          echo "<script>window.location='./admin.php?id=sessions'</script>";
+      }
+      // AKHIR MODIFIKASI
     
     } else {
       $error = '<div style="width: 100%; padding:5px 0px 5px 0px; border-radius:5px;" class="bg-danger"><i class="fa fa-ban"></i> Alert!<br>Invalid username or password.</div>';
@@ -174,7 +200,7 @@ if ($id == "login" || substr($url, -1) == "p") {
 } elseif (empty($id)) {
   echo "<script>window.location='./admin.php?id=sessions'</script>";
 } elseif(in_array($id, $ids) && empty($session)){
-	echo "<script>window.location='./admin.php?id=sessions'</script>";
+  echo "<script>window.location='./admin.php?id=sessions'</script>";
 }
 ?>
 <script src="js/mikhmon-ui.<?= $theme; ?>.min.js"></script>
@@ -182,4 +208,3 @@ if ($id == "login" || substr($url, -1) == "p") {
 <?php include('./include/info.php'); ?>
 </body>
 </html>
-
