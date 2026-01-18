@@ -15,9 +15,37 @@ if (!isset($_SESSION["mikhmon"]) || !isset($_GET['session'])) {
     exit();
 }
 
+// Include RouterOS API Library
+include_once('../lib/routeros_api.class.php');
+
 $session = $_GET['session'];
 global $API; 
 global $iphost, $userhost, $passwdhost;
+
+// Helper: Format Bytes untuk display
+if (!function_exists('formatBytes')) {
+    function formatBytes($size, $precision = 2) {
+        if ($size <= 0) return '0 B';
+        $base = log($size, 1024);
+        $suffixes = array('B', 'KB', 'MB', 'GB', 'TB');
+        return round(pow(1024, $base - floor($base)), $precision) . ' ' . $suffixes[floor($base)];
+    }
+}
+
+// Helper: Decrypt password (dari routeros_api.class.php)
+if (!function_exists('decrypt')) {
+    function decrypt($string, $key=128) {
+        $result = '';
+        $string = base64_decode($string);
+        for($i=0, $k=strlen($string); $i< $k ; $i++) {
+            $char = substr($string, $i, 1);
+            $keychar = substr($key, ($i % strlen($key))-1, 1);
+            $char = chr(ord($char)-ord($keychar));
+            $result .= $char;
+        }
+        return $result;
+    }
+}
 
 // --- [BAGIAN 1] DATABASE ENGINE (SQLITE) ---
 $dbDir = dirname(__DIR__) . '/db_data';
