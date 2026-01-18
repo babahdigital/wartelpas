@@ -20,19 +20,21 @@
  * - username, blok_name, ip_address, mac_address, raw_comment
  */
 
-session_start();
-// KONEKSI & SESSION CHECK
+// KONEKSI & SESSION CHECK (NO session_start - sudah di index.php)
 if (!isset($_SESSION["mikhmon"]) || !isset($_GET['session'])) {
     header("Location:../admin.php?id=login");
     exit();
 }
 
-// Include RouterOS API Library
-include_once('../lib/routeros_api.class.php');
-
 $session = $_GET['session'];
-global $API; 
-global $iphost, $userhost, $passwdhost;
+
+// Gunakan API global dari index.php (sudah terkoneksi)
+global $API, $iphost, $userhost, $passwdhost;
+
+// Pastikan API terkoneksi
+if (!isset($API) || !$API->connected) {
+    die("<div class='alert alert-danger'>ERROR: Koneksi Router gagal. Silakan cek konfigurasi.</div>");
+}
 
 // Helper: Format Bytes untuk display
 if (!function_exists('formatBytes')) {
@@ -99,38 +101,88 @@ try {
 // Fungsi: Simpan Data Terbaru ke DB
 function save_user_history($name, $data) {
     global $db;
-    if(!$db) return;
+    if(!$db) return false;
     
-    // Jangan simpan jika data kosong semua
-    if(empty($data['blok']) && (empty($data['ip']) || $data['ip'] == '-')) return;
+    // Jangan simpan jika username kosong
+    if(empty($name)) return false;
 
     try {
-        // Query Upsert (Insert or Update)
-        $stmt = $db->prepare("INSERT INTO login_history (username, login_date, login_time, price, ip_address, mac_address, validity, blok_name, raw_comment, updated_at) VALUES (:u, :ld, :lt, :p, :ip, :mac, :val, :bl, :raw, :upd) ON CONFLICT(username) DO UPDATE SET 
-            blok_name = COALESCE(NULLIF(excluded.blok_name, ''), login_history.blok_name),
-            ip_address = COALESCE(NULLIF(excluded.ip_address, '-'), login_history.ip_address),
-            mac_address = COALESCE(NULLIF(excluded.mac_address, '-'), login_history.mac_address),
-            raw_comment = excluded.raw_comment,
-            updated_at = excluded.updated_at");
+        // Query Upsert (Insert or Update) - Perbaikan: Simpan data baru tapi pertahankan blok lama jika ada
+        $stmt = $db->prepare("INSERT INTO login_history (username, login_date, login_time, price, ip_address, mac_address, validity, blok_name, raw_comment, updated_at) 
+            VALUES (:u, :ld, :lt, :p, :ip, :mac, :val, :bl, :raw, :upd) 
+            ON CONFLICT(username) DO UPDATE SET 
+                login_date = COALESCE(NULLIF(excluded.login_date, ''), login_history.login_date),
+                login_time = COALESCE(NULLIF(excluded.login_time, ''), login_history.login_time),
+                price = COALESCE(NULLIF(excluded.price, ''), login_history.price),
+                validity = COALESCE(NULLIF(excluded.validity, ''), login_history.validity),
+                blok_name = CASE 
+                    WHEN excluded.blok_name != '' THEN excluded.blok_name 
+                    ELSE COALESCE(login_history.blok_name, '') 
+                END,
+                ip_address = CASE 
+                    WHEN excluded.ip_address != '-' AND excluded.ip_address != '' THEN excluded.ip_address 
+                    ELSE COALESCE(login_history.ip_address, '-') 
+                END,
+                mac_address = CASE 
+                    WHEN excluded.mac_address != '-' AND excluded.mac_address != '' THEN excluded.mac_address 
+                    ELSE COALESCE(login_history.mac_address, '-') 
+                END,
+                raw_comment = excluded.raw_comment,
+                updated_at = excluded.updated_at");
             
         $stmt->execute([
             ':u' => $name,
-            ':ld' => $data['date'],
-            ':lt' => $data['time'],
-            ':p'  => $data['price'],
-            ':ip' => $data['ip'],
-            ':mac'=> $data['mac'],
-            ':val'=> $data['validity'],
-            ':bl' => $data['blok'],
-            ':raw'=> $data['raw'],
+            ':ld' => $data['date'] ?? '',
+            ':lt' => $data['time'] ?? '',
+            ':p'  => $data['price'] ?? '',
+            ':ip' => $data['ip'] ?? '-',
+            ':mac'=> $data['mac'] ?? '-',
+            ':val'=> $data['validity'] ?? '',
+            ':bl' => $data['blok'] ?? '',
+            ':raw'=> $data['raw'] ?? '',
             ':upd'=> date("Y-m-d H:i:s")
         ]);
+        return true;
     } catch (Exception $e) {
-        // Fallback SQLite lama
+        // Fallback SQLite lama (tanpa ON CONFLICT)
         try {
-            $stmt = $db->prepare("INSERT OR REPLACE INTO login_history (username, login_date, login_time, price, ip_address, mac_address, validity, blok_name, raw_comment, updated_at) VALUES (:u, :ld, :lt, :p, :ip, :mac, :val, :bl, :raw, :upd)");
-            $stmt->execute([':u'=>$name, ':ld'=>$data['date'], ':lt'=>$data['time'], ':p'=>$data['price'], ':ip'=>$data['ip'], ':mac'=>$data['mac'], ':val'=>$data['validity'], ':bl'=>$data['blok'], ':raw'=>$data['raw'], ':upd'=>date("Y-m-d H:i:s")]);
-        } catch(Exception $ex) {}
+            // Cek apakah sudah ada
+            $check = $db->prepare("SELECT * FROM login_history WHERE username = :u");
+            $check->execute([':u' => $name]);
+            $existing = $check->fetch(PDO::FETCH_ASSOC);
+            
+            if ($existing) {
+                // Update dengan logika preserve data lama
+                $new_blok = !empty($data['blok']) ? $data['blok'] : ($existing['blok_name'] ?? '');
+                $new_ip = (!empty($data['ip']) && $data['ip'] != '-') ? $data['ip'] : ($existing['ip_address'] ?? '-');
+                $new_mac = (!empty($data['mac']) && $data['mac'] != '-') ? $data['mac'] : ($existing['mac_address'] ?? '-');
+                
+                $stmt = $db->prepare("UPDATE login_history SET 
+                    login_date = :ld, login_time = :lt, price = :p, 
+                    ip_address = :ip, mac_address = :mac, validity = :val, 
+                    blok_name = :bl, raw_comment = :raw, updated_at = :upd 
+                    WHERE username = :u");
+                $stmt->execute([
+                    ':u'=>$name, ':ld'=>$data['date']??'', ':lt'=>$data['time']??'', 
+                    ':p'=>$data['price']??'', ':ip'=>$new_ip, ':mac'=>$new_mac, 
+                    ':val'=>$data['validity']??'', ':bl'=>$new_blok, 
+                    ':raw'=>$data['raw']??'', ':upd'=>date("Y-m-d H:i:s")
+                ]);
+            } else {
+                // Insert baru
+                $stmt = $db->prepare("INSERT INTO login_history (username, login_date, login_time, price, ip_address, mac_address, validity, blok_name, raw_comment, updated_at) 
+                    VALUES (:u, :ld, :lt, :p, :ip, :mac, :val, :bl, :raw, :upd)");
+                $stmt->execute([
+                    ':u'=>$name, ':ld'=>$data['date']??'', ':lt'=>$data['time']??'', 
+                    ':p'=>$data['price']??'', ':ip'=>$data['ip']??'-', ':mac'=>$data['mac']??'-', 
+                    ':val'=>$data['validity']??'', ':bl'=>$data['blok']??'', 
+                    ':raw'=>$data['raw']??'', ':upd'=>date("Y-m-d H:i:s")
+                ]);
+            }
+            return true;
+        } catch(Exception $ex) {
+            return false;
+        }
     }
 }
 
@@ -380,20 +432,26 @@ foreach($all_users as $u) {
         // Jika ONLINE, paksa ambil IP/MAC Realtime dari Active List
         $f_ip = $activeMap[$n]['address'] ?? '-';
         $f_mac = $activeMap[$n]['mac-address'] ?? '-';
-        
-        // Update database dengan data online terbaru
-        if (!empty($f_blok) || $f_ip != '-') {
-            save_user_history($n, [
-                'date' => $f_date, 'time' => $f_time, 'price' => $f_price,
-                'ip' => $f_ip, 'mac' => $f_mac, 'validity' => $f_val,
-                'blok' => $f_blok, 'raw' => $c
-            ]);
-        }
     } elseif ($hist) {
         // Jika OFFLINE, ambil data terakhir dari database
         if ($f_ip == '-' || $f_ip == '') $f_ip = $hist['ip_address'] ?? '-';
         if ($f_mac == '-' || $f_mac == '') $f_mac = $hist['mac_address'] ?? '-';
         if (empty($f_blok)) $f_blok = $hist['blok_name'] ?? '';
+    }
+    
+    // PERBAIKAN PENTING: Simpan ke database jika ada blok (tidak peduli online/offline)
+    // Ini memastikan semua user dengan Blok-X tersimpan ke database
+    if (!empty($f_blok)) {
+        save_user_history($n, [
+            'date' => $f_date, 
+            'time' => $f_time, 
+            'price' => $f_price,
+            'ip' => $f_ip, 
+            'mac' => $f_mac, 
+            'validity' => $f_val,
+            'blok' => $f_blok, 
+            'raw' => $c
+        ]);
     }
 
     // --- FILTERING ---

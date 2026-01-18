@@ -1,8 +1,46 @@
 # PERBAIKAN SCRIPT users.php - Wartelpas
 **Tanggal:** 19 Januari 2026  
 **File:** `hotspot/users.php`
+**Update:** v2.1 - Fix Database & API Connection
 
-## 🔧 MASALAH YANG DIPERBAIKI
+## 🔧 MASALAH YANG DIPERBAIKI (v2.1 - Update Terbaru)
+
+### ⚠️ **CRITICAL FIX: Database Tidak Tersimpan**
+**Masalah:**
+- Data user dengan blok tidak tersimpan ke database
+- Saat pilih dropdown blok (misal A10), data terpakai masih kosong
+- API Connection tidak menggunakan global connection dari index.php
+
+**Penyebab:**
+1. Script users.php membuat `session_start()` sendiri (konflik dengan index.php)
+2. Koneksi API tidak menggunakan global `$API` yang sudah ada
+3. Data hanya tersimpan ke DB ketika user **online**, tidak saat **offline**
+4. Fungsi `save_user_history()` terlalu restrictive (skip data jika IP kosong)
+
+**Solusi v2.1:**
+```php
+// 1. Hapus session_start() - sudah di index.php
+// 2. Gunakan global API yang sudah terkoneksi
+global $API, $iphost, $userhost, $passwdhost;
+
+// 3. Simpan SEMUA user yang punya blok (tidak peduli online/offline)
+if (!empty($f_blok)) {
+    save_user_history($n, [...]);
+}
+
+// 4. Update fungsi save_user_history dengan fallback logic
+// - Preserve data lama jika data baru kosong
+// - Fallback ke UPDATE/INSERT manual jika ON CONFLICT tidak support
+```
+
+**Hasil:**
+- ✅ Semua user dengan `Blok-X` di comment tersimpan ke database
+- ✅ Dropdown blok selalu lengkap untuk semua status filter
+- ✅ Data identitas tetap muncul meskipun comment router berubah
+
+---
+
+## 🔧 MASALAH YANG DIPERBAIKI (v2.0 - Sebelumnya)
 
 ### 1. **Dropdown Blok Tidak Muncul untuk Status Selain Ready**
 **Masalah Sebelumnya:**
@@ -241,6 +279,83 @@ CREATE TABLE login_history (
 1. **Database SQLite** harus writable - Pastikan folder `db_data/` memiliki permission yang benar
 2. **Backup Data** - Lakukan backup database sebelum testing masif
 3. **Clear Cache** - Refresh browser dengan Ctrl+F5 jika UI tidak update
+4. **First Load** - Saat pertama kali buka users.php, tunggu hingga semua data ter-load. Database akan auto-populate.
+
+---
+
+## 🔍 DATABASE DIAGNOSTIC TOOL
+
+**File:** [db_diagnostic.php](db_diagnostic.php)
+
+Akses: `http://your-domain/db_diagnostic.php?session=SESSION_ID`
+
+**Fitur:**
+- ✅ Cek file database & permissions
+- ✅ Cek table structure & columns
+- ✅ Lihat data yang tersimpan (total & per blok)
+- ✅ Test write capability
+- ✅ Manual query executor
+- ✅ Recommendations & troubleshooting
+
+**Cara Pakai:**
+1. Buka `http://localhost/wartelpas/db_diagnostic.php?session=default`
+2. Cek bagian "Data dalam Database"
+3. Jika kosong, buka users.php dulu untuk populate data
+4. Kembali ke diagnostic tool dan klik "🔄 Refresh Data"
+5. Jika masih kosong, klik "Test Write" untuk cek permission
+6. Gunakan "Manual Query" untuk query custom
+
+**Query Examples:**
+```sql
+-- Lihat semua user di BLOK-A10
+SELECT * FROM login_history WHERE blok_name = 'BLOK-A10'
+
+-- Hitung user per blok
+SELECT blok_name, COUNT(*) as total FROM login_history GROUP BY blok_name
+
+-- Lihat user dengan IP kosong
+SELECT username, blok_name FROM login_history WHERE ip_address = '-'
+```
+
+---
+
+## 🐛 TROUBLESHOOTING
+
+### Dropdown Blok Kosong
+**Penyebab:**
+- Database belum terisi (belum pernah buka users.php)
+- Tidak ada user dengan format `Blok-X` di comment
+- Permission database error
+
+**Solusi:**
+1. Buka [db_diagnostic.php](db_diagnostic.php) untuk cek
+2. Pastikan ada data di database
+3. Jika kosong, buka users.php dan tunggu load selesai
+4. Refresh diagnostic tool
+
+### Data Tidak Tersimpan
+**Penyebab:**
+- Folder `db_data/` tidak writable
+- SQLite extension PHP tidak aktif
+- API Router tidak terkoneksi
+
+**Solusi:**
+1. Cek permission: `chmod 755 db_data/`
+2. Cek PHP: `php -m | grep sqlite` (harus ada pdo_sqlite)
+3. Test write via diagnostic tool
+4. Cek error log di browser console
+
+### Identitas Masih Kosong Setelah Fix
+**Penyebab:**
+- Cache browser belum di-clear
+- User belum pernah ter-load (tidak ada di database)
+- Format comment bukan `Blok-X` tapi format lain
+
+**Solusi:**
+1. Hard refresh: Ctrl+F5 atau Ctrl+Shift+R
+2. Buka users.php tanpa filter, scroll sampai bawah
+3. Cek format comment di MikroTik harus `Blok-XXX`
+4. Query manual: `SELECT * FROM login_history WHERE username = 'USER123'`
 
 ---
 
@@ -260,5 +375,18 @@ CREATE TABLE login_history (
 ---
 
 **Status:** ✅ SIAP PRODUKSI  
-**Tested:** ❌ Menunggu testing user  
-**Version:** v-final-2026-01-19
+**Tested:** ⚠️ Memerlukan testing user  
+**Version:** v2.1-final (19 Jan 2026)
+
+**Critical Updates v2.1:**
+- ✅ Fixed: Database tidak tersimpan
+- ✅ Fixed: API Connection menggunakan global dari index.php
+- ✅ Fixed: Data auto-save untuk SEMUA user dengan blok (online/offline)
+- ✅ Added: db_diagnostic.php untuk debugging
+- ✅ Improved: save_user_history() dengan fallback logic
+
+**Next Steps:**
+1. Test di environment production
+2. Buka db_diagnostic.php untuk verify data tersimpan
+3. Test semua filter (dropdown blok + status)
+4. Report bug jika masih ada masalah
