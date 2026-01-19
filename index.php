@@ -148,7 +148,7 @@ if (!isset($_SESSION["mikhmon"])) {
     echo "<script>window.location='./admin.php?id=login'</script>";
   }
 // redirect to home (Universal Fallback)
-  elseif ($hotspot == "dashboard" || ($hotspot == "" && $hotspotuser == "" && !empty($session))) {
+  elseif ($hotspot == "dashboard" || ($hotspot == "" && $hotspotuser == "" && $userprofile == "" && $removeuserprofile == "" && $report == "" && $removereport == "" && !empty($session))) {
     include_once('./dashboard/home.php');
     $_SESSION['ubn'] = "";
   }
