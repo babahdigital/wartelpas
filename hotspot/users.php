@@ -1304,9 +1304,9 @@ if ($debug_mode && !$is_ajax) {
     .search-clear-btn:hover { background: #6c757d; }
     .page-dim { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 9999; }
     .page-dim .spinner { color: #ecf0f1; font-size: 14px; display: flex; align-items: center; gap: 8px; }
-    .action-popup { position: fixed; right: 20px; bottom: 20px; background: #1f2937; color: #e5e7eb; padding: 12px 14px; border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.35); display: none; align-items: center; gap: 10px; z-index: 10000; }
-    .action-popup.success { border-left: 4px solid #22c55e; }
-    .action-popup.error { border-left: 4px solid #ef4444; }
+    .action-banner { position: fixed; top: 0; left: 0; right: 0; display: none; align-items: center; justify-content: center; gap: 10px; padding: 12px 16px; z-index: 10000; font-weight: 600; }
+    .action-banner.success { background: #16a34a; color: #fff; }
+    .action-banner.error { background: #dc2626; color: #fff; }
     .confirm-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.55); z-index: 10001; }
     .confirm-card { background: #1f2937; color: #e5e7eb; border-radius: 10px; padding: 16px; width: 360px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); }
     .confirm-title { font-weight: 700; margin-bottom: 8px; }
@@ -1317,7 +1317,7 @@ if ($debug_mode && !$is_ajax) {
   <div id="page-dim" class="page-dim" aria-hidden="true">
     <div class="spinner"><i class="fa fa-circle-o-notch fa-spin"></i> Memproses...</div>
   </div>
-  <div id="action-popup" class="action-popup" aria-live="polite"></div>
+  <div id="action-banner" class="action-banner" aria-live="polite"></div>
   <div id="confirm-modal" class="confirm-modal" aria-hidden="true">
     <div class="confirm-card">
       <div class="confirm-title">Konfirmasi</div>
