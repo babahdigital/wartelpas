@@ -1534,9 +1534,7 @@ if ($debug_mode) {
   const baseParams = new URLSearchParams(window.location.search);
 
   let lastFetchId = 0;
-  let typingTimer = null;
   let isTyping = false;
-  let lastQuery = searchInput.value.trim();
 
   function buildUrl(isSearch) {
     const params = new URLSearchParams();
@@ -1569,19 +1567,7 @@ if ($debug_mode) {
     } catch (e) {}
   }
 
-  function scheduleSearch() {
-    const nowQuery = searchInput.value.trim();
-    const changed = nowQuery !== lastQuery;
-    lastQuery = nowQuery;
-    isTyping = true;
-    if (typingTimer) clearTimeout(typingTimer);
-    typingTimer = setTimeout(() => {
-      isTyping = false;
-      fetchUsers(changed);
-    }, 350);
-  }
-
-  searchInput.addEventListener('input', scheduleSearch);
+  // Search hanya saat Enter
   searchInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
