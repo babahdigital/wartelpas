@@ -17,14 +17,7 @@
 :set syncStatsOk true;
 :set syncSalesOk true;
 
-# 2. PRE-CLEAN (Opsional - Pastikan script ini ada)
-# Menggunakan 'do' agar jika hantu-sweeper tidak ada, script INDUK tidak mati.
-:do {
-    /system script run hantu-sweeper;
-} on-error={ :log warning "CUCI GUDANG: Script hantu-sweeper tidak ditemukan, lanjut proses..."; }
-:delay 5s;
-
-# 3. SYNC STATISTIK (Wajib Jalan)
+# 2. SYNC STATISTIK (Wajib Jalan)
 :log info "SYNC: Mengirim data statistik ke Mikhmon...";
 :do {
     # HAPUS parameter 'duration', itu yang bikin error.
@@ -34,7 +27,7 @@
 
 :delay 10s;
 
-# 4. SYNC SALES (Laporan Keuangan - PENTING UNTUK DATA TANGGAL 13)
+# 3. SYNC SALES (Laporan Keuangan - PENTING UNTUK DATA TANGGAL 13)
 :log info "SYNC: Mengirim laporan penjualan...";
 :do {
     # HAPUS parameter 'duration'
@@ -51,7 +44,7 @@
     :return;
 }
 
-# 5. HAPUS USER EXPIRED (CLEANUP)
+# 4. HAPUS USER EXPIRED (CLEANUP)
 :log info "CLEANUP: Menghapus user Disabled...";
 
 # Hapus Profile 10Menit
