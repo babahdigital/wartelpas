@@ -12,6 +12,8 @@ $cur = isset($currency) ? $currency : 'Rp';
 
 // Filter periode
 $req_show = $_GET['show'] ?? 'harian';
+$mode = $_GET['mode'] ?? 'final';
+$mode = ($mode === 'live') ? 'live' : 'final';
 $filter_date = $_GET['date'] ?? '';
 if ($req_show === 'harian') {
         $filter_date = $filter_date ?: date('Y-m-d');
@@ -48,7 +50,14 @@ if (file_exists($dbFile)) {
     try {
         $db = new PDO('sqlite:' . $dbFile);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $res = $db->query("SELECT sh.*, lh.last_status FROM sales_history sh LEFT JOIN login_history lh ON lh.username = sh.username ORDER BY sh.id DESC");
+        if ($mode === 'live') {
+            $res = $db->query("SELECT sh.*, lh.last_status, 'final' AS row_mode FROM sales_history sh LEFT JOIN login_history lh ON lh.username = sh.username
+                               UNION ALL
+                               SELECT ls.*, '' AS last_status, 'pending' AS row_mode FROM live_sales ls WHERE ls.sync_status = 'pending'
+                               ORDER BY id DESC");
+        } else {
+            $res = $db->query("SELECT sh.*, lh.last_status, 'final' AS row_mode FROM sales_history sh LEFT JOIN login_history lh ON lh.username = sh.username ORDER BY sh.id DESC");
+        }
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         $rows = [];
@@ -79,12 +88,12 @@ $total_qty_invalid = 0;
 $by_block = [];
 $by_profile = [];
 
-// Gunakan materialized summary jika tersedia
+$use_summary = false;
+// Gunakan materialized summary jika tersedia (hanya untuk mode final)
 $period_type = $req_show === 'harian' ? 'day' : ($req_show === 'bulanan' ? 'month' : 'year');
 $period_key = $filter_date;
-$use_summary = false;
 
-if (isset($db) && $db instanceof PDO && table_exists($db, 'sales_summary_period')) {
+if ($mode === 'final' && isset($db) && $db instanceof PDO && table_exists($db, 'sales_summary_period')) {
     $use_summary = true;
     try {
         $stmt = $db->prepare("SELECT * FROM sales_summary_period WHERE period_type = :pt AND period_key = :pk LIMIT 1");
@@ -210,7 +219,8 @@ foreach ($rows as $r) {
                 'status' => strtoupper($status),
                 'price' => $price,
                 'net' => $net_add,
-                'comment' => $comment
+            'comment' => $comment,
+            'row_mode' => $r['row_mode'] ?? 'final'
         ];
 }
 
@@ -246,6 +256,10 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
         <div class="filter-bar">
             <form method="get" action="" class="filter-bar">
                 <input type="hidden" name="report" value="selling">
+                <select name="mode" onchange="this.form.submit()">
+                    <option value="final" <?= $mode==='final'?'selected':''; ?>>Final</option>
+                    <option value="live" <?= $mode==='live'?'selected':''; ?>>Live</option>
+                </select>
                 <select name="show" onchange="this.form.submit()">
                     <option value="harian" <?= $req_show==='harian'?'selected':''; ?>>Harian</option>
                     <option value="bulanan" <?= $req_show==='bulanan'?'selected':''; ?>>Bulanan</option>
@@ -306,6 +320,7 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
                         <th class="text-right">Harga</th>
                         <th class="text-right">Efektif</th>
                         <th>Catatan</th>
+                        <th>Mode</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -327,6 +342,7 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
                             <td class="text-right"><?= number_format($it['price'],0,',','.') ?></td>
                             <td class="text-right"><?= number_format($it['net'],0,',','.') ?></td>
                             <td><small><?= htmlspecialchars($it['comment']) ?></small></td>
+                            <td><small><?= $it['row_mode'] === 'pending' ? 'LIVE' : 'FINAL' ?></small></td>
                         </tr>
                     <?php endforeach; endif; ?>
                 </tbody>

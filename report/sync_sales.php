@@ -90,6 +90,33 @@ try {
         if (file_exists($summaryHelper)) {
             require_once($summaryHelper);
         }
+
+        // Tabel live_sales untuk realtime
+        $db->exec("CREATE TABLE IF NOT EXISTS live_sales (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            raw_date TEXT,
+            raw_time TEXT,
+            sale_date TEXT,
+            sale_time TEXT,
+            sale_datetime TEXT,
+            username TEXT,
+            profile TEXT,
+            profile_snapshot TEXT,
+            price INTEGER,
+            price_snapshot INTEGER,
+            validity TEXT,
+            comment TEXT,
+            blok_name TEXT,
+            status TEXT,
+            is_rusak INTEGER,
+            is_retur INTEGER,
+            is_invalid INTEGER,
+            qty INTEGER,
+            full_raw_data TEXT UNIQUE,
+            sync_status TEXT DEFAULT 'pending',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            synced_at DATETIME
+        )");
 } catch (PDOException $e) {
     die("Error DB: " . $e->getMessage());
 }
@@ -199,6 +226,56 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
     }
     
     $API->disconnect();
+
+    // Pindahkan data live (pending) ke sales_history saat settlement
+    try {
+        $liveRows = $db->query("SELECT * FROM live_sales WHERE sync_status = 'pending'");
+        $liveRows = $liveRows ? $liveRows->fetchAll(PDO::FETCH_ASSOC) : [];
+        if (!empty($liveRows)) {
+            $ins = $db->prepare("INSERT OR IGNORE INTO sales_history (
+                raw_date, raw_time, sale_date, sale_time, sale_datetime,
+                username, profile, profile_snapshot,
+                price, price_snapshot, sprice_snapshot, validity,
+                comment, blok_name, status, is_rusak, is_retur, is_invalid, qty,
+                full_raw_data
+            ) VALUES (
+                :rd, :rt, :sd, :st, :sdt,
+                :usr, :prof, :prof_snap,
+                :prc, :prc_snap, :sprc_snap, :valid,
+                :cmt, :blok, :status, :is_rusak, :is_retur, :is_invalid, :qty,
+                :raw
+            )");
+
+            foreach ($liveRows as $r) {
+                $ins->execute([
+                    ':rd' => $r['raw_date'] ?? '',
+                    ':rt' => $r['raw_time'] ?? '',
+                    ':sd' => $r['sale_date'] ?? '',
+                    ':st' => $r['sale_time'] ?? '',
+                    ':sdt' => $r['sale_datetime'] ?? '',
+                    ':usr' => $r['username'] ?? '',
+                    ':prof' => $r['profile'] ?? '',
+                    ':prof_snap' => $r['profile_snapshot'] ?? '',
+                    ':prc' => (int)($r['price'] ?? 0),
+                    ':prc_snap' => (int)($r['price_snapshot'] ?? ($r['price'] ?? 0)),
+                    ':sprc_snap' => 0,
+                    ':valid' => $r['validity'] ?? '',
+                    ':cmt' => $r['comment'] ?? '',
+                    ':blok' => $r['blok_name'] ?? '',
+                    ':status' => $r['status'] ?? 'normal',
+                    ':is_rusak' => (int)($r['is_rusak'] ?? 0),
+                    ':is_retur' => (int)($r['is_retur'] ?? 0),
+                    ':is_invalid' => (int)($r['is_invalid'] ?? 0),
+                    ':qty' => (int)($r['qty'] ?? 1),
+                    ':raw' => $r['full_raw_data'] ?? ''
+                ]);
+            }
+
+            $db->exec("UPDATE live_sales SET sync_status='final', synced_at=CURRENT_TIMESTAMP WHERE sync_status='pending'");
+        }
+    } catch (Exception $e) {
+        // Abaikan error live agar sync tetap sukses
+    }
 
     // Rebuild rekap otomatis agar laporan cepat
     if (function_exists('rebuild_sales_summary')) {
