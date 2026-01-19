@@ -41,6 +41,7 @@ services:
       - ./hotspot/users.php:/var/www/html/hotspot/users.php
       - ./hotspot/hotspotactive.php:/var/www/html/hotspot/hotspotactive.php
       - ./hotspot/hosts.php:/var/www/html/hotspot/hosts.php
+      - ./hotspot/cookies.php:/var/www/html/hotspot/cookies.php
       - ./hotspot/save_logout_time.php:/var/www/html/hotspot/save_logout_time.php
       # Keamanan: Overwrite file asli dengan file custom
       - ./hotspot/adduser.php:/var/www/html/hotspot/adduser.php
