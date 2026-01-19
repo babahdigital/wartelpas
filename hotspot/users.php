@@ -1552,13 +1552,14 @@ if ($debug_mode) {
     const debug = baseParams.get('debug');
     if (debug) params.set('debug', debug);
     if (isSearch) params.set('page', '1');
+    params.set('_', Date.now().toString());
     return ajaxBase + '?' + params.toString();
   }
 
   async function fetchUsers(isSearch) {
     const fetchId = ++lastFetchId;
     try {
-      const res = await fetch(buildUrl(isSearch), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const res = await fetch(buildUrl(isSearch), { headers: { 'X-Requested-With': 'XMLHttpRequest' }, cache: 'no-store' });
       if (!res.ok) return;
       const data = await res.json();
       if (fetchId !== lastFetchId) return;
