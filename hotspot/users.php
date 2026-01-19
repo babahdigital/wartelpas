@@ -720,9 +720,10 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           } else {
             $uptime_final = $uptime_user != '' ? $uptime_user : ($uptime_hist != '' ? $uptime_hist : '0s');
           }
-          $cm = extract_ip_mac_from_comment($comm);
-          $ip_final = $arow['address'] ?? ($hist['ip_address'] ?? ($cm['ip'] ?? '-'));
-          $mac_final = $arow['mac-address'] ?? ($hist['mac_address'] ?? ($urow['mac-address'] ?? ($cm['mac'] ?? '-')));
+          $comment_src = $urow['comment'] ?? $comm;
+          $cm = extract_ip_mac_from_comment($comment_src);
+          $ip_final = $arow['address'] ?? ($cm['ip'] ?? ($hist['last_ip'] ?? ($hist['ip_address'] ?? '-')));
+          $mac_final = $arow['mac-address'] ?? ($urow['mac-address'] ?? ($cm['mac'] ?? ($hist['last_mac'] ?? ($hist['mac_address'] ?? '-'))));
           $login_time_real = $hist['login_time_real'] ?? null;
           $logout_time_real = $hist['logout_time_real'] ?? null;
           if (empty($logout_time_real)) {
@@ -737,6 +738,10 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             'mac' => $mac_final ?: '-',
             'uptime' => $uptime_final,
             'bytes' => $bytes_final,
+            'first_ip' => (!empty($hist['first_ip']) ? $hist['first_ip'] : ($ip_final ?: '')),
+            'first_mac' => (!empty($hist['first_mac']) ? $hist['first_mac'] : ($mac_final ?: '')),
+            'last_ip' => ($ip_final && $ip_final != '-') ? $ip_final : ($hist['last_ip'] ?? ''),
+            'last_mac' => ($mac_final && $mac_final != '-') ? $mac_final : ($hist['last_mac'] ?? ''),
             'blok' => extract_blok_name($comm),
             'raw' => $new_c,
             'login_time_real' => $login_time_real,
@@ -744,6 +749,18 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             'status' => 'rusak'
           ];
           save_user_history($name, $save_data);
+
+          // Update status transaksi agar laporan live berkurang
+          if ($db && $name != '') {
+            try {
+              $stmt = $db->prepare("UPDATE sales_history SET status='rusak', is_rusak=1, is_retur=0, is_invalid=0 WHERE username = :u");
+              $stmt->execute([':u' => $name]);
+            } catch(Exception $e) {}
+            try {
+              $stmt = $db->prepare("UPDATE live_sales SET status='rusak', is_rusak=1, is_retur=0, is_invalid=0 WHERE username = :u AND sync_status = 'pending'");
+              $stmt->execute([':u' => $name]);
+            } catch(Exception $e) {}
+          }
         }
       } elseif ($act == 'rollback') {
         // Kembalikan status RUSAK
