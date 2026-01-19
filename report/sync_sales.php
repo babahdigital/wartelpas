@@ -29,7 +29,10 @@ if (!is_dir($root_dir . '/db_data')) mkdir($root_dir . '/db_data', 0777, true);
 try {
     $db = new PDO('sqlite:' . $dbFile);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    
+    $db->exec("PRAGMA journal_mode=WAL;");
+    $db->exec("PRAGMA synchronous=NORMAL;");
+    $db->exec("PRAGMA busy_timeout=2000;");
+
     // Buat Tabel Riwayat Penjualan (sales_history)
     // Struktur disesuaikan dengan format data script Mikhmon
     $db->exec("CREATE TABLE IF NOT EXISTS sales_history (
@@ -39,9 +42,11 @@ try {
                 profile TEXT,
                 price INTEGER,
                 comment TEXT,
+                blok_name TEXT,
                 full_raw_data TEXT UNIQUE,
                 sync_date DATETIME DEFAULT CURRENT_TIMESTAMP
               )");
+    try { $db->exec("ALTER TABLE sales_history ADD COLUMN blok_name TEXT"); } catch(Exception $e) {}
 } catch (PDOException $e) {
     die("Error DB: " . $e->getMessage());
 }
@@ -58,7 +63,7 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
     $scripts = $API->read();
     
     $count = 0;
-    $stmt = $db->prepare("INSERT OR IGNORE INTO sales_history (raw_date, username, profile, price, comment, full_raw_data) VALUES (:rd, :usr, :prof, :prc, :cmt, :raw)");
+    $stmt = $db->prepare("INSERT OR IGNORE INTO sales_history (raw_date, username, profile, price, comment, blok_name, full_raw_data) VALUES (:rd, :usr, :prof, :prc, :cmt, :blok, :raw)");
 
     foreach ($scripts as $s) {
         $rawData = $s['name']; // Format: jan/11/2026-|-09:00:00-|-user-|-price...
@@ -74,6 +79,10 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
             $price    = (int)$d[3]; // Harga
             $profile  = isset($d[7]) ? $d[7] : ''; // Profil
             $comment  = isset($d[8]) ? $d[8] : ''; // Komentar
+            $blok_name = '';
+            if ($comment && preg_match('/\bblok\s*[-_]?\s*([A-Za-z0-9]+)/i', $comment, $m)) {
+                $blok_name = 'BLOK-' . strtoupper($m[1]);
+            }
             
             // Simpan ke DB
             $stmt->bindValue(':rd', $raw_date);
@@ -81,6 +90,7 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
             $stmt->bindValue(':prof', $profile);
             $stmt->bindValue(':prc', $price);
             $stmt->bindValue(':cmt', $comment);
+            $stmt->bindValue(':blok', $blok_name);
             $stmt->bindValue(':raw', $rawData); // Simpan mentahannya juga buat jaga2
             
             if ($stmt->execute()) {

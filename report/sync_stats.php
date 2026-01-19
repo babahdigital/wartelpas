@@ -1,7 +1,7 @@
 <?php
 // FILE: report/sync_stats.php
 // Modified by Pak Dul & Gemini AI (2026)
-// UPDATE: AUTO VALIDATION & AUDIT INJECTION
+// UPDATE: Sync statistik ke DB tanpa ubah komentar MikroTik
 
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
@@ -32,118 +32,125 @@ if (!is_dir($dbDir)) { mkdir($dbDir, 0777, true); }
 try {
     $db = new PDO('sqlite:' . $dbFile);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    
-    // Tabel Statistik User
-    $db->exec("CREATE TABLE IF NOT EXISTS user_stats (
-                username TEXT PRIMARY KEY,
-                uptime TEXT,
-                bytes_total INTEGER,
-                last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
-              )");
+    $db->exec("PRAGMA journal_mode=WAL;");
+    $db->exec("PRAGMA synchronous=NORMAL;");
+    $db->exec("PRAGMA busy_timeout=2000;");
 
-    // Tabel Audit (Untuk menampung user tidak valid)
-    $db->exec("CREATE TABLE IF NOT EXISTS security_log (
+    // Tabel login_history sesuai users.php (persisten)
+    $db->exec("CREATE TABLE IF NOT EXISTS login_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        log_date DATETIME,
-        username TEXT,
-        ip_address TEXT, 
+        username TEXT UNIQUE,
+        login_date TEXT,
+        login_time TEXT,
+        price TEXT,
+        ip_address TEXT,
         mac_address TEXT,
-        reason TEXT,
-        comment TEXT,
-        action_taken TEXT
+        last_uptime TEXT,
+        last_bytes INTEGER,
+        first_ip TEXT,
+        first_mac TEXT,
+        last_ip TEXT,
+        last_mac TEXT,
+        first_login_real DATETIME,
+        last_login_real DATETIME,
+        validity TEXT,
+        blok_name TEXT,
+        raw_comment TEXT,
+        login_time_real DATETIME,
+        logout_time_real DATETIME,
+        last_status TEXT DEFAULT 'ready',
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )");
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN last_uptime TEXT"); } catch(Exception $e) {}
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN last_bytes INTEGER"); } catch(Exception $e) {}
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN last_ip TEXT"); } catch(Exception $e) {}
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN last_mac TEXT"); } catch(Exception $e) {}
     
 } catch (PDOException $e) { die("Error DB: " . $e->getMessage()); }
 
 // EKSEKUSI UTAMA
 $API = new RouterosAPI();
 if ($API->connect($use_ip, $use_user, $use_pass)) {
-    
-    // Ambil User yang aktif/ada traffic
-    $API->write('/ip/hotspot/user/print', false);
-    $API->write('=.proplist=.id,name,uptime,bytes-in,bytes-out,comment,mac-address,profile'); 
-    $users = $API->read();
-    
-    $count_valid = 0;
-    $count_audit = 0;
-    
-    // Prepare Statement
-    $stmtStats = $db->prepare("INSERT OR REPLACE INTO user_stats (username, uptime, bytes_total, last_updated) VALUES (:user, :upt, :bytes, datetime('now','localtime'))");
-    $stmtAudit = $db->prepare("INSERT INTO security_log (log_date, username, mac_address, reason, comment, action_taken) VALUES (datetime('now','localtime'), :user, :mac, :reason, :comm, 'TAGGED_INVALID')");
 
-    foreach ($users as $u) {
-        $uid = $u['.id'];
-        $uName = $u['name'];
-        $uComm = isset($u['comment']) ? $u['comment'] : '';
-        $uMac  = isset($u['mac-address']) ? $u['mac-address'] : '';
-        $uProf = isset($u['profile']) ? $u['profile'] : '';
-        
-        $bytesIn  = isset($u['bytes-in']) ? intval($u['bytes-in']) : 0;
-        $bytesOut = isset($u['bytes-out']) ? intval($u['bytes-out']) : 0;
-        $totalBytes = $bytesIn + $bytesOut;
-        $uptimeStr = isset($u['uptime']) ? $u['uptime'] : '0s';
-
-        // 1. SIMPAN STATISTIK (Hanya jika ada pemakaian)
-        if ($totalBytes > 1024) { // Minimal 1KB baru dianggap aktif
-            $stmtStats->bindValue(':user', $uName);
-            $stmtStats->bindValue(':upt', $uptimeStr);
-            $stmtStats->bindValue(':bytes', $totalBytes);
-            $stmtStats->execute();
-
-            // 2. LOGIKA VALIDASI & AUDIT
-            // Cek apakah user ini sudah ditandai?
-            $is_already_valid = (stripos($uComm, 'Valid:') !== false);
-            $is_already_audit = (stripos($uComm, 'Audit:') !== false);
-            
-            // Cek apakah format sesuai aturan penjualan (Harus ada 'Blok-')
-            $is_legit_format = (stripos($uComm, 'Blok-') !== false);
-
-            if (!$is_already_valid && !$is_already_audit) {
-                
-                if ($is_legit_format) {
-                    // KASUS A: Format Benar (Ada Blok-) & Ada Traffic -> TANDAI VALID
-                    $newComm = "Valid: " . $uComm;
-                    $API->write('/ip/hotspot/user/set', false);
-                    $API->write('=.id=' . $uid, false);
-                    $API->write('=comment=' . $newComm);
-                    $API->read();
-                    $count_valid++;
-                    echo "VALIDATED: $uName ($newComm)\n";
-                    
-                } else {
-                    // KASUS B: Format Salah (Gak ada Blok-) TAPI Ada Traffic -> MASUK AUDIT
-                    // Kecuali profile tertentu (misal default-trial), sesuaikan jika perlu
-                    if (stripos($uName, 'default') === false) { 
-                        $reason = "Usage without Blok- Tag";
-                        
-                        // Masukkan ke DB Audit
-                        $stmtAudit->bindValue(':user', $uName);
-                        $stmtAudit->bindValue(':mac', $uMac);
-                        $stmtAudit->bindValue(':reason', $reason);
-                        $stmtAudit->bindValue(':comm', $uComm);
-                        $stmtAudit->execute();
-                        
-                        // Tandai di Mikrotik biar gak masuk lagi
-                        $newComm = "Audit: " . $uComm;
-                        $API->write('/ip/hotspot/user/set', false);
-                        $API->write('=.id=' . $uid, false);
-                        $API->write('=comment=' . $newComm);
-                        $API->read();
-                        
-                        $count_audit++;
-                        echo "AUDITED: $uName (Alasan: $reason)\n";
-                    }
-                }
-            }
-        }
+    $active_list = $API->comm('/ip/hotspot/active/print', [
+        '.proplist' => 'user,uptime,bytes-in,bytes-out,address,mac-address'
+    ]);
+    $activeMap = [];
+    foreach ($active_list as $a) {
+        if (isset($a['user'])) $activeMap[$a['user']] = $a;
     }
-    
+
+    $users = $API->comm('/ip/hotspot/user/print', [
+        '.proplist' => '.id,name,uptime,bytes-in,bytes-out,comment,mac-address,disabled'
+    ]);
+
+    $stmt = $db->prepare("INSERT INTO login_history (
+        username, ip_address, mac_address, last_uptime, last_bytes, last_ip, last_mac, last_status, updated_at
+    ) VALUES (
+        :u, :ip, :mac, :up, :lb, :lip, :lmac, :st, :upd
+    ) ON CONFLICT(username) DO UPDATE SET
+        ip_address = CASE WHEN excluded.ip_address != '-' AND excluded.ip_address != '' THEN excluded.ip_address ELSE COALESCE(login_history.ip_address, '-') END,
+        mac_address = CASE WHEN excluded.mac_address != '-' AND excluded.mac_address != '' THEN excluded.mac_address ELSE COALESCE(login_history.mac_address, '-') END,
+        last_uptime = COALESCE(NULLIF(excluded.last_uptime, ''), login_history.last_uptime),
+        last_bytes = CASE WHEN excluded.last_bytes IS NOT NULL AND excluded.last_bytes > 0 THEN excluded.last_bytes ELSE COALESCE(login_history.last_bytes, 0) END,
+        last_ip = CASE WHEN excluded.last_ip != '' THEN excluded.last_ip ELSE COALESCE(login_history.last_ip, '') END,
+        last_mac = CASE WHEN excluded.last_mac != '' THEN excluded.last_mac ELSE COALESCE(login_history.last_mac, '') END,
+        last_status = CASE WHEN excluded.last_status != '' THEN excluded.last_status ELSE login_history.last_status END,
+        updated_at = excluded.updated_at");
+
+    $count = 0;
+    foreach ($users as $u) {
+        $name = $u['name'] ?? '';
+        if ($name === '') continue;
+
+        $comment = $u['comment'] ?? '';
+        $is_active = isset($activeMap[$name]);
+
+        $bytes_total = (int)($u['bytes-in'] ?? 0) + (int)($u['bytes-out'] ?? 0);
+        $bytes_active = 0;
+        if ($is_active) {
+            $bytes_active = (int)($activeMap[$name]['bytes-in'] ?? 0) + (int)($activeMap[$name]['bytes-out'] ?? 0);
+        }
+        $bytes = max($bytes_total, $bytes_active);
+
+        $uptime_user = $u['uptime'] ?? '';
+        $uptime_active = $is_active ? ($activeMap[$name]['uptime'] ?? '') : '';
+        $uptime = $uptime_user !== '' ? $uptime_user : $uptime_active;
+
+        $ip = '-';
+        $mac = $u['mac-address'] ?? '-';
+        $last_ip = '';
+        $last_mac = '';
+
+        if ($is_active) {
+            $ip = $activeMap[$name]['address'] ?? '-';
+            $mac = $activeMap[$name]['mac-address'] ?? ($mac ?: '-');
+            $last_ip = $ip !== '-' ? $ip : '';
+            $last_mac = $mac !== '-' ? $mac : '';
+        } else {
+            if (preg_match('/\bIP\s*:\s*([^|\s]+)/i', $comment, $m)) $ip = trim($m[1]);
+            if (preg_match('/\bMAC\s*:\s*([^|\s]+)/i', $comment, $m)) $mac = trim($m[1]);
+        }
+
+        $status = $is_active ? 'online' : '';
+
+        $stmt->execute([
+            ':u' => $name,
+            ':ip' => $ip ?: '-',
+            ':mac' => $mac ?: '-',
+            ':up' => $uptime ?: '',
+            ':lb' => $bytes,
+            ':lip' => $last_ip,
+            ':lmac' => $last_mac,
+            ':st' => $status,
+            ':upd' => date('Y-m-d H:i:s')
+        ]);
+        $count++;
+    }
+
     $API->disconnect();
-    echo "\n------------------------\n";
-    echo "PROSES SELESAI.\n";
-    echo "User divalidasi (Sales): $count_valid\n";
-    echo "User diaudit (Invalid): $count_audit\n";
-    
+    echo "Sukses: $count user disinkronkan ke DB.\n";
+
 } else {
     echo "Error: Gagal Login ke MikroTik.";
 }

@@ -12,6 +12,11 @@
 }
 :set isCleaning true;
 
+:global syncStatsOk;
+:global syncSalesOk;
+:set syncStatsOk true;
+:set syncSalesOk true;
+
 # 2. PRE-CLEAN (Opsional - Pastikan script ini ada)
 # Menggunakan 'do' agar jika hantu-sweeper tidak ada, script INDUK tidak mati.
 :do {
@@ -25,7 +30,7 @@
     # HAPUS parameter 'duration', itu yang bikin error.
     /tool fetch url="http://10.10.83.2:8081/report/sync_stats.php?key=WartelpasSecureKey" keep-result=no;
     :log info "SYNC STATS: Berhasil.";
-} on-error={ :log error "SYNC STATS: GAGAL KONEKSI! Cek IP Server/Jaringan."; }
+} on-error={ :log error "SYNC STATS: GAGAL KONEKSI! Cek IP Server/Jaringan."; :set syncStatsOk false; }
 
 :delay 10s;
 
@@ -35,9 +40,16 @@
     # HAPUS parameter 'duration'
     /tool fetch url="http://10.10.83.2:8081/report/sync_sales.php?key=WartelpasSecureKey" keep-result=no;
     :log info "SYNC SALES: Berhasil terkirim.";
-} on-error={ :log error "SYNC SALES: GAGAL KONEKSI! Data penjualan tidak masuk DB."; }
+} on-error={ :log error "SYNC SALES: GAGAL KONEKSI! Data penjualan tidak masuk DB."; :set syncSalesOk false; }
 
 :delay 10s;
+
+# Jika sync gagal, batal cleanup agar data MikroTik tidak hilang
+:if (($syncStatsOk = false) || ($syncSalesOk = false)) do={
+    :log warning "CLEANUP: Dibatalkan karena sync gagal. Data MikroTik dipertahankan.";
+    :set isCleaning false;
+    :return;
+}
 
 # 5. HAPUS USER EXPIRED (CLEANUP)
 :log info "CLEANUP: Menghapus user Disabled...";
