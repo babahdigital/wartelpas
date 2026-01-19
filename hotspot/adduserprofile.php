@@ -247,6 +247,16 @@ if (!isset($_SESSION["mikhmon"])) {
         font-size: 0.9rem;
         line-height: 1.5;
     }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px 16px;
+    }
+
+    @media (min-width: 768px) {
+      .form-grid { grid-template-columns: 1fr 1fr; }
+    }
 </style>
 
 <div class="container-fluid profile-wrapper">
@@ -267,108 +277,74 @@ if (!isset($_SESSION["mikhmon"])) {
               </button>
             </div>
 
-            <div class="row g-3">
-              <div class="col-12 col-md-6">
-                <div class="form-group">
-                  <label><?= $_name ?></label>
-                  <input class="form-control-mod" type="text" onchange="remSpace();" autocomplete="off" name="name" value="" required="1" autofocus>
-                </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label><?= $_name ?></label>
+                <input class="form-control-mod" type="text" onchange="remSpace();" autocomplete="off" name="name" value="" required="1" autofocus>
               </div>
-              <div class="col-12 col-md-6">
-                <div class="form-group">
-                  <label>Address Pool</label>
-                  <select class="form-control-mod" name="ppool">
-                    <option>none</option>
-                    <?php $TotalReg = count($getpool);
-                    for ($i = 0; $i < $TotalReg; $i++) {
-                      echo "<option>" . $getpool[$i]['name'] . "</option>";
-                    }
-                    ?>
-                  </select>
-                </div>
+              <div class="form-group">
+                <label>Address Pool</label>
+                <select class="form-control-mod" name="ppool">
+                  <option>none</option>
+                  <?php $TotalReg = count($getpool);
+                  for ($i = 0; $i < $TotalReg; $i++) {
+                    echo "<option>" . $getpool[$i]['name'] . "</option>";
+                  }
+                  ?>
+                </select>
               </div>
-            </div>
-
-            <div class="row g-3">
-              <div class="col-12 col-md-6">
-                <div class="form-group">
-                  <label>Shared Users</label>
-                  <input class="form-control-mod" type="text" autocomplete="off" name="sharedusers" value="1" required="1">
-                </div>
+              <div class="form-group">
+                <label>Shared Users</label>
+                <input class="form-control-mod" type="text" autocomplete="off" name="sharedusers" value="1" required="1">
               </div>
-              <div class="col-12 col-md-6">
-                <div class="form-group">
-                  <label>Rate limit [up/down]</label>
-                  <input class="form-control-mod" type="text" name="ratelimit" autocomplete="off" value="" placeholder="Example : 512k/1M">
-                </div>
+              <div class="form-group">
+                <label>Rate limit [up/down]</label>
+                <input class="form-control-mod" type="text" name="ratelimit" autocomplete="off" value="" placeholder="Example : 512k/1M">
               </div>
-            </div>
-
-            <div class="row g-3">
-              <div class="col-12 col-md-6">
-                <div class="form-group">
-                  <label><?= $_expired_mode ?></label>
-                  <select class="form-control-mod" onchange="RequiredV();" id="expmode" name="expmode" required="1">
-                    <option value="">Select...</option>
-                    <option value="0">None</option>
-                    <option value="rem">Remove</option>
-                    <option value="ntf">Notice</option>
-                    <option value="remc">Remove & Record</option>
-                    <option value="ntfc">Notice & Record</option>
-                  </select>
-                </div>
+              <div class="form-group">
+                <label><?= $_expired_mode ?></label>
+                <select class="form-control-mod" onchange="RequiredV();" id="expmode" name="expmode" required="1">
+                  <option value="">Select...</option>
+                  <option value="0">None</option>
+                  <option value="rem">Remove</option>
+                  <option value="ntf">Notice</option>
+                  <option value="remc">Remove & Record</option>
+                  <option value="ntfc">Notice & Record</option>
+                </select>
               </div>
-              <div id="validity" style="display:none;" class="col-12 col-md-6">
-                <div class="form-group">
-                  <label><?= $_validity ?></label>
-                  <input class="form-control-mod" type="text" id="validi" autocomplete="off" name="validity" value="" required="1">
-                </div>
+              <div id="validity" style="display:none;" class="form-group">
+                <label><?= $_validity ?></label>
+                <input class="form-control-mod" type="text" id="validi" autocomplete="off" name="validity" value="" required="1">
               </div>
-              <div id="graceperiod" style="display:none;" class="col-12 col-md-6">
-                <div class="form-group">
-                  <label><?= $_grace_period ?></label>
-                  <input class="form-control-mod" type="text" id="gracepi" autocomplete="off" name="graceperiod" placeholder="5m" value="5m" required="1">
-                </div>
+              <div id="graceperiod" style="display:none;" class="form-group">
+                <label><?= $_grace_period ?></label>
+                <input class="form-control-mod" type="text" id="gracepi" autocomplete="off" name="graceperiod" placeholder="5m" value="5m" required="1">
               </div>
-            </div>
-
-            <div class="row g-3">
-              <div class="col-12 col-md-6">
-                <div class="form-group">
-                  <label><?= $_price.' '.$currency; ?></label>
-                  <input class="form-control-mod" type="text" min="0" name="price" value="">
-                </div>
+              <div class="form-group">
+                <label><?= $_price.' '.$currency; ?></label>
+                <input class="form-control-mod" type="text" min="0" name="price" value="">
               </div>
-              <div class="col-12 col-md-6">
-                <div class="form-group">
-                  <label><?= $_selling_price.' '.$currency; ?></label>
-                  <input class="form-control-mod" type="text" min="0" name="sprice" value="">
-                </div>
+              <div class="form-group">
+                <label><?= $_selling_price.' '.$currency; ?></label>
+                <input class="form-control-mod" type="text" min="0" name="sprice" value="">
               </div>
-            </div>
-
-            <div class="row g-3">
-              <div class="col-12 col-md-6">
-                <div class="form-group">
-                  <label><?= $_lock_user ?></label>
-                  <select class="form-control-mod" id="lockunlock" name="lockunlock" required="1">
-                    <option value="Disable">Disable</option>
-                    <option value="Enable">Enable</option>
-                  </select>
-                </div>
+              <div class="form-group">
+                <label><?= $_lock_user ?></label>
+                <select class="form-control-mod" id="lockunlock" name="lockunlock" required="1">
+                  <option value="Disable">Disable</option>
+                  <option value="Enable">Enable</option>
+                </select>
               </div>
-              <div class="col-12 col-md-6">
-                <div class="form-group">
-                  <label>Parent Queue</label>
-                  <select class="form-control-mod" name="parent">
-                    <option>none</option>
-                    <?php $TotalReg = count($getallqueue);
-                    for ($i = 0; $i < $TotalReg; $i++) {
-                      echo "<option>" . $getallqueue[$i]['name'] . "</option>";
-                    }
-                    ?>
-                  </select>
-                </div>
+              <div class="form-group">
+                <label>Parent Queue</label>
+                <select class="form-control-mod" name="parent">
+                  <option>none</option>
+                  <?php $TotalReg = count($getallqueue);
+                  for ($i = 0; $i < $TotalReg; $i++) {
+                    echo "<option>" . $getallqueue[$i]['name'] . "</option>";
+                  }
+                  ?>
+                </select>
               </div>
             </div>
           </form>
