@@ -243,6 +243,11 @@ if (!isset($_SESSION["mikhmon"])) {
         flex-direction: column;
     }
 
+    .gen-wrapper { padding: 16px 18px; }
+    @media (min-width: 992px) {
+        .gen-wrapper { padding: 20px 26px; }
+    }
+
     /* Form Styles */
     .form-group label {
         color: var(--text-sec);
@@ -261,6 +266,7 @@ if (!isset($_SESSION["mikhmon"])) {
         font-size: 0.95rem;
         transition: border 0.2s;
         margin-bottom: 5px;
+        min-height: 42px;
     }
 
     .form-control-mod:focus {
@@ -321,6 +327,15 @@ if (!isset($_SESSION["mikhmon"])) {
         margin-bottom: 20px;
     }
 
+    .info-server {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .info-server .form-control-mod {
+        flex: 1 1 220px;
+    }
+
     /* FOOTER STATS (Rusak/Retur) */
     .footer-stats-container {
         margin-top: auto; /* Tempel di bawah card ringkasan */
@@ -361,10 +376,10 @@ if (!isset($_SESSION["mikhmon"])) {
     ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
 </style>
 
-<div class="container-fluid p-0">
-    <div class="row row-eq-height">
+<div class="container-fluid gen-wrapper">
+    <div class="row row-eq-height g-3">
         
-        <div class="col-md-7 col-lg-7 mb-3">
+        <div class="col-12 col-lg-7 col-xl-8">
             <div class="card-modern">
                 <div class="card-header-mod">
                     <h3><i class="fa fa-cogs"></i> Konfigurasi Voucher</h3>
@@ -375,15 +390,15 @@ if (!isset($_SESSION["mikhmon"])) {
                         <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
                         <input type="hidden" name="session" value="<?= $session; ?>">
 
-                        <div class="row">
-                            <div class="col-6 mb-3">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
                                 <div class="form-group">
                                     <label>Jumlah (Pcs)</label>
                                     <input type="number" name="qty" id="qtyInput" class="form-control-mod" value="50" min="50" max="500" required>
                                     <div class="text-danger text-info-xxs">*Minimal 50 User</div>
                                 </div>
                             </div>
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6">
                                 <div class="form-group">
                                     <label>Panjang Karakter</label>
                                     <select name="userl" class="form-control-mod">
@@ -395,8 +410,8 @@ if (!isset($_SESSION["mikhmon"])) {
                             </div>
                         </div>
 
-                        <div class="row">
-                            <div class="col-6 mb-3">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
                                 <div class="form-group">
                                     <label>Profil Paket</label>
                                     <select name="profile" id="uprof" class="form-control-mod" onchange="GetVP(); updateTimeLimit();" required>
@@ -414,7 +429,7 @@ if (!isset($_SESSION["mikhmon"])) {
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6">
                                 <div class="form-group">
                                     <label>Batas Waktu</label>
                                     <input type="text" id="timelimit" name="timelimit_display" class="form-control-mod locked-input" readonly value="-">
@@ -422,8 +437,8 @@ if (!isset($_SESSION["mikhmon"])) {
                             </div>
                         </div>
 
-                        <div class="row">
-                            <div class="col-12 mb-3">
+                        <div class="row g-3">
+                            <div class="col-12">
                                 <div class="form-group">
                                     <label>Komentar (Kode Blok)</label>
                                     <select name="adcomment" class="form-control-mod" required>
@@ -437,12 +452,12 @@ if (!isset($_SESSION["mikhmon"])) {
                             </div>
                         </div>
 
-                        <div class="row">
-                             <div class="col-12 mb-3">
+                            <div class="row g-3">
+                                <div class="col-12">
                                 <div class="form-group">
                                     <label>Info Server</label>
-                                    <div style="display:flex; gap:10px;">
-                                        <input type="text" class="form-control-mod locked-input" value="Server: wartel" readonly>
+                                    <div class="info-server">
+                                        <input type="text" class="form-control-mod locked-input" value="Server: <?= htmlspecialchars($hotspot_server ?? 'wartel') ?>" readonly>
                                         <input type="text" class="form-control-mod locked-input" value="Mode: User=Pass" readonly>
                                     </div>
                                     <input type="hidden" name="user" value="vc">
@@ -468,7 +483,7 @@ if (!isset($_SESSION["mikhmon"])) {
             </div>
         </div>
 
-        <div class="col-md-5 col-lg-5 mb-3">
+        <div class="col-12 col-lg-5 col-xl-4">
             <div class="card-modern">
                 <div class="card-header-mod">
                     <h3><i class="fa fa-list-alt"></i> Ringkasan (READY)</h3>
