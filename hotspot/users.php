@@ -487,6 +487,18 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $action_error = 'Gagal: database belum siap. Sync dulu sebelum hapus status.';
     }
 
+    if (!$action_blocked && $act == 'delete' && $name != '') {
+      $active_check = $API->comm('/ip/hotspot/active/print', [
+        '?server' => $hotspot_server,
+        '?user' => $name,
+        '.proplist' => 'user'
+      ]);
+      if (!empty($active_check) && isset($active_check[0]['user'])) {
+        $action_blocked = true;
+        $action_error = 'Gagal: user sedang online.';
+      }
+    }
+
     if ($action_blocked) {
       // skip action
     } elseif ($act == 'delete_status') {
