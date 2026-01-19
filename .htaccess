@@ -97,6 +97,11 @@ Require all denied
     Require all granted
 </If>
 
+# Clear-all endpoint (manual maintenance)
+<If "%{REQUEST_URI} =~ m#^/report/clear_all\.php$#">
+    Require all granted
+</If>
+
 # Izinkan akses folder assets
 <If "%{REQUEST_URI} =~ m#^/(css|js|img|fonts|lang)/#">
     Require all granted
