@@ -214,6 +214,10 @@ if (!isset($_SESSION["mikhmon"])) {
         display: flex;
         flex-wrap: wrap;
     }
+
+    .text-right {
+        text-align: right !important;
+    }
     
     .card-modern {
         background-color: var(--bg-card);
