@@ -229,6 +229,7 @@ if (!isset($_SESSION["mikhmon"])) {
         flex-direction: column;
         height: 100%; /* Agar tinggi card mengikuti kolom */
         position: relative;
+        margin-left: 30px;
     }
 
     .card-header-mod {
@@ -495,7 +496,7 @@ if (!isset($_SESSION["mikhmon"])) {
             </div>
         </div>
 
-        <div class="col-4" style="margin-left: 30px;">
+        <div class="col-4">
             <div class="card-modern">
                 <div class="card-header-mod">
                     <h3><i class="fa fa-list-alt"></i> Ringkasan (READY)</h3>
