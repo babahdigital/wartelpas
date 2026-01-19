@@ -13,14 +13,25 @@ if (!isset($_GET['key']) || $_GET['key'] !== $secret_token) {
     die("Error: Token Salah.");
 }
 
+$session = isset($_GET['session']) ? $_GET['session'] : '';
+if ($session === '') {
+    die("Error: Session tidak valid.");
+}
+
 // 2. LIBRARY API
 $root_dir = dirname(__DIR__); 
 require_once($root_dir . '/lib/routeros_api.class.php');
+require_once($root_dir . '/include/config.php');
+require_once($root_dir . '/include/readcfg.php');
 
-// 3. SETTING MANUAL (Hardcode Login)
-$use_ip   = "10.10.83.1";       
-$use_user = "abdullah";         
-$use_pass = "alhabsyi"; 
+if (!isset($hotspot_server) || $hotspot_server !== 'wartel') {
+    die("Error: Hanya untuk server wartel.");
+}
+
+// 3. SETTING LOGIN DARI KONFIG
+$use_ip   = $iphost;       
+$use_user = $userhost;         
+$use_pass = decrypt($passwdhost); 
 
 // 4. KONEKSI DATABASE
 $dbFile = $root_dir . '/db_data/mikhmon_stats.db';
