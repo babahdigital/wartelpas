@@ -1376,13 +1376,13 @@ if ($debug_mode && !$is_ajax) {
     .toolbar-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
     .toolbar-left { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex: 1 1 auto; }
     .toolbar-right { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; flex: 0 0 auto; margin-left: auto; }
-    .input-group-solid { display: flex; flex-grow: 1; max-width: 860px; }
+    .input-group-solid { display: flex; flex-grow: 1; max-width: 100%; }
     .input-group-solid .form-control, .input-group-solid .custom-select-solid { height: 40px; background: #343a40; border: 1px solid var(--border-col); color: white; padding: 0 12px; font-size: 0.9rem; border-radius: 0; }
     .input-group-solid .first-el { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
     .input-group-solid .last-el { border-top-right-radius: 6px; border-bottom-right-radius: 6px; border-left: none; }
     .input-group-solid .mid-el { border-left: none; border-right: none; }
-    .search-wrap { position: relative; display: flex; align-items: center; }
-    .search-wrap .form-control { padding-right: 36px; }
+    .search-wrap { position: relative; display: flex; align-items: center; flex: 1 1 420px; min-width: 280px; }
+    .search-wrap .form-control { padding-right: 36px; width: 100%; }
     .search-clear-btn { position: absolute; right: 8px; width: 22px; height: 22px; border-radius: 50%; border: none; background: #495057; color: #fff; font-size: 12px; line-height: 22px; display: none; }
     .search-clear-btn:hover { background: #6c757d; }
     .page-dim { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 9999; }
@@ -1429,7 +1429,7 @@ if ($debug_mode && !$is_ajax) {
                 <button type="button" class="search-clear-btn" id="search-clear" title="Clear">×</button>
               </div>
 
-              <select name="status" class="custom-select-solid mid-el" onchange="this.form.submit()" style="flex-basis: 30%;">
+              <select name="status" class="custom-select-solid mid-el" onchange="this.form.submit()" style="flex: 0 0 220px;">
                 <option value="all" <?=($req_status=='all'?'selected':'')?>>Status: Semua</option>
                 <option value="ready" <?=($req_status=='ready'?'selected':'')?>>🟢 Hanya Ready</option>
                 <option value="online" <?=($req_status=='online'?'selected':'')?>>🔵 Sedang Online</option>
@@ -1438,7 +1438,7 @@ if ($debug_mode && !$is_ajax) {
                 <option value="retur" <?=($req_status=='retur'?'selected':'')?>>🟣 Hasil Retur</option>
               </select>
 
-              <select name="comment" class="custom-select-solid last-el" onchange="this.form.submit()" style="flex-basis: 30%;">
+              <select name="comment" class="custom-select-solid last-el" onchange="this.form.submit()" style="flex: 0 0 220px;">
                 <option value="">Semua Blok</option>
                   <?php foreach($list_blok as $b) {
                     $label = preg_replace('/^BLOK-/i', 'BLOK ', $b);
