@@ -30,6 +30,7 @@ if (!isset($_SESSION["mikhmon"])) {
     .flex-left, .flex-right {
         display: flex !important;
         align-items: center !important;
+		margin-left: 20px;
     }
     
     /* Background Asli (Warna Sebelumnya) */
