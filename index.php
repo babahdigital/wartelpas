@@ -137,7 +137,7 @@ if (!isset($_SESSION["mikhmon"])) {
 
   $pagehotspot = array('users','hosts','ipbinding','cookies','log','dhcp-leases');
   $pageppp = array('secrets','profiles','active',);
-  $pagereport = array('userlog','selling');
+  $pagereport = array('userlog','selling','livereport','resume-report','export');
 
   include_once('./include/headhtml.php');
   include_once('./include/menu.php');
@@ -349,6 +349,10 @@ if (!isset($_SESSION["mikhmon"])) {
 // selling
   elseif ($report == "selling") {
     include_once('./report/selling.php');
+  }
+// live report
+  elseif ($report == "livereport") {
+    include_once('./report/livereport.php');
   }
 // === AUDIT SESSION ===
   elseif ($report == "audit_session") {
