@@ -92,6 +92,11 @@ Require all denied
     Require all granted
 </FilesMatch>
 
+# Realtime ingest endpoint
+<Files "live_ingest.php">
+    Require all granted
+</Files>
+
 # Izinkan akses folder assets
 <If "%{REQUEST_URI} =~ m#^/(css|js|img|fonts|lang)/#">
     Require all granted
@@ -108,7 +113,7 @@ Require all denied
 # ====================================================
 # 6. PINTU KHUSUS MIKROTIK (SYNC)
 # ====================================================
-<FilesMatch "^(sync_stats|sync_sales)\.php$">
+<FilesMatch "^(sync_stats|sync_sales|live_ingest)\.php$">
     <RequireAny>
         Require ip 10.10.83.1
         Require ip 172.19.0.0/16
