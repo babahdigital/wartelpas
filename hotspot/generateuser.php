@@ -225,6 +225,7 @@ if (!isset($_SESSION["mikhmon"])) {
         flex-direction: column;
         height: 100%; /* Agar tinggi card mengikuti kolom */
         position: relative;
+        margin-left: 30px;
     }
 
     .card-header-mod {
