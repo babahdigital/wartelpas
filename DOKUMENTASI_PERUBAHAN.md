@@ -74,6 +74,20 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 ### 2.8 Pagination
 - Menambahkan pagination di bawah tabel users agar data tidak dimuat semua sekaligus.
 
+### 2.9 Penyempurnaan UI Modern (Generate/User Profile)
+- **generateuser.php**: tombol cetak/QR dihapus, ringkasan stok per blok + total **RUSAK/RETUR** ditampilkan, layout full‑width dua kolom, style modern selaras dengan users.php.
+- **userprofile.php**: tampilan modern, tombol **Tambah Baru**, table lebih rapi, routing aman (tidak redirect dashboard).
+- **adduserprofile.php**: style modern, form **2 kolom** agar tidak panjang ke bawah.
+- **userprofilebyname.php**: style disamakan dengan adduserprofile (card modern + form 2 kolom).
+
+### 2.10 Keamanan & Aksi Hapus
+- **users.php**: proteksi agar **user online tidak ikut terhapus**, tombol hover pointer, input search diperlebar.
+
+### 2.11 Sinkronisasi & Maintenance
+- **report/sync_stats.php**: sink login_history tanpa mengubah comment RouterOS, WAL aktif, gunakan config/session (tanpa kredensial hardcode).
+- **report/sync_sales.php**: simpan blok_name, WAL aktif, gunakan config/session (tanpa kredensial hardcode).
+- **Mikrotik-CleanWartel.rsc**: hapus preclean “hantu-sweeper”, **abort cleanup jika sync gagal**, URL fetch wajib membawa `session`.
+
 ## 3) Masalah Khusus dan Fix Terkait
 ### 3.1 Waktu/Bytes/Uptime kosong saat RUSAK
 - Parsing comment diperluas untuk format:
@@ -117,6 +131,12 @@ File diagnostik & migrasi sementara yang sudah tidak diperlukan:
 - mikrotik-onlogout.rsc
 - index.php (routing users)
 - hotspot/generateuser.php
+- hotspot/userprofile.php
+- hotspot/adduserprofile.php
+- hotspot/userprofilebyname.php
+- report/sync_stats.php
+- report/sync_sales.php
+- Mikrotik-CleanWartel.rsc
 - voucher/template perubahan label dan blok parsing
 - DOKUMENTASI_PERUBAHAN.md
 
