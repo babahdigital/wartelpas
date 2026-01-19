@@ -1132,6 +1132,121 @@ $pagination_params = $_GET;
 unset($pagination_params['page']);
 $pagination_base = './?' . http_build_query($pagination_params);
 
+$is_ajax = isset($_GET['ajax']) && $_GET['ajax'] == '1';
+if ($is_ajax) {
+  ob_start();
+  if (count($display_data) > 0) {
+    foreach ($display_data as $u) {
+      $keep_params = '&profile=' . urlencode($req_prof) .
+        '&comment=' . urlencode($req_comm) .
+        '&status=' . urlencode($req_status) .
+        '&q=' . urlencode($req_search);
+      ?>
+      <tr>
+        <td>
+          <div style="font-size:15px; font-weight:bold; color:var(--txt-main)"><?= htmlspecialchars($u['name']) ?></div>
+          <div style="font-size:11px; color:var(--txt-muted); max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="<?= htmlspecialchars($u['comment']) ?>">
+            <?= htmlspecialchars(format_comment_display($u['comment'])) ?>
+          </div>
+          <?php if (!empty($u['retur_ref'])): ?>
+            <div style="font-size:10px;color:#b2bec3;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<?= htmlspecialchars($u['retur_ref']) ?>">
+              Retur dari: <?= htmlspecialchars($u['retur_ref']) ?>
+            </div>
+          <?php endif; ?>
+        </td>
+        <td><span class="badge badge-dark border border-secondary p-1"><?= htmlspecialchars($u['profile']) ?></span></td>
+        <td><span class="id-badge"><?= htmlspecialchars($u['blok'] ?: '-') ?></span></td>
+        <td>
+          <div style="font-family:monospace; font-size:12px; color:#aeb6bf"><?= htmlspecialchars($u['mac']) ?></div>
+          <div style="font-family:monospace; font-size:11px; color:#85929e"><?= htmlspecialchars($u['ip']) ?></div>
+        </td>
+        <td>
+          <div style="font-family:monospace; font-size:11px; color:#52c41a" title="Login Time"><?= formatDateIndo($u['login_time']) ?></div>
+          <div style="font-family:monospace; font-size:11px; color:#ff4d4f" title="Logout Time"><?= formatDateIndo($u['logout_time']) ?></div>
+        </td>
+        <td class="text-right">
+          <span style="font-size:13px; font-weight:600"><?= htmlspecialchars($u['uptime']) ?></span><br>
+          <span style="font-size:11px; color:var(--txt-muted)"><?= formatBytes($u['bytes'],2) ?></span>
+        </td>
+        <td class="text-center">
+          <?php if($u['status'] === 'ONLINE'): ?><span class="status-badge st-online">ONLINE</span>
+          <?php elseif($u['status'] === 'RUSAK'): ?><span class="status-badge st-rusak">RUSAK</span>
+          <?php elseif($u['status'] === 'INVALID'): ?><span class="status-badge st-invalid">INVALID</span>
+          <?php elseif($u['status'] === 'RETUR'): ?><span class="status-badge st-retur">RETUR</span>
+          <?php elseif($u['status'] === 'TERPAKAI'): ?><span class="status-badge st-used">TERPAKAI</span>
+          <?php else: ?><span class="status-badge st-ready">READY</span>
+          <?php endif; ?>
+        </td>
+        <td class="text-center">
+          <?php if (strtoupper($u['status']) !== 'RUSAK'): ?>
+            <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
+          <?php endif; ?>
+          <?php if($u['uid']): ?>
+            <?php if (strtoupper($u['status']) === 'RETUR'): ?>
+              <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&download=1&img=1&session=<?= $session ?>','_blank')" title="Download Voucher (PNG)"><i class="fa fa-download"></i></button>
+            <?php elseif (strtoupper($u['status']) === 'RUSAK'): ?>
+              <button type="button" class="btn-act btn-act-retur" onclick="if(confirm('RETUR Voucher <?= htmlspecialchars($u['name']) ?>?')) location.href='./?hotspot=users&action=retur&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&p=<?= urlencode($u['profile']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>'" title="Retur"><i class="fa fa-exchange"></i></button>
+              <button type="button" class="btn-act btn-act-invalid" onclick="if(confirm('Rollback RUSAK <?= htmlspecialchars($u['name']) ?>?')) location.href='./?hotspot=users&action=rollback&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>'" title="Rollback"><i class="fa fa-undo"></i></button>
+            <?php else: ?>
+              <button type="button" class="btn-act btn-act-invalid" onclick="if(confirm('SET RUSAK <?= htmlspecialchars($u['name']) ?>?')) location.href='./?hotspot=users&action=invalid&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>'" title="Rusak"><i class="fa fa-ban"></i></button>
+            <?php endif; ?>
+          <?php endif; ?>
+        </td>
+      </tr>
+      <?php
+    }
+  } else {
+    ?><tr><td colspan="8" class="text-center py-4 text-muted">Tidak ada data.</td></tr><?php
+  }
+  $rows_html = ob_get_clean();
+
+  ob_start();
+  if ($total_pages > 1) {
+    ?>
+    <div class="p-3" style="border-top:1px solid var(--border-col);">
+      <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;">
+        <?php
+          $base = $pagination_base;
+          $link = function($p) use ($base) {
+            return $base . (strpos($base, '?') !== false ? '&' : '?') . 'page=' . $p;
+          };
+          $window = 2;
+          $start = max(1, $page - $window);
+          $end = min($total_pages, $page + $window);
+        ?>
+        <?php if ($page > 1): ?>
+          <a class="btn btn-sm btn-secondary" href="<?= $link(1) ?>">« First</a>
+          <a class="btn btn-sm btn-secondary" href="<?= $link($page - 1) ?>">‹ Prev</a>
+        <?php endif; ?>
+        <?php for ($p = $start; $p <= $end; $p++): ?>
+          <?php if ($p == $page): ?>
+            <span class="btn btn-sm btn-primary" style="pointer-events:none;opacity:.9;">Page <?= $p ?></span>
+          <?php else: ?>
+            <a class="btn btn-sm btn-outline-light" href="<?= $link($p) ?>"><?= $p ?></a>
+          <?php endif; ?>
+        <?php endfor; ?>
+        <?php if ($page < $total_pages): ?>
+          <a class="btn btn-sm btn-secondary" href="<?= $link($page + 1) ?>">Next ›</a>
+          <a class="btn btn-sm btn-secondary" href="<?= $link($total_pages) ?>">Last »</a>
+        <?php endif; ?>
+      </div>
+      <div class="text-center mt-2" style="font-size:12px;color:var(--txt-muted);">
+        Menampilkan <?= ($total_items == 0) ? 0 : ($offset + 1) ?> - <?= min($offset + $per_page, $total_items) ?> dari <?= $total_items ?> data
+      </div>
+    </div>
+    <?php
+  }
+  $pagination_html = ob_get_clean();
+
+  header('Content-Type: application/json');
+  echo json_encode([
+    'rows_html' => $rows_html,
+    'pagination_html' => $pagination_html,
+    'total_label' => 'Total: ' . $total_items . ' Items'
+  ]);
+  exit();
+}
+
 if ($debug_mode) {
   $logDir = dirname(__DIR__) . '/logs';
   if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
@@ -1177,7 +1292,7 @@ if ($debug_mode) {
     <div class="card card-solid">
       <div class="card-header-solid">
         <h3 class="card-title m-0"><i class="fa fa-users mr-2"></i> Manajemen Voucher</h3>
-        <span class="badge badge-secondary p-2" style="font-size:14px">Total: <?= $total_items ?> Items</span>
+        <span id="users-total" class="badge badge-secondary p-2" style="font-size:14px">Total: <?= $total_items ?> Items</span>
       </div>
       <div class="toolbar-container">
         <form action="?" method="GET" class="toolbar-row m-0">
@@ -1288,7 +1403,7 @@ if ($debug_mode) {
                 <th class="text-center" width="120">Aksi</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="users-table-body">
               <?php if(count($display_data) > 0): ?>
                 <?php foreach($display_data as $u): ?>
                   <tr>
@@ -1355,40 +1470,103 @@ if ($debug_mode) {
             </tbody>
           </table>
         </div>
-        <?php if ($total_pages > 1): ?>
-          <div class="p-3" style="border-top:1px solid var(--border-col);">
-            <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;">
-              <?php
-                $base = $pagination_base;
-                $link = function($p) use ($base) {
-                  return $base . (strpos($base, '?') !== false ? '&' : '?') . 'page=' . $p;
-                };
-                $window = 2;
-                $start = max(1, $page - $window);
-                $end = min($total_pages, $page + $window);
-              ?>
-              <?php if ($page > 1): ?>
-                <a class="btn btn-sm btn-secondary" href="<?= $link(1) ?>">« First</a>
-                <a class="btn btn-sm btn-secondary" href="<?= $link($page - 1) ?>">‹ Prev</a>
-              <?php endif; ?>
-              <?php for ($p = $start; $p <= $end; $p++): ?>
-                <?php if ($p == $page): ?>
-                  <span class="btn btn-sm btn-primary" style="pointer-events:none;opacity:.9;">Page <?= $p ?></span>
-                <?php else: ?>
-                  <a class="btn btn-sm btn-outline-light" href="<?= $link($p) ?>"><?= $p ?></a>
+        <div id="users-pagination">
+          <?php if ($total_pages > 1): ?>
+            <div class="p-3" style="border-top:1px solid var(--border-col);">
+              <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;">
+                <?php
+                  $base = $pagination_base;
+                  $link = function($p) use ($base) {
+                    return $base . (strpos($base, '?') !== false ? '&' : '?') . 'page=' . $p;
+                  };
+                  $window = 2;
+                  $start = max(1, $page - $window);
+                  $end = min($total_pages, $page + $window);
+                ?>
+                <?php if ($page > 1): ?>
+                  <a class="btn btn-sm btn-secondary" href="<?= $link(1) ?>">« First</a>
+                  <a class="btn btn-sm btn-secondary" href="<?= $link($page - 1) ?>">‹ Prev</a>
                 <?php endif; ?>
-              <?php endfor; ?>
-              <?php if ($page < $total_pages): ?>
-                <a class="btn btn-sm btn-secondary" href="<?= $link($page + 1) ?>">Next ›</a>
-                <a class="btn btn-sm btn-secondary" href="<?= $link($total_pages) ?>">Last »</a>
-              <?php endif; ?>
+                <?php for ($p = $start; $p <= $end; $p++): ?>
+                  <?php if ($p == $page): ?>
+                    <span class="btn btn-sm btn-primary" style="pointer-events:none;opacity:.9;">Page <?= $p ?></span>
+                  <?php else: ?>
+                    <a class="btn btn-sm btn-outline-light" href="<?= $link($p) ?>"><?= $p ?></a>
+                  <?php endif; ?>
+                <?php endfor; ?>
+                <?php if ($page < $total_pages): ?>
+                  <a class="btn btn-sm btn-secondary" href="<?= $link($page + 1) ?>">Next ›</a>
+                  <a class="btn btn-sm btn-secondary" href="<?= $link($total_pages) ?>">Last »</a>
+                <?php endif; ?>
+              </div>
+              <div class="text-center mt-2" style="font-size:12px;color:var(--txt-muted);">
+                Menampilkan <?= ($total_items == 0) ? 0 : ($offset + 1) ?> - <?= min($offset + $per_page, $total_items) ?> dari <?= $total_items ?> data
+              </div>
             </div>
-            <div class="text-center mt-2" style="font-size:12px;color:var(--txt-muted);">
-              Menampilkan <?= ($total_items == 0) ? 0 : ($offset + 1) ?> - <?= min($offset + $per_page, $total_items) ?> dari <?= $total_items ?> data
-            </div>
-          </div>
-        <?php endif; ?>
+          <?php endif; ?>
+        </div>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+(function(){
+  const searchInput = document.querySelector('input[name="q"]');
+  const statusSelect = document.querySelector('select[name="status"]');
+  const commentSelect = document.querySelector('select[name="comment"]');
+  const tbody = document.getElementById('users-table-body');
+  const totalBadge = document.getElementById('users-total');
+  const paginationWrap = document.getElementById('users-pagination');
+  if (!searchInput || !tbody || !totalBadge || !paginationWrap) return;
+
+  let lastFetchId = 0;
+  let typingTimer = null;
+  let isTyping = false;
+  let lastQuery = searchInput.value.trim();
+
+  function buildUrl(isSearch) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('hotspot', 'users');
+    params.set('session', '<?= $session ?>');
+    params.set('ajax', '1');
+    params.set('q', searchInput.value.trim());
+    if (statusSelect) params.set('status', statusSelect.value);
+    if (commentSelect) params.set('comment', commentSelect.value);
+    if (isSearch) params.set('page', '1');
+    return './?' + params.toString();
+  }
+
+  async function fetchUsers(isSearch) {
+    const fetchId = ++lastFetchId;
+    try {
+      const res = await fetch(buildUrl(isSearch), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (fetchId !== lastFetchId) return;
+      if (typeof data.rows_html === 'string') tbody.innerHTML = data.rows_html;
+      if (typeof data.pagination_html === 'string') paginationWrap.innerHTML = data.pagination_html;
+      if (typeof data.total_label === 'string') totalBadge.textContent = data.total_label;
+    } catch (e) {}
+  }
+
+  function scheduleSearch() {
+    const nowQuery = searchInput.value.trim();
+    const changed = nowQuery !== lastQuery;
+    lastQuery = nowQuery;
+    isTyping = true;
+    if (typingTimer) clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => {
+      isTyping = false;
+      fetchUsers(changed);
+    }, 350);
+  }
+
+  searchInput.addEventListener('input', scheduleSearch);
+
+  setInterval(() => {
+    if (document.hidden || isTyping) return;
+    fetchUsers(false);
+  }, 15000);
+})();
+</script>
