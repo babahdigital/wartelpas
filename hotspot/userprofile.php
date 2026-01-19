@@ -41,34 +41,85 @@ if (!isset($_SESSION["mikhmon"])) {
 }
 ?>
 <style>
-	:root { --dark-card: #2a3036; --border-col: #495057; --txt-main: #ecf0f1; --txt-muted: #adb5bd; --c-blue: #3498db; --c-red: #e74c3c; }
-	.card-solid { background: var(--dark-card); color: var(--txt-main); border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-radius: 8px; }
-	.card-header-solid { background: #23272b; padding: 12px 20px; border-bottom: 2px solid var(--border-col); display: flex; justify-content: space-between; align-items: center; border-radius: 8px 8px 0 0; }
-	.table-dark-solid { width: 100%; border-collapse: separate; border-spacing: 0; }
-	.table-dark-solid th { background: #1b1e21; padding: 12px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--txt-muted); border-bottom: 2px solid var(--border-col); }
-	.table-dark-solid td { padding: 12px; border-bottom: 1px solid #3a4046; vertical-align: middle; font-size: 0.9rem; }
-	.table-dark-solid tr:hover td { background: #32383e; }
-	.btn-act { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 4px; border: none; color: #fff; transition: all 0.2s; margin: 0 2px; }
-	.btn-act-danger { background: var(--c-red); }
-	.btn-act-info { background: var(--c-blue); }
-	.btn-act:hover { transform: translateY(-1px); }
-	.badge-count { font-size: 13px; padding: 6px 10px; }
+		:root {
+				--bg-main: #1e2129;
+				--bg-card: #262935;
+				--bg-input: #323542;
+				--border-c: #3e4252;
+				--text-pri: #e6e6e6;
+				--text-sec: #9ca3af;
+				--accent: #3b82f6;
+				--accent-hover: #2563eb;
+				--danger: #ef4444;
+		}
+
+		.profile-wrapper { padding: 16px 18px; }
+		@media (min-width: 992px) { .profile-wrapper { padding: 20px 26px; } }
+
+		.card-modern {
+				background-color: var(--bg-card);
+				color: var(--text-pri);
+				border: 1px solid var(--border-c);
+				border-radius: 8px;
+				box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+				display: flex;
+				flex-direction: column;
+				height: 100%;
+				position: relative;
+		}
+
+		.card-header-mod {
+				padding: 15px 20px;
+				border-bottom: 1px solid var(--border-c);
+				background: rgba(0,0,0,0.1);
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+		}
+
+		.card-header-mod h3 { margin: 0; font-size: 1.1rem; font-weight: 600; color: var(--text-pri); }
+
+		.card-body-mod { padding: 0; }
+
+		.table-dark-mod { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+		.table-dark-mod th { text-align: left; color: var(--text-sec); padding: 12px; border-bottom: 1px solid var(--border-c); font-weight: 600; }
+		.table-dark-mod td { padding: 12px; border-bottom: 1px solid #323542; color: var(--text-pri); vertical-align: middle; }
+		.table-dark-mod tr:hover td { background: #2c2f3b; }
+
+		.btn-act { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 4px; border: none; color: #fff; transition: all 0.2s; margin: 0 2px; }
+		.btn-act-danger { background: var(--danger); }
+		.btn-act-info { background: var(--accent); }
+		.btn-act:hover { transform: translateY(-1px); }
+
+		.badge-count { font-size: 12px; padding: 6px 10px; border-radius: 6px; background: rgba(255,255,255,0.08); color: var(--text-sec); }
+
+		.btn-primary-modern {
+				background: linear-gradient(to right, var(--accent), var(--accent-hover));
+				color: #fff;
+				border: none;
+				padding: 8px 14px;
+				border-radius: 6px;
+				font-weight: 600;
+				cursor: pointer;
+				text-decoration: none;
+		}
+		.btn-primary-modern:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); color: #fff; }
 </style>
 
-<div class="row">
-<div class="col-12">
-<div class="card card-solid">
-<div class="card-header-solid">
-		<h3 class="card-title m-0"><i class="fa fa-pie-chart mr-2"></i> User Profile</h3>
-		<div class="d-flex align-items-center" style="gap:8px;">
-			<span class="badge badge-secondary badge-count"><?php echo $countprofile; ?> Item<?php echo ($countprofile > 1) ? 's' : ''; ?></span>
-			<a href="./?user-profile=add&session=<?= $session; ?>" class="btn btn-primary" title="Tambah Profile Baru"><i class="fa fa-plus"></i> Tambah Baru</a>
-		</div>
-</div>
-<!-- /.card-header -->
-<div class="card-body p-0">
-<div class="table-responsive" style="max-height: 75vh"> 			   
-<table id="tFilter" class="table table-dark-solid table-hover text-nowrap">
+<div class="container-fluid profile-wrapper">
+	<div class="row">
+		<div class="col-12">
+			<div class="card-modern">
+				<div class="card-header-mod">
+					<h3 class="m-0"><i class="fa fa-pie-chart mr-2"></i> User Profile</h3>
+					<div class="d-flex align-items-center" style="gap:8px;">
+						<span class="badge-count"><?php echo $countprofile; ?> Item<?php echo ($countprofile > 1) ? 's' : ''; ?></span>
+						<a href="./?user-profile=add&session=<?= $session; ?>" class="btn-primary-modern" title="Tambah Profile Baru"><i class="fa fa-plus"></i> Tambah Baru</a>
+					</div>
+				</div>
+				<div class="card-body-mod">
+					<div class="table-responsive" style="max-height: 75vh">
+						<table id="tFilter" class="table-dark-mod text-nowrap">
   <thead>
   <tr> 
 		<th style="min-width:80px;" class="text-center" >Aksi</th>
@@ -182,8 +233,9 @@ for ($i = 0; $i < $TotalReg; $i++) {
 ?>
   </tbody>
 </table>
-</div>
-</div>
-</div>
-</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 </div>
