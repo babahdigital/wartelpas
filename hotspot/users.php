@@ -176,6 +176,15 @@ function extract_retur_user_from_ref($comment) {
   return '';
 }
 
+// Helper: Normalisasi param blok dari dropdown (hapus suffix count seperti ":1")
+function normalize_blok_param($blok) {
+  if (empty($blok)) return $blok;
+  if (preg_match('/^(.+?):\d+$/', $blok, $m)) {
+    return $m[1];
+  }
+  return $blok;
+}
+
 // Helper: Generator User Baru (retur)
 function gen_user($profile, $comment_ref) {
   $blok = '';
@@ -342,7 +351,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     $name = $_GET['name'] ?? '';
     $comm = $_GET['c'] ?? '';
     $prof = $_GET['p'] ?? '';
-    $blok = $_GET['blok'] ?? '';
+    $blok = normalize_blok_param($_GET['blok'] ?? '');
     $status = $_GET['status'] ?? '';
     $action_blocked = false;
     $action_error = '';
@@ -1616,8 +1625,10 @@ if ($debug_mode && !$is_ajax) {
       }
       confirmMessage.textContent = message || 'Lanjutkan aksi ini?';
       confirmModal.style.display = 'flex';
+      confirmModal.setAttribute('aria-hidden', 'false');
       const cleanup = (result) => {
         confirmModal.style.display = 'none';
+        confirmModal.setAttribute('aria-hidden', 'true');
         confirmOk.onclick = null;
         confirmCancel.onclick = null;
         resolve(result);
