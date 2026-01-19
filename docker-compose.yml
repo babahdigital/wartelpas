@@ -46,6 +46,7 @@ services:
       # Keamanan: Overwrite file asli dengan file custom
       - ./hotspot/adduser.php:/var/www/html/hotspot/adduser.php
       - ./hotspot/quickuser.php:/var/www/html/hotspot/quickuser.php
+      - ./hotspot/userprofile.php:/var/www/html/hotspot/userprofile.php
 
       # ==========================================
       # 5. FILE ROOT & TOOLS (CORE SYSTEM)
