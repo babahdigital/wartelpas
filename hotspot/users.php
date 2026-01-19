@@ -1280,7 +1280,7 @@ if ($debug_mode) {
     .toolbar-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
     .toolbar-left { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex: 1 1 auto; }
     .toolbar-right { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; flex: 0 0 auto; margin-left: auto; }
-    .input-group-solid { display: flex; flex-grow: 1; max-width: 700px; }
+    .input-group-solid { display: flex; flex-grow: 1; max-width: 860px; }
     .input-group-solid .form-control, .input-group-solid .custom-select-solid { height: 40px; background: #343a40; border: 1px solid var(--border-col); color: white; padding: 0 12px; font-size: 0.9rem; border-radius: 0; }
     .input-group-solid .first-el { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
     .input-group-solid .last-el { border-top-right-radius: 6px; border-bottom-right-radius: 6px; border-left: none; }
@@ -1289,9 +1289,14 @@ if ($debug_mode) {
     .search-wrap .form-control { padding-right: 36px; }
     .search-clear-btn { position: absolute; right: 8px; width: 22px; height: 22px; border-radius: 50%; border: none; background: #495057; color: #fff; font-size: 12px; line-height: 22px; display: none; }
     .search-clear-btn:hover { background: #6c757d; }
+    .page-dim { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 9999; }
+    .page-dim .spinner { color: #ecf0f1; font-size: 14px; display: flex; align-items: center; gap: 8px; }
   </style>
 
 <div class="row">
+  <div id="page-dim" class="page-dim" aria-hidden="true">
+    <div class="spinner"><i class="fa fa-circle-o-notch fa-spin"></i> Memproses...</div>
+  </div>
   <div class="col-12">
     <div class="card card-solid">
       <div class="card-header-solid">
@@ -1540,6 +1545,7 @@ if ($debug_mode) {
   const paginationWrap = document.getElementById('users-pagination');
   const searchLoading = document.getElementById('search-loading');
   const clearBtn = document.getElementById('search-clear');
+  const pageDim = document.getElementById('page-dim');
   if (!searchInput || !tbody || !totalBadge || !paginationWrap) return;
 
   if (clearBtn) {
@@ -1574,6 +1580,7 @@ if ($debug_mode) {
     const fetchId = ++lastFetchId;
     try {
       if (showLoading && searchLoading) searchLoading.style.display = 'inline-block';
+      if (showLoading && pageDim) pageDim.style.display = 'flex';
       const res = await fetch(buildUrl(isSearch), { headers: { 'X-Requested-With': 'XMLHttpRequest' }, cache: 'no-store' });
       if (!res.ok) return;
       const data = await res.json();
@@ -1584,6 +1591,7 @@ if ($debug_mode) {
     } catch (e) {}
     finally {
       if (showLoading && searchLoading) searchLoading.style.display = 'none';
+      if (showLoading && pageDim) pageDim.style.display = 'none';
     }
   }
 
