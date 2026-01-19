@@ -2,6 +2,11 @@
 # File: mikrotik-onlogin-fixed.rsc
 # Update: 2026-01-19 - PRESERVE BLOK INFO
 
+# Realtime report endpoint (sesuaikan)
+:local baseUrl "http://YOUR-SERVER/report/live_ingest.php";
+:local key "WartelpasSecureKey";
+:local session "YOURSESSION";
+
 :put (",remc,20000,1d,20000,,Enable,");
 
 {
@@ -70,6 +75,15 @@
         # SAVE KE DATABASE LOG (Format untuk PHP parsing)
         :local logComment "$date-|-$time-|-$user-|-20000-|-$address-|-$mac-|-1d-|-30Menit-|-$blokInfo";
         /system script add name=$logComment owner="$month$year" source="$date" comment="mikhmon";
+
+        # REALTIME REPORT (URL-ENCODED)
+        :local payload $logComment;
+        :set payload [:replace $payload " " "%20"];
+        :set payload [:replace $payload "|" "%7C"];
+        :set payload [:replace $payload "/" "%2F"];
+        :set payload [:replace $payload ":" "%3A"];
+        :local url ($baseUrl . "?key=" . $key . "&session=" . $session . "&data=" . $payload);
+        /tool fetch url=$url mode=http keep-result=no;
         
         # SET COMMENT BARU (DENGAN BLOK)
         /ip hotspot user set comment=$newComment [find where name=$user];
