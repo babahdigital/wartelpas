@@ -1636,6 +1636,10 @@ if ($debug_mode && !$is_ajax) {
       try { data = JSON.parse(text); } catch (e) { data = null; }
       if (data && data.ok) {
         window.showActionPopup('success', data.message || 'Berhasil diproses.');
+        if (url.includes('action=batch_delete')) {
+          window.location.href = './?hotspot=users&session=<?= $session ?>';
+          return;
+        }
         if (data.redirect) {
           try { history.replaceState(null, '', data.redirect); } catch (e) {}
         }
