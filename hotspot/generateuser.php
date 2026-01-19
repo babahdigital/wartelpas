@@ -18,6 +18,32 @@ if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
+if (!function_exists('extract_blok_name')) {
+    function extract_blok_name($comment) {
+        if (empty($comment)) return '';
+        if (preg_match('/\bblok\s*[-_]?\s*([A-Za-z0-9]+)/i', $comment, $m)) {
+            return 'BLOK-' . strtoupper($m[1]);
+        }
+        return '';
+    }
+}
+
+if (!function_exists('extract_ip_mac_from_comment')) {
+    function extract_ip_mac_from_comment($comment) {
+        $ip = '';
+        $mac = '';
+        if (!empty($comment)) {
+            if (preg_match('/\bIP\s*:\s*([^|\s]+)/i', $comment, $m)) {
+                $ip = trim($m[1]);
+            }
+            if (preg_match('/\bMAC\s*:\s*([^|\s]+)/i', $comment, $m)) {
+                $mac = trim($m[1]);
+            }
+        }
+        return ['ip' => $ip, 'mac' => $mac];
+    }
+}
+
 $session = isset($_GET['session']) ? $_GET['session'] : '';
 
 if (!isset($_SESSION["mikhmon"])) {
@@ -176,6 +202,74 @@ if (!isset($_SESSION["mikhmon"])) {
             }
         }
     }
+
+    // --- RINGKASAN SISA VOUCHER PER BLOK + TOTAL RETUR/RUSAK ---
+    $blockSummary = [];
+    $totalRusak = 0;
+    $totalRetur = 0;
+    $totalReady = 0;
+
+    $active_list = $API->comm('/ip/hotspot/active/print', [
+        '?server' => 'wartel',
+        '.proplist' => 'user,uptime,bytes-in,bytes-out,address,mac-address'
+    ]);
+    $activeMap = [];
+    foreach ($active_list as $a) {
+        if (isset($a['user'])) $activeMap[$a['user']] = $a;
+    }
+
+    $all_users = $API->comm('/ip/hotspot/user/print', [
+        '?server' => 'wartel',
+        '.proplist' => '.id,name,comment,disabled,bytes-in,bytes-out,uptime'
+    ]);
+
+    foreach ($all_users as $u) {
+        $name = $u['name'] ?? '';
+        $comment = $u['comment'] ?? '';
+        $disabled = $u['disabled'] ?? 'false';
+        $is_active = $name !== '' && isset($activeMap[$name]);
+
+        $bytes_total = (int)($u['bytes-in'] ?? 0) + (int)($u['bytes-out'] ?? 0);
+        $bytes_active = 0;
+        if ($is_active) {
+            $bytes_active = (int)($activeMap[$name]['bytes-in'] ?? 0) + (int)($activeMap[$name]['bytes-out'] ?? 0);
+        }
+        $bytes = max($bytes_total, $bytes_active);
+
+        $uptime_user = $u['uptime'] ?? '';
+        $uptime_active = $is_active ? ($activeMap[$name]['uptime'] ?? '') : '';
+        $uptime = $uptime_user !== '' ? $uptime_user : $uptime_active;
+
+        $cm = extract_ip_mac_from_comment($comment);
+        $is_rusak = (stripos($comment, 'RUSAK') !== false) || ($disabled === 'true');
+        $is_retur = (stripos($comment, '(Retur)') !== false) || (stripos($comment, 'Retur Ref:') !== false);
+        if ($is_rusak) $is_retur = false;
+
+        $is_used = (!$is_retur && !$is_rusak && $disabled !== 'true') &&
+            ($is_active || $bytes > 50 || ($uptime !== '' && $uptime !== '0s') || (($cm['ip'] ?? '') !== ''));
+
+        $status = 'READY';
+        if ($is_active) $status = 'ONLINE';
+        elseif ($is_rusak) $status = 'RUSAK';
+        elseif ($is_retur) $status = 'RETUR';
+        elseif ($is_used) $status = 'TERPAKAI';
+
+        if ($status === 'RUSAK') $totalRusak++;
+        if ($status === 'RETUR') $totalRetur++;
+
+        if ($status === 'READY') {
+            $blok = extract_blok_name($comment);
+            if ($blok !== '') {
+                if (!isset($blockSummary[$blok])) $blockSummary[$blok] = 0;
+                $blockSummary[$blok]++;
+                $totalReady++;
+            }
+        }
+    }
+
+    if (!empty($blockSummary)) {
+        ksort($blockSummary, SORT_NATURAL | SORT_FLAG_CASE);
+    }
 }
 ?>
 
@@ -201,11 +295,6 @@ if (!isset($_SESSION["mikhmon"])) {
         
         <button type="submit" name="save" onclick="return validateForm()" class="btn bg-primary" title="Generate User"> <i class="fa fa-save"></i> <?= $_generate ?></button>
         
-        <?php if(isset($urlprint)): ?>
-        <a class="btn bg-secondary" title="Print Default" href="./voucher/print.php?id=<?= $urlprint; ?>&qr=no&session=<?= $session; ?>" target="_blank"> <i class="fa fa-print"></i> <?= $_print ?></a>
-        <a class="btn bg-danger" title="Print QR" href="./voucher/print.php?id=<?= $urlprint; ?>&qr=yes&session=<?= $session; ?>" target="_blank"> <i class="fa fa-qrcode"></i> <?= $_print_qr ?></a>
-        <a class="btn bg-info" title="Print Small" href="./voucher/print.php?id=<?= $urlprint; ?>&small=yes&session=<?= $session; ?>" target="_blank"> <i class="fa fa-print"></i> <?= $_print_small ?></a>
-        <?php endif; ?>
     </div>
 
 <style>
@@ -313,24 +402,35 @@ if (!isset($_SESSION["mikhmon"])) {
 <div class="col-4">
     <div class="card">
         <div class="card-header">
-            <h3><i class="fa fa-ticket"></i> <?= $_last_generate ?></h3>
+                        <h3><i class="fa fa-ticket"></i> Ringkasan Voucher</h3>
         </div>
         <div class="card-body">
-<?php if(isset($ucode)): ?>
-<table class="table table-bordered">
-  <tr><td><?= $_generate_code ?></td><td><?= $ucode ?></td></tr>
-  <tr><td><?= $_date ?></td><td><?= $udate ?></td></tr>
-  <tr><td><?= $_profile ?></td><td><?= $uprofile ?></td></tr>
-  <tr><td><?= $_validity ?></td><td><?= $uvalid ?></td></tr>
-  <tr><td><?= $_time_limit ?></td><td><?= $utlimit ?></td></tr>
-  <tr><td><?= $_data_limit ?></td><td>Unlimited</td></tr>
-  <tr><td><?= $_price ?></td><td><?= $uprice ?></td></tr>
-  <tr><td><?= $_selling_price ?></td><td><?= $suprice ?></td></tr>
-  <tr><td><?= $_lock_user ?></td><td><?= $ulock ?></td></tr>
-</table>
+<?php if (!empty($blockSummary)): ?>
+        <div class="mb-2" style="font-weight:600;">Sisa Voucher per Blok (READY)</div>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Blok</th>
+                    <th>Jumlah</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($blockSummary as $blok => $count): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($blok) ?></td>
+                        <td><?= (int)$count ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
 <?php else: ?>
-    <div class="text-center p-3 text-muted">Belum ada user di-generate sesi ini.</div>
+        <div class="text-center p-3 text-muted">Tidak ada voucher READY untuk ditampilkan.</div>
 <?php endif; ?>
+
+        <div class="mt-3">
+            <div><b>Total Rusak:</b> <?= (int)$totalRusak ?></div>
+            <div><b>Total Retur:</b> <?= (int)$totalRetur ?></div>
+        </div>
 </div>
 </div>
 </div>
