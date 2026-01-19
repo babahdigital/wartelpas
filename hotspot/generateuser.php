@@ -388,7 +388,7 @@ if (!isset($_SESSION["mikhmon"])) {
 <div class="container-fluid gen-wrapper">
     <div class="row row-eq-height g-3">
         
-        <div class="col-8">
+        <div class="col-8" style="margin-left: -30px;">
             <div class="card-modern">
                 <div class="card-header-mod">
                     <h3><i class="fa fa-cogs"></i> Konfigurasi Voucher</h3>
