@@ -1307,6 +1307,10 @@ if ($debug_mode && !$is_ajax) {
     .action-popup { position: fixed; right: 20px; bottom: 20px; background: #1f2937; color: #e5e7eb; padding: 12px 14px; border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.35); display: none; align-items: center; gap: 10px; z-index: 10000; }
     .action-popup.success { border-left: 4px solid #22c55e; }
     .action-popup.error { border-left: 4px solid #ef4444; }
+    .confirm-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.55); z-index: 10001; }
+    .confirm-card { background: #1f2937; color: #e5e7eb; border-radius: 10px; padding: 16px; width: 360px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); }
+    .confirm-title { font-weight: 700; margin-bottom: 8px; }
+    .confirm-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
   </style>
 
 <div class="row">
@@ -1314,6 +1318,16 @@ if ($debug_mode && !$is_ajax) {
     <div class="spinner"><i class="fa fa-circle-o-notch fa-spin"></i> Memproses...</div>
   </div>
   <div id="action-popup" class="action-popup" aria-live="polite"></div>
+  <div id="confirm-modal" class="confirm-modal" aria-hidden="true">
+    <div class="confirm-card">
+      <div class="confirm-title">Konfirmasi</div>
+      <div id="confirm-message"></div>
+      <div class="confirm-actions">
+        <button type="button" class="btn btn-secondary" id="confirm-cancel">Batal</button>
+        <button type="button" class="btn btn-danger" id="confirm-ok">Ya, Lanjutkan</button>
+      </div>
+    </div>
+  </div>
   <div class="col-12">
     <div class="card card-solid">
       <div class="card-header-solid">
@@ -1564,6 +1578,10 @@ if ($debug_mode && !$is_ajax) {
   const clearBtn = document.getElementById('search-clear');
   const pageDim = document.getElementById('page-dim');
   const actionPopup = document.getElementById('action-popup');
+  const confirmModal = document.getElementById('confirm-modal');
+  const confirmMessage = document.getElementById('confirm-message');
+  const confirmOk = document.getElementById('confirm-ok');
+  const confirmCancel = document.getElementById('confirm-cancel');
   if (!searchInput || !tbody || !totalBadge || !paginationWrap) return;
 
   if (clearBtn) {
@@ -1588,8 +1606,30 @@ if ($debug_mode && !$is_ajax) {
     }
   };
 
+  function showConfirm(message) {
+    return new Promise((resolve) => {
+      if (!confirmModal || !confirmMessage || !confirmOk || !confirmCancel) {
+        resolve(true);
+        return;
+      }
+      confirmMessage.textContent = message || 'Lanjutkan aksi ini?';
+      confirmModal.style.display = 'flex';
+      const cleanup = (result) => {
+        confirmModal.style.display = 'none';
+        confirmOk.onclick = null;
+        confirmCancel.onclick = null;
+        resolve(result);
+      };
+      confirmOk.onclick = () => cleanup(true);
+      confirmCancel.onclick = () => cleanup(false);
+    });
+  }
+
   window.actionRequest = async function(url, confirmMsg) {
-    if (confirmMsg && !confirm(confirmMsg)) return;
+    if (confirmMsg) {
+      const ok = await showConfirm(confirmMsg);
+      if (!ok) return;
+    }
     try {
       if (pageDim) pageDim.style.display = 'flex';
       const ajaxUrl = url + (url.includes('?') ? '&' : '?') + 'ajax=1&action_ajax=1&_=' + Date.now();
