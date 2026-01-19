@@ -30,9 +30,16 @@ if (!isset($_SESSION["mikhmon"])) {
     .flex-left, .flex-right {
         display: flex !important;
         align-items: center !important;
-		margin-left: 20px;
     }
     
+    .flex-left {
+		margin-left: 10px;
+    }
+
+    .flex-right {
+		margin-right: 30px;
+    }
+
     /* Background Asli (Warna Sebelumnya) */
     .card-modern {
         background: rgba(0, 0, 0, 0.2); /* Kembali ke warna asli */
