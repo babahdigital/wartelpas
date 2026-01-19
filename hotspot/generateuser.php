@@ -273,6 +273,20 @@ if (!isset($_SESSION["mikhmon"])) {
 }
 ?>
 
+<style>
+    .gen-page { --dark-card: #2a3036; --border-col: #495057; --txt-main: #ecf0f1; --txt-muted: #adb5bd; }
+    .gen-page .card { background: var(--dark-card); color: var(--txt-main); border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-radius: 8px; }
+    .gen-page .card-header { background: #23272b; border-bottom: 2px solid var(--border-col); border-radius: 8px 8px 0 0; }
+    .gen-page .table { color: var(--txt-main); }
+    .gen-page .table td, .gen-page .table th { border-color: #3a4046; }
+    .gen-page .table thead th { color: var(--txt-muted); text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.75rem; }
+    .gen-page .text-muted { color: var(--txt-muted) !important; }
+    .gen-page .btn { border-radius: 6px; }
+    .gen-page .form-control, .gen-page select.form-control { background: #343a40; border: 1px solid var(--border-col); color: #fff; }
+    .gen-page .form-control::placeholder { color: var(--txt-muted); }
+</style>
+
+<div class="gen-page">
 <div class="row">
 <div class="col-8">
 <div class="card box-bordered">
@@ -395,6 +409,7 @@ if (!isset($_SESSION["mikhmon"])) {
   </tr>
 </table>
 </form>
+}
 </div>
 </div>
 </div>
