@@ -2,7 +2,7 @@
 /*
  * Copyright (C) 2018 Laksamadi Guko.
  * Modified by Pak Dul & Gemini AI (2026) - Wartel Edition
- * UPDATE: Precision Layout, Sticky Header, Responsive Fix
+ * UPDATE: Fix Alignment (Flexbox Manual) & Original Background
  */
 session_start();
 error_reporting(0);
@@ -18,44 +18,58 @@ if (!isset($_SESSION["mikhmon"])) {
 ?>
 
 <style>
-    /* Container & Card Styling */
-    .card-modern {
-        background: #1f2937; /* Warna solid gelap modern untuk kontras lebih baik */
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-        border-radius: 8px;
-        display: flex;
-        flex-direction: column;
-        height: calc(100vh - 120px); /* Menyesuaikan tinggi layar laptop dikurangi navbar */
-        overflow: hidden;
-    }
-
-    /* Header Styling */
-    .card-header-modern {
-        background: rgba(31, 41, 55, 0.95);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 1rem 1.5rem;
-        flex-shrink: 0; /* Header tidak boleh mengecil */
-    }
-
-    /* Search Input Styling */
-    .search-wrapper {
-        position: relative;
-        width: 250px;
-    }
-    .input-modern {
-        background: rgba(0, 0, 0, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: #e5e7eb;
-        border-radius: 6px;
-        padding: 6px 10px 6px 35px;
-        font-size: 0.9rem;
-        transition: all 0.2s;
+    /* Force Layout dengan CSS Murni (Bypass Bootstrap Version) */
+    .flex-header {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        flex-wrap: nowrap !important;
         width: 100%;
     }
+    
+    .flex-left, .flex-right {
+        display: flex !important;
+        align-items: center !important;
+    }
+    
+    /* Background Asli (Warna Sebelumnya) */
+    .card-modern {
+        background: rgba(0, 0, 0, 0.2); /* Kembali ke warna asli */
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        backdrop-filter: blur(4px);
+        border-radius: 8px;
+        height: calc(100vh - 120px);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .card-header-modern {
+        background: rgba(0, 0, 0, 0.1);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        height: 70px; /* Tinggi fix untuk presisi */
+    }
+
+    /* Input Search yang Presisi */
+    .search-box {
+        position: relative;
+        margin-right: 10px;
+    }
+    .input-modern {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #fff;
+        border-radius: 4px;
+        padding: 6px 10px 6px 30px; /* Padding kiri untuk icon */
+        font-size: 13px;
+        height: 34px; /* Samakan tinggi dengan tombol */
+        width: 200px;
+        transition: all 0.2s;
+    }
     .input-modern:focus {
-        background: rgba(0, 0, 0, 0.4);
-        border-color: #3b82f6;
+        background: rgba(0, 0, 0, 0.5);
+        border-color: #3498db;
         outline: none;
     }
     .search-icon {
@@ -63,102 +77,88 @@ if (!isset($_SESSION["mikhmon"])) {
         left: 10px;
         top: 50%;
         transform: translateY(-50%);
-        color: #9ca3af;
-        font-size: 0.8rem;
+        color: #ccc;
+        font-size: 12px;
     }
 
-    /* Table Container Styling */
+    /* Tombol Refresh */
+    .btn-refresh {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #fff;
+        height: 34px;
+        width: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .btn-refresh:hover {
+        background: #3498db;
+        border-color: #3498db;
+    }
+
+    /* Tabel & Scroll */
     .table-container {
-        flex-grow: 1;
-        overflow: auto; /* Scroll hanya di area tabel */
-        position: relative;
+        flex: 1;
+        overflow: auto;
     }
-
-    /* Table Styling */
     .table-modern {
         width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-        color: #d1d5db;
-        font-size: 0.9rem;
+        color: #e0e0e0;
     }
-    
-    /* Sticky Header Logic */
     .table-modern thead th {
+        background: rgba(0, 0, 0, 0.4); /* Header tabel gelap */
         position: sticky;
         top: 0;
-        background: #1f2937; /* Wajib solid color agar tidak transparan saat discroll */
-        z-index: 10;
-        padding: 12px 15px;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        font-weight: 600;
-        letter-spacing: 0.05em;
-        color: #9ca3af;
+        z-index: 5;
         border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Bayangan halus di bawah header */
-    }
-
-    .table-modern tbody tr {
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        transition: background-color 0.15s;
-    }
-    .table-modern tbody tr:hover {
-        background-color: rgba(59, 130, 246, 0.1); /* Highlight biru tipis saat hover */
+        padding: 10px;
+        text-transform: uppercase;
+        font-size: 0.8rem;
     }
     .table-modern td {
-        padding: 10px 15px;
-        vertical-align: middle;
+        padding: 8px 10px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        vertical-align: middle;
     }
     
-    /* Data Styling */
-    .font-mono {
-        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-        font-size: 0.85rem;
-    }
-    .text-user { color: #60a5fa; font-weight: 500; }
-    .text-mac { color: #a78bfa; }
-    .text-domain { color: #34d399; }
-    
-    /* Scrollbar Styling (Webkit) */
-    .table-container::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-    }
-    .table-container::-webkit-scrollbar-track {
-        background: rgba(0,0,0,0.1);
-    }
-    .table-container::-webkit-scrollbar-thumb {
-        background: rgba(255,255,255,0.1);
-        border-radius: 4px;
-    }
-    .table-container::-webkit-scrollbar-thumb:hover {
-        background: rgba(255,255,255,0.2);
+    /* Font styles */
+    .text-mono { font-family: monospace; letter-spacing: 0.5px; }
+    .badge-count {
+        background: #3498db;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+        margin-left: 10px;
+        vertical-align: middle;
     }
 </style>
 
 <div class="row">
     <div class="col-12">
         <div class="card-modern">
-            <div class="card-header-modern d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center">
-                    <h3 class="card-title mb-0 text-white" style="font-size: 1.1rem; font-weight: 600;">
-                        <i class="fa fa-sitemap mr-2 text-primary"></i> Hotspot Cookies
+            <div class="card-header-modern flex-header">
+                <div class="flex-left">
+                    <h3 style="margin: 0; font-size: 16px; color: #fff; font-weight: bold;">
+                        <i class="fa fa-sitemap" style="margin-right: 8px;"></i> Hotspot Cookies
                     </h3>
-                    <span class="badge badge-pill badge-primary ml-3 px-3 py-1" style="font-size: 0.8rem; background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);">
+                    <span class="badge-count">
                         <?php echo $countcookies; ?> Active
                     </span>
                 </div>
                 
-                <div class="d-flex align-items-center">
-                    <div class="search-wrapper mr-3 d-none d-sm-block">
+                <div class="flex-right">
+                    <div class="search-box">
                         <i class="fa fa-search search-icon"></i>
-                        <input id="filterTable" type="text" class="input-modern" placeholder="Search User, MAC...">
+                        <input id="filterTable" type="text" class="input-modern" placeholder="Cari User / MAC...">
                     </div>
-                    <button onclick="location.reload();" class="btn btn-sm btn-outline-secondary text-light" style="border-color: rgba(255,255,255,0.2);" title="Refresh Data">
+                    <div class="btn-refresh" onclick="location.reload();" title="Refresh Data">
                         <i class="fa fa-refresh"></i>
-                    </button>
+                    </div>
                 </div>
             </div>
 
@@ -166,17 +166,16 @@ if (!isset($_SESSION["mikhmon"])) {
                 <table id="dataTable" class="table-modern">
                     <thead>
                         <tr>
-                            <th style="width: 60px; text-align: center;">#</th>
+                            <th width="5%" style="text-align: center;">#</th>
                             <th>User</th>
                             <th>MAC Address</th>
                             <th>Domain</th>
                             <th>Expires</th>
-                            <th style="width: 60px; text-align: center;">Opt</th>
+                            <th width="5%" style="text-align: center;">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php
-                        // Gunakan buffer output jika data sangat banyak untuk performa
                         for ($i = 0; $i < $TotalReg; $i++) {
                             $cookies = $getcookies[$i];
                             $id = $cookies['.id'];
@@ -188,25 +187,14 @@ if (!isset($_SESSION["mikhmon"])) {
                             $uriprocess = "'./?remove-cookie=" . $id . "&session=" . $session . "'";
                             
                             echo "<tr>";
-                            // Index Number
-                            echo "<td style='text-align:center; color: #6b7280;'>" . ($i + 1) . "</td>";
-                            
-                            // User
-                            echo "<td class='text-user'>" . $user . "</td>";
-                            
-                            // MAC (Monospace font for precision)
-                            echo "<td class='font-mono text-mac'>" . $maca . "</td>";
-                            
-                            // Domain
-                            echo "<td class='text-domain'>" . $domain . "</td>";
-                            
-                            // Expires
-                            echo "<td><span class='badge' style='background: rgba(255,255,255,0.1); color: #d1d5db; font-weight: normal;'>" . $exp . "</span></td>";
-                            
-                            // Action Button
+                            echo "<td style='text-align:center; opacity: 0.7;'>" . ($i + 1) . "</td>";
+                            echo "<td style='font-weight:bold; color:#81d4fa;'>" . $user . "</td>";
+                            echo "<td class='text-mono' style='color:#a5d6a7;'>" . $maca . "</td>";
+                            echo "<td style='opacity: 0.8;'>" . $domain . "</td>";
+                            echo "<td><span style='background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:3px; font-size:11px;'>" . $exp . "</span></td>";
                             echo "<td style='text-align:center;'>
-                                    <span class='pointer' title='Remove " . $user . "' onclick=loadpage(".$uriprocess.")>
-                                        <i class='fa fa-trash text-danger' style='opacity: 0.8; transition: opacity 0.2s;' onmouseover='this.style.opacity=1' onmouseout='this.style.opacity=0.8'></i>
+                                    <span style='cursor:pointer;' title='Hapus " . $user . "' onclick=loadpage(".$uriprocess.")>
+                                        <i class='fa fa-trash text-danger'></i>
                                     </span>
                                   </td>";
                             echo "</tr>";
@@ -215,24 +203,17 @@ if (!isset($_SESSION["mikhmon"])) {
                     </tbody>
                 </table>
             </div>
-            <?php if ($TotalReg == 0): ?>
-                <div class="text-center py-5 text-muted">
-                    <i class="fa fa-inbox fa-3x mb-3" style="opacity: 0.3;"></i>
-                    <p>No active cookies found.</p>
-                </div>
-            <?php endif; ?>
         </div>
     </div>
 </div>
 
 <script>
+    // Script pencarian realtime sederhana
     document.getElementById('filterTable').addEventListener('keyup', function() {
         var value = this.value.toLowerCase();
         var rows = document.querySelectorAll('#dataTable tbody tr');
-        
         rows.forEach(function(row) {
-            var text = row.textContent.toLowerCase();
-            row.style.display = text.indexOf(value) > -1 ? '' : 'none';
+            row.style.display = row.innerText.toLowerCase().indexOf(value) > -1 ? '' : 'none';
         });
     });
 </script>

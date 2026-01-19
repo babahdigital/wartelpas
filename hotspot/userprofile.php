@@ -40,28 +40,38 @@ if (!isset($_SESSION["mikhmon"])) {
 	));
 }
 ?>
+<style>
+	:root { --dark-card: #2a3036; --border-col: #495057; --txt-main: #ecf0f1; --txt-muted: #adb5bd; --c-blue: #3498db; --c-red: #e74c3c; }
+	.card-solid { background: var(--dark-card); color: var(--txt-main); border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-radius: 8px; }
+	.card-header-solid { background: #23272b; padding: 12px 20px; border-bottom: 2px solid var(--border-col); display: flex; justify-content: space-between; align-items: center; border-radius: 8px 8px 0 0; }
+	.table-dark-solid { width: 100%; border-collapse: separate; border-spacing: 0; }
+	.table-dark-solid th { background: #1b1e21; padding: 12px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--txt-muted); border-bottom: 2px solid var(--border-col); }
+	.table-dark-solid td { padding: 12px; border-bottom: 1px solid #3a4046; vertical-align: middle; font-size: 0.9rem; }
+	.table-dark-solid tr:hover td { background: #32383e; }
+	.btn-act { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 4px; border: none; color: #fff; transition: all 0.2s; margin: 0 2px; }
+	.btn-act-danger { background: var(--c-red); }
+	.btn-act-info { background: var(--c-blue); }
+	.btn-act:hover { transform: translateY(-1px); }
+	.badge-count { font-size: 13px; padding: 6px 10px; }
+</style>
+
 <div class="row">
 <div class="col-12">
-<div class="card">
-<div class="card-header align-middle">
-    <h3><i class=" fa fa-pie-chart"></i> User Profile 
-    &nbsp; | &nbsp; <a href="./?user-profile=add&session=<?= $session; ?>" title="Add User"><i class="fa fa-user-plus"></i> Add</a>
-	</h3>
+<div class="card card-solid">
+<div class="card-header-solid">
+		<h3 class="card-title m-0"><i class="fa fa-pie-chart mr-2"></i> User Profile</h3>
+		<div class="d-flex align-items-center" style="gap:8px;">
+			<span class="badge badge-secondary badge-count"><?php echo $countprofile; ?> Item<?php echo ($countprofile > 1) ? 's' : ''; ?></span>
+			<a href="./?user-profile=add&session=<?= $session; ?>" class="btn btn-primary" title="Tambah Profile Baru"><i class="fa fa-plus"></i> Tambah Baru</a>
+		</div>
 </div>
 <!-- /.card-header -->
-<div class="card-body">
-<div class="overflow box-bordered" style="max-height: 75vh"> 			   
-<table id="tFilter" class="table table-bordered table-hover text-nowrap">
+<div class="card-body p-0">
+<div class="table-responsive" style="max-height: 75vh"> 			   
+<table id="tFilter" class="table table-dark-solid table-hover text-nowrap">
   <thead>
   <tr> 
-		<th style="min-width:50px;" class="text-center" >
-		<?php
-	if ($countprofile < 2) {
-		echo "$countprofile item  ";
-	} elseif ($countprofile > 1) {
-		echo "$countprofile items   ";
-	}
-	?></th>
+		<th style="min-width:80px;" class="text-center" >Aksi</th>
 		<th class="align-middle"><?= $_name ?></th>
 		<th class="align-middle">Shared<br>Users</th>
 		<th class="align-middle">Rate<br>Limit</th>
@@ -93,10 +103,16 @@ for ($i = 0; $i < $TotalReg; $i++) {
 	if(empty($pmon) || $chkpmon == "true"){$moncolor = "text-orange";}else{$moncolor = "text-green";}
 	echo "<tr>";
 	?>
-  <td style='text-align:center;'><i class='fa fa-minus-square text-danger pointer' onclick="if(confirm('Are you sure to delete profile (<?= $pname; ?>)?')){loadpage('./?remove-user-profile=<?= $pid; ?>&pname=<?= $pname ?>&session=<?= $session; ?>')}else{}" title='Remove <?= $pname; ?>'></i>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-  <?php
-	echo "<a title='Open User by profile " . $pname . "'  href='./?hotspot=users&profile=" . $pname . "&session=" . $session . "'><i class='fa fa-users'></i></a></td>";
-	echo "<td><a title='Open User Profile " . $pname . "' href='./?user-profile=" . $pid . "&session=" . $session . "'><i class='fa fa-edit'></i> <i class='fa fa-ci fa-circle ".$moncolor."'></i> $pname</a></td>";
+	<td style='text-align:center;'>
+		<button type='button' class='btn-act btn-act-danger' title='Hapus <?= $pname; ?>' onclick="if(confirm('Hapus profile <?= $pname; ?>?')){loadpage('./?remove-user-profile=<?= $pid; ?>&pname=<?= $pname ?>&session=<?= $session; ?>')}">
+			<i class='fa fa-trash'></i>
+		</button>
+		<a class='btn-act btn-act-info' title='Lihat user profile <?= $pname; ?>' href='./?hotspot=users&profile=<?= $pname; ?>&session=<?= $session; ?>'>
+			<i class='fa fa-users'></i>
+		</a>
+	</td>
+	<?php
+	echo "<td><a title='Open User Profile " . $pname . "' href='./?user-profile=" . $pid . "&session=" . $session . "' style='color:inherit; text-decoration:none;'><i class='fa fa-edit'></i> <i class='fa fa-ci fa-circle ".$moncolor."'></i> $pname</a></td>";
 //$profiledetalis = $ARRAY[$i];echo "<td>" . $profiledetalis['name'];echo "</td>";
 	echo "<td>" . $psharedu;
 	echo "</td>";
