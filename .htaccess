@@ -92,10 +92,10 @@ Require all denied
     Require all granted
 </FilesMatch>
 
-# Realtime ingest endpoint
-<Files "live_ingest.php">
+# Realtime ingest endpoint (allow direct access by path)
+<If "%{REQUEST_URI} =~ m#^/report/live_ingest\.php$#">
     Require all granted
-</Files>
+</If>
 
 # Izinkan akses folder assets
 <If "%{REQUEST_URI} =~ m#^/(css|js|img|fonts|lang)/#">
