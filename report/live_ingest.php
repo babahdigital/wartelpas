@@ -66,6 +66,7 @@ try {
         profile_snapshot TEXT,
         price INTEGER,
         price_snapshot INTEGER,
+        sprice_snapshot INTEGER,
         validity TEXT,
         comment TEXT,
         blok_name TEXT,
@@ -79,6 +80,7 @@ try {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         synced_at DATETIME
     )");
+    try { $db->exec("ALTER TABLE live_sales ADD COLUMN sprice_snapshot INTEGER"); } catch (Exception $e) {}
 
     $d = explode('-|-', $raw);
     if (count($d) < 4) {
@@ -129,11 +131,11 @@ try {
 
     $stmt = $db->prepare("INSERT OR IGNORE INTO live_sales (
         raw_date, raw_time, sale_date, sale_time, sale_datetime,
-        username, profile, profile_snapshot, price, price_snapshot, validity,
+        username, profile, profile_snapshot, price, price_snapshot, sprice_snapshot, validity,
         comment, blok_name, status, is_rusak, is_retur, is_invalid, qty, full_raw_data
     ) VALUES (
         :rd, :rt, :sd, :st, :sdt,
-        :usr, :prof, :prof_snap, :prc, :prc_snap, :valid,
+        :usr, :prof, :prof_snap, :prc, :prc_snap, :sprc_snap, :valid,
         :cmt, :blok, :status, :is_rusak, :is_retur, :is_invalid, :qty, :raw
     )");
 
@@ -148,6 +150,7 @@ try {
         ':prof_snap' => $profile,
         ':prc' => $price,
         ':prc_snap' => $price,
+        ':sprc_snap' => 0,
         ':valid' => $validity,
         ':cmt' => $comment,
         ':blok' => $blok_name,

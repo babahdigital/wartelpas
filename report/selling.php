@@ -51,12 +51,34 @@ if (file_exists($dbFile)) {
         $db = new PDO('sqlite:' . $dbFile);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         if ($mode === 'live') {
-            $res = $db->query("SELECT sh.*, lh.last_status, 'final' AS row_mode FROM sales_history sh LEFT JOIN login_history lh ON lh.username = sh.username
-                               UNION ALL
-                               SELECT ls.*, '' AS last_status, 'pending' AS row_mode FROM live_sales ls WHERE ls.sync_status = 'pending'
-                               ORDER BY id DESC");
+            $res = $db->query("SELECT 
+                    sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
+                    sh.username, sh.profile, sh.profile_snapshot,
+                    sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
+                    sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
+                    sh.full_raw_data, lh.last_status, 'final' AS row_mode
+                FROM sales_history sh
+                LEFT JOIN login_history lh ON lh.username = sh.username
+                UNION ALL
+                SELECT 
+                    ls.raw_date, ls.raw_time, ls.sale_date, ls.sale_time, ls.sale_datetime,
+                    ls.username, ls.profile, ls.profile_snapshot,
+                    ls.price, ls.price_snapshot, COALESCE(ls.sprice_snapshot, 0) AS sprice_snapshot, ls.validity,
+                    ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
+                    ls.full_raw_data, '' AS last_status, 'pending' AS row_mode
+                FROM live_sales ls
+                WHERE ls.sync_status = 'pending'
+                ORDER BY sale_datetime DESC, raw_date DESC");
         } else {
-            $res = $db->query("SELECT sh.*, lh.last_status, 'final' AS row_mode FROM sales_history sh LEFT JOIN login_history lh ON lh.username = sh.username ORDER BY sh.id DESC");
+            $res = $db->query("SELECT 
+                    sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
+                    sh.username, sh.profile, sh.profile_snapshot,
+                    sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
+                    sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
+                    sh.full_raw_data, lh.last_status, 'final' AS row_mode
+                FROM sales_history sh
+                LEFT JOIN login_history lh ON lh.username = sh.username
+                ORDER BY sh.id DESC");
         }
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {

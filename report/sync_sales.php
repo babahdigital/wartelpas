@@ -104,6 +104,7 @@ try {
             profile_snapshot TEXT,
             price INTEGER,
             price_snapshot INTEGER,
+            sprice_snapshot INTEGER,
             validity TEXT,
             comment TEXT,
             blok_name TEXT,
@@ -117,6 +118,7 @@ try {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             synced_at DATETIME
         )");
+        try { $db->exec("ALTER TABLE live_sales ADD COLUMN sprice_snapshot INTEGER"); } catch (Exception $e) {}
 } catch (PDOException $e) {
     die("Error DB: " . $e->getMessage());
 }
