@@ -205,126 +205,235 @@ if (!isset($_SESSION["mikhmon"])) {
 }
 ?>
 <style>
-  .form-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 14px 16px;
-  }
-  @media (min-width: 768px) {
-    .form-grid { grid-template-columns: 1fr 1fr; }
-  }
-  .form-grid .form-group label {
-    display: block;
-    font-size: 0.85rem;
-    color: #9ca3af;
-    margin-bottom: 6px;
-  }
+    :root {
+        --bg-main: #1e2129;
+        --bg-card: #262935;
+        --bg-input: #323542;
+        --border-c: #3e4252;
+        --text-pri: #e6e6e6;
+        --text-sec: #9ca3af;
+        --accent: #3b82f6;
+        --accent-hover: #2563eb;
+        --warning: #f59e0b;
+    }
+
+    .profile-wrapper { padding: 16px 18px; }
+    @media (min-width: 992px) {
+        .profile-wrapper { padding: 20px 26px; }
+    }
+
+    .row-eq-height { display: flex; flex-wrap: wrap; }
+
+    .card-modern {
+        background-color: var(--bg-card);
+        color: var(--text-pri);
+        border: 1px solid var(--border-c);
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        position: relative;
+        margin-left: 30px;
+    }
+
+    .card-header-mod {
+        padding: 15px 20px;
+        border-bottom: 1px solid var(--border-c);
+        background: rgba(0,0,0,0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-header-mod h3 { margin: 0; font-size: 1.1rem; font-weight: 600; color: var(--text-pri); }
+
+    .card-body-mod {
+        padding: 20px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-group label {
+        color: var(--text-sec);
+        font-size: 0.85rem;
+        margin-bottom: 5px;
+        display: block;
+    }
+
+    .form-control-mod {
+        width: 100%;
+        background-color: var(--bg-input);
+        border: 1px solid var(--border-c);
+        color: var(--text-pri);
+        padding: 10px 12px;
+        border-radius: 6px;
+        font-size: 0.95rem;
+        transition: border 0.2s;
+        margin-bottom: 5px;
+        min-height: 42px;
+    }
+
+    .form-control-mod:focus {
+        border-color: var(--accent);
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+
+    .btn-row {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-bottom: 15px;
+    }
+
+    .btn-primary-modern {
+        background: linear-gradient(to right, var(--accent), var(--accent-hover));
+        color: #fff;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.1s;
+    }
+
+    .btn-primary-modern:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
+
+    .btn-warning-modern {
+        background: rgba(245, 158, 11, 0.15);
+        color: var(--warning);
+        border: 1px solid rgba(245, 158, 11, 0.35);
+        padding: 10px 16px;
+        border-radius: 6px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-warning-modern:hover { background: rgba(245, 158, 11, 0.25); color: #fff; }
+
+    .info-box {
+        color: var(--text-pri);
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px 16px;
+    }
+
+    @media (min-width: 768px) {
+        .form-grid { grid-template-columns: 1fr 1fr; }
+    }
 </style>
 
-<div class="row">
-<div class="col-8">
-<div class="card">
-<div class="card-header">
-    <h3><i class="fa fa-edit"></i> <?= $_edit." ".$_user_profile ?> </h3>
-</div>
-<div class="card-body">
-<form autocomplete="off" method="post" action="">
-  <div>
-    <a class="btn bg-warning" href="./?hotspot=user-profiles&session=<?= $session; ?>"> <i class="fa fa-close"></i> <?= $_close?></a>
-    <button type="submit" name="save" class="btn bg-primary" ><i class="fa fa-save"></i> <?= $_save ?></button>
-  </div>
-<div class="form-grid">
-  <div class="form-group">
-    <label><?= $_name ?> <i class="fa fa-ci fa-circle <?= $moncolor ?>"></i></label>
-    <input class="form-control" type="text" onchange="remSpace();" autocomplete="off" name="name" value="<?= $pname; ?>" required="1" autofocus>
-  </div>
-  <div class="form-group">
-    <label>Address Pool</label>
-    <select class="form-control" name="ppool">
-      <option><?= $ppool; ?></option>
-      <option>none</option>
-      <?php $TotalReg = count($getpool);
-      for ($i = 0; $i < $TotalReg; $i++) {
-        echo "<option>" . $getpool[$i]['name'] . "</option>";
-      }
-      ?>
-    </select>
-  </div>
-  <div class="form-group">
-    <label>Shared Users</label>
-    <input class="form-control" type="text" autocomplete="off" name="sharedusers" value="<?= $psharedu; ?>" required="1">
-  </div>
-  <div class="form-group">
-    <label>Rate limit [up/down]</label>
-    <input class="form-control" type="text" name="ratelimit" autocomplete="off" value="<?= $pratelimit; ?>" placeholder="Example : 512k/1M">
-  </div>
-  <div class="form-group">
-    <label><?= $_expired_mode ?></label>
-    <select class="form-control" onchange="RequiredV();" id="expmode" name="expmode" required="1">
-      <option value="<?= $getexpmode; ?>"><?= $getexpmodet; ?></option>
-      <option value="0">None</option>
-      <option value="rem">Remove</option>
-      <option value="ntf">Notice</option>
-      <option value="remc">Remove & Record</option>
-      <option value="ntfc">Notice & Record</option>
-    </select>
-  </div>
-  <div id="validity" class="form-group" <?php if ($getexpmodet == "None") {echo 'style="display:none;"';}?>>
-    <label><?= $_validity ?></label>
-    <input class="form-control" type="text" id="validi" autocomplete="off" name="validity" value="<?= $getvalid; ?>" required="1">
-  </div>
-  <div class="form-group">
-    <label><?= $_price." ". $currency; ?></label>
-    <input class="form-control" type="text" min="0" name="price" value="<?= $getprice; ?>">
-  </div>
-  <div class="form-group">
-    <label><?= $_selling_price.' '.$currency; ?></label>
-    <input class="form-control" type="text" min="0" name="sprice" value="<?= $getsprice; ?>">
-  </div>
-  <div class="form-group">
-    <label><?= $_lock_user ?></label>
-    <select class="form-control" id="lockunlock" name="lockunlock" required="1">
-      <option value="<?= $getlocku; ?>"><?= $getlocku; ?></option>
-      <option value="Enable">Enable</option>
-      <option value="Disable">Disable</option>
-    </select>
-  </div>
-  <div class="form-group">
-    <label>Parent Queue</label>
-    <select class="form-control" name="parent">
-      <option><?= $sparent; ?></option>
-      <option>none</option>
-      <?php $TotalReg = count($getallqueue);
-      for ($i = 0; $i < $TotalReg; $i++) {
-        echo "<option>" . $getallqueue[$i]['name'] . "</option>";
-      }
-      ?>
-    </select>
-  </div>
-</div>
-</form>
-</div>
-</div>
-</div>
-<div class="col-4">
-  <div class="card">
-    <div class="card-header">
-      <h3><i class="fa fa-book"></i> <?= $_readme ?></h3>
+<div class="container-fluid profile-wrapper">
+  <div class="row row-eq-height g-3">
+    <div class="col-8" style="margin-left: -30px;">
+      <div class="card-modern">
+        <div class="card-header-mod">
+          <h3><i class="fa fa-edit"></i> <?= $_edit." ".$_user_profile ?> </h3>
+        </div>
+        <div class="card-body-mod">
+          <form autocomplete="off" method="post" action="" style="display:flex; flex-direction:column; height:100%;">
+            <div class="btn-row">
+              <a class="btn-warning-modern" href="./?hotspot=user-profiles&session=<?= $session; ?>">
+                <i class="fa fa-close"></i> <?= $_close?>
+              </a>
+              <button type="submit" name="save" class="btn-primary-modern"><i class="fa fa-save"></i> <?= $_save ?></button>
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label><?= $_name ?> <i class="fa fa-ci fa-circle <?= $moncolor ?>"></i></label>
+                <input class="form-control-mod" type="text" onchange="remSpace();" autocomplete="off" name="name" value="<?= $pname; ?>" required="1" autofocus>
+              </div>
+              <div class="form-group">
+                <label>Address Pool</label>
+                <select class="form-control-mod" name="ppool">
+                  <option><?= $ppool; ?></option>
+                  <option>none</option>
+                  <?php $TotalReg = count($getpool);
+                  for ($i = 0; $i < $TotalReg; $i++) {
+                    echo "<option>" . $getpool[$i]['name'] . "</option>";
+                  }
+                  ?>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Shared Users</label>
+                <input class="form-control-mod" type="text" autocomplete="off" name="sharedusers" value="<?= $psharedu; ?>" required="1">
+              </div>
+              <div class="form-group">
+                <label>Rate limit [up/down]</label>
+                <input class="form-control-mod" type="text" name="ratelimit" autocomplete="off" value="<?= $pratelimit; ?>" placeholder="Example : 512k/1M">
+              </div>
+              <div class="form-group">
+                <label><?= $_expired_mode ?></label>
+                <select class="form-control-mod" onchange="RequiredV();" id="expmode" name="expmode" required="1">
+                  <option value="<?= $getexpmode; ?>"><?= $getexpmodet; ?></option>
+                  <option value="0">None</option>
+                  <option value="rem">Remove</option>
+                  <option value="ntf">Notice</option>
+                  <option value="remc">Remove & Record</option>
+                  <option value="ntfc">Notice & Record</option>
+                </select>
+              </div>
+              <div id="validity" class="form-group" <?php if ($getexpmodet == "None") {echo 'style="display:none;"';}?>>
+                <label><?= $_validity ?></label>
+                <input class="form-control-mod" type="text" id="validi" autocomplete="off" name="validity" value="<?= $getvalid; ?>" required="1">
+              </div>
+              <div class="form-group">
+                <label><?= $_price." ". $currency; ?></label>
+                <input class="form-control-mod" type="text" min="0" name="price" value="<?= $getprice; ?>">
+              </div>
+              <div class="form-group">
+                <label><?= $_selling_price.' '.$currency; ?></label>
+                <input class="form-control-mod" type="text" min="0" name="sprice" value="<?= $getsprice; ?>">
+              </div>
+              <div class="form-group">
+                <label><?= $_lock_user ?></label>
+                <select class="form-control-mod" id="lockunlock" name="lockunlock" required="1">
+                  <option value="<?= $getlocku; ?>"><?= $getlocku; ?></option>
+                  <option value="Enable">Enable</option>
+                  <option value="Disable">Disable</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Parent Queue</label>
+                <select class="form-control-mod" name="parent">
+                  <option><?= $sparent; ?></option>
+                  <option>none</option>
+                  <?php $TotalReg = count($getallqueue);
+                  for ($i = 0; $i < $TotalReg; $i++) {
+                    echo "<option>" . $getallqueue[$i]['name'] . "</option>";
+                  }
+                  ?>
+                </select>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
-    <div class="card-body">
-<table class="table">
-    <tr>
-    <td colspan="2">
-      <p style="padding:0px 5px;">
-        <?= $_details_user_profile ?>
-      </p>
-      <p style="padding:0px 5px;">
-        <?= $_format_validity ?>
-      </p>
-    </td>
-  </tr>
-</table>
-</div>
-</div>
-</div>
+
+    <div class="col-4" style="margin-left: 30px;">
+      <div class="card-modern">
+        <div class="card-header-mod">
+          <h3><i class="fa fa-book"></i> <?= $_readme ?></h3>
+        </div>
+        <div class="card-body-mod">
+          <div class="info-box">
+            <p><?= $_details_user_profile ?></p>
+            <p><?= $_format_validity ?></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
