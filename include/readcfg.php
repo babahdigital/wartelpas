@@ -37,6 +37,10 @@ $sesname = explode('+', $data[$session][10])[1];
 $useradm = explode('<|<', $data['mikhmon'][1])[1];
 $passadm = explode('>|>', $data['mikhmon'][2])[1];
 $livereport = explode('@!@', $data[$session][11])[1];
+$hotspot_server = isset($data[$session][12]) ? explode('~', $data[$session][12])[1] : 'wartel';
+if (empty($hotspot_server)) {
+    $hotspot_server = 'wartel';
+}
 
 $cekindo['indo'] = array(
     'RP', 'Rp', 'rp', 'IDR', 'idr', 'RP.', 'Rp.', 'rp.', 'IDR.', 'idr.',

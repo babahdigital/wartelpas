@@ -316,10 +316,13 @@ include('./include/info.php');
 } ?>
 
 <div id="main">  
-<div id="loading" class="lds-dual-ring"></div>
-<?php if($hotspot == 'template-editor' || $id == 'editor'){
-echo '<div class="main-container">';
-}else{
-  echo '<div class="main-container" style="display:none">';
-}
+<?php
+  $force_show_main = ($hotspot == 'users');
+  $loading_style = $force_show_main ? 'style="display:none"' : '';
+  echo "<div id=\"loading\" class=\"lds-dual-ring\" $loading_style></div>";
+  if ($hotspot == 'template-editor' || $id == 'editor' || $force_show_main) {
+    echo '<div class="main-container">';
+  } else {
+    echo '<div class="main-container" style="display:none">';
+  }
 ?>

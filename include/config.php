@@ -19,5 +19,6 @@ $data['S3c7x9_LB'] = array (
     'S3c7x9_LB(1',
     'S3c7x9_LB)',
     'S3c7x9_LB=10',
-    'S3c7x9_LB@!@disable'
+    'S3c7x9_LB@!@disable',
+    'S3c7x9_LB~wartel' // Hotspot server khusus wartelpas
 );

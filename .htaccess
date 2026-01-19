@@ -76,7 +76,7 @@ RedirectMatch 403 ^/voucher/(?!print\.php$).+\.php$
 # 4. LOGIKA DETEKSI IP
 # ====================================================
 SetEnvIf X-Forwarded-For "^10\.0\.0\.6($|,)" TAMU_VIP
-SetEnvIf X-Forwarded-For "^172\.16\.3\.161($|,)" TAMU_VIP
+SetEnvIf X-Forwarded-For "^172\.16\.8\.21($|,)" TAMU_VIP
 
 # ====================================================
 # 5. GERBANG KEAMANAN UTAMA (GLOBAL)

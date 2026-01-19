@@ -18,6 +18,8 @@ if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
+$session = isset($_GET['session']) ? $_GET['session'] : '';
+
 if (!isset($_SESSION["mikhmon"])) {
     header("Location:../admin.php?id=login");
     exit();
@@ -184,8 +186,9 @@ if (!isset($_SESSION["mikhmon"])) {
     <h3><i class="fa fa-user-plus"></i> <?= $_generate_user ?> <small id="loader" style="display: none;" ><i><i class='fa fa-circle-o-notch fa-spin'></i> <?= $_processing ?> </i></small></h3> 
     </div>
     <div class="card-body">
-<form autocomplete="off" method="post" action="">
+<form autocomplete="off" method="post" action="./?hotspot-user=generate&session=<?= $session; ?>">
     <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
+    <input type="hidden" name="session" value="<?= $session; ?>">
     
     <div>
         <?php if (isset($_SESSION['ubp']) && $_SESSION['ubp'] != "") {

@@ -26,7 +26,7 @@ if (!isset($_SESSION["mikhmon"])) {
   if ($id == "settings" && explode("-",$router)[0] == "new") {
     $data = '$data';
     $f = fopen('./include/config.php', 'a');
-    fwrite($f, "\n'$'data['".$router."'] = array ('1'=>'".$router."!','".$router."@|@','".$router."#|#','".$router."%','".$router."^','".$router."&Rp','".$router."*10','".$router."(1','".$router.")','".$router."=10','".$router."@!@disable');");
+    fwrite($f, "\n'$'data['".$router."'] = array ('1'=>'".$router."!','".$router."@|@','".$router."#|#','".$router."%','".$router."^','".$router."&Rp','".$router."*10','".$router."(1','".$router.")','".$router."=10','".$router."@!@disable','".$router."~wartel');");
     fclose($f);
     $search = "'$'data";
     $replace = (string)"$data";
@@ -56,13 +56,14 @@ if (!isset($_SESSION["mikhmon"])) {
     //$sinfolp = encrypt($_POST['infolp']);
     //$sinfolp = ($_POST['infolp']);
     $sidleto = ($_POST['idleto']);
+    $shotspotserver = ($_POST['hotspotserver'] ?? 'wartel');
 
     $sesname = (preg_replace('/\s+/', '-', $_POST['sessname']));
     $slivereport = ($_POST['livereport']);
 
-    $search = array('1' => "$session!$iphost", "$session@|@$userhost", "$session#|#$passwdhost", "$session%$hotspotname", "$session^$dnsname", "$session&$currency", "$session*$areload", "$session($iface", "$session)$infolp", "$session=$idleto", "'$session'", "$session@!@$livereport");
+    $search = array('1' => "$session!$iphost", "$session@|@$userhost", "$session#|#$passwdhost", "$session%$hotspotname", "$session^$dnsname", "$session&$currency", "$session*$areload", "$session($iface", "$session)$infolp", "$session=$idleto", "'$session'", "$session@!@$livereport", "$session~$hotspot_server");
 
-    $replace = array('1' => "$sesname!$siphost", "$sesname@|@$suserhost", "$sesname#|#$spasswdhost", "$sesname%$shotspotname", "$sesname^$sdnsname", "$sesname&$scurrency", "$sesname*$sreload", "$sesname($siface", "$sesname)$sinfolp", "$sesname=$sidleto", "'$sesname'", "$sesname@!@$slivereport");
+    $replace = array('1' => "$sesname!$siphost", "$sesname@|@$suserhost", "$sesname#|#$spasswdhost", "$sesname%$shotspotname", "$sesname^$sdnsname", "$sesname&$scurrency", "$sesname*$sreload", "$sesname($siface", "$sesname)$sinfolp", "$sesname=$sidleto", "'$sesname'", "$sesname@!@$slivereport", "$sesname~$shotspotserver");
 
     for ($i = 1; $i < 15; $i++) {
       $file = file("./include/config.php");
@@ -187,6 +188,9 @@ if (!isset($_SESSION["mikhmon"])) {
 	<tr>
 	<td class="align-middle"><?= $_hotspot_name ?>  </td><td><input class="form-control" type="text" size="15" maxlength="50" name="hotspotname" title="Hotspot Name" value="<?= $hotspotname; ?>" required="1"/></td>
 	</tr>
+  <tr>
+  <td class="align-middle">Hotspot Server</td><td><input class="form-control" type="text" size="15" maxlength="50" name="hotspotserver" title="Nama server hotspot (contoh: wartel)" value="<?= $hotspot_server ?? 'wartel'; ?>" required="1"/></td>
+  </tr>
 	<tr>
 	<td class="align-middle"><?= $_dns_name ?>  </td><td><input class="form-control" type="text" size="15" maxlength="500" name="dnsname" title="DNS Name [IP->Hotspot->Server Profiles->DNS Name]" value="<?= $dnsname; ?>" required="1"/></td>
 	</tr>

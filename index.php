@@ -72,7 +72,14 @@ if (!isset($_SESSION["mikhmon"])) {
   include_once('./lib/formatbytesbites.php');
   $API = new RouterosAPI();
   $API->debug = false;
-  $API->connect($iphost, $userhost, decrypt($passwdhost));
+  $API->timeout = 5; // hindari halaman menggantung jika router lambat
+  $API->attempts = 1;
+  if (!$API->connect($iphost, $userhost, decrypt($passwdhost))) {
+    echo "<div style='padding:16px; background:#2b2f36; color:#e74c3c; font-family:monospace'>".
+         "Gagal konek ke MikroTik ($iphost). Periksa IP/username/password atau koneksi jaringan.".
+         "</div>";
+    exit();
+  }
 
   $getidentity = $API->comm("/system/identity/print");
   $identity = $getidentity[0]['name'];
@@ -141,7 +148,7 @@ if (!isset($_SESSION["mikhmon"])) {
     echo "<script>window.location='./admin.php?id=login'</script>";
   }
 // redirect to home (Universal Fallback)
-  elseif ($hotspot == "dashboard" || ($hotspot == "" && !empty($session))) {
+  elseif ($hotspot == "dashboard" || ($hotspot == "" && $hotspotuser == "" && !empty($session))) {
     include_once('./dashboard/home.php');
     $_SESSION['ubn'] = "";
   }

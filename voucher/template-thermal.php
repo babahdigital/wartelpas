@@ -3,25 +3,25 @@
 </style>
 
 <?php
-// --- LOGIKA AMBIL KODE B10 ---
+// --- LOGIKA AMBIL KODE BLOK ---
 $lokasi_blok = ""; 
-if (strpos($comment, "Blok-") !== false) {
-    $parts = explode("Blok-", $comment);
-    if (isset($parts[1])) $lokasi_blok = $parts[1]; 
-} elseif (strpos($comment, "Kamar-") !== false) {
-    $parts = explode("Kamar-", $comment);
-    if (isset($parts[1])) $lokasi_blok = "KMR " . $parts[1];
+if (stripos($comment, "blok-") !== false) {
+  $parts = preg_split('/blok-/i', $comment);
+  if (isset($parts[1])) $lokasi_blok = trim(explode("|", $parts[1])[0]); 
+} elseif (stripos($comment, "kamar-") !== false) {
+  $parts = preg_split('/kamar-/i', $comment);
+  if (isset($parts[1])) $lokasi_blok = "KMR " . trim(explode("|", $parts[1])[0]);
+}
+if ($lokasi_blok != "") {
+  $lokasi_blok = preg_split('/[\s\(\|]/', $lokasi_blok)[0];
 }
 
 $timelimit = str_replace("m", "mnt", $timelimit);
 $timelimit = str_replace("h", "jam", $timelimit);
 ?>
 
-<table class="voucher" style="width: 180px;">
+<table class="voucher" data-username="<?= htmlspecialchars($user) ?>" style="width: 180px;">
   <tbody>
-    <tr>
-      <td style="text-align: center; font-size: 14px; font-weight:bold;"><?= $hotspotname; ?></td>
-    </tr>
     <tr>
       <td style="text-align: center; font-size: 14px; font-weight:bold; border-bottom: 1px black solid;">
           <img src="<?= $logo; ?>" alt="logo" style="height:30px;border:0;">

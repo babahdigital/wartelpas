@@ -6,55 +6,58 @@ services:
     restart: always
     ports:
       - "8081:80"
+    environment:
+      - TZ=Asia/Makassar
     volumes:
-      # --- PERSISTENCE ---
-      - ./include/config.php:/var/www/html/include/config.php
+      # ==========================================
+      # 1. PERSISTENSI DATA (WAJIB AMAN)
+      # ==========================================
       - ./mikhmon_session:/var/www/html/mikhmon_session
-      - ./error.php:/var/www/html/error.php
-      - ./lang/id.php:/var/www/html/lang/id.php
-      - ./index.php:/var/www/html/index.php
-      
-      # --- DATABASE PERSISTENCE (BARU) ---
-      # Folder ini akan menyimpan file mikhmon_stats.db
       - ./db_data:/var/www/html/db_data
+      - ./img:/var/www/html/img
 
-      # --- CONFIG PHP ---
+      # ==========================================
+      # 2. KONFIGURASI SERVER & PHP
+      # ==========================================
+      - ./include/config.php:/var/www/html/include/config.php
+      - ./settings/settings.php:/var/www/html/settings/settings.php
+      - ./include/readcfg.php:/var/www/html/include/readcfg.php
       - ./custom.ini:/usr/local/etc/php/conf.d/custom.ini
       - ./.htaccess:/var/www/html/.htaccess
-      - ./cekip.php:/var/www/html/cekip.php
 
-      # --- INJEKSI KODE CUSTOM ---
-      - ./report/selling.php:/var/www/html/report/selling.php
-      - ./report/audit.php:/var/www/html/report/audit.php
-      - ./report/livereport.php:/var/www/html/report/livereport.php
+      # ==========================================
+      # 3. MODUL UTAMA (MAPPING SATU FOLDER)
+      # ==========================================
+      - ./report:/var/www/html/report        # Semua laporan
+      - ./voucher:/var/www/html/voucher      # Template & print
+      - ./dashboard:/var/www/html/dashboard  # Dashboard home
+      - ./dhcp:/var/www/html/dhcp            # Modul DHCP
+      - ./process:/var/www/html/process      # Background process
 
-      # Tambahkan file sinkronisasi baru ini
-      - ./report/sync_stats.php:/var/www/html/report/sync_stats.php 
-      - ./report/sync_sales.php:/var/www/html/report/sync_sales.php 
-      
-      - ./include/menu.php:/var/www/html/include/menu.php
-      - ./include/login.php:/var/www/html/include/login.php
-      - ./include/headhtml.php:/var/www/html/include/headhtml.php
-      - ./admin.php:/var/www/html/admin.php
-      - ./dashboard/home.php:/var/www/html/dashboard/home.php
-      - ./dashboard/aload.php:/var/www/html/dashboard/aload.php
+      # ==========================================
+      # 4. MODUL HOTSPOT (FILE SPESIFIK)
+      # ==========================================
       - ./hotspot/generateuser.php:/var/www/html/hotspot/generateuser.php
       - ./hotspot/users.php:/var/www/html/hotspot/users.php
       - ./hotspot/hotspotactive.php:/var/www/html/hotspot/hotspotactive.php
       - ./hotspot/hosts.php:/var/www/html/hotspot/hosts.php
-      - ./voucher/print.php:/var/www/html/voucher/print.php
-      - ./dhcp/dhcpleases.php:/var/www/html/dhcp/dhcpleases.php
-      - ./process/removehotspotuserbycomment.php:/var/www/html/process/removehotspotuserbycomment.php
-
-      # Kemanan Script Hapus Fungsi Add User Dan QuickUser
+      - ./hotspot/save_logout_time.php:/var/www/html/hotspot/save_logout_time.php
+      # Keamanan: Overwrite file asli dengan file custom
       - ./hotspot/adduser.php:/var/www/html/hotspot/adduser.php
       - ./hotspot/quickuser.php:/var/www/html/hotspot/quickuser.php
 
-      # --- ASET ---
-      - ./img:/var/www/html/img
-      - ./voucher/template-thermal.php:/var/www/html/voucher/template-thermal.php
-      - ./voucher/template-small.php:/var/www/html/voucher/template-small.php
-      - ./voucher/template.php:/var/www/html/voucher/template.php
+      # ==========================================
+      # 5. FILE ROOT & TOOLS (CORE SYSTEM)
+      # ==========================================
+      - ./admin.php:/var/www/html/admin.php
+      - ./cekip.php:/var/www/html/cekip.php
+      - ./error.php:/var/www/html/error.php
+      - ./index.php:/var/www/html/index.php
+      - ./lang/id.php:/var/www/html/lang/id.php
 
-    environment:
-      - TZ=Asia/Makassar
+      # ==========================================
+      # 6. INCLUDE LAINNYA
+      # ==========================================
+      - ./include/menu.php:/var/www/html/include/menu.php
+      - ./include/login.php:/var/www/html/include/login.php
+      - ./include/headhtml.php:/var/www/html/include/headhtml.php
