@@ -435,6 +435,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $action_error = 'Gagal: database belum siap. Sync dulu sebelum hapus blok.';
       } else {
         $blok_norm = extract_blok_name($blok);
+        $blok_raw = $blok;
+        $blok_cmp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $blok_norm ?: $blok_raw));
         $list = $API->comm("/ip/hotspot/user/print", array(
           "?server" => $hotspot_server,
           ".proplist" => ".id,name,comment"
@@ -445,7 +447,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           $uname = $usr['name'] ?? '';
           if ($uname === '') continue;
           $cblok = extract_blok_name($c);
-          if ($cblok != '' && strcasecmp($cblok, $blok_norm) == 0) {
+          $cblok_cmp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $cblok));
+          if (($cblok != '' && strcasecmp($cblok, $blok_norm) == 0) || ($cblok_cmp != '' && $cblok_cmp == $blok_cmp) || ($blok_raw != '' && stripos($c, $blok_raw) !== false)) {
             $block_users[] = $uname;
           }
         }
@@ -566,6 +569,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         ".proplist" => ".id,name,comment"
       ));
       $blok_norm = extract_blok_name($blok);
+      $blok_raw = $blok;
+      $blok_cmp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $blok_norm ?: $blok_raw));
       foreach ($list as $usr) {
         $c = $usr['comment'] ?? '';
         $uname = $usr['name'] ?? '';
@@ -573,7 +578,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           continue; // jangan hapus user online
         }
         $cblok = extract_blok_name($c);
-        if ($cblok != '' && strcasecmp($cblok, $blok_norm) == 0) {
+        $cblok_cmp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $cblok));
+        if (($cblok != '' && strcasecmp($cblok, $blok_norm) == 0) || ($cblok_cmp != '' && $cblok_cmp == $blok_cmp) || ($blok_raw != '' && stripos($c, $blok_raw) !== false)) {
           $API->write('/ip/hotspot/user/remove', false);
           $API->write('=.id=' . $usr['.id']);
           $API->read();
@@ -1645,6 +1651,10 @@ if ($debug_mode && !$is_ajax) {
         fetchUsers(true, false);
       } else if (!data) {
         window.showActionPopup('success', 'Berhasil diproses.');
+        if (url.includes('action=batch_delete')) {
+          window.location.href = './?hotspot=users&session=<?= $session ?>';
+          return;
+        }
         fetchUsers(true, false);
       } else {
         window.showActionPopup('error', (data && data.message) ? data.message : 'Gagal memproses.');
