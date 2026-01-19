@@ -561,7 +561,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
                 $deleted_any = true;
                 continue;
               }
-              if ($is_rusak && $target_status === 'rusak') {
+              if ($is_rusak && !$is_retur && $target_status === 'rusak') {
                 $API->write('/ip/hotspot/user/remove', false);
                 $API->write('=.id=' . $usr['.id']);
                 $API->read();
@@ -597,7 +597,9 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
               $cmt = $usr['comment'] ?? '';
               $disabled = $usr['disabled'] ?? 'false';
               $is_rusak_router = (stripos($cmt, 'RUSAK') !== false) || ($disabled === 'true');
+              $is_retur_router = stripos($cmt, '(Retur)') !== false || stripos($cmt, 'Retur Ref:') !== false;
               if (!$is_rusak_router) continue;
+              if ($is_retur_router) continue;
               if ($blok_norm != '') {
                 $cblok = extract_blok_name($cmt);
                 if (strcasecmp($cblok, $blok_norm) !== 0) continue;
