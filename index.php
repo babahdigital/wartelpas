@@ -31,18 +31,28 @@ if (!isset($_SESSION["mikhmon"])) {
 } elseif (empty($session)) {
   $target_session = "";
   foreach ($data as $key => $value) {
-      if ($key !== 'mikhmon') {
-          $target_session = $key;
-          break; 
-      }
+    if ($key !== 'mikhmon') {
+      $target_session = $key;
+      break; 
+    }
   }
 
   if (!empty($target_session)) {
-      header("Location:./?session=" . $target_session);
-      exit();
+    $query = [];
+    if (!empty($_SERVER['QUERY_STRING'])) {
+      parse_str($_SERVER['QUERY_STRING'], $query);
+      unset($query['session']);
+    }
+    $qs = http_build_query($query);
+    $redirect = "./?session=" . $target_session;
+    if (!empty($qs)) {
+      $redirect .= "&" . $qs;
+    }
+    header("Location:" . $redirect);
+    exit();
   } else {
-      echo "<script>window.location='./admin.php?id=sessions'</script>";
-      exit();
+    echo "<script>window.location='./admin.php?id=sessions'</script>";
+    exit();
   }
 
 } else {
@@ -422,7 +432,7 @@ elseif ($ppp == "edit-profile") {
 <?php
 if ($hotspot == "dashboard" || ($hotspot == "" && !empty($session))) {
   echo '<script>
-    if (window.history.replaceState) { window.history.replaceState(null, null, "./"); }
+    if (window.history.replaceState) { window.history.replaceState(null, null, "./?session=' . $session . '"); }
     $("#r_3").load("./dashboard/aload.php?session=' . $session . '&load=logs #r_3");  
     var interval1 = "' . ($areload * 1000) . '";
     var dashboard = setInterval(function() {
