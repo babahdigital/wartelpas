@@ -474,10 +474,10 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
               $missing[] = $uname;
             }
           }
-          if (!empty($missing)) {
-            $action_blocked = true;
-            $action_error = 'Gagal: DB belum sync status (retur/rusak/terpakai) untuk ' . count($missing) . ' user. Refresh/sync dulu sebelum hapus blok.';
-          }
+          // if (!empty($missing)) {
+          //   $action_blocked = true;
+          //   $action_error = 'Gagal: DB belum sync status (retur/rusak/terpakai) untuk ' . count($missing) . ' user. Refresh/sync dulu sebelum hapus blok.';
+          // }
         }
       }
     }
