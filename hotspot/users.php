@@ -335,6 +335,7 @@ $hotspot_server = $hotspot_server ?? 'wartel';
 
 // Action handler sederhana (invalid/retur/delete)
 if (isset($_GET['action']) || isset($_POST['action'])) {
+  $is_action_ajax = isset($_GET['ajax']) && $_GET['ajax'] == '1' && isset($_GET['action_ajax']);
   $act = $_POST['action'] ?? $_GET['action'];
   if ($act == 'invalid' || $act == 'retur' || $act == 'rollback' || $act == 'delete' || $act == 'batch_delete' || $act == 'delete_status') {
     $uid = $_GET['uid'] ?? '';
@@ -796,10 +797,19 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
   if (isset($_GET['q'])) $redir_params['q'] = $_GET['q'];
   if (isset($_GET['debug'])) $redir_params['debug'] = $_GET['debug'];
   $redir = './?' . http_build_query($redir_params);
+  if ($is_action_ajax) {
+    header('Content-Type: application/json');
+    echo json_encode([
+      'ok' => !$action_blocked,
+      'message' => $action_blocked ? $action_error : 'Berhasil diproses.',
+      'redirect' => $action_blocked ? '' : $redir
+    ]);
+    exit();
+  }
   if ($action_blocked) {
-    echo "<script>alert('" . addslashes($action_error) . "'); window.location.href='{$redir}';</script>";
+    echo "<script>if(window.showActionPopup){window.showActionPopup('error','" . addslashes($action_error) . "');}else{alert('" . addslashes($action_error) . "');}</script>";
   } else {
-    echo "<script>window.location.href='{$redir}';</script>";
+    echo "<script>if(window.showActionPopup){window.showActionPopup('success','Berhasil diproses.','{$redir}');}else{window.location.href='{$redir}';}</script>";
   }
   exit();
 }
@@ -1294,12 +1304,16 @@ if ($debug_mode && !$is_ajax) {
     .search-clear-btn:hover { background: #6c757d; }
     .page-dim { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 9999; }
     .page-dim .spinner { color: #ecf0f1; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+    .action-popup { position: fixed; right: 20px; bottom: 20px; background: #1f2937; color: #e5e7eb; padding: 12px 14px; border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.35); display: none; align-items: center; gap: 10px; z-index: 10000; }
+    .action-popup.success { border-left: 4px solid #22c55e; }
+    .action-popup.error { border-left: 4px solid #ef4444; }
   </style>
 
 <div class="row">
   <div id="page-dim" class="page-dim" aria-hidden="true">
     <div class="spinner"><i class="fa fa-circle-o-notch fa-spin"></i> Memproses...</div>
   </div>
+  <div id="action-popup" class="action-popup" aria-live="polite"></div>
   <div class="col-12">
     <div class="card card-solid">
       <div class="card-header-solid">
@@ -1358,7 +1372,7 @@ if ($debug_mode && !$is_ajax) {
               </button>
             <?php endif; ?>
             <?php if ($req_comm == '' && $can_delete_status): ?>
-              <button type="button" class="btn btn-warning" style="height:40px;" onclick="if(confirm('Hapus semua voucher <?= $status_label ?> (tidak online)?')) location.href='./?hotspot=users&action=delete_status&status=<?= $req_status ?>&session=<?= $session ?>'">
+              <button type="button" class="btn btn-warning" style="height:40px;" onclick="actionRequest('./?hotspot=users&action=delete_status&status=<?= $req_status ?>&session=<?= $session ?>','Hapus semua voucher <?= $status_label ?> (tidak online)?')">
                 <i class="fa fa-trash"></i> Hapus <?= $status_label ?>
               </button>
             <?php endif; ?>
@@ -1373,12 +1387,12 @@ if ($debug_mode && !$is_ajax) {
                 </button>
               <?php endif; ?>
               <?php if ($can_delete_status): ?>
-                <button type="button" class="btn btn-warning" style="height:40px;" onclick="if(confirm('Hapus semua voucher <?= $status_label ?> di <?= htmlspecialchars($req_comm) ?> (tidak online)?')) location.href='./?hotspot=users&action=delete_status&status=<?= $req_status ?>&blok=<?= urlencode($req_comm) ?>&session=<?= $session ?>'">
+                <button type="button" class="btn btn-warning" style="height:40px;" onclick="actionRequest('./?hotspot=users&action=delete_status&status=<?= $req_status ?>&blok=<?= urlencode($req_comm) ?>&session=<?= $session ?>','Hapus semua voucher <?= $status_label ?> di <?= htmlspecialchars($req_comm) ?> (tidak online)?')">
                   <i class="fa fa-trash"></i> Hapus <?= $status_label ?>
                 </button>
               <?php endif; ?>
               <?php if ($req_status == 'all'): ?>
-                <button type="button" class="btn btn-danger" style="height:40px;" onclick="if(confirm('Hapus semua voucher di <?= htmlspecialchars($req_comm) ?>?')) location.href='./?hotspot=users&action=batch_delete&blok=<?= urlencode($req_comm) ?>&session=<?= $session ?>'">
+                <button type="button" class="btn btn-danger" style="height:40px;" onclick="actionRequest('./?hotspot=users&action=batch_delete&blok=<?= urlencode($req_comm) ?>&session=<?= $session ?>','Hapus semua voucher di <?= htmlspecialchars($req_comm) ?>?')">
                   <i class="fa fa-trash"></i> Hapus Blok
                 </button>
               <?php endif; ?>
@@ -1482,10 +1496,10 @@ if ($debug_mode && !$is_ajax) {
                         <?php if (strtoupper($u['status']) === 'RETUR'): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&download=1&img=1&session=<?= $session ?>','_blank')" title="Download Voucher (PNG)"><i class="fa fa-download"></i></button>
                         <?php elseif (strtoupper($u['status']) === 'RUSAK'): ?>
-                          <button type="button" class="btn-act btn-act-retur" onclick="if(confirm('RETUR Voucher <?= htmlspecialchars($u['name']) ?>?')) location.href='./?hotspot=users&action=retur&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&p=<?= urlencode($u['profile']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>'" title="Retur"><i class="fa fa-exchange"></i></button>
-                          <button type="button" class="btn-act btn-act-invalid" onclick="if(confirm('Rollback RUSAK <?= htmlspecialchars($u['name']) ?>?')) location.href='./?hotspot=users&action=rollback&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>'" title="Rollback"><i class="fa fa-undo"></i></button>
+                          <button type="button" class="btn-act btn-act-retur" onclick="actionRequest('./?hotspot=users&action=retur&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&p=<?= urlencode($u['profile']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','RETUR Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Retur"><i class="fa fa-exchange"></i></button>
+                          <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=rollback&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','Rollback RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rollback"><i class="fa fa-undo"></i></button>
                         <?php else: ?>
-                          <button type="button" class="btn-act btn-act-invalid" onclick="if(confirm('SET RUSAK <?= htmlspecialchars($u['name']) ?>?')) location.href='./?hotspot=users&action=invalid&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>'" title="Rusak"><i class="fa fa-ban"></i></button>
+                          <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=invalid&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','SET RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rusak"><i class="fa fa-ban"></i></button>
                         <?php endif; ?>
                       <?php endif; ?>
                     </td>
@@ -1549,6 +1563,7 @@ if ($debug_mode && !$is_ajax) {
   const searchLoading = document.getElementById('search-loading');
   const clearBtn = document.getElementById('search-clear');
   const pageDim = document.getElementById('page-dim');
+  const actionPopup = document.getElementById('action-popup');
   if (!searchInput || !tbody || !totalBadge || !paginationWrap) return;
 
   if (clearBtn) {
@@ -1560,6 +1575,37 @@ if ($debug_mode && !$is_ajax) {
 
   let lastFetchId = 0;
   let isTyping = false;
+
+  window.showActionPopup = function(type, message, redirectUrl) {
+    if (!actionPopup) return;
+    actionPopup.classList.remove('success', 'error');
+    actionPopup.classList.add(type === 'error' ? 'error' : 'success');
+    actionPopup.innerHTML = `<i class="fa ${type === 'error' ? 'fa-times-circle' : 'fa-check-circle'}"></i><span>${message}</span>`;
+    actionPopup.style.display = 'flex';
+    setTimeout(() => { actionPopup.style.display = 'none'; }, 2500);
+    if (redirectUrl) {
+      setTimeout(() => { window.location.href = redirectUrl; }, 900);
+    }
+  };
+
+  window.actionRequest = async function(url, confirmMsg) {
+    if (confirmMsg && !confirm(confirmMsg)) return;
+    try {
+      if (pageDim) pageDim.style.display = 'flex';
+      const ajaxUrl = url + (url.includes('?') ? '&' : '?') + 'ajax=1&action_ajax=1&_=' + Date.now();
+      const res = await fetch(ajaxUrl, { cache: 'no-store' });
+      const data = await res.json();
+      if (data && data.ok) {
+        window.showActionPopup('success', data.message || 'Berhasil.', data.redirect || '');
+      } else {
+        window.showActionPopup('error', (data && data.message) ? data.message : 'Gagal memproses.');
+      }
+    } catch (e) {
+      window.showActionPopup('error', 'Gagal memproses.');
+    } finally {
+      if (pageDim) pageDim.style.display = 'none';
+    }
+  };
 
   function buildUrl(isSearch) {
     const params = new URLSearchParams();
