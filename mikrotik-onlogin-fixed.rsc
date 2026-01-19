@@ -3,7 +3,7 @@
 # Update: 2026-01-19 - PRESERVE BLOK INFO
 
 # Realtime report endpoint (sesuaikan)
-:local baseUrl "http://10.10.83.2/report/live_ingest.php";
+:local baseUrl "http://wartelpas.sobigidul.net/report/live_ingest.php";
 :local key "WartelpasSecureKey";
 :local session "S3c7x9_LB";
 
