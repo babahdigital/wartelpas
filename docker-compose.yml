@@ -49,6 +49,7 @@ services:
       - ./hotspot/userprofile.php:/var/www/html/hotspot/userprofile.php
       - ./hotspot/adduserprofile.php:/var/www/html/hotspot/adduserprofile.php
       - ./hotspot/userprofile.php:/var/www/html/hotspot/userprofile.php
+      - ./hotspot/userprofilebyname.php:/var/www/html/hotspot/userprofilebyname.php
 
       # ==========================================
       # 5. FILE ROOT & TOOLS (CORE SYSTEM)
