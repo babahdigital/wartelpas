@@ -2,7 +2,7 @@
 /*
  * Copyright (C) 2018 Laksamadi Guko.
  * Modified by Pak Dul & Gemini AI (2026) - Wartel Edition
- * UPDATE: Filter Hosts by IP (172.16.2.x) & CLEAN COMMENT DISPLAY
+ * UPDATE: Filter Hosts by IP (172.16.2.x) & CLEAN COMMENT DISPLAY & Modern UI
  */
 session_start();
 // hide all error
@@ -41,7 +41,7 @@ if (!isset($_SESSION["mikhmon"])) {
 			$titlename = "Bypassed Hosts (172.16.2.x)";
 		} else {
 			$raw_hosts = $API->comm("/ip/hotspot/host/print");
-			$titlename = "Host List -";
+			$titlename = "Host List";
 		}
 		
 		// 2. Filter Array di PHP (Hanya 172.16.2.x)
@@ -65,98 +65,158 @@ if (!isset($_SESSION["mikhmon"])) {
 }
 ?>
 
+<style>
+    .card-modern {
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        backdrop-filter: blur(4px);
+        border-radius: 12px;
+    }
+    .card-header-modern {
+        background: transparent;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1.5rem;
+    }
+    .table-modern {
+        width: 100%;
+        margin-bottom: 0;
+        color: #e0e0e0;
+    }
+    .table-modern thead th {
+        border-top: none;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+    .table-modern tbody tr {
+        transition: background-color 0.2s ease;
+    }
+    .table-modern tbody tr:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    .table-modern td {
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        vertical-align: middle;
+        padding: 12px 15px;
+    }
+    /* Status Badge Modernization */
+    .badge-modern {
+        border-radius: 6px;
+        padding: 5px 10px;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        font-size: 0.75rem;
+    }
+    .btn-icon-hover:hover {
+        transform: scale(1.2);
+        transition: transform 0.2s;
+        cursor: pointer;
+    }
+</style>
+
 <div class="row">
-<div class="col-12">
-<div class="card">
-<div class="card-header">
-	<h3><i class="fa fa-laptop"></i> <?= $titlename; ?> <span class="badge badge-primary"><?= $counthosts; ?></span>
-	</h3>
-</div>
-<div class="card-body">
+    <div class="col-12">
+        <div class="card card-modern">
+            <div class="card-header card-header-modern">
+                <h3 class="card-title mb-0">
+                    <i class="fa fa-laptop mr-2"></i> <?= $titlename; ?> 
+                    <span class="badge badge-pill badge-primary ml-2"><?= $counthosts; ?></span>
+                </h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table id="dataTable" class="table table-modern table-hover text-nowrap">
+                        <thead>
+                            <tr>
+                                <th style="text-align:center; width: 50px;"><i class="fa fa-trash"></i></th>
+                                <th>Status</th>
+                                <th><?= $_mac_address ?></th>
+                                <th><?= $_ip_address ?></th>
+                                <th>To Address</th>
+                                <th><?= $_server ?></th>
+                                <th><?= $_comment ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php
+                        // Loop menggunakan data yang sudah difilter ($filtered_hosts)
+                        foreach ($filtered_hosts as $hosts) {
+                            $id = $hosts['.id'];
+                            $maca = $hosts['mac-address'];
+                            $addr = $hosts['address'];
+                            $toaddr = isset($hosts['to-address']) ? $hosts['to-address'] : '';
+                            $server = $hosts['server'];
+                            $commt = isset($hosts['comment']) ? $hosts['comment'] : '';
 
-<div class="table-responsive">
-<table id="dataTable" class="table table-bordered table-hover text-nowrap">
-	<thead>
-		<tr>
-			<th style="text-align:center; width: 40px;"><i class="fa fa-trash"></i></th>
-			<th>Status</th>
-			<th><?= $_mac_address ?></th>
-			<th><?= $_ip_address ?></th>
-			<th>To Address</th>
-			<th><?= $_server ?></th>
-			<th><?= $_comment ?></th>
-		</tr>
-	</thead>
-	<tbody>
-<?php
-// Loop menggunakan data yang sudah difilter ($filtered_hosts)
-foreach ($filtered_hosts as $hosts) {
-	$id = $hosts['.id'];
-	$maca = $hosts['mac-address'];
-	$addr = $hosts['address'];
-	$toaddr = isset($hosts['to-address']) ? $hosts['to-address'] : '';
-	$server = $hosts['server'];
-	$commt = isset($hosts['comment']) ? $hosts['comment'] : '';
+                            $uriprocess = "'./?remove-host=" . $id . "&session=" . $session . "'";
 
-	$uriprocess = "'./?remove-host=" . $id . "&session=" . $session . "'";
+                            echo "<tr>";
+                            // Tombol Hapus Modern
+                            echo "<td style='text-align:center;'>
+                                    <span class='btn-icon-hover' title='Remove " . $maca . "' onclick=\"if(confirm('Remove Host $maca?')){loadpage(".$uriprocess.")}\">
+                                        <i class='fa fa-trash text-danger' style='font-size: 1.1rem;'></i>
+                                    </span>
+                                  </td>";
+                            
+                            // Status Badges Modern
+                            echo "<td style='text-align:center;'>";
+                            if ($hosts['authorized'] == "true" && $hosts['DHCP'] == "true") {
+                                echo "<span class='badge badge-success badge-modern' title='Authorized & DHCP'>Auth | DHCP</span>";
+                            } elseif ($hosts['authorized'] == "true") {
+                                echo "<span class='badge badge-success badge-modern' title='Authorized'>Authorized</span>";
+                            } elseif ($hosts['bypassed'] == "true") {
+                                echo "<span class='badge badge-info badge-modern' title='Bypassed'>Bypassed</span>";
+                            } elseif ($hosts['DHCP'] == "true") {
+                                echo "<span class='badge badge-warning badge-modern' title='DHCP Only'>DHCP</span>";
+                            } else {
+                                echo "<span class='badge badge-secondary badge-modern'>-</span>";
+                            }
+                            echo "</td>";
 
-	echo "<tr>";
-	echo "<td style='text-align:center;'><span class='pointer' title='Remove " . $maca . "' onclick=\"if(confirm('Remove Host $maca?')){loadpage(".$uriprocess.")}\"><i class='fa fa-minus-square text-danger'></i></span></td>";
-	
-	echo "<td style='text-align:center;'>";
-	if ($hosts['authorized'] == "true" && $hosts['DHCP'] == "true") {
-		echo "<span class='badge badge-success' title='Authorized & DHCP'>Auth | DHCP</span>";
-	} elseif ($hosts['authorized'] == "true") {
-		echo "<span class='badge badge-success' title='Authorized'>Authorized</span>";
-	} elseif ($hosts['bypassed'] == "true") {
-		echo "<span class='badge badge-info' title='Bypassed'>Bypassed</span>";
-	} elseif ($hosts['DHCP'] == "true") {
-		echo "<span class='badge badge-warning' title='DHCP Only'>DHCP</span>";
-	} else {
-		echo "<span class='badge badge-secondary'>-</span>";
-	}
-	echo "</td>";
-
-	echo "<td>" . $maca . "</td>";
-	echo "<td>" . $addr . "</td>";
-	echo "<td>" . $toaddr . "</td>";
-	echo "<td>" . $server . "</td>";
-	
-	// --- LOGIC TAMPILAN KOMENTAR BERSIH ---
-	echo "<td>";
-	
-	// Cek apakah ini voucher?
-	$is_voucher = (stripos($commt, 'vc-') === 0 || stripos($commt, 'up-') === 0);
-	
-	if ($is_voucher) {
-		// Jika ada Blok-
-		if (strpos($commt, 'Blok-') !== false) {
-			$parts = explode('Blok-', $commt);
-			$clean_blok = 'Blok-' . end($parts);
-			echo "<span style='font-weight:bold; color:#007bff;'>" . $clean_blok . "</span>";
-			
-		} elseif (strpos($commt, 'Kamar-') !== false) {
-			$parts = explode('Kamar-', $commt);
-			$clean_kamar = 'Kamar-' . end($parts);
-			echo "<span style='font-weight:bold; color:#28a745;'>" . $clean_kamar . "</span>";
-			
-		} else {
-			// Voucher biasa tanpa Blok -> Sembunyikan (tampil kosong)
-			echo ""; 
-		}
-	} else {
-		// Komentar User Biasa (bukan voucher) -> Tampilkan Normal
-		echo $commt;
-	}
-	
-	echo "</td>";
-	echo "</tr>";
-}
-?>
-	</tbody>
-</table>
-</div>
-</div>
-</div>
-</div>
+                            echo "<td style='font-family: monospace; color: #81d4fa;'>" . $maca . "</td>";
+                            echo "<td style='font-family: monospace;'>" . $addr . "</td>";
+                            echo "<td style='font-family: monospace;'>" . $toaddr . "</td>";
+                            echo "<td>" . $server . "</td>";
+                            
+                            // --- LOGIC TAMPILAN KOMENTAR BERSIH ---
+                            echo "<td>";
+                            
+                            // Cek apakah ini voucher?
+                            $is_voucher = (stripos($commt, 'vc-') === 0 || stripos($commt, 'up-') === 0);
+                            
+                            if ($is_voucher) {
+                                // Jika ada Blok-
+                                if (strpos($commt, 'Blok-') !== false) {
+                                    $parts = explode('Blok-', $commt);
+                                    $clean_blok = 'Blok-' . end($parts);
+                                    echo "<span class='badge badge-primary badge-modern'>" . $clean_blok . "</span>";
+                                    
+                                } elseif (strpos($commt, 'Kamar-') !== false) {
+                                    $parts = explode('Kamar-', $commt);
+                                    $clean_kamar = 'Kamar-' . end($parts);
+                                    echo "<span class='badge badge-success badge-modern'>" . $clean_kamar . "</span>";
+                                    
+                                } else {
+                                    // Voucher biasa tanpa Blok -> Sembunyikan (tampil kosong)
+                                    echo ""; 
+                                }
+                            } else {
+                                // Komentar User Biasa (bukan voucher) -> Tampilkan Normal
+                                echo "<span style='font-style: italic; color: #ccc;'>" . $commt . "</span>";
+                            }
+                            
+                            echo "</td>";
+                            echo "</tr>";
+                        }
+                        ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>

@@ -2,7 +2,7 @@
 /*
  * Copyright (C) 2018 Laksamadi Guko.
  * Modified by Pak Dul & Gemini AI (2026) - Wartel Edition
- * UPDATE: Filter Active Users by IP (172.16.2.x) & CLEAN COMMENT DISPLAY
+ * UPDATE: Filter Active Users by IP (172.16.2.x) & Modern Dark UI
  */
 session_start();
 // hide all error
@@ -55,97 +55,156 @@ if (!isset($_SESSION["mikhmon"])) {
 }
 ?>
 
+<style>
+    .card-modern {
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        backdrop-filter: blur(4px);
+        border-radius: 12px;
+    }
+    .card-header-modern {
+        background: transparent;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1.5rem;
+    }
+    .table-modern {
+        width: 100%;
+        margin-bottom: 0;
+        color: #e0e0e0;
+    }
+    .table-modern thead th {
+        border-top: none;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+    .table-modern tbody tr {
+        transition: background-color 0.2s ease;
+    }
+    .table-modern tbody tr:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    .table-modern td {
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        vertical-align: middle;
+        padding: 12px 15px;
+    }
+    .badge-modern {
+        border-radius: 6px;
+        padding: 5px 10px;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+    }
+    .btn-icon-hover:hover {
+        transform: scale(1.2);
+        transition: transform 0.2s;
+        cursor: pointer;
+    }
+</style>
+
 <div class="row">
-<div class="col-12">
-<div class="card">
-<div class="card-header">
-	<h3><i class="fa fa-wifi"></i> User Aktif (<span class="badge badge-primary"><?= $TotalReg; ?></span>)</h3> 
-</div>
-<div class="card-body">
-<div class="table-responsive">
-<table id="dataTable" class="table table-bordered table-hover text-nowrap">
-	<thead>
-		<tr>
-			<th style="text-align:center; width: 40px;"><i class="fa fa-trash"></i></th>
-			<th><?= $_server ?></th>
-			<th><?= $_user ?></th>
-			<th><?= $_ip_address ?></th>
-			<th><?= $_mac_address ?></th>
-			<th><?= $_uptime ?></th>
-			<th><?= $_time_left ?></th>
-			<th><?= $_bytes_in ?></th>
-			<th><?= $_bytes_out ?></th>
-			<th>Login By</th>
-			<th><?= $_comment ?></th>
-		</tr>
-	</thead>
-	<tbody>
-<?php
-// Loop menggunakan data yang sudah difilter ($filtered_active)
-foreach ($filtered_active as $hotspotactive) {
-	$id = $hotspotactive['.id'];
-	$server = $hotspotactive['server'];
-	$user = $hotspotactive['user'];
-	$address = $hotspotactive['address'];
-	$mac = $hotspotactive['mac-address'];
-	$uptime = formatDTM($hotspotactive['uptime']);
-	
-	$usesstime = isset($hotspotactive['session-time-left']) ? formatDTM($hotspotactive['session-time-left']) : '';
-	
-	$bytesi = formatBytes($hotspotactive['bytes-in'], 2);
-	$byteso = formatBytes($hotspotactive['bytes-out'], 2);
-	$loginby = isset($hotspotactive['login-by']) ? $hotspotactive['login-by'] : '';
-	$comment = isset($hotspotactive['comment']) ? $hotspotactive['comment'] : '';
-	
-	$uriprocess = "'./?remove-user-active=" . $id . "&session=" . $session . "'";
-	
-	echo "<tr>";
-	echo "<td style='text-align:center;'><span class='pointer' title='Kick User " . $user . "' onclick=\"if(confirm('Disconnect User $user?')){loadpage(".$uriprocess.")}\"><i class='fa fa-minus-square text-danger'></i></span></td>";
-	echo "<td>" . $server . "</td>";
-	echo "<td><a title='Open User Details' href='./?hotspot-user=" . $user . "&session=" . $session . "'><i class='fa fa-edit'></i> " . $user . "</a></td>";
-	echo "<td>" . $address . "</td>";
-	echo "<td>" . $mac . "</td>";
-	echo "<td>" . $uptime . "</td>";
-	echo "<td>" . $usesstime . "</td>";
-	echo "<td>" . $bytesi . "</td>";
-	echo "<td>" . $byteso . "</td>";
-	echo "<td>" . $loginby . "</td>";
-	
-	// --- LOGIC TAMPILAN KOMENTAR BERSIH ---
-	echo "<td>";
-	
-	// Cek apakah ini voucher?
-	$is_voucher = (stripos($comment, 'vc-') === 0 || stripos($comment, 'up-') === 0);
-	
-	if ($is_voucher) {
-		// Jika ada Blok-
-		if (strpos($comment, 'Blok-') !== false) {
-			$parts = explode('Blok-', $comment);
-			$clean_blok = 'Blok-' . end($parts);
-			echo "<span style='font-weight:bold; color:#007bff;'>" . $clean_blok . "</span>";
-			
-		} elseif (strpos($comment, 'Kamar-') !== false) {
-			$parts = explode('Kamar-', $comment);
-			$clean_kamar = 'Kamar-' . end($parts);
-			echo "<span style='font-weight:bold; color:#28a745;'>" . $clean_kamar . "</span>";
-			
-		} else {
-			// Voucher biasa tanpa Blok -> Sembunyikan (tampil kosong)
-			echo ""; 
-		}
-	} else {
-		// Komentar User Biasa (bukan voucher) -> Tampilkan Normal
-		echo $comment;
-	}
-	
-	echo "</td>";
-	echo "</tr>";
-}
-?>
-	</tbody>
-</table>
-</div>
-</div>
-</div>
-</div>
+    <div class="col-12">
+        <div class="card card-modern">
+            <div class="card-header card-header-modern">
+                <h3 class="card-title mb-0">
+                    <i class="fa fa-wifi mr-2"></i> User Aktif 
+                    <span class="badge badge-pill badge-primary ml-2"><?= $TotalReg; ?></span>
+                </h3> 
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table id="dataTable" class="table table-modern table-hover text-nowrap">
+                        <thead>
+                            <tr>
+                                <th style="text-align:center; width: 50px;"><i class="fa fa-ban"></i></th>
+                                <th><?= $_server ?></th>
+                                <th><?= $_user ?></th>
+                                <th><?= $_ip_address ?></th>
+                                <th><?= $_mac_address ?></th>
+                                <th><?= $_uptime ?></th>
+                                <th><?= $_time_left ?></th>
+                                <th><?= $_bytes_in ?></th>
+                                <th><?= $_bytes_out ?></th>
+                                <th>Login By</th>
+                                <th><?= $_comment ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php
+                        // Loop menggunakan data yang sudah difilter ($filtered_active)
+                        foreach ($filtered_active as $hotspotactive) {
+                            $id = $hotspotactive['.id'];
+                            $server = $hotspotactive['server'];
+                            $user = $hotspotactive['user'];
+                            $address = $hotspotactive['address'];
+                            $mac = $hotspotactive['mac-address'];
+                            $uptime = formatDTM($hotspotactive['uptime']);
+                            
+                            $usesstime = isset($hotspotactive['session-time-left']) ? formatDTM($hotspotactive['session-time-left']) : '';
+                            
+                            $bytesi = formatBytes($hotspotactive['bytes-in'], 2);
+                            $byteso = formatBytes($hotspotactive['bytes-out'], 2);
+                            $loginby = isset($hotspotactive['login-by']) ? $hotspotactive['login-by'] : '';
+                            $comment = isset($hotspotactive['comment']) ? $hotspotactive['comment'] : '';
+                            
+                            $uriprocess = "'./?remove-user-active=" . $id . "&session=" . $session . "'";
+                            
+                            echo "<tr>";
+                            // Kick Button Modern
+                            echo "<td style='text-align:center;'>
+                                    <span class='btn-icon-hover' title='Kick User " . $user . "' onclick=\"if(confirm('Disconnect User $user?')){loadpage(".$uriprocess.")}\">
+                                        <i class='fa fa-times-circle text-danger' style='font-size: 1.2rem;'></i>
+                                    </span>
+                                  </td>";
+                            echo "<td>" . $server . "</td>";
+                            echo "<td><a title='Open User Details' href='./?hotspot-user=" . $user . "&session=" . $session . "' style='color: #64b5f6; font-weight: 500;'><i class='fa fa-edit'></i> " . $user . "</a></td>";
+                            echo "<td style='font-family: monospace;'>" . $address . "</td>";
+                            echo "<td style='font-family: monospace;'>" . $mac . "</td>";
+                            echo "<td><i class='fa fa-clock-o text-muted mr-1'></i>" . $uptime . "</td>";
+                            echo "<td><i class='fa fa-hourglass-half text-muted mr-1'></i>" . $usesstime . "</td>";
+                            echo "<td class='text-success'><i class='fa fa-arrow-down mr-1'></i>" . $bytesi . "</td>";
+                            echo "<td class='text-warning'><i class='fa fa-arrow-up mr-1'></i>" . $byteso . "</td>";
+                            echo "<td>" . $loginby . "</td>";
+                            
+                            // --- LOGIC TAMPILAN KOMENTAR BERSIH ---
+                            echo "<td>";
+                            
+                            // Cek apakah ini voucher?
+                            $is_voucher = (stripos($comment, 'vc-') === 0 || stripos($comment, 'up-') === 0);
+                            
+                            if ($is_voucher) {
+                                // Jika ada Blok-
+                                if (strpos($comment, 'Blok-') !== false) {
+                                    $parts = explode('Blok-', $comment);
+                                    $clean_blok = 'Blok-' . end($parts);
+                                    echo "<span class='badge badge-primary badge-modern'>" . $clean_blok . "</span>";
+                                    
+                                } elseif (strpos($comment, 'Kamar-') !== false) {
+                                    $parts = explode('Kamar-', $comment);
+                                    $clean_kamar = 'Kamar-' . end($parts);
+                                    echo "<span class='badge badge-success badge-modern'>" . $clean_kamar . "</span>";
+                                    
+                                } else {
+                                    // Voucher biasa tanpa Blok -> Sembunyikan (tampil kosong)
+                                    echo ""; 
+                                }
+                            } else {
+                                // Komentar User Biasa (bukan voucher) -> Tampilkan Normal
+                                echo "<span style='color: #ccc;'>" . $comment . "</span>";
+                            }
+                            
+                            echo "</td>";
+                            echo "</tr>";
+                        }
+                        ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
