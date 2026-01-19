@@ -48,6 +48,7 @@ services:
       - ./hotspot/quickuser.php:/var/www/html/hotspot/quickuser.php
       - ./hotspot/userprofile.php:/var/www/html/hotspot/userprofile.php
       - ./hotspot/adduserprofile.php:/var/www/html/hotspot/adduserprofile.php
+      - ./hotspot/userprofile.php:/var/www/html/hotspot/userprofile.php
 
       # ==========================================
       # 5. FILE ROOT & TOOLS (CORE SYSTEM)
