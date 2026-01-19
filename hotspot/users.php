@@ -888,16 +888,25 @@ foreach($all_users as $u) {
     $is_rusak = stripos($comment, 'RUSAK') !== false;
     $is_invalid = false;
     $is_retur = stripos($comment, '(Retur)') !== false || stripos($comment, 'Retur Ref:') !== false;
-    if (!$is_retur && $hist && strtolower($hist['last_status'] ?? '') === 'retur') {
+    $hist_status = strtolower($hist['last_status'] ?? '');
+    if (!$is_retur && $hist && $hist_status === 'retur') {
       $is_retur = true;
     }
-    if ($is_retur) {
+    if ($hist && $hist_status === 'rusak') {
+      $is_rusak = true;
+    }
+    if ($disabled === 'true') {
+      $is_rusak = true;
+    }
+    // Retur harus tetap retur meski Retur Ref memuat kata RUSAK
+    if ($is_retur && $hist_status !== 'rusak' && $disabled !== 'true') {
       $is_rusak = false;
     }
-    if ($is_rusak || ($hist && strtolower($hist['last_status'] ?? '') === 'rusak')) {
+    if ($is_rusak || $hist_status === 'rusak') {
       $is_retur = false;
     }
-    $is_used = ($is_active || $bytes > 50 || $uptime != '0s' || ($f_ip != '-' && stripos($comment, '-|-') === false));
+    $is_used = (!$is_retur && !$is_rusak && $disabled !== 'true') &&
+      ($is_active || $bytes > 50 || $uptime != '0s' || ($f_ip != '-' && stripos($comment, '-|-') === false));
 
     $status = 'READY';
     if ($is_active) $status = 'ONLINE';
@@ -905,6 +914,22 @@ foreach($all_users as $u) {
     elseif ($disabled == 'true') $status = 'RUSAK';
     elseif ($is_retur) $status = 'RETUR';
     elseif ($is_used) $status = 'TERPAKAI';
+
+    // Pastikan data usage tampil saat RUSAK
+    if ($status === 'RUSAK' && $hist) {
+      if ($bytes == 0 && (int)($hist['last_bytes'] ?? 0) > 0) {
+        $bytes = (int)$hist['last_bytes'];
+      }
+      if (($uptime == '0s' || $uptime == '') && !empty($hist['last_uptime'])) {
+        $uptime = $hist['last_uptime'];
+      }
+      if (($f_ip == '-' || $f_ip == '') && !empty($hist['ip_address'])) {
+        $f_ip = $hist['ip_address'];
+      }
+      if (($f_mac == '-' || $f_mac == '') && !empty($hist['mac_address'])) {
+        $f_mac = $hist['mac_address'];
+      }
+    }
 
     // Simpan waktu login/logout dan status ke DB
     $now = date('Y-m-d H:i:s');
