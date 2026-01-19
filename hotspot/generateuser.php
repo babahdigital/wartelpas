@@ -75,6 +75,8 @@ if (!isset($_SESSION["mikhmon"])) {
         }
     }
 
+    $getprofile_list = $API->comm("/ip/hotspot/user/profile/print");
+
     // --- PROSES GENERATE USER ---
     if (isset($_POST['qty'])) {
         // CSRF Check
@@ -381,7 +383,7 @@ if (!isset($_SESSION["mikhmon"])) {
 <div class="container-fluid gen-wrapper">
     <div class="row row-eq-height g-3">
         
-        <div class="col-12 col-md-8 col-lg-8 col-xl-9">
+        <div class="col-8">
             <div class="card-modern">
                 <div class="card-header-mod">
                     <h3><i class="fa fa-cogs"></i> Konfigurasi Voucher</h3>
@@ -422,10 +424,14 @@ if (!isset($_SESSION["mikhmon"])) {
                                         if ($genprof != "" && in_array($genprof, $allowedProfiles)) {
                                             echo "<option selected>" . $genprof . "</option>";
                                         }
-                                        foreach ($getprofile as $p) {
-                                            if(in_array($p['name'], $allowedProfiles) && $p['name'] != $genprof) {
-                                                echo "<option>" . $p['name'] . "</option>";
+                                        if (!empty($getprofile_list)) {
+                                            foreach ($getprofile_list as $p) {
+                                                if (in_array($p['name'], $allowedProfiles) && $p['name'] != $genprof) {
+                                                    echo "<option>" . $p['name'] . "</option>";
+                                                }
                                             }
+                                        } else {
+                                            echo "<option value=\"\" disabled>Tidak ada profil</option>";
                                         }
                                         ?>
                                     </select>
@@ -485,7 +491,7 @@ if (!isset($_SESSION["mikhmon"])) {
             </div>
         </div>
 
-        <div class="col-12 col-md-4 col-lg-4 col-xl-3">
+        <div class="col-4">
             <div class="card-modern">
                 <div class="card-header-mod">
                     <h3><i class="fa fa-list-alt"></i> Ringkasan (READY)</h3>
