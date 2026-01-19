@@ -434,7 +434,7 @@ elseif ($ppp == "edit-profile") {
 <script src="./js/mikhmon.js?t=<?= str_replace(" ","_",date("Y-m-d H:i:s")); ?>"></script>
 
 <?php
-if ($hotspot == "dashboard" || ($hotspot == "" && !empty($session))) {
+if ($hotspot == "dashboard" || ($hotspot == "" && $hotspotuser == "" && $userprofile == "" && $removeuserprofile == "" && $report == "" && $removereport == "" && !empty($session))) {
   echo '<script>
     if (window.history.replaceState) { window.history.replaceState(null, null, "./?session=' . $session . '"); }
     $("#r_3").load("./dashboard/aload.php?session=' . $session . '&load=logs #r_3");  
