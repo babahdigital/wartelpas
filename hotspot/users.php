@@ -1725,6 +1725,16 @@ if ($debug_mode && !$is_ajax) {
           window.location.href = './?hotspot=users&session=<?= $session ?>';
           return;
         }
+        if (url.includes('action=delete_status')) {
+          const params = new URLSearchParams(window.location.search);
+          params.set('hotspot', 'users');
+          params.set('session', '<?= $session ?>');
+          params.set('status', 'all');
+          if (commentSelect) params.set('comment', commentSelect.value);
+          params.delete('page');
+          window.location.href = './?' + params.toString();
+          return;
+        }
         fetchUsers(true, false);
       } else {
         window.showActionPopup('error', (data && data.message) ? data.message : 'Gagal memproses.');
