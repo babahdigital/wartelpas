@@ -3,6 +3,7 @@
  * Copyright (C) 2018 Laksamadi Guko.
  * SECURITY UPGRADE: Anti-CSRF, Anti-Bot, & Silent Defense
  * Code Owner: Pak Dul (WartelPas)
+ * REBUILD STYLE: Matching user.php dark theme (2026)
  */
 // Cek session start, jika belum aktif (misal akses langsung), start session.
 if (session_status() == PHP_SESSION_NONE) {
@@ -70,7 +71,7 @@ if (!isset($_SESSION["mikhmon"])) {
             } else {
                 $getprice = $currency . " " . number_format((float)$getprice);
             }
-            $ValidPrice = "<b>Validity : " . $getvalid . " | Price : " . $getprice . " | Lock User : " . $getlocku . "</b>";
+            $ValidPrice = "<span><b>Validity :</b> " . $getvalid . "</span> | <span><b>Price :</b> " . $getprice . "</span> | <span><b>Lock User :</b> " . $getlocku . "</span>";
         }
     }
 
@@ -78,20 +79,17 @@ if (!isset($_SESSION["mikhmon"])) {
     if (isset($_POST['qty'])) {
         
         // --- SECURITY CHECK 1: CSRF TOKEN VALIDATION ---
-        // Jika token dari form tidak sama dengan session, ini serangan!
         if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
              echo "<script>window.location.href='./error.php';</script>";
              exit();
         }
 
         // --- SECURITY CHECK 2: RATE LIMITING (ANTI-BOT) ---
-        // Mencegah tombol dipencet berulang kali dalam waktu singkat (5 detik)
         if (isset($_SESSION['last_gen_time']) && (time() - $_SESSION['last_gen_time'] < 5)) {
-             // Diam-diam tolak, jangan kasih notif
              echo "<script>window.location='./?hotspot-user=generate&session=" . $session . "'</script>";
              exit();
         }
-        $_SESSION['last_gen_time'] = time(); // Catat waktu eksekusi
+        $_SESSION['last_gen_time'] = time();
 
         // AMBIL VARIABEL
         $qty = (int)$_POST['qty']; 
@@ -274,187 +272,302 @@ if (!isset($_SESSION["mikhmon"])) {
 ?>
 
 <style>
-    .gen-page { --dark-card: #2a3036; --border-col: #495057; --txt-main: #ecf0f1; --txt-muted: #adb5bd; }
-    .gen-page .card { background: var(--dark-card); color: var(--txt-main); border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-radius: 8px; }
-    .gen-page .card-header { background: #23272b; border-bottom: 2px solid var(--border-col); border-radius: 8px 8px 0 0; }
-    .gen-page .table { color: var(--txt-main); }
-    .gen-page .table td, .gen-page .table th { border-color: #3a4046; }
-    .gen-page .table thead th { color: var(--txt-muted); text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.75rem; }
+    /* Mengadopsi variabel warna dari user.php untuk konsistensi */
+    :root {
+        --dark-bg: #1e2226;
+        --dark-card: #2a3036;
+        --input-bg: #343a40;
+        --border-col: #495057;
+        --txt-main: #ecf0f1;
+        --txt-muted: #adb5bd;
+        --c-blue: #3498db;
+        --c-green: #2ecc71;
+        --c-orange: #f39c12;
+        --c-red: #e74c3c;
+    }
+
+    /* Base Styles for this page */
+    .gen-page { color: var(--txt-main); }
     .gen-page .text-muted { color: var(--txt-muted) !important; }
-    .gen-page .btn { border-radius: 6px; }
-    .gen-page .form-control, .gen-page select.form-control { background: #343a40; border: 1px solid var(--border-col); color: #fff; }
+    .gen-page .text-danger { color: var(--c-red) !important; }
+
+    /* Card Styles - Solid Dark Theme */
+    .gen-page .card-solid {
+        background: var(--dark-card);
+        color: var(--txt-main);
+        border: none;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .gen-page .card-header-solid {
+        background: #23272b;
+        padding: 15px 20px;
+        border-bottom: 2px solid var(--border-col);
+        border-radius: 8px 8px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .gen-page .card-title { margin: 0; font-weight: 600; font-size: 1.25rem; }
+
+    /* Form Controls */
+    .gen-page .form-control, .gen-page select.form-control {
+        background: var(--input-bg);
+        border: 1px solid var(--border-col);
+        color: var(--txt-main);
+        border-radius: 4px;
+        padding: 8px 12px;
+        height: calc(2.25rem + 2px); /* Standar tinggi bootstrap */
+    }
+    .gen-page .form-control:focus {
+        background: #3b444b;
+        border-color: var(--c-blue);
+        box-shadow: none;
+        color: var(--txt-main);
+    }
     .gen-page .form-control::placeholder { color: var(--txt-muted); }
+
+    /* Locked/Readonly Fields - Tampil elegan, bukan dashed */
+    .gen-page .locked-field {
+        background-color: #2c3138 !important; /* Sedikit lebih gelap dari input biasa */
+        color: var(--txt-muted) !important; /* Teks agak redup */
+        cursor: not-allowed;
+        font-weight: 600;
+        opacity: 1; /* Override bootstrap disabled opacity */
+    }
+
+    /* Table Styles - Meniru gaya user.php */
+    .table-dark-solid { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .table-dark-solid th, .table-dark-solid td {
+        padding: 12px 15px; /* Padding lebih lega */
+        vertical-align: middle;
+        border-bottom: 1px solid #3a4046;
+        color: var(--txt-main);
+    }
+    .table-dark-solid thead th {
+        background: #1b1e21;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--txt-muted);
+        border-bottom: 2px solid var(--border-col);
+        font-weight: 600;
+    }
+    .table-hover tbody tr:hover { background-color: #32383e; }
+
+    /* Label kolom kiri di form */
+    .form-label-td {
+        font-weight: 600;
+        width: 30%;
+        white-space: nowrap;
+    }
+
+    /* Buttons */
+    .gen-page .btn { border-radius: 4px; font-weight: 600; padding: 8px 16px; transition: all 0.2s; border: none;}
+    .gen-page .btn-primary-dark { background: var(--c-blue); color: white; }
+    .gen-page .btn-primary-dark:hover { background: #2980b9; }
+    .gen-page .btn-warning-dark { background: var(--c-orange); color: white; }
+    .gen-page .btn-warning-dark:hover { background: #e67e22; }
+    .gen-page .btn-pink-dark { background: #e84393; color: white; } /* Warna pink custom */
+    .gen-page .btn-pink-dark:hover { background: #d63031; }
+
+    /* Misc */
+    .valid-price-info { padding: 15px; background: rgba(52, 152, 219, 0.1); border-radius: 4px; border-left: 4px solid var(--c-blue); }
+    #loader { margin-left: 10px; color: var(--c-blue); }
 </style>
 
 <div class="gen-page">
-<div class="row">
-<div class="col-8">
-<div class="card box-bordered">
-    <div class="card-header">
-    <h3><i class="fa fa-user-plus"></i> <?= $_generate_user ?> <small id="loader" style="display: none;" ><i><i class='fa fa-circle-o-notch fa-spin'></i> <?= $_processing ?> </i></small></h3> 
-    </div>
-    <div class="card-body">
-<form autocomplete="off" method="post" action="./?hotspot-user=generate&session=<?= $session; ?>">
-    <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
-    <input type="hidden" name="session" value="<?= $session; ?>">
-    
-    <div>
-        <?php if (isset($_SESSION['ubp']) && $_SESSION['ubp'] != "") {
-            echo "<a class='btn bg-warning' href='./?hotspot=users&profile=" . $_SESSION['ubp'] . "&session=" . $session . "'> <i class='fa fa-close'></i> ".$_close."</a>";
-        } else {
-            echo "<a class='btn bg-warning' href='./?hotspot=users&profile=all&session=" . $session . "'> <i class='fa fa-close'></i> ".$_close."</a>";
-        }
-        ?>
-        <a class="btn bg-pink" title="Lihat User per Profile" href="./?hotspot=users&profile=<?php echo isset($uprofile) ? $uprofile : "all"; ?>&session=<?= $session; ?>"> <i class="fa fa-users"></i> <?= $_user_list ?></a>
-        
-        <button type="submit" name="save" onclick="return validateForm()" class="btn bg-primary" title="Generate User"> <i class="fa fa-save"></i> <?= $_generate ?></button>
-        
-    </div>
+    <div class="row">
+        <div class="col-lg-8 col-md-12 mb-4">
+            <div class="card card-solid">
+                <div class="card-header-solid">
+                    <h3 class="card-title"><i class="fa fa-user-plus mr-2"></i> <?= $_generate_user ?></h3>
+                    <small id="loader" style="display: none;"><i><i class='fa fa-circle-o-notch fa-spin'></i> <?= $_processing ?> </i></small>
+                </div>
+                <div class="card-body p-0"> <form autocomplete="off" method="post" action="./?hotspot-user=generate&session=<?= $session; ?>" class="m-0">
+                        <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
+                        <input type="hidden" name="session" value="<?= $session; ?>">
 
-<style>
-    .locked-field {
-        background-color: transparent !important; 
-        border: 1px dashed rgba(128, 128, 128, 0.5) !important; 
-        color: inherit !important; 
-        cursor: not-allowed; 
-        font-weight: bold;
-        opacity: 0.8;
-    }
-</style>
+                        <div class="p-3" style="border-bottom: 1px solid var(--border-col); background: rgba(0,0,0,0.1);">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <?php if (isset($_SESSION['ubp']) && $_SESSION['ubp'] != "") {
+                                        echo "<a class='btn btn-warning-dark mr-2' href='./?hotspot=users&profile=" . $_SESSION['ubp'] . "&session=" . $session . "'> <i class='fa fa-times'></i> ".$_close."</a>";
+                                    } else {
+                                        echo "<a class='btn btn-warning-dark mr-2' href='./?hotspot=users&profile=all&session=" . $session . "'> <i class='fa fa-times'></i> ".$_close."</a>";
+                                    }
+                                    ?>
+                                    <a class="btn btn-pink-dark" title="Lihat User per Profile" href="./?hotspot=users&profile=<?php echo isset($uprofile) ? $uprofile : "all"; ?>&session=<?= $session; ?>"> <i class="fa fa-users"></i> <?= $_user_list ?></a>
+                                </div>
+                                <div>
+                                     <button type="submit" name="save" onclick="return validateForm()" class="btn btn-primary-dark" title="Generate User"> <i class="fa fa-save mr-1"></i> <?= $_generate ?></button>
+                                </div>
+                            </div>
+                        </div>
 
-<table class="table">
-  <tr>
-    <td class="align-middle"><?= $_qty ?></td>
-    <td>
-        <input class="form-control" type="number" id="qtyInput" name="qty" min="50" max="500" value="50" required="1" title="Minimal 50 User">
-        <small class="text-danger">*Minimal 50 User</small>
-    </td>
-  </tr>
-  
-  <tr>
-    <td class="align-middle">Server</td>
-    <td>
-        <input type="text" class="form-control locked-field" value="wartel" readonly>
-    </td>
-  </tr>
+                        <div class="table-responsive">
+                            <table class="table table-dark-solid table-hover m-0">
+                                <tbody>
+                                    <tr>
+                                        <td class="form-label-td"><?= $_qty ?></td>
+                                        <td>
+                                            <div class="input-group">
+                                                <input class="form-control" type="number" id="qtyInput" name="qty" min="50" max="500" value="50" required="1" title="Minimal 50 User">
+                                            </div>
+                                            <small class="text-danger mt-1 d-block"><i class="fa fa-info-circle"></i> Minimal 50 User</small>
+                                        </td>
+                                    </tr>
+                                    
+                                    <tr>
+                                        <td class="form-label-td">Server</td>
+                                        <td>
+                                            <input type="text" class="form-control locked-field" value="wartel" readonly>
+                                        </td>
+                                    </tr>
 
-  <tr>
-    <td class="align-middle"><?= $_user_mode ?></td>
-    <td>
-        <input type="text" class="form-control locked-field" value="Username = Password" readonly>
-        <input type="hidden" name="user" value="vc">
-    </td>
-  </tr>
+                                    <tr>
+                                        <td class="form-label-td"><?= $_user_mode ?></td>
+                                        <td>
+                                            <input type="text" class="form-control locked-field" value="Username = Password" readonly>
+                                            <input type="hidden" name="user" value="vc">
+                                        </td>
+                                    </tr>
 
-  <tr>
-    <td class="align-middle"><?= $_user_length ?></td>
-    <td>
-      <select class="form-control" id="userl" name="userl" required="1">
-            <option value="6">6 Digit</option>
-            <option value="7">7 Digit</option>
-            <option value="8">8 Digit</option>
-      </select>
-    </td>
-  </tr>
-  
-  <tr>
-    <td class="align-middle"><?= $_profile ?></td>
-    <td>
-        <select class="form-control" onchange="GetVP(); updateTimeLimit();" id="uprof" name="profile" required="1">
-            <?php 
-            $allowedProfiles = ['10Menit', '30Menit'];
-            if ($genprof != "" && in_array($genprof, $allowedProfiles)) {
-                echo "<option>" . $genprof . "</option>";
-            }
-            $TotalReg = count($getprofile);
-            for ($i = 0; $i < $TotalReg; $i++) {
-                $pName = $getprofile[$i]['name'];
-                if(in_array($pName, $allowedProfiles) && $pName != $genprof){
-                    echo "<option>" . $pName . "</option>";
-                }
-            }
-            ?>
-        </select>
-    </td>
-  </tr>
+                                    <tr>
+                                        <td class="form-label-td"><?= $_user_length ?></td>
+                                        <td>
+                                            <select class="form-control" id="userl" name="userl" required="1">
+                                                <option value="6">6 Digit</option>
+                                                <option value="7">7 Digit</option>
+                                                <option value="8">8 Digit</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    
+                                    <tr>
+                                        <td class="form-label-td"><?= $_profile ?></td>
+                                        <td>
+                                            <select class="form-control" onchange="GetVP(); updateTimeLimit();" id="uprof" name="profile" required="1">
+                                                <?php 
+                                                $allowedProfiles = ['10Menit', '30Menit'];
+                                                if ($genprof != "" && in_array($genprof, $allowedProfiles)) {
+                                                    echo "<option>" . $genprof . "</option>";
+                                                }
+                                                $TotalReg = count($getprofile);
+                                                for ($i = 0; $i < $TotalReg; $i++) {
+                                                    $pName = $getprofile[$i]['name'];
+                                                    if(in_array($pName, $allowedProfiles) && $pName != $genprof){
+                                                        echo "<option>" . $pName . "</option>";
+                                                    }
+                                                }
+                                                ?>
+                                            </select>
+                                        </td>
+                                    </tr>
 
-  <tr>
-    <td class="align-middle"><?= $_time_limit ?></td>
-    <td>
-        <input class="form-control locked-field" type="text" size="4" autocomplete="off" name="timelimit_display" id="timelimit" value="" readonly>
-    </td>
-  </tr>
+                                    <tr>
+                                        <td class="form-label-td"><?= $_time_limit ?></td>
+                                        <td>
+                                            <input class="form-control locked-field" type="text" autocomplete="off" name="timelimit_display" id="timelimit" value="" readonly>
+                                        </td>
+                                    </tr>
 
-  <tr>
-    <td class="align-middle"><?= $_comment ?></td>
-    <td>
-        <select class="form-control" name="adcomment" id="comment" required="1">
-            <?php
-            $blocks = range('A', 'F');
-            $suffixes = ['10', '30'];
-            foreach($blocks as $blk) {
-                foreach($suffixes as $suf) {
-                    echo "<option value='Blok-$blk$suf'>Blok-$blk$suf</option>";
-                }
-            }
-            ?>
-        </select>
-    </td>
-  </tr>
-
-   <tr >
-    <td colspan="4" class="align-middle w-12" id="GetValidPrice">
-        <?php if ($genprof != "") { echo isset($ValidPrice) ? $ValidPrice : ""; } ?>
-    </td>
-  </tr>
-</table>
-</form>
-}
-</div>
-</div>
-</div>
-
-<div class="col-4">
-    <div class="card">
-        <div class="card-header">
-                        <h3><i class="fa fa-ticket"></i> Ringkasan Voucher</h3>
+                                    <tr>
+                                        <td class="form-label-td"><?= $_comment ?> (Blok)</td>
+                                        <td>
+                                            <select class="form-control" name="adcomment" id="comment" required="1">
+                                                <?php
+                                                $blocks = range('A', 'F');
+                                                $suffixes = ['10', '30'];
+                                                foreach($blocks as $blk) {
+                                                    foreach($suffixes as $suf) {
+                                                        echo "<option value='Blok-$blk$suf'>Blok-$blk$suf</option>";
+                                                    }
+                                                }
+                                                ?>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                         <div id="GetValidPrice" class="p-3">
+                            <?php if ($genprof != "" && isset($ValidPrice)) { ?>
+                                <div class="valid-price-info">
+                                    <?= $ValidPrice ?>
+                                </div>
+                            <?php } ?>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-<?php if (!empty($blockSummary)): ?>
-        <div class="mb-2" style="font-weight:600;">Sisa Voucher per Blok (READY)</div>
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Blok</th>
-                    <th>Jumlah</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($blockSummary as $blok => $count): ?>
-                    <tr>
-                        <td><?= htmlspecialchars($blok) ?></td>
-                        <td><?= (int)$count ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-<?php else: ?>
-        <div class="text-center p-3 text-muted">Tidak ada voucher READY untuk ditampilkan.</div>
-<?php endif; ?>
 
-        <div class="mt-3">
-            <div><b>Total Rusak:</b> <?= (int)$totalRusak ?></div>
-            <div><b>Total Retur:</b> <?= (int)$totalRetur ?></div>
+        <div class="col-lg-4 col-md-12">
+            <div class="card card-solid">
+                <div class="card-header-solid">
+                    <h3 class="card-title"><i class="fa fa-ticket mr-2"></i> Ringkasan Voucher</h3>
+                </div>
+                <div class="card-body p-0">
+                    <?php if (!empty($blockSummary)): ?>
+                        <div class="p-3 font-weight-bold" style="border-bottom: 1px solid var(--border-col); background: rgba(0,0,0,0.1);">
+                            Sisa Voucher per Blok (READY)
+                        </div>
+                        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                            <table class="table table-dark-solid table-hover m-0 table-sm">
+                                <thead>
+                                    <tr>
+                                        <th style="position: sticky; top: 0; z-index: 1;">Blok</th>
+                                        <th style="position: sticky; top: 0; z-index: 1;" class="text-right">Jumlah</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($blockSummary as $blok => $count): ?>
+                                        <tr>
+                                            <td><span class="badge badge-dark border border-secondary p-1"><?= htmlspecialchars($blok) ?></span></td>
+                                            <td class="text-right font-weight-bold" style="color: var(--c-green);"><?= (int)$count ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else: ?>
+                        <div class="text-center p-4 text-muted">
+                            <i class="fa fa-inbox fa-3x mb-3" style="opacity: 0.5;"></i><br>
+                            Tidak ada voucher READY.
+                        </div>
+                    <?php endif; ?>
+
+                    <div class="p-3" style="border-top: 2px solid var(--border-col); background: rgba(0,0,0,0.15);">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Total Rusak:</span>
+                            <span class="badge badge-danger p-2" style="font-size: 1rem; background: var(--c-red);"><?= (int)$totalRusak ?></span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Total Retur:</span>
+                            <span class="badge badge-warning p-2" style="font-size: 1rem; background: var(--c-orange); color: white;"><?= (int)$totalRetur ?></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-</div>
-</div>
-</div>
+    </div>
 </div>
 
 <script>
 function GetVP(){
   var prof = document.getElementById('uprof').value;
-  $("#GetValidPrice").load("./process/getvalidprice.php?name="+prof+"&session=<?= $session; ?> #getdata");
+  // Menggunakan container baru untuk load konten
+  $("#GetValidPrice").load("./process/getvalidprice.php?name="+prof+"&session=<?= $session; ?> #getdata", function(response, status, xhr) {
+      if (status == "success") {
+          // Membungkus hasil load dengan style info jika berhasil
+          var content = $(this).html();
+          if(content.trim() !== ""){
+               $(this).html('<div class="valid-price-info">' + content + '</div>');
+          }
+      }
+  });
 } 
 
 function updateTimeLimit() {
@@ -466,18 +579,18 @@ function updateTimeLimit() {
     } else if (prof === '30Menit') {
         timeField.value = '30m';
     } else {
-        timeField.value = ''; 
+        timeField.value = '-'; 
     }
 }
 
 function validateForm() {
-    loader(); 
     var qty = document.getElementById('qtyInput').value;
     if (qty < 50) {
         alert("Minimal generate harus 50 user!");
-        document.getElementById('loader').style.display = 'none';
         return false;
     }
+    // Tampilkan loader hanya jika validasi lolos
+    document.getElementById('loader').style.display = 'inline-block';
     return true;
 }
 
