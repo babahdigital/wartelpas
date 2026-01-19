@@ -1149,7 +1149,9 @@ if ($debug_mode) {
     .btn-act { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 4px; border: none; color: white; transition: all 0.2s; margin: 0 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     .btn-act-print { background: var(--c-blue); } .btn-act-retur { background: var(--c-orange); } .btn-act-invalid { background: var(--c-red); }
     .toolbar-container { padding: 15px; background: rgba(0,0,0,0.15); border-bottom: 1px solid var(--border-col); }
-    .toolbar-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-start; }
+    .toolbar-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
+    .toolbar-left { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex: 1 1 auto; }
+    .toolbar-right { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; flex: 0 0 auto; margin-left: auto; }
     .input-group-solid { display: flex; flex-grow: 1; max-width: 700px; }
     .input-group-solid .form-control, .input-group-solid .custom-select-solid { height: 40px; background: #343a40; border: 1px solid var(--border-col); color: white; padding: 0 12px; font-size: 0.9rem; border-radius: 0; }
     .input-group-solid .first-el { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
@@ -1169,26 +1171,28 @@ if ($debug_mode) {
           <input type="hidden" name="hotspot" value="users">
           <input type="hidden" name="session" value="<?= $session ?>">
 
-          <div class="input-group-solid">
-            <input type="text" name="q" value="<?= htmlspecialchars($req_search) ?>" class="form-control first-el" placeholder="Cari User..." autocomplete="off">
+          <div class="toolbar-left">
+            <div class="input-group-solid">
+              <input type="text" name="q" value="<?= htmlspecialchars($req_search) ?>" class="form-control first-el" placeholder="Cari User... (pisah dengan koma / spasi)" autocomplete="off">
 
-            <select name="status" class="custom-select-solid mid-el" onchange="this.form.submit()" style="flex-basis: 30%;">
-              <option value="all" <?=($req_status=='all'?'selected':'')?>>Status: Semua</option>
-              <option value="ready" <?=($req_status=='ready'?'selected':'')?>>🟢 Hanya Ready</option>
-              <option value="online" <?=($req_status=='online'?'selected':'')?>>🔵 Sedang Online</option>
-              <option value="used" <?=($req_status=='used'?'selected':'')?>>⚪ Sudah Terpakai</option>
-              <option value="rusak" <?=($req_status=='rusak'?'selected':'')?>>🟠 Rusak / Error</option>
-              <option value="retur" <?=($req_status=='retur'?'selected':'')?>>🟣 Hasil Retur</option>
-            </select>
+              <select name="status" class="custom-select-solid mid-el" onchange="this.form.submit()" style="flex-basis: 30%;">
+                <option value="all" <?=($req_status=='all'?'selected':'')?>>Status: Semua</option>
+                <option value="ready" <?=($req_status=='ready'?'selected':'')?>>🟢 Hanya Ready</option>
+                <option value="online" <?=($req_status=='online'?'selected':'')?>>🔵 Sedang Online</option>
+                <option value="used" <?=($req_status=='used'?'selected':'')?>>⚪ Sudah Terpakai</option>
+                <option value="rusak" <?=($req_status=='rusak'?'selected':'')?>>🟠 Rusak / Error</option>
+                <option value="retur" <?=($req_status=='retur'?'selected':'')?>>🟣 Hasil Retur</option>
+              </select>
 
-            <select name="comment" class="custom-select-solid last-el" onchange="this.form.submit()" style="flex-basis: 30%;">
-              <option value="">Semua Blok</option>
-                <?php foreach($list_blok as $b) {
-                  $label = preg_replace('/^BLOK-/i', 'BLOK ', $b);
-                  $sel = (strcasecmp($req_comm, $b) == 0) ? 'selected' : '';
-                  echo "<option value='$b' $sel>$label</option>";
-              } ?>
-            </select>
+              <select name="comment" class="custom-select-solid last-el" onchange="this.form.submit()" style="flex-basis: 30%;">
+                <option value="">Semua Blok</option>
+                  <?php foreach($list_blok as $b) {
+                    $label = preg_replace('/^BLOK-/i', 'BLOK ', $b);
+                    $sel = (strcasecmp($req_comm, $b) == 0) ? 'selected' : '';
+                    echo "<option value='$b' $sel>$label</option>";
+                } ?>
+              </select>
+            </div>
           </div>
           <?php
             $status_labels = ['used' => 'Terpakai', 'retur' => 'Retur', 'rusak' => 'Rusak'];
@@ -1197,32 +1201,34 @@ if ($debug_mode) {
             $can_print_block = ($req_comm != '' && $req_status === 'ready');
             $can_print_status = ($req_comm != '' && $req_status === 'retur');
           ?>
-          <?php if ($req_comm == '' && $can_delete_status): ?>
-            <button type="button" class="btn btn-warning" style="height:40px;" onclick="if(confirm('Hapus semua voucher <?= $status_label ?> (tidak online)?')) location.href='./?hotspot=users&action=delete_status&status=<?= $req_status ?>&session=<?= $session ?>'">
-              <i class="fa fa-trash"></i> Hapus <?= $status_label ?>
-            </button>
-          <?php endif; ?>
-          <?php if ($req_comm != ''): ?>
-            <?php if ($can_print_status): ?>
-              <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('./voucher/print.php?status=<?= $req_status ?>&blok=<?= urlencode($req_comm) ?>&small=yes&session=<?= $session ?>','_blank').print()">
-                <i class="fa fa-print"></i> Print Status
-              </button>
-            <?php elseif ($can_print_block): ?>
-              <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('./voucher/print.php?id=<?= urlencode($req_comm) ?>&small=yes&session=<?= $session ?>','_blank').print()">
-                <i class="fa fa-print"></i> Print Blok
-              </button>
-            <?php endif; ?>
-            <?php if ($can_delete_status): ?>
-              <button type="button" class="btn btn-warning" style="height:40px;" onclick="if(confirm('Hapus semua voucher <?= $status_label ?> di <?= htmlspecialchars($req_comm) ?> (tidak online)?')) location.href='./?hotspot=users&action=delete_status&status=<?= $req_status ?>&blok=<?= urlencode($req_comm) ?>&session=<?= $session ?>'">
+          <div class="toolbar-right">
+            <?php if ($req_comm == '' && $can_delete_status): ?>
+              <button type="button" class="btn btn-warning" style="height:40px;" onclick="if(confirm('Hapus semua voucher <?= $status_label ?> (tidak online)?')) location.href='./?hotspot=users&action=delete_status&status=<?= $req_status ?>&session=<?= $session ?>'">
                 <i class="fa fa-trash"></i> Hapus <?= $status_label ?>
               </button>
             <?php endif; ?>
-            <?php if ($req_status == 'all'): ?>
-              <button type="button" class="btn btn-danger" style="height:40px;" onclick="if(confirm('Hapus semua voucher di <?= htmlspecialchars($req_comm) ?>?')) location.href='./?hotspot=users&action=batch_delete&blok=<?= urlencode($req_comm) ?>&session=<?= $session ?>'">
-                <i class="fa fa-trash"></i> Hapus Blok
-              </button>
+            <?php if ($req_comm != ''): ?>
+              <?php if ($can_print_status): ?>
+                <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('./voucher/print.php?status=<?= $req_status ?>&blok=<?= urlencode($req_comm) ?>&small=yes&session=<?= $session ?>','_blank').print()">
+                  <i class="fa fa-print"></i> Print Status
+                </button>
+              <?php elseif ($can_print_block): ?>
+                <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('./voucher/print.php?id=<?= urlencode($req_comm) ?>&small=yes&session=<?= $session ?>','_blank').print()">
+                  <i class="fa fa-print"></i> Print Blok
+                </button>
+              <?php endif; ?>
+              <?php if ($can_delete_status): ?>
+                <button type="button" class="btn btn-warning" style="height:40px;" onclick="if(confirm('Hapus semua voucher <?= $status_label ?> di <?= htmlspecialchars($req_comm) ?> (tidak online)?')) location.href='./?hotspot=users&action=delete_status&status=<?= $req_status ?>&blok=<?= urlencode($req_comm) ?>&session=<?= $session ?>'">
+                  <i class="fa fa-trash"></i> Hapus <?= $status_label ?>
+                </button>
+              <?php endif; ?>
+              <?php if ($req_status == 'all'): ?>
+                <button type="button" class="btn btn-danger" style="height:40px;" onclick="if(confirm('Hapus semua voucher di <?= htmlspecialchars($req_comm) ?>?')) location.href='./?hotspot=users&action=batch_delete&blok=<?= urlencode($req_comm) ?>&session=<?= $session ?>'">
+                  <i class="fa fa-trash"></i> Hapus Blok
+                </button>
+              <?php endif; ?>
             <?php endif; ?>
-          <?php endif; ?>
+          </div>
         </form>
       </div>
       <div class="card-body p-0">
