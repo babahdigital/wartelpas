@@ -496,7 +496,7 @@ if (!isset($_SESSION["mikhmon"])) {
             </div>
         </div>
 
-        <div class="col-4">
+        <div class="col-4" style="margin-left: 30px;">
             <div class="card-modern">
                 <div class="card-header-mod">
                     <h3><i class="fa fa-list-alt"></i> Ringkasan (READY)</h3>
