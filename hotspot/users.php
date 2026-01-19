@@ -444,10 +444,9 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           $c = $usr['comment'] ?? '';
           $uname = $usr['name'] ?? '';
           if ($uname === '') continue;
-          if (preg_match('/(Blok-[A-Za-z0-9]+)/i', $c, $bm)) {
-            if (strcasecmp($bm[1], $blok) == 0) {
-              $block_users[] = $uname;
-            }
+          $cblok = extract_blok_name($c);
+          if ($cblok != '' && strcasecmp($cblok, $blok_norm) == 0) {
+            $block_users[] = $uname;
           }
         }
         if (!empty($block_users)) {
@@ -566,30 +565,30 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         "?server" => $hotspot_server,
         ".proplist" => ".id,name,comment"
       ));
+      $blok_norm = extract_blok_name($blok);
       foreach ($list as $usr) {
         $c = $usr['comment'] ?? '';
         $uname = $usr['name'] ?? '';
         if ($uname !== '' && isset($active_names[$uname])) {
           continue; // jangan hapus user online
         }
-        if (preg_match('/(Blok-[A-Za-z0-9]+)/i', $c, $bm)) {
-          if (strcasecmp($bm[1], $blok) == 0) {
-            $API->write('/ip/hotspot/user/remove', false);
-            $API->write('=.id=' . $usr['.id']);
-            $API->read();
-            if ($db && !empty($usr['name'])) {
-              try {
-                $stmt = $db->prepare("DELETE FROM login_history WHERE username = :u");
-                $stmt->execute([':u' => $usr['name']]);
-              } catch(Exception $e) {}
-            }
+        $cblok = extract_blok_name($c);
+        if ($cblok != '' && strcasecmp($cblok, $blok_norm) == 0) {
+          $API->write('/ip/hotspot/user/remove', false);
+          $API->write('=.id=' . $usr['.id']);
+          $API->read();
+          if ($db && !empty($usr['name'])) {
+            try {
+              $stmt = $db->prepare("DELETE FROM login_history WHERE username = :u");
+              $stmt->execute([':u' => $usr['name']]);
+            } catch(Exception $e) {}
           }
         }
       }
       if ($db) {
         try {
           $stmt = $db->prepare("DELETE FROM login_history WHERE blok_name = :b");
-          $stmt->execute([':b' => $blok]);
+          $stmt->execute([':b' => $blok_norm]);
         } catch(Exception $e) {}
       }
     } elseif ($uid != '') {
