@@ -616,16 +616,29 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             '?name' => $name,
             '.proplist' => 'comment,bytes-in,bytes-out,uptime,mac-address'
           ]);
+          $ainfo = $API->comm('/ip/hotspot/active/print', [
+            '?server' => $hotspot_server,
+            '?user' => $name,
+            '.proplist' => 'user,uptime,address,mac-address,bytes-in,bytes-out'
+          ]);
           $urow = $uinfo[0] ?? [];
+          $arow = $ainfo[0] ?? [];
           $bytes_total = ($urow['bytes-in'] ?? 0) + ($urow['bytes-out'] ?? 0);
+          $bytes_active = ($arow['bytes-in'] ?? 0) + ($arow['bytes-out'] ?? 0);
           $bytes_hist = (int)($hist['last_bytes'] ?? 0);
-          $bytes_final = max((int)$bytes_total, $bytes_hist);
+          $bytes_final = max((int)$bytes_total, (int)$bytes_active, $bytes_hist);
           $uptime_user = $urow['uptime'] ?? '';
+          $uptime_active = $arow['uptime'] ?? '';
           $uptime_hist = $hist['last_uptime'] ?? '';
-          $uptime_final = $uptime_user != '' ? $uptime_user : ($uptime_hist != '' ? $uptime_hist : '0s');
+          $base_total = max(uptime_to_seconds($uptime_user), uptime_to_seconds($uptime_hist));
+          if (!empty($uptime_active)) {
+            $uptime_final = seconds_to_uptime($base_total + uptime_to_seconds($uptime_active));
+          } else {
+            $uptime_final = $uptime_user != '' ? $uptime_user : ($uptime_hist != '' ? $uptime_hist : '0s');
+          }
           $cm = extract_ip_mac_from_comment($comm);
-          $ip_final = $hist['ip_address'] ?? ($cm['ip'] ?? '-');
-          $mac_final = $hist['mac_address'] ?? ($urow['mac-address'] ?? ($cm['mac'] ?? '-'));
+          $ip_final = $arow['address'] ?? ($hist['ip_address'] ?? ($cm['ip'] ?? '-'));
+          $mac_final = $arow['mac-address'] ?? ($hist['mac_address'] ?? ($urow['mac-address'] ?? ($cm['mac'] ?? '-')));
           $login_time_real = $hist['login_time_real'] ?? null;
           $logout_time_real = $hist['logout_time_real'] ?? null;
           if (empty($logout_time_real)) {
