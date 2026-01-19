@@ -631,6 +631,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $blok_norm = extract_blok_name($blok);
       $blok_raw = $blok;
       $blok_cmp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $blok_norm ?: $blok_raw));
+      $to_delete = [];
       foreach ($list as $usr) {
         $c = $usr['comment'] ?? '';
         $uname = $usr['name'] ?? '';
@@ -640,15 +641,20 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $cblok = extract_blok_name($c);
         $cblok_cmp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $cblok));
         if (($cblok != '' && strcasecmp($cblok, $blok_norm) == 0) || ($cblok_cmp != '' && $cblok_cmp == $blok_cmp) || ($blok_raw != '' && stripos($c, $blok_raw) !== false)) {
+          $to_delete[] = ['id' => $usr['.id'], 'name' => $uname];
+        }
+      }
+      foreach ($to_delete as $d) {
+        if (!empty($d['id'])) {
           $API->write('/ip/hotspot/user/remove', false);
-          $API->write('=.id=' . $usr['.id']);
+          $API->write('=.id=' . $d['id']);
           $API->read();
-          if ($db && !empty($usr['name'])) {
-            try {
-              $stmt = $db->prepare("DELETE FROM login_history WHERE username = :u");
-              $stmt->execute([':u' => $usr['name']]);
-            } catch(Exception $e) {}
-          }
+        }
+        if ($db && !empty($d['name'])) {
+          try {
+            $stmt = $db->prepare("DELETE FROM login_history WHERE username = :u");
+            $stmt->execute([':u' => $d['name']]);
+          } catch(Exception $e) {}
         }
       }
       if ($db) {
