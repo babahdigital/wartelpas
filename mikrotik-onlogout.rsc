@@ -87,6 +87,10 @@
         :foreach c in=[/ip hotspot cookie find where user="$username"] do={
             /ip hotspot cookie remove $c;
         }
+        # Kick active hanya untuk user yang logout
+        :foreach a in=[/ip hotspot active find where user="$username"] do={
+            /ip hotspot active remove $a;
+        }
         # Putus koneksi hanya untuk user yang logout (berdasarkan IP)
         :if ([:len $userip] > 0) do={
             /ip firewall connection remove [find src-address=$userip];
