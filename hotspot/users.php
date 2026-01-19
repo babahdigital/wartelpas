@@ -1285,6 +1285,10 @@ if ($debug_mode) {
     .input-group-solid .first-el { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
     .input-group-solid .last-el { border-top-right-radius: 6px; border-bottom-right-radius: 6px; border-left: none; }
     .input-group-solid .mid-el { border-left: none; border-right: none; }
+    .search-wrap { position: relative; display: flex; align-items: center; }
+    .search-wrap .form-control { padding-right: 36px; }
+    .search-clear-btn { position: absolute; right: 8px; width: 22px; height: 22px; border-radius: 50%; border: none; background: #495057; color: #fff; font-size: 12px; line-height: 22px; display: none; }
+    .search-clear-btn:hover { background: #6c757d; }
   </style>
 
 <div class="row">
@@ -1301,7 +1305,10 @@ if ($debug_mode) {
 
           <div class="toolbar-left">
             <div class="input-group-solid">
-              <input type="text" name="q" value="<?= htmlspecialchars($req_search) ?>" class="form-control first-el" placeholder="Cari User... (pisah dengan koma / spasi)" autocomplete="off">
+              <div class="search-wrap">
+                <input type="text" name="q" value="<?= htmlspecialchars($req_search) ?>" class="form-control first-el" placeholder="Cari User... (pisah dengan koma / spasi)" autocomplete="off">
+                <button type="button" class="search-clear-btn" id="search-clear" title="Clear">×</button>
+              </div>
 
               <select name="status" class="custom-select-solid mid-el" onchange="this.form.submit()" style="flex-basis: 30%;">
                 <option value="all" <?=($req_status=='all'?'selected':'')?>>Status: Semua</option>
@@ -1321,7 +1328,6 @@ if ($debug_mode) {
                 } ?>
               </select>
             </div>
-            <button type="button" class="btn btn-outline-light" id="search-clear" style="height:40px;" title="Clear pencarian">Clear</button>
             <span id="search-loading" style="display:none;font-size:12px;color:var(--txt-muted);margin-left:6px;">
               <i class="fa fa-circle-o-notch fa-spin"></i> Mencari...
             </span>
@@ -1560,10 +1566,10 @@ if ($debug_mode) {
     return ajaxBase + '?' + params.toString();
   }
 
-  async function fetchUsers(isSearch) {
+  async function fetchUsers(isSearch, showLoading) {
     const fetchId = ++lastFetchId;
     try {
-      if (searchLoading) searchLoading.style.display = 'inline-block';
+      if (showLoading && searchLoading) searchLoading.style.display = 'inline-block';
       const res = await fetch(buildUrl(isSearch), { headers: { 'X-Requested-With': 'XMLHttpRequest' }, cache: 'no-store' });
       if (!res.ok) return;
       const data = await res.json();
@@ -1573,7 +1579,7 @@ if ($debug_mode) {
       if (typeof data.total_label === 'string') totalBadge.textContent = data.total_label;
     } catch (e) {}
     finally {
-      if (searchLoading) searchLoading.style.display = 'none';
+      if (showLoading && searchLoading) searchLoading.style.display = 'none';
     }
   }
 
@@ -1581,14 +1587,21 @@ if ($debug_mode) {
   searchInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      fetchUsers(true);
+      const hasQuery = searchInput.value.trim() !== '';
+      fetchUsers(true, hasQuery);
+    }
+  });
+  searchInput.addEventListener('input', () => {
+    if (clearBtn) {
+      clearBtn.style.display = searchInput.value.trim() !== '' ? 'inline-block' : 'none';
     }
   });
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
       if (searchInput.value !== '') {
         searchInput.value = '';
-        fetchUsers(true);
+        clearBtn.style.display = 'none';
+        fetchUsers(true, false);
       }
     });
   }
@@ -1596,14 +1609,15 @@ if ($debug_mode) {
     form.addEventListener('submit', (e) => {
       if (document.activeElement === searchInput) {
         e.preventDefault();
-        fetchUsers(true);
+        const hasQuery = searchInput.value.trim() !== '';
+        fetchUsers(true, hasQuery);
       }
     });
   }
 
   setInterval(() => {
     if (document.hidden || isTyping) return;
-    fetchUsers(false);
+    fetchUsers(false, false);
   }, 15000);
 })();
 </script>
