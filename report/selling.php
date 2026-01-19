@@ -45,14 +45,24 @@ function norm_date_from_raw_report($raw_date) {
 }
 
 if (file_exists($dbFile)) {
-        try {
-                $db = new PDO('sqlite:' . $dbFile);
-                $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-                $res = $db->query("SELECT sh.*, lh.last_status FROM sales_history sh LEFT JOIN login_history lh ON lh.username = sh.username ORDER BY sh.id DESC");
-                if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-                $rows = [];
-        }
+    try {
+        $db = new PDO('sqlite:' . $dbFile);
+        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $res = $db->query("SELECT sh.*, lh.last_status FROM sales_history sh LEFT JOIN login_history lh ON lh.username = sh.username ORDER BY sh.id DESC");
+        if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $rows = [];
+    }
+}
+
+function table_exists(PDO $db, $table) {
+    try {
+        $stmt = $db->prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=:t");
+        $stmt->execute([':t' => $table]);
+        return (bool)$stmt->fetchColumn();
+    } catch (Exception $e) {
+        return false;
+    }
 }
 
 // Olah data
@@ -68,6 +78,64 @@ $total_qty_invalid = 0;
 
 $by_block = [];
 $by_profile = [];
+
+// Gunakan materialized summary jika tersedia
+$period_type = $req_show === 'harian' ? 'day' : ($req_show === 'bulanan' ? 'month' : 'year');
+$period_key = $filter_date;
+$use_summary = false;
+
+if (isset($db) && $db instanceof PDO && table_exists($db, 'sales_summary_period')) {
+    $use_summary = true;
+    try {
+        $stmt = $db->prepare("SELECT * FROM sales_summary_period WHERE period_type = :pt AND period_key = :pk LIMIT 1");
+        $stmt->execute([':pt' => $period_type, ':pk' => $period_key]);
+        $sum = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($sum) {
+            $total_qty = (int)($sum['qty'] ?? 0);
+            $total_qty_retur = (int)($sum['qty_retur'] ?? 0);
+            $total_qty_rusak = (int)($sum['qty_rusak'] ?? 0);
+            $total_qty_invalid = (int)($sum['qty_invalid'] ?? 0);
+            $total_gross = (int)($sum['gross'] ?? 0);
+            $total_rusak = (int)($sum['rusak'] ?? 0);
+            $total_invalid = (int)($sum['invalid'] ?? 0);
+            $total_net = (int)($sum['net'] ?? 0);
+        } else {
+            $use_summary = false;
+        }
+
+        if ($use_summary) {
+            $stmt = $db->prepare("SELECT * FROM sales_summary_block WHERE period_type = :pt AND period_key = :pk ORDER BY blok_name");
+            $stmt->execute([':pt' => $period_type, ':pk' => $period_key]);
+            $blockRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($blockRows as $b) {
+                $by_block[$b['blok_name']] = [
+                    'qty' => (int)($b['qty'] ?? 0),
+                    'retur' => (int)($b['qty_retur'] ?? 0),
+                    'rusak' => (int)($b['qty_rusak'] ?? 0),
+                    'invalid' => (int)($b['qty_invalid'] ?? 0),
+                    'gross' => (int)($b['gross'] ?? 0),
+                    'net' => (int)($b['net'] ?? 0)
+                ];
+            }
+
+            $stmt = $db->prepare("SELECT * FROM sales_summary_profile WHERE period_type = :pt AND period_key = :pk ORDER BY profile_name");
+            $stmt->execute([':pt' => $period_type, ':pk' => $period_key]);
+            $profileRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($profileRows as $p) {
+                $by_profile[$p['profile_name']] = [
+                    'qty' => (int)($p['qty'] ?? 0),
+                    'retur' => (int)($p['qty_retur'] ?? 0),
+                    'rusak' => (int)($p['qty_rusak'] ?? 0),
+                    'invalid' => (int)($p['qty_invalid'] ?? 0),
+                    'gross' => (int)($p['gross'] ?? 0),
+                    'net' => (int)($p['net'] ?? 0)
+                ];
+            }
+        }
+    } catch (Exception $e) {
+        $use_summary = false;
+    }
+}
 
 foreach ($rows as $r) {
         $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
@@ -98,39 +166,41 @@ foreach ($rows as $r) {
         $loss_invalid = ($status === 'invalid') ? $price : 0;
         $net_add = $gross_add - $loss_rusak - $loss_invalid;
 
-        $total_qty++;
-        if ($status === 'retur') $total_qty_retur++;
-        if ($status === 'rusak') $total_qty_rusak++;
-        if ($status === 'invalid') $total_qty_invalid++;
+        if (!$use_summary) {
+            $total_qty++;
+            if ($status === 'retur') $total_qty_retur++;
+            if ($status === 'rusak') $total_qty_rusak++;
+            if ($status === 'invalid') $total_qty_invalid++;
 
-        $total_gross += $gross_add;
-        $total_rusak += $loss_rusak;
-        $total_invalid += $loss_invalid;
-        $total_net += $net_add;
+            $total_gross += $gross_add;
+            $total_rusak += $loss_rusak;
+            $total_invalid += $loss_invalid;
+            $total_net += $net_add;
 
-        $blok = $r['blok_name'] ?? '-';
-        $profile = $r['profile_snapshot'] ?? ($r['profile'] ?? '-');
+            $blok = $r['blok_name'] ?? '-';
+            $profile = $r['profile_snapshot'] ?? ($r['profile'] ?? '-');
 
-        if (!isset($by_block[$blok])) {
+            if (!isset($by_block[$blok])) {
                 $by_block[$blok] = ['qty'=>0,'gross'=>0,'rusak'=>0,'invalid'=>0,'net'=>0,'retur'=>0];
-        }
-        if (!isset($by_profile[$profile])) {
+            }
+            if (!isset($by_profile[$profile])) {
                 $by_profile[$profile] = ['qty'=>0,'gross'=>0,'rusak'=>0,'invalid'=>0,'net'=>0,'retur'=>0];
+            }
+
+            $by_block[$blok]['qty'] += 1;
+            $by_block[$blok]['gross'] += $gross_add;
+            $by_block[$blok]['rusak'] += $loss_rusak;
+            $by_block[$blok]['invalid'] += $loss_invalid;
+            $by_block[$blok]['net'] += $net_add;
+            if ($status === 'retur') $by_block[$blok]['retur'] += 1;
+
+            $by_profile[$profile]['qty'] += 1;
+            $by_profile[$profile]['gross'] += $gross_add;
+            $by_profile[$profile]['rusak'] += $loss_rusak;
+            $by_profile[$profile]['invalid'] += $loss_invalid;
+            $by_profile[$profile]['net'] += $net_add;
+            if ($status === 'retur') $by_profile[$profile]['retur'] += 1;
         }
-
-        $by_block[$blok]['qty'] += 1;
-        $by_block[$blok]['gross'] += $gross_add;
-        $by_block[$blok]['rusak'] += $loss_rusak;
-        $by_block[$blok]['invalid'] += $loss_invalid;
-        $by_block[$blok]['net'] += $net_add;
-        if ($status === 'retur') $by_block[$blok]['retur'] += 1;
-
-        $by_profile[$profile]['qty'] += 1;
-        $by_profile[$profile]['gross'] += $gross_add;
-        $by_profile[$profile]['rusak'] += $loss_rusak;
-        $by_profile[$profile]['invalid'] += $loss_invalid;
-        $by_profile[$profile]['net'] += $net_add;
-        if ($status === 'retur') $by_profile[$profile]['retur'] += 1;
 
         $list[] = [
                 'dt' => $sale_dt,
@@ -284,10 +354,10 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
                                 <tr>
                                     <td><?= htmlspecialchars($b) ?></td>
                                     <td class="text-right"><?= number_format($v['qty'],0,',','.') ?></td>
-                                    <td class="text-right"><?= number_format($v['gross'],0,',','.') ?></td>
-                                    <td class="text-right"><?= number_format($v['rusak'],0,',','.') ?></td>
-                                    <td class="text-right"><?= number_format($v['invalid'],0,',','.') ?></td>
-                                    <td class="text-right"><?= number_format($v['net'],0,',','.') ?></td>
+                                      <td class="text-right"><?= number_format($v['gross'],0,',','.') ?></td>
+                                      <td class="text-right"><?= number_format($v['rusak'],0,',','.') ?></td>
+                                      <td class="text-right"><?= number_format($v['invalid'],0,',','.') ?></td>
+                                      <td class="text-right"><?= number_format($v['net'],0,',','.') ?></td>
                                 </tr>
                             <?php endforeach; endif; ?>
                         </tbody>

@@ -84,6 +84,12 @@ try {
         try { $db->exec("ALTER TABLE sales_history ADD COLUMN is_invalid INTEGER"); } catch(Exception $e) {}
         try { $db->exec("ALTER TABLE sales_history ADD COLUMN qty INTEGER"); } catch(Exception $e) {}
         try { $db->exec("ALTER TABLE sales_history ADD COLUMN blok_name TEXT"); } catch(Exception $e) {}
+
+        // Helper rekap otomatis
+        $summaryHelper = $root_dir . '/report/sales_summary_helper.php';
+        if (file_exists($summaryHelper)) {
+            require_once($summaryHelper);
+        }
 } catch (PDOException $e) {
     die("Error DB: " . $e->getMessage());
 }
@@ -193,6 +199,16 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
     }
     
     $API->disconnect();
+
+    // Rebuild rekap otomatis agar laporan cepat
+    if (function_exists('rebuild_sales_summary')) {
+        try {
+            rebuild_sales_summary($db);
+        } catch (Exception $e) {
+            // Abaikan error rekap agar sync tetap sukses
+        }
+    }
+
     echo "Sukses: $count laporan penjualan dipindahkan ke Database & dihapus dari MikroTik.";
     
 } else {
