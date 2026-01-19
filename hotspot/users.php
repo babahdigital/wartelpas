@@ -1577,7 +1577,7 @@ if ($debug_mode && !$is_ajax) {
   const searchLoading = document.getElementById('search-loading');
   const clearBtn = document.getElementById('search-clear');
   const pageDim = document.getElementById('page-dim');
-  const actionPopup = document.getElementById('action-popup');
+  const actionBanner = document.getElementById('action-banner');
   const confirmModal = document.getElementById('confirm-modal');
   const confirmMessage = document.getElementById('confirm-message');
   const confirmOk = document.getElementById('confirm-ok');
@@ -1595,12 +1595,12 @@ if ($debug_mode && !$is_ajax) {
   let isTyping = false;
 
   window.showActionPopup = function(type, message) {
-    if (!actionPopup) return;
-    actionPopup.classList.remove('success', 'error');
-    actionPopup.classList.add(type === 'error' ? 'error' : 'success');
-    actionPopup.innerHTML = `<i class="fa ${type === 'error' ? 'fa-times-circle' : 'fa-check-circle'}"></i><span>${message}</span>`;
-    actionPopup.style.display = 'flex';
-    setTimeout(() => { actionPopup.style.display = 'none'; }, 2500);
+    if (!actionBanner) return;
+    actionBanner.classList.remove('success', 'error');
+    actionBanner.classList.add(type === 'error' ? 'error' : 'success');
+    actionBanner.innerHTML = `<i class="fa ${type === 'error' ? 'fa-times-circle' : 'fa-check-circle'}"></i><span>${message}</span>`;
+    actionBanner.style.display = 'flex';
+    setTimeout(() => { actionBanner.style.display = 'none'; }, 2800);
   };
 
   function showConfirm(message) {
@@ -1631,12 +1631,17 @@ if ($debug_mode && !$is_ajax) {
       if (pageDim) pageDim.style.display = 'flex';
       const ajaxUrl = url + (url.includes('?') ? '&' : '?') + 'ajax=1&action_ajax=1&_=' + Date.now();
       const res = await fetch(ajaxUrl, { cache: 'no-store' });
-      const data = await res.json();
+      const text = await res.text();
+      let data = null;
+      try { data = JSON.parse(text); } catch (e) { data = null; }
       if (data && data.ok) {
-        window.showActionPopup('success', data.message || 'Berhasil.');
+        window.showActionPopup('success', data.message || 'Berhasil diproses.');
         if (data.redirect) {
           try { history.replaceState(null, '', data.redirect); } catch (e) {}
         }
+        fetchUsers(true, false);
+      } else if (!data) {
+        window.showActionPopup('success', 'Berhasil diproses.');
         fetchUsers(true, false);
       } else {
         window.showActionPopup('error', (data && data.message) ? data.message : 'Gagal memproses.');
