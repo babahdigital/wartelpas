@@ -1530,21 +1530,29 @@ if ($debug_mode) {
   const paginationWrap = document.getElementById('users-pagination');
   if (!searchInput || !tbody || !totalBadge || !paginationWrap) return;
 
+  const ajaxBase = './hotspot/users.php';
+  const baseParams = new URLSearchParams(window.location.search);
+
   let lastFetchId = 0;
   let typingTimer = null;
   let isTyping = false;
   let lastQuery = searchInput.value.trim();
 
   function buildUrl(isSearch) {
-    const params = new URLSearchParams(window.location.search);
-    params.set('hotspot', 'users');
+    const params = new URLSearchParams();
     params.set('session', '<?= $session ?>');
     params.set('ajax', '1');
     params.set('q', searchInput.value.trim());
     if (statusSelect) params.set('status', statusSelect.value);
     if (commentSelect) params.set('comment', commentSelect.value);
+    const profile = baseParams.get('profile');
+    if (profile) params.set('profile', profile);
+    const perPage = baseParams.get('per_page');
+    if (perPage) params.set('per_page', perPage);
+    const debug = baseParams.get('debug');
+    if (debug) params.set('debug', debug);
     if (isSearch) params.set('page', '1');
-    return './?' + params.toString();
+    return ajaxBase + '?' + params.toString();
   }
 
   async function fetchUsers(isSearch) {
@@ -1573,6 +1581,12 @@ if ($debug_mode) {
   }
 
   searchInput.addEventListener('input', scheduleSearch);
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      fetchUsers(true);
+    }
+  });
   if (form) {
     form.addEventListener('submit', (e) => {
       if (document.activeElement === searchInput) {
