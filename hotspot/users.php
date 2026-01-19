@@ -1594,16 +1594,13 @@ if ($debug_mode && !$is_ajax) {
   let lastFetchId = 0;
   let isTyping = false;
 
-  window.showActionPopup = function(type, message, redirectUrl) {
+  window.showActionPopup = function(type, message) {
     if (!actionPopup) return;
     actionPopup.classList.remove('success', 'error');
     actionPopup.classList.add(type === 'error' ? 'error' : 'success');
     actionPopup.innerHTML = `<i class="fa ${type === 'error' ? 'fa-times-circle' : 'fa-check-circle'}"></i><span>${message}</span>`;
     actionPopup.style.display = 'flex';
     setTimeout(() => { actionPopup.style.display = 'none'; }, 2500);
-    if (redirectUrl) {
-      setTimeout(() => { window.location.href = redirectUrl; }, 900);
-    }
   };
 
   function showConfirm(message) {
@@ -1636,7 +1633,11 @@ if ($debug_mode && !$is_ajax) {
       const res = await fetch(ajaxUrl, { cache: 'no-store' });
       const data = await res.json();
       if (data && data.ok) {
-        window.showActionPopup('success', data.message || 'Berhasil.', data.redirect || '');
+        window.showActionPopup('success', data.message || 'Berhasil.');
+        if (data.redirect) {
+          try { history.replaceState(null, '', data.redirect); } catch (e) {}
+        }
+        fetchUsers(true, false);
       } else {
         window.showActionPopup('error', (data && data.message) ? data.message : 'Gagal memproses.');
       }
