@@ -330,7 +330,7 @@ if (!isset($_SESSION["mikhmon"])) {
     
     /* Scroll area untuk list blok jika terlalu panjang */
     .summary-scroll {
-        max-height: 380px; /* Sesuaikan agar tidak terlalu panjang */
+        max-height: 420px; /* Sesuaikan agar tidak terlalu panjang */
         overflow-y: auto;
         padding-right: 5px;
         margin-bottom: 20px;
