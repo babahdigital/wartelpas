@@ -1371,6 +1371,7 @@ if ($debug_mode && !$is_ajax) {
     .st-used { background: #17a2b8; color: #fff; }
     .id-badge { font-family: 'Courier New', monospace; background: #3d454d; color: #fff; padding: 3px 6px; border-radius: 4px; font-weight: bold; border: 1px solid #56606a; }
     .btn-act { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 4px; border: none; color: white; transition: all 0.2s; margin: 0 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+    .btn-act, .btn, button, .search-clear-btn, .custom-select-solid { cursor: pointer; }
     .btn-act-print { background: var(--c-blue); } .btn-act-retur { background: var(--c-orange); } .btn-act-invalid { background: var(--c-red); }
     .toolbar-container { padding: 15px; background: rgba(0,0,0,0.15); border-bottom: 1px solid var(--border-col); }
     .toolbar-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
