@@ -817,27 +817,31 @@ foreach($active as $a) {
     if(isset($a['user'])) $activeMap[$a['user']] = $a;
 }
 
+$is_ajax = isset($_GET['ajax']) && $_GET['ajax'] == '1';
+
 // List blok untuk dropdown (DB + data router agar langsung muncul)
 $list_blok = [];
-if ($db) {
-  try {
-    $res = $db->query("SELECT DISTINCT blok_name FROM login_history WHERE blok_name IS NOT NULL AND blok_name != ''");
-    if ($res) {
-      foreach ($res as $row) {
-        $bn = extract_blok_name($row['blok_name']);
-        if ($bn && !in_array($bn, $list_blok)) $list_blok[] = $bn;
+if (!$is_ajax) {
+  if ($db) {
+    try {
+      $res = $db->query("SELECT DISTINCT blok_name FROM login_history WHERE blok_name IS NOT NULL AND blok_name != ''");
+      if ($res) {
+        foreach ($res as $row) {
+          $bn = extract_blok_name($row['blok_name']);
+          if ($bn && !in_array($bn, $list_blok)) $list_blok[] = $bn;
+        }
       }
-    }
-  } catch(Exception $e) {}
-}
-if (!empty($all_users)) {
-  foreach ($all_users as $u) {
-    $bn = extract_blok_name($u['comment'] ?? '');
-    if ($bn && !in_array($bn, $list_blok)) $list_blok[] = $bn;
+    } catch(Exception $e) {}
   }
-}
-if (!empty($list_blok)) {
-  sort($list_blok, SORT_NATURAL | SORT_FLAG_CASE);
+  if (!empty($all_users)) {
+    foreach ($all_users as $u) {
+      $bn = extract_blok_name($u['comment'] ?? '');
+      if ($bn && !in_array($bn, $list_blok)) $list_blok[] = $bn;
+    }
+  }
+  if (!empty($list_blok)) {
+    sort($list_blok, SORT_NATURAL | SORT_FLAG_CASE);
+  }
 }
 
 $display_data = [];
@@ -1132,7 +1136,6 @@ $pagination_params = $_GET;
 unset($pagination_params['page']);
 $pagination_base = './?' . http_build_query($pagination_params);
 
-$is_ajax = isset($_GET['ajax']) && $_GET['ajax'] == '1';
 if ($is_ajax) {
   ob_start();
   if (count($display_data) > 0) {
@@ -1247,7 +1250,7 @@ if ($is_ajax) {
   exit();
 }
 
-if ($debug_mode) {
+if ($debug_mode && !$is_ajax) {
   $logDir = dirname(__DIR__) . '/logs';
   if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
   $logFile = $logDir . '/users_debug.log';
@@ -1613,7 +1616,7 @@ if ($debug_mode) {
       if (searchInput.value !== '') {
         searchInput.value = '';
         clearBtn.style.display = 'none';
-        fetchUsers(true, false);
+        fetchUsers(true, true);
       }
     });
   }
