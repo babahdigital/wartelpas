@@ -79,13 +79,18 @@
     # Update comment dengan data logout
     /ip hotspot user set comment=$newComment [find where name="$username"];
 
-    # Hapus cookie untuk user wartel saja (hindari user non-wartel)
+    # Hapus cookie + putus koneksi untuk user wartel saja (hindari user non-wartel)
     :local isWartel false;
     :local blokPos [:find $newComment "Blok-"];
     :if ([:typeof $blokPos] != "nil") do={ :set isWartel true; }
     :if ($isWartel = true) do={
         :foreach c in=[/ip hotspot cookie find where user="$username"] do={
             /ip hotspot cookie remove $c;
+        }
+        # Putus koneksi hanya untuk user yang logout (berdasarkan IP)
+        :if ([:len $userip] > 0) do={
+            /ip firewall connection remove [find src-address=$userip];
+            /ip firewall connection remove [find dst-address=$userip];
         }
     }
     
