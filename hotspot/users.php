@@ -1321,6 +1321,10 @@ if ($debug_mode) {
                 } ?>
               </select>
             </div>
+            <button type="button" class="btn btn-outline-light" id="search-clear" style="height:40px;" title="Clear pencarian">Clear</button>
+            <span id="search-loading" style="display:none;font-size:12px;color:var(--txt-muted);margin-left:6px;">
+              <i class="fa fa-circle-o-notch fa-spin"></i> Mencari...
+            </span>
           </div>
           <?php
             $status_labels = ['used' => 'Terpakai', 'retur' => 'Retur', 'rusak' => 'Rusak'];
@@ -1528,6 +1532,8 @@ if ($debug_mode) {
   const tbody = document.getElementById('users-table-body');
   const totalBadge = document.getElementById('users-total');
   const paginationWrap = document.getElementById('users-pagination');
+  const searchLoading = document.getElementById('search-loading');
+  const clearBtn = document.getElementById('search-clear');
   if (!searchInput || !tbody || !totalBadge || !paginationWrap) return;
 
   const ajaxBase = './hotspot/users.php';
@@ -1557,6 +1563,7 @@ if ($debug_mode) {
   async function fetchUsers(isSearch) {
     const fetchId = ++lastFetchId;
     try {
+      if (searchLoading) searchLoading.style.display = 'inline-block';
       const res = await fetch(buildUrl(isSearch), { headers: { 'X-Requested-With': 'XMLHttpRequest' }, cache: 'no-store' });
       if (!res.ok) return;
       const data = await res.json();
@@ -1565,6 +1572,9 @@ if ($debug_mode) {
       if (typeof data.pagination_html === 'string') paginationWrap.innerHTML = data.pagination_html;
       if (typeof data.total_label === 'string') totalBadge.textContent = data.total_label;
     } catch (e) {}
+    finally {
+      if (searchLoading) searchLoading.style.display = 'none';
+    }
   }
 
   // Search hanya saat Enter
@@ -1574,6 +1584,14 @@ if ($debug_mode) {
       fetchUsers(true);
     }
   });
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      if (searchInput.value !== '') {
+        searchInput.value = '';
+        fetchUsers(true);
+      }
+    });
+  }
   if (form) {
     form.addEventListener('submit', (e) => {
       if (document.activeElement === searchInput) {
