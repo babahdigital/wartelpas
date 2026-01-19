@@ -7,7 +7,7 @@
 :local key "WartelpasSecureKey";
 :local session "S3c7x9_LB";
 
-:put (",remc,20000,1d,20000,,Enable,");
+:put (",remc,5000,1d,5000,,Enable,");
 
 {
     :local comment [/ip hotspot user get [/ip hotspot user find where name="$user"] comment];
@@ -73,7 +73,7 @@
         :local time [/system clock get time];
         
         # SAVE KE DATABASE LOG (Format untuk PHP parsing)
-        :local logComment "$date-|-$time-|-$user-|-20000-|-$address-|-$mac-|-1d-|-30Menit-|-$blokInfo";
+        :local logComment "$date-|-$time-|-$user-|-5000-|-$address-|-$mac-|-1d-|-10Menit-|-$blokInfo";
         /system script add name=$logComment owner="$month$year" source="$date" comment="mikhmon";
 
         # REALTIME REPORT (URL-ENCODED)
