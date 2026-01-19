@@ -848,6 +848,16 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             'status' => 'retur'
           ];
           save_user_history($name, $save_data);
+
+          // Kembalikan pendapatan yang sempat berkurang karena RUSAK
+          try {
+            $stmt = $db->prepare("UPDATE sales_history SET status='normal', is_rusak=0, is_retur=0, is_invalid=0 WHERE username = :u");
+            $stmt->execute([':u' => $name]);
+          } catch(Exception $e) {}
+          try {
+            $stmt = $db->prepare("UPDATE live_sales SET status='normal', is_rusak=0, is_retur=0, is_invalid=0 WHERE username = :u AND sync_status = 'pending'");
+            $stmt->execute([':u' => $name]);
+          } catch(Exception $e) {}
         }
 
         // Hapus voucher lama
