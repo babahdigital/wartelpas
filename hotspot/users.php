@@ -1542,6 +1542,10 @@ if ($debug_mode) {
   const clearBtn = document.getElementById('search-clear');
   if (!searchInput || !tbody || !totalBadge || !paginationWrap) return;
 
+  if (clearBtn) {
+    clearBtn.style.display = searchInput.value.trim() !== '' ? 'inline-block' : 'none';
+  }
+
   const ajaxBase = './hotspot/users.php';
   const baseParams = new URLSearchParams(window.location.search);
 
