@@ -44,20 +44,46 @@ try {
     $db->exec("PRAGMA synchronous=NORMAL;");
     $db->exec("PRAGMA busy_timeout=2000;");
 
-    // Buat Tabel Riwayat Penjualan (sales_history)
-    // Struktur disesuaikan dengan format data script Mikhmon
-    $db->exec("CREATE TABLE IF NOT EXISTS sales_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                raw_date TEXT,
-                username TEXT,
-                profile TEXT,
-                price INTEGER,
-                comment TEXT,
-                blok_name TEXT,
-                full_raw_data TEXT UNIQUE,
-                sync_date DATETIME DEFAULT CURRENT_TIMESTAMP
-              )");
-    try { $db->exec("ALTER TABLE sales_history ADD COLUMN blok_name TEXT"); } catch(Exception $e) {}
+        // Buat Tabel Riwayat Penjualan (sales_history)
+        // Struktur disesuaikan dengan format data script Mikhmon
+        $db->exec("CREATE TABLE IF NOT EXISTS sales_history (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                raw_date TEXT,
+                                raw_time TEXT,
+                                sale_date TEXT,
+                                sale_time TEXT,
+                                sale_datetime TEXT,
+                                username TEXT,
+                                profile TEXT,
+                                profile_snapshot TEXT,
+                                price INTEGER,
+                                price_snapshot INTEGER,
+                                sprice_snapshot INTEGER,
+                                validity TEXT,
+                                comment TEXT,
+                                blok_name TEXT,
+                                status TEXT,
+                                is_rusak INTEGER,
+                                is_retur INTEGER,
+                                is_invalid INTEGER,
+                                qty INTEGER,
+                                full_raw_data TEXT UNIQUE,
+                                sync_date DATETIME DEFAULT CURRENT_TIMESTAMP
+                            )");
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN raw_time TEXT"); } catch(Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN sale_date TEXT"); } catch(Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN sale_time TEXT"); } catch(Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN sale_datetime TEXT"); } catch(Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN profile_snapshot TEXT"); } catch(Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN price_snapshot INTEGER"); } catch(Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN sprice_snapshot INTEGER"); } catch(Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN validity TEXT"); } catch(Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN status TEXT"); } catch(Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN is_rusak INTEGER"); } catch(Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN is_retur INTEGER"); } catch(Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN is_invalid INTEGER"); } catch(Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN qty INTEGER"); } catch(Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN blok_name TEXT"); } catch(Exception $e) {}
 } catch (PDOException $e) {
     die("Error DB: " . $e->getMessage());
 }
@@ -74,7 +100,19 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
     $scripts = $API->read();
     
     $count = 0;
-    $stmt = $db->prepare("INSERT OR IGNORE INTO sales_history (raw_date, username, profile, price, comment, blok_name, full_raw_data) VALUES (:rd, :usr, :prof, :prc, :cmt, :blok, :raw)");
+    $stmt = $db->prepare("INSERT OR IGNORE INTO sales_history (
+        raw_date, raw_time, sale_date, sale_time, sale_datetime,
+        username, profile, profile_snapshot,
+        price, price_snapshot, sprice_snapshot, validity,
+        comment, blok_name, status, is_rusak, is_retur, is_invalid, qty,
+        full_raw_data
+    ) VALUES (
+        :rd, :rt, :sd, :st, :sdt,
+        :usr, :prof, :prof_snap,
+        :prc, :prc_snap, :sprc_snap, :valid,
+        :cmt, :blok, :status, :is_rusak, :is_retur, :is_invalid, :qty,
+        :raw
+    )");
 
     foreach ($scripts as $s) {
         $rawData = $s['name']; // Format: jan/11/2026-|-09:00:00-|-user-|-price...
@@ -85,23 +123,63 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
         // Pastikan formatnya benar (Minimal ada 4 elemen)
         if (count($d) >= 4) {
             $raw_date = $d[0]; // Tanggal
-            // $d[1] adalah jam
+            $raw_time = $d[1] ?? ''; // Jam
             $username = $d[2]; // User
             $price    = (int)$d[3]; // Harga
             $profile  = isset($d[7]) ? $d[7] : ''; // Profil
+            $validity = $d[6] ?? '';
             $comment  = isset($d[8]) ? $d[8] : ''; // Komentar
             $blok_name = '';
             if ($comment && preg_match('/\bblok\s*[-_]?\s*([A-Za-z0-9]+)/i', $comment, $m)) {
                 $blok_name = 'BLOK-' . strtoupper($m[1]);
             }
+
+            $sale_date = '';
+            if (preg_match('/^[a-zA-Z]{3}\/\d{2}\/\d{4}$/', $raw_date)) {
+                $mon = strtolower(substr($raw_date, 0, 3));
+                $map = [
+                    'jan' => '01', 'feb' => '02', 'mar' => '03', 'apr' => '04', 'may' => '05', 'jun' => '06',
+                    'jul' => '07', 'aug' => '08', 'sep' => '09', 'oct' => '10', 'nov' => '11', 'dec' => '12'
+                ];
+                $mm = $map[$mon] ?? '';
+                if ($mm !== '') {
+                    $parts = explode('/', $raw_date);
+                    $sale_date = $parts[2] . '-' . $mm . '-' . $parts[1];
+                }
+            }
+            if ($sale_date === '' && preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $raw_date)) {
+                $parts = explode('/', $raw_date);
+                $sale_date = $parts[2] . '-' . $parts[0] . '-' . $parts[1];
+            }
+            $sale_time = $raw_time ?: '';
+            $sale_datetime = ($sale_date && $sale_time) ? ($sale_date . ' ' . $sale_time) : '';
+
+            $cmt_low = strtolower($comment);
+            $status = 'normal';
+            if (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
+            elseif (strpos($cmt_low, 'rusak') !== false) $status = 'rusak';
+            elseif (strpos($cmt_low, 'retur') !== false) $status = 'retur';
             
             // Simpan ke DB
             $stmt->bindValue(':rd', $raw_date);
+            $stmt->bindValue(':rt', $raw_time);
+            $stmt->bindValue(':sd', $sale_date);
+            $stmt->bindValue(':st', $sale_time);
+            $stmt->bindValue(':sdt', $sale_datetime);
             $stmt->bindValue(':usr', $username);
             $stmt->bindValue(':prof', $profile);
+            $stmt->bindValue(':prof_snap', $profile ?: '');
             $stmt->bindValue(':prc', $price);
+            $stmt->bindValue(':prc_snap', $price);
+            $stmt->bindValue(':sprc_snap', 0);
+            $stmt->bindValue(':valid', $validity);
             $stmt->bindValue(':cmt', $comment);
             $stmt->bindValue(':blok', $blok_name);
+            $stmt->bindValue(':status', $status);
+            $stmt->bindValue(':is_rusak', $status === 'rusak' ? 1 : 0);
+            $stmt->bindValue(':is_retur', $status === 'retur' ? 1 : 0);
+            $stmt->bindValue(':is_invalid', $status === 'invalid' ? 1 : 0);
+            $stmt->bindValue(':qty', 1);
             $stmt->bindValue(':raw', $rawData); // Simpan mentahannya juga buat jaga2
             
             if ($stmt->execute()) {
