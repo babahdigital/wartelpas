@@ -28,7 +28,7 @@
 :log info "SYNC: Mengirim data statistik ke Mikhmon...";
 :do {
     # HAPUS parameter 'duration', itu yang bikin error.
-    /tool fetch url="http://10.10.83.2:8081/report/sync_stats.php?key=WartelpasSecureKey" keep-result=no;
+    /tool fetch url="http://10.10.83.2:8081/report/sync_stats.php?key=WartelpasSecureKey&session=S3c7x9_LB" keep-result=no;
     :log info "SYNC STATS: Berhasil.";
 } on-error={ :log error "SYNC STATS: GAGAL KONEKSI! Cek IP Server/Jaringan."; :set syncStatsOk false; }
 
@@ -38,7 +38,7 @@
 :log info "SYNC: Mengirim laporan penjualan...";
 :do {
     # HAPUS parameter 'duration'
-    /tool fetch url="http://10.10.83.2:8081/report/sync_sales.php?key=WartelpasSecureKey" keep-result=no;
+    /tool fetch url="http://10.10.83.2:8081/report/sync_sales.php?key=WartelpasSecureKey&session=S3c7x9_LB" keep-result=no;
     :log info "SYNC SALES: Berhasil terkirim.";
 } on-error={ :log error "SYNC SALES: GAGAL KONEKSI! Data penjualan tidak masuk DB."; :set syncSalesOk false; }
 

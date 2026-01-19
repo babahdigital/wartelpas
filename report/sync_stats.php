@@ -13,16 +13,27 @@ if (!isset($_GET['key']) || $_GET['key'] !== $secret_token) {
     http_response_code(403); die("Error: Akses Ditolak. Token salah.");
 }
 
+$session = isset($_GET['session']) ? $_GET['session'] : '';
+if ($session === '') {
+    http_response_code(403); die("Error: Session tidak valid.");
+}
+
 // LIBRARY
 $root_dir = dirname(__DIR__); 
 $apiFile = $root_dir . '/lib/routeros_api.class.php';
 if (file_exists($apiFile)) { require_once($apiFile); } 
 else { die("CRITICAL ERROR: File library routeros_api.class.php tidak ditemukan."); }
+require_once($root_dir . '/include/config.php');
+require_once($root_dir . '/include/readcfg.php');
 
-// SETTING MIKROTIK
-$use_ip   = "10.10.83.1";       
-$use_user = "abdullah";         
-$use_pass = "alhabsyi"; 
+if (!isset($hotspot_server) || $hotspot_server !== 'wartel') {
+    http_response_code(403); die("Error: Hanya untuk server wartel.");
+}
+
+// SETTING MIKROTIK DARI KONFIG
+$use_ip   = $iphost;       
+$use_user = $userhost;         
+$use_pass = decrypt($passwdhost); 
 
 // DATABASE SETUP
 $dbDir = $root_dir . '/db_data';
