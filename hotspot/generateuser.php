@@ -3,7 +3,7 @@
  * Copyright (C) 2018 Laksamadi Guko.
  * SECURITY UPGRADE: Anti-CSRF, Anti-Bot, & Silent Defense
  * Code Owner: Pak Dul (WartelPas)
- * REBUILD STYLE: Responsive Fix for Laptop & Mobile (2026)
+ * REBUILD STYLE: Full Width Responsive Grid & Dark Theme (2026)
  */
 // Cek session start
 if (session_status() == PHP_SESSION_NONE) {
@@ -66,10 +66,10 @@ if (!isset($_SESSION["mikhmon"])) {
             } else {
                 $getprice = $currency . " " . number_format((float)$getprice);
             }
-            $ValidPrice = "<div class='d-flex flex-wrap gap-2 align-items-center justify-content-between text-small'>" .
-                          "<span><i class='fa fa-clock-o text-muted'></i> <b>Valid:</b> " . $getvalid . "</span>" .
-                          "<span><i class='fa fa-tag text-muted'></i> <b>Price:</b> " . $getprice . "</span>" .
-                          "<span><i class='fa fa-lock text-muted'></i> <b>Lock:</b> " . $getlocku . "</span></div>";
+            $ValidPrice = "<div class='info-valid-box'>" .
+                          "<div class='v-item'><i class='fa fa-clock-o'></i> Valid: <b>" . $getvalid . "</b></div>" .
+                          "<div class='v-item'><i class='fa fa-tag'></i> Price: <b>" . $getprice . "</b></div>" .
+                          "<div class='v-item'><i class='fa fa-lock'></i> Lock: <b>" . $getlocku . "</b></div></div>";
         }
     }
 
@@ -146,7 +146,6 @@ if (!isset($_SESSION["mikhmon"])) {
     $blockSummary = [];
     $totalRusak = 0;
     $totalRetur = 0;
-    $totalReady = 0;
 
     $active_list = $API->comm('/ip/hotspot/active/print', ['?server' => 'wartel', '.proplist' => 'user']);
     $activeMap = [];
@@ -193,271 +192,279 @@ if (!isset($_SESSION["mikhmon"])) {
 <style>
     /* VARIABLES */
     :root {
-        --dark-bg: #1e2226;
-        --dark-card: #2a3036;
-        --input-bg: #343a40;
-        --border-col: #495057;
-        --txt-main: #ecf0f1;
-        --txt-muted: #adb5bd;
-        --c-blue: #3498db;
-        --c-green: #2ecc71;
-        --c-orange: #f39c12;
-        --c-red: #e74c3c;
+        --dark-bg: #121212;
+        --dark-card: #1e1e1e;
+        --input-bg: #2d2d2d;
+        --border-col: #333333;
+        --txt-main: #e0e0e0;
+        --txt-muted: #a0a0a0;
+        --accent-blue: #3a86ff;
+        --accent-green: #00b894;
+        --accent-red: #ff7675;
+        --accent-yellow: #fdcb6e;
     }
 
     /* CARD STYLES */
-    .gen-page .card-solid {
+    .gen-page .card-modern {
         background: var(--dark-card);
         color: var(--txt-main);
-        border: none;
+        border: 1px solid var(--border-col);
         box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         border-radius: 8px;
-        display: flex;
-        flex-direction: column;
-        height: 100%; /* Agar tinggi card sama */
-        overflow: hidden;
+        margin-bottom: 20px;
     }
 
-    .gen-page .card-header-solid {
-        background: #23272b;
-        padding: 12px 20px;
-        border-bottom: 2px solid var(--border-col);
+    .gen-page .card-header-modern {
+        background: rgba(255,255,255,0.03);
+        padding: 15px 20px;
+        border-bottom: 1px solid var(--border-col);
         display: flex;
         justify-content: space-between;
         align-items: center;
-        flex-shrink: 0;
     }
-    .gen-page .card-title { margin: 0; font-weight: 600; font-size: 1.1rem; }
+    .gen-page .card-title { margin: 0; font-weight: 600; font-size: 1.2rem; }
 
-    /* CARD BODY & SCROLLING */
-    .gen-page .card-body {
-        padding: 0;
-        flex-grow: 1;
-        display: flex;
-        flex-direction: column;
-        min-height: 0; /* Penting untuk nested scroll flexbox */
+    .gen-page .card-body-modern {
+        padding: 20px;
     }
-    
-    .gen-page .scrollable-content {
-        flex-grow: 1;
-        overflow-y: auto;
-        padding: 0;
-    }
-    
+
     /* FORM STYLES */
+    .gen-page .form-label {
+        font-weight: 500;
+        color: var(--txt-muted);
+        margin-bottom: 8px;
+        display: block;
+    }
     .gen-page .form-control {
         background: var(--input-bg);
         border: 1px solid var(--border-col);
         color: var(--txt-main);
-        height: calc(2.25rem + 2px);
+        height: 45px; /* Lebih tinggi agar mudah diklik */
+        padding: 10px 15px;
+        border-radius: 6px;
     }
     .gen-page .form-control:focus {
-        background: #3b444b;
-        border-color: var(--c-blue);
-        color: var(--txt-main);
+        background: #363636;
+        border-color: var(--accent-blue);
+        color: #fff;
         box-shadow: none;
     }
     .gen-page .locked-field {
-        background-color: #2c3138 !important;
-        color: var(--txt-muted) !important;
+        background-color: #252525 !important;
+        color: #666 !important;
         cursor: not-allowed;
-        border: 1px solid rgba(73, 80, 87, 0.5);
     }
 
-    /* TABLE STYLES */
-    .table-dark-solid { width: 100%; margin: 0; }
-    .table-dark-solid td, .table-dark-solid th {
-        padding: 12px 15px;
-        border-bottom: 1px solid #3a4046;
-        vertical-align: middle;
-        color: var(--txt-main);
-    }
-    .table-dark-solid tr:last-child td { border-bottom: none; }
-    .form-label-td { width: 35%; font-weight: 600; white-space: nowrap; color: var(--txt-muted); font-size: 0.9rem; }
-    
-    /* BUTTONS */
-    .btn-custom { border-radius: 4px; font-weight: 600; padding: 6px 14px; border: none; font-size: 0.9rem; }
-    .btn-blue { background: var(--c-blue); color: #fff; }
-    .btn-blue:hover { background: #2980b9; }
-    .btn-warn { background: var(--c-orange); color: #fff; }
-    .btn-warn:hover { background: #e67e22; }
-    .btn-pink { background: #e84393; color: #fff; }
-    .btn-pink:hover { background: #d63031; }
-
-    /* FOOTER SUMMARY */
-    .summary-footer {
-        background: rgba(0,0,0,0.2);
-        border-top: 1px solid var(--border-col);
+    /* INFO BOX */
+    .info-valid-box {
+        background: rgba(58, 134, 255, 0.1);
+        border-left: 4px solid var(--accent-blue);
         padding: 15px;
-        flex-shrink: 0;
+        margin-top: 15px;
+        border-radius: 4px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+    .v-item { color: var(--txt-main); font-size: 0.95rem; }
+    .v-item i { color: var(--accent-blue); margin-right: 5px; }
+
+    /* SUMMARY GRID (DYNAMIC LAYOUT) */
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); /* Dinamis mengisi lebar */
+        gap: 15px;
     }
     
-    /* SCROLLBAR CUSTOM */
-    .scrollable-content::-webkit-scrollbar { width: 8px; }
-    .scrollable-content::-webkit-scrollbar-track { background: #2a3036; }
-    .scrollable-content::-webkit-scrollbar-thumb { background: #495057; border-radius: 4px; }
-    .scrollable-content::-webkit-scrollbar-thumb:hover { background: #6c757d; }
-    
-    .valid-price-container {
-        background: rgba(52, 152, 219, 0.1);
-        border-left: 3px solid var(--c-blue);
-        padding: 10px 15px;
-        margin-top: auto; /* Push to bottom of form card if needed */
+    .blok-card {
+        background: #252525;
+        border: 1px solid var(--border-col);
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        transition: transform 0.2s;
+        position: relative;
+        overflow: hidden;
     }
+    .blok-card:hover {
+        transform: translateY(-3px);
+        border-color: var(--accent-green);
+    }
+    .blok-card::before {
+        content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px;
+        background: var(--accent-green);
+    }
+    .blok-name { display: block; font-size: 0.9rem; color: var(--txt-muted); margin-bottom: 5px; text-transform: uppercase; }
+    .blok-count { display: block; font-size: 1.8rem; font-weight: 700; color: var(--accent-green); }
+
+    /* BUTTONS */
+    .btn-action {
+        width: 100%;
+        padding: 12px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        border: none;
+        border-radius: 6px;
+        background: var(--accent-blue);
+        color: #fff;
+        cursor: pointer;
+        transition: background 0.3s;
+        margin-top: 20px;
+    }
+    .btn-action:hover { background: #217dbb; }
+
+    /* FOOTER STATS */
+    .footer-stats {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border-col);
+        display: flex;
+        justify-content: space-around;
+        text-align: center;
+    }
+    .stat-val { font-size: 1.5rem; font-weight: bold; display: block; }
+    .stat-lbl { font-size: 0.85rem; color: var(--txt-muted); }
+    .c-red { color: var(--accent-red); }
+    .c-yellow { color: var(--accent-yellow); }
 </style>
 
-<div class="gen-page container-fluid p-0"> <div class="row row-eq-height"> <div class="col-xl-8 col-lg-7 col-md-12 mb-3">
-            <div class="card card-solid">
-                <div class="card-header-solid">
-                    <h3 class="card-title"><i class="fa fa-user-plus mr-2"></i> <?= $_generate_user ?></h3>
-                    <small id="loader" style="display: none;" class="text-info"><i class='fa fa-circle-o-notch fa-spin'></i> Processing...</small>
+<div class="gen-page container-fluid p-0">
+    <div class="row">
+        
+        <div class="col-12">
+            <div class="card card-modern">
+                <div class="card-header-modern">
+                    <h3 class="card-title"><i class="fa fa-cogs mr-2"></i> <?= $_generate_user ?></h3>
+                    <small id="loader" style="display: none;" class="text-info"><i class='fa fa-circle-o-notch fa-spin'></i> Memproses...</small>
                 </div>
                 
-                <div class="card-body">
-                    <form autocomplete="off" method="post" action="./?hotspot-user=generate&session=<?= $session; ?>" class="d-flex flex-column h-100 m-0">
+                <div class="card-body-modern">
+                    <form autocomplete="off" method="post" action="./?hotspot-user=generate&session=<?= $session; ?>">
                         <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
                         <input type="hidden" name="session" value="<?= $session; ?>">
 
-                        <div class="p-3 border-bottom border-secondary d-flex flex-wrap gap-2 justify-content-between align-items-center bg-dark-soft">
-                            <div>
-                                <?php $back_link = "./?hotspot=users&profile=" . (isset($_SESSION['ubp']) && $_SESSION['ubp'] != "" ? $_SESSION['ubp'] : "all") . "&session=" . $session; ?>
-                                <a class="btn btn-custom btn-warn mr-1" href="<?= $back_link ?>"><i class="fa fa-times"></i> <?= $_close ?></a>
-                                <a class="btn btn-custom btn-pink" href="./?hotspot=users&profile=<?php echo isset($uprofile) ? $uprofile : "all"; ?>&session=<?= $session; ?>"><i class="fa fa-users"></i> List</a>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><?= $_qty ?> (Jumlah)</label>
+                                <input class="form-control" type="number" id="qtyInput" name="qty" min="50" max="500" value="50" required placeholder="Min 50">
+                                <small class="text-danger">*Minimal 50 User</small>
                             </div>
-                            <button type="submit" name="save" onclick="return validateForm()" class="btn btn-custom btn-blue"><i class="fa fa-save"></i> <?= $_generate ?></button>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Server / Mode</label>
+                                <div class="d-flex gap-2">
+                                    <input type="text" class="form-control locked-field mr-2" value="wartel" readonly style="flex:1;">
+                                    <input type="text" class="form-control locked-field" value="User=Pass" readonly style="flex:1;">
+                                    <input type="hidden" name="user" value="vc">
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="scrollable-content">
-                            <table class="table table-dark-solid">
-                                <tr>
-                                    <td class="form-label-td"><?= $_qty ?></td>
-                                    <td>
-                                        <input class="form-control" type="number" id="qtyInput" name="qty" min="50" max="500" value="50" required>
-                                        <small class="text-danger mt-1 d-block" style="font-size: 11px;">*Minimal 50 User</small>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="form-label-td">Server / Mode</td>
-                                    <td>
-                                        <div class="d-flex gap-2">
-                                            <input type="text" class="form-control locked-field mr-1" value="wartel" readonly>
-                                            <input type="text" class="form-control locked-field" value="User=Pass" readonly>
-                                            <input type="hidden" name="user" value="vc">
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="form-label-td"><?= $_user_length ?></td>
-                                    <td>
-                                        <select class="form-control" id="userl" name="userl" required>
-                                            <option value="6">6 Digit</option>
-                                            <option value="7">7 Digit</option>
-                                            <option value="8">8 Digit</option>
-                                        </select>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="form-label-td"><?= $_profile ?></td>
-                                    <td>
-                                        <select class="form-control" onchange="GetVP(); updateTimeLimit();" id="uprof" name="profile" required>
-                                            <?php 
-                                            $allowedProfiles = ['10Menit', '30Menit'];
-                                            if ($genprof != "" && in_array($genprof, $allowedProfiles)) echo "<option selected>" . $genprof . "</option>";
-                                            foreach ($getprofile as $p) {
-                                                $pName = $p['name'];
-                                                if(in_array($pName, $allowedProfiles) && $pName != $genprof) echo "<option>" . $pName . "</option>";
-                                            }
-                                            ?>
-                                        </select>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="form-label-td"><?= $_time_limit ?></td>
-                                    <td><input class="form-control locked-field" type="text" name="timelimit_display" id="timelimit" readonly></td>
-                                </tr>
-                                <tr>
-                                    <td class="form-label-td"><?= $_comment ?> (Blok)</td>
-                                    <td>
-                                        <select class="form-control" name="adcomment" id="comment" required>
-                                            <?php
-                                            foreach(range('A', 'F') as $blk) {
-                                                foreach(['10', '30'] as $suf) echo "<option value='Blok-$blk$suf'>Blok-$blk$suf</option>";
-                                            }
-                                            ?>
-                                        </select>
-                                    </td>
-                                </tr>
-                            </table>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><?= $_user_length ?></label>
+                                <select class="form-control" id="userl" name="userl" required>
+                                    <option value="6">6 Digit</option>
+                                    <option value="7">7 Digit</option>
+                                    <option value="8">8 Digit</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><?= $_profile ?></label>
+                                <select class="form-control" onchange="GetVP(); updateTimeLimit();" id="uprof" name="profile" required>
+                                    <?php 
+                                    $allowedProfiles = ['10Menit', '30Menit'];
+                                    if ($genprof != "" && in_array($genprof, $allowedProfiles)) echo "<option selected>" . $genprof . "</option>";
+                                    foreach ($getprofile as $p) {
+                                        $pName = $p['name'];
+                                        if(in_array($pName, $allowedProfiles) && $pName != $genprof) echo "<option>" . $pName . "</option>";
+                                    }
+                                    ?>
+                                </select>
+                            </div>
                         </div>
 
-                        <div id="GetValidPrice" class="valid-price-container">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><?= $_time_limit ?></label>
+                                <input class="form-control locked-field" type="text" name="timelimit_display" id="timelimit" readonly>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><?= $_comment ?> (Kode Blok)</label>
+                                <select class="form-control" name="adcomment" id="comment" required style="font-family: monospace; font-size: 1.1rem;">
+                                    <?php
+                                    foreach(range('A', 'F') as $blk) {
+                                        foreach(['10', '30'] as $suf) echo "<option value='Blok-$blk$suf'>Blok-$blk$suf</option>";
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="GetValidPrice">
                             <?php if ($genprof != "" && isset($ValidPrice)) echo $ValidPrice; ?>
                         </div>
+
+                        <button type="submit" name="save" onclick="return validateForm()" class="btn-action">
+                            <i class="fa fa-save mr-2"></i> GENERATE VOUCHER
+                        </button>
                     </form>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-4 col-lg-5 col-md-12 mb-3">
-            <div class="card card-solid">
-                <div class="card-header-solid">
-                    <h3 class="card-title"><i class="fa fa-ticket mr-2"></i> Ringkasan Voucher</h3>
+        <div class="col-12">
+            <div class="card card-modern">
+                <div class="card-header-modern">
+                    <h3 class="card-title"><i class="fa fa-th-large mr-2"></i> Ringkasan Voucher (READY)</h3>
                 </div>
                 
-                <div class="card-body">
-                    <div style="padding: 10px 15px; border-bottom: 1px solid #3a4046; background: rgba(0,0,0,0.1); font-weight: bold; font-size: 0.85rem; color: var(--txt-muted);">
-                        <div class="d-flex justify-content-between">
-                            <span>BLOK (READY)</span>
-                            <span>JUMLAH</span>
+                <div class="card-body-modern">
+                    <?php if (!empty($blockSummary)): ?>
+                        <div class="summary-grid">
+                            <?php foreach ($blockSummary as $blok => $count): ?>
+                                <div class="blok-card">
+                                    <span class="blok-name"><?= htmlspecialchars($blok) ?></span>
+                                    <span class="blok-count"><?= (int)$count ?></span>
+                                    <small class="text-muted">pcs</small>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
-                    </div>
-
-                    <div class="scrollable-content">
-                        <?php if (!empty($blockSummary)): ?>
-                            <table class="table table-dark-solid table-sm table-hover m-0">
-                                <tbody>
-                                    <?php foreach ($blockSummary as $blok => $count): ?>
-                                        <tr>
-                                            <td style="padding-left: 20px;"><span class="badge badge-dark border border-secondary"><?= htmlspecialchars($blok) ?></span></td>
-                                            <td class="text-right font-weight-bold" style="color: var(--c-green); padding-right: 20px;"><?= (int)$count ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        <?php else: ?>
-                            <div class="text-center p-5 text-muted">
-                                <i class="fa fa-inbox fa-3x mb-3" style="opacity: 0.3;"></i><br>
-                                <small>Tidak ada voucher READY.</small>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-
-                    <div class="summary-footer">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-muted text-sm"><i class="fa fa-ban text-danger"></i> Total Rusak</span>
-                            <span class="badge badge-danger"><?= (int)$totalRusak ?></span>
+                    <?php else: ?>
+                        <div class="text-center p-5 text-muted" style="background: rgba(0,0,0,0.1); border-radius: 8px;">
+                            <i class="fa fa-inbox fa-3x mb-3" style="opacity: 0.3;"></i><br>
+                            <h4>Stok Kosong</h4>
+                            <small>Tidak ada voucher dengan status READY.</small>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-muted text-sm"><i class="fa fa-refresh text-warning"></i> Total Retur</span>
-                            <span class="badge badge-warning text-white"><?= (int)$totalRetur ?></span>
+                    <?php endif; ?>
+
+                    <div class="footer-stats">
+                        <div>
+                            <span class="stat-val c-red"><?= (int)$totalRusak ?></span>
+                            <span class="stat-lbl">Total Rusak</span>
+                        </div>
+                        <div>
+                            <span class="stat-val c-yellow"><?= (int)$totalRetur ?></span>
+                            <span class="stat-lbl">Total Retur</span>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
     </div>
 </div>
 
 <script>
 function GetVP(){
   var prof = document.getElementById('uprof').value;
+  // Memuat data validitas harga
   $("#GetValidPrice").load("./process/getvalidprice.php?name="+prof+"&session=<?= $session; ?> #getdata", function(res, status) {
       if (status == "success") {
-          var content = $(this).html();
-          // Formatting ulang hasil load agar sesuai style baru
-          if(content.trim() !== ""){
-             // Kita biarkan structure PHP process merender text, container CSS yang mengatur padding
-          }
+          // Optional: manipulasi DOM jika perlu merapikan hasil dari process/getvalidprice.php
       }
   });
 } 
@@ -465,12 +472,23 @@ function GetVP(){
 function updateTimeLimit() {
     var prof = document.getElementById('uprof').value;
     var timeField = document.getElementById('timelimit');
-    timeField.value = (prof === '10Menit') ? '10m' : ((prof === '30Menit') ? '30m' : '-');
+    // Logika display timelimit client-side
+    if (prof === '10Menit') {
+        timeField.value = '10m';
+    } else if (prof === '30Menit') {
+        timeField.value = '30m';
+    } else {
+        timeField.value = '-';
+    }
 }
 
 function validateForm() {
     var qty = document.getElementById('qtyInput').value;
-    if (qty < 50) { alert("Minimal generate harus 50 user!"); return false; }
+    if (qty < 50) { 
+        alert("Minimal generate harus 50 user!"); 
+        document.getElementById('qtyInput').focus();
+        return false; 
+    }
     document.getElementById('loader').style.display = 'inline-block';
     return true;
 }
