@@ -537,6 +537,55 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             $del->execute([':u' => $uname]);
             $deleted_any = true;
           }
+          if (!$deleted_any && $target_status !== '') {
+            $list = $API->comm("/ip/hotspot/user/print", array(
+              "?server" => $hotspot_server,
+              ".proplist" => ".id,name,comment,disabled,bytes-in,bytes-out,uptime"
+            ));
+            foreach ($list as $usr) {
+              $uname = $usr['name'] ?? '';
+              if ($uname === '' || isset($active_names[$uname])) continue;
+              $cmt = $usr['comment'] ?? '';
+              if ($blok_norm != '') {
+                $cblok = extract_blok_name($cmt);
+                if (strcasecmp($cblok, $blok_norm) !== 0) continue;
+              }
+              $is_rusak = (stripos($cmt, 'RUSAK') !== false) || (($usr['disabled'] ?? 'false') === 'true');
+              $is_retur = stripos($cmt, '(Retur)') !== false || stripos($cmt, 'Retur Ref:') !== false;
+              if ($is_retur && !$is_rusak && $target_status === 'retur') {
+                $API->write('/ip/hotspot/user/remove', false);
+                $API->write('=.id=' . $usr['.id']);
+                $API->read();
+                $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
+                $del->execute([':u' => $uname]);
+                $deleted_any = true;
+                continue;
+              }
+              if ($is_rusak && $target_status === 'rusak') {
+                $API->write('/ip/hotspot/user/remove', false);
+                $API->write('=.id=' . $usr['.id']);
+                $API->read();
+                $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
+                $del->execute([':u' => $uname]);
+                $deleted_any = true;
+                continue;
+              }
+              if ($target_status === 'terpakai' && !$is_rusak && !$is_retur) {
+                $bytes = (int)(($usr['bytes-in'] ?? 0) + ($usr['bytes-out'] ?? 0));
+                $uptime = $usr['uptime'] ?? '';
+                $cm = extract_ip_mac_from_comment($cmt);
+                $is_used = ($bytes > 50 || ($uptime != '' && $uptime != '0s') || ($cm['ip'] ?? '') != '');
+                if ($is_used) {
+                  $API->write('/ip/hotspot/user/remove', false);
+                  $API->write('=.id=' . $usr['.id']);
+                  $API->read();
+                  $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
+                  $del->execute([':u' => $uname]);
+                  $deleted_any = true;
+                }
+              }
+            }
+          }
           if ($target_status === 'rusak') {
             $list = $API->comm("/ip/hotspot/user/print", array(
               "?server" => $hotspot_server,
@@ -1332,7 +1381,7 @@ if ($debug_mode && !$is_ajax) {
     <div class="spinner"><i class="fa fa-circle-o-notch fa-spin"></i> Memproses...</div>
   </div>
   <div id="action-banner" class="action-banner" aria-live="polite"></div>
-  <div id="confirm-modal" class="confirm-modal" aria-hidden="true">
+  <div id="confirm-modal" class="confirm-modal">
     <div class="confirm-card">
       <div class="confirm-title">Konfirmasi</div>
       <div id="confirm-message"></div>
@@ -1625,12 +1674,12 @@ if ($debug_mode && !$is_ajax) {
       }
       confirmMessage.textContent = message || 'Lanjutkan aksi ini?';
       confirmModal.style.display = 'flex';
-      confirmModal.setAttribute('aria-hidden', 'false');
       const cleanup = (result) => {
         confirmModal.style.display = 'none';
-        confirmModal.setAttribute('aria-hidden', 'true');
         confirmOk.onclick = null;
         confirmCancel.onclick = null;
+        try { document.activeElement && document.activeElement.blur(); } catch (e) {}
+        try { document.body.focus(); } catch (e) {}
         resolve(result);
       };
       confirmOk.onclick = () => cleanup(true);
