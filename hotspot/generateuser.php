@@ -113,7 +113,9 @@ if (!isset($_SESSION["mikhmon"])) {
         $getlock = explode(",", $ponlogin)[6];
         
         $_SESSION['ubp'] = $profile;
-        $server = "wartel"; $user = "vc"; $datalimit = 0;
+        $server = $hotspot_server ?? 'wartel';
+        $user = "vc";
+        $datalimit = 0;
         
         $commt = $user . "-" . rand(100, 999) . "-" . date("m.d.y") . "-" . $adcomment;
         $gentemp = $commt . "|~" . $profile . "~" . $getvalid . "~" . $getprice . "!".$getsprice."~" . $timelimit . "~" . $datalimit . "~" . $getlock;
@@ -149,11 +151,11 @@ if (!isset($_SESSION["mikhmon"])) {
     $totalRusak = 0;
     $totalRetur = 0;
 
-    $active_list = $API->comm('/ip/hotspot/active/print', ['?server' => 'wartel', '.proplist' => 'user']);
+    $active_list = $API->comm('/ip/hotspot/active/print', ['?server' => ($hotspot_server ?? 'wartel'), '.proplist' => 'user']);
     $activeMap = [];
     foreach ($active_list as $a) { if (isset($a['user'])) $activeMap[$a['user']] = true; }
 
-    $all_users = $API->comm('/ip/hotspot/user/print', ['?server' => 'wartel', '.proplist' => 'name,comment,disabled,bytes-in,bytes-out,uptime']);
+    $all_users = $API->comm('/ip/hotspot/user/print', ['?server' => ($hotspot_server ?? 'wartel'), '.proplist' => 'name,comment,disabled,bytes-in,bytes-out,uptime']);
 
     foreach ($all_users as $u) {
         $name = $u['name'] ?? '';
@@ -379,7 +381,7 @@ if (!isset($_SESSION["mikhmon"])) {
 <div class="container-fluid gen-wrapper">
     <div class="row row-eq-height g-3">
         
-        <div class="col-12 col-lg-7 col-xl-8">
+        <div class="col-12 col-md-8 col-lg-8 col-xl-9">
             <div class="card-modern">
                 <div class="card-header-mod">
                     <h3><i class="fa fa-cogs"></i> Konfigurasi Voucher</h3>
@@ -483,7 +485,7 @@ if (!isset($_SESSION["mikhmon"])) {
             </div>
         </div>
 
-        <div class="col-12 col-lg-5 col-xl-4">
+        <div class="col-12 col-md-4 col-lg-4 col-xl-3">
             <div class="card-modern">
                 <div class="card-header-mod">
                     <h3><i class="fa fa-list-alt"></i> Ringkasan (READY)</h3>
