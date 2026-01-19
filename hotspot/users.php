@@ -1295,7 +1295,7 @@ if ($debug_mode) {
         <span id="users-total" class="badge badge-secondary p-2" style="font-size:14px">Total: <?= $total_items ?> Items</span>
       </div>
       <div class="toolbar-container">
-        <form action="?" method="GET" class="toolbar-row m-0">
+        <form action="?" method="GET" class="toolbar-row m-0" id="users-toolbar-form">
           <input type="hidden" name="hotspot" value="users">
           <input type="hidden" name="session" value="<?= $session ?>">
 
@@ -1328,8 +1328,17 @@ if ($debug_mode) {
             $status_label = $status_labels[$req_status] ?? '';
             $can_print_block = ($req_comm != '' && $req_status === 'ready');
             $can_print_status = ($req_comm != '' && $req_status === 'retur');
+            $reset_params = $_GET;
+            $reset_params['status'] = 'all';
+            unset($reset_params['page']);
+            $reset_url = './?' . http_build_query($reset_params);
           ?>
           <div class="toolbar-right">
+            <?php if ($req_status !== 'all'): ?>
+              <button type="button" class="btn btn-outline-light" style="height:40px;" onclick="location.href='<?= $reset_url ?>'">
+                <i class="fa fa-undo"></i> Reset Status
+              </button>
+            <?php endif; ?>
             <?php if ($req_comm == '' && $can_delete_status): ?>
               <button type="button" class="btn btn-warning" style="height:40px;" onclick="if(confirm('Hapus semua voucher <?= $status_label ?> (tidak online)?')) location.href='./?hotspot=users&action=delete_status&status=<?= $req_status ?>&session=<?= $session ?>'">
                 <i class="fa fa-trash"></i> Hapus <?= $status_label ?>
@@ -1512,6 +1521,7 @@ if ($debug_mode) {
 
 <script>
 (function(){
+  const form = document.getElementById('users-toolbar-form');
   const searchInput = document.querySelector('input[name="q"]');
   const statusSelect = document.querySelector('select[name="status"]');
   const commentSelect = document.querySelector('select[name="comment"]');
@@ -1563,6 +1573,14 @@ if ($debug_mode) {
   }
 
   searchInput.addEventListener('input', scheduleSearch);
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      if (document.activeElement === searchInput) {
+        e.preventDefault();
+        fetchUsers(true);
+      }
+    });
+  }
 
   setInterval(() => {
     if (document.hidden || isTyping) return;
