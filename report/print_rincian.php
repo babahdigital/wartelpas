@@ -57,6 +57,33 @@ function extract_ip_mac_from_comment($comment) {
     return ['ip' => $ip, 'mac' => $mac];
 }
 
+function uptime_to_seconds($uptime) {
+    if (empty($uptime) || $uptime === '0s') return 0;
+    $total = 0;
+    if (preg_match_all('/(\d+)(w|d|h|m|s)/i', $uptime, $m, PREG_SET_ORDER)) {
+        foreach ($m as $part) {
+            $val = (int)$part[1];
+            switch (strtolower($part[2])) {
+                case 'w': $total += $val * 7 * 24 * 3600; break;
+                case 'd': $total += $val * 24 * 3600; break;
+                case 'h': $total += $val * 3600; break;
+                case 'm': $total += $val * 60; break;
+                case 's': $total += $val; break;
+            }
+        }
+    }
+    return $total;
+}
+
+function extract_datetime_from_comment($comment) {
+    if (empty($comment)) return '';
+    $first = trim(explode('|', $comment)[0] ?? '');
+    if ($first === '') return '';
+    $ts = strtotime($first);
+    if ($ts === false) return '';
+    return date('Y-m-d H:i:s', $ts);
+}
+
 function format_bytes_short($bytes) {
     $b = (float)$bytes;
     if ($b <= 0) return '0 B';
@@ -218,9 +245,25 @@ if ($is_usage && file_exists($dbFile)) {
 
             if (!$is_used) continue;
 
+            $login_time = $hist['login_time_real'] ?? '';
+            $logout_time = $hist['logout_time_real'] ?? '';
+            if ($logout_time === '') {
+                $logout_time = extract_datetime_from_comment($comment);
+            }
+            if ($login_time === '' && $logout_time !== '') {
+                $u_sec = uptime_to_seconds($uptime);
+                if ($u_sec > 0) {
+                    $login_time = date('Y-m-d H:i:s', strtotime($logout_time) - $u_sec);
+                } else {
+                    $login_time = $logout_time;
+                }
+            }
+            if ($login_time === '') $login_time = '-';
+            if ($logout_time === '') $logout_time = '-';
+
             $usage_list[] = [
-                'login' => $hist['login_time_real'] ?? '',
-                'logout' => $hist['logout_time_real'] ?? '',
+                'login' => $login_time,
+                'logout' => $logout_time,
                 'username' => $name,
                 'blok' => $f_blok ?: '-',
                 'ip' => $f_ip,
