@@ -957,7 +957,7 @@ if ($db) {
   try {
     $need_history = in_array(strtolower($req_status), ['used','rusak','retur','all']) || trim($req_search) !== '';
     if ($need_history) {
-      $res = $db->query("SELECT username, raw_comment, last_status FROM login_history WHERE username IS NOT NULL AND username != ''");
+      $res = $db->query("SELECT username, raw_comment, last_status, last_bytes, last_uptime, ip_address, mac_address FROM login_history WHERE username IS NOT NULL AND username != ''");
       $existing = [];
       foreach ($all_users as $u) {
         if (!empty($u['name'])) $existing[$u['name']] = true;
@@ -965,18 +965,41 @@ if ($db) {
       foreach ($res->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $uname = $row['username'] ?? '';
         if ($uname === '' || isset($existing[$uname])) continue;
+        $comment = (string)($row['raw_comment'] ?? '');
         $st = strtolower((string)($row['last_status'] ?? ''));
-        if ($req_status === 'used' && $st !== 'terpakai') continue;
-        if ($req_status === 'rusak' && $st !== 'rusak') continue;
-        if ($req_status === 'retur' && $st !== 'retur') continue;
+        $bytes_hist = (int)($row['last_bytes'] ?? 0);
+        $uptime_hist = (string)($row['last_uptime'] ?? '');
+        $ip_hist = (string)($row['ip_address'] ?? '');
+        $mac_hist = (string)($row['mac_address'] ?? '');
+        $cm = extract_ip_mac_from_comment($comment);
+        $ip_use = $ip_hist !== '' && $ip_hist !== '-' ? $ip_hist : ($cm['ip'] ?? '');
+        $mac_use = $mac_hist !== '' && $mac_hist !== '-' ? $mac_hist : ($cm['mac'] ?? '');
+
+        $h_is_rusak = ($st === 'rusak') || (stripos($comment, 'RUSAK') !== false);
+        $h_is_retur = ($st === 'retur') || (stripos($comment, '(Retur)') !== false) || (stripos($comment, 'Retur Ref:') !== false);
+        if ($h_is_rusak) $h_is_retur = false;
+        $h_is_used = (!$h_is_rusak && !$h_is_retur) && (
+          $bytes_hist > 50 ||
+          ($uptime_hist !== '' && $uptime_hist !== '0s') ||
+          ($ip_use !== '' && $ip_use !== '-')
+        );
+        $h_status = 'READY';
+        if ($h_is_rusak) $h_status = 'RUSAK';
+        elseif ($h_is_retur) $h_status = 'RETUR';
+        elseif ($h_is_used) $h_status = 'TERPAKAI';
+
+        if ($req_status === 'used' && $h_status !== 'TERPAKAI') continue;
+        if ($req_status === 'rusak' && $h_status !== 'RUSAK') continue;
+        if ($req_status === 'retur' && $h_status !== 'RETUR') continue;
+        if ($req_status === 'all' && $h_status === 'READY') continue;
         $all_users[] = [
           'name' => $uname,
-          'comment' => $row['raw_comment'] ?? '',
+          'comment' => $comment,
           'profile' => '',
-          'disabled' => $st === 'rusak' ? 'true' : 'false',
-          'bytes-in' => 0,
+          'disabled' => $h_status === 'RUSAK' ? 'true' : 'false',
+          'bytes-in' => $bytes_hist,
           'bytes-out' => 0,
-          'uptime' => ''
+          'uptime' => $uptime_hist
         ];
         $existing[$uname] = true;
       }
