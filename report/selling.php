@@ -429,22 +429,6 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
     </div>
 </div>
 
-<script>
-    (function(){
-        var w = document.getElementById('chk_wartel');
-        var k = document.getElementById('chk_kamtib');
-        var ww = document.getElementById('wartel_wrap');
-        var kw = document.getElementById('kamtib_wrap');
-        function toggle(){
-            ww.style.display = w && w.checked ? 'block' : 'none';
-            kw.style.display = k && k.checked ? 'block' : 'none';
-        }
-        if (w) w.addEventListener('change', toggle);
-        if (k) k.addEventListener('change', toggle);
-        toggle();
-    })();
-</script>
-
 <div id="hpModal" class="modal-backdrop" onclick="if(event.target===this){this.style.display='none';}">
     <div class="modal-card">
         <div class="modal-title">Input Handphone per Blok (Harian)</div>
