@@ -395,6 +395,14 @@ function get_user_history($name) {
     }
 }
 
+function is_wartel_client($comment, $hist_blok = '') {
+  if (!empty($hist_blok)) return true;
+  $blok = extract_blok_name($comment);
+  if (!empty($blok)) return true;
+  if (!empty($comment) && stripos($comment, 'blok-') !== false) return true;
+  return false;
+}
+
 // --- ROUTEROS ---
 $API = new RouterosAPI();
 $API->debug = false;
@@ -405,6 +413,10 @@ if (!$API->connect($iphost, $userhost, decrypt($passwdhost))) {
 }
 
 $hotspot_server = $hotspot_server ?? 'wartel';
+$only_wartel = true;
+if (isset($_GET['only_wartel']) && $_GET['only_wartel'] === '0') {
+  $only_wartel = false;
+}
 
 // Action handler sederhana (invalid/retur/delete)
 if (isset($_GET['action']) || isset($_POST['action'])) {
@@ -962,6 +974,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
   if (isset($_GET['show'])) $redir_params['show'] = $_GET['show'];
   if (isset($_GET['date'])) $redir_params['date'] = $_GET['date'];
   if (isset($_GET['debug'])) $redir_params['debug'] = $_GET['debug'];
+  if (isset($_GET['only_wartel'])) $redir_params['only_wartel'] = $_GET['only_wartel'];
   $redir = './?' . http_build_query($redir_params);
   if ($is_action_ajax) {
     header('Content-Type: application/json');
@@ -1000,7 +1013,7 @@ if ($db) {
   try {
     $need_history = in_array(strtolower($req_status), ['used','rusak','retur','all']) || trim($req_search) !== '';
     if ($need_history) {
-      $res = $db->query("SELECT username, raw_comment, last_status, last_bytes, last_uptime, ip_address, mac_address FROM login_history WHERE username IS NOT NULL AND username != ''");
+      $res = $db->query("SELECT username, raw_comment, last_status, last_bytes, last_uptime, ip_address, mac_address, blok_name FROM login_history WHERE username IS NOT NULL AND username != ''");
       $existing = [];
       foreach ($all_users as $u) {
         if (!empty($u['name'])) $existing[$u['name']] = true;
@@ -1009,6 +1022,8 @@ if ($db) {
         $uname = $row['username'] ?? '';
         if ($uname === '' || isset($existing[$uname])) continue;
         $comment = (string)($row['raw_comment'] ?? '');
+        $hist_blok = (string)($row['blok_name'] ?? '');
+        if ($only_wartel && !is_wartel_client($comment, $hist_blok)) continue;
         $st = strtolower((string)($row['last_status'] ?? ''));
         $bytes_hist = (int)($row['last_bytes'] ?? 0);
         $uptime_hist = (string)($row['last_uptime'] ?? '');
@@ -1098,6 +1113,9 @@ foreach($all_users as $u) {
     $hist = get_user_history($name);
     if (empty($f_blok) && $hist && !empty($hist['blok_name'])) {
       $f_blok = $hist['blok_name'];
+    }
+    if ($only_wartel && !is_wartel_client($comment, $f_blok)) {
+      continue;
     }
     if (!$is_active && $hist) {
       if ($f_ip == '-') $f_ip = $hist['ip_address'] ?? '-';
