@@ -499,21 +499,29 @@ $total_qty_laku = max(0, $total_qty - $total_qty_retur - $total_qty_rusak - $tot
                 <div class="summary-value"><?= $cur ?> <?= number_format($total_gross,0,',','.') ?></div>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Koreksi Rusak</div>
-                <div class="summary-value" style="color:#f39c12;">-<?= $cur ?> <?= number_format($total_rusak,0,',','.') ?></div>
+                <div class="summary-title">Voucher Rusak</div>
+                <div class="summary-value" style="color:#f39c12;"><?= number_format($total_qty_rusak,0,',','.') ?></div>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Koreksi Invalid</div>
-                <div class="summary-value" style="color:#e74c3c;">-<?= $cur ?> <?= number_format($total_invalid,0,',','.') ?></div>
+                <div class="summary-title">Handphone Total Aktif</div>
+                <div class="summary-value" style="color:#4ea8ff;">
+                    <?= number_format($hp_active_units,0,',','.') ?>
+                </div>
+                <div style="font-size:12px;color:var(--txt-muted)">
+                    WARTEL: <?= number_format($hp_wartel_units,0,',','.') ?> | KAMTIB: <?= number_format($hp_kamtib_units,0,',','.') ?>
+                </div>
+                <div style="font-size:12px;color:var(--txt-muted)">
+                    Rusak: <?= number_format($hp_rusak_units,0,',','.') ?> | Spam: <?= number_format($hp_spam_units,0,',','.') ?> | Aktif: <?= number_format($hp_active_units,0,',','.') ?>
+                </div>
             </div>
             <div class="summary-card">
                 <div class="summary-title">Pendapatan Bersih</div>
                 <div class="summary-value" style="color:#2ecc71;"><?= $cur ?> <?= number_format($total_net,0,',','.') ?></div>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Total Quota (Qty)</div>
-                <div class="summary-value"><?= number_format($total_qty,0,',','.') ?></div>
-                <div style="font-size:12px;color:var(--txt-muted)">Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Invalid: <?= number_format($total_qty_invalid,0,',','.') ?></div>
+                <div class="summary-title">Total Voucher Laku</div>
+                <div class="summary-value"><?= number_format($total_qty_laku,0,',','.') ?></div>
+                <div style="font-size:12px;color:var(--txt-muted)">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bandwidth: -</div>
             </div>
         </div>
     </div>
@@ -845,26 +853,6 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
     </div>
 </div>
 
-<?php if (!empty($hp_summary)): ?>
-<div class="card-solid mb-3">
-    <div class="card-header-solid">
-        <h3 class="m-0"><i class="fa fa-check-square-o mr-2"></i> Rekap Unit per Kategori</h3>
-    </div>
-    <div class="card-body" style="padding:16px;">
-        <div class="summary-grid">
-            <?php foreach ($hp_summary as $s): ?>
-                <div class="summary-card">
-                    <div class="summary-title"><?= htmlspecialchars($s['unit_type'] ?? '-') ?></div>
-                    <div class="summary-value"><?= (int)($s['total_units'] ?? 0) ?> Unit</div>
-                    <div style="font-size:12px;color:var(--txt-muted);margin-top:6px;">
-                        Rusak: <?= (int)($s['rusak_units'] ?? 0) ?> | Spam: <?= (int)($s['spam_units'] ?? 0) ?> | Aktif: <?= (int)($s['active_units'] ?? 0) ?>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</div>
-<?php endif; ?>
 <?php endif; ?>
 
 <div class="card-solid mb-3">
