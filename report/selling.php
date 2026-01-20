@@ -416,6 +416,14 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
                     </select>
                 </div>
                 <div>
+                    <label>Unit</label>
+                    <select class="form-input" name="unit_type" required>
+                        <option value="" disabled selected>Pilih Unit</option>
+                        <option value="WARTEL">WARTEL</option>
+                        <option value="KAMTIB">KAMTIB</option>
+                    </select>
+                </div>
+                <div>
                     <label>Tanggal</label>
                     <input class="form-input" type="date" name="report_date" value="<?= htmlspecialchars($filter_date); ?>" required>
                 </div>
@@ -452,13 +460,27 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
 
 <?php
 $hp_rows = [];
+$hp_summary = [];
 if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         try {
                 $stmt = $db->prepare("SELECT * FROM phone_block_daily WHERE report_date = :d ORDER BY blok_name");
                 $stmt->execute([':d' => $filter_date]);
                 $hp_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmt2 = $db->prepare("SELECT unit_type,
+            SUM(total_units) AS total_units,
+            SUM(active_units) AS active_units,
+            SUM(rusak_units) AS rusak_units,
+            SUM(spam_units) AS spam_units
+          FROM phone_block_daily
+          WHERE report_date = :d
+          GROUP BY unit_type
+          ORDER BY unit_type");
+        $stmt2->execute([':d' => $filter_date]);
+        $hp_summary = $stmt2->fetchAll(PDO::FETCH_ASSOC);
         } catch (Exception $e) {
                 $hp_rows = [];
+        $hp_summary = [];
         }
 }
 ?>
@@ -474,6 +496,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 <thead>
                     <tr>
                         <th>Blok</th>
+                        <th>Unit</th>
                         <th class="text-right">Total</th>
                         <th class="text-right">Aktif</th>
                         <th class="text-right">Rusak</th>
@@ -484,17 +507,18 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 </thead>
                 <tbody>
                     <?php if (empty($hp_rows)): ?>
-                        <tr><td colspan="7" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada input.</td></tr>
+                        <tr><td colspan="8" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada input.</td></tr>
                     <?php else: foreach ($hp_rows as $r): ?>
                         <tr>
                             <td><?= htmlspecialchars($r['blok_name'] ?? '-') ?></td>
+                            <td><?= htmlspecialchars($r['unit_type'] ?? '-') ?></td>
                             <td class="text-right"><?= (int)($r['total_units'] ?? 0) ?></td>
                             <td class="text-right"><?= (int)($r['active_units'] ?? 0) ?></td>
                             <td class="text-right"><?= (int)($r['rusak_units'] ?? 0) ?></td>
                             <td class="text-right"><?= (int)($r['spam_units'] ?? 0) ?></td>
                             <td><small><?= htmlspecialchars($r['notes'] ?? '') ?></small></td>
                             <td class="text-center">
-                                <a class="btn-act btn-act-danger" href="./?report=selling&mode=<?= $mode; ?>&show=<?= $req_show; ?>&date=<?= urlencode($filter_date); ?>&hp_delete=1&blok=<?= urlencode($r['blok_name']); ?>&hp_date=<?= urlencode($filter_date); ?>" onclick="return confirm('Hapus data blok <?= htmlspecialchars($r['blok_name'] ?? '-') ?> untuk <?= htmlspecialchars($filter_date); ?>?')">
+                                <a class="btn-act btn-act-danger" href="./?report=selling&mode=<?= $mode; ?>&show=<?= $req_show; ?>&date=<?= urlencode($filter_date); ?>&hp_delete=1&blok=<?= urlencode($r['blok_name']); ?>&type=<?= urlencode($r['unit_type']); ?>&hp_date=<?= urlencode($filter_date); ?>" onclick="return confirm('Hapus data blok <?= htmlspecialchars($r['blok_name'] ?? '-') ?> (<?= htmlspecialchars($r['unit_type'] ?? '-') ?>) untuk <?= htmlspecialchars($filter_date); ?>?')">
                                     <i class="fa fa-trash"></i>
                                 </a>
                             </td>
@@ -505,6 +529,27 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         </div>
     </div>
 </div>
+
+<?php if (!empty($hp_summary)): ?>
+<div class="card-solid mb-3">
+    <div class="card-header-solid">
+        <h3 class="m-0"><i class="fa fa-check-square-o mr-2"></i> Rekap Unit per Kategori</h3>
+    </div>
+    <div class="card-body" style="padding:16px;">
+        <div class="summary-grid">
+            <?php foreach ($hp_summary as $s): ?>
+                <div class="summary-card">
+                    <div class="summary-title"><?= htmlspecialchars($s['unit_type'] ?? '-') ?></div>
+                    <div class="summary-value"><?= (int)($s['total_units'] ?? 0) ?> Unit</div>
+                    <div style="font-size:12px;color:var(--txt-muted);margin-top:6px;">
+                        Rusak: <?= (int)($s['rusak_units'] ?? 0) ?> | Spam: <?= (int)($s['spam_units'] ?? 0) ?> | Aktif: <?= (int)($s['active_units'] ?? 0) ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 <?php endif; ?>
 
 <div class="card-solid mb-3">
