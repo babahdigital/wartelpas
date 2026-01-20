@@ -275,10 +275,11 @@ if ($is_usage && file_exists($dbFile)) {
             if ($req_status === 'online') $status_match = ($status === 'ONLINE');
             elseif ($req_status === 'rusak') $status_match = ($status === 'RUSAK');
             elseif ($req_status === 'used' || $req_status === 'terpakai') $status_match = ($status === 'TERPAKAI');
-            elseif ($req_status === 'all') $status_match = in_array($status, ['ONLINE','RUSAK','TERPAKAI']);
+            elseif ($req_status === 'all') $status_match = in_array($status, ['RUSAK','TERPAKAI']);
             else $status_match = ($status === 'TERPAKAI');
 
             if (!$status_match) continue;
+            if ($status === 'READY') continue;
 
             $seen_users[$name] = true;
 
