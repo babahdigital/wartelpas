@@ -932,7 +932,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     <?php endforeach; endif; ?>
                 </tbody>
             </table>
-        
+        </div>
         <?php if ($tx_pages > 1): ?>
             <?php
                 $tx_base = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
@@ -961,7 +961,6 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 </div>
             </div>
         <?php endif; ?>
-        </div>
     </div>
 </div>
 
