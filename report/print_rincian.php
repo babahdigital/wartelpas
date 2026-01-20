@@ -176,7 +176,7 @@ if ($is_usage && file_exists($dbFile)) {
     try {
         $db = $db ?? new PDO('sqlite:' . $dbFile);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $stmt = $db->query("SELECT username, blok_name, ip_address, mac_address, last_uptime, last_bytes, login_time_real, logout_time_real, raw_comment, last_status FROM login_history");
+        $stmt = $db->query("SELECT username, blok_name, ip_address, mac_address, last_uptime, last_bytes, login_time_real, logout_time_real, raw_comment, last_status, login_count, first_login_real, last_login_real FROM login_history");
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
             $uname = $row['username'] ?? '';
             if ($uname !== '') $histMap[$uname] = $row;
@@ -308,6 +308,7 @@ if ($is_usage && file_exists($dbFile)) {
             if ($login_time === '') $login_time = '-';
             if ($logout_time === '') $logout_time = '-';
 
+            $relogin = ((int)($hist['login_count'] ?? 0) > 1) || (!empty($hist['first_login_real']) && !empty($hist['last_login_real']) && $hist['first_login_real'] !== $hist['last_login_real']);
             $usage_list[] = [
                 'login' => $login_time,
                 'logout' => $logout_time,
@@ -318,7 +319,8 @@ if ($is_usage && file_exists($dbFile)) {
                 'uptime' => $uptime,
                 'bytes' => $bytes,
                 'status' => strtolower($status),
-                'comment' => $comment
+                'comment' => $comment,
+                'relogin' => $relogin
             ];
         }
 
@@ -342,6 +344,7 @@ if ($is_usage && file_exists($dbFile)) {
 
             $login_time = $row['login_time_real'] ?? '-';
             $logout_time = $row['logout_time_real'] ?? '-';
+            $relogin = ((int)($row['login_count'] ?? 0) > 1) || (!empty($row['first_login_real']) && !empty($row['last_login_real']) && $row['first_login_real'] !== $row['last_login_real']);
             $usage_list[] = [
                 'login' => $login_time,
                 'logout' => $logout_time,
@@ -352,7 +355,8 @@ if ($is_usage && file_exists($dbFile)) {
                 'uptime' => $row['last_uptime'] ?? '-',
                 'bytes' => (int)($row['last_bytes'] ?? 0),
                 'status' => strtolower($status),
-                'comment' => $comment
+                'comment' => $comment,
+                'relogin' => $relogin
             ];
         }
     }
@@ -469,6 +473,7 @@ function esc($s){ return htmlspecialchars((string)$s); }
                                                 elseif ($st === 'RUSAK') $st_class = 'status-rusak';
                                                 elseif ($st === 'TERPAKAI') $st_class = 'status-terpakai';
                                             ?>
+                                            <?php if (!empty($it['relogin'])): $st = $st . ' / RELOGIN'; endif; ?>
                                             <td class="<?= esc($st_class) ?>"><?= esc($st) ?></td>
                   </tr>
                   <?php endforeach; ?>
