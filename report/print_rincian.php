@@ -261,8 +261,15 @@ if ($is_usage && file_exists($dbFile)) {
             if ($is_retur && $hist_status !== 'rusak' && $disabled !== 'true') $is_rusak = false;
             if ($is_rusak || $hist_status === 'rusak') $is_retur = false;
 
+            $hist_used = $hist && (
+                in_array($hist_status, ['online','terpakai','rusak','retur']) ||
+                !empty($hist['login_time_real']) ||
+                !empty($hist['logout_time_real']) ||
+                (!empty($hist['last_uptime']) && $hist['last_uptime'] != '0s') ||
+                (int)($hist['last_bytes'] ?? 0) > 0
+            );
             $is_used = (!$is_retur && !$is_rusak && $disabled !== 'true') &&
-                ($is_active || $bytes > 50 || $uptime != '0s' || ($f_ip != '-' && stripos($comment, '-|-') === false));
+                ($is_active || $bytes > 50 || $uptime != '0s' || $hist_used);
 
             $status = 'READY';
             if ($is_active) $status = 'ONLINE';

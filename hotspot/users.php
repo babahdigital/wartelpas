@@ -1459,7 +1459,10 @@ if ($is_ajax) {
       ?>
       <tr>
         <td>
-          <div style="font-size:15px; font-weight:bold; color:var(--txt-main)"><?= htmlspecialchars($u['name']) ?></div>
+          <div style="font-size:15px; font-weight:bold; color:var(--txt-main)">
+            <?= htmlspecialchars($u['name']) ?>
+            <?php if(!empty($u['relogin'])): ?><span class="status-badge st-relogin" style="margin-left:6px;">RELOGIN</span><?php endif; ?>
+          </div>
           <div style="font-size:11px; color:var(--txt-muted); max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="<?= htmlspecialchars($u['comment']) ?>">
             <?= htmlspecialchars(format_comment_display($u['comment'])) ?>
           </div>
@@ -1493,14 +1496,16 @@ if ($is_ajax) {
           <?php endif; ?>
         </td>
         <td class="text-center">
-          <?php if (strtoupper($u['status']) === 'TERPAKAI'): ?>
-            <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=used&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
-          <?php elseif (strtoupper($u['status']) === 'ONLINE'): ?>
-            <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=online&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Online"><i class="fa fa-print"></i></button>
-          <?php elseif (strtoupper($u['status']) === 'RUSAK'): ?>
-            <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=rusak&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Rusak"><i class="fa fa-print"></i></button>
-          <?php else: ?>
-            <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
+          <?php if ($req_status === 'all'): ?>
+            <?php if (strtoupper($u['status']) === 'TERPAKAI'): ?>
+              <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=used&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
+            <?php elseif (strtoupper($u['status']) === 'ONLINE'): ?>
+              <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=online&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Online"><i class="fa fa-print"></i></button>
+            <?php elseif (strtoupper($u['status']) === 'RUSAK'): ?>
+              <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=rusak&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Rusak"><i class="fa fa-print"></i></button>
+            <?php else: ?>
+              <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
+            <?php endif; ?>
           <?php endif; ?>
           <?php if($u['uid']): ?>
             <?php if (strtoupper($u['status']) === 'RETUR'): ?>
