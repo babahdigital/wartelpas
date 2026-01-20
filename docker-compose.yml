@@ -33,6 +33,7 @@ services:
       - ./dashboard:/var/www/html/dashboard  # Dashboard home
       - ./dhcp:/var/www/html/dhcp            # Modul DHCP
       - ./process:/var/www/html/process      # Background process
+      - ./logs:/var/www/html/logs            # Logs
 
       # ==========================================
       # 4. MODUL HOTSPOT (FILE SPESIFIK)
