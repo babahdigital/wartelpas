@@ -1091,8 +1091,10 @@ foreach($all_users as $u) {
       $logout_time_real = null;
       $base_uptime = $uptime_active != '' ? $uptime_active : ($uptime_user != '' ? $uptime_user : $uptime_hist);
       $u_sec = uptime_to_seconds($base_uptime);
-      if (empty($login_time_real) || $last_status !== 'online') {
-        $login_time_real = $u_sec > 0 ? date('Y-m-d H:i:s', time() - $u_sec) : $now;
+      if ($u_sec > 0) {
+        $login_time_real = date('Y-m-d H:i:s', time() - $u_sec);
+      } elseif (empty($login_time_real) || $last_status !== 'online') {
+        $login_time_real = $now;
       }
     } else {
       if ($last_status === 'online' || (!empty($login_time_real) && empty($logout_time_real))) {
