@@ -284,6 +284,8 @@ $total_qty = 0;
 $total_qty_retur = 0;
 $total_qty_rusak = 0;
 $total_qty_invalid = 0;
+$rusak_10m = 0;
+$rusak_30m = 0;
 
 $by_block = [];
 $by_profile = [];
@@ -378,7 +380,15 @@ foreach ($rows as $r) {
         if (!$use_summary) {
             $total_qty++;
             if ($status === 'retur') $total_qty_retur++;
-            if ($status === 'rusak') $total_qty_rusak++;
+            if ($status === 'rusak') {
+                $total_qty_rusak++;
+                $p = strtolower((string)$profile);
+                if (preg_match('/\b10\s*(menit|m)\b/i', $p)) {
+                    $rusak_10m++;
+                } elseif (preg_match('/\b30\s*(menit|m)\b/i', $p)) {
+                    $rusak_30m++;
+                }
+            }
             if ($status === 'invalid') $total_qty_invalid++;
 
             $total_gross += $gross_add;
@@ -505,7 +515,7 @@ $total_qty_laku = max(0, $total_qty - $total_qty_retur - $total_qty_rusak - $tot
             <div class="summary-card">
                 <div class="summary-title">Voucher Rusak</div>
                 <div class="summary-value" ><span style="color: crimson;"><?= number_format($total_qty_rusak,0,',','.') ?></span></div>
-                <div style="font-size:12px;color:var(--txt-muted)">Profile 10 Menit | 30 Menit</div>
+                <div style="font-size:12px;color:var(--txt-muted)">10 Menit: <?= number_format($rusak_10m,0,',','.') ?> | 30 Menit: <?= number_format($rusak_30m,0,',','.') ?></div>
             </div>
             <div class="summary-card">
                 <div class="summary-title">Total Handphone</div>
