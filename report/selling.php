@@ -15,8 +15,7 @@ $hp_redirect = '';
 
 // Filter periode
 $req_show = $_GET['show'] ?? 'harian';
-$mode = $_GET['mode'] ?? 'final';
-$mode = ($mode === 'live') ? 'live' : 'final';
+$mode = 'final';
 $filter_date = $_GET['date'] ?? '';
 if ($req_show === 'harian') {
         $filter_date = $filter_date ?: date('Y-m-d');
@@ -67,27 +66,25 @@ if (file_exists($dbFile)) {
             UNIQUE(report_date, blok_name, unit_type)
         )");
         try { $db->exec("ALTER TABLE phone_block_daily ADD COLUMN unit_type TEXT"); } catch (Exception $e) {}
-        if ($mode === 'live') {
-            $res = $db->query("SELECT 
-                    ls.raw_date, ls.raw_time, ls.sale_date, ls.sale_time, ls.sale_datetime,
-                    ls.username, ls.profile, ls.profile_snapshot,
-                    ls.price, ls.price_snapshot, ls.sprice_snapshot, ls.validity,
-                    ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
-                    ls.full_raw_data, lh.last_status, 'pending' AS row_mode
-                FROM live_sales ls
-                LEFT JOIN login_history lh ON lh.username = ls.username
-                ORDER BY ls.sale_datetime DESC, ls.raw_date DESC");
-        } else {
-            $res = $db->query("SELECT 
-                    sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
-                    sh.username, sh.profile, sh.profile_snapshot,
-                    sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
-                    sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
-                    sh.full_raw_data, lh.last_status, 'final' AS row_mode
-                FROM sales_history sh
-                LEFT JOIN login_history lh ON lh.username = sh.username
-                ORDER BY sh.id DESC");
-        }
+        $res = $db->query("SELECT 
+                sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
+                sh.username, sh.profile, sh.profile_snapshot,
+                sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
+                sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
+                sh.full_raw_data, lh.last_status
+            FROM sales_history sh
+            LEFT JOIN login_history lh ON lh.username = sh.username
+            UNION ALL
+            SELECT 
+                ls.raw_date, ls.raw_time, ls.sale_date, ls.sale_time, ls.sale_datetime,
+                ls.username, ls.profile, ls.profile_snapshot,
+                ls.price, ls.price_snapshot, ls.sprice_snapshot, ls.validity,
+                ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
+                ls.full_raw_data, lh2.last_status
+            FROM live_sales ls
+            LEFT JOIN login_history lh2 ON lh2.username = ls.username
+            WHERE ls.sync_status = 'pending'
+            ORDER BY sale_datetime DESC, raw_date DESC");
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         $rows = [];
@@ -235,11 +232,11 @@ $by_block = [];
 $by_profile = [];
 
 $use_summary = false;
-// Gunakan materialized summary jika tersedia (hanya untuk mode final)
+// Summary dimatikan agar data live + final tetap akurat
 $period_type = $req_show === 'harian' ? 'day' : ($req_show === 'bulanan' ? 'month' : 'year');
 $period_key = $filter_date;
 
-if ($mode === 'final' && isset($db) && $db instanceof PDO && table_exists($db, 'sales_summary_period')) {
+if (false && isset($db) && $db instanceof PDO && table_exists($db, 'sales_summary_period')) {
     $use_summary = true;
     try {
         $stmt = $db->prepare("SELECT * FROM sales_summary_period WHERE period_type = :pt AND period_key = :pk LIMIT 1");
