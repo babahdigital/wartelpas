@@ -769,7 +769,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                               <td class="text-right"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['active_units'] ?? 0) : '-' ?></td>
                               <td class="text-right"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['rusak_units'] ?? 0) : '-' ?></td>
                               <td class="text-right"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['spam_units'] ?? 0) : '-' ?></td>
-                            <td><small><?= htmlspecialchars($r['notes'] ?? '') ?></small></td>
+                            <td class="text-right"><small><?= htmlspecialchars($r['notes'] ?? '') ?></small></td>
                             <td class="text-center">
                                 <?php if (($r['unit_type'] ?? '') === 'TOTAL'): ?>
                                     <button type="button" class="btn-act" onclick="openHpEdit(this)"
