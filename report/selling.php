@@ -397,6 +397,7 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
     .unit-stack { font-family: monospace; font-size: 12px; line-height: 1.2; }
     .unit-wartel { color: #52c41a; }
     .unit-kamtib { color: #4ea8ff; }
+    .hp-notes { max-width: 260px; white-space: normal !important; word-break: break-word; line-height: 1.3; }
     .summary-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
     .summary-card { background: #23272b; border: 1px solid var(--border-col); border-radius: 8px; padding: 14px; }
     .summary-title { font-size: 0.8rem; color: var(--txt-muted); text-transform: uppercase; letter-spacing: 1px; }
@@ -769,7 +770,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                               <td class="text-right"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['active_units'] ?? 0) : '-' ?></td>
                               <td class="text-right"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['rusak_units'] ?? 0) : '-' ?></td>
                               <td class="text-right"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['spam_units'] ?? 0) : '-' ?></td>
-                            <td class="text-right"><small><?= htmlspecialchars($r['notes'] ?? '') ?></small></td>
+                            <td class="hp-notes"><small title="<?= htmlspecialchars($r['notes'] ?? '') ?>"><?= htmlspecialchars($r['notes'] ?? '') ?></small></td>
                             <td class="text-center">
                                 <?php if (($r['unit_type'] ?? '') === 'TOTAL'): ?>
                                     <button type="button" class="btn-act" onclick="openHpEdit(this)"
