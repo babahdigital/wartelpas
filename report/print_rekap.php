@@ -330,6 +330,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 <body>
     <div class="toolbar">
         <button class="btn" onclick="window.print()">Print / Download PDF</button>
+        <button class="btn" onclick="downloadReport()">Download</button>
         <button class="btn" onclick="shareReport()">Share</button>
     </div>
 
@@ -463,6 +464,23 @@ function shareReport(){
     } else {
         window.prompt('Salin link laporan:', window.location.href);
     }
+}
+
+function downloadReport(){
+    var now = new Date();
+    var pad = function(n){ return String(n).padStart(2, '0'); };
+    var ts = now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate()) + '-' + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
+    var filename = 'laporan-harian-' + ts + '.html';
+    var html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+    var blob = new Blob([html], {type: 'text/html'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 </script>
 </body>
