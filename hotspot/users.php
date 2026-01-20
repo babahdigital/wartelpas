@@ -225,7 +225,7 @@ function normalize_date_key($dateTime, $mode) {
 }
 
 // Helper: Generator User Baru (retur)
-function gen_user($profile, $comment_ref) {
+function gen_user($profile, $comment_ref, $orig_user = '') {
   $blok = '';
   if (preg_match('/(Blok-[A-Za-z0-9]+)/i', $comment_ref, $m)) $blok = $m[1];
   if ($blok === '') {
@@ -241,7 +241,12 @@ function gen_user($profile, $comment_ref) {
   $user = substr(str_shuffle($char), 0, 6);
   $pass = $user;
   $blok_part = $blok != '' ? $blok . ' ' : '';
-  $new_comm = trim($blok_part . "(Retur) Valid: Retur Ref:$clean_ref | Profile:$profile");
+  $ref_user = trim((string)$orig_user);
+  $ref_label = $ref_user !== '' ? "Retur Ref:$ref_user" : "Retur Ref:$clean_ref";
+  if ($ref_user !== '' && stripos($clean_ref, $ref_user) === false) {
+    $ref_label = "Retur Ref:$ref_user | $clean_ref";
+  }
+  $new_comm = trim($blok_part . "(Retur) Valid: $ref_label | Profile:$profile");
   return ['u'=>$user, 'p'=>$pass, 'c'=>$new_comm];
 }
 
@@ -918,7 +923,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         }
 
         // Generate voucher baru
-        $gen = gen_user($prof ?: 'default', $comm ?: $name);
+        $gen = gen_user($prof ?: 'default', $comm ?: $name, $name);
         $API->write('/ip/hotspot/user/add', false);
         $API->write('=server='.$hotspot_server, false);
         $API->write('=name='.$gen['u'], false);
