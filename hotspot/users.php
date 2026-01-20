@@ -1309,6 +1309,11 @@ foreach($all_users as $u) {
       if ($f_ip != '-' && $f_ip != '') $last_ip = $f_ip;
       if ($f_mac != '-' && $f_mac != '') $last_mac = $f_mac;
     }
+    if (empty($first_login_real)) {
+      if (!empty($login_time_real)) $first_login_real = $login_time_real;
+      elseif (!empty($hist['login_time_real'])) $first_login_real = $hist['login_time_real'];
+      elseif (!empty($hist['first_login_real'])) $first_login_real = $hist['first_login_real'];
+    }
     // Untuk RETUR: gunakan data dari voucher asal jika tersedia dan data saat ini masih kosong
     $retur_ref_user = '';
     $retur_hist = null;
@@ -1444,7 +1449,7 @@ foreach($all_users as $u) {
     }
     if ($status === 'RUSAK') {
       $uptime_sec = uptime_to_seconds($uptime);
-      $show_rusak_times = ($uptime_sec > 0 || $bytes > 0) && $uptime_sec <= 300 && $bytes <= (10 * 1024 * 1024);
+      $show_rusak_times = ($uptime_sec > 0 || $bytes > 0) && $uptime_sec <= 180 && $bytes <= (1 * 1024 * 1024);
       if (!$show_rusak_times) {
         $login_disp = '-';
         $logout_disp = '-';
@@ -1461,6 +1466,7 @@ foreach($all_users as $u) {
     }
 
     $relogin_flag = ((int)($hist['login_count'] ?? 0) > 1) || (!empty($hist['first_login_real']) && !empty($hist['last_login_real']) && $hist['first_login_real'] !== $hist['last_login_real']);
+    $first_login_disp = $first_login_real ?? ($hist['first_login_real'] ?? '-');
     $display_data[] = [
       'uid' => $u['.id'] ?? '',
         'name' => $name,
@@ -1469,6 +1475,7 @@ foreach($all_users as $u) {
         'ip' => $f_ip,
         'mac' => $f_mac,
       'comment' => $comment,
+        'first_login' => $first_login_disp,
         'retur_ref' => $is_retur ? extract_retur_ref($comment) : '',
         'uptime' => $uptime,
         'bytes' => $bytes,
@@ -1512,7 +1519,7 @@ if ($is_ajax) {
             <?php if(!empty($u['relogin'])): ?><span class="status-badge st-relogin" style="margin-left:6px;">RELOGIN</span><?php endif; ?>
           </div>
           <div style="font-size:11px; color:var(--txt-muted); max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="<?= htmlspecialchars($u['comment']) ?>">
-            <?= htmlspecialchars(format_comment_display($u['comment'])) ?>
+            First login: <?= formatDateIndo($u['first_login'] ?? '-') ?>
           </div>
           <?php if (!empty($u['retur_ref'])): ?>
             <div style="font-size:10px;color:#b2bec3;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<?= htmlspecialchars($u['retur_ref']) ?>">
@@ -1926,7 +1933,7 @@ if ($debug_mode && !$is_ajax) {
                         <?php if(!empty($u['relogin'])): ?><span class="status-badge st-relogin" style="margin-left:6px;">RELOGIN</span><?php endif; ?>
                       </div>
                       <div style="font-size:11px; color:var(--txt-muted); max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="<?= htmlspecialchars($u['comment']) ?>">
-                        <?= htmlspecialchars(format_comment_display($u['comment'])) ?>
+                        First login: <?= formatDateIndo($u['first_login'] ?? '-') ?>
                       </div>
                       <?php if (!empty($u['retur_ref'])): ?>
                         <div style="font-size:10px;color:#b2bec3;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<?= htmlspecialchars($u['retur_ref']) ?>">
