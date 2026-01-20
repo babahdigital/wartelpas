@@ -90,6 +90,8 @@ $hp_spam_units = 0;
 $hp_wartel_units = 0;
 $hp_kamtib_units = 0;
 $hp_active_by_block = [];
+$hp_stats_by_block = [];
+$hp_units_by_block = [];
 $block_summaries = [];
 
 try {
@@ -141,6 +143,40 @@ try {
             foreach ($hpBlockRows as $hb) {
                 $blk = normalize_block_name($hb['blok_name'] ?? '');
                 $hp_active_by_block[$blk] = (int)($hb['active_units'] ?? 0);
+            }
+
+            $stmtHpStats = $db->prepare("SELECT blok_name,
+                    SUM(total_units) AS total_units,
+                    SUM(active_units) AS active_units,
+                    SUM(rusak_units) AS rusak_units,
+                    SUM(spam_units) AS spam_units
+                FROM phone_block_daily
+                WHERE report_date = :d AND unit_type = 'TOTAL'
+                GROUP BY blok_name");
+            $stmtHpStats->execute([':d' => $filter_date]);
+            $hpStatsRows = $stmtHpStats->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($hpStatsRows as $hs) {
+                $blk = normalize_block_name($hs['blok_name'] ?? '');
+                $hp_stats_by_block[$blk] = [
+                    'total' => (int)($hs['total_units'] ?? 0),
+                    'active' => (int)($hs['active_units'] ?? 0),
+                    'rusak' => (int)($hs['rusak_units'] ?? 0),
+                    'spam' => (int)($hs['spam_units'] ?? 0)
+                ];
+            }
+
+            $stmtHpUnitsBlock = $db->prepare("SELECT blok_name, unit_type, SUM(total_units) AS total_units
+                FROM phone_block_daily
+                WHERE report_date = :d AND unit_type IN ('WARTEL','KAMTIB')
+                GROUP BY blok_name, unit_type");
+            $stmtHpUnitsBlock->execute([':d' => $filter_date]);
+            $hpUnitRows = $stmtHpUnitsBlock->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($hpUnitRows as $hu) {
+                $blk = normalize_block_name($hu['blok_name'] ?? '');
+                if (!isset($hp_units_by_block[$blk])) $hp_units_by_block[$blk] = ['WARTEL' => 0, 'KAMTIB' => 0];
+                $ut = strtoupper((string)($hu['unit_type'] ?? ''));
+                if ($ut === 'WARTEL') $hp_units_by_block[$blk]['WARTEL'] = (int)($hu['total_units'] ?? 0);
+                if ($ut === 'KAMTIB') $hp_units_by_block[$blk]['KAMTIB'] = (int)($hu['total_units'] ?? 0);
             }
 
             $stmtHp2 = $db->prepare("SELECT unit_type, SUM(total_units) AS total_units
@@ -354,15 +390,23 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     <th style="width:70px;">Total Qty</th>
                                     <th style="width:120px;">Total (Rp)</th>
                                     <th style="width:120px;">Bandwidth</th>
-                                    <th style="width:90px;">HP Aktif</th>
+                                    <th style="width:80px;">HP Aktif</th>
+                                    <th style="width:80px;">WARTEL</th>
+                                    <th style="width:80px;">KAMTIB</th>
+                                    <th style="width:70px;">Rusak</th>
+                                    <th style="width:70px;">Spam</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (empty($block_summaries)): ?>
-                                    <tr><td colspan="9" style="text-align:center;">Tidak ada data</td></tr>
+                                    <tr><td colspan="13" style="text-align:center;">Tidak ada data</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($block_summaries as $blk => $bdata): ?>
-                                        <?php $hp_active_val = (int)($hp_active_by_block[$blk] ?? 0); ?>
+                                        <?php
+                                            $hp_active_val = (int)($hp_active_by_block[$blk] ?? 0);
+                                            $hp_stat = $hp_stats_by_block[$blk] ?? ['total' => 0, 'active' => 0, 'rusak' => 0, 'spam' => 0];
+                                            $hp_unit = $hp_units_by_block[$blk] ?? ['WARTEL' => 0, 'KAMTIB' => 0];
+                                        ?>
                                         <tr>
                                             <td><?= htmlspecialchars($blk) ?></td>
                                             <td style="text-align:center;"><?= number_format((int)$bdata['qty_10'],0,',','.') ?></td>
@@ -372,7 +416,11 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             <td style="text-align:center;"><?= number_format((int)$bdata['total_qty'],0,',','.') ?></td>
                                             <td style="text-align:right;"><?= number_format((int)$bdata['total_amount'],0,',','.') ?></td>
                                             <td style="text-align:right;"><?= htmlspecialchars(format_bytes_short((int)$bdata['total_bw'])) ?></td>
-                                            <td class="rekap-hp"><?= number_format($hp_active_val,0,',','.') ?></td>
+                                            <td class="rekap-hp"><?= number_format((int)$hp_stat['active'],0,',','.') ?></td>
+                                            <td class="rekap-hp"><?= number_format((int)$hp_unit['WARTEL'],0,',','.') ?></td>
+                                            <td class="rekap-hp"><?= number_format((int)$hp_unit['KAMTIB'],0,',','.') ?></td>
+                                            <td class="rekap-hp"><?= number_format((int)$hp_stat['rusak'],0,',','.') ?></td>
+                                            <td class="rekap-hp"><?= number_format((int)$hp_stat['spam'],0,',','.') ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
