@@ -397,7 +397,7 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
     .unit-stack { font-family: monospace; font-size: 12px; line-height: 1.2; }
     .unit-wartel { color: #52c41a; }
     .unit-kamtib { color: #4ea8ff; }
-    .hp-notes { max-width: 260px; white-space: normal !important; word-break: break-word; line-height: 1.3; text-align: right; }
+    .hp-notes { max-width: 150px; white-space: normal !important; word-break: break-word; line-height: 1.3; text-align: right; }
     .summary-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
     .summary-card { background: #23272b; border: 1px solid var(--border-col); border-radius: 8px; padding: 14px; }
     .summary-title { font-size: 0.8rem; color: var(--txt-muted); text-transform: uppercase; letter-spacing: 1px; }
