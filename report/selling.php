@@ -519,7 +519,7 @@ $total_qty_laku = max(0, $total_qty - $total_qty_retur - $total_qty_rusak - $tot
             </div>
             <div class="summary-card">
                 <div class="summary-title">Total Handphone</div>
-                <div style="margin-top:6px;">
+                <div style="margin-top:7px; margin-bottom:10px;">
                     <span class="summary-badge badge-wartel">WARTEL: <?= number_format($hp_wartel_units,0,',','.') ?></span>
                     <span class="summary-badge badge-kamtib">KAMTIB: <?= number_format($hp_kamtib_units,0,',','.') ?></span>
                 </div>
