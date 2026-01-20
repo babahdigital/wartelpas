@@ -286,6 +286,8 @@ try {
     try { $db->exec("ALTER TABLE login_history ADD COLUMN last_uptime TEXT"); } catch(Exception $e) {}
     // Pastikan kolom last_bytes ada
     try { $db->exec("ALTER TABLE login_history ADD COLUMN last_bytes INTEGER"); } catch(Exception $e) {}
+    // Pastikan kolom raw_comment ada
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN raw_comment TEXT"); } catch(Exception $e) {}
     // Pastikan kolom device/login tracking ada
     try { $db->exec("ALTER TABLE login_history ADD COLUMN first_ip TEXT"); } catch(Exception $e) {}
     try { $db->exec("ALTER TABLE login_history ADD COLUMN first_mac TEXT"); } catch(Exception $e) {}
@@ -293,6 +295,11 @@ try {
     try { $db->exec("ALTER TABLE login_history ADD COLUMN last_mac TEXT"); } catch(Exception $e) {}
     try { $db->exec("ALTER TABLE login_history ADD COLUMN first_login_real DATETIME"); } catch(Exception $e) {}
     try { $db->exec("ALTER TABLE login_history ADD COLUMN last_login_real DATETIME"); } catch(Exception $e) {}
+    // Pastikan kolom login/logout real tersedia
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN login_time_real DATETIME"); } catch(Exception $e) {}
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN logout_time_real DATETIME"); } catch(Exception $e) {}
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN last_status TEXT DEFAULT 'ready'"); } catch(Exception $e) {}
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP"); } catch(Exception $e) {}
 } catch(Exception $e){
     $db = null;
 }

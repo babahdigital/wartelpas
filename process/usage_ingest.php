@@ -106,6 +106,15 @@ try {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )");
 
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN ip_address TEXT"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN mac_address TEXT"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN last_uptime TEXT"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN raw_comment TEXT"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN login_time_real DATETIME"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN logout_time_real DATETIME"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN last_status TEXT DEFAULT 'ready'"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP"); } catch (Exception $e) {}
+
     $status = $event === 'login' ? 'online' : 'terpakai';
 
     $stmt = $db->prepare("INSERT INTO login_history (
