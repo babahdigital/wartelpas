@@ -456,6 +456,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
     :root { --dark-bg: #1e2226; --dark-card: #2a3036; --border-col: #495057; --txt-main: #ecf0f1; --txt-muted: #adb5bd; --c-blue: #3498db; --c-green: #2ecc71; --c-orange: #f39c12; --c-red: #e74c3c; }
     .card-solid { background: var(--dark-card); color: var(--txt-main); border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-radius: 8px; }
     .card-header-solid { background: #23272b; padding: 12px 20px; border-bottom: 2px solid var(--border-col); display: flex; justify-content: space-between; align-items: center; border-radius: 8px 8px 0 0; }
+    .card-footer-solid { background: #23272b; padding: 10px 16px; border-top: 1px solid var(--border-col); border-radius: 0 0 8px 8px; }
     .table-dark-solid { width: 100%; border-collapse: separate; border-spacing: 0; }
     .table-dark-solid th { background: #1b1e21; padding: 12px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--txt-muted); border-bottom: 2px solid var(--border-col); }
     .table-dark-solid td { padding: 12px; border-bottom: 1px solid #3a4046; vertical-align: middle; font-size: 0.9rem; }
@@ -933,33 +934,34 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             </table>
         </div>
     </div>
+    <?php if ($tx_pages > 1): ?>
+        <?php
+            $tx_base = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+            $tx_link = function($p) use ($tx_base) { return $tx_base . '&tx_page=' . $p; };
+            $tx_window = 2;
+            $tx_start = max(1, $tx_page - $tx_window);
+            $tx_end = min($tx_pages, $tx_page + $tx_window);
+        ?>
+        <div class="card-footer-solid">
+            <div class="tx-pager">
+                <?php if ($tx_page > 1): ?>
+                    <a href="<?= $tx_link(1); ?>">« First</a>
+                    <a href="<?= $tx_link($tx_page - 1); ?>">‹ Prev</a>
+                <?php endif; ?>
+                <?php for ($p = $tx_start; $p <= $tx_end; $p++): ?>
+                    <?php if ($p == $tx_page): ?>
+                        <span class="active"><?= $p; ?></span>
+                    <?php else: ?>
+                        <a href="<?= $tx_link($p); ?>"><?= $p; ?></a>
+                    <?php endif; ?>
+                <?php endfor; ?>
+                <?php if ($tx_page < $tx_pages): ?>
+                    <a href="<?= $tx_link($tx_page + 1); ?>">Next ›</a>
+                    <a href="<?= $tx_link($tx_pages); ?>">Last »</a>
+                <?php endif; ?>
+            </div>
+        </div>
+    <?php endif; ?>
 </div>
-
-<?php if ($tx_pages > 1): ?>
-    <?php
-        $tx_base = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
-        $tx_link = function($p) use ($tx_base) { return $tx_base . '&tx_page=' . $p; };
-        $tx_window = 2;
-        $tx_start = max(1, $tx_page - $tx_window);
-        $tx_end = min($tx_pages, $tx_page + $tx_window);
-    ?>
-    <div class="tx-pager" style="margin-bottom:14px;">
-        <?php if ($tx_page > 1): ?>
-            <a href="<?= $tx_link(1); ?>">« First</a>
-            <a href="<?= $tx_link($tx_page - 1); ?>">‹ Prev</a>
-        <?php endif; ?>
-        <?php for ($p = $tx_start; $p <= $tx_end; $p++): ?>
-            <?php if ($p == $tx_page): ?>
-                <span class="active"><?= $p; ?></span>
-            <?php else: ?>
-                <a href="<?= $tx_link($p); ?>"><?= $p; ?></a>
-            <?php endif; ?>
-        <?php endfor; ?>
-        <?php if ($tx_page < $tx_pages): ?>
-            <a href="<?= $tx_link($tx_page + 1); ?>">Next ›</a>
-            <a href="<?= $tx_link($tx_pages); ?>">Last »</a>
-        <?php endif; ?>
-    </div>
-<?php endif; ?>
 
 <!-- Pendapatan per Blok/Profile sementara disembunyikan sesuai permintaan -->
