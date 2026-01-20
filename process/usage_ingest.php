@@ -18,8 +18,8 @@ if ($session === '') {
     die("Error: Session tidak valid.");
 }
 
-$event = strtolower(trim($_GET['event'] ?? ''));
-$user = trim($_GET['user'] ?? '');
+$event = strtolower(trim($_GET['event'] ?? 'login'));
+$user = trim($_GET['user'] ?? ($_GET['username'] ?? ($_GET['u'] ?? '')));
 $date = trim($_GET['date'] ?? '');
 $time = trim($_GET['time'] ?? '');
 $ip = trim($_GET['ip'] ?? '');
@@ -27,9 +27,14 @@ $mac = trim($_GET['mac'] ?? '');
 $uptime = trim($_GET['uptime'] ?? '');
 $comment = trim($_GET['comment'] ?? '');
 
-if ($user === '' || ($event !== 'login' && $event !== 'logout')) {
-    http_response_code(400);
-    die("Error: Parameter tidak lengkap.");
+if ($event !== 'login' && $event !== 'logout') {
+    $event = 'login';
+}
+if ($user === '') {
+    // jangan hard-fail agar MikroTik tidak error, tetapi catat log
+    @file_put_contents(dirname(__DIR__) . '/logs/usage_ingest.log', date('c') . " | missing user | " . $_SERVER['QUERY_STRING'] . "\n", FILE_APPEND);
+    echo "OK";
+    exit;
 }
 
 function normalize_date($raw) {
@@ -69,7 +74,7 @@ try {
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $db->exec("PRAGMA journal_mode=WAL;");
     $db->exec("PRAGMA synchronous=NORMAL;");
-    $db->exec("PRAGMA busy_timeout=2000;");
+    $db->exec("PRAGMA busy_timeout=5000;");
 
     $db->exec("CREATE TABLE IF NOT EXISTS login_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -128,6 +133,7 @@ try {
 
     echo "OK";
 } catch (Exception $e) {
+    @file_put_contents(dirname(__DIR__) . '/logs/usage_ingest.log', date('c') . " | error | " . $e->getMessage() . " | " . $_SERVER['QUERY_STRING'] . "\n", FILE_APPEND);
     http_response_code(500);
     echo "Error";
 }
