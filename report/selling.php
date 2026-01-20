@@ -136,7 +136,7 @@ if (isset($db) && $db instanceof PDO && isset($_POST['hp_submit'])) {
 
 // Hapus data handphone per blok (harian)
 if (isset($db) && $db instanceof PDO && isset($_GET['hp_delete'])) {
-    $del_date = trim($_GET['date'] ?? '');
+    $del_date = trim($_GET['hp_date'] ?? '');
     $del_blok = trim($_GET['blok'] ?? '');
     if ($del_date !== '' && $del_blok !== '') {
         try {
@@ -488,7 +488,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             <td class="text-right"><?= (int)($r['spam_units'] ?? 0) ?></td>
                             <td><small><?= htmlspecialchars($r['notes'] ?? '') ?></small></td>
                             <td class="text-center">
-                                <a class="btn-act btn-act-danger" href="./?report=selling&mode=<?= $mode; ?>&show=<?= $req_show; ?>&date=<?= urlencode($filter_date); ?>&hp_delete=1&blok=<?= urlencode($r['blok_name']); ?>&date=<?= urlencode($filter_date); ?>" onclick="return confirm('Hapus data blok <?= htmlspecialchars($r['blok_name'] ?? '-') ?> untuk <?= htmlspecialchars($filter_date); ?>?')">
+                                <a class="btn-act btn-act-danger" href="./?report=selling&mode=<?= $mode; ?>&show=<?= $req_show; ?>&date=<?= urlencode($filter_date); ?>&hp_delete=1&blok=<?= urlencode($r['blok_name']); ?>&hp_date=<?= urlencode($filter_date); ?>" onclick="return confirm('Hapus data blok <?= htmlspecialchars($r['blok_name'] ?? '-') ?> untuk <?= htmlspecialchars($filter_date); ?>?')">
                                     <i class="fa fa-trash"></i>
                                 </a>
                             </td>
