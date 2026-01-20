@@ -1294,26 +1294,42 @@ foreach($all_users as $u) {
     }
 
     if ($db && $name != '') {
-        $save_data = [
-            'ip' => $f_ip,
-            'mac' => $f_mac,
-          'uptime' => $uptime,
-            'bytes' => $bytes,
-            'first_ip' => $first_ip,
-            'first_mac' => $first_mac,
-            'last_ip' => $last_ip,
-            'last_mac' => $last_mac,
-            'first_login_real' => $first_login_real,
-            'last_login_real' => $last_login_real,
-            'blok' => $f_blok,
-            'raw' => $comment,
-            'login_time_real' => $login_time_real,
-            'logout_time_real' => $logout_time_real,
-            'status' => $next_status,
-            'updated_at' => ($next_status === 'online') ? date('Y-m-d H:i:s') : null
-        ];
-        save_user_history($name, $save_data);
-        $hist = get_user_history($name);
+        $should_save = false;
+        if (!$hist) {
+          $should_save = true;
+        } else {
+          $should_save = (
+            strtolower((string)($hist['last_status'] ?? '')) !== $next_status ||
+            (string)($hist['last_uptime'] ?? '') !== (string)$uptime ||
+            (int)($hist['last_bytes'] ?? 0) !== (int)$bytes ||
+            (string)($hist['ip_address'] ?? '') !== (string)$f_ip ||
+            (string)($hist['mac_address'] ?? '') !== (string)$f_mac ||
+            (string)($hist['login_time_real'] ?? '') !== (string)($login_time_real ?? '') ||
+            (string)($hist['logout_time_real'] ?? '') !== (string)($logout_time_real ?? '')
+          );
+        }
+        if ($should_save) {
+          $save_data = [
+              'ip' => $f_ip,
+              'mac' => $f_mac,
+            'uptime' => $uptime,
+              'bytes' => $bytes,
+              'first_ip' => $first_ip,
+              'first_mac' => $first_mac,
+              'last_ip' => $last_ip,
+              'last_mac' => $last_mac,
+              'first_login_real' => $first_login_real,
+              'last_login_real' => $last_login_real,
+              'blok' => $f_blok,
+              'raw' => $comment,
+              'login_time_real' => $login_time_real,
+              'logout_time_real' => $logout_time_real,
+              'status' => $next_status,
+              'updated_at' => ($next_status === 'online') ? date('Y-m-d H:i:s') : null
+          ];
+          save_user_history($name, $save_data);
+          $hist = get_user_history($name);
+        }
     }
 
     if ($debug_mode) {
@@ -1864,14 +1880,16 @@ if ($debug_mode && !$is_ajax) {
                       <?php endif; ?>
                     </td>
                     <td class="text-center">
-                      <?php if (strtoupper($u['status']) === 'TERPAKAI'): ?>
-                        <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=used&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
-                      <?php elseif (strtoupper($u['status']) === 'ONLINE'): ?>
-                        <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=online&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Online"><i class="fa fa-print"></i></button>
-                      <?php elseif (strtoupper($u['status']) === 'RUSAK'): ?>
-                        <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=rusak&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Rusak"><i class="fa fa-print"></i></button>
-                      <?php else: ?>
-                        <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
+                      <?php if ($req_status === 'all'): ?>
+                        <?php if (strtoupper($u['status']) === 'TERPAKAI'): ?>
+                          <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=used&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
+                        <?php elseif (strtoupper($u['status']) === 'ONLINE'): ?>
+                          <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=online&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Online"><i class="fa fa-print"></i></button>
+                        <?php elseif (strtoupper($u['status']) === 'RUSAK'): ?>
+                          <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=rusak&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Rusak"><i class="fa fa-print"></i></button>
+                        <?php else: ?>
+                          <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
+                        <?php endif; ?>
                       <?php endif; ?>
                       <?php if($u['uid']): ?>
                         <?php
