@@ -151,7 +151,8 @@ try {
         }
     }
 
-    $redirect = './?report=selling' . $session_qs . '&show=' . urlencode($show) . '&date=' . urlencode($date);
+    $redirect_date = ($show === 'harian' && $report_date !== '') ? $report_date : $date;
+    $redirect = './?report=selling' . $session_qs . '&show=' . urlencode($show) . '&date=' . urlencode($redirect_date);
     echo json_encode(['ok' => true, 'redirect' => $redirect]);
 } catch (Exception $e) {
     http_response_code(500);
