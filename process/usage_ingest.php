@@ -132,7 +132,7 @@ try {
         first_login_real = COALESCE(login_history.first_login_real, excluded.first_login_real),
         last_login_real = CASE WHEN excluded.last_status = 'online' THEN excluded.last_login_real ELSE COALESCE(login_history.last_login_real, excluded.last_login_real) END,
         login_time_real = CASE WHEN excluded.last_status = 'online' THEN excluded.login_time_real ELSE COALESCE(login_history.login_time_real, excluded.login_time_real) END,
-        logout_time_real = CASE WHEN excluded.last_status = 'online' THEN login_history.logout_time_real ELSE COALESCE(excluded.logout_time_real, login_history.logout_time_real) END,
+        logout_time_real = CASE WHEN excluded.last_status = 'terpakai' THEN excluded.logout_time_real ELSE login_history.logout_time_real END,
         login_count = CASE WHEN excluded.last_status = 'online' THEN COALESCE(login_history.login_count,0) + 1 ELSE COALESCE(login_history.login_count,0) END,
         last_status = COALESCE(excluded.last_status, login_history.last_status),
         updated_at = excluded.updated_at

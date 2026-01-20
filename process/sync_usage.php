@@ -182,10 +182,6 @@ foreach ($all_users as $u) {
             $login_time_real = $u_sec > 0 ? date('Y-m-d H:i:s', time() - $u_sec) : $now;
         }
         $logout_time_real = null;
-    } else {
-        if (empty($logout_time_real)) {
-            $logout_time_real = $now;
-        }
     }
 
         $stmt = $db->prepare("INSERT INTO login_history (

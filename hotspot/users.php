@@ -1377,6 +1377,7 @@ foreach($all_users as $u) {
       $logout_disp = merge_date_time($logout_disp, $hist['updated_at']);
     }
 
+    $relogin_flag = ((int)($hist['login_count'] ?? 0) > 1) || (!empty($hist['first_login_real']) && !empty($hist['last_login_real']) && $hist['first_login_real'] !== $hist['last_login_real']);
     $display_data[] = [
       'uid' => $u['.id'] ?? '',
         'name' => $name,
@@ -1391,7 +1392,7 @@ foreach($all_users as $u) {
         'status' => $status,
         'login_time' => $login_disp,
         'logout_time' => $logout_disp,
-        'relogin' => ((int)($hist['login_count'] ?? 0) > 1)
+        'relogin' => $relogin_flag
     ];
 }
 $API->disconnect();
@@ -1816,7 +1817,10 @@ if ($debug_mode && !$is_ajax) {
                 <?php foreach($display_data as $u): ?>
                   <tr>
                     <td>
-                      <div style="font-size:15px; font-weight:bold; color:var(--txt-main)"><?= htmlspecialchars($u['name']) ?></div>
+                      <div style="font-size:15px; font-weight:bold; color:var(--txt-main)">
+                        <?= htmlspecialchars($u['name']) ?>
+                        <?php if(!empty($u['relogin'])): ?><span class="status-badge st-relogin" style="margin-left:6px;">RELOGIN</span><?php endif; ?>
+                      </div>
                       <div style="font-size:11px; color:var(--txt-muted); max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="<?= htmlspecialchars($u['comment']) ?>">
                         <?= htmlspecialchars(format_comment_display($u['comment'])) ?>
                       </div>
