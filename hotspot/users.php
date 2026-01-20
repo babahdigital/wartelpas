@@ -1036,7 +1036,15 @@ if ($db) {
         $h_comment_rusak = preg_match('/\bAudit:\s*RUSAK\b/i', $comment) || preg_match('/^\s*RUSAK\b/i', $comment);
         $h_is_rusak = ($st === 'rusak') || $h_comment_rusak;
         $h_is_retur = ($st === 'retur') || (stripos($comment, '(Retur)') !== false) || (stripos($comment, 'Retur Ref:') !== false);
-        if ($h_is_rusak) $h_is_retur = false;
+        if ($st === 'retur') {
+          $h_is_retur = true;
+          $h_is_rusak = false;
+        } elseif ($st === 'rusak') {
+          $h_is_rusak = true;
+          $h_is_retur = false;
+        } elseif ($h_is_rusak) {
+          $h_is_retur = false;
+        }
         $h_is_used = (!$h_is_rusak && !$h_is_retur) && (
           $bytes_hist > 50 ||
           ($uptime_hist !== '' && $uptime_hist !== '0s') ||
@@ -1165,6 +1173,13 @@ foreach($all_users as $u) {
     }
     if ($disabled === 'true') {
       $is_rusak = true;
+    }
+    if ($hist_status === 'retur') {
+      $is_retur = true;
+      $is_rusak = false;
+    } elseif ($hist_status === 'rusak') {
+      $is_rusak = true;
+      $is_retur = false;
     }
     // Retur harus tetap retur meski Retur Ref memuat kata RUSAK
     if ($is_retur && $hist_status !== 'rusak' && $disabled !== 'true') {
