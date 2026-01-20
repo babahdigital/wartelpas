@@ -50,6 +50,18 @@ if (file_exists($dbFile)) {
     try {
         $db = new PDO('sqlite:' . $dbFile);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $db->exec("CREATE TABLE IF NOT EXISTS phone_block_daily (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_date TEXT,
+            blok_name TEXT,
+            total_units INTEGER,
+            active_units INTEGER,
+            rusak_units INTEGER,
+            spam_units INTEGER,
+            notes TEXT,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(report_date, blok_name)
+        )");
         if ($mode === 'live') {
             $res = $db->query("SELECT 
                     sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
@@ -83,6 +95,42 @@ if (file_exists($dbFile)) {
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         $rows = [];
+    }
+}
+
+// Simpan input handphone per blok (harian)
+if (isset($db) && $db instanceof PDO && isset($_POST['hp_submit'])) {
+    $blok_name = trim($_POST['blok_name'] ?? '');
+    $report_date = trim($_POST['report_date'] ?? '');
+    $total_units = (int)($_POST['total_units'] ?? 0);
+    $active_units = (int)($_POST['active_units'] ?? 0);
+    $rusak_units = (int)($_POST['rusak_units'] ?? 0);
+    $spam_units = (int)($_POST['spam_units'] ?? 0);
+    $notes = trim($_POST['notes'] ?? '');
+
+    if ($blok_name !== '' && $report_date !== '') {
+        try {
+            $stmt = $db->prepare("INSERT INTO phone_block_daily
+                (report_date, blok_name, total_units, active_units, rusak_units, spam_units, notes, updated_at)
+                VALUES (:d, :b, :t, :a, :r, :s, :n, CURRENT_TIMESTAMP)
+                ON CONFLICT(report_date, blok_name) DO UPDATE SET
+                  total_units=excluded.total_units,
+                  active_units=excluded.active_units,
+                  rusak_units=excluded.rusak_units,
+                  spam_units=excluded.spam_units,
+                  notes=excluded.notes,
+                  updated_at=CURRENT_TIMESTAMP
+            ");
+            $stmt->execute([
+                ':d' => $report_date,
+                ':b' => $blok_name,
+                ':t' => $total_units,
+                ':a' => $active_units,
+                ':r' => $rusak_units,
+                ':s' => $spam_units,
+                ':n' => $notes
+            ]);
+        } catch (Exception $e) {}
     }
 }
 
@@ -270,6 +318,12 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
     .filter-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
     .filter-bar select, .filter-bar input { background: #343a40; border: 1px solid var(--border-col); color: #fff; padding: 6px 10px; border-radius: 6px; }
     .btn-print { background: var(--c-blue); color: #fff; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 10000; }
+    .modal-card { background: #1f2937; color: #e5e7eb; border-radius: 10px; width: 480px; max-width: 90vw; padding: 16px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); }
+    .modal-title { font-weight: 700; margin-bottom: 12px; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+    .form-input { width: 100%; background: #343a40; border: 1px solid var(--border-col); color: #fff; padding: 8px 10px; border-radius: 6px; }
+    .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 </style>
 
 <div class="card-solid mb-3">
@@ -296,6 +350,7 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
                 <?php endif; ?>
             </form>
             <button class="btn-print" onclick="window.print()"><i class="fa fa-print"></i></button>
+            <button class="btn-print" onclick="document.getElementById('hpModal').style.display='flex'">Input HP Blok</button>
         </div>
     </div>
     <div class="card-body" style="padding:16px;">
@@ -324,6 +379,102 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
         </div>
     </div>
 </div>
+
+<div id="hpModal" class="modal-backdrop" onclick="if(event.target===this){this.style.display='none';}">
+    <div class="modal-card">
+        <div class="modal-title">Input Handphone per Blok (Harian)</div>
+        <form method="post" action="">
+            <input type="hidden" name="report" value="selling">
+            <div class="form-grid-2">
+                <div>
+                    <label>Blok</label>
+                    <input class="form-input" name="blok_name" placeholder="BLOK-A" required>
+                </div>
+                <div>
+                    <label>Tanggal</label>
+                    <input class="form-input" type="date" name="report_date" value="<?= htmlspecialchars($filter_date); ?>" required>
+                </div>
+            </div>
+            <div class="form-grid-2" style="margin-top:10px;">
+                <div>
+                    <label>Total Unit</label>
+                    <input class="form-input" type="number" name="total_units" min="0" value="0" required>
+                </div>
+                <div>
+                    <label>Aktif</label>
+                    <input class="form-input" type="number" name="active_units" min="0" value="0">
+                </div>
+                <div>
+                    <label>Rusak</label>
+                    <input class="form-input" type="number" name="rusak_units" min="0" value="0">
+                </div>
+                <div>
+                    <label>Spam</label>
+                    <input class="form-input" type="number" name="spam_units" min="0" value="0">
+                </div>
+            </div>
+            <div style="margin-top:10px;">
+                <label>Catatan</label>
+                <input class="form-input" name="notes" placeholder="opsional">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-print" onclick="document.getElementById('hpModal').style.display='none'">Batal</button>
+                <button type="submit" name="hp_submit" class="btn-print">Simpan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<?php
+$hp_rows = [];
+if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
+        try {
+                $stmt = $db->prepare("SELECT * FROM phone_block_daily WHERE report_date = :d ORDER BY blok_name");
+                $stmt->execute([':d' => $filter_date]);
+                $hp_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+                $hp_rows = [];
+        }
+}
+?>
+
+<?php if ($req_show === 'harian'): ?>
+<div class="card-solid mb-3">
+    <div class="card-header-solid">
+        <h3 class="m-0"><i class="fa fa-mobile mr-2"></i> Data Handphone per Blok (Harian)</h3>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive" style="max-height: 360px;">
+            <table class="table-dark-solid text-nowrap">
+                <thead>
+                    <tr>
+                        <th>Blok</th>
+                        <th class="text-right">Total</th>
+                        <th class="text-right">Aktif</th>
+                        <th class="text-right">Rusak</th>
+                        <th class="text-right">Spam</th>
+                        <th>Catatan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($hp_rows)): ?>
+                        <tr><td colspan="6" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada input.</td></tr>
+                    <?php else: foreach ($hp_rows as $r): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($r['blok_name'] ?? '-') ?></td>
+                            <td class="text-right"><?= (int)($r['total_units'] ?? 0) ?></td>
+                            <td class="text-right"><?= (int)($r['active_units'] ?? 0) ?></td>
+                            <td class="text-right"><?= (int)($r['rusak_units'] ?? 0) ?></td>
+                            <td class="text-right"><?= (int)($r['spam_units'] ?? 0) ?></td>
+                            <td><small><?= htmlspecialchars($r['notes'] ?? '') ?></small></td>
+                        </tr>
+                    <?php endforeach; endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <div class="card-solid mb-3">
     <div class="card-header-solid">
@@ -373,66 +524,4 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-6">
-        <div class="card-solid mb-3">
-            <div class="card-header-solid">
-                <h3 class="m-0"><i class="fa fa-th-large mr-2"></i> Pendapatan per Blok</h3>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive" style="max-height: 360px;">
-                    <table class="table-dark-solid text-nowrap">
-                        <thead>
-                            <tr><th>Blok</th><th class="text-right">Qty</th><th class="text-right">Kotor</th><th class="text-right">Rusak</th><th class="text-right">Invalid</th><th class="text-right">Net</th></tr>
-                        </thead>
-                        <tbody>
-                            <?php if (empty($by_block)): ?>
-                                <tr><td colspan="6" style="text-align:center;color:var(--txt-muted);padding:30px;">Tidak ada data.</td></tr>
-                            <?php else: foreach ($by_block as $b => $v): ?>
-                                <tr>
-                                    <td><?= htmlspecialchars($b) ?></td>
-                                    <td class="text-right"><?= number_format($v['qty'],0,',','.') ?></td>
-                                      <td class="text-right"><?= number_format($v['gross'],0,',','.') ?></td>
-                                      <td class="text-right"><?= number_format($v['rusak'],0,',','.') ?></td>
-                                      <td class="text-right"><?= number_format($v['invalid'],0,',','.') ?></td>
-                                      <td class="text-right"><?= number_format($v['net'],0,',','.') ?></td>
-                                </tr>
-                            <?php endforeach; endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-6">
-        <div class="card-solid mb-3">
-            <div class="card-header-solid">
-                <h3 class="m-0"><i class="fa fa-tags mr-2"></i> Pendapatan per Profile</h3>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive" style="max-height: 360px;">
-                    <table class="table-dark-solid text-nowrap">
-                        <thead>
-                            <tr><th>Profile</th><th class="text-right">Qty</th><th class="text-right">Kotor</th><th class="text-right">Rusak</th><th class="text-right">Invalid</th><th class="text-right">Net</th></tr>
-                        </thead>
-                        <tbody>
-                            <?php if (empty($by_profile)): ?>
-                                <tr><td colspan="6" style="text-align:center;color:var(--txt-muted);padding:30px;">Tidak ada data.</td></tr>
-                            <?php else: foreach ($by_profile as $p => $v): ?>
-                                <tr>
-                                    <td><?= htmlspecialchars($p) ?></td>
-                                    <td class="text-right"><?= number_format($v['qty'],0,',','.') ?></td>
-                                    <td class="text-right"><?= number_format($v['gross'],0,',','.') ?></td>
-                                    <td class="text-right"><?= number_format($v['rusak'],0,',','.') ?></td>
-                                    <td class="text-right"><?= number_format($v['invalid'],0,',','.') ?></td>
-                                    <td class="text-right"><?= number_format($v['net'],0,',','.') ?></td>
-                                </tr>
-                            <?php endforeach; endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Pendapatan per Blok/Profile sementara disembunyikan sesuai permintaan -->
