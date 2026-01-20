@@ -134,6 +134,18 @@ if (isset($db) && $db instanceof PDO && isset($_POST['hp_submit'])) {
     }
 }
 
+// Hapus data handphone per blok (harian)
+if (isset($db) && $db instanceof PDO && isset($_GET['hp_delete'])) {
+    $del_date = trim($_GET['date'] ?? '');
+    $del_blok = trim($_GET['blok'] ?? '');
+    if ($del_date !== '' && $del_blok !== '') {
+        try {
+            $stmt = $db->prepare("DELETE FROM phone_block_daily WHERE report_date = :d AND blok_name = :b");
+            $stmt->execute([':d' => $del_date, ':b' => $del_blok]);
+        } catch (Exception $e) {}
+    }
+}
+
 function table_exists(PDO $db, $table) {
     try {
         $stmt = $db->prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=:t");
@@ -324,6 +336,8 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
     .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
     .form-input { width: 100%; background: #343a40; border: 1px solid var(--border-col); color: #fff; padding: 8px 10px; border-radius: 6px; }
     .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btn-act { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 4px; border: none; color: #fff; background: #3a4046; }
+    .btn-act-danger { background: #e74c3c; }
 </style>
 
 <div class="card-solid mb-3">
@@ -459,11 +473,12 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         <th class="text-right">Rusak</th>
                         <th class="text-right">Spam</th>
                         <th>Catatan</th>
+                        <th class="text-center">Hapus</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($hp_rows)): ?>
-                        <tr><td colspan="6" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada input.</td></tr>
+                        <tr><td colspan="7" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada input.</td></tr>
                     <?php else: foreach ($hp_rows as $r): ?>
                         <tr>
                             <td><?= htmlspecialchars($r['blok_name'] ?? '-') ?></td>
@@ -472,6 +487,11 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             <td class="text-right"><?= (int)($r['rusak_units'] ?? 0) ?></td>
                             <td class="text-right"><?= (int)($r['spam_units'] ?? 0) ?></td>
                             <td><small><?= htmlspecialchars($r['notes'] ?? '') ?></small></td>
+                            <td class="text-center">
+                                <a class="btn-act btn-act-danger" href="./?report=selling&mode=<?= $mode; ?>&show=<?= $req_show; ?>&date=<?= urlencode($filter_date); ?>&hp_delete=1&blok=<?= urlencode($r['blok_name']); ?>&date=<?= urlencode($filter_date); ?>" onclick="return confirm('Hapus data blok <?= htmlspecialchars($r['blok_name'] ?? '-') ?> untuk <?= htmlspecialchars($filter_date); ?>?')">
+                                    <i class="fa fa-trash"></i>
+                                </a>
+                            </td>
                         </tr>
                     <?php endforeach; endif; ?>
                 </tbody>
