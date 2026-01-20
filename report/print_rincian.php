@@ -7,13 +7,15 @@ if (!isset($_SESSION["mikhmon"])) {
     exit;
 }
 
+$session = $_GET['session'] ?? '';
+
 include('../include/config.php');
 include('../include/readcfg.php');
 include_once('../lib/routeros_api.class.php');
 
 $dbFile = dirname(__DIR__) . '/db_data/mikhmon_stats.db';
 $cur = isset($currency) ? $currency : 'Rp';
-$session_id = $_GET['session'] ?? '';
+$session_id = $session;
 
 $mode = $_GET['mode'] ?? '';
 $req_status = strtolower((string)($_GET['status'] ?? ''));
