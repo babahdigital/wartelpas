@@ -73,14 +73,6 @@ if (file_exists($dbFile)) {
                     sh.full_raw_data, lh.last_status, 'final' AS row_mode
                 FROM sales_history sh
                 LEFT JOIN login_history lh ON lh.username = sh.username
-                UNION ALL
-                SELECT 
-                    ls.raw_date, ls.raw_time, ls.sale_date, ls.sale_time, ls.sale_datetime,
-                    ls.username, ls.profile, ls.profile_snapshot,
-                    ls.price, ls.price_snapshot, COALESCE(ls.sprice_snapshot, 0) AS sprice_snapshot, ls.validity,
-                    ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
-                    ls.full_raw_data, '' AS last_status, 'pending' AS row_mode
-                FROM live_sales ls
                 WHERE ls.sync_status = 'pending'
                 ORDER BY sale_datetime DESC, raw_date DESC");
         } else {
@@ -436,6 +428,22 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
         </div>
     </div>
 </div>
+
+<script>
+    (function(){
+        var w = document.getElementById('chk_wartel');
+        var k = document.getElementById('chk_kamtib');
+        var ww = document.getElementById('wartel_wrap');
+        var kw = document.getElementById('kamtib_wrap');
+        function toggle(){
+            ww.style.display = w && w.checked ? 'block' : 'none';
+            kw.style.display = k && k.checked ? 'block' : 'none';
+        }
+        if (w) w.addEventListener('change', toggle);
+        if (k) k.addEventListener('change', toggle);
+        toggle();
+    })();
+</script>
 
 <div id="hpModal" class="modal-backdrop" onclick="if(event.target===this){this.style.display='none';}">
     <div class="modal-card">
