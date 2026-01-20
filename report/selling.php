@@ -444,6 +444,10 @@ $total_qty_laku = max(0, $total_qty - $total_qty_retur - $total_qty_rusak - $tot
     .unit-wartel { color: #52c41a; }
     .unit-kamtib { color: #4ea8ff; }
     .hp-notes { max-width: 150px; white-space: normal !important; word-break: break-word; line-height: 1.3; text-align: right; }
+    .summary-badge { display:inline-block; font-size:11px; padding:2px 8px; border-radius:10px; border:1px solid #495057; margin-right:6px; background:#2b3137; color:#e9ecef; }
+    .badge-wartel { background:#1f3b2b; border-color:#2f6b4a; color:#7ee2a8; }
+    .badge-kamtib { background:#223049; border-color:#355a8f; color:#9cc7ff; }
+    .text-green { color:#2ecc71; }
     .summary-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
     .summary-card { background: #23272b; border: 1px solid var(--border-col); border-radius: 8px; padding: 14px; }
     .summary-title { font-size: 0.8rem; color: var(--txt-muted); text-transform: uppercase; letter-spacing: 1px; }
@@ -503,15 +507,19 @@ $total_qty_laku = max(0, $total_qty - $total_qty_retur - $total_qty_rusak - $tot
                 <div class="summary-value" style="color:#f39c12;"><?= number_format($total_qty_rusak,0,',','.') ?></div>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Handphone Total Aktif</div>
+                <div class="summary-title">Total Handphone</div>
                 <div class="summary-value" style="color:#4ea8ff;">
-                    <?= number_format($hp_active_units,0,',','.') ?>
+                    <?= number_format($hp_total_units,0,',','.') ?>
                 </div>
                 <div style="font-size:12px;color:var(--txt-muted)">
-                    WARTEL: <?= number_format($hp_wartel_units,0,',','.') ?> | KAMTIB: <?= number_format($hp_kamtib_units,0,',','.') ?>
+                    Aktif: <span class="text-green"><?= number_format($hp_active_units,0,',','.') ?></span>
                 </div>
-                <div style="font-size:12px;color:var(--txt-muted)">
-                    Rusak: <?= number_format($hp_rusak_units,0,',','.') ?> | Spam: <?= number_format($hp_spam_units,0,',','.') ?> | Aktif: <?= number_format($hp_active_units,0,',','.') ?>
+                <div style="margin-top:6px;">
+                    <span class="summary-badge badge-wartel">WARTEL: <?= number_format($hp_wartel_units,0,',','.') ?></span>
+                    <span class="summary-badge badge-kamtib">KAMTIB: <?= number_format($hp_kamtib_units,0,',','.') ?></span>
+                </div>
+                <div style="font-size:12px;color:var(--txt-muted);margin-top:6px;">
+                    Rusak: <?= number_format($hp_rusak_units,0,',','.') ?> | Spam: <?= number_format($hp_spam_units,0,',','.') ?>
                 </div>
             </div>
             <div class="summary-card">
