@@ -54,14 +54,16 @@ if (file_exists($dbFile)) {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             report_date TEXT,
             blok_name TEXT,
+            unit_type TEXT,
             total_units INTEGER,
             active_units INTEGER,
             rusak_units INTEGER,
             spam_units INTEGER,
             notes TEXT,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(report_date, blok_name)
+            UNIQUE(report_date, blok_name, unit_type)
         )");
+        try { $db->exec("ALTER TABLE phone_block_daily ADD COLUMN unit_type TEXT"); } catch (Exception $e) {}
         if ($mode === 'live') {
             $res = $db->query("SELECT 
                     sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
@@ -101,6 +103,7 @@ if (file_exists($dbFile)) {
 // Simpan input handphone per blok (harian)
 if (isset($db) && $db instanceof PDO && isset($_POST['hp_submit'])) {
     $blok_name = trim($_POST['blok_name'] ?? '');
+    $unit_type = trim($_POST['unit_type'] ?? '');
     $report_date = trim($_POST['report_date'] ?? '');
     $total_units = (int)($_POST['total_units'] ?? 0);
     $active_units = (int)($_POST['active_units'] ?? 0);
@@ -108,12 +111,13 @@ if (isset($db) && $db instanceof PDO && isset($_POST['hp_submit'])) {
     $spam_units = (int)($_POST['spam_units'] ?? 0);
     $notes = trim($_POST['notes'] ?? '');
 
-    if ($blok_name !== '' && $report_date !== '') {
+    if ($blok_name !== '' && $unit_type !== '' && $report_date !== '') {
         try {
             $stmt = $db->prepare("INSERT INTO phone_block_daily
-                (report_date, blok_name, total_units, active_units, rusak_units, spam_units, notes, updated_at)
-                VALUES (:d, :b, :t, :a, :r, :s, :n, CURRENT_TIMESTAMP)
-                ON CONFLICT(report_date, blok_name) DO UPDATE SET
+                (report_date, blok_name, unit_type, total_units, active_units, rusak_units, spam_units, notes, updated_at)
+                VALUES (:d, :b, :ut, :t, :a, :r, :s, :n, CURRENT_TIMESTAMP)
+                ON CONFLICT(report_date, blok_name, unit_type) DO UPDATE SET
+                  unit_type=excluded.unit_type,
                   total_units=excluded.total_units,
                   active_units=excluded.active_units,
                   rusak_units=excluded.rusak_units,
@@ -124,6 +128,7 @@ if (isset($db) && $db instanceof PDO && isset($_POST['hp_submit'])) {
             $stmt->execute([
                 ':d' => $report_date,
                 ':b' => $blok_name,
+                ':ut' => $unit_type,
                 ':t' => $total_units,
                 ':a' => $active_units,
                 ':r' => $rusak_units,
@@ -138,10 +143,11 @@ if (isset($db) && $db instanceof PDO && isset($_POST['hp_submit'])) {
 if (isset($db) && $db instanceof PDO && isset($_GET['hp_delete'])) {
     $del_date = trim($_GET['hp_date'] ?? '');
     $del_blok = trim($_GET['blok'] ?? '');
-    if ($del_date !== '' && $del_blok !== '') {
+    $del_type = trim($_GET['type'] ?? '');
+    if ($del_date !== '' && $del_blok !== '' && $del_type !== '') {
         try {
-            $stmt = $db->prepare("DELETE FROM phone_block_daily WHERE report_date = :d AND blok_name = :b");
-            $stmt->execute([':d' => $del_date, ':b' => $del_blok]);
+            $stmt = $db->prepare("DELETE FROM phone_block_daily WHERE report_date = :d AND blok_name = :b AND unit_type = :ut");
+            $stmt->execute([':d' => $del_date, ':b' => $del_blok, ':ut' => $del_type]);
         } catch (Exception $e) {}
     }
 }
