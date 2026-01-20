@@ -1742,6 +1742,18 @@ if ($debug_mode && !$is_ajax) {
                 <i class="fa fa-undo"></i> Reset Status
               </button>
             <?php endif; ?>
+            <?php if ($req_status === 'all' && $req_comm == ''): ?>
+              <?php
+                $today_params = $_GET;
+                $today_params['show'] = 'harian';
+                $today_params['date'] = date('Y-m-d');
+                unset($today_params['page']);
+                $today_url = './?' . http_build_query($today_params);
+              ?>
+              <button type="button" class="btn btn-outline-light" style="height:40px;" onclick="location.href='<?= $today_url ?>'">
+                <i class="fa fa-calendar"></i> Reset Tanggal
+              </button>
+            <?php endif; ?>
             <?php if ($can_print_used): ?>
               <?php
                 $usage_params = [
