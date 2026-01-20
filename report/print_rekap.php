@@ -396,13 +396,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             <thead>
                                 <tr>
                                     <th rowspan="2" style="width:140px;">Jenis Blok</th>
-                                    <th rowspan="2" style="width:60px;">Qty</th>
-                                    <th rowspan="2" style="width:50px;">RS</th>
-                                    <th rowspan="2" style="width:50px;">RT</th>
+                                    <th rowspan="2" style="width:70px;">Qty</th>
                                     <th rowspan="2" style="width:110px;">Total (Rp)</th>
-                                    <th rowspan="2" style="width:60px;">Qty</th>
-                                    <th rowspan="2" style="width:50px;">RS</th>
-                                    <th rowspan="2" style="width:50px;">RT</th>
+                                    <th rowspan="2" style="width:70px;">Qty</th>
                                     <th rowspan="2" style="width:110px;">Total Blok</th>
                                     <th rowspan="2" style="width:110px;">Bandwidth</th>
                                     <th colspan="3" style="width:210px;">Device</th>
@@ -419,7 +415,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             </thead>
                             <tbody>
                                 <?php if (empty($block_summaries)): ?>
-                                    <tr><td colspan="13" style="text-align:center;">Tidak ada data</td></tr>
+                                    <tr><td colspan="11" style="text-align:center;">Tidak ada data</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($block_summaries as $blk => $bdata): ?>
                                         <?php
@@ -430,12 +426,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                         <tr>
                                             <td><?= htmlspecialchars($blk) ?>10</td>
                                             <td style="text-align:center;"><?= number_format((int)$bdata['qty_10'],0,',','.') ?></td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['rs_10'],0,',','.') ?></td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['rt_10'],0,',','.') ?></td>
                                             <td style="text-align:right;"><?= number_format((int)$bdata['amt_10'],0,',','.') ?></td>
                                             <td style="text-align:center;" rowspan="3"><?= number_format((int)$bdata['total_qty'],0,',','.') ?></td>
-                                            <td style="text-align:center;" rowspan="3"><?= number_format((int)$bdata['rs_total'],0,',','.') ?></td>
-                                            <td style="text-align:center;" rowspan="3"><?= number_format((int)$bdata['rt_total'],0,',','.') ?></td>
                                             <td style="text-align:right;" rowspan="3"><?= number_format((int)$bdata['total_amount'],0,',','.') ?></td>
                                             <td style="text-align:right;" rowspan="3"><?= htmlspecialchars(format_bytes_short((int)$bdata['total_bw'])) ?></td>
                                             <td class="rekap-hp" rowspan="3"><?= number_format((int)$hp_stat['total'],0,',','.') ?></td>
@@ -448,15 +440,11 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                         <tr>
                                             <td><?= htmlspecialchars($blk) ?>30</td>
                                             <td style="text-align:center;"><?= number_format((int)$bdata['qty_30'],0,',','.') ?></td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['rs_30'],0,',','.') ?></td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['rt_30'],0,',','.') ?></td>
                                             <td style="text-align:right;"><?= number_format((int)$bdata['amt_30'],0,',','.') ?></td>
                                         </tr>
                                         <tr class="rekap-subtotal">
                                             <td style="text-align:right;">Total <?= htmlspecialchars($blk) ?> :</td>
                                             <td style="text-align:center;"><?= number_format((int)$bdata['total_qty'],0,',','.') ?></td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['rs_total'],0,',','.') ?></td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['rt_total'],0,',','.') ?></td>
                                             <td style="text-align:right;"><?= number_format((int)$bdata['total_amount'],0,',','.') ?></td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -470,7 +458,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             </tbody>
         </table>
         <div style="margin-top:8px; font-size:11px; color:#444;">
-            Keterangan: RS = Rusak, RT = Retur, SP = Spam, WR = Wartel, KM = Kamtib.
+            Keterangan: RS = Rusak, SP = Spam, WR = Wartel, KM = Kamtib.
         </div>
         <div style="margin-top:4px; font-size:11px; color:#444;">
             Catatan: Data bersifat sementara sampai settlement harian jam 03:00. Data final dihitung pada jam 04:00.
