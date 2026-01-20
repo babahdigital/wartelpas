@@ -825,7 +825,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         <h3 class="m-0"><i class="fa fa-mobile mr-2"></i> Data Handphone per Blok (Harian)</h3>
     </div>
     <div class="card-body p-0">
-        <div class="table-responsive" style="max-height: 360px;">
+        <div class="table-responsive">
             <table class="table-dark-solid text-nowrap">
                 <thead>
                     <tr>
@@ -900,7 +900,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         <h3 class="m-0"><i class="fa fa-list-alt mr-2"></i> Rincian Transaksi</h3>
     </div>
     <div class="card-body p-0">
-        <div class="table-responsive" style="max-height: 420px;">
+        <div class="table-responsive">
             <table class="table-dark-solid text-nowrap">
                 <thead>
                     <tr>
