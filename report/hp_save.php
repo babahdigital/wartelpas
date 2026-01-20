@@ -87,7 +87,7 @@ try {
     )");
     try { $db->exec("ALTER TABLE phone_block_daily ADD COLUMN unit_type TEXT"); } catch (Exception $e) {}
 
-    $del = $db->prepare("DELETE FROM phone_block_daily WHERE report_date = :d AND blok_name = :b AND unit_type = :ut");
+    $del = $db->prepare("DELETE FROM phone_block_daily WHERE report_date = :d AND blok_name = :b");
     $ins = $db->prepare("INSERT INTO phone_block_daily
         (report_date, blok_name, unit_type, total_units, active_units, rusak_units, spam_units, notes, updated_at)
         VALUES (:d, :b, :ut, :t, :a, :r, :s, :n, CURRENT_TIMESTAMP)
@@ -95,8 +95,7 @@ try {
 
     $del->execute([
         ':d' => $report_date,
-        ':b' => $blok_name,
-        ':ut' => 'TOTAL'
+        ':b' => $blok_name
     ]);
     $ins->execute([
         ':d' => $report_date,
@@ -110,11 +109,6 @@ try {
     ]);
 
     if ($use_wartel) {
-        $del->execute([
-            ':d' => $report_date,
-            ':b' => $blok_name,
-            ':ut' => 'WARTEL'
-        ]);
         $ins->execute([
             ':d' => $report_date,
             ':b' => $blok_name,
@@ -127,11 +121,6 @@ try {
         ]);
     }
     if ($use_kamtib) {
-        $del->execute([
-            ':d' => $report_date,
-            ':b' => $blok_name,
-            ':ut' => 'KAMTIB'
-        ]);
         $ins->execute([
             ':d' => $report_date,
             ':b' => $blok_name,
