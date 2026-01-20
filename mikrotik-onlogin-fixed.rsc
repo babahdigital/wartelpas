@@ -93,8 +93,12 @@
         :local payload $logComment;
         :local url ($baseUrl . "?key=" . $key . "&session=" . $session);
         /tool fetch url=$url http-method=post http-data=("data=" . $payload) keep-result=no;
+
+        # REALTIME USAGE (LOGIN)
+        :local usageUrl ("http://wartelpas.sobigidul.net/process/usage_ingest.php?key=" . $key . "&session=" . $session . "&event=login" . "&user=" . $user . "&date=" . $date . "&time=" . $time . "&ip=" . $address . "&mac=" . $mac . "&uptime=" . $uptime . "&comment=" . $comment);
+        /tool fetch url=$usageUrl keep-result=no;
         
-        # SET COMMENT BARU (DENGAN BLOK)
+        # SET COMMENT BARU (DENGAN BLOK) - TANPA MENUMPUK
         /ip hotspot user set comment=$newComment [find where name=$user];
         
         # SET MAC ADDRESS
