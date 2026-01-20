@@ -334,7 +334,7 @@ function save_user_history($name, $data) {
             logout_time_real = CASE WHEN excluded.last_status = 'online' THEN NULL ELSE COALESCE(login_history.logout_time_real, excluded.logout_time_real) END,
             last_status = COALESCE(excluded.last_status, login_history.last_status),
             raw_comment = excluded.raw_comment,
-            updated_at = excluded.updated_at");
+            updated_at = CASE WHEN excluded.last_status = 'online' THEN excluded.updated_at ELSE login_history.updated_at END");
         $stmt->execute([
             ':u' => $name,
             ':ld' => $data['date'] ?? '',
@@ -1297,7 +1297,8 @@ foreach($all_users as $u) {
             'raw' => $comment,
             'login_time_real' => $login_time_real,
             'logout_time_real' => $logout_time_real,
-            'status' => $next_status
+            'status' => $next_status,
+            'updated_at' => ($next_status === 'online') ? date('Y-m-d H:i:s') : null
         ];
         save_user_history($name, $save_data);
         $hist = get_user_history($name);
