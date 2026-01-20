@@ -25,6 +25,11 @@ $filter_blok = trim((string)($_GET['blok'] ?? ''));
 
 $filter_date = $_GET['date'] ?? date('Y-m-d');
 
+$usage_label = 'TERPAKAI';
+if ($req_status === 'online') $usage_label = 'ONLINE';
+elseif ($req_status === 'rusak') $usage_label = 'RUSAK';
+elseif ($req_status === 'all') $usage_label = 'SEMUA';
+
 function normalize_block_name_simple($blok_name) {
     $raw = strtoupper(trim((string)$blok_name));
     if ($raw === '') return '';
@@ -202,6 +207,7 @@ if ($is_usage && file_exists($dbFile)) {
             if (isset($a['user'])) $activeMap[$a['user']] = $a;
         }
 
+        $seen_users = [];
         foreach ($all_users as $u) {
             $name = $u['name'] ?? '';
             if ($name === '') continue;
@@ -274,6 +280,8 @@ if ($is_usage && file_exists($dbFile)) {
 
             if (!$status_match) continue;
 
+            $seen_users[$name] = true;
+
             $login_time = $hist['login_time_real'] ?? '';
             $logout_time = $hist['logout_time_real'] ?? '';
             if ($logout_time === '') {
@@ -309,6 +317,40 @@ if ($is_usage && file_exists($dbFile)) {
                 'mac' => $f_mac,
                 'uptime' => $uptime,
                 'bytes' => $bytes,
+                'status' => strtolower($status),
+                'comment' => $comment
+            ];
+        }
+
+        // Tambahkan data history-only jika user sudah hilang dari Mikrotik
+        foreach ($histMap as $uname => $row) {
+            if (isset($seen_users[$uname])) continue;
+            if ($filter_user !== '' && $uname !== $filter_user) continue;
+            $hist_status = strtolower((string)($row['last_status'] ?? ''));
+            $status = ($hist_status === 'rusak') ? 'RUSAK' : ($hist_status === 'retur' ? 'RETUR' : 'TERPAKAI');
+            if ($req_status === 'online') continue;
+            if ($req_status === 'rusak' && $status !== 'RUSAK') continue;
+            if ($req_status === 'used' && $status !== 'TERPAKAI') continue;
+            if ($req_status === 'all' && !in_array($status, ['RUSAK','TERPAKAI'])) continue;
+
+            $comment = (string)($row['raw_comment'] ?? '');
+            $f_blok = normalize_block_name_simple($row['blok_name'] ?? '') ?: extract_blok_name($comment);
+            if ($filter_blok !== '') {
+                $target_blok = normalize_block_name_simple($filter_blok);
+                if ($f_blok === '' || strcasecmp($f_blok, $target_blok) !== 0) continue;
+            }
+
+            $login_time = $row['login_time_real'] ?? '-';
+            $logout_time = $row['logout_time_real'] ?? '-';
+            $usage_list[] = [
+                'login' => $login_time,
+                'logout' => $logout_time,
+                'username' => $uname,
+                'blok' => $f_blok ?: '-',
+                'ip' => $row['ip_address'] ?? '-',
+                'mac' => $row['mac_address'] ?? '-',
+                'uptime' => $row['last_uptime'] ?? '-',
+                'bytes' => (int)($row['last_bytes'] ?? 0),
                 'status' => strtolower($status),
                 'comment' => $comment
             ];
@@ -384,10 +426,11 @@ function esc($s){ return htmlspecialchars((string)$s); }
     </div>
 
     <?php if ($is_usage): ?>
-      <h2>Bukti Pemakaian Voucher</h2>
+            <h2>Bukti Pemakaian Voucher (<?= esc($usage_label) ?>)</h2>
             <div class="meta">
         <?php if ($filter_user !== ''): ?>User: <?= esc($filter_user) ?> | <?php endif; ?>
         <?php if ($filter_blok !== ''): ?>Blok: <?= esc($filter_blok) ?> | <?php endif; ?>
+                Status: <?= esc($usage_label) ?> | 
                 Tanggal Cetak: <?= esc(format_date_indo(date('Y-m-d H:i:s'))) ?>
       </div>
 

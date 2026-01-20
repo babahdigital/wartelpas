@@ -566,8 +566,10 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
               $API->write('=.id=' . $u[0]['.id']);
               $API->read();
             }
-            $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
-            $del->execute([':u' => $uname]);
+            if ($target_status === 'terpakai') {
+              $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
+              $del->execute([':u' => $uname]);
+            }
             $deleted_any = true;
           }
           if (!$deleted_any && $target_status !== '') {
@@ -589,8 +591,10 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
                 $API->write('/ip/hotspot/user/remove', false);
                 $API->write('=.id=' . $usr['.id']);
                 $API->read();
-                $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
-                $del->execute([':u' => $uname]);
+                if ($target_status === 'terpakai') {
+                  $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
+                  $del->execute([':u' => $uname]);
+                }
                 $deleted_any = true;
                 continue;
               }
@@ -598,8 +602,10 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
                 $API->write('/ip/hotspot/user/remove', false);
                 $API->write('=.id=' . $usr['.id']);
                 $API->read();
-                $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
-                $del->execute([':u' => $uname]);
+                if ($target_status === 'terpakai') {
+                  $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
+                  $del->execute([':u' => $uname]);
+                }
                 $deleted_any = true;
                 continue;
               }
@@ -612,8 +618,10 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
                   $API->write('/ip/hotspot/user/remove', false);
                   $API->write('=.id=' . $usr['.id']);
                   $API->read();
-                  $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
-                  $del->execute([':u' => $uname]);
+                  if ($target_status === 'terpakai') {
+                    $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
+                    $del->execute([':u' => $uname]);
+                  }
                   $deleted_any = true;
                 }
               }
@@ -642,8 +650,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
                 $API->write('=.id=' . $usr['.id']);
                 $API->read();
               }
-              $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
-              $del->execute([':u' => $uname]);
+              // Jangan hapus histori rusak di DB
             }
           }
         } catch(Exception $e) {}
@@ -693,8 +700,12 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $API->read();
         if ($db && $name != '') {
           try {
-            $stmt = $db->prepare("DELETE FROM login_history WHERE username = :u");
-            $stmt->execute([':u' => $name]);
+            $hist = get_user_history($name);
+            $st = strtolower((string)($hist['last_status'] ?? ''));
+            if (!in_array($st, ['rusak','retur'])) {
+              $stmt = $db->prepare("DELETE FROM login_history WHERE username = :u");
+              $stmt->execute([':u' => $name]);
+            }
           } catch(Exception $e) {}
         }
       } elseif ($act == 'invalid') {
@@ -951,6 +962,38 @@ foreach($active as $a) {
 }
 
 $is_ajax = isset($_GET['ajax']) && $_GET['ajax'] == '1';
+
+// Tambahkan data history-only agar TERPAKAI/RUSAK/RETUR tetap tampil
+if ($db) {
+  try {
+    $need_history = in_array(strtolower($req_status), ['used','rusak','retur','all']) || trim($req_search) !== '';
+    if ($need_history) {
+      $res = $db->query("SELECT username, raw_comment, last_status FROM login_history WHERE username IS NOT NULL AND username != ''");
+      $existing = [];
+      foreach ($all_users as $u) {
+        if (!empty($u['name'])) $existing[$u['name']] = true;
+      }
+      foreach ($res->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $uname = $row['username'] ?? '';
+        if ($uname === '' || isset($existing[$uname])) continue;
+        $st = strtolower((string)($row['last_status'] ?? ''));
+        if ($req_status === 'used' && $st !== 'terpakai') continue;
+        if ($req_status === 'rusak' && $st !== 'rusak') continue;
+        if ($req_status === 'retur' && $st !== 'retur') continue;
+        $all_users[] = [
+          'name' => $uname,
+          'comment' => $row['raw_comment'] ?? '',
+          'profile' => '',
+          'disabled' => $st === 'rusak' ? 'true' : 'false',
+          'bytes-in' => 0,
+          'bytes-out' => 0,
+          'uptime' => ''
+        ];
+        $existing[$uname] = true;
+      }
+    }
+  } catch (Exception $e) {}
+}
 
 // List blok untuk dropdown (DB + data router agar langsung muncul)
 $list_blok = [];
@@ -1614,14 +1657,14 @@ if ($debug_mode && !$is_ajax) {
               <?php
                 $print_all_params = [
                   'mode' => 'usage',
-                  'status' => in_array($req_status, ['used','online','rusak']) ? $req_status : 'all',
+                  'status' => 'all',
                   'session' => $session,
                   'blok' => $req_comm
                 ];
                 $print_all_url = './report/print_rincian.php?' . http_build_query($print_all_params);
               ?>
               <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('<?= $print_all_url ?>','_blank').print()">
-                <i class="fa fa-print"></i> Print Semua
+                <i class="fa fa-print"></i> Print Bukti
               </button>
               <?php if ($can_delete_status): ?>
                 <button type="button" class="btn btn-warning" style="height:40px;" onclick="actionRequest('./?hotspot=users&action=delete_status&status=<?= $req_status ?>&blok=<?= urlencode($req_comm) ?>&session=<?= $session ?>','Hapus semua voucher <?= $status_label ?> di <?= htmlspecialchars($req_comm) ?> (tidak online)?')">
