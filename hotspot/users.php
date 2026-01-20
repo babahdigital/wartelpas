@@ -1179,10 +1179,14 @@ foreach($all_users as $u) {
       if (empty($logout_time_real) && ($status === 'TERPAKAI' || $status === 'RUSAK')) {
         $comment_dt = extract_datetime_from_comment($comment);
         if ($comment_dt != '') {
-          $logout_time_real = $comment_dt;
+          if ($status === 'TERPAKAI' && substr($comment_dt, -8) === '00:00:00') {
+            // abaikan jam 00:00:00 untuk terpakai
+          } else {
+            $logout_time_real = $comment_dt;
+          }
         }
       }
-      if (!empty($logout_time_real) && substr($logout_time_real, -8) === '00:00:00' && !empty($hist['updated_at'])) {
+      if (!empty($logout_time_real) && substr($logout_time_real, -8) === '00:00:00' && !empty($hist['updated_at']) && $status !== 'TERPAKAI') {
         $logout_time_real = merge_date_time($logout_time_real, $hist['updated_at']);
       }
       if (empty($login_time_real) && !empty($logout_time_real)) {
@@ -1192,6 +1196,13 @@ foreach($all_users as $u) {
           $login_time_real = date('Y-m-d H:i:s', strtotime($logout_time_real) - $u_sec);
         } else {
           $login_time_real = $logout_time_real;
+        }
+      }
+      if ($status === 'TERPAKAI' && !empty($login_time_real) && empty($logout_time_real)) {
+        $base_uptime = $uptime_hist != '' ? $uptime_hist : $uptime_user;
+        $u_sec = uptime_to_seconds($base_uptime);
+        if ($u_sec > 0) {
+          $logout_time_real = date('Y-m-d H:i:s', strtotime($login_time_real) + $u_sec);
         }
       }
     }
@@ -1332,6 +1343,9 @@ foreach($all_users as $u) {
     $logout_disp = $logout_time_real ?? ($hist['logout_time_real'] ?? ($hist['last_login_real'] ?? '-'));
     if ($status === 'READY') {
       $login_disp = '-';
+      $logout_disp = '-';
+    }
+    if ($status === 'TERPAKAI' && $login_disp === '-' && $logout_disp !== '-' && substr($logout_disp, -8) === '00:00:00') {
       $logout_disp = '-';
     }
     if ($status === 'RUSAK') {
