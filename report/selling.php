@@ -9,6 +9,8 @@ error_reporting(0);
 $dbFile = dirname(__DIR__) . '/db_data/mikhmon_stats.db';
 $rows = [];
 $cur = isset($currency) ? $currency : 'Rp';
+$session_id = $_GET['session'] ?? '';
+$session_qs = $session_id !== '' ? '&session=' . urlencode($session_id) : '';
 
 // Filter periode
 $req_show = $_GET['show'] ?? 'harian';
@@ -66,15 +68,14 @@ if (file_exists($dbFile)) {
         try { $db->exec("ALTER TABLE phone_block_daily ADD COLUMN unit_type TEXT"); } catch (Exception $e) {}
         if ($mode === 'live') {
             $res = $db->query("SELECT 
-                    sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
-                    sh.username, sh.profile, sh.profile_snapshot,
-                    sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
-                    sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
-                    sh.full_raw_data, lh.last_status, 'final' AS row_mode
-                FROM sales_history sh
-                LEFT JOIN login_history lh ON lh.username = sh.username
-                WHERE ls.sync_status = 'pending'
-                ORDER BY sale_datetime DESC, raw_date DESC");
+                    ls.raw_date, ls.raw_time, ls.sale_date, ls.sale_time, ls.sale_datetime,
+                    ls.username, ls.profile, ls.profile_snapshot,
+                    ls.price, ls.price_snapshot, ls.sprice_snapshot, ls.validity,
+                    ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
+                    ls.full_raw_data, lh.last_status, 'pending' AS row_mode
+                FROM live_sales ls
+                LEFT JOIN login_history lh ON lh.username = ls.username
+                ORDER BY ls.sale_datetime DESC, ls.raw_date DESC");
         } else {
             $res = $db->query("SELECT 
                     sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
@@ -381,6 +382,9 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
         <div class="filter-bar">
             <form method="get" action="" class="filter-bar">
                 <input type="hidden" name="report" value="selling">
+                <?php if ($session_id !== ''): ?>
+                    <input type="hidden" name="session" value="<?= htmlspecialchars($session_id); ?>">
+                <?php endif; ?>
                 <select name="mode" onchange="this.form.submit()">
                     <option value="final" <?= $mode==='final'?'selected':''; ?>>Final</option>
                     <option value="live" <?= $mode==='live'?'selected':''; ?>>Live</option>
@@ -434,6 +438,9 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
         <div class="modal-title">Input Handphone per Blok (Harian)</div>
         <form method="post" action="">
             <input type="hidden" name="report" value="selling">
+            <?php if ($session_id !== ''): ?>
+                <input type="hidden" name="session" value="<?= htmlspecialchars($session_id); ?>">
+            <?php endif; ?>
             <div class="form-grid-2">
                 <div>
                     <label>Blok</label>
@@ -555,7 +562,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                               <td class="text-right"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['spam_units'] ?? 0) : '-' ?></td>
                             <td><small><?= htmlspecialchars($r['notes'] ?? '') ?></small></td>
                             <td class="text-center">
-                                <a class="btn-act btn-act-danger" href="./?report=selling&mode=<?= $mode; ?>&show=<?= $req_show; ?>&date=<?= urlencode($filter_date); ?>&hp_delete=1&blok=<?= urlencode($r['blok_name']); ?>&type=<?= urlencode($r['unit_type']); ?>&hp_date=<?= urlencode($filter_date); ?>" onclick="return confirm('Hapus data blok <?= htmlspecialchars($r['blok_name'] ?? '-') ?> (<?= htmlspecialchars($r['unit_type'] ?? '-') ?>) untuk <?= htmlspecialchars($filter_date); ?>?')">
+                                <a class="btn-act btn-act-danger" href="./?report=selling<?= $session_qs; ?>&mode=<?= $mode; ?>&show=<?= $req_show; ?>&date=<?= urlencode($filter_date); ?>&hp_delete=1&blok=<?= urlencode($r['blok_name']); ?>&type=<?= urlencode($r['unit_type']); ?>&hp_date=<?= urlencode($filter_date); ?>" onclick="return confirm('Hapus data blok <?= htmlspecialchars($r['blok_name'] ?? '-') ?> (<?= htmlspecialchars($r['unit_type'] ?? '-') ?>) untuk <?= htmlspecialchars($filter_date); ?>?')">
                                     <i class="fa fa-trash"></i>
                                 </a>
                             </td>
