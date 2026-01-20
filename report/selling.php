@@ -11,6 +11,7 @@ $rows = [];
 $cur = isset($currency) ? $currency : 'Rp';
 $session_id = $_GET['session'] ?? '';
 $session_qs = $session_id !== '' ? '&session=' . urlencode($session_id) : '';
+$hp_redirect = '';
 
 // Filter periode
 $req_show = $_GET['show'] ?? 'harian';
@@ -178,9 +179,11 @@ if (isset($db) && $db instanceof PDO && isset($_POST['hp_submit'])) {
         } catch (Exception $e) {}
     }
     if ($hp_saved && empty($hp_error)) {
-        $redirect = './?report=selling' . $session_qs . '&mode=' . urlencode($mode) . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
-        header('Location: ' . $redirect);
-        exit;
+        $hp_redirect = './?report=selling' . $session_qs . '&mode=' . urlencode($mode) . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+        if (!headers_sent()) {
+            header('Location: ' . $hp_redirect);
+            exit;
+        }
     }
 }
 
@@ -194,9 +197,11 @@ if (isset($db) && $db instanceof PDO && isset($_GET['hp_delete'])) {
             $stmt = $db->prepare("DELETE FROM phone_block_daily WHERE report_date = :d AND blok_name = :b");
             $stmt->execute([':d' => $del_date, ':b' => $del_blok]);
         } catch (Exception $e) {}
-        $redirect = './?report=selling' . $session_qs . '&mode=' . urlencode($mode) . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
-        header('Location: ' . $redirect);
-        exit;
+        $hp_redirect = './?report=selling' . $session_qs . '&mode=' . urlencode($mode) . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+        if (!headers_sent()) {
+            header('Location: ' . $hp_redirect);
+            exit;
+        }
     }
 }
 
@@ -363,6 +368,10 @@ foreach ($rows as $r) {
 ksort($by_block, SORT_NATURAL | SORT_FLAG_CASE);
 ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
 ?>
+
+<?php if (!empty($hp_redirect) && headers_sent()): ?>
+    <script>window.location.replace('<?= htmlspecialchars($hp_redirect, ENT_QUOTES); ?>');</script>
+<?php endif; ?>
 
 <style>
     :root { --dark-bg: #1e2226; --dark-card: #2a3036; --border-col: #495057; --txt-main: #ecf0f1; --txt-muted: #adb5bd; --c-blue: #3498db; --c-green: #2ecc71; --c-orange: #f39c12; --c-red: #e74c3c; }
