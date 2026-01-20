@@ -857,7 +857,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             </td>
                             <td class="text-right"><?= number_format($it['price'],0,',','.') ?></td>
                             <td class="text-right"><?= number_format($it['net'],0,',','.') ?></td>
-                            <td><small><?= htmlspecialchars($it['comment']) ?></small></td>
+                            <td><small class="text-right"><?= htmlspecialchars($it['comment']) ?></small></td>
                         </tr>
                     <?php endforeach; endif; ?>
                 </tbody>
