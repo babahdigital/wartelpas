@@ -200,11 +200,10 @@ if (isset($db) && $db instanceof PDO && isset($_POST['hp_submit'])) {
 // Hapus data handphone per blok (harian)
 if (isset($db) && $db instanceof PDO && isset($_GET['hp_delete'])) {
     $del_date = trim($_GET['hp_date'] ?? '');
-    $del_blok = trim($_GET['blok'] ?? '');
-    $del_type = trim($_GET['type'] ?? '');
+    $del_blok = strtoupper(trim($_GET['blok'] ?? ''));
     if ($del_date !== '' && $del_blok !== '') {
         try {
-            $stmt = $db->prepare("DELETE FROM phone_block_daily WHERE report_date = :d AND blok_name = :b");
+            $stmt = $db->prepare("DELETE FROM phone_block_daily WHERE report_date = :d AND UPPER(blok_name) = :b");
             $stmt->execute([':d' => $del_date, ':b' => $del_blok]);
         } catch (Exception $e) {}
         $hp_redirect = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
@@ -772,12 +771,12 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                         data-kamtib="<?= (int)$bk; ?>">
                                         <i class="fa fa-edit"></i>
                                     </button>
+                                    <a class="btn-act btn-act-danger" href="./?report=selling<?= $session_qs; ?>&show=<?= $req_show; ?>&date=<?= urlencode($filter_date); ?>&hp_delete=1&blok=<?= urlencode($bname); ?>&hp_date=<?= urlencode($filter_date); ?>" onclick="return confirm('Hapus data blok <?= htmlspecialchars($bname); ?> untuk <?= htmlspecialchars($filter_date); ?>?')">
+                                        <i class="fa fa-trash"></i>
+                                    </a>
                                 <?php else: ?>
                                     <span style="color:var(--txt-muted);">-</span>
                                 <?php endif; ?>
-                                <a class="btn-act btn-act-danger" href="./?report=selling<?= $session_qs; ?>&show=<?= $req_show; ?>&date=<?= urlencode($filter_date); ?>&hp_delete=1&blok=<?= urlencode($r['blok_name']); ?>&type=<?= urlencode($r['unit_type']); ?>&hp_date=<?= urlencode($filter_date); ?>" onclick="return confirm('Hapus data blok <?= htmlspecialchars($r['blok_name'] ?? '-') ?> (<?= htmlspecialchars($r['unit_type'] ?? '-') ?>) untuk <?= htmlspecialchars($filter_date); ?>?')">
-                                    <i class="fa fa-trash"></i>
-                                </a>
                             </td>
                         </tr>
                     <?php endforeach; endif; ?>
