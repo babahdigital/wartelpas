@@ -11,14 +11,18 @@ if (!is_dir($logDir)) {
     @mkdir($logDir, 0755, true);
 }
 
+@file_put_contents($logDir . '/usage_ingest.log', date('c') . " | hit | ip=" . ($_SERVER['REMOTE_ADDR'] ?? '-') . " | qs=" . ($_SERVER['QUERY_STRING'] ?? '') . "\n", FILE_APPEND);
+
 $secret_token = "WartelpasSecureKey";
 if (!isset($_GET['key']) || $_GET['key'] !== $secret_token) {
+    @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | reject | reason=bad_key | qs=" . ($_SERVER['QUERY_STRING'] ?? '') . "\n", FILE_APPEND);
     http_response_code(403);
     die("Error: Token Salah.");
 }
 
 $session = $_GET['session'] ?? '';
 if ($session === '') {
+    @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | reject | reason=missing_session | qs=" . ($_SERVER['QUERY_STRING'] ?? '') . "\n", FILE_APPEND);
     http_response_code(403);
     die("Error: Session tidak valid.");
 }
