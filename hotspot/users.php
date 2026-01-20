@@ -17,6 +17,17 @@ $req_prof = isset($_GET['profile']) ? $_GET['profile'] : 'all';
 $req_comm = isset($_GET['comment']) ? urldecode($_GET['comment']) : '';
 $req_status = isset($_GET['status']) ? $_GET['status'] : 'all';
 $req_search = isset($_GET['q']) ? $_GET['q'] : '';
+$req_show = $_GET['show'] ?? 'harian';
+$filter_date = $_GET['date'] ?? '';
+$req_show = in_array($req_show, ['harian', 'bulanan', 'tahunan']) ? $req_show : 'harian';
+if ($req_show === 'harian') {
+  $filter_date = $filter_date ?: date('Y-m-d');
+} elseif ($req_show === 'bulanan') {
+  $filter_date = $filter_date ?: date('Y-m');
+} else {
+  $req_show = 'tahunan';
+  $filter_date = $filter_date ?: date('Y');
+}
 $debug_mode = isset($_GET['debug']) && $_GET['debug'] == '1';
 $enforce_rusak_rules = !(isset($_GET['rusak_free']) && $_GET['rusak_free'] == '1');
 
@@ -183,6 +194,16 @@ function normalize_blok_param($blok) {
     return $m[1];
   }
   return $blok;
+}
+
+// Helper: Normalisasi tanggal untuk filter (harian/bulanan/tahunan)
+function normalize_date_key($dateTime, $mode) {
+  if (empty($dateTime)) return '';
+  $ts = strtotime($dateTime);
+  if ($ts === false) return '';
+  if ($mode === 'bulanan') return date('Y-m', $ts);
+  if ($mode === 'tahunan') return date('Y', $ts);
+  return date('Y-m-d', $ts);
 }
 
 // Helper: Generator User Baru (retur)
@@ -905,6 +926,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
   if (isset($_GET['comment'])) $redir_params['comment'] = $_GET['comment'];
   if (isset($_GET['status'])) $redir_params['status'] = $_GET['status'];
   if (isset($_GET['q'])) $redir_params['q'] = $_GET['q'];
+  if (isset($_GET['show'])) $redir_params['show'] = $_GET['show'];
+  if (isset($_GET['date'])) $redir_params['date'] = $_GET['date'];
   if (isset($_GET['debug'])) $redir_params['debug'] = $_GET['debug'];
   $redir = './?' . http_build_query($redir_params);
   if ($is_action_ajax) {
@@ -1100,6 +1123,19 @@ foreach($all_users as $u) {
       }
     }
 
+      // Filter tanggal (harian/bulanan/tahunan)
+      if (!empty($filter_date)) {
+        $date_candidate = $login_time_real ?: $logout_time_real ?: '';
+        if ($date_candidate === '') {
+          $comment_dt = extract_datetime_from_comment($comment);
+          if ($comment_dt !== '') $date_candidate = $comment_dt;
+        }
+        $date_key = normalize_date_key($date_candidate, $req_show);
+        if ($date_key === '' || $date_key !== $filter_date) {
+          continue;
+        }
+      }
+
     // Jika voucher pernah login (ada IP/MAC) namun waktu/uptime masih kosong, coba isi dari selisih login/logout
     if (!$is_active && $uptime == '0s' && !empty($logout_time_real) && !empty($login_time_real)) {
       $diff = strtotime($logout_time_real) - strtotime($login_time_real);
@@ -1263,7 +1299,9 @@ if ($is_ajax) {
       $keep_params = '&profile=' . urlencode($req_prof) .
         '&comment=' . urlencode($req_comm) .
         '&status=' . urlencode($req_status) .
-        '&q=' . urlencode($req_search);
+        '&q=' . urlencode($req_search) .
+        '&show=' . urlencode($req_show) .
+        '&date=' . urlencode($filter_date);
       ?>
       <tr>
         <td>
@@ -1477,6 +1515,20 @@ if ($debug_mode && !$is_ajax) {
                 } ?>
               </select>
             </div>
+            <div class="input-group-solid" style="margin-left:6px;">
+              <select name="show" class="custom-select-solid first-el" onchange="this.form.submit()" style="flex: 0 0 140px;">
+                <option value="harian" <?= $req_show==='harian'?'selected':''; ?>>Harian</option>
+                <option value="bulanan" <?= $req_show==='bulanan'?'selected':''; ?>>Bulanan</option>
+                <option value="tahunan" <?= $req_show==='tahunan'?'selected':''; ?>>Tahunan</option>
+              </select>
+              <?php if ($req_show === 'harian'): ?>
+                <input type="date" name="date" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" class="form-control last-el" style="flex:0 0 170px;">
+              <?php elseif ($req_show === 'bulanan'): ?>
+                <input type="month" name="date" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" class="form-control last-el" style="flex:0 0 170px;">
+              <?php else: ?>
+                <input type="number" name="date" min="2000" max="2100" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" class="form-control last-el" style="flex:0 0 120px;">
+              <?php endif; ?>
+            </div>
             <span id="search-loading" style="display:none;font-size:12px;color:var(--txt-muted);margin-left:6px;">
               <i class="fa fa-circle-o-notch fa-spin"></i> Mencari...
             </span>
@@ -1635,7 +1687,9 @@ if ($debug_mode && !$is_ajax) {
                           $keep_params = '&profile=' . urlencode($req_prof) .
                             '&comment=' . urlencode($req_comm) .
                             '&status=' . urlencode($req_status) .
-                            '&q=' . urlencode($req_search);
+                            '&q=' . urlencode($req_search) .
+                            '&show=' . urlencode($req_show) .
+                            '&date=' . urlencode($filter_date);
                         ?>
                         <?php if (strtoupper($u['status']) === 'RETUR'): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&download=1&img=1&session=<?= $session ?>','_blank')" title="Download Voucher (PNG)"><i class="fa fa-download"></i></button>
