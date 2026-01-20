@@ -63,11 +63,20 @@
         }
     }
     
-    # Build new comment dengan format: EXPIRED | BLOK | LAST_IP | LAST_MAC
-    :local expiredDate ("$logoutDate $logoutTime");
+    # Build new comment tanpa ubah tanggal (ambil tanggal lama jika ada)
+    :local baseDate "";
+    :local pipePos2 [:find $cleanComment "|"];
+    :if ([:typeof $pipePos2] != "nil") do={
+        :set baseDate [:pick $cleanComment 0 $pipePos2];
+    } else={
+        :set baseDate $cleanComment;
+    }
+    :if ([:len $baseDate] = 0) do={
+        :set baseDate ("$logoutDate $logoutTime");
+    }
     
     # Format: "jan/21/2026 00:25:32 | Blok-A10 | IP:192.168.1.100 | MAC:AA:BB:CC:DD:EE:FF"
-    :local newComment "$expiredDate";
+    :local newComment "$baseDate";
     
     :if ([:len $blokInfo] > 0) do={
         :set newComment ("$newComment | $blokInfo");

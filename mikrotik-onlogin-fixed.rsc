@@ -46,19 +46,32 @@
         :local exp [/sys sch get [/sys sch find where name="$user"] next-run];
         :local getxp [:len $exp];
         :local newComment "";
+        :local existingDate "";
+        :if ([:len $comment] > 0) do={
+            :local pipePos [:find $comment "|"];
+            :if ([:typeof $pipePos] != "nil") do={
+                :set existingDate [:pick $comment 0 $pipePos];
+            } else={
+                :set existingDate $comment;
+            }
+        }
         
         # BUAT COMMENT BARU DENGAN FORMAT: EXPIRED | BLOK | DATA LAIN
-        :if ($getxp = 15) do={
-            :local d [:pick $exp 0 6];
-            :local t [:pick $exp 7 16];
-            :local s "/";
-            :set newComment ("$d$s$year $t");
-        }
-        :if ($getxp = 8) do={
-            :set newComment ("$date $exp");
-        }
-        :if ($getxp > 15) do={
-            :set newComment $exp;
+        :if ([:len $existingDate] > 0) do={
+            :set newComment $existingDate;
+        } else={
+            :if ($getxp = 15) do={
+                :local d [:pick $exp 0 6];
+                :local t [:pick $exp 7 16];
+                :local s "/";
+                :set newComment ("$d$s$year $t");
+            }
+            :if ($getxp = 8) do={
+                :set newComment ("$date $exp");
+            }
+            :if ($getxp > 15) do={
+                :set newComment $exp;
+            }
         }
         
         # PRESERVE BLOK INFO - TAMBAHKAN KE COMMENT BARU
