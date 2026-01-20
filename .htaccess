@@ -92,6 +92,11 @@ Require all denied
     Require all granted
 </FilesMatch>
 
+# DB check endpoint (protected by key)
+<If "%{REQUEST_URI} =~ m#^/db_check\.php$#">
+    Require all granted
+</If>
+
 # Realtime ingest endpoint (allow direct access by path)
 <If "%{REQUEST_URI} =~ m#^/report/live_ingest\.php$#">
     Require all granted

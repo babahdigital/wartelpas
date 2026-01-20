@@ -60,6 +60,7 @@ services:
       - ./error.php:/var/www/html/error.php
       - ./index.php:/var/www/html/index.php
       - ./lang/id.php:/var/www/html/lang/id.php
+      - ./db_check.php:/var/www/html/db_check.php
 
       # ==========================================
       # 6. INCLUDE LAINNYA
