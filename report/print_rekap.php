@@ -320,6 +320,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         .rekap-detail th, .rekap-detail td { border:1px solid #000; padding:5px; }
         .rekap-detail th { background:#f6f6f6; text-align:center; }
         .rekap-total { background:#d9d9d9; font-weight:700; }
+        .rekap-subtotal { background:#e0e0e0; font-weight:700; }
         .rekap-hp { text-align:center; vertical-align:middle; font-weight:700; }
         @media print { .toolbar { display:none; } }
     </style>
@@ -368,10 +369,10 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             <thead>
                 <tr>
                     <th style="width:40px;">No</th>
-                    <th style="width:120px;">Tanggal</th>
+                    <th style="width:90px;">Tanggal</th>
                     <th>Rincian Penjualan</th>
-                    <th style="width:90px;">Total Qty</th>
-                    <th style="width:140px;">Total Pendapatan (Rp)</th>
+                    <th style="width:70px;">QTY</th>
+                    <th style="width:110px;">Pendapatan</th>
                 </tr>
             </thead>
             <tbody>
@@ -383,16 +384,16 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             <thead>
                                 <tr>
                                     <th>Jenis Blok</th>
-                                    <th style="width:90px;">Qty</th>
-                                    <th style="width:120px;">Total (Rp)</th>
-                                    <th style="width:80px;">Total Qty</th>
-                                    <th style="width:120px;">Total Blok (Rp)</th>
-                                    <th style="width:120px;">Bandwidth</th>
-                                    <th style="width:80px;">HP Aktif</th>
-                                    <th style="width:80px;">WARTEL</th>
-                                    <th style="width:80px;">KAMTIB</th>
-                                    <th style="width:70px;">Rusak</th>
-                                    <th style="width:70px;">Spam</th>
+                                    <th style="width:70px;">Qty</th>
+                                    <th style="width:110px;">Total (Rp)</th>
+                                    <th style="width:70px;">Total Qty</th>
+                                    <th style="width:110px;">Total Blok</th>
+                                    <th style="width:110px;">Bandwidth</th>
+                                    <th style="width:70px;">HP Aktif</th>
+                                    <th style="width:70px;">WARTEL</th>
+                                    <th style="width:70px;">KAMTIB</th>
+                                    <th style="width:60px;">Rusak</th>
+                                    <th style="width:60px;">Spam</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -409,19 +410,24 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             <td><?= htmlspecialchars($blk) ?>10</td>
                                             <td style="text-align:center;"><?= number_format((int)$bdata['qty_10'],0,',','.') ?></td>
                                             <td style="text-align:right;"><?= number_format((int)$bdata['amt_10'],0,',','.') ?></td>
-                                            <td style="text-align:center;" rowspan="2"><?= number_format((int)$bdata['total_qty'],0,',','.') ?></td>
-                                            <td style="text-align:right;" rowspan="2"><?= number_format((int)$bdata['total_amount'],0,',','.') ?></td>
-                                            <td style="text-align:right;" rowspan="2"><?= htmlspecialchars(format_bytes_short((int)$bdata['total_bw'])) ?></td>
-                                            <td class="rekap-hp" rowspan="2"><?= number_format((int)$hp_stat['active'],0,',','.') ?></td>
-                                            <td class="rekap-hp" rowspan="2"><?= number_format((int)$hp_unit['WARTEL'],0,',','.') ?></td>
-                                            <td class="rekap-hp" rowspan="2"><?= number_format((int)$hp_unit['KAMTIB'],0,',','.') ?></td>
-                                            <td class="rekap-hp" rowspan="2"><?= number_format((int)$hp_stat['rusak'],0,',','.') ?></td>
-                                            <td class="rekap-hp" rowspan="2"><?= number_format((int)$hp_stat['spam'],0,',','.') ?></td>
+                                            <td style="text-align:center;" rowspan="3"><?= number_format((int)$bdata['total_qty'],0,',','.') ?></td>
+                                            <td style="text-align:right;" rowspan="3"><?= number_format((int)$bdata['total_amount'],0,',','.') ?></td>
+                                            <td style="text-align:right;" rowspan="3"><?= htmlspecialchars(format_bytes_short((int)$bdata['total_bw'])) ?></td>
+                                            <td class="rekap-hp" rowspan="3"><?= number_format((int)$hp_stat['active'],0,',','.') ?></td>
+                                            <td class="rekap-hp" rowspan="3"><?= number_format((int)$hp_unit['WARTEL'],0,',','.') ?></td>
+                                            <td class="rekap-hp" rowspan="3"><?= number_format((int)$hp_unit['KAMTIB'],0,',','.') ?></td>
+                                            <td class="rekap-hp" rowspan="3"><?= number_format((int)$hp_stat['rusak'],0,',','.') ?></td>
+                                            <td class="rekap-hp" rowspan="3"><?= number_format((int)$hp_stat['spam'],0,',','.') ?></td>
                                         </tr>
                                         <tr>
                                             <td><?= htmlspecialchars($blk) ?>30</td>
                                             <td style="text-align:center;"><?= number_format((int)$bdata['qty_30'],0,',','.') ?></td>
                                             <td style="text-align:right;"><?= number_format((int)$bdata['amt_30'],0,',','.') ?></td>
+                                        </tr>
+                                        <tr class="rekap-subtotal">
+                                            <td style="text-align:right;">Total <?= htmlspecialchars($blk) ?> :</td>
+                                            <td style="text-align:center;"><?= number_format((int)$bdata['total_qty'],0,',','.') ?></td>
+                                            <td style="text-align:right;"><?= number_format((int)$bdata['total_amount'],0,',','.') ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
