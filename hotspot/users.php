@@ -152,6 +152,12 @@ function extract_datetime_from_comment($comment) {
   if (preg_match('/RUSAK\s*\d{2}\/\d{2}\/\d{2}\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})/i', $comment, $m)) {
     return $m[1];
   }
+  // Support format: mm.dd.yy (contoh: 01.20.26)
+  if (preg_match('/\b(\d{2})[\.\/-](\d{2})[\.\/-](\d{2})\b/', $comment, $m)) {
+    $yy = (int)$m[3];
+    $year = $yy < 70 ? (2000 + $yy) : (1900 + $yy);
+    return sprintf('%04d-%02d-%02d 00:00:00', $year, (int)$m[1], (int)$m[2]);
+  }
   // Support format: "Valid dd-mm-YYYY HH:MM:SS" (or with colon)
   if (preg_match('/\bValid\s*:?(\d{2})-(\d{2})-(\d{4})\s+(\d{2}:\d{2}:\d{2})/i', $comment, $m)) {
     return $m[3] . '-' . $m[2] . '-' . $m[1] . ' ' . $m[4];
@@ -1201,7 +1207,7 @@ foreach($all_users as $u) {
         $hist_dt = $hist['last_login_real'] ?? ($hist['first_login_real'] ?? ($hist['updated_at'] ?? ''));
         $date_candidate = $comment_dt !== '' ? $comment_dt : ($login_time_real ?: $logout_time_real ?: $hist_dt);
         $date_key = normalize_date_key($date_candidate, $req_show);
-        if ($date_key === '' || $date_key !== $filter_date) {
+        if ($date_key !== '' && $date_key !== $filter_date) {
           continue;
         }
       }
