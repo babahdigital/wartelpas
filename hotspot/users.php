@@ -479,11 +479,11 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $bytes = max((int)$bytes_total, (int)$bytes_active);
       $uptime = $urow['uptime'] ?? ($arow['uptime'] ?? '0s');
       $uptime_sec = uptime_to_seconds($uptime);
-      $bytes_limit = 10 * 1024 * 1024; // 10 MB
+      $bytes_limit = 1 * 1024 * 1024; // 1 MB
       $is_active = isset($arow['user']);
-      if (!($act == 'retur' && $is_rusak_target) && ($is_active || $bytes > $bytes_limit || $uptime_sec > 300)) {
+      if (!($act == 'retur' && $is_rusak_target) && ($is_active || $bytes > $bytes_limit || $uptime_sec > 180)) {
         $action_blocked = true;
-        $action_error = 'Gagal: data sudah terpakai (online / bytes > 10MB / uptime > 5 menit).';
+        $action_error = 'Gagal: data sudah terpakai (online / bytes > 1MB / uptime > 3 menit).';
       }
     }
     if (!$action_blocked && $act == 'retur') {
