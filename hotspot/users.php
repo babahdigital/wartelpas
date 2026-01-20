@@ -174,6 +174,14 @@ function extract_datetime_from_comment($comment) {
   return date('Y-m-d H:i:s', $ts);
 }
 
+// Helper: gabungkan tanggal dari $dateStr dengan jam dari $timeStr
+function merge_date_time($dateStr, $timeStr) {
+  if (empty($dateStr) || empty($timeStr)) return $dateStr;
+  $date = date('Y-m-d', strtotime($dateStr));
+  $time = date('H:i:s', strtotime($timeStr));
+  return $date . ' ' . $time;
+}
+
 // Helper: Ekstrak sumber retur dari comment
 function extract_retur_ref($comment) {
   if (empty($comment)) return '';
@@ -1172,6 +1180,10 @@ foreach($all_users as $u) {
           $logout_time_real = $comment_dt;
         }
       }
+      // Jika jam 00:00:00 dari komentar, gunakan jam dari updated_at (agar presisi)
+      if (!empty($logout_time_real) && substr($logout_time_real, -8) === '00:00:00' && !empty($hist['updated_at'])) {
+        $logout_time_real = merge_date_time($logout_time_real, $hist['updated_at']);
+      }
       if (empty($login_time_real) && !empty($logout_time_real)) {
         $base_uptime = $uptime_user != '' ? $uptime_user : $uptime_hist;
         $u_sec = uptime_to_seconds($base_uptime);
@@ -1188,6 +1200,9 @@ foreach($all_users as $u) {
         if (empty($logout_time_real)) {
           $comment_dt = extract_datetime_from_comment($comment);
           if ($comment_dt != '') $logout_time_real = $comment_dt;
+        }
+        if (!empty($logout_time_real) && substr($logout_time_real, -8) === '00:00:00' && !empty($hist['updated_at'])) {
+          $logout_time_real = merge_date_time($logout_time_real, $hist['updated_at']);
         }
         if (empty($login_time_real) && !empty($logout_time_real)) {
           $base_uptime = $uptime_hist != '' ? $uptime_hist : $uptime_user;
@@ -1333,8 +1348,11 @@ foreach($all_users as $u) {
       if (!$found) continue;
     }
 
-    $login_disp = $login_time_real ?? ($hist['login_time_real'] ?? '-');
-    $logout_disp = $logout_time_real ?? ($hist['logout_time_real'] ?? '-');
+    $login_disp = $login_time_real ?? ($hist['login_time_real'] ?? ($hist['first_login_real'] ?? '-'));
+    $logout_disp = $logout_time_real ?? ($hist['logout_time_real'] ?? ($hist['last_login_real'] ?? '-'));
+    if ($logout_disp !== '-' && substr($logout_disp, -8) === '00:00:00' && !empty($hist['updated_at'])) {
+      $logout_disp = merge_date_time($logout_disp, $hist['updated_at']);
+    }
 
     $display_data[] = [
       'uid' => $u['.id'] ?? '',
