@@ -473,7 +473,7 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
 <div id="hpModal" class="modal-backdrop" onclick="if(event.target===this){this.style.display='none';}">
     <div class="modal-card">
         <div class="modal-title">Input Handphone per Blok (Harian)</div>
-        <form id="hpForm" method="post" action="./hp_save.php">
+        <form id="hpForm" method="post" action="report/hp_save.php">
             <input type="hidden" name="report" value="selling">
             <?php if ($session_id !== ''): ?>
                 <input type="hidden" name="session" value="<?= htmlspecialchars($session_id); ?>">
