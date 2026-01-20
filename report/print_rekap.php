@@ -449,7 +449,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             Keterangan: RS = Rusak, SP = Spam, WR = Wartel, KM = Kamtib.
         </div>
         <div style="margin-top:4px; font-size:11px; color:#444;">
-            Catatan: Data bersifat sementara sampai settlement harian jam 03:00. Data final dihitung pada jam 02:00.
+            Catatan: Data bersifat sementara sampai settlement harian jam 03:00. Data final dihitung pada jam 04:00.
         </div>
     <?php endif; ?>
 
