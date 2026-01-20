@@ -95,7 +95,7 @@
         /tool fetch url=$url http-method=post http-data=("data=" . $payload) keep-result=no;
 
         # REALTIME USAGE (LOGIN)
-        :local usageUrl ("http://wartelpas.sobigidul.net/process/usage_ingest.php?key=" . $key . "&session=" . $session . "&event=login" . "&user=" . $user . "&date=" . $date . "&time=" . $time . "&ip=" . $address . "&mac=" . $mac . "&uptime=" . $uptime . "&comment=" . $comment);
+        :local usageUrl ("http://wartelpas.sobigidul.net/process/usage_ingest.php?key=" . $key . "&session=" . $session . "&event=login" . "&user=" . $user . "&date=" . $date . "&time=" . $time . "&ip=" . $address . "&mac=" . $mac . "&uptime=" . $uptime);
         /tool fetch url=$usageUrl keep-result=no;
         
         # SET COMMENT BARU (DENGAN BLOK) - TANPA MENUMPUK
