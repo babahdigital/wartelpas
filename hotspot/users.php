@@ -280,7 +280,8 @@ try {
         login_time_real DATETIME,
         logout_time_real DATETIME,
         last_status TEXT DEFAULT 'ready',
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        login_count INTEGER DEFAULT 0
     )");
     // Pastikan kolom last_uptime ada
     try { $db->exec("ALTER TABLE login_history ADD COLUMN last_uptime TEXT"); } catch(Exception $e) {}
