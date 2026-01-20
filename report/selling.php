@@ -98,9 +98,9 @@ if (isset($db) && $db instanceof PDO && isset($_POST['hp_submit'])) {
     $blok_name = trim($_POST['blok_name'] ?? '');
     $report_date = trim($_POST['report_date'] ?? '');
     $total_units = (int)($_POST['total_units'] ?? 0);
-    $active_units = (int)($_POST['active_units'] ?? 0);
     $rusak_units = (int)($_POST['rusak_units'] ?? 0);
     $spam_units = (int)($_POST['spam_units'] ?? 0);
+    $active_units = max(0, $total_units - $rusak_units - $spam_units);
     $notes = trim($_POST['notes'] ?? '');
 
     $use_wartel = isset($_POST['unit_wartel']) ? 1 : 0;
@@ -120,6 +120,8 @@ if (isset($db) && $db instanceof PDO && isset($_POST['hp_submit'])) {
                 $hp_error = 'Jika hanya KAMTIB dipilih, jumlahnya harus sama dengan total.';
             } elseif ($use_wartel && $use_kamtib && $total_units !== $sum_units) {
                 $hp_error = 'Total unit harus sama dengan jumlah WARTEL + KAMTIB.';
+            } elseif ($total_units < ($rusak_units + $spam_units)) {
+                $hp_error = 'Total unit tidak boleh kurang dari Rusak + Spam.';
             } else {
                 $stmt = $db->prepare("INSERT INTO phone_block_daily
                     (report_date, blok_name, unit_type, total_units, active_units, rusak_units, spam_units, notes, updated_at)
@@ -478,10 +480,6 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
                     <input class="form-input" type="number" name="total_units" min="0" value="0" required>
                 </div>
                 <div>
-                    <label>Aktif</label>
-                    <input class="form-input" type="number" name="active_units" min="0" value="0">
-                </div>
-                <div>
                     <label>Rusak</label>
                     <input class="form-input" type="number" name="rusak_units" min="0" value="0">
                 </div>
@@ -490,6 +488,7 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
                     <input class="form-input" type="number" name="spam_units" min="0" value="0">
                 </div>
             </div>
+            <input type="hidden" name="active_units" value="0">
             <div style="margin-top:10px;">
                 <label>Distribusi Unit (wajib pilih salah satu)</label>
                 <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-top:6px;">
@@ -541,8 +540,11 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
         var btn = document.getElementById('hpSubmitBtn');
         var err = document.getElementById('hpClientError');
         var totalEl = form ? form.querySelector('input[name="total_units"]') : null;
+        var activeEl = form ? form.querySelector('input[name="active_units"]') : null;
         var wartelEl = form ? form.querySelector('input[name="wartel_units"]') : null;
         var kamtibEl = form ? form.querySelector('input[name="kamtib_units"]') : null;
+        var rusakEl = form ? form.querySelector('input[name="rusak_units"]') : null;
+        var spamEl = form ? form.querySelector('input[name="spam_units"]') : null;
         function toggle(){
             if (ww) ww.style.display = w && w.checked ? 'block' : 'none';
             if (kw) kw.style.display = k && k.checked ? 'block' : 'none';
@@ -555,6 +557,12 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
             var total = totalEl ? parseInt(totalEl.value || '0', 10) : 0;
             var wartel = wartelEl ? parseInt(wartelEl.value || '0', 10) : 0;
             var kamtib = kamtibEl ? parseInt(kamtibEl.value || '0', 10) : 0;
+            var rusak = rusakEl ? parseInt(rusakEl.value || '0', 10) : 0;
+            var spam = spamEl ? parseInt(spamEl.value || '0', 10) : 0;
+            if (activeEl) {
+                var calcActive = total - rusak - spam;
+                activeEl.value = calcActive >= 0 ? calcActive : 0;
+            }
             var useW = !!(w && w.checked);
             var useK = !!(k && k.checked);
             var msg = '';
@@ -566,6 +574,8 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
                 msg = 'Jika hanya KAMTIB dipilih, jumlahnya harus sama dengan total.';
             } else if (useW && useK && total !== (wartel + kamtib)) {
                 msg = 'Total unit harus sama dengan jumlah WARTEL + KAMTIB.';
+            } else if (total < (rusak + spam)) {
+                msg = 'Total unit tidak boleh kurang dari Rusak + Spam.';
             }
             if (msg) {
                 err.textContent = msg;
@@ -582,6 +592,8 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
         if (totalEl) totalEl.addEventListener('input', validate);
         if (wartelEl) wartelEl.addEventListener('input', validate);
         if (kamtibEl) kamtibEl.addEventListener('input', validate);
+        if (rusakEl) rusakEl.addEventListener('input', validate);
+        if (spamEl) spamEl.addEventListener('input', validate);
         toggle();
     })();
 </script>
