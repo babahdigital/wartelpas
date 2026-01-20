@@ -473,12 +473,14 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
 <div id="hpModal" class="modal-backdrop" onclick="if(event.target===this){this.style.display='none';}">
     <div class="modal-card">
         <div class="modal-title">Input Handphone per Blok (Harian)</div>
-        <form id="hpForm" method="post" action="./?report=selling<?= $session_qs; ?>&show=<?= $req_show; ?>&date=<?= urlencode($filter_date); ?>">
+        <form id="hpForm" method="post" action="./hp_save.php">
             <input type="hidden" name="report" value="selling">
             <?php if ($session_id !== ''): ?>
                 <input type="hidden" name="session" value="<?= htmlspecialchars($session_id); ?>">
             <?php endif; ?>
             <input type="hidden" name="ajax" value="1">
+            <input type="hidden" name="show" value="<?= htmlspecialchars($req_show); ?>">
+            <input type="hidden" name="date" value="<?= htmlspecialchars($filter_date); ?>">
             <div class="form-grid-2">
                 <div>
                     <label>Blok</label>
@@ -620,16 +622,18 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
                 if (btn && btn.disabled) return;
                 var fd = new FormData(form);
                 fetch(form.action, { method: 'POST', body: fd })
-                    .then(function(r){ return r.json(); })
-                    .then(function(data){
+                    .then(function(r){ return r.text(); })
+                    .then(function(text){
+                        var data = null;
+                        try { data = JSON.parse(text); } catch (e) {}
                         if (data && data.ok && data.redirect) {
                             window.location.replace(data.redirect);
-                        } else {
-                            var msg = (data && data.message) ? data.message : 'Gagal menyimpan data.';
-                            err.textContent = msg;
-                            err.style.display = 'block';
-                            if (btn) btn.disabled = true;
+                            return;
                         }
+                        var msg = (data && data.message) ? data.message : 'Respon tidak valid dari server.';
+                        err.textContent = msg;
+                        err.style.display = 'block';
+                        if (btn) btn.disabled = true;
                     })
                     .catch(function(){
                         err.textContent = 'Gagal mengirim data. Coba lagi.';
