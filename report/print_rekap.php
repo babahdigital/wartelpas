@@ -47,18 +47,26 @@ function norm_date_from_raw_report($raw_date) {
     return '';
 }
 
-function make_profile_label($profile, $block_letter) {
-    $profile = trim((string)$profile);
-    $slug = strtoupper(preg_replace('/[^A-Z0-9]+/', '', $profile));
-    if ($slug === '') return 'BLOK-' . $block_letter;
-    return 'BLOK-' . $block_letter . '-' . $slug;
+function normalize_block_name($blok_name, $comment = '') {
+    $raw = strtoupper(trim((string)$blok_name));
+    if ($raw === '' && $comment !== '') {
+        if (preg_match('/\bblok\s*[-_]?\s*([A-Z0-9]+)\b/i', $comment, $m)) {
+            $raw = strtoupper($m[1]);
+        }
+    }
+    if ($raw === '') return 'BLOK-LAIN';
+    $raw = preg_replace('/^BLOK[-_\s]*/', '', $raw);
+    if (preg_match('/^([A-Z]+)/', $raw, $m)) {
+        $raw = $m[1];
+    }
+    return 'BLOK-' . $raw;
 }
 
-function normalize_block_letter($blok_name) {
-    $b = strtoupper(trim((string)$blok_name));
-    if ($b === '') return 'LAIN';
-    if (preg_match('/[A-Z]/', $b, $m)) return $m[0];
-    return 'LAIN';
+function detect_profile_minutes($profile) {
+    $p = strtolower((string)$profile);
+    if (preg_match('/\b10\s*(menit|m)\b/i', $p)) return '10';
+    if (preg_match('/\b30\s*(menit|m)\b/i', $p)) return '30';
+    return 'OTHER';
 }
 
 function format_bytes_short($bytes) {
@@ -131,7 +139,7 @@ try {
             $stmtHpBlock->execute([':d' => $filter_date]);
             $hpBlockRows = $stmtHpBlock->fetchAll(PDO::FETCH_ASSOC);
             foreach ($hpBlockRows as $hb) {
-                $blk = normalize_block_letter($hb['blok_name'] ?? '');
+                $blk = normalize_block_name($hb['blok_name'] ?? '');
                 $hp_active_by_block[$blk] = (int)($hb['active_units'] ?? 0);
             }
 
@@ -204,27 +212,22 @@ foreach ($rows as $r) {
         $total_qty_units += $qty;
         $total_net_units += $net_line;
 
-        $block = normalize_block_letter($r['blok_name'] ?? '');
-        $profile_key = strtoupper(trim((string)$profile));
-        if ($profile_key === '') $profile_key = 'UNKNOWN';
-        $label = make_profile_label($profile, $block);
+        $block = normalize_block_name($r['blok_name'] ?? '', $comment);
+        $bucket = detect_profile_minutes($profile);
         if (!isset($block_summaries[$block])) {
             $block_summaries[$block] = [
                 'total_qty' => 0,
                 'total_amount' => 0,
                 'total_bw' => 0,
-                'profiles' => []
+                'qty_10' => 0,
+                'qty_30' => 0
             ];
-        }
-        if (!isset($block_summaries[$block]['profiles'][$profile_key])) {
-            $block_summaries[$block]['profiles'][$profile_key] = ['qty' => 0, 'total' => 0, 'bw' => 0, 'label' => $label];
         }
         $bytes = (int)($r['last_bytes'] ?? 0);
         if ($bytes < 0) $bytes = 0;
         $bw_line = $bytes;
-        $block_summaries[$block]['profiles'][$profile_key]['qty'] += $qty;
-        $block_summaries[$block]['profiles'][$profile_key]['total'] += $net_line;
-        $block_summaries[$block]['profiles'][$profile_key]['bw'] += $bw_line;
+        if ($bucket === '10') $block_summaries[$block]['qty_10'] += $qty;
+        if ($bucket === '30') $block_summaries[$block]['qty_30'] += $qty;
         $block_summaries[$block]['total_qty'] += $qty;
         $block_summaries[$block]['total_amount'] += $net_line;
         $block_summaries[$block]['total_bw'] += $bw_line;
@@ -336,7 +339,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             <thead>
                                 <tr>
                                     <th>Jenis Blok</th>
-                                    <th style="width:70px;">Qty</th>
+                                    <th style="width:90px;">Profile 10 Menit</th>
+                                    <th style="width:90px;">Profile 30 Menit</th>
+                                    <th style="width:70px;">Total Qty</th>
                                     <th style="width:120px;">Total (Rp)</th>
                                     <th style="width:120px;">Bandwidth</th>
                                     <th style="width:90px;">HP Aktif</th>
@@ -344,36 +349,18 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             </thead>
                             <tbody>
                                 <?php if (empty($block_summaries)): ?>
-                                    <tr><td colspan="5" style="text-align:center;">Tidak ada data</td></tr>
+                                    <tr><td colspan="7" style="text-align:center;">Tidak ada data</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($block_summaries as $blk => $bdata): ?>
-                                        <?php
-                                            $profiles = $bdata['profiles'];
-                                            $sorted_profiles = $profiles;
-                                            uasort($sorted_profiles, function($a, $b) {
-                                                return strnatcasecmp($a['label'] ?? '', $b['label'] ?? '');
-                                            });
-                                            $rowspan = count($sorted_profiles) + 1;
-                                            $hp_active_val = (int)($hp_active_by_block[$blk] ?? 0);
-                                            $row_index = 0;
-                                        ?>
-                                        <?php foreach ($sorted_profiles as $pdata): ?>
-                                            <tr>
-                                                <td><?= htmlspecialchars($pdata['label'] ?? ('BLOK-' . $blk)) ?></td>
-                                                <td style="text-align:center;"><?= number_format((int)$pdata['qty'],0,',','.') ?></td>
-                                                <td style="text-align:right;"><?= number_format((int)$pdata['total'],0,',','.') ?></td>
-                                                <td style="text-align:right;"><?= htmlspecialchars(format_bytes_short((int)$pdata['bw'])) ?></td>
-                                                <?php if ($row_index === 0): ?>
-                                                    <td class="rekap-hp" rowspan="<?= (int)$rowspan ?>"><?= number_format($hp_active_val,0,',','.') ?></td>
-                                                <?php endif; ?>
-                                            </tr>
-                                            <?php $row_index++; ?>
-                                        <?php endforeach; ?>
-                                        <tr class="rekap-total">
-                                            <td style="text-align:right;">Total Blok <?= htmlspecialchars($blk) ?> :</td>
+                                        <?php $hp_active_val = (int)($hp_active_by_block[$blk] ?? 0); ?>
+                                        <tr>
+                                            <td><?= htmlspecialchars($blk) ?></td>
+                                            <td style="text-align:center;"><?= number_format((int)$bdata['qty_10'],0,',','.') ?></td>
+                                            <td style="text-align:center;"><?= number_format((int)$bdata['qty_30'],0,',','.') ?></td>
                                             <td style="text-align:center;"><?= number_format((int)$bdata['total_qty'],0,',','.') ?></td>
                                             <td style="text-align:right;"><?= number_format((int)$bdata['total_amount'],0,',','.') ?></td>
                                             <td style="text-align:right;"><?= htmlspecialchars(format_bytes_short((int)$bdata['total_bw'])) ?></td>
+                                            <td class="rekap-hp"><?= number_format($hp_active_val,0,',','.') ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
