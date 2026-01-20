@@ -281,6 +281,7 @@ if ($is_usage && file_exists($dbFile)) {
             }
             if ($status === 'ONLINE') {
                 $logout_time = '-';
+                // gunakan waktu login dari DB agar presisi sama dengan users.php
                 if ($login_time === '') {
                     $u_sec = uptime_to_seconds($uptime);
                     if ($u_sec > 0) {

@@ -344,7 +344,7 @@ function get_user_history($name) {
     global $db;
     if(!$db) return null;
     try {
-    $stmt = $db->prepare("SELECT username, login_time_real, logout_time_real, blok_name, ip_address, mac_address, last_uptime, last_bytes, last_status, first_ip, first_mac, last_ip, last_mac, first_login_real, last_login_real FROM login_history WHERE username = :u LIMIT 1");
+    $stmt = $db->prepare("SELECT username, login_time_real, logout_time_real, blok_name, ip_address, mac_address, last_uptime, last_bytes, last_status, first_ip, first_mac, last_ip, last_mac, first_login_real, last_login_real, updated_at FROM login_history WHERE username = :u LIMIT 1");
         $stmt->execute([':u' => $name]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     } catch(Exception $e){
@@ -1121,7 +1121,8 @@ foreach($all_users as $u) {
       // Filter tanggal (harian/bulanan/tahunan) - abaikan untuk READY
       if (!empty($filter_date) && $status !== 'READY') {
         $comment_dt = extract_datetime_from_comment($comment);
-        $date_candidate = $comment_dt !== '' ? $comment_dt : ($login_time_real ?: $logout_time_real ?: '');
+        $hist_dt = $hist['last_login_real'] ?? ($hist['first_login_real'] ?? ($hist['updated_at'] ?? ''));
+        $date_candidate = $comment_dt !== '' ? $comment_dt : ($login_time_real ?: $logout_time_real ?: $hist_dt);
         $date_key = normalize_date_key($date_candidate, $req_show);
         if ($date_key === '' || $date_key !== $filter_date) {
           continue;
