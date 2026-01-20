@@ -258,7 +258,13 @@ foreach ($rows as $r) {
                 'qty_10' => 0,
                 'qty_30' => 0,
                 'amt_10' => 0,
-                'amt_30' => 0
+                'amt_30' => 0,
+                'rs_10' => 0,
+                'rt_10' => 0,
+                'rs_30' => 0,
+                'rt_30' => 0,
+                'rs_total' => 0,
+                'rt_total' => 0
             ];
         }
         $bytes = (int)($r['last_bytes'] ?? 0);
@@ -267,14 +273,20 @@ foreach ($rows as $r) {
         if ($bucket === '10') {
             $block_summaries[$block]['qty_10'] += $qty;
             $block_summaries[$block]['amt_10'] += $net_line;
+            if ($status === 'rusak') $block_summaries[$block]['rs_10'] += $qty;
+            if ($status === 'retur') $block_summaries[$block]['rt_10'] += $qty;
         }
         if ($bucket === '30') {
             $block_summaries[$block]['qty_30'] += $qty;
             $block_summaries[$block]['amt_30'] += $net_line;
+            if ($status === 'rusak') $block_summaries[$block]['rs_30'] += $qty;
+            if ($status === 'retur') $block_summaries[$block]['rt_30'] += $qty;
         }
         $block_summaries[$block]['total_qty'] += $qty;
         $block_summaries[$block]['total_amount'] += $net_line;
         $block_summaries[$block]['total_bw'] += $bw_line;
+        if ($status === 'rusak') $block_summaries[$block]['rs_total'] += $qty;
+        if ($status === 'retur') $block_summaries[$block]['rt_total'] += $qty;
     }
 
     $total_qty++;
