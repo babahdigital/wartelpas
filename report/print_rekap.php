@@ -383,12 +383,10 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             <thead>
                                 <tr>
                                     <th>Jenis Blok</th>
-                                    <th style="width:90px;">Qty 10 Menit</th>
-                                    <th style="width:120px;">Total 10 Menit (Rp)</th>
-                                    <th style="width:90px;">Qty 30 Menit</th>
-                                    <th style="width:120px;">Total 30 Menit (Rp)</th>
-                                    <th style="width:70px;">Total Qty</th>
+                                    <th style="width:90px;">Qty</th>
                                     <th style="width:120px;">Total (Rp)</th>
+                                    <th style="width:80px;">Total Qty</th>
+                                    <th style="width:120px;">Total Blok (Rp)</th>
                                     <th style="width:120px;">Bandwidth</th>
                                     <th style="width:80px;">HP Aktif</th>
                                     <th style="width:80px;">WARTEL</th>
@@ -399,7 +397,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             </thead>
                             <tbody>
                                 <?php if (empty($block_summaries)): ?>
-                                    <tr><td colspan="13" style="text-align:center;">Tidak ada data</td></tr>
+                                    <tr><td colspan="11" style="text-align:center;">Tidak ada data</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($block_summaries as $blk => $bdata): ?>
                                         <?php
@@ -408,19 +406,22 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             $hp_unit = $hp_units_by_block[$blk] ?? ['WARTEL' => 0, 'KAMTIB' => 0];
                                         ?>
                                         <tr>
-                                            <td><?= htmlspecialchars($blk) ?></td>
+                                            <td><?= htmlspecialchars($blk) ?>10</td>
                                             <td style="text-align:center;"><?= number_format((int)$bdata['qty_10'],0,',','.') ?></td>
                                             <td style="text-align:right;"><?= number_format((int)$bdata['amt_10'],0,',','.') ?></td>
+                                            <td style="text-align:center;" rowspan="2"><?= number_format((int)$bdata['total_qty'],0,',','.') ?></td>
+                                            <td style="text-align:right;" rowspan="2"><?= number_format((int)$bdata['total_amount'],0,',','.') ?></td>
+                                            <td style="text-align:right;" rowspan="2"><?= htmlspecialchars(format_bytes_short((int)$bdata['total_bw'])) ?></td>
+                                            <td class="rekap-hp" rowspan="2"><?= number_format((int)$hp_stat['active'],0,',','.') ?></td>
+                                            <td class="rekap-hp" rowspan="2"><?= number_format((int)$hp_unit['WARTEL'],0,',','.') ?></td>
+                                            <td class="rekap-hp" rowspan="2"><?= number_format((int)$hp_unit['KAMTIB'],0,',','.') ?></td>
+                                            <td class="rekap-hp" rowspan="2"><?= number_format((int)$hp_stat['rusak'],0,',','.') ?></td>
+                                            <td class="rekap-hp" rowspan="2"><?= number_format((int)$hp_stat['spam'],0,',','.') ?></td>
+                                        </tr>
+                                        <tr>
+                                            <td><?= htmlspecialchars($blk) ?>30</td>
                                             <td style="text-align:center;"><?= number_format((int)$bdata['qty_30'],0,',','.') ?></td>
                                             <td style="text-align:right;"><?= number_format((int)$bdata['amt_30'],0,',','.') ?></td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['total_qty'],0,',','.') ?></td>
-                                            <td style="text-align:right;"><?= number_format((int)$bdata['total_amount'],0,',','.') ?></td>
-                                            <td style="text-align:right;"><?= htmlspecialchars(format_bytes_short((int)$bdata['total_bw'])) ?></td>
-                                            <td class="rekap-hp"><?= number_format((int)$hp_stat['active'],0,',','.') ?></td>
-                                            <td class="rekap-hp"><?= number_format((int)$hp_unit['WARTEL'],0,',','.') ?></td>
-                                            <td class="rekap-hp"><?= number_format((int)$hp_unit['KAMTIB'],0,',','.') ?></td>
-                                            <td class="rekap-hp"><?= number_format((int)$hp_stat['rusak'],0,',','.') ?></td>
-                                            <td class="rekap-hp"><?= number_format((int)$hp_stat['spam'],0,',','.') ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
