@@ -385,7 +385,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                     <th style="width:90px;">Tanggal</th>
                     <th>Rincian Penjualan</th>
                     <th style="width:70px;">QTY</th>
-                    <th style="width:110px;">Pendapatan</th>
+                    <th style="width:90px;">Pendapatan</th>
                 </tr>
             </thead>
             <tbody>
@@ -395,17 +395,20 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <table class="rekap-detail">
                             <thead>
                                 <tr>
-                                    <th rowspan="2" style="width:140px;">Jenis Blok</th>
-                                    <th rowspan="2" style="width:70px;">Qty</th>
-                                    <th rowspan="2" style="width:110px;">Total (Rp)</th>
-                                    <th rowspan="2" style="width:70px;">Qty</th>
-                                    <th rowspan="2" style="width:110px;">Total Blok</th>
-                                    <th rowspan="2" style="width:110px;">Bandwidth</th>
+                                    <th rowspan="2" style="width:170px;">Jenis Blok</th>
+                                    <th colspan="3" style="width:150px;">Qty</th>
+                                    <th rowspan="2" style="width:90px;">Pendapatan</th>
+                                    <th rowspan="2" style="width:80px;">Qty</th>
+                                    <th rowspan="2" style="width:90px;">Total Blok</th>
+                                    <th rowspan="2" style="width:90px;">Bandwidth</th>
                                     <th colspan="3" style="width:210px;">Device</th>
                                     <th colspan="2" style="width:140px;">Unit</th>
                                     <th rowspan="2" style="width:70px;">Aktif</th>
                                 </tr>
                                 <tr>
+                                    <th style="width:50px;">Total</th>
+                                    <th style="width:50px;">RS</th>
+                                    <th style="width:50px;">RT</th>
                                     <th style="width:70px;">Total</th>
                                     <th style="width:70px;">RS</th>
                                     <th style="width:70px;">SP</th>
@@ -415,7 +418,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             </thead>
                             <tbody>
                                 <?php if (empty($block_summaries)): ?>
-                                    <tr><td colspan="11" style="text-align:center;">Tidak ada data</td></tr>
+                                    <tr><td colspan="14" style="text-align:center;">Tidak ada data</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($block_summaries as $blk => $bdata): ?>
                                         <?php
@@ -426,6 +429,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                         <tr>
                                             <td><?= htmlspecialchars($blk) ?>10</td>
                                             <td style="text-align:center;"><?= number_format((int)$bdata['qty_10'],0,',','.') ?></td>
+                                            <td style="text-align:center;"><?= number_format((int)$bdata['rs_10'],0,',','.') ?></td>
+                                            <td style="text-align:center;"><?= number_format((int)$bdata['rt_10'],0,',','.') ?></td>
                                             <td style="text-align:right;"><?= number_format((int)$bdata['amt_10'],0,',','.') ?></td>
                                             <td style="text-align:center;" rowspan="3"><?= number_format((int)$bdata['total_qty'],0,',','.') ?></td>
                                             <td style="text-align:right;" rowspan="3"><?= number_format((int)$bdata['total_amount'],0,',','.') ?></td>
@@ -440,11 +445,15 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                         <tr>
                                             <td><?= htmlspecialchars($blk) ?>30</td>
                                             <td style="text-align:center;"><?= number_format((int)$bdata['qty_30'],0,',','.') ?></td>
+                                            <td style="text-align:center;"><?= number_format((int)$bdata['rs_30'],0,',','.') ?></td>
+                                            <td style="text-align:center;"><?= number_format((int)$bdata['rt_30'],0,',','.') ?></td>
                                             <td style="text-align:right;"><?= number_format((int)$bdata['amt_30'],0,',','.') ?></td>
                                         </tr>
                                         <tr class="rekap-subtotal">
                                             <td style="text-align:right;">Total <?= htmlspecialchars($blk) ?> :</td>
                                             <td style="text-align:center;"><?= number_format((int)$bdata['total_qty'],0,',','.') ?></td>
+                                            <td style="text-align:center;"><?= number_format((int)$bdata['rs_total'],0,',','.') ?></td>
+                                            <td style="text-align:center;"><?= number_format((int)$bdata['rt_total'],0,',','.') ?></td>
                                             <td style="text-align:right;"><?= number_format((int)$bdata['total_amount'],0,',','.') ?></td>
                                         </tr>
                                     <?php endforeach; ?>
