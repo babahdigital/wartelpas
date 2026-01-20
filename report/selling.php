@@ -534,7 +534,7 @@ $total_qty_laku = max(0, $total_qty - $total_qty_retur - $total_qty_rusak - $tot
             <div class="summary-card">
                 <div class="summary-title">Total Voucher Laku</div>
                 <div class="summary-value"><?= number_format($total_qty_laku,0,',','.') ?></div>
-                <div style="font-size:12px;color:var(--txt-muted)">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bandwidth: -</div>
+                <div style="font-size:12px;color:var(--txt-muted);margin-top: 3px;">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bandwidth: -</div>
             </div>
         </div>
     </div>
