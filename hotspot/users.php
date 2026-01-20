@@ -1544,14 +1544,14 @@ if ($is_ajax) {
           <?php endif; ?>
         </td>
         <td class="text-center">
-          <?php if ($req_status === 'all'): ?>
-            <?php if (strtoupper($u['status']) === 'TERPAKAI'): ?>
+          <?php if (in_array($req_status, ['all','used','rusak','online'], true)): ?>
+            <?php if (strtoupper($u['status']) === 'TERPAKAI' && in_array($req_status, ['all','used'], true)): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=used&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
-            <?php elseif (strtoupper($u['status']) === 'ONLINE'): ?>
+            <?php elseif (strtoupper($u['status']) === 'ONLINE' && in_array($req_status, ['all','online'], true)): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=online&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Online"><i class="fa fa-print"></i></button>
-            <?php elseif (strtoupper($u['status']) === 'RUSAK'): ?>
+            <?php elseif (strtoupper($u['status']) === 'RUSAK' && in_array($req_status, ['all','rusak'], true)): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=rusak&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Rusak"><i class="fa fa-print"></i></button>
-            <?php else: ?>
+            <?php elseif ($req_status === 'all'): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
             <?php endif; ?>
           <?php endif; ?>
@@ -1958,14 +1958,14 @@ if ($debug_mode && !$is_ajax) {
                       <?php endif; ?>
                     </td>
                     <td class="text-center">
-                      <?php if ($req_status === 'all'): ?>
-                        <?php if (strtoupper($u['status']) === 'TERPAKAI'): ?>
+                      <?php if (in_array($req_status, ['all','used','rusak','online'], true)): ?>
+                        <?php if (strtoupper($u['status']) === 'TERPAKAI' && in_array($req_status, ['all','used'], true)): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=used&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
-                        <?php elseif (strtoupper($u['status']) === 'ONLINE'): ?>
+                        <?php elseif (strtoupper($u['status']) === 'ONLINE' && in_array($req_status, ['all','online'], true)): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=online&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Online"><i class="fa fa-print"></i></button>
-                        <?php elseif (strtoupper($u['status']) === 'RUSAK'): ?>
+                        <?php elseif (strtoupper($u['status']) === 'RUSAK' && in_array($req_status, ['all','rusak'], true)): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=rusak&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Rusak"><i class="fa fa-print"></i></button>
-                        <?php else: ?>
+                        <?php elseif ($req_status === 'all'): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
                         <?php endif; ?>
                       <?php endif; ?>
