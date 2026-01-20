@@ -17,10 +17,13 @@ $req_prof = isset($_GET['profile']) ? $_GET['profile'] : 'all';
 $req_comm = isset($_GET['comment']) ? urldecode($_GET['comment']) : '';
 $req_status = isset($_GET['status']) ? $_GET['status'] : 'all';
 $req_search = isset($_GET['q']) ? $_GET['q'] : '';
-$req_show = $_GET['show'] ?? 'harian';
+$default_show = in_array($req_status, ['used', 'rusak', 'retur']) ? 'semua' : 'harian';
+$req_show = $_GET['show'] ?? $default_show;
 $filter_date = $_GET['date'] ?? '';
-$req_show = in_array($req_show, ['harian', 'bulanan', 'tahunan']) ? $req_show : 'harian';
-if ($req_show === 'harian') {
+$req_show = in_array($req_show, ['harian', 'bulanan', 'tahunan', 'semua']) ? $req_show : 'harian';
+if ($req_show === 'semua') {
+  $filter_date = '';
+} elseif ($req_show === 'harian') {
   $filter_date = $filter_date ?: date('Y-m-d');
 } elseif ($req_show === 'bulanan') {
   $filter_date = $filter_date ?: date('Y-m');
@@ -975,7 +978,8 @@ if ($db) {
         $ip_use = $ip_hist !== '' && $ip_hist !== '-' ? $ip_hist : ($cm['ip'] ?? '');
         $mac_use = $mac_hist !== '' && $mac_hist !== '-' ? $mac_hist : ($cm['mac'] ?? '');
 
-        $h_is_rusak = ($st === 'rusak') || (stripos($comment, 'RUSAK') !== false);
+        $h_comment_rusak = preg_match('/\bAudit:\s*RUSAK\b/i', $comment) || preg_match('/^\s*RUSAK\b/i', $comment);
+        $h_is_rusak = ($st === 'rusak') || $h_comment_rusak;
         $h_is_retur = ($st === 'retur') || (stripos($comment, '(Retur)') !== false) || (stripos($comment, 'Retur Ref:') !== false);
         if ($h_is_rusak) $h_is_retur = false;
         $h_is_used = (!$h_is_rusak && !$h_is_retur) && (
@@ -1090,7 +1094,8 @@ foreach($all_users as $u) {
       $uptime = $uptime_hist;
     }
 
-    $is_rusak = stripos($comment, 'RUSAK') !== false;
+    $comment_rusak = preg_match('/\bAudit:\s*RUSAK\b/i', $comment) || preg_match('/^\s*RUSAK\b/i', $comment);
+    $is_rusak = $comment_rusak;
     $is_invalid = false;
     $is_retur = stripos($comment, '(Retur)') !== false || stripos($comment, 'Retur Ref:') !== false;
     $hist_status = strtolower($hist['last_status'] ?? '');
@@ -1174,7 +1179,7 @@ foreach($all_users as $u) {
     }
 
       // Filter tanggal (harian/bulanan/tahunan) - abaikan untuk READY
-      if (!empty($filter_date) && $status !== 'READY') {
+      if ($req_show !== 'semua' && !empty($filter_date) && $status !== 'READY') {
         $comment_dt = extract_datetime_from_comment($comment);
         $hist_dt = $hist['last_login_real'] ?? ($hist['first_login_real'] ?? ($hist['updated_at'] ?? ''));
         $date_candidate = $comment_dt !== '' ? $comment_dt : ($login_time_real ?: $logout_time_real ?: $hist_dt);
@@ -1573,6 +1578,7 @@ if ($debug_mode && !$is_ajax) {
             </div>
             <div class="input-group-solid period-group">
               <select name="show" class="custom-select-solid first-el no-sep-right" onchange="this.form.submit()" style="flex: 0 0 140px;">
+                <option value="semua" <?= $req_show==='semua'?'selected':''; ?>>Semua</option>
                 <option value="harian" <?= $req_show==='harian'?'selected':''; ?>>Harian</option>
                 <option value="bulanan" <?= $req_show==='bulanan'?'selected':''; ?>>Bulanan</option>
                 <option value="tahunan" <?= $req_show==='tahunan'?'selected':''; ?>>Tahunan</option>
@@ -1582,7 +1588,9 @@ if ($debug_mode && !$is_ajax) {
               <?php elseif ($req_show === 'bulanan'): ?>
                 <input type="month" name="date" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" class="form-control last-el no-sep-left" style="flex:0 0 170px;">
               <?php else: ?>
-                <input type="number" name="date" min="2000" max="2100" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" class="form-control last-el no-sep-left" style="flex:0 0 120px;">
+                <?php if ($req_show === 'tahunan'): ?>
+                  <input type="number" name="date" min="2000" max="2100" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" class="form-control last-el no-sep-left" style="flex:0 0 120px;">
+                <?php endif; ?>
               <?php endif; ?>
             </div>
             <span id="search-loading" style="display:none;font-size:12px;color:var(--txt-muted);margin-left:6px;">
