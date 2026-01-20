@@ -1193,6 +1193,9 @@ foreach($all_users as $u) {
           }
         }
       }
+      if ($status === 'TERPAKAI' && empty($logout_time_real) && !empty($hist['updated_at'])) {
+        $logout_time_real = $hist['updated_at'];
+      }
       if (!empty($logout_time_real) && substr($logout_time_real, -8) === '00:00:00' && !empty($hist['updated_at']) && $status !== 'TERPAKAI') {
         $logout_time_real = merge_date_time($logout_time_real, $hist['updated_at']);
       }
