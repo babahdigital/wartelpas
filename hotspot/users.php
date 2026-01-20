@@ -369,7 +369,7 @@ function get_user_history($name) {
     global $db;
     if(!$db) return null;
     try {
-    $stmt = $db->prepare("SELECT username, login_time_real, logout_time_real, blok_name, ip_address, mac_address, last_uptime, last_bytes, last_status, first_ip, first_mac, last_ip, last_mac, first_login_real, last_login_real, updated_at FROM login_history WHERE username = :u LIMIT 1");
+  $stmt = $db->prepare("SELECT username, login_time_real, logout_time_real, blok_name, ip_address, mac_address, last_uptime, last_bytes, last_status, first_ip, first_mac, last_ip, last_mac, first_login_real, last_login_real, updated_at, login_count FROM login_history WHERE username = :u LIMIT 1");
         $stmt->execute([':u' => $name]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     } catch(Exception $e){
@@ -1205,10 +1205,9 @@ foreach($all_users as $u) {
           $logout_time_real = date('Y-m-d H:i:s', strtotime($login_time_real) + $u_sec);
         }
         if ($status === 'TERPAKAI' && empty($login_time_real) && empty($logout_time_real)) {
-          $ref_time = !empty($db_updated_at) ? $db_updated_at : $now;
-          if ($u_sec > 0) {
-            $logout_time_real = $ref_time;
-            $login_time_real = date('Y-m-d H:i:s', strtotime($ref_time) - $u_sec);
+          if (!empty($db_updated_at) && $u_sec > 0) {
+            $logout_time_real = $db_updated_at;
+            $login_time_real = date('Y-m-d H:i:s', strtotime($db_updated_at) - $u_sec);
           }
         }
       }
