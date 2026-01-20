@@ -84,6 +84,13 @@ function extract_datetime_from_comment($comment) {
     return date('Y-m-d H:i:s', $ts);
 }
 
+function format_date_indo($dateStr) {
+    if (empty($dateStr) || $dateStr === '-') return '-';
+    $ts = strtotime($dateStr);
+    if ($ts === false) return $dateStr;
+    return date('d-m-Y H:i:s', $ts);
+}
+
 function format_bytes_short($bytes) {
     $b = (float)$bytes;
     if ($b <= 0) return '0 B';
@@ -370,8 +377,8 @@ function esc($s){ return htmlspecialchars((string)$s); }
               <?php else: ?>
                   <?php foreach ($usage_list as $it): ?>
                   <tr>
-                      <td><?= esc($it['login']) ?></td>
-                      <td><?= esc($it['logout']) ?></td>
+                      <td><?= esc(format_date_indo($it['login'])) ?></td>
+                      <td><?= esc(format_date_indo($it['logout'])) ?></td>
                       <td><?= esc($it['username']) ?></td>
                       <td><?= esc($it['blok']) ?></td>
                       <td><?= esc($it['ip']) ?></td>
