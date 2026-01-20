@@ -924,33 +924,33 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 </tbody>
             </table>
         </div>
-        <?php if ($tx_pages > 1): ?>
-            <?php
-                $tx_base = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
-                $tx_link = function($p) use ($tx_base) { return $tx_base . '&tx_page=' . $p; };
-                $tx_window = 2;
-                $tx_start = max(1, $tx_page - $tx_window);
-                $tx_end = min($tx_pages, $tx_page + $tx_window);
-            ?>
-            <div class="tx-pager">
-                <?php if ($tx_page > 1): ?>
-                    <a href="<?= $tx_link(1); ?>">« First</a>
-                    <a href="<?= $tx_link($tx_page - 1); ?>">‹ Prev</a>
-                <?php endif; ?>
-                <?php for ($p = $tx_start; $p <= $tx_end; $p++): ?>
-                    <?php if ($p == $tx_page): ?>
-                        <span class="active"><?= $p; ?></span>
-                    <?php else: ?>
-                        <a href="<?= $tx_link($p); ?>"><?= $p; ?></a>
-                    <?php endif; ?>
-                <?php endfor; ?>
-                <?php if ($tx_page < $tx_pages): ?>
-                    <a href="<?= $tx_link($tx_page + 1); ?>">Next ›</a>
-                    <a href="<?= $tx_link($tx_pages); ?>">Last »</a>
-                <?php endif; ?>
-            </div>
-        <?php endif; ?>
     </div>
+    <?php if ($tx_pages > 1): ?>
+        <?php
+            $tx_base = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+            $tx_link = function($p) use ($tx_base) { return $tx_base . '&tx_page=' . $p; };
+            $tx_window = 2;
+            $tx_start = max(1, $tx_page - $tx_window);
+            $tx_end = min($tx_pages, $tx_page + $tx_window);
+        ?>
+        <div class="tx-pager">
+            <?php if ($tx_page > 1): ?>
+                <a href="<?= $tx_link(1); ?>">« First</a>
+                <a href="<?= $tx_link($tx_page - 1); ?>">‹ Prev</a>
+            <?php endif; ?>
+            <?php for ($p = $tx_start; $p <= $tx_end; $p++): ?>
+                <?php if ($p == $tx_page): ?>
+                    <span class="active"><?= $p; ?></span>
+                <?php else: ?>
+                    <a href="<?= $tx_link($p); ?>"><?= $p; ?></a>
+                <?php endif; ?>
+            <?php endfor; ?>
+            <?php if ($tx_page < $tx_pages): ?>
+                <a href="<?= $tx_link($tx_page + 1); ?>">Next ›</a>
+                <a href="<?= $tx_link($tx_pages); ?>">Last »</a>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
 </div>
 
 <!-- Pendapatan per Blok/Profile sementara disembunyikan sesuai permintaan -->
