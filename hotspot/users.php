@@ -1505,7 +1505,7 @@ if ($debug_mode && !$is_ajax) {
                   'session' => $session
                 ];
                 if ($req_comm != '') $usage_params['blok'] = $req_comm;
-                $usage_url = '../report/print_rincian.php?' . http_build_query($usage_params);
+                $usage_url = './report/print_rincian.php?' . http_build_query($usage_params);
               ?>
               <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('<?= $usage_url ?>','_blank').print()">
                 <i class="fa fa-print"></i> Print Terpakai
@@ -1624,7 +1624,7 @@ if ($debug_mode && !$is_ajax) {
                     </td>
                     <td class="text-center">
                       <?php if (strtoupper($u['status']) === 'TERPAKAI'): ?>
-                        <button type="button" class="btn-act btn-act-print" onclick="window.open('../report/print_rincian.php?mode=usage&status=used&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
+                        <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=used&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
                       <?php elseif (strtoupper($u['status']) !== 'RUSAK'): ?>
                         <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
                       <?php endif; ?>

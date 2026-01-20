@@ -14,7 +14,36 @@ $dbFile = dirname(__DIR__) . '/db_data/mikhmon_stats.db';
 $cur = isset($currency) ? $currency : 'Rp';
 $session_id = $_GET['session'] ?? '';
 
+$mode = $_GET['mode'] ?? '';
+$req_status = strtolower((string)($_GET['status'] ?? ''));
+$is_usage = ($mode === 'usage' || $req_status === 'used');
+$filter_user = trim((string)($_GET['user'] ?? ''));
+$filter_blok = trim((string)($_GET['blok'] ?? ''));
+
 $filter_date = $_GET['date'] ?? date('Y-m-d');
+
+function normalize_block_name_simple($blok_name) {
+    $raw = strtoupper(trim((string)$blok_name));
+    if ($raw === '') return '';
+    $raw = preg_replace('/^BLOK[-_\s]*/', '', $raw);
+    if (preg_match('/^([A-Z0-9]+)/', $raw, $m)) {
+        $raw = $m[1];
+    }
+    return 'BLOK-' . $raw;
+}
+
+function format_bytes_short($bytes) {
+    $b = (float)$bytes;
+    if ($b <= 0) return '0 B';
+    $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    $i = 0;
+    while ($b >= 1024 && $i < count($units) - 1) {
+        $b /= 1024;
+        $i++;
+    }
+    $dec = $i >= 2 ? 2 : 0;
+    return number_format($b, $dec, ',', '.') . ' ' . $units[$i];
+}
 
 function norm_date_from_raw_report($raw_date) {
     $raw = trim((string)$raw_date);
@@ -40,6 +69,7 @@ function norm_date_from_raw_report($raw_date) {
 
 $rows = [];
 $list = [];
+$usage_list = [];
 
 try {
     if (file_exists($dbFile)) {
@@ -65,6 +95,43 @@ try {
             WHERE ls.sync_status = 'pending'
             ORDER BY sale_datetime DESC, raw_date DESC");
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
+
+        if ($is_usage) {
+            $sql = "SELECT username, blok_name, ip_address, mac_address, last_uptime, last_bytes, login_time_real, logout_time_real, raw_comment, last_status
+                    FROM login_history
+                    WHERE lower(last_status) IN ('terpakai','used')";
+            $params = [];
+            if ($filter_user !== '') {
+                $sql .= " AND username = :u";
+                $params[':u'] = $filter_user;
+            }
+            if ($filter_blok !== '') {
+                $sql .= " AND blok_name IS NOT NULL AND blok_name != ''";
+            }
+            $sql .= " ORDER BY datetime(login_time_real) DESC, username ASC";
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            $usage_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($usage_rows as $ur) {
+                $blok_val = normalize_block_name_simple($ur['blok_name'] ?? '');
+                if ($filter_blok !== '') {
+                    $target_blok = normalize_block_name_simple($filter_blok);
+                    if ($blok_val === '' || strcasecmp($blok_val, $target_blok) !== 0) continue;
+                }
+                $usage_list[] = [
+                    'login' => $ur['login_time_real'] ?? '',
+                    'logout' => $ur['logout_time_real'] ?? '',
+                    'username' => $ur['username'] ?? '-',
+                    'blok' => $blok_val ?: '-',
+                    'ip' => $ur['ip_address'] ?? '-',
+                    'mac' => $ur['mac_address'] ?? '-',
+                    'uptime' => $ur['last_uptime'] ?? '0s',
+                    'bytes' => (int)($ur['last_bytes'] ?? 0),
+                    'status' => $ur['last_status'] ?? 'terpakai',
+                    'comment' => $ur['raw_comment'] ?? ''
+                ];
+            }
+        }
     }
 } catch (Exception $e) {
     $rows = [];
@@ -111,7 +178,7 @@ function esc($s){ return htmlspecialchars((string)$s); }
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Print Rincian Harian</title>
+    <title><?= $is_usage ? 'Bukti Pemakaian Voucher' : 'Print Rincian Harian' ?></title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body { font-family: Arial, sans-serif; color:#111; margin:20px; }
@@ -135,47 +202,92 @@ function esc($s){ return htmlspecialchars((string)$s); }
         <button class="btn" onclick="shareReport()">Share</button>
     </div>
 
-    <h2>Rincian Transaksi Harian</h2>
-    <div class="meta">Tanggal: <?= esc($filter_date) ?></div>
+    <?php if ($is_usage): ?>
+      <h2>Bukti Pemakaian Voucher</h2>
+      <div class="meta">
+        <?php if ($filter_user !== ''): ?>User: <?= esc($filter_user) ?> | <?php endif; ?>
+        <?php if ($filter_blok !== ''): ?>Blok: <?= esc($filter_blok) ?> | <?php endif; ?>
+        Tanggal Cetak: <?= esc(date('Y-m-d H:i')) ?>
+      </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Jam</th>
-                <th>Username</th>
-                <th>Profile</th>
-                <th>Catatan</th>
-                <th>Status</th>
-                <th>Harga</th>
-                <th>Bruto</th>
-                <th>Netto</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php if (empty($list)): ?>
-                <tr><td colspan="8" style="text-align:center;">Tidak ada data</td></tr>
-            <?php else: ?>
-                <?php foreach ($list as $it): ?>
-                <tr>
-                    <td><?= esc($it['time']) ?></td>
-                    <td><?= esc($it['username']) ?></td>
-                    <td><?= esc($it['profile']) ?></td>
-                    <td><?= esc($it['comment']) ?></td>
-                    <td class="status-<?= esc($it['status']) ?>"><?= strtoupper(esc($it['status'])) ?></td>
-                    <td><?= $cur ?> <?= number_format((int)$it['price'],0,',','.') ?></td>
-                    <td><?= $cur ?> <?= number_format((int)$it['gross'],0,',','.') ?></td>
-                    <td><?= $cur ?> <?= number_format((int)$it['net'],0,',','.') ?></td>
-                </tr>
-                <?php endforeach; ?>
-            <?php endif; ?>
-        </tbody>
-    </table>
+      <table>
+          <thead>
+              <tr>
+                  <th>Login</th>
+                  <th>Logout</th>
+                  <th>Username</th>
+                  <th>Blok</th>
+                  <th>IP</th>
+                  <th>MAC</th>
+                  <th>Uptime</th>
+                  <th>Bytes</th>
+                  <th>Status</th>
+              </tr>
+          </thead>
+          <tbody>
+              <?php if (empty($usage_list)): ?>
+                  <tr><td colspan="9" style="text-align:center;">Tidak ada data</td></tr>
+              <?php else: ?>
+                  <?php foreach ($usage_list as $it): ?>
+                  <tr>
+                      <td><?= esc($it['login']) ?></td>
+                      <td><?= esc($it['logout']) ?></td>
+                      <td><?= esc($it['username']) ?></td>
+                      <td><?= esc($it['blok']) ?></td>
+                      <td><?= esc($it['ip']) ?></td>
+                      <td><?= esc($it['mac']) ?></td>
+                      <td><?= esc($it['uptime']) ?></td>
+                      <td><?= esc(format_bytes_short($it['bytes'])) ?></td>
+                      <td class="status-normal">TERPAKAI</td>
+                  </tr>
+                  <?php endforeach; ?>
+              <?php endif; ?>
+          </tbody>
+      </table>
+    <?php else: ?>
+      <h2>Rincian Transaksi Harian</h2>
+      <div class="meta">Tanggal: <?= esc($filter_date) ?></div>
+
+      <table>
+          <thead>
+              <tr>
+                  <th>Jam</th>
+                  <th>Username</th>
+                  <th>Profile</th>
+                  <th>Catatan</th>
+                  <th>Status</th>
+                  <th>Harga</th>
+                  <th>Bruto</th>
+                  <th>Netto</th>
+              </tr>
+          </thead>
+          <tbody>
+              <?php if (empty($list)): ?>
+                  <tr><td colspan="8" style="text-align:center;">Tidak ada data</td></tr>
+              <?php else: ?>
+                  <?php foreach ($list as $it): ?>
+                  <tr>
+                      <td><?= esc($it['time']) ?></td>
+                      <td><?= esc($it['username']) ?></td>
+                      <td><?= esc($it['profile']) ?></td>
+                      <td><?= esc($it['comment']) ?></td>
+                      <td class="status-<?= esc($it['status']) ?>"><?= strtoupper(esc($it['status'])) ?></td>
+                      <td><?= $cur ?> <?= number_format((int)$it['price'],0,',','.') ?></td>
+                      <td><?= $cur ?> <?= number_format((int)$it['gross'],0,',','.') ?></td>
+                      <td><?= $cur ?> <?= number_format((int)$it['net'],0,',','.') ?></td>
+                  </tr>
+                  <?php endforeach; ?>
+              <?php endif; ?>
+          </tbody>
+      </table>
+    <?php endif; ?>
 
 <script>
 function shareReport(){
+    const title = <?= $is_usage ? "'Bukti Pemakaian Voucher'" : "'Rincian Transaksi Harian'" ?>;
     if (navigator.share) {
         navigator.share({
-            title: 'Rincian Transaksi Harian',
+            title: title,
             url: window.location.href
         });
     } else {
