@@ -505,6 +505,7 @@ $total_qty_laku = max(0, $total_qty - $total_qty_retur - $total_qty_rusak - $tot
             <div class="summary-card">
                 <div class="summary-title">Voucher Rusak</div>
                 <div class="summary-value" ><span style="color: crimson;"><?= number_format($total_qty_rusak,0,',','.') ?></span></div>
+                <div style="font-size:12px;color:var(--txt-muted)">Profile 10 Menit | 30 Menit</div>
             </div>
             <div class="summary-card">
                 <div class="summary-title">Total Handphone</div>
