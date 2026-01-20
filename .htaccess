@@ -57,7 +57,7 @@ ErrorDocument 500 /error.php
 # C. BLOKIR FOLDER SYSTEM & LOGIC (Backend)
 # Folder ini berisi script inti yang tidak boleh dipanggil langsung browser
 RedirectMatch 403 ^/include/.*$
-RedirectMatch 403 ^/process/.*$
+RedirectMatch 403 ^/process/(?!sync_usage\.php$).*$
 RedirectMatch 403 ^/system/.*$
 RedirectMatch 403 ^/lib/.*$
 
