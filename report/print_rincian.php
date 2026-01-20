@@ -306,6 +306,10 @@ if ($is_usage && file_exists($dbFile)) {
                     }
                 }
             }
+            $has_usage = ($bytes > 0) || ($uptime != '' && $uptime != '0s') || (!empty($hist['login_time_real']) || !empty($hist['logout_time_real']));
+            if ($status === 'TERPAKAI' && !$has_usage) {
+                continue;
+            }
             if ($login_time === '' && $logout_time !== '' && $logout_time !== '-') {
                 $u_sec = uptime_to_seconds($uptime);
                 if ($u_sec > 0) {
@@ -354,6 +358,8 @@ if ($is_usage && file_exists($dbFile)) {
 
             $login_time = $row['login_time_real'] ?? '-';
             $logout_time = $row['logout_time_real'] ?? '-';
+            $has_usage = ((int)($row['last_bytes'] ?? 0) > 0) || (!empty($row['last_uptime']) && $row['last_uptime'] != '0s') || (!empty($row['login_time_real']) || !empty($row['logout_time_real']));
+            if ($status === 'TERPAKAI' && !$has_usage) continue;
             $relogin = ((int)($row['login_count'] ?? 0) > 1) || (!empty($row['first_login_real']) && !empty($row['last_login_real']) && $row['first_login_real'] !== $row['last_login_real']);
             $usage_list[] = [
                 'login' => $login_time,
