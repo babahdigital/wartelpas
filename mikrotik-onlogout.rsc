@@ -14,6 +14,7 @@
     :local usermac $"mac-address";
     :local logoutTime [/system clock get time];
     :local logoutDate [/system clock get date];
+    :local userUptime [/ip hotspot user get [/ip hotspot user find where name="$username"] uptime];
     
     # Get current comment
     :local currentComment [/ip hotspot user get [/ip hotspot user find where name="$username"] comment];
@@ -89,7 +90,7 @@
     /ip hotspot user set comment=$newComment [find where name="$username"];
 
     # REALTIME USAGE (LOGOUT)
-    :local usageUrl ("http://wartelpas.sobigidul.net/process/usage_ingest.php?key=WartelpasSecureKey&session=S3c7x9_LB&event=logout&user=" . $username . "&date=" . $logoutDate . "&time=" . $logoutTime . "&ip=" . $userip . "&mac=" . $usermac);
+    :local usageUrl ("http://wartelpas.sobigidul.net/process/usage_ingest.php?key=WartelpasSecureKey&session=S3c7x9_LB&event=logout&user=" . $username . "&date=" . $logoutDate . "&time=" . $logoutTime . "&ip=" . $userip . "&mac=" . $usermac . "&uptime=" . $userUptime);
     /tool fetch url=$usageUrl keep-result=no;
 
     # Hapus cookie + putus koneksi untuk user wartel saja (hindari user non-wartel)

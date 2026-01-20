@@ -12,6 +12,9 @@
 {
     :local comment [/ip hotspot user get [/ip hotspot user find where name="$user"] comment];
     :local ucode [:pick $comment 0 2];
+    :local date [/system clock get date];
+    :local time [/system clock get time];
+    :local mac $"mac-address";
     
     # EKSTRAK BLOK DARI COMMENT LAMA (SEBELUM DIGANTI)
     :local blokInfo "";
@@ -82,8 +85,6 @@
         :delay 5s;
         /sys sch remove [find where name="$user"];
         
-        :local mac $"mac-address";
-        :local time [/system clock get time];
         
         # SAVE KE DATABASE LOG (Format untuk PHP parsing)
         :local logComment "$date-|-$time-|-$user-|-5000-|-$address-|-$mac-|-1d-|-10Menit-|-$blokInfo";
@@ -94,14 +95,14 @@
         :local url ($baseUrl . "?key=" . $key . "&session=" . $session);
         /tool fetch url=$url http-method=post http-data=("data=" . $payload) keep-result=no;
 
-        # REALTIME USAGE (LOGIN)
-        :local usageUrl ("http://wartelpas.sobigidul.net/process/usage_ingest.php?key=" . $key . "&session=" . $session . "&event=login" . "&user=" . $user . "&date=" . $date . "&time=" . $time . "&ip=" . $address . "&mac=" . $mac . "&uptime=" . $uptime);
-        /tool fetch url=$usageUrl keep-result=no;
-        
         # SET COMMENT BARU (DENGAN BLOK) - TANPA MENUMPUK
         /ip hotspot user set comment=$newComment [find where name=$user];
         
         # SET MAC ADDRESS
         /ip hotspot user set mac-address=$mac [find where name=$user];
     }
+
+    # REALTIME USAGE (LOGIN) - kirim untuk semua login
+    :local usageUrl ("http://wartelpas.sobigidul.net/process/usage_ingest.php?key=" . $key . "&session=" . $session . "&event=login" . "&user=" . $user . "&date=" . $date . "&time=" . $time . "&ip=" . $address . "&mac=" . $mac . "&uptime=" . $uptime);
+    /tool fetch url=$usageUrl keep-result=no;
 }
