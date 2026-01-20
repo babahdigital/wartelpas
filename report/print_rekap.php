@@ -47,19 +47,8 @@ function norm_date_from_raw_report($raw_date) {
     return '';
 }
 
-function detect_profile_minutes($profile) {
-    $p = strtolower((string)$profile);
-    if (preg_match('/\b10\s*(menit|m)\b/i', $p)) return '10';
-    if (preg_match('/\b30\s*(menit|m)\b/i', $p)) return '30';
-    return 'OTHER';
-}
-
 function make_profile_label($profile, $block_letter) {
     $profile = trim((string)$profile);
-    $mins = detect_profile_minutes($profile);
-    if ($mins === '10' || $mins === '30') {
-        return 'BLOK-' . $block_letter . $mins;
-    }
     $slug = strtoupper(preg_replace('/[^A-Z0-9]+/', '', $profile));
     if ($slug === '') return 'BLOK-' . $block_letter;
     return 'BLOK-' . $block_letter . '-' . $slug;
