@@ -93,6 +93,7 @@ if (file_exists($dbFile)) {
 
 // Simpan input handphone per blok (harian)
 if (isset($db) && $db instanceof PDO && isset($_POST['hp_submit'])) {
+    $hp_is_ajax = isset($_POST['ajax']) && $_POST['ajax'] === '1';
     $blok_name = trim($_POST['blok_name'] ?? '');
     $report_date = trim($_POST['report_date'] ?? '');
     $total_units = (int)($_POST['total_units'] ?? 0);
@@ -176,11 +177,23 @@ if (isset($db) && $db instanceof PDO && isset($_POST['hp_submit'])) {
         } catch (Exception $e) {}
     }
     if ($hp_saved && empty($hp_error)) {
-        $hp_redirect = './?report=selling' . $session_qs . '&mode=' . urlencode($mode) . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+        $hp_redirect = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
         if (!headers_sent()) {
             header('Location: ' . $hp_redirect);
             exit;
         }
+    }
+    if ($hp_is_ajax) {
+        header('Content-Type: application/json');
+        if (!empty($hp_error)) {
+            echo json_encode(['ok' => false, 'message' => $hp_error]);
+        } elseif ($hp_saved) {
+            $redirect = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+            echo json_encode(['ok' => true, 'redirect' => $redirect]);
+        } else {
+            echo json_encode(['ok' => false, 'message' => 'Gagal menyimpan data.']);
+        }
+        exit;
     }
 }
 
@@ -194,7 +207,7 @@ if (isset($db) && $db instanceof PDO && isset($_GET['hp_delete'])) {
             $stmt = $db->prepare("DELETE FROM phone_block_daily WHERE report_date = :d AND blok_name = :b");
             $stmt->execute([':d' => $del_date, ':b' => $del_blok]);
         } catch (Exception $e) {}
-        $hp_redirect = './?report=selling' . $session_qs . '&mode=' . urlencode($mode) . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+        $hp_redirect = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
         if (!headers_sent()) {
             header('Location: ' . $hp_redirect);
             exit;
@@ -362,8 +375,7 @@ foreach ($rows as $r) {
                 'status' => strtoupper($status),
                 'price' => $price,
                 'net' => $net_add,
-            'comment' => $comment,
-            'row_mode' => $r['row_mode'] ?? 'final'
+            'comment' => $comment
         ];
 }
 
@@ -414,10 +426,6 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
                 <?php if ($session_id !== ''): ?>
                     <input type="hidden" name="session" value="<?= htmlspecialchars($session_id); ?>">
                 <?php endif; ?>
-                <select name="mode" onchange="this.form.submit()">
-                    <option value="final" <?= $mode==='final'?'selected':''; ?>>Final</option>
-                    <option value="live" <?= $mode==='live'?'selected':''; ?>>Live</option>
-                </select>
                 <select name="show" onchange="this.form.submit()">
                     <option value="harian" <?= $req_show==='harian'?'selected':''; ?>>Harian</option>
                     <option value="bulanan" <?= $req_show==='bulanan'?'selected':''; ?>>Bulanan</option>
@@ -465,11 +473,12 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
 <div id="hpModal" class="modal-backdrop" onclick="if(event.target===this){this.style.display='none';}">
     <div class="modal-card">
         <div class="modal-title">Input Handphone per Blok (Harian)</div>
-        <form id="hpForm" method="post" action="./?report=selling<?= $session_qs; ?>&mode=<?= $mode; ?>&show=<?= $req_show; ?>&date=<?= urlencode($filter_date); ?>">
+        <form id="hpForm" method="post" action="./?report=selling<?= $session_qs; ?>&show=<?= $req_show; ?>&date=<?= urlencode($filter_date); ?>">
             <input type="hidden" name="report" value="selling">
             <?php if ($session_id !== ''): ?>
                 <input type="hidden" name="session" value="<?= htmlspecialchars($session_id); ?>">
             <?php endif; ?>
+            <input type="hidden" name="ajax" value="1">
             <div class="form-grid-2">
                 <div>
                     <label>Blok</label>
@@ -605,6 +614,30 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
         if (kamtibEl) kamtibEl.addEventListener('input', validate);
         if (rusakEl) rusakEl.addEventListener('input', validate);
         if (spamEl) spamEl.addEventListener('input', validate);
+        if (form) {
+            form.addEventListener('submit', function(e){
+                e.preventDefault();
+                if (btn && btn.disabled) return;
+                var fd = new FormData(form);
+                fetch(form.action, { method: 'POST', body: fd })
+                    .then(function(r){ return r.json(); })
+                    .then(function(data){
+                        if (data && data.ok && data.redirect) {
+                            window.location.replace(data.redirect);
+                        } else {
+                            var msg = (data && data.message) ? data.message : 'Gagal menyimpan data.';
+                            err.textContent = msg;
+                            err.style.display = 'block';
+                            if (btn) btn.disabled = true;
+                        }
+                    })
+                    .catch(function(){
+                        err.textContent = 'Gagal mengirim data. Coba lagi.';
+                        err.style.display = 'block';
+                        if (btn) btn.disabled = true;
+                    });
+            });
+        }
         toggle();
     })();
 
@@ -738,7 +771,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                 <?php else: ?>
                                     <span style="color:var(--txt-muted);">-</span>
                                 <?php endif; ?>
-                                <a class="btn-act btn-act-danger" href="./?report=selling<?= $session_qs; ?>&mode=<?= $mode; ?>&show=<?= $req_show; ?>&date=<?= urlencode($filter_date); ?>&hp_delete=1&blok=<?= urlencode($r['blok_name']); ?>&type=<?= urlencode($r['unit_type']); ?>&hp_date=<?= urlencode($filter_date); ?>" onclick="return confirm('Hapus data blok <?= htmlspecialchars($r['blok_name'] ?? '-') ?> (<?= htmlspecialchars($r['unit_type'] ?? '-') ?>) untuk <?= htmlspecialchars($filter_date); ?>?')">
+                                <a class="btn-act btn-act-danger" href="./?report=selling<?= $session_qs; ?>&show=<?= $req_show; ?>&date=<?= urlencode($filter_date); ?>&hp_delete=1&blok=<?= urlencode($r['blok_name']); ?>&type=<?= urlencode($r['unit_type']); ?>&hp_date=<?= urlencode($filter_date); ?>" onclick="return confirm('Hapus data blok <?= htmlspecialchars($r['blok_name'] ?? '-') ?> (<?= htmlspecialchars($r['unit_type'] ?? '-') ?>) untuk <?= htmlspecialchars($filter_date); ?>?')">
                                     <i class="fa fa-trash"></i>
                                 </a>
                             </td>
@@ -789,7 +822,6 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         <th class="text-right">Harga</th>
                         <th class="text-right">Efektif</th>
                         <th>Catatan</th>
-                        <th>Mode</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -811,7 +843,6 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             <td class="text-right"><?= number_format($it['price'],0,',','.') ?></td>
                             <td class="text-right"><?= number_format($it['net'],0,',','.') ?></td>
                             <td><small><?= htmlspecialchars($it['comment']) ?></small></td>
-                            <td><small><?= $it['row_mode'] === 'pending' ? 'LIVE' : 'FINAL' ?></small></td>
                         </tr>
                     <?php endforeach; endif; ?>
                 </tbody>
