@@ -1485,6 +1485,7 @@ if ($debug_mode && !$is_ajax) {
             $status_label = $status_labels[$req_status] ?? '';
             $can_print_block = ($req_comm != '' && $req_status === 'ready');
             $can_print_status = ($req_comm != '' && $req_status === 'retur');
+            $can_print_used = ($req_status === 'used');
             $reset_params = $_GET;
             $reset_params['status'] = 'all';
             unset($reset_params['page']);
@@ -1494,6 +1495,20 @@ if ($debug_mode && !$is_ajax) {
             <?php if ($req_status !== 'all'): ?>
               <button type="button" class="btn btn-outline-light" style="height:40px;" onclick="location.href='<?= $reset_url ?>'">
                 <i class="fa fa-undo"></i> Reset Status
+              </button>
+            <?php endif; ?>
+            <?php if ($can_print_used): ?>
+              <?php
+                $usage_params = [
+                  'mode' => 'usage',
+                  'status' => 'used',
+                  'session' => $session
+                ];
+                if ($req_comm != '') $usage_params['blok'] = $req_comm;
+                $usage_url = '../report/print_rincian.php?' . http_build_query($usage_params);
+              ?>
+              <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('<?= $usage_url ?>','_blank').print()">
+                <i class="fa fa-print"></i> Print Terpakai
               </button>
             <?php endif; ?>
             <?php if ($req_comm == '' && $can_delete_status): ?>
@@ -1608,7 +1623,9 @@ if ($debug_mode && !$is_ajax) {
                       <?php endif; ?>
                     </td>
                     <td class="text-center">
-                      <?php if (strtoupper($u['status']) !== 'RUSAK'): ?>
+                      <?php if (strtoupper($u['status']) === 'TERPAKAI'): ?>
+                        <button type="button" class="btn-act btn-act-print" onclick="window.open('../report/print_rincian.php?mode=usage&status=used&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
+                      <?php elseif (strtoupper($u['status']) !== 'RUSAK'): ?>
                         <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
                       <?php endif; ?>
                       <?php if($u['uid']): ?>
@@ -1703,7 +1720,7 @@ if ($debug_mode && !$is_ajax) {
   const baseParams = new URLSearchParams(window.location.search);
 
   let lastFetchId = 0;
-  let isTyping = false;
+  let appliedQuery = (baseParams.get('q') || '').trim();
 
   window.showActionPopup = function(type, message) {
     if (!actionBanner) return;
@@ -1798,7 +1815,8 @@ if ($debug_mode && !$is_ajax) {
     const params = new URLSearchParams();
     params.set('session', '<?= $session ?>');
     params.set('ajax', '1');
-    params.set('q', searchInput.value.trim());
+    const qValue = isSearch ? searchInput.value.trim() : appliedQuery;
+    params.set('q', qValue);
     if (statusSelect) params.set('status', statusSelect.value);
     if (commentSelect) params.set('comment', commentSelect.value);
     const profile = baseParams.get('profile');
@@ -1815,6 +1833,7 @@ if ($debug_mode && !$is_ajax) {
   async function fetchUsers(isSearch, showLoading) {
     const fetchId = ++lastFetchId;
     try {
+      if (isSearch) appliedQuery = searchInput.value.trim();
       if (showLoading && searchLoading) searchLoading.style.display = 'inline-block';
       if (showLoading && pageDim) pageDim.style.display = 'flex';
       const res = await fetch(buildUrl(isSearch), { headers: { 'X-Requested-With': 'XMLHttpRequest' }, cache: 'no-store' });
@@ -1864,7 +1883,9 @@ if ($debug_mode && !$is_ajax) {
   }
 
   setInterval(() => {
-    if (document.hidden || isTyping) return;
+    if (document.hidden) return;
+    const currentInput = searchInput.value.trim();
+    if (currentInput !== appliedQuery) return;
     fetchUsers(false, false);
   }, 15000);
 })();
