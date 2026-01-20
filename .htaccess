@@ -117,6 +117,11 @@ Require all denied
     Require all granted
 </If>
 
+# Clear block endpoint
+<If "%{REQUEST_URI} =~ m#^/report/clear_block\.php$#">
+    Require all granted
+</If>
+
 # Print report endpoints
 <If "%{REQUEST_URI} =~ m#^/report/print_rekap\.php$#">
     Require all granted
