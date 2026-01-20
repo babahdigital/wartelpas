@@ -61,6 +61,19 @@ function normalize_block_letter($blok_name) {
     return 'LAIN';
 }
 
+function format_bytes_short($bytes) {
+    $b = (float)$bytes;
+    if ($b <= 0) return '0 B';
+    $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    $i = 0;
+    while ($b >= 1024 && $i < count($units) - 1) {
+        $b /= 1024;
+        $i++;
+    }
+    $dec = $i >= 2 ? 2 : 0;
+    return number_format($b, $dec, ',', '.') . ' ' . $units[$i];
+}
+
 $rows = [];
 $hp_total_units = 0;
 $hp_active_units = 0;
@@ -80,7 +93,7 @@ try {
                 sh.username, sh.profile, sh.profile_snapshot,
                 sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
                 sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
-                sh.full_raw_data, lh.last_status
+                sh.full_raw_data, lh.last_status, lh.last_bytes
             FROM sales_history sh
             LEFT JOIN login_history lh ON lh.username = sh.username
             UNION ALL
@@ -89,7 +102,7 @@ try {
                 ls.username, ls.profile, ls.profile_snapshot,
                 ls.price, ls.price_snapshot, ls.sprice_snapshot, ls.validity,
                 ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
-                ls.full_raw_data, lh2.last_status
+                ls.full_raw_data, lh2.last_status, lh2.last_bytes
             FROM live_sales ls
             LEFT JOIN login_history lh2 ON lh2.username = ls.username
             WHERE ls.sync_status = 'pending'
@@ -197,16 +210,22 @@ foreach ($rows as $r) {
             $block_summaries[$block] = [
                 'total_qty' => 0,
                 'total_amount' => 0,
+                'total_bw' => 0,
                 'profiles' => []
             ];
         }
         if (!isset($block_summaries[$block]['profiles'][$minutes])) {
-            $block_summaries[$block]['profiles'][$minutes] = ['qty' => 0, 'total' => 0];
+            $block_summaries[$block]['profiles'][$minutes] = ['qty' => 0, 'total' => 0, 'bw' => 0];
         }
+        $bytes = (int)($r['last_bytes'] ?? 0);
+        if ($bytes < 0) $bytes = 0;
+        $bw_line = $bytes * $qty;
         $block_summaries[$block]['profiles'][$minutes]['qty'] += $qty;
         $block_summaries[$block]['profiles'][$minutes]['total'] += $net_line;
+        $block_summaries[$block]['profiles'][$minutes]['bw'] += $bw_line;
         $block_summaries[$block]['total_qty'] += $qty;
         $block_summaries[$block]['total_amount'] += $net_line;
+        $block_summaries[$block]['total_bw'] += $bw_line;
     }
 
     $total_qty++;
@@ -252,6 +271,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         .rekap-detail th, .rekap-detail td { border:1px solid #000; padding:5px; }
         .rekap-detail th { background:#f6f6f6; text-align:center; }
         .rekap-total { background:#d9d9d9; font-weight:700; }
+        .rekap-hp { text-align:center; vertical-align:middle; font-weight:700; }
         @media print { .toolbar { display:none; } }
     </style>
 </head>
@@ -317,12 +337,13 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     <th>Quota</th>
                                     <th style="width:70px;">Qty</th>
                                     <th style="width:120px;">Total (Rp)</th>
+                                    <th style="width:120px;">Bandwidth</th>
                                     <th style="width:90px;">HP Aktif</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (empty($block_summaries)): ?>
-                                    <tr><td colspan="5" style="text-align:center;">Tidak ada data</td></tr>
+                                    <tr><td colspan="6" style="text-align:center;">Tidak ada data</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($block_summaries as $blk => $bdata): ?>
                                         <?php
@@ -331,6 +352,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             $sorted_profiles = [];
                                             foreach ($order as $o) if (isset($profiles[$o])) $sorted_profiles[$o] = $profiles[$o];
                                             foreach ($profiles as $k => $v) if (!isset($sorted_profiles[$k])) $sorted_profiles[$k] = $v;
+                                            $rowspan = count($sorted_profiles) + 1;
+                                            $hp_active_val = (int)($hp_active_by_block[$blk] ?? 0);
+                                            $row_index = 0;
                                         ?>
                                         <?php foreach ($sorted_profiles as $min => $pdata): ?>
                                             <?php
@@ -342,14 +366,18 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                                 <td style="text-align:center;"><?= $quota ?></td>
                                                 <td style="text-align:center;"><?= number_format((int)$pdata['qty'],0,',','.') ?></td>
                                                 <td style="text-align:right;"><?= number_format((int)$pdata['total'],0,',','.') ?></td>
-                                                <td></td>
+                                                <td style="text-align:right;"><?= htmlspecialchars(format_bytes_short((int)$pdata['bw'])) ?></td>
+                                                <?php if ($row_index === 0): ?>
+                                                    <td class="rekap-hp" rowspan="<?= (int)$rowspan ?>"><?= number_format($hp_active_val,0,',','.') ?></td>
+                                                <?php endif; ?>
                                             </tr>
+                                            <?php $row_index++; ?>
                                         <?php endforeach; ?>
                                         <tr class="rekap-total">
                                             <td colspan="2" style="text-align:right;">Total Blok <?= htmlspecialchars($blk) ?> :</td>
                                             <td style="text-align:center;"><?= number_format((int)$bdata['total_qty'],0,',','.') ?></td>
                                             <td style="text-align:right;"><?= number_format((int)$bdata['total_amount'],0,',','.') ?></td>
-                                            <td style="text-align:center;"><?= number_format((int)($hp_active_by_block[$blk] ?? 0),0,',','.') ?></td>
+                                            <td style="text-align:right;"><?= htmlspecialchars(format_bytes_short((int)$bdata['total_bw'])) ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
