@@ -966,7 +966,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 </div>
             </div>
         <?php endif; ?>
-    </div></div>
+    </div>
 </div>
 
 <!-- Pendapatan per Blok/Profile sementara disembunyikan sesuai permintaan -->
