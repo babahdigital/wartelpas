@@ -115,6 +115,11 @@ Require all denied
     Require all granted
 </If>
 
+# Sync usage endpoint
+<If "%{REQUEST_URI} =~ m#^/process/sync_usage\.php$#">
+    Require all granted
+</If>
+
 # Izinkan akses folder assets
 <If "%{REQUEST_URI} =~ m#^/(css|js|img|fonts|lang)/#">
     Require all granted
