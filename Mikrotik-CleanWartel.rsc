@@ -21,7 +21,7 @@
 :log info "SYNC: Mengirim data statistik ke Mikhmon...";
 :do {
     # HAPUS parameter 'duration', itu yang bikin error.
-    /tool fetch url="http://wartelpas.sobigidul.net/report/sync_stats.php?key=WartelpasSecureKey&session=S3c7x9_LB" keep-result=no;
+    /tool fetch url="http://wartelpas.sobigidul.net:8081/report/sync_stats.php?key=WartelpasSecureKey&session=S3c7x9_LB" keep-result=no;
     :log info "SYNC STATS: Berhasil.";
 } on-error={ :log error "SYNC STATS: GAGAL KONEKSI! Cek IP Server/Jaringan."; :set syncStatsOk false; }
 
@@ -31,7 +31,7 @@
 :log info "SYNC: Mengirim laporan penjualan...";
 :do {
     # HAPUS parameter 'duration'
-    /tool fetch url="http://wartelpas.sobigidul.net/report/sync_sales.php?key=WartelpasSecureKey&session=S3c7x9_LB" keep-result=no;
+    /tool fetch url="http://wartelpas.sobigidul.net:8081/report/sync_sales.php?key=WartelpasSecureKey&session=S3c7x9_LB" keep-result=no;
     :log info "SYNC SALES: Berhasil terkirim.";
 } on-error={ :log error "SYNC SALES: GAGAL KONEKSI! Data penjualan tidak masuk DB."; :set syncSalesOk false; }
 
@@ -47,7 +47,7 @@
 # 4. SYNC USAGE (Catat login/logout/uptime)
 :log info "SYNC: Mengirim data pemakaian (usage) ...";
 :do {
-    /tool fetch url="http://wartelpas.sobigidul.net/process/sync_usage.php?session=S3c7x9_LB" keep-result=no;
+    /tool fetch url="http://wartelpas.sobigidul.net:8081/process/sync_usage.php?session=S3c7x9_LB" keep-result=no;
     :log info "SYNC USAGE: Berhasil.";
 } on-error={ :log warning "SYNC USAGE: Gagal koneksi."; }
 
@@ -56,7 +56,7 @@
 # 4b. CLEAR SERVER LOGS (optional)
 :log info "MAINT: Clear server logs...";
 :do {
-    /tool fetch url="http://wartelpas.sobigidul.net/report/clear_logs.php?key=WartelpasSecureKey&session=S3c7x9_LB" keep-result=no;
+    /tool fetch url="http://wartelpas.sobigidul.net:8081/report/clear_logs.php?key=WartelpasSecureKey&session=S3c7x9_LB" keep-result=no;
     :log info "MAINT: Clear logs OK.";
 } on-error={ :log warning "MAINT: Clear logs gagal."; }
 

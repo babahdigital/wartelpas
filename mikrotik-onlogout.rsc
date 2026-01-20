@@ -90,7 +90,7 @@
     /ip hotspot user set comment=$newComment [find where name="$username"];
 
     # REALTIME USAGE (LOGOUT)
-    :local usageUrl ("http://wartelpas.sobigidul.net/process/usage_ingest.php?key=WartelpasSecureKey&session=S3c7x9_LB&event=logout&user=" . $username . "&date=" . $logoutDate . "&time=" . $logoutTime . "&ip=" . $userip . "&mac=" . $usermac . "&uptime=" . $userUptime);
+    :local usageUrl ("http://wartelpas.sobigidul.net:8081/process/usage_ingest.php?key=WartelpasSecureKey&session=S3c7x9_LB&event=logout&user=" . $username . "&date=" . $logoutDate . "&time=" . $logoutTime . "&ip=" . $userip . "&mac=" . $usermac . "&uptime=" . $userUptime);
     /tool fetch url=$usageUrl keep-result=no;
 
     # Hapus cookie + putus koneksi untuk user wartel saja (hindari user non-wartel)

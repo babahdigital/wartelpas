@@ -1,6 +1,7 @@
 <?php
 session_start();
 error_reporting(0);
+set_time_limit(0);
 
 if (!isset($_GET['session'])) {
     http_response_code(400);
@@ -63,6 +64,16 @@ function uptime_to_seconds_sync($uptime) {
         }
     }
     return $total;
+}
+
+function log_sync_usage($message) {
+    $logDir = dirname(__DIR__) . '/logs';
+    if (!is_dir($logDir)) {
+        @mkdir($logDir, 0755, true);
+    }
+    $logFile = $logDir . '/sync_usage.log';
+    $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
+    @file_put_contents($logFile, $line, FILE_APPEND);
 }
 
 // --- Database ---
@@ -130,10 +141,30 @@ try {
         }
     }
 } catch (Exception $e) {
+    log_sync_usage('DB error: ' . $e->getMessage());
     http_response_code(500);
     echo "DB error";
     exit;
 }
+
+// Respond early to avoid MikroTik fetch timeout
+$requestId = substr(md5(uniqid('', true)), 0, 8);
+$startTime = microtime(true);
+log_sync_usage("START id=$requestId session=$session ip=" . ($_SERVER['REMOTE_ADDR'] ?? '-'));
+header('Content-Type: application/json');
+echo json_encode([
+    'ok' => true,
+    'queued' => true,
+    'id' => $requestId,
+    'time' => date('Y-m-d H:i:s')
+]);
+if (function_exists('fastcgi_finish_request')) {
+    fastcgi_finish_request();
+} else {
+    @ob_flush();
+    @flush();
+}
+ignore_user_abort(true);
 
 // --- RouterOS ---
 $API = new RouterosAPI();
@@ -141,8 +172,7 @@ $API->debug = false;
 $API->timeout = 5;
 $API->attempts = 1;
 if (!$API->connect($iphost, $userhost, decrypt($passwdhost))) {
-    http_response_code(500);
-    echo "Router connect failed";
+    log_sync_usage("ROUTER CONNECT FAILED id=$requestId host=$iphost");
     exit;
 }
 
@@ -246,9 +276,5 @@ foreach ($all_users as $u) {
     ]);
     $updated++;
 }
-
-echo json_encode([
-    'ok' => true,
-    'updated' => $updated,
-    'time' => $now
-]);
+$elapsed = round(microtime(true) - $startTime, 3);
+log_sync_usage("DONE id=$requestId updated=$updated elapsed={$elapsed}s");
