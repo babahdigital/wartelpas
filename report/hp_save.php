@@ -140,5 +140,6 @@ try {
     echo json_encode(['ok' => true, 'redirect' => $redirect]);
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['ok' => false, 'message' => 'Gagal menyimpan data.']);
+    $msg = $e->getMessage();
+    echo json_encode(['ok' => false, 'message' => 'Gagal menyimpan data: ' . $msg]);
 }
