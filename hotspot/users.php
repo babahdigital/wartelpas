@@ -280,28 +280,38 @@ try {
         login_time_real DATETIME,
         logout_time_real DATETIME,
         last_status TEXT DEFAULT 'ready',
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME,
         login_count INTEGER DEFAULT 0
     )");
-    // Pastikan kolom last_uptime ada
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN last_uptime TEXT"); } catch(Exception $e) {}
-    // Pastikan kolom last_bytes ada
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN last_bytes INTEGER"); } catch(Exception $e) {}
-    // Pastikan kolom raw_comment ada
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN raw_comment TEXT"); } catch(Exception $e) {}
-    // Pastikan kolom device/login tracking ada
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN first_ip TEXT"); } catch(Exception $e) {}
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN first_mac TEXT"); } catch(Exception $e) {}
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN last_ip TEXT"); } catch(Exception $e) {}
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN last_mac TEXT"); } catch(Exception $e) {}
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN first_login_real DATETIME"); } catch(Exception $e) {}
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN last_login_real DATETIME"); } catch(Exception $e) {}
-    // Pastikan kolom login/logout real tersedia
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN login_time_real DATETIME"); } catch(Exception $e) {}
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN logout_time_real DATETIME"); } catch(Exception $e) {}
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN last_status TEXT DEFAULT 'ready'"); } catch(Exception $e) {}
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP"); } catch(Exception $e) {}
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN login_count INTEGER DEFAULT 0"); } catch(Exception $e) {}
+    $requiredCols = [
+      'ip_address' => 'TEXT',
+      'mac_address' => 'TEXT',
+      'last_uptime' => 'TEXT',
+      'last_bytes' => 'INTEGER',
+      'first_ip' => 'TEXT',
+      'first_mac' => 'TEXT',
+      'last_ip' => 'TEXT',
+      'last_mac' => 'TEXT',
+      'first_login_real' => 'DATETIME',
+      'last_login_real' => 'DATETIME',
+      'validity' => 'TEXT',
+      'blok_name' => 'TEXT',
+      'raw_comment' => 'TEXT',
+      'login_time_real' => 'DATETIME',
+      'logout_time_real' => 'DATETIME',
+      'last_status' => "TEXT DEFAULT 'ready'",
+      'updated_at' => 'DATETIME',
+      'login_count' => 'INTEGER DEFAULT 0'
+    ];
+    $existingCols = [];
+    foreach ($db->query("PRAGMA table_info(login_history)") as $row) {
+      $existingCols[$row['name']] = true;
+    }
+    foreach ($requiredCols as $col => $type) {
+      if (!isset($existingCols[$col])) {
+        try { $db->exec("ALTER TABLE login_history ADD COLUMN $col $type"); } catch(Exception $e) {}
+      }
+    }
 } catch(Exception $e){
     $db = null;
 }
