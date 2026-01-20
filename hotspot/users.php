@@ -1446,6 +1446,9 @@ if ($debug_mode && !$is_ajax) {
     .input-group-solid .first-el { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
     .input-group-solid .last-el { border-top-right-radius: 6px; border-bottom-right-radius: 6px; border-left: none; }
     .input-group-solid .mid-el { border-left: none; border-right: none; }
+    .input-group-solid .no-sep-right { border-right: none; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+    .input-group-solid .no-sep-left { border-left: none; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+    .period-group { margin-left: auto; }
     .search-wrap { position: relative; display: flex; align-items: center; flex: 1 1 420px; min-width: 280px; }
     .search-wrap .form-control { padding-right: 36px; width: 100%; }
     .search-clear-btn { position: absolute; right: 8px; width: 22px; height: 22px; border-radius: 50%; border: none; background: #495057; color: #fff; font-size: 12px; line-height: 22px; display: none; }
@@ -1512,18 +1515,18 @@ if ($debug_mode && !$is_ajax) {
                 } ?>
               </select>
             </div>
-            <div class="input-group-solid" style="margin-left:6px;">
-              <select name="show" class="custom-select-solid first-el" onchange="this.form.submit()" style="flex: 0 0 140px;">
+            <div class="input-group-solid period-group">
+              <select name="show" class="custom-select-solid first-el no-sep-right" onchange="this.form.submit()" style="flex: 0 0 140px;">
                 <option value="harian" <?= $req_show==='harian'?'selected':''; ?>>Harian</option>
                 <option value="bulanan" <?= $req_show==='bulanan'?'selected':''; ?>>Bulanan</option>
                 <option value="tahunan" <?= $req_show==='tahunan'?'selected':''; ?>>Tahunan</option>
               </select>
               <?php if ($req_show === 'harian'): ?>
-                <input type="date" name="date" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" class="form-control last-el" style="flex:0 0 170px;">
+                <input type="date" name="date" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" class="form-control last-el no-sep-left" style="flex:0 0 170px;">
               <?php elseif ($req_show === 'bulanan'): ?>
-                <input type="month" name="date" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" class="form-control last-el" style="flex:0 0 170px;">
+                <input type="month" name="date" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" class="form-control last-el no-sep-left" style="flex:0 0 170px;">
               <?php else: ?>
-                <input type="number" name="date" min="2000" max="2100" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" class="form-control last-el" style="flex:0 0 120px;">
+                <input type="number" name="date" min="2000" max="2100" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" class="form-control last-el no-sep-left" style="flex:0 0 120px;">
               <?php endif; ?>
             </div>
             <span id="search-loading" style="display:none;font-size:12px;color:var(--txt-muted);margin-left:6px;">
