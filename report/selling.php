@@ -452,7 +452,7 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
 <div id="hpModal" class="modal-backdrop" onclick="if(event.target===this){this.style.display='none';}">
     <div class="modal-card">
         <div class="modal-title">Input Handphone per Blok (Harian)</div>
-        <form method="post" action="./?report=selling<?= $session_qs; ?>&mode=<?= $mode; ?>&show=<?= $req_show; ?>&date=<?= urlencode($filter_date); ?>">
+        <form id="hpForm" method="post" action="./?report=selling<?= $session_qs; ?>&mode=<?= $mode; ?>&show=<?= $req_show; ?>&date=<?= urlencode($filter_date); ?>">
             <input type="hidden" name="report" value="selling">
             <?php if ($session_id !== ''): ?>
                 <input type="hidden" name="session" value="<?= htmlspecialchars($session_id); ?>">
@@ -515,6 +515,7 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
                 <div style="font-size:12px;color:var(--txt-muted);margin-top:6px;">
                     Jika memilih satu unit saja, jumlahnya harus sama dengan Total Unit.
                 </div>
+                <div id="hpClientError" style="display:none;margin-top:8px;color:#fca5a5;font-size:12px;"></div>
             </div>
             <div style="margin-top:10px;">
                 <label>Catatan</label>
@@ -522,7 +523,7 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
             </div>
             <div class="modal-actions">
                 <button type="button" class="btn-print" onclick="document.getElementById('hpModal').style.display='none'">Batal</button>
-                <button type="submit" name="hp_submit" class="btn-print">Simpan</button>
+                <button type="submit" id="hpSubmitBtn" name="hp_submit" class="btn-print" disabled>Simpan</button>
             </div>
         </form>
     </div>
@@ -536,14 +537,51 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
         var kw = document.getElementById('kamtib_wrap');
         var wu = ww ? ww.querySelector('input') : null;
         var ku = kw ? kw.querySelector('input') : null;
+        var form = document.getElementById('hpForm');
+        var btn = document.getElementById('hpSubmitBtn');
+        var err = document.getElementById('hpClientError');
+        var totalEl = form ? form.querySelector('input[name="total_units"]') : null;
+        var wartelEl = form ? form.querySelector('input[name="wartel_units"]') : null;
+        var kamtibEl = form ? form.querySelector('input[name="kamtib_units"]') : null;
         function toggle(){
             if (ww) ww.style.display = w && w.checked ? 'block' : 'none';
             if (kw) kw.style.display = k && k.checked ? 'block' : 'none';
             if (wu) wu.required = !!(w && w.checked);
             if (ku) ku.required = !!(k && k.checked);
+            validate();
+        }
+        function validate(){
+            if (!form || !btn || !err) return;
+            var total = totalEl ? parseInt(totalEl.value || '0', 10) : 0;
+            var wartel = wartelEl ? parseInt(wartelEl.value || '0', 10) : 0;
+            var kamtib = kamtibEl ? parseInt(kamtibEl.value || '0', 10) : 0;
+            var useW = !!(w && w.checked);
+            var useK = !!(k && k.checked);
+            var msg = '';
+            if (!useW && !useK) {
+                msg = 'Pilih minimal salah satu unit (WARTEL/KAMTIB).';
+            } else if (useW && !useK && total !== wartel) {
+                msg = 'Jika hanya WARTEL dipilih, jumlahnya harus sama dengan total.';
+            } else if (!useW && useK && total !== kamtib) {
+                msg = 'Jika hanya KAMTIB dipilih, jumlahnya harus sama dengan total.';
+            } else if (useW && useK && total !== (wartel + kamtib)) {
+                msg = 'Total unit harus sama dengan jumlah WARTEL + KAMTIB.';
+            }
+            if (msg) {
+                err.textContent = msg;
+                err.style.display = 'block';
+                btn.disabled = true;
+            } else {
+                err.textContent = '';
+                err.style.display = 'none';
+                btn.disabled = false;
+            }
         }
         if (w) w.addEventListener('change', toggle);
         if (k) k.addEventListener('change', toggle);
+        if (totalEl) totalEl.addEventListener('input', validate);
+        if (wartelEl) wartelEl.addEventListener('input', validate);
+        if (kamtibEl) kamtibEl.addEventListener('input', validate);
         toggle();
     })();
 </script>
