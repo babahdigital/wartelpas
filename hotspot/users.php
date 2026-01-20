@@ -2109,6 +2109,8 @@ if ($debug_mode && !$is_ajax) {
     if (perPage) params.set('per_page', perPage);
     const debug = baseParams.get('debug');
     if (debug) params.set('debug', debug);
+    const ro = baseParams.get('readonly');
+    if (ro) params.set('readonly', ro);
     if (isSearch) params.set('page', '1');
     params.set('_', Date.now().toString());
     return ajaxBase + '?' + params.toString();

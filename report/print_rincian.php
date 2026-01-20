@@ -277,6 +277,7 @@ if ($is_usage && file_exists($dbFile)) {
             elseif ($disabled === 'true') $status = 'RUSAK';
             elseif ($is_retur) $status = 'RETUR';
             elseif ($is_used) $status = 'TERPAKAI';
+            if ($status === 'READY') continue;
 
             $status_match = true;
             if ($req_status === 'online') $status_match = ($status === 'ONLINE');
@@ -337,6 +338,7 @@ if ($is_usage && file_exists($dbFile)) {
             if (isset($seen_users[$uname])) continue;
             if ($filter_user !== '' && $uname !== $filter_user) continue;
             $hist_status = strtolower((string)($row['last_status'] ?? ''));
+            if (!in_array($hist_status, ['rusak','retur','terpakai','online'])) continue;
             $status = ($hist_status === 'rusak') ? 'RUSAK' : ($hist_status === 'retur' ? 'RETUR' : 'TERPAKAI');
             if ($req_status === 'online') continue;
             if ($req_status === 'rusak' && $status !== 'RUSAK') continue;
