@@ -1535,6 +1535,8 @@ if ($debug_mode && !$is_ajax) {
             $can_print_block = ($req_comm != '' && $req_status === 'ready');
             $can_print_status = ($req_comm != '' && $req_status === 'retur');
             $can_print_used = ($req_status === 'used');
+            $can_print_online = ($req_status === 'online');
+            $can_print_rusak = ($req_status === 'rusak');
             $reset_params = $_GET;
             $reset_params['status'] = 'all';
             unset($reset_params['page']);
@@ -1560,6 +1562,34 @@ if ($debug_mode && !$is_ajax) {
                 <i class="fa fa-print"></i> Print Terpakai
               </button>
             <?php endif; ?>
+            <?php if ($can_print_online): ?>
+              <?php
+                $usage_params = [
+                  'mode' => 'usage',
+                  'status' => 'online',
+                  'session' => $session
+                ];
+                if ($req_comm != '') $usage_params['blok'] = $req_comm;
+                $usage_url = './report/print_rincian.php?' . http_build_query($usage_params);
+              ?>
+              <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('<?= $usage_url ?>','_blank').print()">
+                <i class="fa fa-print"></i> Print Online
+              </button>
+            <?php endif; ?>
+            <?php if ($can_print_rusak): ?>
+              <?php
+                $usage_params = [
+                  'mode' => 'usage',
+                  'status' => 'rusak',
+                  'session' => $session
+                ];
+                if ($req_comm != '') $usage_params['blok'] = $req_comm;
+                $usage_url = './report/print_rincian.php?' . http_build_query($usage_params);
+              ?>
+              <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('<?= $usage_url ?>','_blank').print()">
+                <i class="fa fa-print"></i> Print Rusak
+              </button>
+            <?php endif; ?>
             <?php if ($req_comm == '' && $can_delete_status): ?>
               <button type="button" class="btn btn-warning" style="height:40px;" onclick="actionRequest('./?hotspot=users&action=delete_status&status=<?= $req_status ?>&session=<?= $session ?>','Hapus semua voucher <?= $status_label ?> (tidak online)?')">
                 <i class="fa fa-trash"></i> Hapus <?= $status_label ?>
@@ -1575,6 +1605,18 @@ if ($debug_mode && !$is_ajax) {
                   <i class="fa fa-print"></i> Print Blok
                 </button>
               <?php endif; ?>
+              <?php
+                $print_all_params = [
+                  'mode' => 'usage',
+                  'status' => in_array($req_status, ['used','online','rusak']) ? $req_status : 'all',
+                  'session' => $session,
+                  'blok' => $req_comm
+                ];
+                $print_all_url = './report/print_rincian.php?' . http_build_query($print_all_params);
+              ?>
+              <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('<?= $print_all_url ?>','_blank').print()">
+                <i class="fa fa-print"></i> Print Semua
+              </button>
               <?php if ($can_delete_status): ?>
                 <button type="button" class="btn btn-warning" style="height:40px;" onclick="actionRequest('./?hotspot=users&action=delete_status&status=<?= $req_status ?>&blok=<?= urlencode($req_comm) ?>&session=<?= $session ?>','Hapus semua voucher <?= $status_label ?> di <?= htmlspecialchars($req_comm) ?> (tidak online)?')">
                   <i class="fa fa-trash"></i> Hapus <?= $status_label ?>

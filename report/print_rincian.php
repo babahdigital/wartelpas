@@ -19,7 +19,7 @@ $session_id = $session;
 
 $mode = $_GET['mode'] ?? '';
 $req_status = strtolower((string)($_GET['status'] ?? ''));
-$is_usage = ($mode === 'usage' || $req_status === 'used');
+$is_usage = ($mode === 'usage' || in_array($req_status, ['used','online','rusak','all']));
 $filter_user = trim((string)($_GET['user'] ?? ''));
 $filter_blok = trim((string)($_GET['blok'] ?? ''));
 
@@ -248,9 +248,23 @@ if ($is_usage && file_exists($dbFile)) {
             if ($is_rusak || $hist_status === 'rusak') $is_retur = false;
 
             $is_used = (!$is_retur && !$is_rusak && $disabled !== 'true') &&
-                (!$is_active && ($bytes > 50 || $uptime != '0s' || ($f_ip != '-' && stripos($comment, '-|-') === false)));
+                ($is_active || $bytes > 50 || $uptime != '0s' || ($f_ip != '-' && stripos($comment, '-|-') === false));
 
-            if (!$is_used) continue;
+            $status = 'READY';
+            if ($is_active) $status = 'ONLINE';
+            elseif ($is_rusak) $status = 'RUSAK';
+            elseif ($disabled === 'true') $status = 'RUSAK';
+            elseif ($is_retur) $status = 'RETUR';
+            elseif ($is_used) $status = 'TERPAKAI';
+
+            $status_match = true;
+            if ($req_status === 'online') $status_match = ($status === 'ONLINE');
+            elseif ($req_status === 'rusak') $status_match = ($status === 'RUSAK');
+            elseif ($req_status === 'used' || $req_status === 'terpakai') $status_match = ($status === 'TERPAKAI');
+            elseif ($req_status === 'all') $status_match = in_array($status, ['ONLINE','RUSAK','TERPAKAI']);
+            else $status_match = ($status === 'TERPAKAI');
+
+            if (!$status_match) continue;
 
             $login_time = $hist['login_time_real'] ?? '';
             $logout_time = $hist['logout_time_real'] ?? '';
@@ -277,7 +291,7 @@ if ($is_usage && file_exists($dbFile)) {
                 'mac' => $f_mac,
                 'uptime' => $uptime,
                 'bytes' => $bytes,
-                'status' => 'terpakai',
+                'status' => strtolower($status),
                 'comment' => $comment
             ];
         }
@@ -340,6 +354,8 @@ function esc($s){ return htmlspecialchars((string)$s); }
         .status-rusak { color:#d35400; font-weight:700; }
         .status-retur { color:#7f8c8d; font-weight:700; }
         .status-invalid { color:#c0392b; font-weight:700; }
+        .status-online { color:#1976d2; font-weight:700; }
+        .status-terpakai { color:#0a7f2e; font-weight:700; }
         @media print { .toolbar { display:none; } }
     </style>
 </head>
@@ -385,7 +401,14 @@ function esc($s){ return htmlspecialchars((string)$s); }
                       <td><?= esc($it['mac']) ?></td>
                       <td><?= esc($it['uptime']) ?></td>
                       <td><?= esc(format_bytes_short($it['bytes'])) ?></td>
-                      <td class="status-normal">TERPAKAI</td>
+                                            <?php
+                                                $st = strtoupper((string)($it['status'] ?? ''));
+                                                $st_class = 'status-normal';
+                                                if ($st === 'ONLINE') $st_class = 'status-online';
+                                                elseif ($st === 'RUSAK') $st_class = 'status-rusak';
+                                                elseif ($st === 'TERPAKAI') $st_class = 'status-terpakai';
+                                            ?>
+                                            <td class="<?= esc($st_class) ?>"><?= esc($st) ?></td>
                   </tr>
                   <?php endforeach; ?>
               <?php endif; ?>
