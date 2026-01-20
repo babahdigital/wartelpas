@@ -6,6 +6,11 @@ ini_set('display_errors', 0);
 error_reporting(0);
 header('Content-Type: text/plain');
 
+$logDir = dirname(__DIR__) . '/logs';
+if (!is_dir($logDir)) {
+    @mkdir($logDir, 0755, true);
+}
+
 $secret_token = "WartelpasSecureKey";
 if (!isset($_GET['key']) || $_GET['key'] !== $secret_token) {
     http_response_code(403);
@@ -32,7 +37,7 @@ if ($event !== 'login' && $event !== 'logout') {
 }
 if ($user === '') {
     // jangan hard-fail agar MikroTik tidak error, tetapi catat log
-    @file_put_contents(dirname(__DIR__) . '/logs/usage_ingest.log', date('c') . " | missing user | " . $_SERVER['QUERY_STRING'] . "\n", FILE_APPEND);
+    @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | missing user | " . $_SERVER['QUERY_STRING'] . "\n", FILE_APPEND);
     echo "OK";
     exit;
 }
@@ -133,8 +138,7 @@ try {
 
     echo "OK";
 } catch (Exception $e) {
-    @file_put_contents(dirname(__DIR__) . '/logs/usage_ingest.log', date('c') . " | error | " . $e->getMessage() . " | " . $_SERVER['QUERY_STRING'] . "\n", FILE_APPEND);
-    http_response_code(500);
-    echo "Error";
+    @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | error | " . $e->getMessage() . " | " . $_SERVER['QUERY_STRING'] . "\n", FILE_APPEND);
+    echo "OK";
 }
 ?>

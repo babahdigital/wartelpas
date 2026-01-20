@@ -2,9 +2,14 @@
 // FILE: report/live_ingest.php
 // Realtime ingest dari MikroTik (on-login) ke DB lokal
 
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
+ini_set('display_errors', 0);
+error_reporting(0);
 header('Content-Type: text/plain');
+
+$logDir = dirname(__DIR__) . '/logs';
+if (!is_dir($logDir)) {
+    @mkdir($logDir, 0755, true);
+}
 
 $secret_token = "WartelpasSecureKey";
 if (!isset($_GET['key']) || $_GET['key'] !== $secret_token) {
@@ -39,8 +44,9 @@ if ($raw === '') {
 }
 
 if ($raw === '') {
-    http_response_code(400);
-    die("Error: Data kosong.");
+    @file_put_contents($logDir . '/live_ingest.log', date('c') . " | empty data | " . ($_SERVER['QUERY_STRING'] ?? '') . "\n", FILE_APPEND);
+    echo "OK";
+    exit;
 }
 
 $root_dir = dirname(__DIR__);
@@ -52,7 +58,7 @@ try {
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $db->exec("PRAGMA journal_mode=WAL;");
     $db->exec("PRAGMA synchronous=NORMAL;");
-    $db->exec("PRAGMA busy_timeout=2000;");
+    $db->exec("PRAGMA busy_timeout=5000;");
 
     $db->exec("CREATE TABLE IF NOT EXISTS live_sales (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,8 +90,9 @@ try {
 
     $d = explode('-|-', $raw);
     if (count($d) < 4) {
-        http_response_code(400);
-        die("Error: Format data tidak valid.");
+        @file_put_contents($logDir . '/live_ingest.log', date('c') . " | invalid format | " . $raw . "\n", FILE_APPEND);
+        echo "OK";
+        exit;
     }
 
     $raw_date = $d[0] ?? '';
@@ -164,7 +171,7 @@ try {
 
     echo "OK";
 } catch (Exception $e) {
-    http_response_code(500);
-    echo "Error: " . $e->getMessage();
+    @file_put_contents($logDir . '/live_ingest.log', date('c') . " | error | " . $e->getMessage() . " | " . ($raw ?? '') . " | " . ($_SERVER['QUERY_STRING'] ?? '') . "\n", FILE_APPEND);
+    echo "OK";
 }
 ?>
