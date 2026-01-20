@@ -383,20 +383,27 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <table class="rekap-detail">
                             <thead>
                                 <tr>
-                                    <th>Jenis Blok</th>
-                                    <th style="width:70px;">Qty</th>
-                                    <th style="width:110px;">Total (Rp)</th>
-                                    <th style="width:70px;">Total Qty</th>
-                                    <th style="width:110px;">Total Blok</th>
-                                    <th style="width:110px;">Bandwidth</th>
-                                    <th style="width:90px;">Total</th>
-                                    <th style="width:110px;">Unit</th>
-                                    <th style="width:70px;">HP Aktif</th>
+                                    <th rowspan="2">Jenis Blok</th>
+                                    <th rowspan="2" style="width:70px;">Qty</th>
+                                    <th rowspan="2" style="width:110px;">Total (Rp)</th>
+                                    <th rowspan="2" style="width:70px;">Total Qty</th>
+                                    <th rowspan="2" style="width:110px;">Total Blok</th>
+                                    <th rowspan="2" style="width:110px;">Bandwidth</th>
+                                    <th colspan="3" style="width:210px;">Device</th>
+                                    <th colspan="2" style="width:140px;">Unit</th>
+                                    <th rowspan="2" style="width:70px;">HP Aktif</th>
+                                </tr>
+                                <tr>
+                                    <th style="width:70px;">Total</th>
+                                    <th style="width:70px;">Rusak</th>
+                                    <th style="width:70px;">Spam</th>
+                                    <th style="width:70px;">WARTEL</th>
+                                    <th style="width:70px;">KAMTIB</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (empty($block_summaries)): ?>
-                                    <tr><td colspan="10" style="text-align:center;">Tidak ada data</td></tr>
+                                    <tr><td colspan="12" style="text-align:center;">Tidak ada data</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($block_summaries as $blk => $bdata): ?>
                                         <?php
@@ -411,16 +418,11 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             <td style="text-align:center;" rowspan="3"><?= number_format((int)$bdata['total_qty'],0,',','.') ?></td>
                                             <td style="text-align:right;" rowspan="3"><?= number_format((int)$bdata['total_amount'],0,',','.') ?></td>
                                             <td style="text-align:right;" rowspan="3"><?= htmlspecialchars(format_bytes_short((int)$bdata['total_bw'])) ?></td>
-                                            <td class="rekap-hp" rowspan="3">
-                                                <div style="border-bottom:1px solid #000; padding-bottom:2px; margin-bottom:2px;">
-                                                    <?= number_format((int)$hp_stat['total'],0,',','.') ?>
-                                                </div>
-                                                <div style="font-weight:400; font-size:11px;">Rusak: <?= number_format((int)$hp_stat['rusak'],0,',','.') ?> | Spam: <?= number_format((int)$hp_stat['spam'],0,',','.') ?></div>
-                                            </td>
-                                            <td class="rekap-hp" rowspan="3">
-                                                <div>WARTEL: <?= number_format((int)$hp_unit['WARTEL'],0,',','.') ?></div>
-                                                <div>KAMTIB: <?= number_format((int)$hp_unit['KAMTIB'],0,',','.') ?></div>
-                                            </td>
+                                            <td class="rekap-hp" rowspan="3"><?= number_format((int)$hp_stat['total'],0,',','.') ?></td>
+                                            <td class="rekap-hp" rowspan="3"><?= number_format((int)$hp_stat['rusak'],0,',','.') ?></td>
+                                            <td class="rekap-hp" rowspan="3"><?= number_format((int)$hp_stat['spam'],0,',','.') ?></td>
+                                            <td class="rekap-hp" rowspan="3"><?= number_format((int)$hp_unit['WARTEL'],0,',','.') ?></td>
+                                            <td class="rekap-hp" rowspan="3"><?= number_format((int)$hp_unit['KAMTIB'],0,',','.') ?></td>
                                             <td class="rekap-hp" rowspan="3"><?= number_format((int)$hp_stat['active'],0,',','.') ?></td>
                                         </tr>
                                         <tr>
