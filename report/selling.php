@@ -56,6 +56,19 @@ function norm_date_from_raw_report($raw_date) {
         return '';
 }
 
+    function format_bytes_short($bytes) {
+        $b = (float)$bytes;
+        if ($b <= 0) return '0 B';
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $i = 0;
+        while ($b >= 1024 && $i < count($units) - 1) {
+            $b /= 1024;
+            $i++;
+        }
+        $dec = $i >= 2 ? 2 : 0;
+        return number_format($b, $dec, ',', '.') . ' ' . $units[$i];
+    }
+
 if (file_exists($dbFile)) {
     try {
         $db = new PDO('sqlite:' . $dbFile);
@@ -78,8 +91,8 @@ if (file_exists($dbFile)) {
                 sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
                 sh.username, sh.profile, sh.profile_snapshot,
                 sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
-                sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
-                sh.full_raw_data, lh.last_status
+            sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
+            sh.full_raw_data, lh.last_status, lh.last_bytes
             FROM sales_history sh
             LEFT JOIN login_history lh ON lh.username = sh.username
             UNION ALL
@@ -87,8 +100,8 @@ if (file_exists($dbFile)) {
                 ls.raw_date, ls.raw_time, ls.sale_date, ls.sale_time, ls.sale_datetime,
                 ls.username, ls.profile, ls.profile_snapshot,
                 ls.price, ls.price_snapshot, ls.sprice_snapshot, ls.validity,
-                ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
-                ls.full_raw_data, lh2.last_status
+            ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
+            ls.full_raw_data, lh2.last_status, lh2.last_bytes
             FROM live_sales ls
             LEFT JOIN login_history lh2 ON lh2.username = ls.username
             WHERE ls.sync_status = 'pending'
@@ -429,6 +442,7 @@ foreach ($rows as $r) {
                 'status' => strtoupper($status),
                 'price' => $price,
                 'net' => $net_add,
+                'bytes' => (int)($r['last_bytes'] ?? 0),
             'comment' => $comment
         ];
 }
@@ -923,12 +937,13 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         <th>Status</th>
                         <th class="text-right">Harga</th>
                         <th class="text-right">Efektif</th>
+                        <th class="text-right">Bandwidth</th>
                         <th class="text-right">Catatan</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($list_page)): ?>
-                        <tr><td colspan="8" style="text-align:center;color:var(--txt-muted);padding:30px;">Tidak ada data pada periode ini.</td></tr>
+                        <tr><td colspan="9" style="text-align:center;color:var(--txt-muted);padding:30px;">Tidak ada data pada periode ini.</td></tr>
                     <?php else: foreach ($list_page as $it): ?>
                         <tr>
                             <td><?= htmlspecialchars($it['dt']) ?></td>
@@ -944,6 +959,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             </td>
                             <td class="text-right"><?= number_format($it['price'],0,',','.') ?></td>
                             <td class="text-right"><?= number_format($it['net'],0,',','.') ?></td>
+                            <td class="text-right"><?= htmlspecialchars(format_bytes_short((int)($it['bytes'] ?? 0))) ?></td>
                             <td class="text-right"><small><?= htmlspecialchars($it['comment']) ?></small></td>
                         </tr>
                     <?php endforeach; endif; ?>

@@ -219,7 +219,7 @@ foreach ($rows as $r) {
         }
         $bytes = (int)($r['last_bytes'] ?? 0);
         if ($bytes < 0) $bytes = 0;
-        $bw_line = $bytes * $qty;
+        $bw_line = $bytes;
         $block_summaries[$block]['profiles'][$minutes]['qty'] += $qty;
         $block_summaries[$block]['profiles'][$minutes]['total'] += $net_line;
         $block_summaries[$block]['profiles'][$minutes]['bw'] += $bw_line;
