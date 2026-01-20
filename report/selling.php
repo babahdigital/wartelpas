@@ -394,6 +394,9 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
     .table-dark-solid th { background: #1b1e21; padding: 12px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--txt-muted); border-bottom: 2px solid var(--border-col); }
     .table-dark-solid td { padding: 12px; border-bottom: 1px solid #3a4046; vertical-align: middle; font-size: 0.9rem; }
     .table-dark-solid tr:hover td { background: #32383e; }
+    .unit-stack { font-family: monospace; font-size: 12px; line-height: 1.2; }
+    .unit-wartel { color: #52c41a; }
+    .unit-kamtib { color: #4ea8ff; }
     .summary-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
     .summary-card { background: #23272b; border: 1px solid var(--border-col); border-radius: 8px; padding: 14px; }
     .summary-title { font-size: 0.8rem; color: var(--txt-muted); text-transform: uppercase; letter-spacing: 1px; }
@@ -679,6 +682,7 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
 
 <?php
 $hp_rows = [];
+$hp_rows_total = [];
 $hp_summary = [];
 if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         try {
@@ -696,6 +700,10 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     $hp_breakdown[$bname][$ut] = (int)($row['total_units'] ?? 0);
                 }
 
+                $hp_rows_total = array_values(array_filter($hp_rows, function($row){
+                    return strtoupper((string)($row['unit_type'] ?? '')) === 'TOTAL';
+                }));
+
                 $stmt2 = $db->prepare("SELECT unit_type,
             SUM(total_units) AS total_units,
             SUM(active_units) AS active_units,
@@ -709,6 +717,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         $hp_summary = $stmt2->fetchAll(PDO::FETCH_ASSOC);
         } catch (Exception $e) {
                 $hp_rows = [];
+        $hp_rows_total = [];
         $hp_summary = [];
         }
 }
@@ -742,12 +751,20 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (empty($hp_rows)): ?>
+                    <?php if (empty($hp_rows_total)): ?>
                         <tr><td colspan="8" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada input.</td></tr>
-                    <?php else: foreach ($hp_rows as $r): ?>
+                    <?php else: foreach ($hp_rows_total as $r): ?>
                         <tr>
                             <td><?= htmlspecialchars($r['blok_name'] ?? '-') ?></td>
-                            <td><?= htmlspecialchars($r['unit_type'] ?? '-') ?></td>
+                            <td>
+                                <?php
+                                    $bname = $r['blok_name'] ?? '';
+                                    $bw = $hp_breakdown[$bname]['WARTEL'] ?? 0;
+                                    $bk = $hp_breakdown[$bname]['KAMTIB'] ?? 0;
+                                ?>
+                                <div class="unit-stack unit-wartel">WARTEL: <?= (int)$bw; ?></div>
+                                <div class="unit-stack unit-kamtib">KAMTIB: <?= (int)$bk; ?></div>
+                            </td>
                             <td class="text-right"><?= (int)($r['total_units'] ?? 0) ?></td>
                               <td class="text-right"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['active_units'] ?? 0) : '-' ?></td>
                               <td class="text-right"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['rusak_units'] ?? 0) : '-' ?></td>
@@ -755,11 +772,6 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             <td><small><?= htmlspecialchars($r['notes'] ?? '') ?></small></td>
                             <td class="text-center">
                                 <?php if (($r['unit_type'] ?? '') === 'TOTAL'): ?>
-                                    <?php
-                                        $bname = $r['blok_name'] ?? '';
-                                        $bw = $hp_breakdown[$bname]['WARTEL'] ?? 0;
-                                        $bk = $hp_breakdown[$bname]['KAMTIB'] ?? 0;
-                                    ?>
                                     <button type="button" class="btn-act" onclick="openHpEdit(this)"
                                         data-blok="<?= htmlspecialchars($bname); ?>"
                                         data-date="<?= htmlspecialchars($filter_date); ?>"
