@@ -1217,7 +1217,7 @@ foreach($all_users as $u) {
     }
 
       // Filter tanggal (harian/bulanan/tahunan) - abaikan untuk READY
-      if ($req_status !== 'used' && $req_show !== 'semua' && !empty($filter_date) && $status !== 'READY') {
+      if ($req_status !== 'used' && $req_show !== 'semua' && !empty($filter_date) && $status !== 'READY' && $status !== 'TERPAKAI') {
         $comment_dt = extract_datetime_from_comment($comment);
         $hist_dt = $hist['last_login_real'] ?? ($hist['first_login_real'] ?? ($hist['updated_at'] ?? ''));
         $date_candidate = $comment_dt !== '' ? $comment_dt : ($login_time_real ?: $logout_time_real ?: $hist_dt);
@@ -1353,6 +1353,14 @@ foreach($all_users as $u) {
     if ($status === 'READY') {
       $login_disp = '-';
       $logout_disp = '-';
+    }
+    if ($status === 'RUSAK') {
+      $uptime_sec = uptime_to_seconds($uptime);
+      $show_rusak_times = ($uptime_sec > 0 || $bytes > 0) && $uptime_sec <= 300 && $bytes <= (10 * 1024 * 1024);
+      if (!$show_rusak_times) {
+        $login_disp = '-';
+        $logout_disp = '-';
+      }
     }
     if ($logout_disp !== '-' && substr($logout_disp, -8) === '00:00:00' && !empty($hist['updated_at'])) {
       $logout_disp = merge_date_time($logout_disp, $hist['updated_at']);
