@@ -1123,8 +1123,8 @@ foreach($all_users as $u) {
       }
     }
 
-      // Filter tanggal (harian/bulanan/tahunan)
-      if (!empty($filter_date)) {
+      // Filter tanggal (harian/bulanan/tahunan) - abaikan untuk READY
+      if (!empty($filter_date) && $status !== 'READY') {
         $comment_dt = extract_datetime_from_comment($comment);
         $date_candidate = $comment_dt !== '' ? $comment_dt : ($login_time_real ?: $logout_time_real ?: '');
         $date_key = normalize_date_key($date_candidate, $req_show);
