@@ -53,6 +53,15 @@
 
 :delay 5s;
 
+# 4b. CLEAR SERVER LOGS (optional)
+:log info "MAINT: Clear server logs...";
+:do {
+    /tool fetch url="http://wartelpas.sobigidul.net/report/clear_logs.php?key=WartelpasSecureKey&session=S3c7x9_LB" keep-result=no;
+    :log info "MAINT: Clear logs OK.";
+} on-error={ :log warning "MAINT: Clear logs gagal."; }
+
+:delay 2s;
+
 # 5. HAPUS USER EXPIRED (CLEANUP)
 :log info "CLEANUP: Menghapus user Disabled...";
 

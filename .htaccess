@@ -1,0 +1,167 @@
+# ====================================================
+# .HTACCESS WARTEL PAS - FULL ARMOR (TREE OPTIMIZED)
+# ====================================================
+
+# 1. SETTING DASAR & SECURITY HEADER
+Options -Indexes
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
+
+# Hardening PHP
+<IfModule mod_php7.c>
+    php_value max_execution_time 300
+    php_value memory_limit 256M
+</IfModule>
+<IfModule mod_php.c>
+    php_value max_execution_time 300
+    php_value memory_limit 256M
+</IfModule>
+
+# Security Headers (Anti-Iframe & Anti-Sniffing)
+<IfModule mod_headers.c>
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# 2. HALAMAN ERROR
+ErrorDocument 403 /error.php
+ErrorDocument 404 /error.php
+ErrorDocument 500 /error.php
+
+<Files "error.php">
+    Require all granted
+</Files>
+
+# ====================================================
+# 3. PROTEKSI FILE & FOLDER (DISESUAIKAN DENGAN TREE)
+# ====================================================
+
+# A. Blokir File Konfigurasi & Source Code
+# Mencegah download file config docker, nginx, git, env, dll
+<FilesMatch "^\.|\.(exe|bat|sh|sql|env|git|ini|yml|conf|log|db|bak|json|md|txt)$">
+    Require all denied
+</FilesMatch>
+
+<Files "Dockerfile">
+    Require all denied
+</Files>
+
+# B. Blokir Akses Langsung ke config.php
+<Files "config.php">
+    Require all denied
+</Files>
+
+# C. BLOKIR FOLDER SYSTEM & LOGIC (Backend)
+# Folder ini berisi script inti yang tidak boleh dipanggil langsung browser
+RedirectMatch 403 ^/include/.*$
+RedirectMatch 403 ^/process/(?!sync_usage\.php$|usage_ingest\.php$).*$
+RedirectMatch 403 ^/system/.*$
+RedirectMatch 403 ^/lib/.*$
+
+# D. BLOKIR FOLDER DATA SENSITIF (CRITICAL!)
+# Folder ini berisi session aktif, database, dan logs. HARAM diakses umum.
+RedirectMatch 403 ^/mikhmon_session/.*$
+RedirectMatch 403 ^/db_data/.*$
+RedirectMatch 403 ^/logs/.*$
+RedirectMatch 403 ^/mikhmon/.*$
+
+# E. BLOKIR TEMPLATE VOUCHER
+# Blokir semua php di folder voucher KECUALI print.php
+RedirectMatch 403 ^/voucher/(?!print\.php$).+\.php$
+
+# ====================================================
+# 4. LOGIKA DETEKSI IP
+# ====================================================
+SetEnvIf X-Forwarded-For "^10\.0\.0\.6($|,)" TAMU_VIP
+SetEnvIf X-Forwarded-For "^172\.16\.8\.21($|,)" TAMU_VIP
+
+# ====================================================
+# 5. GERBANG KEAMANAN UTAMA (GLOBAL)
+# ====================================================
+
+# A. DEFAULT: TOLAK SEMUA
+Require all denied
+
+# B. WHITELIST: AKSES PUBLIK (Login & Assets)
+# Izinkan file login dan folder assets (css, js, fonts, img)
+# Agar tampilan login tidak rusak saat diakses publik (jika diinginkan)
+<FilesMatch "^(index\.php|admin\.php|login\.php|cekip\.php)$">
+    Require all granted
+</FilesMatch>
+
+# DB check endpoint (protected by key)
+<If "%{REQUEST_URI} =~ m#^/db_check\.php$#">
+    Require all granted
+</If>
+
+# Realtime ingest endpoint (allow direct access by path)
+<If "%{REQUEST_URI} =~ m#^/report/live_ingest\.php$#">
+    Require all granted
+</If>
+
+# HP save endpoint (AJAX input)
+<If "%{REQUEST_URI} =~ m#^/report/hp_save\.php$#">
+    Require all granted
+</If>
+
+# Clear-all endpoint (manual maintenance)
+<If "%{REQUEST_URI} =~ m#^/report/clear_all\.php$#">
+    Require all granted
+</If>
+
+# Clear logs endpoint
+<If "%{REQUEST_URI} =~ m#^/report/clear_logs\.php$#">
+    Require all granted
+</If>
+
+# Print report endpoints
+<If "%{REQUEST_URI} =~ m#^/report/print_rekap\.php$#">
+    Require all granted
+</If>
+<If "%{REQUEST_URI} =~ m#^/report/print_rincian\.php$#">
+    Require all granted
+</If>
+
+# Sync usage endpoint
+<If "%{REQUEST_URI} =~ m#^/process/sync_usage\.php$#">
+    Require all granted
+</If>
+
+# Usage ingest endpoint (login/logout)
+<If "%{REQUEST_URI} =~ m#^/process/usage_ingest\.php$#">
+    Require all granted
+</If>
+
+# Izinkan akses folder assets
+<If "%{REQUEST_URI} =~ m#^/(css|js|img|fonts|lang)/#">
+    Require all granted
+</If>
+
+# C. WHITELIST: TAMU VIP (Dashboard Full Akses)
+# IP VIP boleh akses file AJAX (dashboard/, hotspot/, dll)
+<RequireAny>
+    Require env TAMU_VIP
+    Require ip 127.0.0.1
+    Require ip ::1
+</RequireAny>
+
+# ====================================================
+# 6. PINTU KHUSUS MIKROTIK (SYNC)
+# ====================================================
+<FilesMatch "^(sync_stats|sync_sales|live_ingest)\.php$">
+    <RequireAny>
+        Require ip 10.10.83.1
+        Require ip 172.19.0.0/16
+        Require ip 127.0.0.1
+    </RequireAny>
+</FilesMatch>
+
+# ====================================================
+# 7. PINTU KHUSUS PRINT VOUCHER
+# ====================================================
+<Files "print.php">
+    Require all granted
+</Files>
