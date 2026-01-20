@@ -47,6 +47,20 @@ function norm_date_from_raw_report($raw_date) {
     return '';
 }
 
+function detect_profile_minutes($profile) {
+    $p = strtolower((string)$profile);
+    if (preg_match('/\b10\s*(menit|m)\b/i', $p)) return '10';
+    if (preg_match('/\b30\s*(menit|m)\b/i', $p)) return '30';
+    return 'OTHER';
+}
+
+function normalize_block_letter($blok_name) {
+    $b = strtoupper(trim((string)$blok_name));
+    if ($b === '') return 'LAIN';
+    if (preg_match('/[A-Z]/', $b, $m)) return $m[0];
+    return 'LAIN';
+}
+
 $rows = [];
 $hp_total_units = 0;
 $hp_active_units = 0;
@@ -54,6 +68,8 @@ $hp_rusak_units = 0;
 $hp_spam_units = 0;
 $hp_wartel_units = 0;
 $hp_kamtib_units = 0;
+$hp_active_by_block = [];
+$block_summaries = [];
 
 try {
     if (file_exists($dbFile)) {
@@ -95,6 +111,17 @@ try {
             $hp_rusak_units = (int)($hp['rusak_units'] ?? 0);
             $hp_spam_units = (int)($hp['spam_units'] ?? 0);
 
+            $stmtHpBlock = $db->prepare("SELECT blok_name, SUM(active_units) AS active_units
+                FROM phone_block_daily
+                WHERE report_date = :d AND unit_type = 'TOTAL'
+                GROUP BY blok_name");
+            $stmtHpBlock->execute([':d' => $filter_date]);
+            $hpBlockRows = $stmtHpBlock->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($hpBlockRows as $hb) {
+                $blk = normalize_block_letter($hb['blok_name'] ?? '');
+                $hp_active_by_block[$blk] = (int)($hb['active_units'] ?? 0);
+            }
+
             $stmtHp2 = $db->prepare("SELECT unit_type, SUM(total_units) AS total_units
                 FROM phone_block_daily
                 WHERE report_date = :d AND unit_type IN ('WARTEL','KAMTIB')
@@ -122,6 +149,8 @@ $total_qty_rusak = 0;
 $total_qty_invalid = 0;
 $rusak_10m = 0;
 $rusak_30m = 0;
+$total_qty_units = 0;
+$total_net_units = 0;
 
 foreach ($rows as $r) {
     $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
@@ -149,6 +178,36 @@ foreach ($rows as $r) {
     $loss_rusak = ($status === 'rusak') ? $price : 0;
     $loss_invalid = ($status === 'invalid') ? $price : 0;
     $net_add = $gross_add - $loss_rusak - $loss_invalid;
+
+    if ($req_show === 'harian') {
+        $qty = (int)($r['qty'] ?? 0);
+        if ($qty <= 0) $qty = 1;
+        $line_price = $price * $qty;
+        $gross_line = ($status === 'retur' || $status === 'invalid') ? 0 : $line_price;
+        $loss_rusak_line = ($status === 'rusak') ? $line_price : 0;
+        $loss_invalid_line = ($status === 'invalid') ? $line_price : 0;
+        $net_line = $gross_line - $loss_rusak_line - $loss_invalid_line;
+
+        $total_qty_units += $qty;
+        $total_net_units += $net_line;
+
+        $block = normalize_block_letter($r['blok_name'] ?? '');
+        $minutes = detect_profile_minutes($profile);
+        if (!isset($block_summaries[$block])) {
+            $block_summaries[$block] = [
+                'total_qty' => 0,
+                'total_amount' => 0,
+                'profiles' => []
+            ];
+        }
+        if (!isset($block_summaries[$block]['profiles'][$minutes])) {
+            $block_summaries[$block]['profiles'][$minutes] = ['qty' => 0, 'total' => 0];
+        }
+        $block_summaries[$block]['profiles'][$minutes]['qty'] += $qty;
+        $block_summaries[$block]['profiles'][$minutes]['total'] += $net_line;
+        $block_summaries[$block]['total_qty'] += $qty;
+        $block_summaries[$block]['total_amount'] += $net_line;
+    }
 
     $total_qty++;
     if ($status === 'retur') $total_qty_retur++;
@@ -186,6 +245,13 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         .label { font-size:11px; color:#666; text-transform:uppercase; letter-spacing:.5px; }
         .value { font-size:18px; font-weight:700; margin-top:4px; }
         .small { font-size:12px; color:#555; margin-top:4px; }
+        .rekap-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:16px; }
+        .rekap-table th, .rekap-table td { border:1px solid #000; padding:6px; vertical-align:top; }
+        .rekap-table th { background:#f2f2f2; text-align:center; }
+        .rekap-detail { width:100%; border-collapse:collapse; font-size:12px; }
+        .rekap-detail th, .rekap-detail td { border:1px solid #000; padding:5px; }
+        .rekap-detail th { background:#f6f6f6; text-align:center; }
+        .rekap-total { background:#d9d9d9; font-weight:700; }
         @media print { .toolbar { display:none; } }
     </style>
 </head>
@@ -226,6 +292,76 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         </div>
         <?php endif; ?>
     </div>
+
+    <?php if ($req_show === 'harian'): ?>
+        <?php ksort($block_summaries); ?>
+        <table class="rekap-table">
+            <thead>
+                <tr>
+                    <th style="width:40px;">No</th>
+                    <th style="width:120px;">Tanggal</th>
+                    <th>Rincian Penjualan</th>
+                    <th style="width:90px;">Total Qty</th>
+                    <th style="width:140px;">Total Pendapatan (Rp)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="text-align:center;">1</td>
+                    <td style="text-align:center; font-weight:700;"><?= htmlspecialchars(date('d-m-Y', strtotime($filter_date))) ?></td>
+                    <td>
+                        <table class="rekap-detail">
+                            <thead>
+                                <tr>
+                                    <th>Jenis Blok</th>
+                                    <th>Quota</th>
+                                    <th style="width:70px;">Qty</th>
+                                    <th style="width:120px;">Total (Rp)</th>
+                                    <th style="width:90px;">HP Aktif</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($block_summaries)): ?>
+                                    <tr><td colspan="5" style="text-align:center;">Tidak ada data</td></tr>
+                                <?php else: ?>
+                                    <?php foreach ($block_summaries as $blk => $bdata): ?>
+                                        <?php
+                                            $profiles = $bdata['profiles'];
+                                            $order = ['10','30','OTHER'];
+                                            $sorted_profiles = [];
+                                            foreach ($order as $o) if (isset($profiles[$o])) $sorted_profiles[$o] = $profiles[$o];
+                                            foreach ($profiles as $k => $v) if (!isset($sorted_profiles[$k])) $sorted_profiles[$k] = $v;
+                                        ?>
+                                        <?php foreach ($sorted_profiles as $min => $pdata): ?>
+                                            <?php
+                                                $label = ($min === 'OTHER') ? ('BLOK-' . $blk) : ('BLOK-' . $blk . $min);
+                                                $quota = ($min === '10') ? '10 Menit' : (($min === '30') ? '30 Menit' : '-');
+                                            ?>
+                                            <tr>
+                                                <td><?= htmlspecialchars($label) ?></td>
+                                                <td style="text-align:center;"><?= $quota ?></td>
+                                                <td style="text-align:center;"><?= number_format((int)$pdata['qty'],0,',','.') ?></td>
+                                                <td style="text-align:right;"><?= number_format((int)$pdata['total'],0,',','.') ?></td>
+                                                <td></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                        <tr class="rekap-total">
+                                            <td colspan="2" style="text-align:right;">Total Blok <?= htmlspecialchars($blk) ?> :</td>
+                                            <td style="text-align:center;"><?= number_format((int)$bdata['total_qty'],0,',','.') ?></td>
+                                            <td style="text-align:right;"><?= number_format((int)$bdata['total_amount'],0,',','.') ?></td>
+                                            <td style="text-align:center;"><?= number_format((int)($hp_active_by_block[$blk] ?? 0),0,',','.') ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </td>
+                    <td style="text-align:center; font-weight:700; font-size:14px;"><?= number_format((int)$total_qty_units,0,',','.') ?></td>
+                    <td style="text-align:right; font-weight:700; font-size:14px;"><?= number_format((int)$total_net_units,0,',','.') ?></td>
+                </tr>
+            </tbody>
+        </table>
+    <?php endif; ?>
 
 <script>
 function shareReport(){
