@@ -300,6 +300,7 @@ try {
     try { $db->exec("ALTER TABLE login_history ADD COLUMN logout_time_real DATETIME"); } catch(Exception $e) {}
     try { $db->exec("ALTER TABLE login_history ADD COLUMN last_status TEXT DEFAULT 'ready'"); } catch(Exception $e) {}
     try { $db->exec("ALTER TABLE login_history ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP"); } catch(Exception $e) {}
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN login_count INTEGER DEFAULT 0"); } catch(Exception $e) {}
 } catch(Exception $e){
     $db = null;
 }
@@ -1389,7 +1390,8 @@ foreach($all_users as $u) {
         'bytes' => $bytes,
         'status' => $status,
         'login_time' => $login_disp,
-        'logout_time' => $logout_disp
+        'logout_time' => $logout_disp,
+        'relogin' => ((int)($hist['login_count'] ?? 0) > 1)
     ];
 }
 $API->disconnect();
@@ -1453,6 +1455,7 @@ if ($is_ajax) {
           <?php elseif($u['status'] === 'TERPAKAI'): ?><span class="status-badge st-used">TERPAKAI</span>
           <?php else: ?><span class="status-badge st-ready">READY</span>
           <?php endif; ?>
+          <?php if(!empty($u['relogin'])): ?><span class="status-badge st-relogin">RELOGIN</span><?php endif; ?>
         </td>
         <td class="text-center">
           <?php if (strtoupper($u['status']) === 'TERPAKAI'): ?>
