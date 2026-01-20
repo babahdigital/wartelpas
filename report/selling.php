@@ -444,7 +444,7 @@ $total_qty_laku = max(0, $total_qty - $total_qty_retur - $total_qty_rusak - $tot
     .unit-wartel { color: #52c41a; }
     .unit-kamtib { color: #4ea8ff; }
     .hp-notes { max-width: 150px; white-space: normal !important; word-break: break-word; line-height: 1.3; text-align: right; }
-    .summary-badge { display:inline-block; font-size:11px; padding:2px 8px; border-radius:10px; border:1px solid #495057; margin-right:6px; background:#2b3137; color:#e9ecef; }
+    .summary-badge { display:inline-block; font-size:11px; padding:2px 8px; border:1px solid #495057; margin-right:6px; background:#2b3137; color:#e9ecef; }
     .badge-wartel { background:#1f3b2b; border-color:#2f6b4a; color:#7ee2a8; }
     .badge-kamtib { background:#223049; border-color:#355a8f; color:#9cc7ff; }
     .text-green { color:#2ecc71; }
