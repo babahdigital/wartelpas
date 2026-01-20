@@ -25,7 +25,7 @@ if ($date === '') {
     $date = $show === 'bulanan' ? date('Y-m') : ($show === 'tahunan' ? date('Y') : date('Y-m-d'));
 }
 
-$blok_name = trim($_POST['blok_name'] ?? '');
+$blok_name = strtoupper(trim($_POST['blok_name'] ?? ''));
 $report_date = trim($_POST['report_date'] ?? '');
 $total_units = (int)($_POST['total_units'] ?? 0);
 $rusak_units = (int)($_POST['rusak_units'] ?? 0);
@@ -73,88 +73,80 @@ try {
     $db = new PDO('sqlite:' . $dbFile);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    $savePhone = function(PDO $db) use (
-        $report_date, $blok_name, $total_units, $active_units, $rusak_units, $spam_units, $notes,
-        $use_wartel, $use_kamtib, $wartel_units, $kamtib_units
-    ) {
-        $db->exec("CREATE TABLE IF NOT EXISTS phone_block_daily (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            report_date TEXT,
-            blok_name TEXT,
-            unit_type TEXT,
-            total_units INTEGER,
-            active_units INTEGER,
-            rusak_units INTEGER,
-            spam_units INTEGER,
-            notes TEXT,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(report_date, blok_name, unit_type)
-        )");
-        try { $db->exec("ALTER TABLE phone_block_daily ADD COLUMN unit_type TEXT"); } catch (Exception $e) {}
+    $db->exec("PRAGMA journal_mode=WAL;");
+    $db->exec("PRAGMA busy_timeout=5000;");
+    $db->exec("CREATE TABLE IF NOT EXISTS phone_block_daily (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        report_date TEXT,
+        blok_name TEXT,
+        unit_type TEXT,
+        total_units INTEGER,
+        active_units INTEGER,
+        rusak_units INTEGER,
+        spam_units INTEGER,
+        notes TEXT,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(report_date, blok_name, unit_type)
+    )");
+    try { $db->exec("ALTER TABLE phone_block_daily ADD COLUMN unit_type TEXT"); } catch (Exception $e) {}
 
-        $del = $db->prepare("DELETE FROM phone_block_daily WHERE report_date = :d AND blok_name = :b");
-        $ins = $db->prepare("INSERT INTO phone_block_daily
-            (report_date, blok_name, unit_type, total_units, active_units, rusak_units, spam_units, notes, updated_at)
-            VALUES (:d, :b, :ut, :t, :a, :r, :s, :n, CURRENT_TIMESTAMP)
-        ");
+    $db->beginTransaction();
 
-        $del->execute([
-            ':d' => $report_date,
-            ':b' => $blok_name
-        ]);
+    $del = $db->prepare("DELETE FROM phone_block_daily WHERE report_date = :d AND UPPER(blok_name) = :b");
+    $ins = $db->prepare("INSERT INTO phone_block_daily
+        (report_date, blok_name, unit_type, total_units, active_units, rusak_units, spam_units, notes, updated_at)
+        VALUES (:d, :b, :ut, :t, :a, :r, :s, :n, CURRENT_TIMESTAMP)
+    ");
+
+    $del->execute([
+        ':d' => $report_date,
+        ':b' => $blok_name
+    ]);
+    $ins->execute([
+        ':d' => $report_date,
+        ':b' => $blok_name,
+        ':ut' => 'TOTAL',
+        ':t' => $total_units,
+        ':a' => $active_units,
+        ':r' => $rusak_units,
+        ':s' => $spam_units,
+        ':n' => $notes
+    ]);
+
+    if ($use_wartel) {
         $ins->execute([
             ':d' => $report_date,
             ':b' => $blok_name,
-            ':ut' => 'TOTAL',
-            ':t' => $total_units,
-            ':a' => $active_units,
-            ':r' => $rusak_units,
-            ':s' => $spam_units,
-            ':n' => $notes
+            ':ut' => 'WARTEL',
+            ':t' => $wartel_units,
+            ':a' => 0,
+            ':r' => 0,
+            ':s' => 0,
+            ':n' => ''
         ]);
-
-        if ($use_wartel) {
-            $ins->execute([
-                ':d' => $report_date,
-                ':b' => $blok_name,
-                ':ut' => 'WARTEL',
-                ':t' => $wartel_units,
-                ':a' => 0,
-                ':r' => 0,
-                ':s' => 0,
-                ':n' => ''
-            ]);
-        }
-        if ($use_kamtib) {
-            $ins->execute([
-                ':d' => $report_date,
-                ':b' => $blok_name,
-                ':ut' => 'KAMTIB',
-                ':t' => $kamtib_units,
-                ':a' => 0,
-                ':r' => 0,
-                ':s' => 0,
-                ':n' => ''
-            ]);
-        }
-    };
-
-    try {
-        $savePhone($db);
-    } catch (Exception $e) {
-        $msg = $e->getMessage();
-        if (stripos($msg, 'UNIQUE constraint failed: phone_block_daily.report_date, phone_block_daily.blok_name') !== false) {
-            $db->exec("DROP TABLE IF EXISTS phone_block_daily");
-            $savePhone($db);
-        } else {
-            throw $e;
-        }
     }
+    if ($use_kamtib) {
+        $ins->execute([
+            ':d' => $report_date,
+            ':b' => $blok_name,
+            ':ut' => 'KAMTIB',
+            ':t' => $kamtib_units,
+            ':a' => 0,
+            ':r' => 0,
+            ':s' => 0,
+            ':n' => ''
+        ]);
+    }
+
+    $db->commit();
 
     $redirect_date = ($show === 'harian' && $report_date !== '') ? $report_date : $date;
     $redirect = './?report=selling' . $session_qs . '&show=' . urlencode($show) . '&date=' . urlencode($redirect_date);
     echo json_encode(['ok' => true, 'redirect' => $redirect]);
 } catch (Exception $e) {
+    if (isset($db) && $db instanceof PDO && $db->inTransaction()) {
+        $db->rollBack();
+    }
     http_response_code(500);
     $msg = $e->getMessage();
     echo json_encode(['ok' => false, 'message' => 'Gagal menyimpan data: ' . $msg]);
