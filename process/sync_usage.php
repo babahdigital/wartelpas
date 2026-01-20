@@ -96,8 +96,10 @@ try {
         login_time_real DATETIME,
         logout_time_real DATETIME,
         last_status TEXT DEFAULT 'ready',
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        login_count INTEGER DEFAULT 0
     )");
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN login_count INTEGER DEFAULT 0"); } catch(Exception $e) {}
 } catch (Exception $e) {
     http_response_code(500);
     echo "DB error";
@@ -163,34 +165,46 @@ foreach ($all_users as $u) {
         if ($is_used) $status = 'terpakai';
     }
 
-    $login_time_real = null;
-    $logout_time_real = null;
+    // Ambil history untuk locking
+    $hist = null;
+    try {
+        $stmtHist = $db->prepare("SELECT login_time_real, logout_time_real, login_count FROM login_history WHERE username = :u LIMIT 1");
+        $stmtHist->execute([':u'=>$name]);
+        $hist = $stmtHist->fetch(PDO::FETCH_ASSOC);
+    } catch(Exception $e) {}
+
+    $login_time_real = $hist['login_time_real'] ?? null;
+    $logout_time_real = $hist['logout_time_real'] ?? null;
+
     if ($is_active) {
-        $u_sec = uptime_to_seconds_sync($uptime);
-        $login_time_real = $u_sec > 0 ? date('Y-m-d H:i:s', time() - $u_sec) : $now;
+        if (empty($login_time_real)) {
+            $u_sec = uptime_to_seconds_sync($uptime);
+            $login_time_real = $u_sec > 0 ? date('Y-m-d H:i:s', time() - $u_sec) : $now;
+        }
         $logout_time_real = null;
     } else {
-        // if last status online, set logout now
-        $logout_time_real = $now;
+        if (empty($logout_time_real)) {
+            $logout_time_real = $now;
+        }
     }
 
-    $stmt = $db->prepare("INSERT INTO login_history (
-        username, ip_address, mac_address, last_uptime, last_bytes, blok_name, raw_comment,
-        login_time_real, logout_time_real, last_status, updated_at
-      ) VALUES (
-        :u, :ip, :mac, :up, :lb, :bl, :raw, :ltr, :lor, :st, :upd
-      ) ON CONFLICT(username) DO UPDATE SET
-        ip_address = CASE WHEN excluded.ip_address != '-' AND excluded.ip_address != '' THEN excluded.ip_address ELSE login_history.ip_address END,
-        mac_address = CASE WHEN excluded.mac_address != '-' AND excluded.mac_address != '' THEN excluded.mac_address ELSE login_history.mac_address END,
-        last_uptime = COALESCE(NULLIF(excluded.last_uptime,''), login_history.last_uptime),
-        last_bytes = CASE WHEN excluded.last_bytes IS NOT NULL AND excluded.last_bytes > 0 THEN excluded.last_bytes ELSE login_history.last_bytes END,
-        blok_name = CASE WHEN excluded.blok_name != '' THEN excluded.blok_name ELSE login_history.blok_name END,
-        raw_comment = CASE WHEN excluded.raw_comment != '' THEN excluded.raw_comment ELSE login_history.raw_comment END,
-        login_time_real = COALESCE(excluded.login_time_real, login_history.login_time_real),
-        logout_time_real = COALESCE(excluded.logout_time_real, login_history.logout_time_real),
-        last_status = COALESCE(excluded.last_status, login_history.last_status),
-        updated_at = excluded.updated_at
-    ");
+        $stmt = $db->prepare("INSERT INTO login_history (
+                username, ip_address, mac_address, last_uptime, last_bytes, blok_name, raw_comment,
+                login_time_real, logout_time_real, last_status, updated_at
+            ) VALUES (
+                :u, :ip, :mac, :up, :lb, :bl, :raw, :ltr, :lor, :st, :upd
+            ) ON CONFLICT(username) DO UPDATE SET
+                ip_address = CASE WHEN excluded.ip_address != '-' AND excluded.ip_address != '' THEN excluded.ip_address ELSE login_history.ip_address END,
+                mac_address = CASE WHEN excluded.mac_address != '-' AND excluded.mac_address != '' THEN excluded.mac_address ELSE login_history.mac_address END,
+                last_uptime = COALESCE(NULLIF(excluded.last_uptime,''), login_history.last_uptime),
+                last_bytes = CASE WHEN excluded.last_bytes IS NOT NULL AND excluded.last_bytes > 0 THEN excluded.last_bytes ELSE login_history.last_bytes END,
+                blok_name = CASE WHEN excluded.blok_name != '' THEN excluded.blok_name ELSE login_history.blok_name END,
+                raw_comment = CASE WHEN excluded.raw_comment != '' THEN excluded.raw_comment ELSE login_history.raw_comment END,
+                login_time_real = COALESCE(login_history.login_time_real, excluded.login_time_real),
+                logout_time_real = COALESCE(login_history.logout_time_real, excluded.logout_time_real),
+                last_status = COALESCE(excluded.last_status, login_history.last_status),
+                updated_at = CASE WHEN excluded.last_status = 'online' THEN excluded.updated_at ELSE login_history.updated_at END
+        ");
 
     $stmt->execute([
         ':u' => $name,

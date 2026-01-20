@@ -103,7 +103,8 @@ try {
         login_time_real DATETIME,
         logout_time_real DATETIME,
         last_status TEXT DEFAULT 'ready',
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        login_count INTEGER DEFAULT 0
     )");
 
     try { $db->exec("ALTER TABLE login_history ADD COLUMN ip_address TEXT"); } catch (Exception $e) {}
@@ -114,21 +115,25 @@ try {
     try { $db->exec("ALTER TABLE login_history ADD COLUMN logout_time_real DATETIME"); } catch (Exception $e) {}
     try { $db->exec("ALTER TABLE login_history ADD COLUMN last_status TEXT DEFAULT 'ready'"); } catch (Exception $e) {}
     try { $db->exec("ALTER TABLE login_history ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN login_count INTEGER DEFAULT 0"); } catch (Exception $e) {}
 
     $status = $event === 'login' ? 'online' : 'terpakai';
 
     $stmt = $db->prepare("INSERT INTO login_history (
         username, ip_address, mac_address, last_uptime, raw_comment,
-        login_time_real, logout_time_real, last_status, updated_at
+        login_time_real, logout_time_real, first_login_real, last_login_real, last_status, updated_at, login_count
     ) VALUES (
-        :u, :ip, :mac, :up, :raw, :ltr, :lor, :st, :upd
+        :u, :ip, :mac, :up, :raw, :ltr, :lor, :flr, :llr, :st, :upd, :cnt
     ) ON CONFLICT(username) DO UPDATE SET
         ip_address = CASE WHEN excluded.ip_address != '' AND excluded.ip_address != '-' THEN excluded.ip_address ELSE login_history.ip_address END,
         mac_address = CASE WHEN excluded.mac_address != '' AND excluded.mac_address != '-' THEN excluded.mac_address ELSE login_history.mac_address END,
         last_uptime = COALESCE(NULLIF(excluded.last_uptime, ''), login_history.last_uptime),
         raw_comment = CASE WHEN excluded.raw_comment != '' THEN excluded.raw_comment ELSE login_history.raw_comment END,
-        login_time_real = COALESCE(excluded.login_time_real, login_history.login_time_real),
-        logout_time_real = COALESCE(excluded.logout_time_real, login_history.logout_time_real),
+        first_login_real = COALESCE(login_history.first_login_real, excluded.first_login_real),
+        last_login_real = CASE WHEN excluded.last_status = 'online' THEN excluded.last_login_real ELSE COALESCE(login_history.last_login_real, excluded.last_login_real) END,
+        login_time_real = CASE WHEN excluded.last_status = 'online' THEN excluded.login_time_real ELSE COALESCE(login_history.login_time_real, excluded.login_time_real) END,
+        logout_time_real = CASE WHEN excluded.last_status = 'online' THEN login_history.logout_time_real ELSE COALESCE(excluded.logout_time_real, login_history.logout_time_real) END,
+        login_count = CASE WHEN excluded.last_status = 'online' THEN COALESCE(login_history.login_count,0) + 1 ELSE COALESCE(login_history.login_count,0) END,
         last_status = COALESCE(excluded.last_status, login_history.last_status),
         updated_at = excluded.updated_at
     ");
@@ -141,8 +146,11 @@ try {
         ':raw' => $comment,
         ':ltr' => $event === 'login' ? $dt : null,
         ':lor' => $event === 'logout' ? $dt : null,
+        ':flr' => $event === 'login' ? $dt : null,
+        ':llr' => $event === 'login' ? $dt : null,
         ':st' => $status,
-        ':upd' => $now
+        ':upd' => $now,
+        ':cnt' => $event === 'login' ? 1 : null
     ]);
 
     echo "OK";
