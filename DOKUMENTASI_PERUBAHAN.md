@@ -13,6 +13,11 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 8. **Aksi hapus/retur/rusak** belum aman (tidak cek aktif, tidak sinkron DB).
 9. **UI membingungkan**: print blok muncul di status tidak semestinya, tombol tidak sesuai kondisi, jarak toolbar terlalu renggang.
 10. **Download PNG** menggunakan nama file generik.
+11. **Login/logout tidak tercatat** karena endpoint ingest gagal (400/500/timeout).
+12. **DB schema mismatch** (kolom baru belum ada, ON CONFLICT gagal karena index unik belum ada).
+13. **READY bocor ke TERPAKAI** pada tampilan/print karena deteksi pemakaian terlalu longgar.
+14. **Sync Usage timeout di MikroTik** karena respons endpoint terlambat (router API call lama).
+15. **Data “ready” tetap muncul** setelah DB dikosongkan (dianggap error padahal hasil sync).
 
 ## 2) Solusi & Penyempurnaan yang Diterapkan
 ### 2.1 Optimalisasi RouterOS API
@@ -98,6 +103,27 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **.htaccess**: whitelist endpoint print rekap/rincian.
 - **UI Tombol**: tombol Print Rekap/Print Rincian di header laporan.
 
+### 2.13 Realtime Usage & Login/Logout Tracking
+- **process/usage_ingest.php**: diperkuat agar selalu `OK`, logging error, dan tidak memicu 500.
+- **report/live_ingest.php**: respon aman, log request invalid.
+- **MikroTik onlogin/onlogout**: selalu kirim usage ingest (login/logout) + uptime/IP/MAC.
+- **login_count & relogin**: pencatatan relogin dan badge di users + print.
+
+### 2.14 Perbaikan Print Rincian (TERPAKAI vs READY)
+- **READY disaring**: print rincian hanya menampilkan TERPAKAI/RUSAK, bukan READY.
+- **Guard pemakaian**: TERPAKAI hanya jika ada bytes/uptime/login_time/logout_time valid.
+
+### 2.15 Maintenance & Debug Tools
+- **db_check.php**: cek schema, row, path DB, dan status writable.
+- **report/clear_logs.php**: bersihkan log ingest.
+- **report/clear_block.php**: hapus `login_history` berdasarkan blok.
+- **.htaccess**: whitelist endpoint maintenance dan ingest.
+
+### 2.16 Stabilitas Sync Usage
+- **process/sync_usage.php**: respons cepat (early response + flush) agar MikroTik tidak timeout.
+- Logging **sync_usage.log** untuk audit proses dan durasi.
+- Script MikroTik diubah ke **port 8081** agar sesuai container.
+
 ## 3) Masalah Khusus dan Fix Terkait
 ### 3.1 Waktu/Bytes/Uptime kosong saat RUSAK
 - Parsing comment diperluas untuk format:
@@ -113,6 +139,19 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - `gen_user()` dibersihkan agar **tidak nested** Retur Ref.
 - Rollback menghapus `(Retur)` dan `Retur Ref:` agar status tidak salah.
 - Rollback juga menghapus jejak RUSAK di comment agar kembali READY.
+
+### 3.4 Database terlalu sulit (schema mismatch & conflict)
+- **Gejala**: login/logout tidak tercatat, ON CONFLICT gagal, kolom baru tidak ada.
+- **Akar masalah**: DB lama tidak memiliki kolom baru + tidak ada unique index `username`.
+- **Solusi**:
+  - Auto-migrate kolom via `PRAGMA table_info` + `ALTER TABLE` saat runtime.
+  - Tambah **unique index** `idx_login_history_username` untuk ON CONFLICT.
+  - Sinkronisasi aman tanpa menimpa data login/logout yang sudah terkunci.
+
+### 3.5 Sync Usage timeout (MikroTik)
+- **Gejala**: fetch timeout waiting data / receiving content.
+- **Akar masalah**: proses router API lama, respons endpoint telat.
+- **Solusi**: endpoint mengirim respons JSON **lebih dulu**, lanjut proses di belakang.
 
 ## 4) File yang Dibersihkan (Dihapus)
 File diagnostik & migrasi sementara yang sudah tidak diperlukan:
@@ -150,8 +189,16 @@ File diagnostik & migrasi sementara yang sudah tidak diperlukan:
 - report/hp_save.php
 - report/print_rekap.php
 - report/print_rincian.php
+- process/usage_ingest.php
+- process/sync_usage.php
+- report/live_ingest.php
+- report/clear_logs.php
+- report/clear_block.php
+- db_check.php
 - .htaccess
 - Mikrotik-CleanWartel.rsc
+- mikrotik-onlogin-fixed.rsc
+- mikrotik-onlogout.rsc
 - voucher/template perubahan label dan blok parsing
 - DOKUMENTASI_PERUBAHAN.md
 
@@ -162,9 +209,12 @@ File diagnostik & migrasi sementara yang sudah tidak diperlukan:
 - Retur jelas asalnya, rollback tersedia.
 - Print dan download sesuai kebutuhan.
 - Cookie dibersihkan aman tanpa mengganggu klien non‑Wartel.
+- Login/logout tercatat real‑time dan relogin terlihat.
+- Sync Usage tidak timeout di MikroTik.
 
 ## 7) Catatan Operasional
 - Pastikan script `mikrotik-onlogout.rsc` sudah dipasang pada server profile hotspot.
+- Gunakan URL port **8081** pada semua script MikroTik sesuai container.
 - Jika ada data yang masih kosong, pastikan voucher pernah login agar DB terisi.
 - Jika diperlukan debug, gunakan parameter `?debug=1` pada users.php.
 
