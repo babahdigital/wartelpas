@@ -103,19 +103,39 @@ try {
         login_time_real DATETIME,
         logout_time_real DATETIME,
         last_status TEXT DEFAULT 'ready',
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME,
         login_count INTEGER DEFAULT 0
     )");
 
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN ip_address TEXT"); } catch (Exception $e) {}
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN mac_address TEXT"); } catch (Exception $e) {}
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN last_uptime TEXT"); } catch (Exception $e) {}
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN raw_comment TEXT"); } catch (Exception $e) {}
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN login_time_real DATETIME"); } catch (Exception $e) {}
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN logout_time_real DATETIME"); } catch (Exception $e) {}
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN last_status TEXT DEFAULT 'ready'"); } catch (Exception $e) {}
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP"); } catch (Exception $e) {}
-    try { $db->exec("ALTER TABLE login_history ADD COLUMN login_count INTEGER DEFAULT 0"); } catch (Exception $e) {}
+    $requiredCols = [
+        'ip_address' => 'TEXT',
+        'mac_address' => 'TEXT',
+        'last_uptime' => 'TEXT',
+        'last_bytes' => 'INTEGER',
+        'first_ip' => 'TEXT',
+        'first_mac' => 'TEXT',
+        'last_ip' => 'TEXT',
+        'last_mac' => 'TEXT',
+        'first_login_real' => 'DATETIME',
+        'last_login_real' => 'DATETIME',
+        'validity' => 'TEXT',
+        'blok_name' => 'TEXT',
+        'raw_comment' => 'TEXT',
+        'login_time_real' => 'DATETIME',
+        'logout_time_real' => 'DATETIME',
+        'last_status' => "TEXT DEFAULT 'ready'",
+        'updated_at' => 'DATETIME',
+        'login_count' => 'INTEGER DEFAULT 0'
+    ];
+    $existingCols = [];
+    foreach ($db->query("PRAGMA table_info(login_history)") as $row) {
+        $existingCols[$row['name']] = true;
+    }
+    foreach ($requiredCols as $col => $type) {
+        if (!isset($existingCols[$col])) {
+            try { $db->exec("ALTER TABLE login_history ADD COLUMN $col $type"); } catch (Exception $e) {}
+        }
+    }
 
     $status = $event === 'login' ? 'online' : 'terpakai';
 
