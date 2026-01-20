@@ -1559,6 +1559,7 @@ if ($debug_mode && !$is_ajax) {
     .st-invalid { background: var(--c-red); color: #fff; }
     .st-retur { background: #8e44ad; color: #fff; }
     .st-used { background: #17a2b8; color: #fff; }
+    .st-relogin { background: #9b59b6; color: #fff; }
     .id-badge { font-family: 'Courier New', monospace; background: #3d454d; color: #fff; padding: 3px 6px; border-radius: 4px; font-weight: bold; border: 1px solid #56606a; }
     .btn-act { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 4px; border: none; color: white; transition: all 0.2s; margin: 0 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     .btn-act, .btn, button, .search-clear-btn, .custom-select-solid { cursor: pointer; }
@@ -1847,6 +1848,7 @@ if ($debug_mode && !$is_ajax) {
                       <?php elseif($u['status'] === 'TERPAKAI'): ?><span class="status-badge st-used">TERPAKAI</span>
                       <?php else: ?><span class="status-badge st-ready">READY</span>
                       <?php endif; ?>
+                      <?php if(!empty($u['relogin'])): ?><span class="status-badge st-relogin">RELOGIN</span><?php endif; ?>
                     </td>
                     <td class="text-center">
                       <?php if (strtoupper($u['status']) === 'TERPAKAI'): ?>
