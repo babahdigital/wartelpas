@@ -1392,6 +1392,10 @@ foreach($all_users as $u) {
       $login_disp = '-';
       $logout_disp = '-';
     }
+    if ($status === 'RETUR') {
+      $login_disp = '-';
+      $logout_disp = '-';
+    }
     if ($status === 'TERPAKAI' && $logout_disp !== '-' && substr($logout_disp, -8) === '00:00:00') {
       // fallback: jika logout masih jam 00:00:00 dan ada login+uptime, hitung ulang logout
       $base_uptime = $uptime_hist != '' ? $uptime_hist : $uptime_user;
@@ -1407,6 +1411,12 @@ foreach($all_users as $u) {
         $login_disp = '-';
         $logout_disp = '-';
       }
+    }
+    if ($login_disp !== '-' && strtotime($login_disp) !== false && date('Y', strtotime($login_disp)) < 2000) {
+      $login_disp = '-';
+    }
+    if ($logout_disp !== '-' && strtotime($logout_disp) !== false && date('Y', strtotime($logout_disp)) < 2000) {
+      $logout_disp = '-';
     }
     if ($logout_disp !== '-' && substr($logout_disp, -8) === '00:00:00' && !empty($hist['updated_at'])) {
       $logout_disp = merge_date_time($logout_disp, $hist['updated_at']);
@@ -1610,6 +1620,9 @@ if ($debug_mode && !$is_ajax) {
     .toolbar-right { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; flex: 0 0 auto; margin-left: auto; }
     .input-group-solid { display: flex; flex-grow: 1; max-width: 100%; gap: 0; }
     .input-group-solid .form-control, .input-group-solid .custom-select-solid { height: 40px; background: #343a40; border: 1px solid var(--border-col); color: white; padding: 0 12px; font-size: 0.9rem; border-radius: 0; }
+    .input-group-solid .form-control:focus, .input-group-solid .custom-select-solid:focus {
+      outline: none; box-shadow: none; border-color: var(--border-col);
+    }
     .input-group-solid .first-el { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
     .input-group-solid .last-el { border-top-right-radius: 6px; border-bottom-right-radius: 6px; border-left: none; }
     .input-group-solid .mid-el { border-left: none; border-right: none; }
