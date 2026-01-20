@@ -1345,8 +1345,13 @@ foreach($all_users as $u) {
       $login_disp = '-';
       $logout_disp = '-';
     }
-    if ($status === 'TERPAKAI' && $login_disp === '-' && $logout_disp !== '-' && substr($logout_disp, -8) === '00:00:00') {
-      $logout_disp = '-';
+    if ($status === 'TERPAKAI' && $logout_disp !== '-' && substr($logout_disp, -8) === '00:00:00') {
+      // fallback: jika logout masih jam 00:00:00 dan ada login+uptime, hitung ulang logout
+      $base_uptime = $uptime_hist != '' ? $uptime_hist : $uptime_user;
+      $u_sec = uptime_to_seconds($base_uptime);
+      if ($login_disp !== '-' && $u_sec > 0) {
+        $logout_disp = date('Y-m-d H:i:s', strtotime($login_disp) + $u_sec);
+      }
     }
     if ($status === 'RUSAK') {
       $uptime_sec = uptime_to_seconds($uptime);
