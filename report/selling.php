@@ -103,7 +103,6 @@ if (file_exists($dbFile)) {
 // Simpan input handphone per blok (harian)
 if (isset($db) && $db instanceof PDO && isset($_POST['hp_submit'])) {
     $blok_name = trim($_POST['blok_name'] ?? '');
-    $unit_type = trim($_POST['unit_type'] ?? '');
     $report_date = trim($_POST['report_date'] ?? '');
     $total_units = (int)($_POST['total_units'] ?? 0);
     $active_units = (int)($_POST['active_units'] ?? 0);
@@ -111,30 +110,68 @@ if (isset($db) && $db instanceof PDO && isset($_POST['hp_submit'])) {
     $spam_units = (int)($_POST['spam_units'] ?? 0);
     $notes = trim($_POST['notes'] ?? '');
 
-    if ($blok_name !== '' && $unit_type !== '' && $report_date !== '') {
+    $use_wartel = isset($_POST['unit_wartel']) ? 1 : 0;
+    $use_kamtib = isset($_POST['unit_kamtib']) ? 1 : 0;
+    $wartel_units = (int)($_POST['wartel_units'] ?? 0);
+    $kamtib_units = (int)($_POST['kamtib_units'] ?? 0);
+    $sum_units = ($use_wartel ? $wartel_units : 0) + ($use_kamtib ? $kamtib_units : 0);
+
+    if ($blok_name !== '' && $report_date !== '') {
         try {
-            $stmt = $db->prepare("INSERT INTO phone_block_daily
-                (report_date, blok_name, unit_type, total_units, active_units, rusak_units, spam_units, notes, updated_at)
-                VALUES (:d, :b, :ut, :t, :a, :r, :s, :n, CURRENT_TIMESTAMP)
-                ON CONFLICT(report_date, blok_name, unit_type) DO UPDATE SET
-                  unit_type=excluded.unit_type,
-                  total_units=excluded.total_units,
-                  active_units=excluded.active_units,
-                  rusak_units=excluded.rusak_units,
-                  spam_units=excluded.spam_units,
-                  notes=excluded.notes,
-                  updated_at=CURRENT_TIMESTAMP
-            ");
-            $stmt->execute([
-                ':d' => $report_date,
-                ':b' => $blok_name,
-                ':ut' => $unit_type,
-                ':t' => $total_units,
-                ':a' => $active_units,
-                ':r' => $rusak_units,
-                ':s' => $spam_units,
-                ':n' => $notes
-            ]);
+            if ($sum_units > 0 && $total_units !== $sum_units) {
+                $hp_error = 'Total unit harus sama dengan jumlah WARTEL + KAMTIB.';
+            } else {
+                $stmt = $db->prepare("INSERT INTO phone_block_daily
+                    (report_date, blok_name, unit_type, total_units, active_units, rusak_units, spam_units, notes, updated_at)
+                    VALUES (:d, :b, :ut, :t, :a, :r, :s, :n, CURRENT_TIMESTAMP)
+                    ON CONFLICT(report_date, blok_name, unit_type) DO UPDATE SET
+                      unit_type=excluded.unit_type,
+                      total_units=excluded.total_units,
+                      active_units=excluded.active_units,
+                      rusak_units=excluded.rusak_units,
+                      spam_units=excluded.spam_units,
+                      notes=excluded.notes,
+                      updated_at=CURRENT_TIMESTAMP
+                ");
+
+                // Simpan TOTAL
+                $stmt->execute([
+                    ':d' => $report_date,
+                    ':b' => $blok_name,
+                    ':ut' => 'TOTAL',
+                    ':t' => $total_units,
+                    ':a' => $active_units,
+                    ':r' => $rusak_units,
+                    ':s' => $spam_units,
+                    ':n' => $notes
+                ]);
+
+                // Simpan breakdown WARTEL/KAMTIB (hanya total)
+                if ($use_wartel) {
+                    $stmt->execute([
+                        ':d' => $report_date,
+                        ':b' => $blok_name,
+                        ':ut' => 'WARTEL',
+                        ':t' => $wartel_units,
+                        ':a' => 0,
+                        ':r' => 0,
+                        ':s' => 0,
+                        ':n' => ''
+                    ]);
+                }
+                if ($use_kamtib) {
+                    $stmt->execute([
+                        ':d' => $report_date,
+                        ':b' => $blok_name,
+                        ':ut' => 'KAMTIB',
+                        ':t' => $kamtib_units,
+                        ':a' => 0,
+                        ':r' => 0,
+                        ':s' => 0,
+                        ':n' => ''
+                    ]);
+                }
+            }
         } catch (Exception $e) {}
     }
 }
@@ -463,17 +500,18 @@ $hp_rows = [];
 $hp_summary = [];
 if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         try {
-                $stmt = $db->prepare("SELECT * FROM phone_block_daily WHERE report_date = :d ORDER BY blok_name");
+                $stmt = $db->prepare("SELECT * FROM phone_block_daily WHERE report_date = :d ORDER BY blok_name,
+                    CASE unit_type WHEN 'TOTAL' THEN 0 WHEN 'WARTEL' THEN 1 WHEN 'KAMTIB' THEN 2 ELSE 3 END");
                 $stmt->execute([':d' => $filter_date]);
                 $hp_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $stmt2 = $db->prepare("SELECT unit_type,
+                $stmt2 = $db->prepare("SELECT unit_type,
             SUM(total_units) AS total_units,
             SUM(active_units) AS active_units,
             SUM(rusak_units) AS rusak_units,
             SUM(spam_units) AS spam_units
           FROM phone_block_daily
-          WHERE report_date = :d
+                    WHERE report_date = :d AND unit_type IN ('WARTEL','KAMTIB')
           GROUP BY unit_type
           ORDER BY unit_type");
         $stmt2->execute([':d' => $filter_date]);
@@ -486,6 +524,13 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
 ?>
 
 <?php if ($req_show === 'harian'): ?>
+<?php if (!empty($hp_error)): ?>
+    <div class="card-solid mb-3">
+        <div class="card-body" style="padding:12px;color:#fca5a5;">
+            <?= htmlspecialchars($hp_error); ?>
+        </div>
+    </div>
+<?php endif; ?>
 <div class="card-solid mb-3">
     <div class="card-header-solid">
         <h3 class="m-0"><i class="fa fa-mobile mr-2"></i> Data Handphone per Blok (Harian)</h3>
@@ -513,9 +558,9 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             <td><?= htmlspecialchars($r['blok_name'] ?? '-') ?></td>
                             <td><?= htmlspecialchars($r['unit_type'] ?? '-') ?></td>
                             <td class="text-right"><?= (int)($r['total_units'] ?? 0) ?></td>
-                            <td class="text-right"><?= (int)($r['active_units'] ?? 0) ?></td>
-                            <td class="text-right"><?= (int)($r['rusak_units'] ?? 0) ?></td>
-                            <td class="text-right"><?= (int)($r['spam_units'] ?? 0) ?></td>
+                              <td class="text-right"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['active_units'] ?? 0) : '-' ?></td>
+                              <td class="text-right"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['rusak_units'] ?? 0) : '-' ?></td>
+                              <td class="text-right"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['spam_units'] ?? 0) : '-' ?></td>
                             <td><small><?= htmlspecialchars($r['notes'] ?? '') ?></small></td>
                             <td class="text-center">
                                 <a class="btn-act btn-act-danger" href="./?report=selling&mode=<?= $mode; ?>&show=<?= $req_show; ?>&date=<?= urlencode($filter_date); ?>&hp_delete=1&blok=<?= urlencode($r['blok_name']); ?>&type=<?= urlencode($r['unit_type']); ?>&hp_date=<?= urlencode($filter_date); ?>" onclick="return confirm('Hapus data blok <?= htmlspecialchars($r['blok_name'] ?? '-') ?> (<?= htmlspecialchars($r['unit_type'] ?? '-') ?>) untuk <?= htmlspecialchars($filter_date); ?>?')">
