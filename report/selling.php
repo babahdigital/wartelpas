@@ -13,6 +13,14 @@ $session_id = $_GET['session'] ?? '';
 $session_qs = $session_id !== '' ? '&session=' . urlencode($session_id) : '';
 $hp_redirect = '';
 
+// Ringkasan HP (harian)
+$hp_total_units = 0;
+$hp_active_units = 0;
+$hp_rusak_units = 0;
+$hp_spam_units = 0;
+$hp_wartel_units = 0;
+$hp_kamtib_units = 0;
+
 // Filter periode
 $req_show = $_GET['show'] ?? 'harian';
 $mode = 'final';
@@ -86,6 +94,43 @@ if (file_exists($dbFile)) {
             WHERE ls.sync_status = 'pending'
             ORDER BY sale_datetime DESC, raw_date DESC");
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
+
+        if ($req_show === 'harian') {
+            try {
+                $stmtHp = $db->prepare("SELECT
+                        SUM(total_units) AS total_units,
+                        SUM(active_units) AS active_units,
+                        SUM(rusak_units) AS rusak_units,
+                        SUM(spam_units) AS spam_units
+                    FROM phone_block_daily
+                    WHERE report_date = :d AND unit_type = 'TOTAL'");
+                $stmtHp->execute([':d' => $filter_date]);
+                $hp = $stmtHp->fetch(PDO::FETCH_ASSOC) ?: [];
+                $hp_total_units = (int)($hp['total_units'] ?? 0);
+                $hp_active_units = (int)($hp['active_units'] ?? 0);
+                $hp_rusak_units = (int)($hp['rusak_units'] ?? 0);
+                $hp_spam_units = (int)($hp['spam_units'] ?? 0);
+
+                $stmtHp2 = $db->prepare("SELECT unit_type, SUM(total_units) AS total_units
+                    FROM phone_block_daily
+                    WHERE report_date = :d AND unit_type IN ('WARTEL','KAMTIB')
+                    GROUP BY unit_type");
+                $stmtHp2->execute([':d' => $filter_date]);
+                $hpRows = $stmtHp2->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($hpRows as $hr) {
+                    $ut = strtoupper((string)($hr['unit_type'] ?? ''));
+                    if ($ut === 'WARTEL') $hp_wartel_units = (int)($hr['total_units'] ?? 0);
+                    if ($ut === 'KAMTIB') $hp_kamtib_units = (int)($hr['total_units'] ?? 0);
+                }
+            } catch (Exception $e) {
+                $hp_total_units = 0;
+                $hp_active_units = 0;
+                $hp_rusak_units = 0;
+                $hp_spam_units = 0;
+                $hp_wartel_units = 0;
+                $hp_kamtib_units = 0;
+            }
+        }
     } catch (Exception $e) {
         $rows = [];
     }
@@ -380,6 +425,7 @@ foreach ($rows as $r) {
 
 ksort($by_block, SORT_NATURAL | SORT_FLAG_CASE);
 ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
+$total_qty_laku = max(0, $total_qty - $total_qty_retur - $total_qty_rusak - $total_qty_invalid);
 ?>
 
 <?php if (!empty($hp_redirect) && headers_sent()): ?>
