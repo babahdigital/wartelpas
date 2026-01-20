@@ -330,8 +330,8 @@ function save_user_history($name, $data) {
             last_mac = CASE WHEN excluded.last_mac != '' THEN excluded.last_mac ELSE COALESCE(login_history.last_mac, '') END,
             first_login_real = COALESCE(login_history.first_login_real, excluded.first_login_real),
             last_login_real = COALESCE(excluded.last_login_real, login_history.last_login_real),
-            login_time_real = COALESCE(excluded.login_time_real, login_history.login_time_real),
-            logout_time_real = COALESCE(excluded.logout_time_real, login_history.logout_time_real),
+            login_time_real = CASE WHEN excluded.last_status = 'online' THEN excluded.login_time_real ELSE COALESCE(login_history.login_time_real, excluded.login_time_real) END,
+            logout_time_real = CASE WHEN excluded.last_status = 'online' THEN NULL ELSE COALESCE(login_history.logout_time_real, excluded.logout_time_real) END,
             last_status = COALESCE(excluded.last_status, login_history.last_status),
             raw_comment = excluded.raw_comment,
             updated_at = excluded.updated_at");
