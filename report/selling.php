@@ -610,6 +610,38 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
         if (spamEl) spamEl.addEventListener('input', validate);
         toggle();
     })();
+
+    window.openHpEdit = function(btn){
+        var form = document.getElementById('hpForm');
+        if (!form || !btn) return;
+        form.querySelector('select[name="blok_name"]').value = btn.getAttribute('data-blok') || '';
+        form.querySelector('input[name="report_date"]').value = btn.getAttribute('data-date') || '';
+        form.querySelector('input[name="total_units"]').value = btn.getAttribute('data-total') || '0';
+        form.querySelector('input[name="rusak_units"]').value = btn.getAttribute('data-rusak') || '0';
+        form.querySelector('input[name="spam_units"]').value = btn.getAttribute('data-spam') || '0';
+        form.querySelector('input[name="notes"]').value = btn.getAttribute('data-notes') || '';
+
+        var wartel = parseInt(btn.getAttribute('data-wartel') || '0', 10);
+        var kamtib = parseInt(btn.getAttribute('data-kamtib') || '0', 10);
+
+        var w = document.getElementById('chk_wartel');
+        var k = document.getElementById('chk_kamtib');
+        var wartelEl = form.querySelector('input[name="wartel_units"]');
+        var kamtibEl = form.querySelector('input[name="kamtib_units"]');
+
+        if (w) w.checked = wartel > 0;
+        if (k) k.checked = kamtib > 0;
+        if (wartelEl) wartelEl.value = wartel;
+        if (kamtibEl) kamtibEl.value = kamtib;
+
+        if (typeof window.dispatchEvent === 'function') {
+            var evt = new Event('change');
+            if (w) w.dispatchEvent(evt);
+            if (k) k.dispatchEvent(evt);
+        }
+
+        document.getElementById('hpModal').style.display = 'flex';
+    };
 </script>
 
 <?php
@@ -621,6 +653,15 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     CASE unit_type WHEN 'TOTAL' THEN 0 WHEN 'WARTEL' THEN 1 WHEN 'KAMTIB' THEN 2 ELSE 3 END");
                 $stmt->execute([':d' => $filter_date]);
                 $hp_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                $hp_breakdown = [];
+                foreach ($hp_rows as $row) {
+                    $bname = $row['blok_name'] ?? '';
+                    $ut = $row['unit_type'] ?? '';
+                    if ($bname === '' || ($ut !== 'WARTEL' && $ut !== 'KAMTIB')) continue;
+                    if (!isset($hp_breakdown[$bname])) $hp_breakdown[$bname] = ['WARTEL' => 0, 'KAMTIB' => 0];
+                    $hp_breakdown[$bname][$ut] = (int)($row['total_units'] ?? 0);
+                }
 
                 $stmt2 = $db->prepare("SELECT unit_type,
             SUM(total_units) AS total_units,
@@ -680,6 +721,26 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                               <td class="text-right"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['spam_units'] ?? 0) : '-' ?></td>
                             <td><small><?= htmlspecialchars($r['notes'] ?? '') ?></small></td>
                             <td class="text-center">
+                                <?php if (($r['unit_type'] ?? '') === 'TOTAL'): ?>
+                                    <?php
+                                        $bname = $r['blok_name'] ?? '';
+                                        $bw = $hp_breakdown[$bname]['WARTEL'] ?? 0;
+                                        $bk = $hp_breakdown[$bname]['KAMTIB'] ?? 0;
+                                    ?>
+                                    <button type="button" class="btn-act" onclick="openHpEdit(this)"
+                                        data-blok="<?= htmlspecialchars($bname); ?>"
+                                        data-date="<?= htmlspecialchars($filter_date); ?>"
+                                        data-total="<?= (int)($r['total_units'] ?? 0); ?>"
+                                        data-rusak="<?= (int)($r['rusak_units'] ?? 0); ?>"
+                                        data-spam="<?= (int)($r['spam_units'] ?? 0); ?>"
+                                        data-notes="<?= htmlspecialchars($r['notes'] ?? ''); ?>"
+                                        data-wartel="<?= (int)$bw; ?>"
+                                        data-kamtib="<?= (int)$bk; ?>">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                <?php else: ?>
+                                    <span style="color:var(--txt-muted);">-</span>
+                                <?php endif; ?>
                                 <a class="btn-act btn-act-danger" href="./?report=selling<?= $session_qs; ?>&mode=<?= $mode; ?>&show=<?= $req_show; ?>&date=<?= urlencode($filter_date); ?>&hp_delete=1&blok=<?= urlencode($r['blok_name']); ?>&type=<?= urlencode($r['unit_type']); ?>&hp_date=<?= urlencode($filter_date); ?>" onclick="return confirm('Hapus data blok <?= htmlspecialchars($r['blok_name'] ?? '-') ?> (<?= htmlspecialchars($r['unit_type'] ?? '-') ?>) untuk <?= htmlspecialchars($filter_date); ?>?')">
                                     <i class="fa fa-trash"></i>
                                 </a>
