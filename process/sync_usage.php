@@ -78,6 +78,34 @@ function log_sync_usage($message) {
     @file_put_contents($logFile, $line, FILE_APPEND);
 }
 
+// Respond early to avoid MikroTik fetch timeout
+$requestId = substr(md5(uniqid('', true)), 0, 8);
+$startTime = microtime(true);
+log_sync_usage("START id=$requestId session=$session ip=" . ($_SERVER['REMOTE_ADDR'] ?? '-'));
+if (function_exists('session_write_close')) {
+    session_write_close();
+}
+header('Content-Type: application/json');
+$payload = json_encode([
+    'ok' => true,
+    'queued' => true,
+    'id' => $requestId,
+    'time' => date('Y-m-d H:i:s')
+]);
+header('Connection: close');
+header('Content-Length: ' . strlen($payload));
+echo $payload;
+while (ob_get_level() > 0) {
+    @ob_end_flush();
+}
+if (function_exists('fastcgi_finish_request')) {
+    fastcgi_finish_request();
+} else {
+    @ob_flush();
+    @flush();
+}
+ignore_user_abort(true);
+
 // --- Database ---
 $dbDir = dirname(__DIR__) . '/db_data';
 if (!is_dir($dbDir)) mkdir($dbDir, 0755, true);
@@ -144,38 +172,8 @@ try {
     }
 } catch (Exception $e) {
     log_sync_usage('DB error: ' . $e->getMessage());
-    http_response_code(500);
-    echo "DB error";
     exit;
 }
-
-// Respond early to avoid MikroTik fetch timeout
-$requestId = substr(md5(uniqid('', true)), 0, 8);
-$startTime = microtime(true);
-log_sync_usage("START id=$requestId session=$session ip=" . ($_SERVER['REMOTE_ADDR'] ?? '-'));
-if (function_exists('session_write_close')) {
-    session_write_close();
-}
-header('Content-Type: application/json');
-$payload = json_encode([
-    'ok' => true,
-    'queued' => true,
-    'id' => $requestId,
-    'time' => date('Y-m-d H:i:s')
-]);
-header('Connection: close');
-header('Content-Length: ' . strlen($payload));
-echo $payload;
-while (ob_get_level() > 0) {
-    @ob_end_flush();
-}
-if (function_exists('fastcgi_finish_request')) {
-    fastcgi_finish_request();
-} else {
-    @ob_flush();
-    @flush();
-}
-ignore_user_abort(true);
 
 // --- RouterOS ---
 $API = new RouterosAPI();
