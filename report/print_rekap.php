@@ -303,7 +303,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
     <title>Print Rekap Laporan</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body { font-family: Arial, sans-serif; color:#111; margin:20px; }
+        body { font-family: Arial, sans-serif; color:#111; margin:20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         h2 { margin:0 0 6px 0; }
         .meta { font-size:12px; color:#555; margin-bottom:12px; }
         .toolbar { margin-bottom:14px; display:flex; gap:8px; flex-wrap:wrap; }
@@ -315,12 +315,14 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         .small { font-size:12px; color:#555; margin-top:4px; }
         .rekap-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:16px; }
         .rekap-table th, .rekap-table td { border:1px solid #000; padding:6px; vertical-align:top; }
-        .rekap-table th { background:#f2f2f2; text-align:center; }
+        .rekap-table th { background:#f0f3f7; text-align:center; }
         .rekap-detail { width:100%; border-collapse:collapse; font-size:12px; }
         .rekap-detail th, .rekap-detail td { border:1px solid #000; padding:5px; }
-        .rekap-detail th { background:#f6f6f6; text-align:center; }
-        .rekap-total { background:#d9d9d9; font-weight:700; }
-        .rekap-subtotal { background:#e0e0e0; font-weight:700; }
+        .rekap-detail th { background:#e9eef5; text-align:center; }
+        .rekap-detail td { vertical-align: middle; }
+        .rekap-detail tr:nth-child(even) td { background:#fbfbfd; }
+        .rekap-total { background:#d7dee8; font-weight:700; }
+        .rekap-subtotal { background:#e8edf4; font-weight:700; }
         .rekap-hp { text-align:center; vertical-align:middle; font-weight:700; }
         @media print { .toolbar { display:none; } }
     </style>
