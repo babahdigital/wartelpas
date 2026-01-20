@@ -220,14 +220,22 @@ foreach ($rows as $r) {
                 'total_amount' => 0,
                 'total_bw' => 0,
                 'qty_10' => 0,
-                'qty_30' => 0
+                'qty_30' => 0,
+                'amt_10' => 0,
+                'amt_30' => 0
             ];
         }
         $bytes = (int)($r['last_bytes'] ?? 0);
         if ($bytes < 0) $bytes = 0;
         $bw_line = $bytes;
-        if ($bucket === '10') $block_summaries[$block]['qty_10'] += $qty;
-        if ($bucket === '30') $block_summaries[$block]['qty_30'] += $qty;
+        if ($bucket === '10') {
+            $block_summaries[$block]['qty_10'] += $qty;
+            $block_summaries[$block]['amt_10'] += $net_line;
+        }
+        if ($bucket === '30') {
+            $block_summaries[$block]['qty_30'] += $qty;
+            $block_summaries[$block]['amt_30'] += $net_line;
+        }
         $block_summaries[$block]['total_qty'] += $qty;
         $block_summaries[$block]['total_amount'] += $net_line;
         $block_summaries[$block]['total_bw'] += $bw_line;
@@ -339,8 +347,10 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             <thead>
                                 <tr>
                                     <th>Jenis Blok</th>
-                                    <th style="width:90px;">Profile 10 Menit</th>
-                                    <th style="width:90px;">Profile 30 Menit</th>
+                                    <th style="width:90px;">Qty 10 Menit</th>
+                                    <th style="width:120px;">Total 10 Menit (Rp)</th>
+                                    <th style="width:90px;">Qty 30 Menit</th>
+                                    <th style="width:120px;">Total 30 Menit (Rp)</th>
                                     <th style="width:70px;">Total Qty</th>
                                     <th style="width:120px;">Total (Rp)</th>
                                     <th style="width:120px;">Bandwidth</th>
@@ -349,14 +359,16 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             </thead>
                             <tbody>
                                 <?php if (empty($block_summaries)): ?>
-                                    <tr><td colspan="7" style="text-align:center;">Tidak ada data</td></tr>
+                                    <tr><td colspan="9" style="text-align:center;">Tidak ada data</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($block_summaries as $blk => $bdata): ?>
                                         <?php $hp_active_val = (int)($hp_active_by_block[$blk] ?? 0); ?>
                                         <tr>
                                             <td><?= htmlspecialchars($blk) ?></td>
                                             <td style="text-align:center;"><?= number_format((int)$bdata['qty_10'],0,',','.') ?></td>
+                                            <td style="text-align:right;"><?= number_format((int)$bdata['amt_10'],0,',','.') ?></td>
                                             <td style="text-align:center;"><?= number_format((int)$bdata['qty_30'],0,',','.') ?></td>
+                                            <td style="text-align:right;"><?= number_format((int)$bdata['amt_30'],0,',','.') ?></td>
                                             <td style="text-align:center;"><?= number_format((int)$bdata['total_qty'],0,',','.') ?></td>
                                             <td style="text-align:right;"><?= number_format((int)$bdata['total_amount'],0,',','.') ?></td>
                                             <td style="text-align:right;"><?= htmlspecialchars(format_bytes_short((int)$bdata['total_bw'])) ?></td>
