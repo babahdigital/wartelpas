@@ -1301,7 +1301,9 @@ if ($is_ajax) {
           <?php endif; ?>
         </td>
         <td class="text-center">
-          <?php if (strtoupper($u['status']) !== 'RUSAK'): ?>
+          <?php if (strtoupper($u['status']) === 'TERPAKAI'): ?>
+            <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=used&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
+          <?php elseif (strtoupper($u['status']) !== 'RUSAK'): ?>
             <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
           <?php endif; ?>
           <?php if($u['uid']): ?>

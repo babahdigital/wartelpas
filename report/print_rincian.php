@@ -9,6 +9,7 @@ if (!isset($_SESSION["mikhmon"])) {
 
 include('../include/config.php');
 include('../include/readcfg.php');
+include_once('../lib/routeros_api.class.php');
 
 $dbFile = dirname(__DIR__) . '/db_data/mikhmon_stats.db';
 $cur = isset($currency) ? $currency : 'Rp';
@@ -30,6 +31,28 @@ function normalize_block_name_simple($blok_name) {
         $raw = $m[1];
     }
     return 'BLOK-' . $raw;
+}
+
+function extract_blok_name($comment) {
+    if (empty($comment)) return '';
+    if (preg_match('/\bblok\s*[-_]?\s*([A-Za-z0-9]+)/i', $comment, $m)) {
+        return 'BLOK-' . strtoupper($m[1]);
+    }
+    return '';
+}
+
+function extract_ip_mac_from_comment($comment) {
+    $ip = '';
+    $mac = '';
+    if (!empty($comment)) {
+        if (preg_match('/\bIP\s*:\s*([^|\s]+)/i', $comment, $m)) {
+            $ip = trim($m[1]);
+        }
+        if (preg_match('/\bMAC\s*:\s*([^|\s]+)/i', $comment, $m)) {
+            $mac = trim($m[1]);
+        }
+    }
+    return ['ip' => $ip, 'mac' => $mac];
 }
 
 function format_bytes_short($bytes) {
@@ -95,46 +118,118 @@ try {
             WHERE ls.sync_status = 'pending'
             ORDER BY sale_datetime DESC, raw_date DESC");
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
-
-        if ($is_usage) {
-            $sql = "SELECT username, blok_name, ip_address, mac_address, last_uptime, last_bytes, login_time_real, logout_time_real, raw_comment, last_status
-                    FROM login_history
-                    WHERE lower(last_status) IN ('terpakai','used')";
-            $params = [];
-            if ($filter_user !== '') {
-                $sql .= " AND username = :u";
-                $params[':u'] = $filter_user;
-            }
-            if ($filter_blok !== '') {
-                $sql .= " AND blok_name IS NOT NULL AND blok_name != ''";
-            }
-            $sql .= " ORDER BY datetime(login_time_real) DESC, username ASC";
-            $stmt = $db->prepare($sql);
-            $stmt->execute($params);
-            $usage_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($usage_rows as $ur) {
-                $blok_val = normalize_block_name_simple($ur['blok_name'] ?? '');
-                if ($filter_blok !== '') {
-                    $target_blok = normalize_block_name_simple($filter_blok);
-                    if ($blok_val === '' || strcasecmp($blok_val, $target_blok) !== 0) continue;
-                }
-                $usage_list[] = [
-                    'login' => $ur['login_time_real'] ?? '',
-                    'logout' => $ur['logout_time_real'] ?? '',
-                    'username' => $ur['username'] ?? '-',
-                    'blok' => $blok_val ?: '-',
-                    'ip' => $ur['ip_address'] ?? '-',
-                    'mac' => $ur['mac_address'] ?? '-',
-                    'uptime' => $ur['last_uptime'] ?? '0s',
-                    'bytes' => (int)($ur['last_bytes'] ?? 0),
-                    'status' => $ur['last_status'] ?? 'terpakai',
-                    'comment' => $ur['raw_comment'] ?? ''
-                ];
-            }
-        }
     }
 } catch (Exception $e) {
     $rows = [];
+}
+
+if ($is_usage && file_exists($dbFile)) {
+    $histMap = [];
+    try {
+        $db = $db ?? new PDO('sqlite:' . $dbFile);
+        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $stmt = $db->query("SELECT username, blok_name, ip_address, mac_address, last_uptime, last_bytes, login_time_real, logout_time_real, raw_comment, last_status FROM login_history");
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $uname = $row['username'] ?? '';
+            if ($uname !== '') $histMap[$uname] = $row;
+        }
+    } catch (Exception $e) {
+        $histMap = [];
+    }
+
+    $API = new RouterosAPI();
+    $API->debug = false;
+    $API->timeout = 5;
+    $API->attempts = 1;
+    $hotspot_server = $hotspot_server ?? 'wartel';
+    $connected = $API->connect($iphost, $userhost, decrypt($passwdhost));
+    if ($connected) {
+        $all_users = $API->comm("/ip/hotspot/user/print", array(
+            "?server" => $hotspot_server,
+            ".proplist" => ".id,name,comment,profile,disabled,bytes-in,bytes-out,uptime"
+        ));
+        $active = $API->comm("/ip/hotspot/active/print", array(
+            "?server" => $hotspot_server,
+            ".proplist" => "user,uptime,address,mac-address,bytes-in,bytes-out"
+        ));
+        $API->disconnect();
+
+        $activeMap = [];
+        foreach ($active as $a) {
+            if (isset($a['user'])) $activeMap[$a['user']] = $a;
+        }
+
+        foreach ($all_users as $u) {
+            $name = $u['name'] ?? '';
+            if ($name === '') continue;
+            if ($filter_user !== '' && $name !== $filter_user) continue;
+
+            $comment = (string)($u['comment'] ?? '');
+            $disabled = $u['disabled'] ?? 'false';
+            $is_active = isset($activeMap[$name]);
+
+            $f_blok = extract_blok_name($comment);
+            $hist = $histMap[$name] ?? null;
+            if ($f_blok === '' && $hist && !empty($hist['blok_name'])) {
+                $f_blok = normalize_block_name_simple($hist['blok_name']);
+            }
+            if ($filter_blok !== '') {
+                $target_blok = normalize_block_name_simple($filter_blok);
+                if ($f_blok === '' || strcasecmp($f_blok, $target_blok) !== 0) continue;
+            }
+
+            $f_ip = $is_active ? ($activeMap[$name]['address'] ?? '-') : '-';
+            $f_mac = $is_active ? ($activeMap[$name]['mac-address'] ?? '-') : '-';
+            if ($f_ip == '-' || $f_mac == '-') {
+                $cm = extract_ip_mac_from_comment($comment);
+                if ($f_ip == '-' && !empty($cm['ip'])) $f_ip = $cm['ip'];
+                if ($f_mac == '-' && !empty($cm['mac'])) $f_mac = $cm['mac'];
+            }
+            if (!$is_active && $hist) {
+                if ($f_ip == '-' && !empty($hist['ip_address'])) $f_ip = $hist['ip_address'];
+                if ($f_mac == '-' && !empty($hist['mac_address'])) $f_mac = $hist['mac_address'];
+            }
+
+            $bytes_total = ($u['bytes-in'] ?? 0) + ($u['bytes-out'] ?? 0);
+            $bytes_active = 0;
+            if ($is_active) {
+                $bytes_active = ($activeMap[$name]['bytes-in'] ?? 0) + ($activeMap[$name]['bytes-out'] ?? 0);
+            }
+            $bytes_hist = (int)($hist['last_bytes'] ?? 0);
+            $bytes = max((int)$bytes_total, (int)$bytes_active, $bytes_hist);
+
+            $uptime_user = $u['uptime'] ?? '';
+            $uptime_hist = $hist['last_uptime'] ?? '';
+            $uptime = $uptime_user != '' ? $uptime_user : ($uptime_hist != '' ? $uptime_hist : '0s');
+
+            $is_rusak = stripos($comment, 'RUSAK') !== false;
+            $is_retur = stripos($comment, '(Retur)') !== false || stripos($comment, 'Retur Ref:') !== false;
+            $hist_status = strtolower((string)($hist['last_status'] ?? ''));
+            if ($hist_status === 'rusak') $is_rusak = true;
+            if ($hist_status === 'retur') $is_retur = true;
+            if ($disabled === 'true') $is_rusak = true;
+            if ($is_retur && $hist_status !== 'rusak' && $disabled !== 'true') $is_rusak = false;
+            if ($is_rusak || $hist_status === 'rusak') $is_retur = false;
+
+            $is_used = (!$is_retur && !$is_rusak && $disabled !== 'true') &&
+                (!$is_active && ($bytes > 50 || $uptime != '0s' || ($f_ip != '-' && stripos($comment, '-|-') === false)));
+
+            if (!$is_used) continue;
+
+            $usage_list[] = [
+                'login' => $hist['login_time_real'] ?? '',
+                'logout' => $hist['logout_time_real'] ?? '',
+                'username' => $name,
+                'blok' => $f_blok ?: '-',
+                'ip' => $f_ip,
+                'mac' => $f_mac,
+                'uptime' => $uptime,
+                'bytes' => $bytes,
+                'status' => 'terpakai',
+                'comment' => $comment
+            ];
+        }
+    }
 }
 
 foreach ($rows as $r) {
