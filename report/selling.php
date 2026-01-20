@@ -746,7 +746,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         <th class="text-right">Aktif</th>
                         <th class="text-right">Rusak</th>
                         <th class="text-right">Spam</th>
-                        <th>Catatan</th>
+                        <th class="text-right">Catatan</th>
                         <th class="text-center">Hapus</th>
                     </tr>
                 </thead>
