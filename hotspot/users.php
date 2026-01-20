@@ -17,6 +17,7 @@ $req_prof = isset($_GET['profile']) ? $_GET['profile'] : 'all';
 $req_comm = isset($_GET['comment']) ? urldecode($_GET['comment']) : '';
 $req_status = isset($_GET['status']) ? $_GET['status'] : 'all';
 $req_search = isset($_GET['q']) ? $_GET['q'] : '';
+$read_only = isset($_GET['readonly']) && $_GET['readonly'] == '1';
 $default_show = in_array($req_status, ['used', 'rusak', 'retur']) ? 'semua' : 'harian';
 $req_show = $_GET['show'] ?? $default_show;
 $filter_date = $_GET['date'] ?? '';
@@ -1149,8 +1150,15 @@ foreach($all_users as $u) {
     if ($is_rusak || $hist_status === 'rusak') {
       $is_retur = false;
     }
+    $hist_used = $hist && (
+      in_array($hist_status, ['online','terpakai','rusak','retur']) ||
+      !empty($hist['login_time_real']) ||
+      !empty($hist['logout_time_real']) ||
+      (!empty($hist['last_uptime']) && $hist['last_uptime'] != '0s') ||
+      (int)($hist['last_bytes'] ?? 0) > 0
+    );
     $is_used = (!$is_retur && !$is_rusak && $disabled !== 'true') &&
-      ($is_active || $bytes > 50 || $uptime != '0s' || ($f_ip != '-' && stripos($comment, '-|-') === false));
+      ($is_active || $bytes > 50 || $uptime != '0s' || $hist_used);
 
     $status = 'READY';
     if ($is_active) $status = 'ONLINE';
@@ -1293,7 +1301,7 @@ foreach($all_users as $u) {
       }
     }
 
-    if ($db && $name != '') {
+    if ($db && !$read_only && $name != '') {
         $should_save = false;
         if (!$hist) {
           $should_save = true;
@@ -1777,9 +1785,11 @@ if ($debug_mode && !$is_ajax) {
                 ];
                 $print_all_url = './report/print_rincian.php?' . http_build_query($print_all_params);
               ?>
-              <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('<?= $print_all_url ?>','_blank').print()">
-                <i class="fa fa-print"></i> Print Bukti
-              </button>
+              <?php if ($req_status === 'all'): ?>
+                <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('<?= $print_all_url ?>','_blank').print()">
+                  <i class="fa fa-print"></i> Print Bukti
+                </button>
+              <?php endif; ?>
               <?php if ($can_delete_status): ?>
                 <button type="button" class="btn btn-warning" style="height:40px;" onclick="actionRequest('./?hotspot=users&action=delete_status&status=<?= $req_status ?>&blok=<?= urlencode($req_comm) ?>&session=<?= $session ?>','Hapus semua voucher <?= $status_label ?> di <?= htmlspecialchars($req_comm) ?> (tidak online)?')">
                   <i class="fa fa-trash"></i> Hapus <?= $status_label ?>
