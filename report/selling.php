@@ -205,6 +205,11 @@ if (isset($db) && $db instanceof PDO && isset($_GET['hp_delete'])) {
     }
 }
 
+if (!empty($hp_redirect) && headers_sent()) {
+    echo '<script>window.location.replace(' . json_encode($hp_redirect) . ');</script>';
+    exit;
+}
+
 function table_exists(PDO $db, $table) {
     try {
         $stmt = $db->prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=:t");
