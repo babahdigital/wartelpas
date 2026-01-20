@@ -897,6 +897,39 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
     <div class="card-body p-0">
         <div class="table-responsive" style="max-height: 420px;">
             <table class="table-dark-solid text-nowrap">
+                <thead>
+                    <tr>
+                        <th>Tanggal</th>
+                        <th>User</th>
+                        <th>Profile</th>
+                        <th>Blok</th>
+                        <th>Status</th>
+                        <th class="text-right">Harga</th>
+                        <th class="text-right">Efektif</th>
+                        <th class="text-right">Catatan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($list_page)): ?>
+                        <tr><td colspan="8" style="text-align:center;color:var(--txt-muted);padding:30px;">Tidak ada data pada periode ini.</td></tr>
+                    <?php else: foreach ($list_page as $it): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($it['dt']) ?></td>
+                            <td><?= htmlspecialchars($it['user']) ?></td>
+                            <td><?= htmlspecialchars($it['profile']) ?></td>
+                            <td><?= htmlspecialchars($it['blok']) ?></td>
+                            <td>
+                                <?php
+                                    $st = strtolower($it['status']);
+                                    $cls = $st === 'rusak' ? 'st-rusak' : ($st === 'retur' ? 'st-retur' : ($st === 'invalid' ? 'st-invalid' : 'st-normal'));
+                                ?>
+                                <span class="status-badge <?= $cls; ?>"><?= htmlspecialchars($it['status']) ?></span>
+                            </td>
+                            <td class="text-right"><?= number_format($it['price'],0,',','.') ?></td>
+                            <td class="text-right"><?= number_format($it['net'],0,',','.') ?></td>
+                            <td class="text-right"><small><?= htmlspecialchars($it['comment']) ?></small></td>
+                        </tr>
+                    <?php endforeach; endif; ?>
                 </tbody>
             </table>
         </div>
@@ -928,7 +961,6 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 </div>
             </div>
         <?php endif; ?>
-        </div>
     </div>
 </div>
 
