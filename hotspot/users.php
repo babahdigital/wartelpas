@@ -1441,14 +1441,15 @@ if ($debug_mode && !$is_ajax) {
     .toolbar-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
     .toolbar-left { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex: 1 1 auto; }
     .toolbar-right { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; flex: 0 0 auto; margin-left: auto; }
-    .input-group-solid { display: flex; flex-grow: 1; max-width: 100%; }
+    .input-group-solid { display: flex; flex-grow: 1; max-width: 100%; gap: 0; }
     .input-group-solid .form-control, .input-group-solid .custom-select-solid { height: 40px; background: #343a40; border: 1px solid var(--border-col); color: white; padding: 0 12px; font-size: 0.9rem; border-radius: 0; }
     .input-group-solid .first-el { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
     .input-group-solid .last-el { border-top-right-radius: 6px; border-bottom-right-radius: 6px; border-left: none; }
     .input-group-solid .mid-el { border-left: none; border-right: none; }
     .input-group-solid .no-sep-right { border-right: none; border-top-right-radius: 0; border-bottom-right-radius: 0; }
     .input-group-solid .no-sep-left { border-left: none; border-top-left-radius: 0; border-bottom-left-radius: 0; }
-    .period-group { margin-left: auto; }
+    .period-group { margin-left: auto; gap: 0; flex-wrap: nowrap; }
+    .period-group .custom-select-solid, .period-group .form-control { margin: 0; }
     .search-wrap { position: relative; display: flex; align-items: center; flex: 1 1 420px; min-width: 280px; }
     .search-wrap .form-control { padding-right: 36px; width: 100%; }
     .search-clear-btn { position: absolute; right: 8px; width: 22px; height: 22px; border-radius: 50%; border: none; background: #495057; color: #fff; font-size: 12px; line-height: 22px; display: none; }
