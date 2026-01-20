@@ -566,10 +566,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
               $API->write('=.id=' . $u[0]['.id']);
               $API->read();
             }
-            if ($target_status === 'terpakai') {
-              $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
-              $del->execute([':u' => $uname]);
-            }
+            $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
+            $del->execute([':u' => $uname]);
             $deleted_any = true;
           }
           if (!$deleted_any && $target_status !== '') {
@@ -591,10 +589,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
                 $API->write('/ip/hotspot/user/remove', false);
                 $API->write('=.id=' . $usr['.id']);
                 $API->read();
-                if ($target_status === 'terpakai') {
-                  $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
-                  $del->execute([':u' => $uname]);
-                }
+                $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
+                $del->execute([':u' => $uname]);
                 $deleted_any = true;
                 continue;
               }
@@ -602,10 +598,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
                 $API->write('/ip/hotspot/user/remove', false);
                 $API->write('=.id=' . $usr['.id']);
                 $API->read();
-                if ($target_status === 'terpakai') {
-                  $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
-                  $del->execute([':u' => $uname]);
-                }
+                $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
+                $del->execute([':u' => $uname]);
                 $deleted_any = true;
                 continue;
               }
@@ -618,10 +612,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
                   $API->write('/ip/hotspot/user/remove', false);
                   $API->write('=.id=' . $usr['.id']);
                   $API->read();
-                  if ($target_status === 'terpakai') {
-                    $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
-                    $del->execute([':u' => $uname]);
-                  }
+                  $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
+                  $del->execute([':u' => $uname]);
                   $deleted_any = true;
                 }
               }
@@ -650,7 +642,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
                 $API->write('=.id=' . $usr['.id']);
                 $API->read();
               }
-              // Jangan hapus histori rusak di DB
+              $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
+              $del->execute([':u' => $uname]);
             }
           }
         } catch(Exception $e) {}
@@ -700,12 +693,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $API->read();
         if ($db && $name != '') {
           try {
-            $hist = get_user_history($name);
-            $st = strtolower((string)($hist['last_status'] ?? ''));
-            if (!in_array($st, ['rusak','retur'])) {
-              $stmt = $db->prepare("DELETE FROM login_history WHERE username = :u");
-              $stmt->execute([':u' => $name]);
-            }
+            $stmt = $db->prepare("DELETE FROM login_history WHERE username = :u");
+            $stmt->execute([':u' => $name]);
           } catch(Exception $e) {}
         }
       } elseif ($act == 'invalid') {
