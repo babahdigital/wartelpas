@@ -519,7 +519,7 @@ $total_qty_laku = max(0, $total_qty - $total_qty_retur - $total_qty_rusak - $tot
                     <span class="summary-badge badge-kamtib">KAMTIB: <?= number_format($hp_kamtib_units,0,',','.') ?></span>
                 </div>
                 <div style="font-size:12px;color:var(--txt-muted);margin-top:6px;">
-                    Rusak: <?= number_format($hp_rusak_units,0,',','.') ?> | Spam: <?= number_format($hp_spam_units,0,',','.') ?>
+                    Rusak: <?= number_format($hp_rusak_units,0,',','.') ?> | Spam: <?= number_format($hp_spam_units,0,',','.') ?> | Aktif: <span class="text-green"><?= number_format($hp_active_units,0,',','.') ?></span>
                 </div>
             </div>
             <div class="summary-card">
