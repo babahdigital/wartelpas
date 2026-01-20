@@ -87,20 +87,18 @@ try {
     )");
     try { $db->exec("ALTER TABLE phone_block_daily ADD COLUMN unit_type TEXT"); } catch (Exception $e) {}
 
-    $stmt = $db->prepare("INSERT INTO phone_block_daily
+    $del = $db->prepare("DELETE FROM phone_block_daily WHERE report_date = :d AND blok_name = :b AND unit_type = :ut");
+    $ins = $db->prepare("INSERT INTO phone_block_daily
         (report_date, blok_name, unit_type, total_units, active_units, rusak_units, spam_units, notes, updated_at)
         VALUES (:d, :b, :ut, :t, :a, :r, :s, :n, CURRENT_TIMESTAMP)
-        ON CONFLICT(report_date, blok_name, unit_type) DO UPDATE SET
-          unit_type=excluded.unit_type,
-          total_units=excluded.total_units,
-          active_units=excluded.active_units,
-          rusak_units=excluded.rusak_units,
-          spam_units=excluded.spam_units,
-          notes=excluded.notes,
-          updated_at=CURRENT_TIMESTAMP
     ");
 
-    $stmt->execute([
+    $del->execute([
+        ':d' => $report_date,
+        ':b' => $blok_name,
+        ':ut' => 'TOTAL'
+    ]);
+    $ins->execute([
         ':d' => $report_date,
         ':b' => $blok_name,
         ':ut' => 'TOTAL',
@@ -112,7 +110,12 @@ try {
     ]);
 
     if ($use_wartel) {
-        $stmt->execute([
+        $del->execute([
+            ':d' => $report_date,
+            ':b' => $blok_name,
+            ':ut' => 'WARTEL'
+        ]);
+        $ins->execute([
             ':d' => $report_date,
             ':b' => $blok_name,
             ':ut' => 'WARTEL',
@@ -124,7 +127,12 @@ try {
         ]);
     }
     if ($use_kamtib) {
-        $stmt->execute([
+        $del->execute([
+            ':d' => $report_date,
+            ':b' => $blok_name,
+            ':ut' => 'KAMTIB'
+        ]);
+        $ins->execute([
             ':d' => $report_date,
             ':b' => $blok_name,
             ':ut' => 'KAMTIB',
