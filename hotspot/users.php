@@ -683,19 +683,9 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           $API->write('=.id=' . $d['id']);
           $API->read();
         }
-        if ($db && !empty($d['name'])) {
-          try {
-            $stmt = $db->prepare("DELETE FROM login_history WHERE username = :u");
-            $stmt->execute([':u' => $d['name']]);
-          } catch(Exception $e) {}
-        }
+        // Jangan hapus histori pemakaian (login_history) saat hapus blok
       }
-      if ($db) {
-        try {
-          $stmt = $db->prepare("DELETE FROM login_history WHERE blok_name = :b");
-          $stmt->execute([':b' => $blok_norm]);
-        } catch(Exception $e) {}
-      }
+      // Jangan hapus histori pemakaian per blok di login_history
     } elseif ($uid != '') {
       if ($act == 'delete') {
         $API->write('/ip/hotspot/user/remove', false);
