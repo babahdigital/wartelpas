@@ -91,6 +91,13 @@ function format_date_indo($dateStr) {
     return date('d-m-Y H:i:s', $ts);
 }
 
+function format_date_only_indo($dateStr) {
+    if (empty($dateStr) || $dateStr === '-') return '-';
+    $ts = strtotime($dateStr);
+    if ($ts === false) return $dateStr;
+    return date('d-m-Y', $ts);
+}
+
 function format_bytes_short($bytes) {
     $b = (float)$bytes;
     if ($b <= 0) return '0 B';
@@ -236,7 +243,8 @@ if ($is_usage && file_exists($dbFile)) {
 
             $uptime_user = $u['uptime'] ?? '';
             $uptime_hist = $hist['last_uptime'] ?? '';
-            $uptime = $uptime_user != '' ? $uptime_user : ($uptime_hist != '' ? $uptime_hist : '0s');
+            $uptime_active = $is_active ? ($activeMap[$name]['uptime'] ?? '') : '';
+            $uptime = $uptime_active != '' ? $uptime_active : ($uptime_user != '' ? $uptime_user : ($uptime_hist != '' ? $uptime_hist : '0s'));
 
             $is_rusak = stripos($comment, 'RUSAK') !== false;
             $is_retur = stripos($comment, '(Retur)') !== false || stripos($comment, 'Retur Ref:') !== false;
@@ -271,7 +279,16 @@ if ($is_usage && file_exists($dbFile)) {
             if ($logout_time === '') {
                 $logout_time = extract_datetime_from_comment($comment);
             }
-            if ($login_time === '' && $logout_time !== '') {
+            if ($status === 'ONLINE') {
+                $logout_time = '-';
+                if ($login_time === '') {
+                    $u_sec = uptime_to_seconds($uptime);
+                    if ($u_sec > 0) {
+                        $login_time = date('Y-m-d H:i:s', time() - $u_sec);
+                    }
+                }
+            }
+            if ($login_time === '' && $logout_time !== '' && $logout_time !== '-') {
                 $u_sec = uptime_to_seconds($uptime);
                 if ($u_sec > 0) {
                     $login_time = date('Y-m-d H:i:s', strtotime($logout_time) - $u_sec);
@@ -367,10 +384,10 @@ function esc($s){ return htmlspecialchars((string)$s); }
 
     <?php if ($is_usage): ?>
       <h2>Bukti Pemakaian Voucher</h2>
-      <div class="meta">
+            <div class="meta">
         <?php if ($filter_user !== ''): ?>User: <?= esc($filter_user) ?> | <?php endif; ?>
         <?php if ($filter_blok !== ''): ?>Blok: <?= esc($filter_blok) ?> | <?php endif; ?>
-        Tanggal Cetak: <?= esc(date('Y-m-d H:i')) ?>
+                Tanggal Cetak: <?= esc(format_date_indo(date('Y-m-d H:i:s'))) ?>
       </div>
 
       <table>
@@ -415,8 +432,8 @@ function esc($s){ return htmlspecialchars((string)$s); }
           </tbody>
       </table>
     <?php else: ?>
-      <h2>Rincian Transaksi Harian</h2>
-      <div class="meta">Tanggal: <?= esc($filter_date) ?></div>
+    <h2>Rincian Transaksi Harian</h2>
+    <div class="meta">Tanggal: <?= esc(format_date_only_indo($filter_date)) ?></div>
 
       <table>
           <thead>
