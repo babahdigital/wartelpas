@@ -88,6 +88,16 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **report/sync_sales.php**: simpan blok_name, WAL aktif, gunakan config/session (tanpa kredensial hardcode).
 - **Mikrotik-CleanWartel.rsc**: hapus preclean “hantu-sweeper”, **abort cleanup jika sync gagal**, URL fetch wajib membawa `session`.
 
+### 2.12 Laporan Penjualan, HP Blok, & Print Rekap
+- **report/selling.php**: gabung data `sales_history` + `live_sales` (pending), perbaikan perhitungan status (normal/rusak/retur/invalid), summary card baru, perhitungan rusak 10/30 menit, dan layout full-height agar pagination tidak terpotong.
+- **Rincian Transaksi**: pagination manual (`tx_page`) + kolom **Bandwidth** (dari `login_history.last_bytes`).
+- **Input HP Blok**: perbaikan validasi, only TOTAL row punya aksi edit/hapus, breakdown WARTEL/KAMTIB ditampilkan, catatan wrap, total bar HP di bawah tabel.
+- **report/hp_save.php**: insert/update aman (tanpa DROP), transaksi, WAL/busy_timeout, validasi WARTEL/KAMTIB, response JSON, redirect date harian.
+- **report/print_rekap.php**: desain rekap harian diperluas dengan tabel detail per blok (B10/B30 + subtotal), kolom Qty dengan subkolom Total/RS/RT, kolom Device (Total/RS/SP), Unit (WR/KM), Bandwidth, Aktif; parsing blok dari `blok_name`/comment; warna print; note singkatan & catatan settlement (sementara jam 03:00, final jam 04:00); nama file PDF unik via `beforeprint` (timestamp).
+- **report/print_rincian.php**: halaman print rincian harian dengan print/share.
+- **.htaccess**: whitelist endpoint print rekap/rincian.
+- **UI Tombol**: tombol Print Rekap/Print Rincian di header laporan.
+
 ## 3) Masalah Khusus dan Fix Terkait
 ### 3.1 Waktu/Bytes/Uptime kosong saat RUSAK
 - Parsing comment diperluas untuk format:
@@ -136,6 +146,11 @@ File diagnostik & migrasi sementara yang sudah tidak diperlukan:
 - hotspot/userprofilebyname.php
 - report/sync_stats.php
 - report/sync_sales.php
+- report/selling.php
+- report/hp_save.php
+- report/print_rekap.php
+- report/print_rincian.php
+- .htaccess
 - Mikrotik-CleanWartel.rsc
 - voucher/template perubahan label dan blok parsing
 - DOKUMENTASI_PERUBAHAN.md
