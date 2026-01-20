@@ -465,6 +465,15 @@ function shareReport(){
     }
 }
 
+function setUniquePrintTitle(){
+    var now = new Date();
+    var pad = function(n){ return String(n).padStart(2, '0'); };
+    var ts = now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate()) + '-' + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
+    document.title = 'laporan-harian-' + ts;
+}
+
+window.addEventListener('beforeprint', setUniquePrintTitle);
+
 </script>
 </body>
 </html>
