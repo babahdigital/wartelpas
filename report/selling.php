@@ -436,6 +436,16 @@ foreach ($rows as $r) {
 ksort($by_block, SORT_NATURAL | SORT_FLAG_CASE);
 ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
 $total_qty_laku = max(0, $total_qty - $total_qty_retur - $total_qty_rusak - $total_qty_invalid);
+
+$tx_page_size = 50;
+$tx_page = isset($_GET['tx_page']) ? (int)$_GET['tx_page'] : 1;
+if ($tx_page < 1) $tx_page = 1;
+$tx_total = count($list);
+$tx_pages = $tx_page_size > 0 ? (int)ceil($tx_total / $tx_page_size) : 1;
+if ($tx_pages < 1) $tx_pages = 1;
+if ($tx_page > $tx_pages) $tx_page = $tx_pages;
+$tx_offset = ($tx_page - 1) * $tx_page_size;
+$list_page = array_slice($list, $tx_offset, $tx_page_size);
 ?>
 
 <?php if (!empty($hp_redirect) && headers_sent()): ?>
@@ -459,6 +469,9 @@ $total_qty_laku = max(0, $total_qty - $total_qty_retur - $total_qty_rusak - $tot
     .badge-kamtib { background:#223049; border-color:#355a8f; color:#9cc7ff; }
     .text-green { color:#2ecc71; }
     .summary-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+        .tx-pager { display:flex; gap:6px; justify-content:center; align-items:center; padding:10px; border-top:1px solid var(--border-col); }
+        .tx-pager a, .tx-pager span { background:#343a40; border:1px solid var(--border-col); color:#fff; padding:4px 10px; border-radius:6px; font-size:12px; text-decoration:none; }
+        .tx-pager .active { background:#4ea8ff; border-color:#4ea8ff; color:#0b1220; font-weight:700; }
     .summary-card { background: #23272b; border: 1px solid var(--border-col); border-radius: 8px; padding: 14px; }
     .summary-title { font-size: 0.8rem; color: var(--txt-muted); text-transform: uppercase; letter-spacing: 1px; }
     .summary-value { font-size: 1.4rem; font-weight: 700; margin-top: 6px; }
@@ -528,13 +541,13 @@ $total_qty_laku = max(0, $total_qty - $total_qty_retur - $total_qty_rusak - $tot
                 </div>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Pendapatan Bersih</div>
-                <div class="summary-value" style="color:#2ecc71;"><?= $cur ?> <?= number_format($total_net,0,',','.') ?></div>
-            </div>
-            <div class="summary-card">
                 <div class="summary-title">Total Voucher Laku</div>
                 <div class="summary-value"><?= number_format($total_qty_laku,0,',','.') ?></div>
                 <div style="font-size:12px;color:var(--txt-muted);margin-top: 3px;">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bandwidth: -</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Pendapatan Bersih</div>
+                <div class="summary-value" style="color:#2ecc71;"><?= $cur ?> <?= number_format($total_net,0,',','.') ?></div>
             </div>
         </div>
     </div>
@@ -888,9 +901,9 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (empty($list)): ?>
+                    <?php if (empty($list_page)): ?>
                         <tr><td colspan="8" style="text-align:center;color:var(--txt-muted);padding:30px;">Tidak ada data pada periode ini.</td></tr>
-                    <?php else: foreach ($list as $it): ?>
+                    <?php else: foreach ($list_page as $it): ?>
                         <tr>
                             <td><?= htmlspecialchars($it['dt']) ?></td>
                             <td><?= htmlspecialchars($it['user']) ?></td>
@@ -911,6 +924,32 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 </tbody>
             </table>
         </div>
+        <?php if ($tx_pages > 1): ?>
+            <?php
+                $tx_base = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+                $tx_link = function($p) use ($tx_base) { return $tx_base . '&tx_page=' . $p; };
+                $tx_window = 2;
+                $tx_start = max(1, $tx_page - $tx_window);
+                $tx_end = min($tx_pages, $tx_page + $tx_window);
+            ?>
+            <div class="tx-pager">
+                <?php if ($tx_page > 1): ?>
+                    <a href="<?= $tx_link(1); ?>">« First</a>
+                    <a href="<?= $tx_link($tx_page - 1); ?>">‹ Prev</a>
+                <?php endif; ?>
+                <?php for ($p = $tx_start; $p <= $tx_end; $p++): ?>
+                    <?php if ($p == $tx_page): ?>
+                        <span class="active"><?= $p; ?></span>
+                    <?php else: ?>
+                        <a href="<?= $tx_link($p); ?>"><?= $p; ?></a>
+                    <?php endif; ?>
+                <?php endfor; ?>
+                <?php if ($tx_page < $tx_pages): ?>
+                    <a href="<?= $tx_link($tx_page + 1); ?>">Next ›</a>
+                    <a href="<?= $tx_link($tx_pages); ?>">Last »</a>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
     </div>
 </div>
 
