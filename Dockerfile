@@ -1,29 +1,28 @@
 FROM php:7.4-apache
 
-# Install Library Pendukung & SQLite Driver
+# 1. Install Library Pendukung
 RUN apt-get update && apt-get install -y git zip unzip sqlite3 libsqlite3-dev \
     && docker-php-ext-install mysqli pdo pdo_sqlite \
     && a2enmod rewrite \
     && apt-get clean
 
-# Copy Source Code dari Folder Lokal (Lebih cepat & aman daripada git clone ulang)
+# 2. Copy Source Code
 COPY . /var/www/html/
 
-# Buat Folder Data jika belum ada
-RUN mkdir -p /var/www/html/mikhmon_session /var/www/html/db_data
-
-# SET PERMISSION (KEAMANAN)
-# 1. Set Owner ke www-data (Apache User)
-RUN chown -R www-data:www-data /var/www/html
-
-# 2. Set Permission Standar (Folder 755, File 644)
-RUN find /var/www/html -type d -exec chmod 755 {} \;
-RUN find /var/www/html -type f -exec chmod 644 {} \;
-
-# 3. Kunci Config & File Sensitif (Hanya bisa dibaca, tidak bisa diedit via script/shell)
-RUN chmod 444 /var/www/html/include/config.php
-
-# 4. Beri akses tulis HANYA ke folder yang butuh (Session, Database, IMG untuk upload logo)
-RUN chmod -R 777 /var/www/html/mikhmon_session
-RUN chmod -R 777 /var/www/html/db_data
-RUN chmod -R 777 /var/www/html/img
+# 3. Setup Folder & Permission (Digabung agar efisien & minim layer)
+# - mkdir: Membuat folder penting (termasuk logs) jika belum ada
+# - chown: Mengubah owner default ke www-data
+# - chmod 777: Memberikan akses tulis penuh ke folder data (logs, session, db, img)
+#   ini SOLUSI agar bisa ditulis walau folder host terbaca sebagai root.
+RUN mkdir -p /var/www/html/mikhmon_session \
+             /var/www/html/db_data \
+             /var/www/html/logs \
+             /var/www/html/img \
+    && chown -R www-data:www-data /var/www/html \
+    && find /var/www/html -type d -exec chmod 755 {} \; \
+    && find /var/www/html -type f -exec chmod 644 {} \; \
+    && chmod -R 777 /var/www/html/mikhmon_session \
+    && chmod -R 777 /var/www/html/db_data \
+    && chmod -R 777 /var/www/html/img \
+    && chmod -R 777 /var/www/html/logs \
+    && chmod 444 /var/www/html/include/config.php
