@@ -111,7 +111,13 @@ if (isset($db) && $db instanceof PDO && isset($_POST['hp_submit'])) {
 
     if ($blok_name !== '' && $report_date !== '') {
         try {
-            if ($sum_units > 0 && $total_units !== $sum_units) {
+            if (!$use_wartel && !$use_kamtib) {
+                $hp_error = 'Pilih minimal salah satu unit (WARTEL/KAMTIB).';
+            } elseif ($use_wartel && !$use_kamtib && $total_units !== $wartel_units) {
+                $hp_error = 'Jika hanya WARTEL dipilih, jumlahnya harus sama dengan total.';
+            } elseif (!$use_wartel && $use_kamtib && $total_units !== $kamtib_units) {
+                $hp_error = 'Jika hanya KAMTIB dipilih, jumlahnya harus sama dengan total.';
+            } elseif ($use_wartel && $use_kamtib && $total_units !== $sum_units) {
                 $hp_error = 'Total unit harus sama dengan jumlah WARTEL + KAMTIB.';
             } else {
                 $stmt = $db->prepare("INSERT INTO phone_block_daily
@@ -455,14 +461,6 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
                     </select>
                 </div>
                 <div>
-                    <label>Unit</label>
-                    <select class="form-input" name="unit_type" required>
-                        <option value="" disabled selected>Pilih Unit</option>
-                        <option value="WARTEL">WARTEL</option>
-                        <option value="KAMTIB">KAMTIB</option>
-                    </select>
-                </div>
-                <div>
                     <label>Tanggal</label>
                     <input class="form-input" type="date" name="report_date" value="<?= htmlspecialchars($filter_date); ?>" required>
                 </div>
@@ -486,6 +484,32 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
                 </div>
             </div>
             <div style="margin-top:10px;">
+                <label>Distribusi Unit (wajib pilih salah satu)</label>
+                <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-top:6px;">
+                    <label style="display:flex; gap:6px; align-items:center;">
+                        <input type="checkbox" id="chk_wartel" name="unit_wartel" value="1">
+                        <span>WARTEL</span>
+                    </label>
+                    <label style="display:flex; gap:6px; align-items:center;">
+                        <input type="checkbox" id="chk_kamtib" name="unit_kamtib" value="1">
+                        <span>KAMTIB</span>
+                    </label>
+                </div>
+                <div class="form-grid-2" style="margin-top:8px;">
+                    <div id="wartel_wrap" style="display:none;">
+                        <label>Jumlah WARTEL</label>
+                        <input class="form-input" type="number" name="wartel_units" min="0" value="0">
+                    </div>
+                    <div id="kamtib_wrap" style="display:none;">
+                        <label>Jumlah KAMTIB</label>
+                        <input class="form-input" type="number" name="kamtib_units" min="0" value="0">
+                    </div>
+                </div>
+                <div style="font-size:12px;color:var(--txt-muted);margin-top:6px;">
+                    Jika memilih satu unit saja, jumlahnya harus sama dengan Total Unit.
+                </div>
+            </div>
+            <div style="margin-top:10px;">
                 <label>Catatan</label>
                 <input class="form-input" name="notes" placeholder="opsional">
             </div>
@@ -496,6 +520,26 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
         </form>
     </div>
 </div>
+
+<script>
+    (function(){
+        var w = document.getElementById('chk_wartel');
+        var k = document.getElementById('chk_kamtib');
+        var ww = document.getElementById('wartel_wrap');
+        var kw = document.getElementById('kamtib_wrap');
+        var wu = ww ? ww.querySelector('input') : null;
+        var ku = kw ? kw.querySelector('input') : null;
+        function toggle(){
+            if (ww) ww.style.display = w && w.checked ? 'block' : 'none';
+            if (kw) kw.style.display = k && k.checked ? 'block' : 'none';
+            if (wu) wu.required = !!(w && w.checked);
+            if (ku) ku.required = !!(k && k.checked);
+        }
+        if (w) w.addEventListener('change', toggle);
+        if (k) k.addEventListener('change', toggle);
+        toggle();
+    })();
+</script>
 
 <?php
 $hp_rows = [];
