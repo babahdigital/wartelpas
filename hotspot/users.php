@@ -1176,34 +1176,39 @@ foreach($all_users as $u) {
         $login_time_real = ($u_sec > 0) ? date('Y-m-d H:i:s', time() - $u_sec) : $now;
       }
     } else {
-      if (empty($logout_time_real)) {
-        if ($last_status_db === 'online') {
-          $logout_time_real = $now;
-        } elseif (!empty($db_updated_at) && ($status === 'TERPAKAI' || $status === 'RUSAK')) {
-          $logout_time_real = $db_updated_at;
-        } else {
-          $comment_dt = extract_datetime_from_comment($comment);
-          if ($comment_dt != '') {
-            if (!($status === 'TERPAKAI' && substr($comment_dt, -8) === '00:00:00')) {
-              $logout_time_real = $comment_dt;
+      if (!empty($hist['login_time_real']) && !empty($hist['logout_time_real'])) {
+        $login_time_real = $hist['login_time_real'];
+        $logout_time_real = $hist['logout_time_real'];
+      } else {
+        if (empty($logout_time_real)) {
+          if ($last_status_db === 'online') {
+            $logout_time_real = $now;
+          } elseif (!empty($db_updated_at) && ($status === 'TERPAKAI' || $status === 'RUSAK')) {
+            $logout_time_real = $db_updated_at;
+          } else {
+            $comment_dt = extract_datetime_from_comment($comment);
+            if ($comment_dt != '') {
+              if (!($status === 'TERPAKAI' && substr($comment_dt, -8) === '00:00:00')) {
+                $logout_time_real = $comment_dt;
+              }
             }
           }
         }
-      }
-      if (!empty($logout_time_real) && substr($logout_time_real, -8) === '00:00:00' && !empty($db_updated_at)) {
-        $logout_time_real = merge_date_time($logout_time_real, $db_updated_at);
-      }
-      if (empty($login_time_real) && !empty($logout_time_real) && $u_sec > 0) {
-        $login_time_real = date('Y-m-d H:i:s', strtotime($logout_time_real) - $u_sec);
-      }
-      if (!empty($login_time_real) && empty($logout_time_real) && $u_sec > 0) {
-        $logout_time_real = date('Y-m-d H:i:s', strtotime($login_time_real) + $u_sec);
-      }
-      if ($status === 'TERPAKAI' && empty($login_time_real) && empty($logout_time_real)) {
-        $ref_time = !empty($db_updated_at) ? $db_updated_at : $now;
-        if ($u_sec > 0) {
-          $logout_time_real = $ref_time;
-          $login_time_real = date('Y-m-d H:i:s', strtotime($ref_time) - $u_sec);
+        if (!empty($logout_time_real) && substr($logout_time_real, -8) === '00:00:00' && !empty($db_updated_at)) {
+          $logout_time_real = merge_date_time($logout_time_real, $db_updated_at);
+        }
+        if (empty($login_time_real) && !empty($logout_time_real) && $u_sec > 0) {
+          $login_time_real = date('Y-m-d H:i:s', strtotime($logout_time_real) - $u_sec);
+        }
+        if (!empty($login_time_real) && empty($logout_time_real) && $u_sec > 0) {
+          $logout_time_real = date('Y-m-d H:i:s', strtotime($login_time_real) + $u_sec);
+        }
+        if ($status === 'TERPAKAI' && empty($login_time_real) && empty($logout_time_real)) {
+          $ref_time = !empty($db_updated_at) ? $db_updated_at : $now;
+          if ($u_sec > 0) {
+            $logout_time_real = $ref_time;
+            $login_time_real = date('Y-m-d H:i:s', strtotime($ref_time) - $u_sec);
+          }
         }
       }
     }
