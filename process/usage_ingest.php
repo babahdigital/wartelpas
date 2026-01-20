@@ -173,6 +173,8 @@ try {
         ':cnt' => $event === 'login' ? 1 : null
     ]);
 
+    @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | ok | user=" . $user . " | event=" . $status . " | dt=" . $dt . " | ip=" . $ip . " | mac=" . $mac . "\n", FILE_APPEND);
+
     echo "OK";
 } catch (Exception $e) {
     @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | error | " . $e->getMessage() . " | " . $_SERVER['QUERY_STRING'] . "\n", FILE_APPEND);

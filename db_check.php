@@ -13,6 +13,7 @@ if ($key !== $secret) {
 }
 
 $dbFile = __DIR__ . '/db_data/mikhmon_stats.db';
+$dbReal = realpath($dbFile) ?: $dbFile;
 if (!file_exists($dbFile)) {
     echo "DB not found";
     exit;
@@ -37,10 +38,14 @@ try {
         exit;
     }
 
+    $countRow = $db->query("SELECT COUNT(1) AS cnt FROM login_history")->fetch(PDO::FETCH_ASSOC);
     $sql = "SELECT " . implode(',', $selectCols) . " FROM login_history ORDER BY updated_at DESC LIMIT 50";
     $rows = $db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 
     echo "<h3>login_history (latest 50)</h3>";
+    echo "<p>DB Path: " . htmlspecialchars($dbReal) . "</p>";
+    echo "<p>Writable: " . (is_writable(dirname($dbFile)) ? 'yes' : 'no') . " | File exists: " . (file_exists($dbFile) ? 'yes' : 'no') . "</p>";
+    echo "<p>Total rows: " . htmlspecialchars((string)($countRow['cnt'] ?? '0')) . "</p>";
     echo "<p>Columns: " . htmlspecialchars(implode(', ', $cols)) . "</p>";
     echo "<table border='1' cellspacing='0' cellpadding='6'>";
     echo "<thead><tr>";
