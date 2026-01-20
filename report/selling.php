@@ -454,6 +454,8 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
 
 <style>
     :root { --dark-bg: #1e2226; --dark-card: #2a3036; --border-col: #495057; --txt-main: #ecf0f1; --txt-muted: #adb5bd; --c-blue: #3498db; --c-green: #2ecc71; --c-orange: #f39c12; --c-red: #e74c3c; }
+    #main { min-height: 100vh; height: auto; overflow: visible; }
+    .main-container { min-height: calc(100vh - 55px); height: auto; overflow: visible; }
     .card-solid { background: var(--dark-card); color: var(--txt-main); border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-radius: 8px; }
     .card-header-solid { background: #23272b; padding: 12px 20px; border-bottom: 2px solid var(--border-col); display: flex; justify-content: space-between; align-items: center; border-radius: 8px 8px 0 0; }
     .card-footer-solid { background: #23272b; padding: 10px 16px; border-top: 1px solid var(--border-col); border-radius: 0 0 8px 8px; width: 100%; box-sizing: border-box; }
