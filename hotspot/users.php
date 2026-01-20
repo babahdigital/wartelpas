@@ -283,6 +283,7 @@ try {
         updated_at DATETIME,
         login_count INTEGER DEFAULT 0
     )");
+      $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_login_history_username ON login_history(username)");
     $requiredCols = [
       'ip_address' => 'TEXT',
       'mac_address' => 'TEXT',
