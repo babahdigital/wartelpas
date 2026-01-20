@@ -314,8 +314,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         .value { font-size:18px; font-weight:700; margin-top:4px; }
         .small { font-size:12px; color:#555; margin-top:4px; }
         .rekap-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:16px; }
-        .rekap-table th, .rekap-table td { border:1px solid #000; padding:6px; vertical-align:top; }
-        .rekap-table th { background:#f0f3f7; text-align:center; }
+        .rekap-table th, .rekap-table td { border:1px solid #000; padding:6px; vertical-align:middle; }
+        .rekap-table th { background:#f0f3f7; text-align:center; vertical-align:middle; }
         .rekap-detail { width:100%; border-collapse:collapse; font-size:12px; }
         .rekap-detail th, .rekap-detail td { border:1px solid #000; padding:5px; }
         .rekap-detail th { background:#e9eef5; text-align:center; }
