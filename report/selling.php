@@ -472,6 +472,8 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         .tx-pager { display:flex; gap:6px; justify-content:center; align-items:center; padding:10px; border-top:1px solid var(--border-col); }
         .tx-pager a, .tx-pager span { background:#343a40; border:1px solid var(--border-col); color:#fff; padding:4px 10px; border-radius:6px; font-size:12px; text-decoration:none; }
         .tx-pager .active { background:#4ea8ff; border-color:#4ea8ff; color:#0b1220; font-weight:700; }
+        .hp-total-bar { display:flex; gap:12px; flex-wrap:wrap; padding:10px 14px; border-top:1px solid var(--border-col); background:#262b31; color:var(--txt-muted); font-size:12px; }
+        .hp-total-bar b { color:#fff; }
     .summary-card { background: #23272b; border: 1px solid var(--border-col); border-radius: 8px; padding: 14px; }
     .summary-title { font-size: 0.8rem; color: var(--txt-muted); text-transform: uppercase; letter-spacing: 1px; }
     .summary-value { font-size: 1.4rem; font-weight: 700; margin-top: 6px; }
@@ -543,7 +545,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             <div class="summary-card">
                 <div class="summary-title">Total Voucher Laku</div>
                 <div class="summary-value"><?= number_format($total_qty_laku,0,',','.') ?></div>
-                <div style="font-size:12px;color:var(--txt-muted);margin-top: 3px;">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bandwidth: -</div>
+                <div style="font-size:12px;color:var(--txt-muted);margin-top: 1px;">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bandwidth: -</div>
             </div>
             <div class="summary-card">
                 <div class="summary-title">Pendapatan Bersih</div>
@@ -876,6 +878,12 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 </tbody>
             </table>
         </div>
+        <div class="hp-total-bar">
+            <div>Total: <b><?= number_format($hp_total_units,0,',','.') ?></b></div>
+            <div>Aktif: <b><?= number_format($hp_active_units,0,',','.') ?></b></div>
+            <div>Rusak: <b><?= number_format($hp_rusak_units,0,',','.') ?></b></div>
+            <div>Spam: <b><?= number_format($hp_spam_units,0,',','.') ?></b></div>
+        </div>
     </div>
 </div>
 
@@ -925,32 +933,33 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             </table>
         </div>
     </div>
-    <?php if ($tx_pages > 1): ?>
-        <?php
-            $tx_base = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
-            $tx_link = function($p) use ($tx_base) { return $tx_base . '&tx_page=' . $p; };
-            $tx_window = 2;
-            $tx_start = max(1, $tx_page - $tx_window);
-            $tx_end = min($tx_pages, $tx_page + $tx_window);
-        ?>
-        <div class="tx-pager">
-            <?php if ($tx_page > 1): ?>
-                <a href="<?= $tx_link(1); ?>">« First</a>
-                <a href="<?= $tx_link($tx_page - 1); ?>">‹ Prev</a>
-            <?php endif; ?>
-            <?php for ($p = $tx_start; $p <= $tx_end; $p++): ?>
-                <?php if ($p == $tx_page): ?>
-                    <span class="active"><?= $p; ?></span>
-                <?php else: ?>
-                    <a href="<?= $tx_link($p); ?>"><?= $p; ?></a>
-                <?php endif; ?>
-            <?php endfor; ?>
-            <?php if ($tx_page < $tx_pages): ?>
-                <a href="<?= $tx_link($tx_page + 1); ?>">Next ›</a>
-                <a href="<?= $tx_link($tx_pages); ?>">Last »</a>
-            <?php endif; ?>
-        </div>
-    <?php endif; ?>
 </div>
+
+<?php if ($tx_pages > 1): ?>
+    <?php
+        $tx_base = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+        $tx_link = function($p) use ($tx_base) { return $tx_base . '&tx_page=' . $p; };
+        $tx_window = 2;
+        $tx_start = max(1, $tx_page - $tx_window);
+        $tx_end = min($tx_pages, $tx_page + $tx_window);
+    ?>
+    <div class="tx-pager" style="margin-bottom:14px;">
+        <?php if ($tx_page > 1): ?>
+            <a href="<?= $tx_link(1); ?>">« First</a>
+            <a href="<?= $tx_link($tx_page - 1); ?>">‹ Prev</a>
+        <?php endif; ?>
+        <?php for ($p = $tx_start; $p <= $tx_end; $p++): ?>
+            <?php if ($p == $tx_page): ?>
+                <span class="active"><?= $p; ?></span>
+            <?php else: ?>
+                <a href="<?= $tx_link($p); ?>"><?= $p; ?></a>
+            <?php endif; ?>
+        <?php endfor; ?>
+        <?php if ($tx_page < $tx_pages): ?>
+            <a href="<?= $tx_link($tx_page + 1); ?>">Next ›</a>
+            <a href="<?= $tx_link($tx_pages); ?>">Last »</a>
+        <?php endif; ?>
+    </div>
+<?php endif; ?>
 
 <!-- Pendapatan per Blok/Profile sementara disembunyikan sesuai permintaan -->
