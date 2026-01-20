@@ -388,7 +388,12 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
             <div class="form-grid-2">
                 <div>
                     <label>Blok</label>
-                    <input class="form-input" name="blok_name" placeholder="BLOK-A" required>
+                    <select class="form-input" name="blok_name" required>
+                        <option value="" disabled selected>Pilih Blok</option>
+                        <?php foreach (range('A','F') as $b): ?>
+                            <option value="BLOK-<?= $b ?>">BLOK-<?= $b ?></option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
                 <div>
                     <label>Tanggal</label>
