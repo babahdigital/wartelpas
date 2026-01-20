@@ -17,13 +17,10 @@ $req_prof = isset($_GET['profile']) ? $_GET['profile'] : 'all';
 $req_comm = isset($_GET['comment']) ? urldecode($_GET['comment']) : '';
 $req_status = isset($_GET['status']) ? $_GET['status'] : 'all';
 $req_search = isset($_GET['q']) ? $_GET['q'] : '';
-$default_show = in_array($req_status, ['used', 'rusak', 'retur']) ? 'semua' : 'harian';
-$req_show = $_GET['show'] ?? $default_show;
+$req_show = $_GET['show'] ?? 'harian';
 $filter_date = $_GET['date'] ?? '';
-$req_show = in_array($req_show, ['harian', 'bulanan', 'tahunan', 'semua']) ? $req_show : 'harian';
-if ($req_show === 'semua') {
-  $filter_date = '';
-} elseif ($req_show === 'harian') {
+$req_show = in_array($req_show, ['harian', 'bulanan', 'tahunan']) ? $req_show : 'harian';
+if ($req_show === 'harian') {
   $filter_date = $filter_date ?: date('Y-m-d');
 } elseif ($req_show === 'bulanan') {
   $filter_date = $filter_date ?: date('Y-m');
@@ -1176,10 +1173,27 @@ foreach($all_users as $u) {
       if (empty($login_time_real) && !empty($logout_time_real)) {
         $login_time_real = $logout_time_real;
       }
+
+      // Untuk TERPAKAI: pastikan login/logout terisi dari comment + uptime hist
+      if ($status === 'TERPAKAI') {
+        if (empty($logout_time_real)) {
+          $comment_dt = extract_datetime_from_comment($comment);
+          if ($comment_dt != '') $logout_time_real = $comment_dt;
+        }
+        if (empty($login_time_real) && !empty($logout_time_real)) {
+          $base_uptime = $uptime_hist != '' ? $uptime_hist : $uptime_user;
+          $u_sec = uptime_to_seconds($base_uptime);
+          if ($u_sec > 0) {
+            $login_time_real = date('Y-m-d H:i:s', strtotime($logout_time_real) - $u_sec);
+          } else {
+            $login_time_real = $logout_time_real;
+          }
+        }
+      }
     }
 
       // Filter tanggal (harian/bulanan/tahunan) - abaikan untuk READY
-      if ($req_show !== 'semua' && !empty($filter_date) && $status !== 'READY') {
+      if (!empty($filter_date) && $status !== 'READY') {
         $comment_dt = extract_datetime_from_comment($comment);
         $hist_dt = $hist['last_login_real'] ?? ($hist['first_login_real'] ?? ($hist['updated_at'] ?? ''));
         $date_candidate = $comment_dt !== '' ? $comment_dt : ($login_time_real ?: $logout_time_real ?: $hist_dt);
@@ -1578,7 +1592,6 @@ if ($debug_mode && !$is_ajax) {
             </div>
             <div class="input-group-solid period-group">
               <select name="show" class="custom-select-solid first-el no-sep-right" onchange="this.form.submit()" style="flex: 0 0 140px;">
-                <option value="semua" <?= $req_show==='semua'?'selected':''; ?>>Semua</option>
                 <option value="harian" <?= $req_show==='harian'?'selected':''; ?>>Harian</option>
                 <option value="bulanan" <?= $req_show==='bulanan'?'selected':''; ?>>Bulanan</option>
                 <option value="tahunan" <?= $req_show==='tahunan'?'selected':''; ?>>Tahunan</option>
@@ -1588,9 +1601,7 @@ if ($debug_mode && !$is_ajax) {
               <?php elseif ($req_show === 'bulanan'): ?>
                 <input type="month" name="date" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" class="form-control last-el no-sep-left" style="flex:0 0 170px;">
               <?php else: ?>
-                <?php if ($req_show === 'tahunan'): ?>
-                  <input type="number" name="date" min="2000" max="2100" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" class="form-control last-el no-sep-left" style="flex:0 0 120px;">
-                <?php endif; ?>
+                <input type="number" name="date" min="2000" max="2100" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" class="form-control last-el no-sep-left" style="flex:0 0 120px;">
               <?php endif; ?>
             </div>
             <span id="search-loading" style="display:none;font-size:12px;color:var(--txt-muted);margin-left:6px;">
