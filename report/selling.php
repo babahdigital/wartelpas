@@ -416,7 +416,7 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
     .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
     .form-input { width: 100%; background: #343a40; border: 1px solid var(--border-col); color: #fff; padding: 8px 10px; border-radius: 6px; }
     .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .btn-act { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 4px; border: none; color: #fff; background: #3a4046; }
+    .btn-act { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 4px; border: none; color: #fff; background: #3a4046; cursor: pointer; }
     .btn-act-danger { background: #e74c3c; }
 </style>
 
