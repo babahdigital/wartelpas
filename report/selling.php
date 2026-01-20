@@ -743,11 +743,11 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     <tr>
                         <th>Blok</th>
                         <th>Unit</th>
-                        <th class="text-right">Total</th>
-                        <th class="text-right">Aktif</th>
-                        <th class="text-right">Rusak</th>
-                        <th class="text-right">Spam</th>
-                        <th class="text-right">Catatan</th>
+                        <th class="text-center">Total</th>
+                        <th class="text-center">Aktif</th>
+                        <th class="text-center">Rusak</th>
+                        <th class="text-center">Spam</th>
+                        <th class="text-center">Catatan</th>
                         <th class="text-center">Hapus</th>
                     </tr>
                 </thead>
@@ -766,10 +766,10 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                 <div class="unit-stack unit-wartel">WARTEL: <?= (int)$bw; ?></div>
                                 <div class="unit-stack unit-kamtib">KAMTIB: <?= (int)$bk; ?></div>
                             </td>
-                            <td class="text-right"><?= (int)($r['total_units'] ?? 0) ?></td>
-                              <td class="text-right"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['active_units'] ?? 0) : '-' ?></td>
-                              <td class="text-right"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['rusak_units'] ?? 0) : '-' ?></td>
-                              <td class="text-right"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['spam_units'] ?? 0) : '-' ?></td>
+                            <td class="text-center"><?= (int)($r['total_units'] ?? 0) ?></td>
+                              <td class="text-center"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['active_units'] ?? 0) : '-' ?></td>
+                              <td class="text-center"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['rusak_units'] ?? 0) : '-' ?></td>
+                              <td class="text-center"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['spam_units'] ?? 0) : '-' ?></td>
                             <td class="hp-notes"><small title="<?= htmlspecialchars($r['notes'] ?? '') ?>"><?= htmlspecialchars($r['notes'] ?? '') ?></small></td>
                             <td class="text-center">
                                 <?php if (($r['unit_type'] ?? '') === 'TOTAL'): ?>
