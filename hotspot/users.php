@@ -1467,7 +1467,6 @@ if ($is_ajax) {
           <?php elseif($u['status'] === 'TERPAKAI'): ?><span class="status-badge st-used">TERPAKAI</span>
           <?php else: ?><span class="status-badge st-ready">READY</span>
           <?php endif; ?>
-          <?php if(!empty($u['relogin'])): ?><span class="status-badge st-relogin">RELOGIN</span><?php endif; ?>
         </td>
         <td class="text-center">
           <?php if (strtoupper($u['status']) === 'TERPAKAI'): ?>
@@ -1863,7 +1862,6 @@ if ($debug_mode && !$is_ajax) {
                       <?php elseif($u['status'] === 'TERPAKAI'): ?><span class="status-badge st-used">TERPAKAI</span>
                       <?php else: ?><span class="status-badge st-ready">READY</span>
                       <?php endif; ?>
-                      <?php if(!empty($u['relogin'])): ?><span class="status-badge st-relogin">RELOGIN</span><?php endif; ?>
                     </td>
                     <td class="text-center">
                       <?php if (strtoupper($u['status']) === 'TERPAKAI'): ?>
