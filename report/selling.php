@@ -174,11 +174,14 @@ if (isset($db) && $db instanceof PDO && isset($_GET['hp_delete'])) {
     $del_date = trim($_GET['hp_date'] ?? '');
     $del_blok = trim($_GET['blok'] ?? '');
     $del_type = trim($_GET['type'] ?? '');
-    if ($del_date !== '' && $del_blok !== '' && $del_type !== '') {
+    if ($del_date !== '' && $del_blok !== '') {
         try {
-            $stmt = $db->prepare("DELETE FROM phone_block_daily WHERE report_date = :d AND blok_name = :b AND unit_type = :ut");
-            $stmt->execute([':d' => $del_date, ':b' => $del_blok, ':ut' => $del_type]);
+            $stmt = $db->prepare("DELETE FROM phone_block_daily WHERE report_date = :d AND blok_name = :b");
+            $stmt->execute([':d' => $del_date, ':b' => $del_blok]);
         } catch (Exception $e) {}
+        $redirect = './?report=selling' . $session_qs . '&mode=' . urlencode($mode) . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+        header('Location: ' . $redirect);
+        exit;
     }
 }
 
