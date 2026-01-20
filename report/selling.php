@@ -109,6 +109,7 @@ if (isset($db) && $db instanceof PDO && isset($_POST['hp_submit'])) {
     $kamtib_units = (int)($_POST['kamtib_units'] ?? 0);
     $sum_units = ($use_wartel ? $wartel_units : 0) + ($use_kamtib ? $kamtib_units : 0);
 
+    $hp_saved = false;
     if ($blok_name !== '' && $report_date !== '') {
         try {
             if (!$use_wartel && !$use_kamtib) {
@@ -170,8 +171,14 @@ if (isset($db) && $db instanceof PDO && isset($_POST['hp_submit'])) {
                         ':n' => ''
                     ]);
                 }
+                $hp_saved = true;
             }
         } catch (Exception $e) {}
+    }
+    if ($hp_saved && empty($hp_error)) {
+        $redirect = './?report=selling' . $session_qs . '&mode=' . urlencode($mode) . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+        header('Location: ' . $redirect);
+        exit;
     }
 }
 
@@ -445,7 +452,7 @@ ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
 <div id="hpModal" class="modal-backdrop" onclick="if(event.target===this){this.style.display='none';}">
     <div class="modal-card">
         <div class="modal-title">Input Handphone per Blok (Harian)</div>
-        <form method="post" action="">
+        <form method="post" action="./?report=selling<?= $session_qs; ?>&mode=<?= $mode; ?>&show=<?= $req_show; ?>&date=<?= urlencode($filter_date); ?>">
             <input type="hidden" name="report" value="selling">
             <?php if ($session_id !== ''): ?>
                 <input type="hidden" name="session" value="<?= htmlspecialchars($session_id); ?>">
