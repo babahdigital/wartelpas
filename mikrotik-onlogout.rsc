@@ -85,8 +85,12 @@
     # Hapus IP/MAC lama jika sudah ada
     :set newComment ("$newComment | IP:$userip | MAC:$usermac");
     
-    # Update comment dengan data logout
+    # Update comment dengan data logout (tanpa menumpuk)
     /ip hotspot user set comment=$newComment [find where name="$username"];
+
+    # REALTIME USAGE (LOGOUT)
+    :local usageUrl ("http://wartelpas.sobigidul.net/process/usage_ingest.php?key=WartelpasSecureKey&session=S3c7x9_LB&event=logout&user=" . $username . "&date=" . $logoutDate . "&time=" . $logoutTime . "&ip=" . $userip . "&mac=" . $usermac);
+    /tool fetch url=$usageUrl keep-result=no;
 
     # Hapus cookie + putus koneksi untuk user wartel saja (hindari user non-wartel)
     :local isWartel false;
