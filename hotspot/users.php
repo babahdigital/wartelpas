@@ -1125,11 +1125,8 @@ foreach($all_users as $u) {
 
       // Filter tanggal (harian/bulanan/tahunan)
       if (!empty($filter_date)) {
-        $date_candidate = $login_time_real ?: $logout_time_real ?: '';
-        if ($date_candidate === '') {
-          $comment_dt = extract_datetime_from_comment($comment);
-          if ($comment_dt !== '') $date_candidate = $comment_dt;
-        }
+        $comment_dt = extract_datetime_from_comment($comment);
+        $date_candidate = $comment_dt !== '' ? $comment_dt : ($login_time_real ?: $logout_time_real ?: '');
         $date_key = normalize_date_key($date_candidate, $req_show);
         if ($date_key === '' || $date_key !== $filter_date) {
           continue;
@@ -1755,6 +1752,8 @@ if ($debug_mode && !$is_ajax) {
   const searchInput = document.querySelector('input[name="q"]');
   const statusSelect = document.querySelector('select[name="status"]');
   const commentSelect = document.querySelector('select[name="comment"]');
+  const showSelect = document.querySelector('select[name="show"]');
+  const dateInput = document.querySelector('input[name="date"]');
   const tbody = document.getElementById('users-table-body');
   const totalBadge = document.getElementById('users-total');
   const paginationWrap = document.getElementById('users-pagination');
@@ -1875,6 +1874,8 @@ if ($debug_mode && !$is_ajax) {
     params.set('q', qValue);
     if (statusSelect) params.set('status', statusSelect.value);
     if (commentSelect) params.set('comment', commentSelect.value);
+    if (showSelect) params.set('show', showSelect.value);
+    if (dateInput) params.set('date', dateInput.value);
     const profile = baseParams.get('profile');
     if (profile) params.set('profile', profile);
     const perPage = baseParams.get('per_page');
