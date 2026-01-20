@@ -368,7 +368,6 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         <table class="rekap-table">
             <thead>
                 <tr>
-                    <th style="width:40px;">No</th>
                     <th style="width:90px;">Tanggal</th>
                     <th>Rincian Penjualan</th>
                     <th style="width:70px;">QTY</th>
@@ -377,33 +376,32 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             </thead>
             <tbody>
                 <tr>
-                    <td style="text-align:center;">1</td>
                     <td style="text-align:center; font-weight:700;"><?= htmlspecialchars(date('d-m-Y', strtotime($filter_date))) ?></td>
                     <td>
                         <table class="rekap-detail">
                             <thead>
                                 <tr>
-                                    <th rowspan="2">Jenis Blok</th>
+                                    <th rowspan="2" style="width:140px;">Jenis Blok</th>
                                     <th rowspan="2" style="width:70px;">Qty</th>
                                     <th rowspan="2" style="width:110px;">Total (Rp)</th>
-                                    <th rowspan="2" style="width:70px;">Total Qty</th>
+                                    <th rowspan="2" style="width:70px;">Qty</th>
                                     <th rowspan="2" style="width:110px;">Total Blok</th>
                                     <th rowspan="2" style="width:110px;">Bandwidth</th>
                                     <th colspan="3" style="width:210px;">Device</th>
                                     <th colspan="2" style="width:140px;">Unit</th>
-                                    <th rowspan="2" style="width:70px;">HP Aktif</th>
+                                    <th rowspan="2" style="width:70px;">Aktif</th>
                                 </tr>
                                 <tr>
                                     <th style="width:70px;">Total</th>
-                                    <th style="width:70px;">Rusak</th>
-                                    <th style="width:70px;">Spam</th>
-                                    <th style="width:70px;">WARTEL</th>
-                                    <th style="width:70px;">KAMTIB</th>
+                                    <th style="width:70px;">RS</th>
+                                    <th style="width:70px;">SP</th>
+                                    <th style="width:70px;">WR</th>
+                                    <th style="width:70px;">KM</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (empty($block_summaries)): ?>
-                                    <tr><td colspan="12" style="text-align:center;">Tidak ada data</td></tr>
+                                    <tr><td colspan="11" style="text-align:center;">Tidak ada data</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($block_summaries as $blk => $bdata): ?>
                                         <?php
@@ -445,6 +443,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                 </tr>
             </tbody>
         </table>
+        <div style="margin-top:8px; font-size:11px; color:#444;">
+            Keterangan: RS = Rusak, SP = Spam, WR = Wartel, KM = Kamtib.
+        </div>
     <?php endif; ?>
 
 <script>
