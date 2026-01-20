@@ -523,6 +523,18 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                     <input type="number" name="date" min="2000" max="2100" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" style="width:100px;">
                 <?php endif; ?>
             </form>
+            <?php
+                $print_rekap_url = 'report/print_rekap.php?show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+                if ($session_id !== '') $print_rekap_url .= '&session=' . urlencode($session_id);
+                $print_rincian_url = 'report/print_rincian.php?date=' . urlencode($filter_date);
+                if ($session_id !== '') $print_rincian_url .= '&session=' . urlencode($session_id);
+            ?>
+            <button class="btn-print" onclick="window.open('<?= $print_rekap_url ?>','_blank')">Print Rekap</button>
+            <?php if ($req_show === 'harian'): ?>
+                <button class="btn-print" onclick="window.open('<?= $print_rincian_url ?>','_blank')">Print Rincian</button>
+            <?php else: ?>
+                <button class="btn-print" style="opacity:.6;cursor:not-allowed;" disabled>Print Rincian</button>
+            <?php endif; ?>
             <button class="btn-print" onclick="window.print()"><i class="fa fa-print"></i></button>
             <button class="btn-print" onclick="document.getElementById('hpModal').style.display='flex'">Input HP Blok</button>
         </div>

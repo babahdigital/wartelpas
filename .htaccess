@@ -107,6 +107,14 @@ Require all denied
     Require all granted
 </If>
 
+# Print report endpoints
+<If "%{REQUEST_URI} =~ m#^/report/print_rekap\.php$#">
+    Require all granted
+</If>
+<If "%{REQUEST_URI} =~ m#^/report/print_rincian\.php$#">
+    Require all granted
+</If>
+
 # Izinkan akses folder assets
 <If "%{REQUEST_URI} =~ m#^/(css|js|img|fonts|lang)/#">
     Require all granted
