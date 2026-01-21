@@ -547,7 +547,7 @@ function normalize_uptime_diff($diff, $snap = 2) {
         .status-invalid { color:#c0392b; font-weight:700; }
         .status-online { color:#1976d2; font-weight:700; }
         .status-terpakai { color:#0a7f2e; font-weight:700; }
-        .status-relogin { color:#6f42c1; font-weight:700; }
+        .status-relogin { color:#fff; background:#6f42c1; font-weight:700; padding:2px 6px; border-radius:4px; display:inline-block; }
         @media print { .toolbar { display:none; } }
     </style>
 </head>
