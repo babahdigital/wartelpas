@@ -479,10 +479,13 @@ $tx_offset = ($tx_page - 1) * $tx_page_size;
 $list_page = array_slice($list, $tx_offset, $tx_page_size);
 ?>
 
+<?php $is_ajax = isset($_GET['ajax']) && $_GET['ajax'] === '1'; ?>
+
 <?php if (!empty($hp_redirect) && headers_sent()): ?>
     <script>window.location.replace('<?= htmlspecialchars($hp_redirect, ENT_QUOTES); ?>');</script>
 <?php endif; ?>
 
+<?php if (!$is_ajax): ?>
 <style>
     :root { --dark-bg: #1e2226; --dark-card: #2a3036; --border-col: #495057; --txt-main: #ecf0f1; --txt-muted: #adb5bd; --c-blue: #3498db; --c-green: #2ecc71; --c-orange: #f39c12; --c-red: #e74c3c; }
     html, body { height: 100%; min-height: 100%; }
@@ -531,6 +534,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
     .btn-act { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 4px; border: none; color: #fff; background: #3a4046; cursor: pointer; }
     .btn-act-danger { background: #e74c3c; }
 </style>
+<?php endif; ?>
 
 <div class="card-solid mb-3">
     <div class="card-header-solid">
@@ -568,6 +572,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             <?php endif; ?>
             <button class="btn-print" onclick="window.print()"><i class="fa fa-print"></i></button>
             <button class="btn-print" onclick="document.getElementById('hpModal').style.display='flex'">Input HP Blok</button>
+            <button class="btn-print" type="button" onclick="softReloadSelling()">Reload</button>
         </div>
     </div>
     <div class="card-body" style="padding:16px;">
@@ -604,6 +609,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
     </div>
 </div>
 
+<?php if (!$is_ajax): ?>
 <div id="hpModal" class="modal-backdrop" onclick="if(event.target===this){this.style.display='none';}">
     <div class="modal-card">
         <div class="modal-title">Input Handphone per Blok (Harian)</div>
@@ -811,6 +817,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         document.getElementById('hpModal').style.display = 'flex';
     };
 </script>
+<?php endif; ?>
 
 <?php
 $hp_rows = [];
