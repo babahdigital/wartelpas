@@ -188,10 +188,6 @@ try {
                 if (strpos($msg, 'CLEANUP: Dibatalkan') !== false || strpos($msgUpper, 'GAGAL') !== false || strpos($msgUpper, 'ERROR') !== false) {
                     $fail = true;
                 }
-
-                if ($done) {
-                    break;
-                }
             }
         } else {
             $message = 'Gagal konek ke router.';
