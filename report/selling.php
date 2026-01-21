@@ -941,11 +941,12 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             window.settleQueue.push(row);
         });
         if (!window.settleTimer) {
-            window.settleTimer = setInterval(renderSettlementLogItem, 500);
+            window.settleTimer = setInterval(renderSettlementLogItem, 900);
         }
     }
 
     function renderSettlementLogItem(){
+        if (window.settleTyping) return;
         if (!window.settleQueue || window.settleQueue.length === 0) {
             if (window.settleDone) {
                 clearInterval(window.settleTimer);
@@ -962,16 +963,45 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         var cls = row.type || 'info';
         var line = document.createElement('div');
         line.className = 'log-entry';
-        line.innerHTML = '<span class="log-time">' + String(t).replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span>'
-            + '<span class="log-topic">' + String(topic).replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span>'
-            + '<span class="log-' + String(cls).replace(/[^a-z]/gi,'') + '">' + String(msg).replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span>';
+        var timeSpan = document.createElement('span');
+        timeSpan.className = 'log-time';
+        timeSpan.textContent = String(t);
+        var topicSpan = document.createElement('span');
+        topicSpan.className = 'log-topic';
+        topicSpan.textContent = String(topic);
+        var msgSpan = document.createElement('span');
+        msgSpan.className = 'log-' + String(cls).replace(/[^a-z]/gi,'');
+        msgSpan.textContent = '';
+        line.appendChild(timeSpan);
+        line.appendChild(topicSpan);
+        line.appendChild(msgSpan);
         var cursor = logBox.querySelector('.cursor-blink');
         if (cursor) cursor.remove();
         logBox.appendChild(line);
-        var newCursor = document.createElement('span');
-        newCursor.className = 'cursor-blink';
-        logBox.appendChild(newCursor);
         logBox.scrollTop = logBox.scrollHeight;
+        window.settleTyping = true;
+        typeSettlementMessage(msgSpan, String(msg), function(){
+            window.settleTyping = false;
+            var newCursor = document.createElement('span');
+            newCursor.className = 'cursor-blink';
+            logBox.appendChild(newCursor);
+            logBox.scrollTop = logBox.scrollHeight;
+        });
+    }
+
+    function typeSettlementMessage(target, text, done){
+        var i = 0;
+        var len = text.length;
+        var speed = 18;
+        var timer = setInterval(function(){
+            if (i >= len) {
+                clearInterval(timer);
+                if (done) done();
+                return;
+            }
+            target.textContent += text.charAt(i);
+            i += 1;
+        }, speed);
     }
 
     (function(){
