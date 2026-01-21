@@ -208,6 +208,7 @@ $rusak_10m = 0;
 $rusak_30m = 0;
 $total_qty_units = 0;
 $total_net_units = 0;
+$total_bandwidth = 0;
 
 foreach ($rows as $r) {
     $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
@@ -235,6 +236,8 @@ foreach ($rows as $r) {
     $loss_rusak = ($status === 'rusak') ? $price : 0;
     $loss_invalid = ($status === 'invalid') ? $price : 0;
     $net_add = $gross_add - $loss_rusak - $loss_invalid;
+
+    $total_bandwidth += (int)($r['last_bytes'] ?? 0);
 
     if ($req_show === 'harian') {
         $qty = (int)($r['qty'] ?? 0);
@@ -360,7 +363,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         <div class="card">
             <div class="label">Total Voucher Laku</div>
             <div class="value"><?= number_format($total_qty_laku,0,',','.') ?></div>
-            <div class="small">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Invalid: <?= number_format($total_qty_invalid,0,',','.') ?></div>
+            <div class="small">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bandwidth: <?= htmlspecialchars(format_bytes_short($total_bandwidth)) ?></div>
         </div>
         <div class="card">
             <div class="label">Voucher Rusak</div>
