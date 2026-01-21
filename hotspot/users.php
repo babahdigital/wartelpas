@@ -1410,16 +1410,12 @@ foreach($all_users as $u) {
     }
     if ($hist_status === 'retur') {
       $is_retur = true;
-      $is_rusak = false;
     } elseif ($hist_status === 'rusak') {
       $is_rusak = true;
     }
-    // Retur harus tetap retur meski Retur Ref memuat kata RUSAK
-    if ($is_retur && $disabled !== 'true') {
+    // Retur harus tetap retur meski ada Audit: RUSAK atau disabled
+    if ($is_retur) {
       $is_rusak = false;
-    }
-    if ($is_rusak && !$is_retur) {
-      $is_retur = false;
     }
     $hist_used = $hist && (
       in_array($hist_status, ['online','terpakai','rusak','retur']) ||
