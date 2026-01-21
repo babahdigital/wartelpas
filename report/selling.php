@@ -753,6 +753,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         var logBox = document.getElementById('settlement-log');
         var logWrap = document.getElementById('settlement-log-wrap');
         var statusEl = document.getElementById('settlement-status');
+        var processEl = document.getElementById('processStatus');
         var closeBtn = document.getElementById('settlement-close');
         var confirmBox = document.getElementById('settlement-confirm');
         var startBtn = document.getElementById('settlement-start');
@@ -761,6 +762,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (logBox) logBox.innerHTML = '';
         if (logWrap) logWrap.style.display = 'none';
         if (statusEl) statusEl.textContent = 'Menunggu konfirmasi';
+        if (processEl) processEl.innerHTML = '<i class="fa fa-refresh"></i> Menunggu proses...';
         if (closeBtn) {
             closeBtn.disabled = false;
             closeBtn.style.opacity = '1';

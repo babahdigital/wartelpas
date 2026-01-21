@@ -64,18 +64,40 @@ if ($action === 'logs') {
     try {
         if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
             $rawLogs = $API->comm('/log/print', [
-                '.proplist' => 'time,message',
+                '.proplist' => 'time,topics,message',
                 '?message~' => 'CLEANUP|SYNC|CUCI GUDANG|SUKSES|MAINT'
             ]);
             $API->disconnect();
-            $rawLogs = is_array($rawLogs) ? array_slice($rawLogs, -80) : [];
+            $rawLogs = is_array($rawLogs) ? array_slice($rawLogs, -60) : [];
             foreach ($rawLogs as $l) {
-                $line = trim(($l['time'] ?? '') . ' ' . ($l['message'] ?? ''));
-                if ($line !== '') $logs[] = $line;
-                if (strpos($line, 'SUKSES: Cuci Gudang Selesai') !== false) {
+                $time = trim((string)($l['time'] ?? ''));
+                $topics = trim((string)($l['topics'] ?? 'system,info'));
+                $msg = trim((string)($l['message'] ?? ''));
+                if ($msg === '' && $time === '') continue;
+
+                $type = 'info';
+                $msgUpper = strtoupper($msg);
+                if (strpos($msgUpper, 'SUKSES') !== false || strpos($msgUpper, 'BERHASIL') !== false) {
+                    $type = 'success';
+                } elseif (strpos($msgUpper, 'GAGAL') !== false || strpos($msgUpper, 'ERROR') !== false || strpos($msgUpper, 'DIBATALKAN') !== false) {
+                    $type = 'error';
+                } elseif (strpos($msgUpper, 'WARNING') !== false || strpos($msgUpper, 'WARN') !== false) {
+                    $type = 'warning';
+                } elseif (strpos($msgUpper, 'SYNC') !== false || strpos($msgUpper, 'CLEANUP') !== false || strpos($msgUpper, 'MAINT') !== false) {
+                    $type = 'system';
+                }
+
+                $logs[] = [
+                    'time' => $time,
+                    'topic' => $topics,
+                    'type' => $type,
+                    'message' => $msg
+                ];
+
+                if (strpos($msg, 'SUKSES: Cuci Gudang Selesai') !== false) {
                     $done = true;
                 }
-                if (strpos($line, 'CLEANUP: Dibatalkan') !== false) {
+                if (strpos($msg, 'CLEANUP: Dibatalkan') !== false || strpos($msgUpper, 'GAGAL') !== false || strpos($msgUpper, 'ERROR') !== false) {
                     $fail = true;
                 }
             }
@@ -91,13 +113,15 @@ if ($action === 'logs') {
     if ($done) $status = 'done';
     elseif ($fail) $status = 'failed';
 
+    $now = date('Y-m-d H:i:s');
     try {
         $stmt = $db->prepare("INSERT OR REPLACE INTO settlement_log (report_date, status, triggered_at, completed_at, source, message)
-            VALUES (:d, :s, COALESCE((SELECT triggered_at FROM settlement_log WHERE report_date = :d), CURRENT_TIMESTAMP), :c, 'manual', :m)");
+            VALUES (:d, :s, COALESCE((SELECT triggered_at FROM settlement_log WHERE report_date = :d), :t), :c, 'manual', :m)");
         $stmt->execute([
             ':d' => $date,
             ':s' => $status === 'done' ? 'done' : ($status === 'failed' ? 'failed' : 'running'),
-            ':c' => $status === 'done' ? date('Y-m-d H:i:s') : null,
+            ':c' => $status === 'done' ? $now : null,
+            ':t' => $now,
             ':m' => $message
         ]);
     } catch (Exception $e) {}
@@ -133,11 +157,13 @@ try {
 }
 
 try {
+    $now = date('Y-m-d H:i:s');
     $stmt = $db->prepare("INSERT OR REPLACE INTO settlement_log (report_date, status, triggered_at, completed_at, source, message)
-        VALUES (:d, :s, CURRENT_TIMESTAMP, NULL, 'manual', :m)");
+        VALUES (:d, :s, :t, NULL, 'manual', :m)");
     $stmt->execute([
         ':d' => $date,
         ':s' => $ok ? 'running' : 'failed',
+        ':t' => $now,
         ':m' => $message
     ]);
 } catch (Exception $e) {}
