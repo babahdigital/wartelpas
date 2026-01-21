@@ -1803,6 +1803,7 @@ if ($debug_mode && !$is_ajax) {
     .relogin-table th, .relogin-table td { border: 1px solid #3d3d3d; padding: 6px 8px; font-size: 12px; }
     .relogin-table th { background: #252525; color: #eaeaea; text-align: left; }
     .relogin-table td { color: #d2d2d2; }
+    .relogin-note { color: #f3c969; font-size: 11px; margin-left: 6px; }
     .relogin-more { text-align: center; color: #9aa0a6; font-style: italic; padding-top: 8px; }
     .relogin-actions { display: flex; gap: 6px; align-items: center; }
     .relogin-print { background: #2d8cff; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
@@ -2384,7 +2385,8 @@ if ($debug_mode && !$is_ajax) {
         const seq = ev.seq || (idx + 1);
         const loginLabel = formatTimeOnly(ev.login_time);
         const logoutLabel = formatTimeOnly(ev.logout_time);
-        html += `<tr><td>#${seq}</td><td>${loginLabel}</td><td>${logoutLabel}</td></tr>`;
+        const note = (!ev.login_time && ev.logout_time) ? '<span class="relogin-note">logout tanpa login</span>' : '';
+        html += `<tr><td>#${seq}</td><td>${loginLabel}${note}</td><td>${logoutLabel}</td></tr>`;
       });
       html += '</tbody></table>';
       if ((data.total || 0) > events.length) {
@@ -2507,7 +2509,8 @@ if ($debug_mode && !$is_ajax) {
         const seq = ev.seq || (idx + 1);
         const loginLabel = formatTimeOnly(ev.login_time);
         const logoutLabel = formatTimeOnly(ev.logout_time);
-        return `<tr><td>#${seq}</td><td>${loginLabel}</td><td>${logoutLabel}</td></tr>`;
+        const note = (!ev.login_time && ev.logout_time) ? ' (logout tanpa login)' : '';
+        return `<tr><td>#${seq}</td><td>${loginLabel}${note}</td><td>${logoutLabel}</td></tr>`;
       }).join('');
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Detail Relogin</title>
         <style>
