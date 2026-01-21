@@ -2363,6 +2363,7 @@ if ($debug_mode && !$is_ajax) {
       const criteria = data.criteria || {};
       const values = data.values || {};
       const limits = data.limits || {};
+      const headerMsg = data.message || '';
       const items = [
         { label: `Offline (tidak sedang online)`, ok: !!criteria.offline, value: values.online || '-' },
         { label: `Bytes <= ${limits.bytes || '-'}`, ok: !!criteria.bytes_ok, value: values.bytes || '-' },
@@ -2377,9 +2378,11 @@ if ($debug_mode && !$is_ajax) {
           <div style="color:#cbd5e1;">${it.value}</div>
         </div>`;
       }).join('');
+      const msgHtml = headerMsg ? `<div style="margin-bottom:8px;color:#f3c969;">${headerMsg}</div>` : '';
       confirmMessage.innerHTML = `
         <div style="text-align:left;">
           <div style="margin-bottom:8px;font-weight:600;">Cek Kelayakan Rusak</div>
+          ${msgHtml}
           ${rows}
         </div>`;
       const isValid = !!data.ok;
@@ -2472,15 +2475,27 @@ if ($debug_mode && !$is_ajax) {
       const text = await res.text();
       let data = null;
       try { data = JSON.parse(text); } catch (e) { data = null; }
-      if (data) {
-        const ok = await showRusakChecklist(data);
-        if (!ok) return;
-        window.actionRequest(url, null);
-      } else {
-        window.showActionPopup('error', 'Gagal memproses.');
+      if (!data) {
+        data = {
+          ok: false,
+          message: 'Gagal memproses. Data validasi tidak terbaca.',
+          criteria: {},
+          values: {},
+          limits: {}
+        };
       }
+      const ok = await showRusakChecklist(data);
+      if (!ok) return;
+      window.actionRequest(url, null);
     } catch (e) {
-      window.showActionPopup('error', 'Gagal memproses.');
+      const data = {
+        ok: false,
+        message: 'Gagal memproses. Tidak bisa mengambil data validasi.',
+        criteria: {},
+        values: {},
+        limits: {}
+      };
+      await showRusakChecklist(data);
     }
   };
 
