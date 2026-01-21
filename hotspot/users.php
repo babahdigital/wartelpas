@@ -1946,6 +1946,7 @@ if ($debug_mode && !$is_ajax) {
         <div id="confirm-message" class="confirm-message"></div>
       </div>
       <div class="confirm-footer">
+        <button type="button" class="confirm-btn confirm-btn-secondary" id="confirm-print"><i class="fa fa-print"></i> Print</button>
         <button type="button" class="confirm-btn confirm-btn-secondary" id="confirm-cancel">Batal</button>
         <button type="button" class="confirm-btn confirm-btn-warning" id="confirm-ok">Ya, Lanjutkan</button>
       </div>
