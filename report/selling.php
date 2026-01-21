@@ -128,6 +128,13 @@ if (file_exists($dbFile)) {
         try { $db->exec("ALTER TABLE sales_history ADD COLUMN qty INTEGER"); } catch (Exception $e) {}
         try { $db->exec("ALTER TABLE sales_history ADD COLUMN blok_name TEXT"); } catch (Exception $e) {}
         try { $db->exec("ALTER TABLE sales_history ADD COLUMN full_raw_data TEXT"); } catch (Exception $e) {}
+        $db->exec("CREATE TABLE IF NOT EXISTS settlement_log (
+            report_date TEXT PRIMARY KEY,
+            status TEXT,
+            triggered_at DATETIME,
+            source TEXT,
+            message TEXT
+        )");
         $db->exec("CREATE TABLE IF NOT EXISTS phone_block_daily (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             report_date TEXT,
@@ -162,6 +169,16 @@ if (file_exists($dbFile)) {
             WHERE ls.sync_status = 'pending'
             ORDER BY sale_datetime DESC, raw_date DESC");
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
+
+        $settled_today = false;
+        try {
+            $stmtSet = $db->prepare("SELECT status FROM settlement_log WHERE report_date = :d LIMIT 1");
+            $stmtSet->execute([':d' => $filter_date]);
+            $srow = $stmtSet->fetch(PDO::FETCH_ASSOC);
+            $settled_today = $srow && strtolower((string)$srow['status']) === 'done';
+        } catch (Exception $e) {
+            $settled_today = false;
+        }
 
         if ($req_show === 'harian') {
             try {
@@ -684,6 +701,36 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
 </div>
 
 <script>
+    function manualSettlement(){
+        var btn = document.getElementById('btn-settlement');
+        if (!btn || btn.disabled) return;
+        if (!confirm('Jalankan settlement manual sekarang?')) return;
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+        btn.style.cursor = 'not-allowed';
+        var params = new URLSearchParams();
+        params.set('session', '<?= htmlspecialchars($session_id); ?>');
+        params.set('date', '<?= htmlspecialchars($filter_date); ?>');
+        fetch('report/settlement_manual.php?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+                if (!data || !data.ok) {
+                    alert((data && data.message) ? data.message : 'Settlement gagal.');
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                    return;
+                }
+                alert('Settlement berhasil.');
+                softReloadSelling();
+            })
+            .catch(function(){
+                alert('Settlement gagal.');
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            });
+    }
     (function(){
         var w = document.getElementById('chk_wartel');
         var k = document.getElementById('chk_kamtib');
@@ -863,9 +910,8 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             <?php else: ?>
                 <button class="btn-print" style="opacity:.6;cursor:not-allowed;" disabled>Print Rincian</button>
             <?php endif; ?>
-            <button class="btn-print" onclick="window.print()"><i class="fa fa-print"></i></button>
             <button class="btn-print" type="button" onclick="openHpModal()">Input HP Blok</button>
-            <button class="btn-print" type="button" onclick="softReloadSelling()">Reload</button>
+            <button class="btn-print" type="button" id="btn-settlement" onclick="manualSettlement()" <?= (!empty($settled_today) ? 'disabled style="opacity:.6;cursor:not-allowed;"' : '') ?>>Settlement</button>
         </div>
     </div>
     <div class="card-body" style="padding:16px;">
