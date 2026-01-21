@@ -2727,7 +2727,12 @@ if ($debug_mode && !$is_ajax) {
             params.set('action', 'login_events');
             params.set('name', uname);
             params.set('session', '<?= $session ?>');
-            params.set('recent', '10');
+            const firstLogin = el.getAttribute('data-first-login') || '';
+            const dateKey = extractDateKey(firstLogin);
+            if (dateKey) {
+              params.set('show', 'harian');
+              params.set('date', dateKey);
+            }
             params.set('ajax', '1');
             params.set('_', Date.now().toString());
             const resp = await fetch(ajaxBase + '?' + params.toString(), { cache: 'no-store' });
@@ -2756,6 +2761,10 @@ if ($debug_mode && !$is_ajax) {
       }
       if (data && data.meta) {
         if (reloginEvents.length > 0) data.meta.relogin_events = reloginEvents;
+        if (reloginEvents.length > 0) data.meta.relogin_count = reloginEvents.length;
+        const firstLoginMeta = el ? (el.getAttribute('data-first-login') || '') : '';
+        const dateKeyMeta = extractDateKey(firstLoginMeta);
+        if (dateKeyMeta) data.meta.relogin_date = dateKeyMeta;
       }
       const ok = await showRusakChecklist(data);
       if (!ok) return;
