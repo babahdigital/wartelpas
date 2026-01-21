@@ -927,7 +927,8 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 if (btn && btn.disabled) return;
                 window.sellingPauseReload = true;
                 var fd = new FormData(form);
-                fetch(form.action, { method: 'POST', body: fd })
+                fd.append('ajax', '1');
+                fetch(form.action, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                     .then(function(r){ return r.text(); })
                     .then(function(text){
                         var data = null;
