@@ -856,6 +856,14 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 if (data && Array.isArray(data.logs) && logBox) {
                     enqueueSettlementLogs(data.logs);
                 }
+                if (data && data.info_message) {
+                    if (!window.settleInfoShown) {
+                        window.settleInfoShown = true;
+                        enqueueSettlementLogs([
+                            { time: '', topic: 'system,info', type: 'info', message: data.info_message }
+                        ]);
+                    }
+                }
                 if (data && data.status) {
                     if (statusEl) statusEl.textContent = data.status === 'done' ? 'Selesai' : (data.status === 'failed' ? 'Gagal' : 'Berjalan');
                     if (processEl) processEl.innerHTML = data.status === 'done'

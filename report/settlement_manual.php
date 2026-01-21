@@ -163,13 +163,9 @@ if ($action === 'logs') {
         $fail = true;
     }
 
+    $infoMessage = '';
     if (empty($logs)) {
-        $logs[] = [
-            'time' => date('H:i:s'),
-            'topic' => 'system,info',
-            'type' => 'info',
-            'message' => $message !== '' ? $message : 'Menunggu log dari MikroTik...'
-        ];
+        $infoMessage = $message !== '' ? $message : 'Menunggu log dari MikroTik...';
     }
 
     if ($done) $status = 'done';
@@ -188,7 +184,7 @@ if ($action === 'logs') {
         ]);
     } catch (Exception $e) {}
 
-    echo json_encode(['ok' => true, 'status' => $status, 'logs' => $logs]);
+    echo json_encode(['ok' => true, 'status' => $status, 'logs' => $logs, 'info_message' => $infoMessage]);
     exit;
 }
 
