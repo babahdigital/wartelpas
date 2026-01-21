@@ -16,13 +16,33 @@ if ($session === '') {
     die("Error: Session tidak valid.");
 }
 
+$root_dir = dirname(__DIR__);
+require_once($root_dir . '/include/config.php');
+if (!isset($data[$session])) {
+    http_response_code(403);
+    die("Error: Session tidak terdaftar.");
+}
+require_once($root_dir . '/include/readcfg.php');
+if (!isset($hotspot_server) || $hotspot_server !== 'wartel') {
+    http_response_code(403);
+    die("Error: Hanya untuk server wartel.");
+}
+
 $blok = trim((string)($_GET['blok'] ?? ''));
 if ($blok === '') {
     http_response_code(400);
     die("Error: Blok kosong.");
 }
 
-$dbFile = dirname(__DIR__) . '/db_data/mikhmon_stats.db';
+$date = trim((string)($_GET['date'] ?? ''));
+$dateClause = '';
+$dateParams = [];
+if ($date !== '') {
+    $dateClause = ' AND sale_date = :d';
+    $dateParams[':d'] = $date;
+}
+
+$dbFile = $root_dir . '/db_data/mikhmon_stats.db';
 if (!file_exists($dbFile)) {
     die("DB not found");
 }
@@ -30,9 +50,24 @@ if (!file_exists($dbFile)) {
 try {
     $db = new PDO('sqlite:' . $dbFile);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
     $stmt = $db->prepare("DELETE FROM login_history WHERE LOWER(blok_name) = LOWER(:b)");
     $stmt->execute([':b' => $blok]);
-    echo "OK deleted=" . $stmt->rowCount();
+    $deleted_login = $stmt->rowCount();
+
+    $stmt = $db->prepare("DELETE FROM sales_history WHERE LOWER(blok_name) = LOWER(:b)" . $dateClause);
+    $stmt->execute(array_merge([':b' => $blok], $dateParams));
+    $deleted_sales = $stmt->rowCount();
+
+    $stmt = $db->prepare("DELETE FROM live_sales WHERE LOWER(blok_name) = LOWER(:b)" . $dateClause);
+    $stmt->execute(array_merge([':b' => $blok], $dateParams));
+    $deleted_live = $stmt->rowCount();
+
+    $stmt = $db->prepare("DELETE FROM phone_block_daily WHERE LOWER(blok_name) = LOWER(:b)" . ($date !== '' ? " AND report_date = :d" : ""));
+    $stmt->execute(array_merge([':b' => $blok], $date !== '' ? [':d' => $date] : []));
+    $deleted_hp = $stmt->rowCount();
+
+    echo "OK login=" . $deleted_login . ", sales=" . $deleted_sales . ", live=" . $deleted_live . ", hp=" . $deleted_hp;
 } catch (Exception $e) {
     http_response_code(500);
     echo "Error";
