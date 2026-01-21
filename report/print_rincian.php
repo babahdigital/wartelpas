@@ -312,6 +312,8 @@ if ($is_usage && file_exists($dbFile)) {
             $is_rusak = stripos($comment, 'RUSAK') !== false;
             $is_retur = stripos($comment, '(Retur)') !== false || stripos($comment, 'Retur Ref:') !== false;
             $hist_status = strtolower((string)($hist['last_status'] ?? ''));
+            $hist_comment = (string)($hist['raw_comment'] ?? '');
+            $hist_is_retur = (stripos($hist_comment, '(Retur)') !== false) || (stripos($hist_comment, 'Retur Ref:') !== false) || ($hist_status === 'retur');
             if ($hist_status === 'rusak') $is_rusak = true;
             if ($hist_status === 'retur') $is_retur = true;
             if ($disabled === 'true') $is_rusak = true;
@@ -341,7 +343,7 @@ if ($is_usage && file_exists($dbFile)) {
             elseif ($req_status === 'all') $status_match = in_array($status, ['RUSAK','TERPAKAI']);
             else $status_match = ($status === 'TERPAKAI');
 
-            if ($req_status === 'rusak' && $is_retur) {
+            if ($req_status === 'rusak' && ($is_retur || $hist_is_retur)) {
                 continue;
             }
 
