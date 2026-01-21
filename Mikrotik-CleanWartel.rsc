@@ -103,6 +103,9 @@
         :local hasUsage false;
         :if ($total > 0) do={ :set hasUsage true; }
         :if ($uptimeZero = false) do={ :set hasUsage true; }
+        :local isRusakComment (([:find $comm "RUSAK"] >= 0) || ([:find $comm "Rusak"] >= 0) || ([:find $comm "rusak"] >= 0));
+        :local isReturComment (([:find $comm "RETUR"] >= 0) || ([:find $comm "Retur"] >= 0) || ([:find $comm "retur"] >= 0));
+        :local isMarkedBad ($isDisabled || $isRusakComment || $isReturComment);
         :local isReady (( $isDisabled = false ) && ( $total = 0 ) && $uptimeZero );
         :local commPrefix [:pick $comm 0 3];
         :if ([:len $isActive] > 0) do={
@@ -111,7 +114,7 @@
             :if ($isReady) do={
                 :log info ("SETTLE: CLEANUP: Skip READY user " . $name . ".");
             } else={
-                :if ($isDisabled || $hasUsage) do={
+                :if ($isMarkedBad || $hasUsage) do={
                     /ip hotspot user remove $u;
                     :set removed ($removed + 1);
                 }
