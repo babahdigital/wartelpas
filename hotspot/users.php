@@ -419,6 +419,19 @@ function get_user_history($name) {
     }
 }
 
+function count_recent_relogin_events($username, $minutes = 5) {
+  global $db;
+  if (!$db || empty($username)) return 0;
+  $since = date('Y-m-d H:i:s', time() - ($minutes * 60));
+  try {
+    $stmt = $db->prepare("SELECT COUNT(*) FROM login_events WHERE username = :u AND ((login_time IS NOT NULL AND login_time >= :since) OR (logout_time IS NOT NULL AND logout_time >= :since))");
+    $stmt->execute([':u' => $username, ':since' => $since]);
+    return (int)$stmt->fetchColumn();
+  } catch (Exception $e) {
+    return 0;
+  }
+}
+
 function is_wartel_client($comment, $hist_blok = '') {
   if (!empty($hist_blok)) return true;
   $blok = extract_blok_name($comment);
@@ -562,9 +575,15 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $bytes_limit = $limits['bytes'];
       $uptime_limit = $limits['uptime'];
       $is_active = isset($arow['user']);
+      $recent_relogin = count_recent_relogin_events($name, 5);
+      $relogin_ok = (!$is_active) && ($bytes <= $bytes_limit) && ($uptime_sec <= $uptime_limit) && ($recent_relogin >= 3);
       if (!($act == 'retur' && $is_rusak_target) && ($is_active || $bytes > $bytes_limit || $uptime_sec > $uptime_limit)) {
         $action_blocked = true;
         $action_error = 'Voucher masih valid, tidak bisa dianggap rusak (online / bytes > ' . $limits['bytes_label'] . ' / uptime > ' . $limits['uptime_label'] . ').';
+      }
+      if ($action_blocked && $relogin_ok) {
+        $action_blocked = false;
+        $action_error = '';
       }
     }
 
