@@ -328,7 +328,7 @@ if ($is_usage && file_exists($dbFile)) {
             $hist_comment = (string)($hist['raw_comment'] ?? '');
             $hist_is_retur = (stripos($hist_comment, '(Retur)') !== false) || (stripos($hist_comment, 'Retur Ref:') !== false) || ($hist_status === 'retur');
             if ($hist_status === 'rusak') $is_rusak = true;
-            if ($hist_status === 'retur') $is_retur = true;
+            if ($hist_status === 'retur' || $hist_is_retur) $is_retur = true;
             if ($disabled === 'true') $is_rusak = true;
             if ($is_retur) $is_rusak = false;
 
