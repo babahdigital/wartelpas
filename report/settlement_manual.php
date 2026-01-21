@@ -85,8 +85,14 @@ try {
                 }
 
                 $rawLogs = $API->comm('/log/print', [
-                    '.proplist' => 'time,topics,message'
+                    '.proplist' => 'time,topics,message',
+                    '?message~' => 'SETTLE'
                 ]);
+                if (!is_array($rawLogs) || count($rawLogs) === 0) {
+                    $rawLogs = $API->comm('/log/print', [
+                        '.proplist' => 'time,topics,message'
+                    ]);
+                }
                 if (!is_array($rawLogs) || count($rawLogs) === 0) {
                     $rawLogs = [];
                 }
@@ -142,7 +148,7 @@ try {
                     $sawFetch = true;
                 }
 
-                if (!$capture) {
+                if (!$capture && !$startsOk) {
                     continue;
                 }
 
