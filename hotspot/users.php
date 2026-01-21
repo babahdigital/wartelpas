@@ -2458,7 +2458,7 @@ if ($debug_mode && !$is_ajax) {
         if (mt && mt.username) metaRows.push(`<tr><td>User</td><td>${mt.username}</td></tr>`);
         if (mt && mt.blok) metaRows.push(`<tr><td>Blok</td><td>${mt.blok}</td></tr>`);
         if (mt && mt.profile) metaRows.push(`<tr><td>Profile</td><td>${mt.profile}</td></tr>`);
-        if (mt && (mt.login || mt.logout)) metaRows.push(`<tr><td>Login</td><td>${mt.login}</td></tr><tr><td>Logout</td><td>${mt.logout}</td></tr>`);
+        if (mt && mt.first_login) metaRows.push(`<tr><td>First Login</td><td>${mt.first_login}</td></tr>`);
         const metaBlock = metaRows.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;margin:6px 0 10px 0;">
           <thead><tr><th style="text-align:left;padding:6px 8px;border:1px solid #444;background:#f0f0f0;">Info</th><th style="text-align:left;padding:6px 8px;border:1px solid #444;background:#f0f0f0;">Nilai</th></tr></thead>
           <tbody>${metaRows.join('')}</tbody></table>` : '';
@@ -2476,6 +2476,18 @@ if ($debug_mode && !$is_ajax) {
           ${metaBlock}
           ${msgLine}
           <table><thead><tr><th>Kriteria</th><th>Nilai</th><th>Status</th></tr></thead><tbody>${rowsPrint}</tbody></table>
+          ${(() => {
+            if (!mt || !Array.isArray(mt.relogin_events) || mt.relogin_events.length === 0) return '';
+            const rows = mt.relogin_events.map((ev, idx) => {
+              const seq = ev.seq || (idx + 1);
+              const loginLabel = formatTimeOnly(ev.login_time);
+              const logoutLabel = formatTimeOnly(ev.logout_time);
+              const note = (!ev.login_time && ev.logout_time) ? ' (logout tanpa login)' : '';
+              return `<tr><td>#${seq}</td><td>${loginLabel}${note}</td><td>${logoutLabel}</td></tr>`;
+            }).join('');
+            return `<div style="margin:10px 0 6px 0;font-size:12px;font-weight:600;">Rincian Relogin</div>
+              <table><thead><tr><th>#</th><th>Login</th><th>Logout</th></tr></thead><tbody>${rows}</tbody></table>`;
+          })()}
         </body></html>`;
         const w = window.open('', '_blank');
         if (!w) return;
@@ -2679,8 +2691,15 @@ if ($debug_mode && !$is_ajax) {
           message: 'Gagal memproses. Data validasi tidak terbaca.',
           criteria: {},
           values: {},
-          limits: {}
+          limits: {},
+          meta: {}
         };
+      }
+      if (el && data && data.meta && !data.meta.relogin_events) {
+        const fallback = buildRusakDataFromElement(el);
+        if (fallback && fallback.meta.relogin_events) {
+          data.meta.relogin_events = fallback.meta.relogin_events;
+        }
       }
       const ok = await showRusakChecklist(data);
       if (!ok) return;
