@@ -110,6 +110,15 @@ if ($action === 'logs') {
         $fail = true;
     }
 
+    if (empty($logs)) {
+        $logs[] = [
+            'time' => date('H:i:s'),
+            'topic' => 'system,info',
+            'type' => 'info',
+            'message' => $message !== '' ? $message : 'Menunggu log dari MikroTik...'
+        ];
+    }
+
     if ($done) $status = 'done';
     elseif ($fail) $status = 'failed';
 
