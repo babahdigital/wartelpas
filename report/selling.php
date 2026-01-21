@@ -627,7 +627,12 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             <div class="modal-title">Input Handphone per Blok (Harian)</div>
             <button type="button" class="modal-close" onclick="closeHpModal()">&times;</button>
         </div>
-        <form id="hpForm" method="post" action="./?report=selling<?= $session_qs; ?>">
+        <form id="hpForm" method="post" action="report/hp_save.php">
+            <?php if ($session_id !== ''): ?>
+                <input type="hidden" name="session" value="<?= htmlspecialchars($session_id); ?>">
+            <?php endif; ?>
+            <input type="hidden" name="show" value="<?= htmlspecialchars($req_show); ?>">
+            <input type="hidden" name="date" value="<?= htmlspecialchars($filter_date); ?>">
             <input type="hidden" name="report" value="selling">
             <?php if ($session_id !== ''): ?>
                 <input type="hidden" name="session" value="<?= htmlspecialchars($session_id); ?>">
