@@ -1713,10 +1713,20 @@ if ($debug_mode && !$is_ajax) {
     .action-banner { position: fixed; top: 0; left: 0; right: 0; display: none; align-items: center; justify-content: center; gap: 10px; padding: 12px 16px; z-index: 10000; font-weight: 600; }
     .action-banner.success { background: #16a34a; color: #fff; }
     .action-banner.error { background: #dc2626; color: #fff; }
-    .confirm-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.55); z-index: 10001; }
-    .confirm-card { background: #1f2937; color: #e5e7eb; border-radius: 10px; padding: 16px; width: 360px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); }
-    .confirm-title { font-weight: 700; margin-bottom: 8px; }
-    .confirm-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+    .confirm-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); z-index: 10001; }
+    .confirm-card { background: #2c2c2c; color: #e0e0e0; border-radius: 8px; width: 420px; max-width: 92vw; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; }
+    .confirm-header { background: #252525; border-bottom: 1px solid #3d3d3d; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; }
+    .confirm-title { font-weight: 600; color: #fff; font-size: 16px; margin: 0; }
+    .confirm-close { background: transparent; border: none; color: #fff; opacity: 0.7; font-size: 20px; line-height: 1; cursor: pointer; }
+    .confirm-close:hover { opacity: 1; }
+    .confirm-body { padding: 20px; color: #ccc; text-align: center; }
+    .confirm-icon { font-size: 36px; color: #ff9800; margin-bottom: 10px; }
+    .confirm-message { color: #ccc; font-size: 14px; }
+    .confirm-footer { background: #252525; border-top: 1px solid #3d3d3d; padding: 12px 20px; display: flex; gap: 8px; justify-content: flex-end; }
+    .confirm-btn { border: none; border-radius: 4px; padding: 8px 12px; font-weight: 600; cursor: pointer; }
+    .confirm-btn-secondary { background: #424242; color: #fff; border: 1px solid #555; }
+    .confirm-btn-secondary:hover { background: #505050; }
+    .confirm-btn-warning { background: #ff9800; color: #fff; }
   </style>
 
 <div class="row">
@@ -1726,11 +1736,17 @@ if ($debug_mode && !$is_ajax) {
   <div id="action-banner" class="action-banner" aria-live="polite"></div>
   <div id="confirm-modal" class="confirm-modal">
     <div class="confirm-card">
-      <div class="confirm-title">Konfirmasi</div>
-      <div id="confirm-message"></div>
-      <div class="confirm-actions">
-        <button type="button" class="btn btn-secondary" id="confirm-cancel">Batal</button>
-        <button type="button" class="btn btn-danger" id="confirm-ok">Ya, Lanjutkan</button>
+      <div class="confirm-header">
+        <div class="confirm-title">Konfirmasi Tindakan</div>
+        <button type="button" class="confirm-close" id="confirm-close">&times;</button>
+      </div>
+      <div class="confirm-body">
+        <div class="confirm-icon"><i class="fa fa-question-circle"></i></div>
+        <div id="confirm-message" class="confirm-message"></div>
+      </div>
+      <div class="confirm-footer">
+        <button type="button" class="confirm-btn confirm-btn-secondary" id="confirm-cancel">Batal</button>
+        <button type="button" class="confirm-btn confirm-btn-warning" id="confirm-ok">Ya, Lanjutkan</button>
       </div>
     </div>
   </div>
@@ -2091,6 +2107,7 @@ if ($debug_mode && !$is_ajax) {
   const confirmMessage = document.getElementById('confirm-message');
   const confirmOk = document.getElementById('confirm-ok');
   const confirmCancel = document.getElementById('confirm-cancel');
+  const confirmClose = document.getElementById('confirm-close');
   if (!searchInput || !tbody || !totalBadge || !paginationWrap) return;
 
   if (clearBtn) {
@@ -2130,6 +2147,7 @@ if ($debug_mode && !$is_ajax) {
       };
       confirmOk.onclick = () => cleanup(true);
       confirmCancel.onclick = () => cleanup(false);
+      if (confirmClose) confirmClose.onclick = () => cleanup(false);
     });
   }
 
