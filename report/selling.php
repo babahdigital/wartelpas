@@ -707,36 +707,96 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
 </div>
 
 <script>
+    var settlementTimer = null;
     function manualSettlement(){
         var btn = document.getElementById('btn-settlement');
         if (!btn || btn.disabled) return;
         if (!confirm('Jalankan settlement manual sekarang?')) return;
+        var modal = document.getElementById('settlement-modal');
+        var logBox = document.getElementById('settlement-log');
+        var statusEl = document.getElementById('settlement-status');
+        var closeBtn = document.getElementById('settlement-close');
+        if (modal) modal.style.display = 'flex';
+        if (logBox) logBox.textContent = '';
+        if (statusEl) statusEl.textContent = 'Menjalankan settlement...';
+        if (closeBtn) {
+            closeBtn.disabled = true;
+            closeBtn.style.opacity = '0.6';
+            closeBtn.style.cursor = 'not-allowed';
+        }
         btn.disabled = true;
         btn.style.opacity = '0.6';
         btn.style.cursor = 'not-allowed';
         var params = new URLSearchParams();
         params.set('session', '<?= htmlspecialchars($session_id); ?>');
         params.set('date', '<?= htmlspecialchars($filter_date); ?>');
+        params.set('action', 'start');
         fetch('report/settlement_manual.php?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function(r){ return r.json(); })
             .then(function(data){
                 if (!data || !data.ok) {
-                    alert((data && data.message) ? data.message : 'Settlement gagal.');
+                    if (statusEl) statusEl.textContent = (data && data.message) ? data.message : 'Settlement gagal.';
                     btn.disabled = false;
                     btn.style.opacity = '1';
                     btn.style.cursor = 'pointer';
                     return;
                 }
-                alert('Settlement berhasil.');
-                softReloadSelling();
+                pollSettlementLogs();
             })
             .catch(function(){
-                alert('Settlement gagal.');
+                if (statusEl) statusEl.textContent = 'Settlement gagal.';
                 btn.disabled = false;
                 btn.style.opacity = '1';
                 btn.style.cursor = 'pointer';
             });
     }
+
+    function pollSettlementLogs(){
+        var logBox = document.getElementById('settlement-log');
+        var statusEl = document.getElementById('settlement-status');
+        var closeBtn = document.getElementById('settlement-close');
+        var params = new URLSearchParams();
+        params.set('session', '<?= htmlspecialchars($session_id); ?>');
+        params.set('date', '<?= htmlspecialchars($filter_date); ?>');
+        params.set('action', 'logs');
+        fetch('report/settlement_manual.php?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+                if (data && Array.isArray(data.logs) && logBox) {
+                    logBox.textContent = data.logs.join('\n');
+                    logBox.scrollTop = logBox.scrollHeight;
+                }
+                if (data && data.status) {
+                    if (statusEl) statusEl.textContent = data.status === 'done' ? 'Selesai' : (data.status === 'failed' ? 'Gagal' : 'Berjalan');
+                }
+                if (data && data.status === 'done') {
+                    if (closeBtn) {
+                        closeBtn.disabled = false;
+                        closeBtn.style.opacity = '1';
+                        closeBtn.style.cursor = 'pointer';
+                    }
+                    if (statusEl) statusEl.textContent = 'Selesai';
+                    softReloadSelling();
+                    clearTimeout(settlementTimer);
+                    return;
+                }
+                settlementTimer = setTimeout(pollSettlementLogs, 2000);
+            })
+            .catch(function(){
+                settlementTimer = setTimeout(pollSettlementLogs, 2000);
+            });
+    }
+
+    (function(){
+        var closeBtn = document.getElementById('settlement-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function(){
+                if (closeBtn.disabled) return;
+                var modal = document.getElementById('settlement-modal');
+                if (modal) modal.style.display = 'none';
+            });
+        }
+    })();
     (function(){
         var w = document.getElementById('chk_wartel');
         var k = document.getElementById('chk_kamtib');
