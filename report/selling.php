@@ -23,6 +23,9 @@ $hp_kamtib_units = 0;
 
 // Filter periode
 $req_show = $_GET['show'] ?? 'harian';
+$date_param_provided = isset($_GET['date']) && trim((string)$_GET['date']) !== '';
+$auto_date_applied = false;
+$last_available_date = '';
 $mode = 'final';
 $filter_date = $_GET['date'] ?? '';
 if ($req_show === 'harian') {
@@ -186,6 +189,19 @@ if (file_exists($dbFile)) {
             WHERE ls.sync_status = 'pending'
             ORDER BY sale_datetime DESC, raw_date DESC");
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
+
+        if (!$date_param_provided && $req_show === 'harian' && !empty($rows)) {
+            foreach ($rows as $r) {
+                $cand = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
+                if ($cand !== '' && ($last_available_date === '' || $cand > $last_available_date)) {
+                    $last_available_date = $cand;
+                }
+            }
+            if ($last_available_date !== '' && $last_available_date !== $filter_date) {
+                $filter_date = $last_available_date;
+                $auto_date_applied = true;
+            }
+        }
 
         $settled_today = false;
         $settlement_time = '';
@@ -411,6 +427,7 @@ if ($req_show === 'harian' && isset($db) && $db instanceof PDO) {
 
 $by_block = [];
 $by_profile = [];
+$no_sales_message = '';
 
 $use_summary = false;
 // Summary dimatikan agar data live + final tetap akurat
@@ -579,6 +596,10 @@ foreach ($rows as $r) {
 ksort($by_block, SORT_NATURAL | SORT_FLAG_CASE);
 ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
 $total_qty_laku = max(0, $total_qty - $total_qty_retur - $total_qty_rusak - $total_qty_invalid);
+
+if (empty($list) && $last_available_date !== '' && $filter_date !== $last_available_date) {
+    $no_sales_message = 'Tidak ada data untuk tanggal ini. Data terakhir: ' . $last_available_date . '.';
+}
 
 $tx_page_size = 50;
 $tx_page = isset($_GET['tx_page']) ? (int)$_GET['tx_page'] : 1;
@@ -1285,6 +1306,15 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         </div>
     </div>
     <div class="card-body" style="padding:16px;">
+        <?php if (!empty($no_sales_message)): ?>
+            <div style="background:#2b2b2b;border:1px solid #555;border-radius:6px;padding:10px 12px;margin-bottom:12px;color:#f3c969;">
+                <i class="fa fa-info-circle"></i> <?= htmlspecialchars($no_sales_message); ?>
+            </div>
+        <?php elseif (!empty($auto_date_applied)): ?>
+            <div style="background:#2b2b2b;border:1px solid #555;border-radius:6px;padding:10px 12px;margin-bottom:12px;color:#8bd0ff;">
+                <i class="fa fa-info-circle"></i> Menampilkan data terakhir: <?= htmlspecialchars($filter_date); ?>
+            </div>
+        <?php endif; ?>
         <div class="summary-grid">
             <div class="summary-card">
                 <div class="summary-title">Pendapatan Kotor</div>
