@@ -27,7 +27,6 @@
     :log info "SETTLE: SYNC STATS: Berhasil.";
 } on-error={ :log error "SETTLE: SYNC STATS: GAGAL KONEKSI! Cek IP Server/Jaringan."; :set syncStatsOk false; }
 
-:delay 10s;
 
 # 3. SYNC SALES (Laporan Keuangan - PENTING UNTUK DATA TANGGAL 13)
 :log info "SETTLE: SYNC: Mengirim laporan penjualan...";
@@ -37,7 +36,6 @@
     :log info "SETTLE: SYNC SALES: Berhasil terkirim.";
 } on-error={ :log error "SETTLE: SYNC SALES: GAGAL KONEKSI! Data penjualan tidak masuk DB."; :set syncSalesOk false; }
 
-:delay 10s;
 
 # Jika sync gagal, batal cleanup agar data MikroTik tidak hilang
 :if (($syncStatsOk = false) || ($syncSalesOk = false)) do={
@@ -53,7 +51,6 @@
     :log info "SETTLE: SYNC USAGE: Berhasil.";
 } on-error={ :log warning "SETTLE: SYNC USAGE: Gagal koneksi."; }
 
-:delay 5s;
 
 # 4b. CLEAR SCRIPT LOG (opsional) - HAPUS SCRIPT MIKHMON TERBENTUK SAAT LOGIN
 :log info "SETTLE: MAINT: Hapus script mikhmon...";
@@ -67,7 +64,6 @@
     }
 } on-error={ :log warning "SETTLE: MAINT: Gagal hapus script mikhmon."; }
 
-:delay 2s;
 
 # 5. HAPUS USER NON-READY (SUDAH PERNAH TERPAKAI)
 :log info "SETTLE: CLEANUP: Hapus user terpakai (bytes/uptime/disabled)...";
