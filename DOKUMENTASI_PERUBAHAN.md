@@ -163,6 +163,36 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 ### 2.22 UI Konfirmasi Tanpa Alert
 - Konfirmasi hapus/edit diganti menjadi **modal** bergaya design.html (tanpa `alert/confirm`).
 
+### 2.23 Penyempurnaan Settlement, Rekap, dan Filter Wartel
+- **report/selling.php**:
+  - Konfirmasi hapus HP memakai format tanggal **dd-mm-yyyy**.
+  - Perbaikan modal HP (tutup/konfirmasi), gaya modal mengikuti design.html.
+  - Auto-carry over data HP harian dari tanggal terakhir jika kosong.
+  - Perhitungan pendapatan kini **qty-aware** (price * qty).
+  - Normalisasi nama blok (BLOK-X) agar konsisten antara data comment/blok_name.
+- **report/print_rekap.php**:
+  - Perhitungan pendapatan **qty-aware**.
+  - Definisi “laku” disamakan dengan selling (berdasarkan status, bukan bytes).
+  - Whitelist blok harian berdasar **phone_block_daily** agar blok “uji coba” tidak ikut terhitung.
+- **report/settlement_manual.php**:
+  - Menjalankan **script CuciGudangManual** langsung (tanpa scheduler).
+  - Logging settlement dipersempit: hanya log dengan prefix SETTLE/CLEANUP/SYNC/MAINT/SUKSES.
+  - Terminal log dibuat berurutan (typewriter), status **Selesai** muncul setelah log akhir.
+  - Tombol tutup dikunci hingga proses selesai, plus tombol **Reset settlement**.
+- **Mikrotik-CleanWartel.rsc**:
+  - Semua log diberi prefix **SETTLE** agar terfilter rapi.
+  - Delay disetel ulang agar urutan log terbaca stabil.
+- **report/clear_block.php**:
+  - Hapus data blok lintas tabel (login_history, sales_history, live_sales).
+  - Support hapus varian **BLOK-X10/BLOK-X30** saat input BLOK-X.
+  - Data HP **tidak dihapus** default (opsional `delete_hp=1`).
+- **report/check_block.php** (baru):
+  - Endpoint audit untuk mengecek keberadaan blok pada semua tabel.
+- **report/live_ingest.php**:
+  - Validasi session config & hanya izinkan **hotspot_server=wartel**.
+- **report/sync_stats.php**:
+  - Filter berdasarkan hotspot server + skip user tanpa marker BLOK agar data non‑Wartel tidak masuk lagi saat settlement.
+
 ## 3) Masalah Khusus dan Fix Terkait
 ### 3.1 Waktu/Bytes/Uptime kosong saat RUSAK
 - Parsing comment diperluas untuk format:
@@ -206,6 +236,16 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **Gejala**: rekap berisi transaksi tanpa BLOK.
 - **Akar masalah**: tidak ada filter data non‑Wartel saat ingest/sync.
 - **Solusi**: skip data tanpa BLOK di `live_ingest` dan `sync_sales`.
+
+### 3.12 Data non‑Wartel muncul lagi setelah settlement
+- **Gejala**: setelah cleanup, data non‑Wartel (contoh nomor 08) muncul kembali saat settlement.
+- **Akar masalah**: `report/sync_stats.php` menarik semua user hotspot tanpa filter `server` dan tanpa cek BLOK.
+- **Solusi**: filter `?server=$hotspot_server` dan **skip user tanpa BLOK**.
+
+### 3.13 Blok “uji coba” tetap muncul di rekap
+- **Gejala**: BLOK-A tetap tampil walau sudah dihapus dari MikroTik.
+- **Akar masalah**: data historis tersimpan sebagai BLOK-A10/BLOK-A30 di DB.
+- **Solusi**: whitelist blok harian berdasar `phone_block_daily`, dan tool `clear_block`/`check_block` mendukung pola BLOK-X[0-9]*.
 
 ### 3.9 Rekap nol karena schema tidak lengkap
 - **Gejala**: rekap kosong, insert gagal.
