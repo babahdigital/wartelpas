@@ -1702,7 +1702,7 @@ if ($is_ajax) {
         </td>
         <td class="text-center">
           <?php if(!empty($u['relogin'])): ?>
-            <button type="button" class="btn-act btn-act-relogin" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" title="Detail Relogin"><i class="fa fa-eye"></i></button>
+            <button type="button" class="btn-act btn-act-relogin" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'], ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'], ENT_QUOTES) ?>" title="Detail Relogin"><i class="fa fa-eye"></i></button>
           <?php endif; ?>
           <?php if (in_array($req_status, ['all','used','rusak','online'], true)): ?>
             <?php if (strtoupper($u['status']) === 'TERPAKAI' && in_array($req_status, ['all','used'], true)): ?>
