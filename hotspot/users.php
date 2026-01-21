@@ -2452,7 +2452,8 @@ if ($debug_mode && !$is_ajax) {
         const rowsPrint = itms.map(it => {
           const status = it.ok ? 'OK' : 'TIDAK';
           const statusClass = it.ok ? 'status-ok' : 'status-bad';
-          return `<tr><td>${it.label}</td><td>${it.value}</td><td class="${statusClass}">${status}</td></tr>`;
+          const rowClass = it.ok ? 'row-ok' : 'row-bad';
+          return `<tr class="${rowClass}"><td>${it.label}</td><td>${it.value}</td><td class="${statusClass}">${status}</td></tr>`;
         }).join('');
         const metaRows = [];
         if (mt && mt.date) metaRows.push(`<tr><td>Tanggal</td><td>${mt.date}</td></tr>`);
@@ -2473,11 +2474,14 @@ if ($debug_mode && !$is_ajax) {
             table{width:100%;border-collapse:collapse;font-size:12px;}
             th,td{border:1px solid #444;padding:6px 8px;text-align:left;}
             th{background:#f0f0f0;}
-            .status-ok{color:#0b7a0b;font-weight:700;}
-            .status-bad{color:#c62828;font-weight:700;}
-            .meta-first-login td{background:#e3f2fd;}
-            .meta-login td{background:#e8f5e9;}
-            .meta-logout td{background:#fff3e0;}
+            .status-ok{color:#0b7a0b !important;font-weight:700;}
+            .status-bad{color:#c62828 !important;font-weight:700;}
+            .row-ok td{background:#e8f5e9 !important;}
+            .row-bad td{background:#ffebee !important;}
+            .meta-first-login td{background:#e3f2fd !important;}
+            .meta-login td{background:#e8f5e9 !important;}
+            .meta-logout td{background:#fff3e0 !important;}
+            @media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
           </style>
         </head><body>
           <h3>Cek Kelayakan Rusak</h3>
