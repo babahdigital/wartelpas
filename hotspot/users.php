@@ -1403,6 +1403,7 @@ foreach($all_users as $u) {
       if ($is_used || $is_rusak || $disabled == 'true' || $is_retur) continue;
     }
     if ($req_status == 'online' && !$is_active) continue;
+    if ($req_status == 'online' && $f_blok == '') continue;
     if ($req_status == 'used') {
       if (!$is_used || $is_active || $is_rusak) continue;
     }
