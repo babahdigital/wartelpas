@@ -1912,6 +1912,7 @@ if ($debug_mode && !$is_ajax) {
     .confirm-btn-secondary { background: #424242; color: #fff; border: 1px solid #555; }
     .confirm-btn-secondary:hover { background: #505050; }
     .confirm-btn-warning { background: #ff9800; color: #fff; }
+    .confirm-btn-secondary, .fa-print:before { top: 3px; position: relative; margin-right: 7px; }
     .relogin-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); z-index: 10002; }
     .relogin-card { background: #2c2c2c; color: #e0e0e0; border-radius: 8px; width: 440px; max-width: 92vw; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; }
     .relogin-header { background: #252525; border-bottom: 1px solid #3d3d3d; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; }
@@ -1928,7 +1929,6 @@ if ($debug_mode && !$is_ajax) {
     .relogin-more { text-align: center; color: #9aa0a6; font-style: italic; padding-top: 8px; }
     .relogin-actions { display: flex; gap: 6px; align-items: center; }
     .relogin-print { background: #2d8cff; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
-    .fa-print:before { top: 3px; position: relative; margin-right: 7px; }
   </style>
 
 <div class="row">
