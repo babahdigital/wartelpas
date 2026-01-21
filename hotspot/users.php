@@ -2099,6 +2099,7 @@ if ($debug_mode && !$is_ajax) {
       <div class="card-header-solid">
         <h3 class="card-title m-0"><i class="fa fa-users mr-2"></i> Manajemen Voucher</h3>
         <span id="users-total" class="badge badge-secondary p-2" style="font-size:14px">Total: <?= $total_items ?> Items</span>
+        <span id="users-active" class="badge badge-info p-2" style="font-size:14px;margin-left:6px;">Online: -</span>
       </div>
       <div class="toolbar-container">
         <form action="?" method="GET" class="toolbar-row m-0" id="users-toolbar-form">
@@ -2442,6 +2443,7 @@ if ($debug_mode && !$is_ajax) {
   const dateInput = document.querySelector('input[name="date"]');
   const tbody = document.getElementById('users-table-body');
   const totalBadge = document.getElementById('users-total');
+  const activeBadge = document.getElementById('users-active');
   const paginationWrap = document.getElementById('users-pagination');
   const searchLoading = document.getElementById('search-loading');
   const clearBtn = document.getElementById('search-clear');
@@ -3007,6 +3009,19 @@ if ($debug_mode && !$is_ajax) {
     try { history.replaceState(null, '', url.toString()); } catch (e) {}
   }
 
+  async function refreshActiveStatus() {
+    if (!activeBadge) return;
+    try {
+      const url = './hotspot/aload_users.php?session=<?= $session ?>&load=users_status&_=' + Date.now();
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && Array.isArray(data.active)) {
+        activeBadge.textContent = `Online: ${data.active.length} User`;
+      }
+    } catch (e) {}
+  }
+
   async function fetchUsers(isSearch, showLoading) {
     const fetchId = ++lastFetchId;
     try {
@@ -3123,6 +3138,9 @@ if ($debug_mode && !$is_ajax) {
     const currentInput = searchInput.value.trim();
     if (currentInput !== appliedQuery) return;
     fetchUsers(false, false);
+    refreshActiveStatus();
   }, 15000);
+
+  refreshActiveStatus();
 })();
 </script>
