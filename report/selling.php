@@ -713,6 +713,14 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
 
 <script>
     var settlementTimer = null;
+    var hpDeleteUrl = '';
+    function openDeleteHpModal(url, blok, date){
+        hpDeleteUrl = url || '';
+        var modal = document.getElementById('hp-delete-modal');
+        var text = document.getElementById('hp-delete-text');
+        if (text) text.textContent = 'Hapus data Blok ' + (blok || '-') + ' tanggal ' + (date || '-') + '?';
+        if (modal) modal.style.display = 'flex';
+    }
     function manualSettlement(){
         var btn = document.getElementById('btn-settlement');
         if (!btn || btn.disabled) return;
@@ -860,6 +868,19 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 if (modal) modal.style.display = 'none';
             });
         }
+    })();
+    (function(){
+        var modal = document.getElementById('hp-delete-modal');
+        var closeBtn = document.getElementById('hp-delete-close');
+        var cancelBtn = document.getElementById('hp-delete-cancel');
+        var confirmBtn = document.getElementById('hp-delete-confirm');
+        var close = function(){ if (modal) modal.style.display = 'none'; };
+        if (closeBtn) closeBtn.addEventListener('click', close);
+        if (cancelBtn) cancelBtn.addEventListener('click', close);
+        if (confirmBtn) confirmBtn.addEventListener('click', function(){
+            if (!hpDeleteUrl) return close();
+            window.location.href = hpDeleteUrl;
+        });
     })();
     (function(){
         var w = document.getElementById('chk_wartel');
