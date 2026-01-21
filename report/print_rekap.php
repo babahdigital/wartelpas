@@ -564,17 +564,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             Keterangan: RS = Rusak, RT = Retur, SP = Spam, WR = Wartel, KM = Kamtib.
         </div>
         <div style="margin-top:4px; font-size:11px; color:#444;">
-            Catatan:
-        </div>
-        <div style="margin-top:4px; font-size:11px; color:#444;">
-            1. Data rekap adalah acuan resmi untuk keuangan karena berasal dari transaksi. Daftar user digunakan untuk memantau status user online/terpakai.
-        </div>
-        <div style="margin-top:4px; font-size:11px; color:#444;">
-            2. Selisih bisa terjadi jika voucher masih status online, dihapus dari router, gagal dibuat ke router, atau belum login.
-        </div>
-        <div style="margin-top:4px; font-size:11px; color:#444;">
-            3. Data bersifat sementara sampai settlement harian jam 03:00. Data final dihitung pada jam 04:00.
-        </div>
+            Catatan: Data rekap adalah acuan resmi untuk keuangan karena berasal dari transaksi. Daftar user digunakan untuk memantau status user online/terpakai.
+        </div> 
     <?php endif; ?>
 
 <script>
