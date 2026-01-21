@@ -1600,6 +1600,9 @@ foreach($all_users as $u) {
     if ($req_status == 'ready') {
       if (!$is_ready_now) continue;
     }
+    if ($req_status == 'all' && $status === 'READY') {
+      continue;
+    }
     if ($req_status == 'online' && !$is_active) continue;
     if ($req_status == 'online' && $f_blok == '') continue;
     if ($req_status == 'used') {
