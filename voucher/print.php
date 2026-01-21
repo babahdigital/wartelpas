@@ -69,20 +69,29 @@ if (!isset($_SESSION["mikhmon"])) {
         foreach ($rows as $r) {
           $row_blok = $r['blok_name'] ?? '';
           $raw_comment = $r['raw_comment'] ?? '';
+          $is_retur_comment = (stripos($raw_comment, '(Retur)') !== false) || (stripos($raw_comment, 'Retur Ref:') !== false);
           $cm_blok = extract_blok_from_comment($raw_comment);
           $match = (stripos($row_blok, $blok) !== false) || (stripos($cm_blok, $blok) !== false) || (stripos($raw_comment, $blok) !== false);
           if (!$match) continue;
+          if ($target_status === 'retur' && !$is_retur_comment) continue;
+          if ($target_status === 'rusak' && $is_retur_comment) continue;
           $u = $API->comm('/ip/hotspot/user/print', [
             '?name' => $r['username'],
             '.proplist' => '.id,name,password,profile,comment,limit-uptime,limit-bytes-total,uptime,bytes-in,bytes-out'
           ]);
           if (isset($u[0])) {
+            $router_comment = $u[0]['comment'] ?? '';
+            $router_is_retur = (stripos($router_comment, '(Retur)') !== false) || (stripos($router_comment, 'Retur Ref:') !== false);
+            if ($target_status === 'retur' && !$router_is_retur) continue;
+            if ($target_status === 'rusak' && $router_is_retur) continue;
             $getuser[] = $u[0];
           } else {
             $profile_name = '';
             if (preg_match('/Profile:([^|]+)/i', $raw_comment, $m)) {
               $profile_name = trim($m[1]);
             }
+            if ($target_status === 'retur' && !$is_retur_comment) continue;
+            if ($target_status === 'rusak' && $is_retur_comment) continue;
             $getuser[] = [
               '.id' => 'db-'.$r['username'],
               'name' => $r['username'],
@@ -107,13 +116,20 @@ if (!isset($_SESSION["mikhmon"])) {
             '.proplist' => '.id,name,password,profile,comment,limit-uptime,limit-bytes-total,uptime,bytes-in,bytes-out'
           ]);
           if (isset($u[0])) {
+            $router_comment = $u[0]['comment'] ?? '';
+            $router_is_retur = (stripos($router_comment, '(Retur)') !== false) || (stripos($router_comment, 'Retur Ref:') !== false);
+            if ($target_status === 'retur' && !$router_is_retur) continue;
+            if ($target_status === 'rusak' && $router_is_retur) continue;
             $getuser[] = $u[0];
           } else {
             $raw_comment = $r['raw_comment'] ?? '';
+            $is_retur_comment = (stripos($raw_comment, '(Retur)') !== false) || (stripos($raw_comment, 'Retur Ref:') !== false);
             $profile_name = '';
             if (preg_match('/Profile:([^|]+)/i', $raw_comment, $m)) {
               $profile_name = trim($m[1]);
             }
+            if ($target_status === 'retur' && !$is_retur_comment) continue;
+            if ($target_status === 'rusak' && $is_retur_comment) continue;
             $getuser[] = [
               '.id' => 'db-'.$r['username'],
               'name' => $r['username'],
@@ -143,6 +159,9 @@ if (!isset($_SESSION["mikhmon"])) {
       ));
       foreach ($raw_users as $u) {
         $u_comment = $u['comment'] ?? '';
+        $is_retur_comment = (stripos($u_comment, '(Retur)') !== false) || (stripos($u_comment, 'Retur Ref:') !== false);
+        if ($target_status === 'retur' && !$is_retur_comment) continue;
+        if ($target_status === 'rusak' && $is_retur_comment) continue;
         if (stripos($u_comment, $key) === false) continue;
         if ($blok != '') {
           $cm_blok = extract_blok_from_comment($u_comment);
