@@ -492,10 +492,16 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             Keterangan: RS = Rusak, RT = Retur, SP = Spam, WR = Wartel, KM = Kamtib.
         </div>
         <div style="margin-top:4px; font-size:11px; color:#444;">
-            Catatan: Data rekap adalah acuan resmi untuk keuangan karena berasal dari transaksi (sales_history/live_sales). Daftar user digunakan untuk memantau status user online/terpakai. Selisih bisa terjadi jika voucher dihapus dari router, gagal dibuat ke router, atau belum login.
+            Catatan:
         </div>
         <div style="margin-top:4px; font-size:11px; color:#444;">
-            Catatan: Data bersifat sementara sampai settlement harian jam 03:00. Data final dihitung pada jam 04:00.
+            1. Data rekap adalah acuan resmi untuk keuangan karena berasal dari transaksi. Daftar user digunakan untuk memantau status user online/terpakai.
+        </div>
+        <div style="margin-top:4px; font-size:11px; color:#444;">
+            2. Selisih bisa terjadi jika voucher dihapus dari router, gagal dibuat ke router, atau belum login.
+        </div>
+        <div style="margin-top:4px; font-size:11px; color:#444;">
+            3. Data bersifat sementara sampai settlement harian jam 03:00. Data final dihitung pada jam 04:00.
         </div>
     <?php endif; ?>
 
