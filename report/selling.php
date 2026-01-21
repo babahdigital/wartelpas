@@ -764,7 +764,6 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         window.settleQueue = [];
         window.settleSeen = {};
         window.settleInfoShown = false;
-        window.settleStatus = '';
         updateSettlementCloseState();
         if (modal) modal.style.display = 'flex';
         if (logBox) logBox.innerHTML = '';
@@ -868,21 +867,23 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                     }
                 }
                 if (data && data.status) {
-                    window.settleStatus = data.status;
-                    updateSettlementStatus();
+                    if (statusEl) statusEl.textContent = data.status === 'done' ? 'Selesai' : (data.status === 'failed' ? 'Gagal' : 'Berjalan');
+                    if (processEl) processEl.innerHTML = data.status === 'done'
+                        ? '<i class="fa fa-check-circle"></i> Selesai'
+                        : (data.status === 'failed' ? '<i class="fa fa-times-circle"></i> Gagal' : '<i class="fa fa-refresh fa-spin"></i> Sedang memproses...');
                 }
                 if (data && data.status === 'done') {
+                    if (statusEl) statusEl.textContent = 'Selesai';
                     window.settleDone = true;
                     updateSettlementCloseState();
-                    updateSettlementStatus();
                     softReloadSelling();
                     clearTimeout(settlementTimer);
                     return;
                 }
                 if (data && data.status === 'failed') {
+                    if (statusEl) statusEl.textContent = 'Gagal';
                     window.settleDone = true;
                     updateSettlementCloseState();
-                    updateSettlementStatus();
                     clearTimeout(settlementTimer);
                     return;
                 }
@@ -936,25 +937,6 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             closeBtn.disabled = true;
             closeBtn.style.opacity = '0.6';
             closeBtn.style.cursor = 'not-allowed';
-        }
-    }
-
-    function updateSettlementStatus(){
-        var statusEl = document.getElementById('settlement-status');
-        var processEl = document.getElementById('processStatus');
-        if (!window.settleStatus) return;
-        var ready = !!window.settleDone && !window.settleTyping && (!window.settleQueue || window.settleQueue.length === 0);
-        if (!ready) {
-            if (statusEl) statusEl.textContent = 'Berjalan';
-            if (processEl) processEl.innerHTML = '<i class="fa fa-refresh fa-spin"></i> Sedang memproses...';
-            return;
-        }
-        if (window.settleStatus === 'done') {
-            if (statusEl) statusEl.textContent = 'Selesai';
-            if (processEl) processEl.innerHTML = '<i class="fa fa-check-circle"></i> Selesai';
-        } else if (window.settleStatus === 'failed') {
-            if (statusEl) statusEl.textContent = 'Gagal';
-            if (processEl) processEl.innerHTML = '<i class="fa fa-times-circle"></i> Gagal';
         }
     }
 
@@ -1016,7 +998,6 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             logBox.appendChild(newCursor);
             logBox.scrollTop = logBox.scrollHeight;
             updateSettlementCloseState();
-            updateSettlementStatus();
         });
     }
 

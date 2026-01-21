@@ -83,11 +83,6 @@ if ($action === 'logs') {
                 }
                 $API->disconnect();
                 $rawLogs = is_array($rawLogs) ? array_slice($rawLogs, -400) : [];
-                if (is_array($rawLogs)) {
-                    $rawLogs = array_reverse($rawLogs);
-                }
-            $sawSettle = false;
-            $sawFetch = false;
             foreach ($rawLogs as $l) {
                 $time = trim((string)($l['time'] ?? ''));
                 $topics = trim((string)($l['topics'] ?? 'system,info'));
@@ -105,18 +100,20 @@ if ($action === 'logs') {
 
                 $msgUpper = strtoupper($msgTrim);
                 $topicUpper = strtoupper($topics);
+                static $settleStarted = false;
                 $startsOk = preg_match('/^(SETTLE:|CLEANUP:|SYNC:|MAINT:|SUKSES:)/i', $msgTrim);
                 $isScriptTopic = (strpos($topicUpper, 'SCRIPT') !== false);
                 $isFetchTopic = (strpos($topicUpper, 'FETCH') !== false) && (strpos($msgUpper, 'WARTELPAS') !== false || strpos($msgUpper, 'SOBIGIDUL') !== false);
 
-                if ($startsOk || $isScriptTopic) {
-                    $sawSettle = true;
-                }
-                if ($isFetchTopic) {
-                    $sawFetch = true;
+                if (stripos($msgTrim, 'SETTLE: CLEANUP: Mulai') !== false) {
+                    $settleStarted = true;
                 }
 
-                if (!($startsOk || $isScriptTopic || ($sawSettle && $isFetchTopic))) {
+                if (!$settleStarted && !$startsOk) {
+                    continue;
+                }
+
+                if (!($startsOk || $isScriptTopic || $isFetchTopic)) {
                     continue;
                 }
 
@@ -168,11 +165,7 @@ if ($action === 'logs') {
 
     $infoMessage = '';
     if (empty($logs)) {
-        if ($sawFetch) {
-            $infoMessage = 'Log settlement belum muncul. Pastikan script Cuci Gudang sudah terpasang dan scheduler berjalan.';
-        } else {
-            $infoMessage = $message !== '' ? $message : 'Menunggu log dari MikroTik...';
-        }
+        $infoMessage = $message !== '' ? $message : 'Menunggu log dari MikroTik...';
     }
 
     if ($done) $status = 'done';
