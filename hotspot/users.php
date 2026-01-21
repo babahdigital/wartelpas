@@ -1465,7 +1465,7 @@ foreach($all_users as $u) {
       $logout_disp = merge_date_time($logout_disp, $hist['updated_at']);
     }
 
-    $relogin_flag = ((int)($hist['login_count'] ?? 0) > 1) || (!empty($hist['first_login_real']) && !empty($hist['last_login_real']) && $hist['first_login_real'] !== $hist['last_login_real']);
+    $relogin_flag = ((int)($hist['login_count'] ?? 0) > 1);
     $first_login_disp = $first_login_real ?? ($hist['first_login_real'] ?? '-');
     $display_data[] = [
       'uid' => $u['.id'] ?? '',

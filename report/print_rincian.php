@@ -362,7 +362,7 @@ if ($is_usage && file_exists($dbFile)) {
             if ($login_time === '') $login_time = '-';
             if ($logout_time === '') $logout_time = '-';
 
-            $relogin = ((int)($hist['login_count'] ?? 0) > 1) || (!empty($hist['first_login_real']) && !empty($hist['last_login_real']) && $hist['first_login_real'] !== $hist['last_login_real']);
+            $relogin = ((int)($hist['login_count'] ?? 0) > 1);
             $first_login = $hist['first_login_real'] ?? $login_time;
             $usage_list[] = [
                 'first_login' => $first_login,
@@ -406,7 +406,7 @@ if ($is_usage && file_exists($dbFile)) {
             $logout_time = $row['logout_time_real'] ?? '-';
             $has_usage = ((int)($row['last_bytes'] ?? 0) > 0) || (!empty($row['last_uptime']) && $row['last_uptime'] != '0s') || (!empty($row['login_time_real']) || !empty($row['logout_time_real']));
             if ($status === 'TERPAKAI' && !$has_usage) continue;
-            $relogin = ((int)($row['login_count'] ?? 0) > 1) || (!empty($row['first_login_real']) && !empty($row['last_login_real']) && $row['first_login_real'] !== $row['last_login_real']);
+            $relogin = ((int)($row['login_count'] ?? 0) > 1);
             $usage_list[] = [
                 'first_login' => $row['first_login_real'] ?? $login_time,
                 'login' => $login_time,
@@ -538,9 +538,9 @@ function esc($s){ return htmlspecialchars((string)$s); }
                                             <?php
                                                 $st = strtolower((string)($it['status'] ?? ''));
                                                 $st_label = '-';
-                                                if (!empty($it['relogin'])) $st_label = 'Relogin';
-                                                elseif ($st === 'online') $st_label = 'Online';
+                                                if ($st === 'online') $st_label = 'Online';
                                                 elseif ($st === 'rusak') $st_label = 'Rusak';
+                                                elseif (!empty($it['relogin'])) $st_label = 'Relogin';
                                             ?>
                                             <td><?= esc($st_label) ?></td>
                   </tr>
