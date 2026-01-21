@@ -25,10 +25,10 @@ $filter_blok = trim((string)($_GET['blok'] ?? ''));
 
 $filter_date = $_GET['date'] ?? date('Y-m-d');
 
-$usage_label = 'TERPAKAI';
-if ($req_status === 'online') $usage_label = 'ONLINE';
-elseif ($req_status === 'rusak') $usage_label = 'RUSAK';
-elseif ($req_status === 'all') $usage_label = 'SEMUA';
+$usage_label = 'Terpakai';
+if ($req_status === 'online') $usage_label = 'Online';
+elseif ($req_status === 'rusak') $usage_label = 'Rusak';
+elseif ($req_status === 'all') $usage_label = 'Semua';
 
 function normalize_block_name_simple($blok_name) {
     $raw = strtoupper(trim((string)$blok_name));
@@ -94,6 +94,26 @@ function format_date_indo($dateStr) {
     $ts = strtotime($dateStr);
     if ($ts === false) return $dateStr;
     return date('d-m-Y H:i:s', $ts);
+}
+
+function format_date_long_indo($dateStr) {
+    if (empty($dateStr) || $dateStr === '-') return '-';
+    $ts = strtotime($dateStr);
+    if ($ts === false) return $dateStr;
+    $months = [
+        'Januari','Februari','Maret','April','Mei','Juni',
+        'Juli','Agustus','September','Oktober','November','Desember'
+    ];
+    $m = (int)date('n', $ts);
+    $month = $months[$m - 1] ?? date('m', $ts);
+    return date('d', $ts) . ' ' . $month . ' ' . date('Y', $ts);
+}
+
+function format_time_only($dateStr) {
+    if (empty($dateStr) || $dateStr === '-') return '-';
+    $ts = strtotime($dateStr);
+    if ($ts === false) return $dateStr;
+    return date('H:i:s', $ts);
 }
 
 function format_date_only_indo($dateStr) {
@@ -322,7 +342,9 @@ if ($is_usage && file_exists($dbFile)) {
             if ($logout_time === '') $logout_time = '-';
 
             $relogin = ((int)($hist['login_count'] ?? 0) > 1) || (!empty($hist['first_login_real']) && !empty($hist['last_login_real']) && $hist['first_login_real'] !== $hist['last_login_real']);
+            $first_login = $hist['first_login_real'] ?? $login_time;
             $usage_list[] = [
+                'first_login' => $first_login,
                 'login' => $login_time,
                 'logout' => $logout_time,
                 'username' => $name,
@@ -362,6 +384,7 @@ if ($is_usage && file_exists($dbFile)) {
             if ($status === 'TERPAKAI' && !$has_usage) continue;
             $relogin = ((int)($row['login_count'] ?? 0) > 1) || (!empty($row['first_login_real']) && !empty($row['last_login_real']) && $row['first_login_real'] !== $row['last_login_real']);
             $usage_list[] = [
+                'first_login' => $row['first_login_real'] ?? $login_time,
                 'login' => $login_time,
                 'logout' => $logout_time,
                 'username' => $uname,
@@ -451,21 +474,25 @@ function esc($s){ return htmlspecialchars((string)$s); }
         <?php if ($filter_user !== ''): ?>User: <?= esc($filter_user) ?> | <?php endif; ?>
         <?php if ($filter_blok !== ''): ?>Blok: <?= esc($filter_blok) ?> | <?php endif; ?>
                 Status: <?= esc($usage_label) ?> | 
-                Tanggal Cetak: <?= esc(format_date_indo(date('Y-m-d H:i:s'))) ?>
+                Tanggal: <?= esc(format_date_long_indo($filter_date)) ?> | Jam Cetak: <?= esc(format_time_only(date('Y-m-d H:i:s'))) ?>
       </div>
 
       <table>
           <thead>
               <tr>
+                  <th colspan="3">Waktu</th>
+                  <th rowspan="2">Username</th>
+                  <th rowspan="2">Blok</th>
+                  <th rowspan="2">IP</th>
+                  <th rowspan="2">MAC</th>
+                  <th rowspan="2">Uptime</th>
+                  <th rowspan="2">Bytes</th>
+                  <th rowspan="2">Status</th>
+              </tr>
+              <tr>
+                  <th>First Login</th>
                   <th>Login</th>
                   <th>Logout</th>
-                  <th>Username</th>
-                  <th>Blok</th>
-                  <th>IP</th>
-                  <th>MAC</th>
-                  <th>Uptime</th>
-                  <th>Bytes</th>
-                  <th>Status</th>
               </tr>
           </thead>
           <tbody>
@@ -474,23 +501,20 @@ function esc($s){ return htmlspecialchars((string)$s); }
               <?php else: ?>
                   <?php foreach ($usage_list as $it): ?>
                   <tr>
-                      <td><?= esc(format_date_indo($it['login'])) ?></td>
-                      <td><?= esc(format_date_indo($it['logout'])) ?></td>
+                      <td><?= esc(format_time_only($it['first_login'] ?? '-')) ?></td>
+                      <td><?= esc(format_time_only($it['login'])) ?></td>
+                      <td><?= esc(format_time_only($it['logout'])) ?></td>
                       <td><?= esc($it['username']) ?></td>
                       <td><?= esc($it['blok']) ?></td>
                       <td><?= esc($it['ip']) ?></td>
                       <td><?= esc($it['mac']) ?></td>
                       <td><?= esc($it['uptime']) ?></td>
                       <td><?= esc(format_bytes_short($it['bytes'])) ?></td>
-                                            <?php
-                                                $st = strtoupper((string)($it['status'] ?? ''));
-                                                $st_class = 'status-normal';
-                                                if ($st === 'ONLINE') $st_class = 'status-online';
-                                                elseif ($st === 'RUSAK') $st_class = 'status-rusak';
-                                                elseif ($st === 'TERPAKAI') $st_class = 'status-terpakai';
-                                            ?>
-                                            <?php if (!empty($it['relogin'])): $st = $st . ' / RELOGIN'; endif; ?>
-                                            <td class="<?= esc($st_class) ?>"><?= esc($st) ?></td>
+                      <?php if (!empty($it['relogin'])): ?>
+                        <td class="status-terpakai">Relogin</td>
+                      <?php else: ?>
+                        <td>-</td>
+                      <?php endif; ?>
                   </tr>
                   <?php endforeach; ?>
               <?php endif; ?>
