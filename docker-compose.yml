@@ -34,6 +34,7 @@ services:
       - ./dhcp:/var/www/html/dhcp            # Modul DHCP
       - ./process:/var/www/html/process      # Background process
       - ./logs:/var/www/html/logs            # Logs
+      - ./tools:/var/www/html/tools          # Alat bantu admin
 
       # ==========================================
       # 4. MODUL HOTSPOT (FILE SPESIFIK)
