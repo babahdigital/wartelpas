@@ -2427,7 +2427,8 @@ if ($debug_mode && !$is_ajax) {
       confirmOk.style.cursor = isValid ? 'pointer' : 'not-allowed';
       if (confirmPrint) confirmPrint.style.display = 'inline-flex';
       confirmModal.style.display = 'flex';
-      rusakPrintPayload = { headerMsg, items };
+      const meta = data.meta || {};
+      rusakPrintPayload = { headerMsg, items, meta };
       const cleanup = (result) => {
         confirmModal.style.display = 'none';
         confirmOk.onclick = null;
@@ -2446,11 +2447,20 @@ if ($debug_mode && !$is_ajax) {
       if (confirmClose) confirmClose.onclick = () => cleanup(false);
       if (confirmPrint) confirmPrint.onclick = () => {
         if (!rusakPrintPayload) return;
-        const { headerMsg: hm, items: itms } = rusakPrintPayload;
+        const { headerMsg: hm, items: itms, meta: mt } = rusakPrintPayload;
         const rowsPrint = itms.map(it => {
           const status = it.ok ? 'OK' : 'TIDAK';
           return `<tr><td>${it.label}</td><td>${it.value}</td><td>${status}</td></tr>`;
         }).join('');
+        const metaLines = [];
+        if (mt && mt.date) metaLines.push(`Tanggal: ${mt.date}`);
+        if (mt && mt.username) metaLines.push(`User: ${mt.username}`);
+        if (mt && mt.blok) metaLines.push(`Blok: ${mt.blok}`);
+        if (mt && mt.profile) metaLines.push(`Profile: ${mt.profile}`);
+        if (mt && (mt.login || mt.logout)) {
+          metaLines.push(`Login: ${mt.login} | Logout: ${mt.logout}`);
+        }
+        const metaBlock = metaLines.length ? `<div style="margin:6px 0 10px 0;font-size:12px;color:#444;">${metaLines.join(' · ')}</div>` : '';
         const msgLine = hm ? `<div style="margin:6px 0 10px 0;font-size:12px;color:#444;">${hm}</div>` : '';
         const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cek Kelayakan Rusak</title>
           <style>
@@ -2462,6 +2472,7 @@ if ($debug_mode && !$is_ajax) {
           </style>
         </head><body>
           <h3>Cek Kelayakan Rusak</h3>
+          ${metaBlock}
           ${msgLine}
           <table><thead><tr><th>Kriteria</th><th>Nilai</th><th>Status</th></tr></thead><tbody>${rowsPrint}</tbody></table>
         </body></html>`;
@@ -2668,16 +2679,29 @@ if ($debug_mode && !$is_ajax) {
   }
 
   function formatBlokLabel(blok) {
+  function formatDateNow() {
+    const d = new Date();
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yy = d.getFullYear();
+    return `${dd}-${mm}-${yy}`;
+  }
     if (!blok) return '';
     const raw = blok.replace(/^BLOK-?/i, '').trim();
     const m = raw.match(/^([A-Z]+)/i);
     return m ? m[1].toUpperCase() : raw.toUpperCase();
   }
 
+    const username = el.getAttribute('data-user') || '';
+    const blok = el.getAttribute('data-blok') || '';
+    const loginTime = el.getAttribute('data-login') || '';
+    const logoutTime = el.getAttribute('data-logout') || '';
   function formatProfileLabel(profile) {
     if (!profile) return '';
     return profile.replace(/(\d+)\s*(menit)/i, '$1 Menit');
   }
+    const dateBase = loginTime && loginTime !== '-' ? loginTime : (logoutTime && logoutTime !== '-' ? logoutTime : '');
+    const headerDate = dateBase ? formatDateHeader(dateBase) : formatDateNow();
 
   function formatTimeOnly(dt) {
     if (!dt) return '-';
@@ -2686,6 +2710,14 @@ if ($debug_mode && !$is_ajax) {
   }
 
   async function openReloginModal(username, blok, profile) {
+      meta: {
+        username,
+        blok: formatBlokLabel(blok),
+        profile: formatProfileLabel(profile),
+        date: headerDate,
+        login: loginTime || '-',
+        logout: logoutTime || '-'
+      },
     if (!reloginModal || !reloginBody) return;
     if (reloginTitle) reloginTitle.textContent = `Detail Relogin - ${username}`;
     if (reloginSub) reloginSub.textContent = '';
