@@ -476,7 +476,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $stmtCount->execute($params);
       $total = (int)$stmtCount->fetchColumn();
 
-      $stmt = $db->prepare("SELECT login_time, logout_time, seq FROM login_events WHERE $where ORDER BY COALESCE(login_time, logout_time) DESC, id DESC LIMIT 3");
+      $stmt = $db->prepare("SELECT login_time, logout_time, seq FROM login_events WHERE $where ORDER BY seq ASC, id ASC LIMIT 3");
       $stmt->execute($params);
       $events = [];
       while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
@@ -1799,12 +1799,13 @@ if ($debug_mode && !$is_ajax) {
     .relogin-close { background: transparent; border: none; color: #fff; opacity: 0.7; font-size: 20px; line-height: 1; cursor: pointer; }
     .relogin-close:hover { opacity: 1; }
     .relogin-body { padding: 16px 18px; font-size: 13px; color: #ccc; }
-    .relogin-list { list-style: none; padding: 0; margin: 0; }
-    .relogin-list li { padding: 10px 0; border-bottom: 1px solid #3d3d3d; }
-    .relogin-list li:last-child { border-bottom: none; }
-    .relogin-row { display: flex; gap: 10px; align-items: flex-start; }
-    .relogin-seq { display: inline-flex; min-width: 36px; height: 22px; align-items: center; justify-content: center; border-radius: 4px; background: #3b3b3b; color: #d2d2d2; font-size: 11px; font-weight: 700; }
-    .relogin-more { text-align: center; color: #9aa0a6; font-style: italic; }
+    .relogin-table { width: 100%; border-collapse: collapse; }
+    .relogin-table th, .relogin-table td { border: 1px solid #3d3d3d; padding: 6px 8px; font-size: 12px; }
+    .relogin-table th { background: #252525; color: #eaeaea; text-align: left; }
+    .relogin-table td { color: #d2d2d2; }
+    .relogin-more { text-align: center; color: #9aa0a6; font-style: italic; padding-top: 8px; }
+    .relogin-actions { display: flex; gap: 6px; align-items: center; }
+    .relogin-print { background: #2d8cff; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
   </style>
 
 <div class="row">
@@ -1832,7 +1833,10 @@ if ($debug_mode && !$is_ajax) {
     <div class="relogin-card">
       <div class="relogin-header">
         <div class="relogin-title" id="relogin-title">Detail Relogin</div>
-        <button type="button" class="relogin-close" id="relogin-close">&times;</button>
+        <div class="relogin-actions">
+          <button type="button" class="relogin-print" id="relogin-print"><i class="fa fa-print"></i> Print</button>
+          <button type="button" class="relogin-close" id="relogin-close">&times;</button>
+        </div>
       </div>
       <div class="relogin-body" id="relogin-body">
         <div style="text-align:center;color:#9aa0a6;">Memuat...</div>
