@@ -248,7 +248,11 @@ foreach ($rows as $r) {
         $loss_invalid_line = ($status === 'invalid') ? $line_price : 0;
         $net_line = $gross_line - $loss_rusak_line - $loss_invalid_line;
 
-        $total_qty_units += $qty;
+        $is_laku = !in_array($status, ['rusak', 'retur', 'invalid'], true);
+
+        if ($is_laku) {
+            $total_qty_units += $qty;
+        }
         $total_net_units += $net_line;
 
         $block = normalize_block_name($r['blok_name'] ?? '', $comment);
@@ -274,20 +278,26 @@ foreach ($rows as $r) {
         if ($bytes < 0) $bytes = 0;
         $bw_line = $bytes;
         if ($bucket === '10') {
-            $block_summaries[$block]['qty_10'] += $qty;
-            $block_summaries[$block]['amt_10'] += $net_line;
+            if ($is_laku) {
+                $block_summaries[$block]['qty_10'] += $qty;
+                $block_summaries[$block]['amt_10'] += $net_line;
+            }
             if ($status === 'rusak') $block_summaries[$block]['rs_10'] += $qty;
             if ($status === 'retur') $block_summaries[$block]['rt_10'] += $qty;
         }
         if ($bucket === '30') {
-            $block_summaries[$block]['qty_30'] += $qty;
-            $block_summaries[$block]['amt_30'] += $net_line;
+            if ($is_laku) {
+                $block_summaries[$block]['qty_30'] += $qty;
+                $block_summaries[$block]['amt_30'] += $net_line;
+            }
             if ($status === 'rusak') $block_summaries[$block]['rs_30'] += $qty;
             if ($status === 'retur') $block_summaries[$block]['rt_30'] += $qty;
         }
-        $block_summaries[$block]['total_qty'] += $qty;
-        $block_summaries[$block]['total_amount'] += $net_line;
-        $block_summaries[$block]['total_bw'] += $bw_line;
+        if ($is_laku) {
+            $block_summaries[$block]['total_qty'] += $qty;
+            $block_summaries[$block]['total_amount'] += $net_line;
+            $block_summaries[$block]['total_bw'] += $bw_line;
+        }
         if ($status === 'rusak') $block_summaries[$block]['rs_total'] += $qty;
         if ($status === 'retur') $block_summaries[$block]['rt_total'] += $qty;
     }
