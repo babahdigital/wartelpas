@@ -792,6 +792,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 if (logWrap) logWrap.style.display = 'block';
                 if (footer) footer.style.display = 'flex';
                 if (statusEl) statusEl.textContent = 'Menjalankan settlement...';
+                if (processEl) processEl.innerHTML = '<i class="fa fa-refresh fa-spin"></i> Menghubungkan ke MikroTik...';
                 btn.disabled = true;
                 btn.style.opacity = '0.6';
                 btn.style.cursor = 'not-allowed';
@@ -808,6 +809,9 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 if (logBox) {
                     logBox.innerHTML = '<span class="cursor-blink"></span>';
                 }
+                enqueueSettlementLogs([
+                    { time: '', topic: 'system,info', type: 'info', message: 'Menunggu koneksi ke MikroTik dan log settlement...' }
+                ]);
                 var params = new URLSearchParams();
                 params.set('session', '<?= htmlspecialchars($session_id); ?>');
                 params.set('date', '<?= htmlspecialchars($filter_date); ?>');
