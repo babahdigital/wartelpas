@@ -384,7 +384,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         <div class="card">
             <div class="label">Total Voucher Laku</div>
             <div class="value"><?= number_format($total_qty_laku,0,',','.') ?></div>
-            <div class="small">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bandwidth: <?= htmlspecialchars(format_bytes_short($total_bandwidth)) ?></div>
+            <div class="small">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Byte: <?= htmlspecialchars(format_bytes_short($total_bandwidth)) ?></div>
         </div>
         <div class="card">
             <div class="label">Voucher Rusak</div>
@@ -422,7 +422,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     <th rowspan="2" style="width:90px;">Pendapatan</th>
                                     <th rowspan="2" style="width:80px;">Qty</th>
                                     <th rowspan="2" style="width:90px;">Total Blok</th>
-                                    <th rowspan="2" style="width:90px;">Bandwidth</th>
+                                    <th rowspan="2" style="width:90px;">Byte</th>
                                     <th colspan="3" style="width:210px;">Device</th>
                                     <th colspan="2" style="width:140px;">Unit</th>
                                     <th rowspan="2" style="width:70px;">Aktif</th>

@@ -1577,6 +1577,66 @@ foreach($all_users as $u) {
 }
 $API->disconnect();
 
+// Sorting (before pagination)
+$status_rank = [
+  'ONLINE' => 0,
+  'TERPAKAI' => 1,
+  'RUSAK' => 2,
+  'RETUR' => 3,
+  'READY' => 4,
+  'INVALID' => 5
+];
+$to_ts = function($dt) {
+  if (empty($dt) || $dt === '-') return 0;
+  $ts = strtotime($dt);
+  return $ts ? $ts : 0;
+};
+if (!empty($display_data)) {
+  usort($display_data, function($a, $b) use ($req_status, $status_rank, $to_ts) {
+    $sa = $a['status'] ?? 'READY';
+    $sb = $b['status'] ?? 'READY';
+
+    if ($req_status === 'used') {
+      $ta = $to_ts($a['logout_time'] ?? '-');
+      $tb = $to_ts($b['logout_time'] ?? '-');
+      if ($ta !== $tb) return $tb <=> $ta;
+      $la = $to_ts($a['login_time'] ?? '-');
+      $lb = $to_ts($b['login_time'] ?? '-');
+      if ($la !== $lb) return $lb <=> $la;
+      return strcmp((string)($a['name'] ?? ''), (string)($b['name'] ?? ''));
+    }
+
+    if ($req_status === 'online') {
+      $la = $to_ts($a['login_time'] ?? '-');
+      $lb = $to_ts($b['login_time'] ?? '-');
+      if ($la !== $lb) return $lb <=> $la;
+      return strcmp((string)($a['name'] ?? ''), (string)($b['name'] ?? ''));
+    }
+
+    if ($req_status === 'rusak' || $req_status === 'retur') {
+      $ta = $to_ts($a['logout_time'] ?? '-');
+      $tb = $to_ts($b['logout_time'] ?? '-');
+      if ($ta !== $tb) return $tb <=> $ta;
+      $la = $to_ts($a['login_time'] ?? '-');
+      $lb = $to_ts($b['login_time'] ?? '-');
+      if ($la !== $lb) return $lb <=> $la;
+      return strcmp((string)($a['name'] ?? ''), (string)($b['name'] ?? ''));
+    }
+
+    if ($req_status === 'ready') {
+      return strcmp((string)($a['name'] ?? ''), (string)($b['name'] ?? ''));
+    }
+
+    $ra = $status_rank[$sa] ?? 99;
+    $rb = $status_rank[$sb] ?? 99;
+    if ($ra !== $rb) return $ra <=> $rb;
+    $ta = $to_ts($sa === 'ONLINE' ? ($a['login_time'] ?? '-') : ($a['logout_time'] ?? '-'));
+    $tb = $to_ts($sb === 'ONLINE' ? ($b['login_time'] ?? '-') : ($b['logout_time'] ?? '-'));
+    if ($ta !== $tb) return $tb <=> $ta;
+    return strcmp((string)($a['name'] ?? ''), (string)($b['name'] ?? ''));
+  });
+}
+
 // Pagination (after filtering)
 $total_items = count($display_data);
 $per_page = isset($_GET['per_page']) ? max(10, min(200, (int)$_GET['per_page'])) : 50;
