@@ -341,6 +341,10 @@ if ($is_usage && file_exists($dbFile)) {
             elseif ($req_status === 'all') $status_match = in_array($status, ['RUSAK','TERPAKAI']);
             else $status_match = ($status === 'TERPAKAI');
 
+            if ($req_status === 'rusak' && $is_retur) {
+                continue;
+            }
+
             if (!$status_match) continue;
             if ($status === 'READY') continue;
 
@@ -401,6 +405,9 @@ if ($is_usage && file_exists($dbFile)) {
             }
 
             $relogin = ((int)($hist['login_count'] ?? 0) > 1);
+            if ($req_status === 'rusak') {
+                $relogin = false;
+            }
             $first_login = $hist['first_login_real'] ?? $login_time;
             $usage_list[] = [
                 'first_login' => $first_login,
@@ -430,6 +437,11 @@ if ($is_usage && file_exists($dbFile)) {
             if ($req_status === 'used' && $status !== 'TERPAKAI') continue;
             if ($req_status === 'all' && !in_array($status, ['RUSAK','TERPAKAI','ONLINE'])) continue;
 
+            if ($req_status === 'rusak') {
+                $is_retur_hist = (stripos($row['raw_comment'] ?? '', '(Retur)') !== false) || (stripos($row['raw_comment'] ?? '', 'Retur Ref:') !== false) || ($hist_status === 'retur');
+                if ($is_retur_hist) continue;
+            }
+
             $comment = (string)($row['raw_comment'] ?? '');
             $f_blok = normalize_block_name_simple($row['blok_name'] ?? '') ?: extract_blok_name($comment);
             if ($only_wartel && !is_wartel_client($comment, $row['blok_name'] ?? '')) {
@@ -455,6 +467,9 @@ if ($is_usage && file_exists($dbFile)) {
                 }
             }
             $relogin = ((int)($row['login_count'] ?? 0) > 1);
+            if ($req_status === 'rusak') {
+                $relogin = false;
+            }
             $usage_list[] = [
                 'first_login' => $row['first_login_real'] ?? $login_time,
                 'login' => $login_time,
