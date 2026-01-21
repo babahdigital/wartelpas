@@ -82,6 +82,12 @@ function format_bytes_short($bytes) {
     return number_format($b, $dec, ',', '.') . ' ' . $units[$i];
 }
 
+function format_date_ddmmyyyy($dateStr) {
+    $ts = strtotime((string)$dateStr);
+    if ($ts === false) return $dateStr;
+    return date('d-m-Y', $ts);
+}
+
 $rows = [];
 $hp_total_units = 0;
 $hp_active_units = 0;
@@ -364,7 +370,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
     </div>
 
     <h2>Rekap Laporan Penjualan</h2>
-    <div class="meta">Periode: <?= htmlspecialchars($period_label) ?> | Tanggal: <?= htmlspecialchars($filter_date) ?></div>
+    <div class="meta">Periode: <?= htmlspecialchars($period_label) ?> | Tanggal: <?= htmlspecialchars(format_date_ddmmyyyy($filter_date)) ?></div>
 
     <div class="grid">
         <div class="card">
@@ -400,7 +406,6 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         <table class="rekap-table">
             <thead>
                 <tr>
-                    <th style="width:90px;">Tanggal</th>
                     <th>Rincian Penjualan</th>
                     <th style="width:70px;">QTY</th>
                     <th style="width:90px;">Pendapatan</th>
@@ -408,7 +413,6 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             </thead>
             <tbody>
                 <tr>
-                    <td style="text-align:center; font-weight:700;"><?= htmlspecialchars(date('d-m-Y', strtotime($filter_date))) ?></td>
                     <td>
                         <table class="rekap-detail">
                             <thead>
@@ -488,7 +492,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             Keterangan: RS = Rusak, RT = Retur, SP = Spam, WR = Wartel, KM = Kamtib.
         </div>
         <div style="margin-top:4px; font-size:11px; color:#444;">
-            Catatan: Angka rekap berasal dari transaksi (sales_history/live_sales). Selisih dengan daftar user bisa terjadi jika voucher dihapus dari router, gagal dibuat ke router, atau belum login.
+            Catatan: Data rekap adalah acuan resmi untuk keuangan karena berasal dari transaksi (sales_history/live_sales). Daftar user digunakan untuk memantau status user online/terpakai. Selisih bisa terjadi jika voucher dihapus dari router, gagal dibuat ke router, atau belum login.
         </div>
         <div style="margin-top:4px; font-size:11px; color:#444;">
             Catatan: Data bersifat sementara sampai settlement harian jam 03:00. Data final dihitung pada jam 04:00.
