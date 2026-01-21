@@ -104,6 +104,46 @@ try {
     if (file_exists($dbFile)) {
         $db = new PDO('sqlite:' . $dbFile);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $db->exec("CREATE TABLE IF NOT EXISTS live_sales (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            raw_date TEXT,
+            raw_time TEXT,
+            sale_date TEXT,
+            sale_time TEXT,
+            sale_datetime TEXT,
+            username TEXT,
+            profile TEXT,
+            profile_snapshot TEXT,
+            price INTEGER,
+            price_snapshot INTEGER,
+            sprice_snapshot INTEGER,
+            validity TEXT,
+            comment TEXT,
+            blok_name TEXT,
+            status TEXT,
+            is_rusak INTEGER,
+            is_retur INTEGER,
+            is_invalid INTEGER,
+            qty INTEGER,
+            full_raw_data TEXT UNIQUE,
+            sync_status TEXT DEFAULT 'pending',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            synced_at DATETIME
+        )");
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN sale_date TEXT"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN sale_time TEXT"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN sale_datetime TEXT"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN profile_snapshot TEXT"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN price_snapshot INTEGER"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN sprice_snapshot INTEGER"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN validity TEXT"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN status TEXT"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN is_rusak INTEGER"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN is_retur INTEGER"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN is_invalid INTEGER"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN qty INTEGER"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN blok_name TEXT"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE sales_history ADD COLUMN full_raw_data TEXT"); } catch (Exception $e) {}
         $res = $db->query("SELECT 
                 sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
                 sh.username, sh.profile, sh.profile_snapshot,
