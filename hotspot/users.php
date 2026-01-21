@@ -1894,7 +1894,10 @@ if ($debug_mode && !$is_ajax) {
   <div id="relogin-modal" class="relogin-modal" aria-hidden="true">
     <div class="relogin-card">
       <div class="relogin-header">
-        <div class="relogin-title" id="relogin-title">Detail Relogin</div>
+        <div>
+          <div class="relogin-title" id="relogin-title">Detail Relogin</div>
+          <div class="relogin-sub" id="relogin-sub"></div>
+        </div>
         <div class="relogin-actions">
           <button type="button" class="relogin-print" id="relogin-print"><i class="fa fa-print"></i> Print</button>
           <button type="button" class="relogin-close" id="relogin-close">&times;</button>
@@ -2166,7 +2169,7 @@ if ($debug_mode && !$is_ajax) {
                     </td>
                     <td class="text-center">
                       <?php if(!empty($u['relogin'])): ?>
-                        <button type="button" class="btn-act btn-act-relogin" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" title="Detail Relogin"><i class="fa fa-eye"></i></button>
+                        <button type="button" class="btn-act btn-act-relogin" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'], ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'], ENT_QUOTES) ?>" title="Detail Relogin"><i class="fa fa-eye"></i></button>
                       <?php endif; ?>
                       <?php if (in_array($req_status, ['all','used','rusak','online'], true)): ?>
                         <?php if (strtoupper($u['status']) === 'TERPAKAI' && in_array($req_status, ['all','used'], true)): ?>
