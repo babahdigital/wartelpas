@@ -2272,6 +2272,7 @@ if ($debug_mode && !$is_ajax) {
   const reloginModal = document.getElementById('relogin-modal');
   const reloginBody = document.getElementById('relogin-body');
   const reloginTitle = document.getElementById('relogin-title');
+  const reloginSub = document.getElementById('relogin-sub');
   const reloginClose = document.getElementById('relogin-close');
   const reloginPrint = document.getElementById('relogin-print');
   if (!searchInput || !tbody || !totalBadge || !paginationWrap) return;
@@ -2415,9 +2416,10 @@ if ($debug_mode && !$is_ajax) {
     return parts[1] || '-';
   }
 
-  async function openReloginModal(username) {
+  async function openReloginModal(username, blok, profile) {
     if (!reloginModal || !reloginBody) return;
     if (reloginTitle) reloginTitle.textContent = `Detail Relogin - ${username}`;
+    if (reloginSub) reloginSub.textContent = '';
     reloginBody.innerHTML = '<div style="text-align:center;color:#9aa0a6;">Memuat...</div>';
     reloginModal.style.display = 'flex';
     reloginPrintPayload = null;
@@ -2443,7 +2445,13 @@ if ($debug_mode && !$is_ajax) {
       }
       const firstDateTime = events.find(ev => ev.login_time || ev.logout_time);
       const headerDate = firstDateTime ? formatDateHeader(firstDateTime.login_time || firstDateTime.logout_time) : '';
-      if (reloginTitle && headerDate) reloginTitle.textContent = `Detail Relogin - ${username} | ${headerDate}`;
+      if (reloginSub) {
+        const parts = [];
+        if (headerDate) parts.push(headerDate);
+        if (blok) parts.push(`Blok ${blok.replace(/^BLOK-?/i, '')}`);
+        if (profile) parts.push(profile);
+        reloginSub.textContent = parts.join(' · ');
+      }
       let html = '<table class="relogin-table"><thead><tr><th>#</th><th>Login</th><th>Logout</th></tr></thead><tbody>';
       events.forEach((ev, idx) => {
         const seq = ev.seq || (idx + 1);
@@ -2457,7 +2465,7 @@ if ($debug_mode && !$is_ajax) {
         html += '<div class="relogin-more">lebih...</div>';
       }
       reloginBody.innerHTML = html;
-      reloginPrintPayload = { username, events };
+      reloginPrintPayload = { username, events, headerDate, blok, profile };
     } catch (e) {
       reloginBody.innerHTML = '<div style="text-align:center;color:#ff6b6b;">Gagal memuat data.</div>';
     }
@@ -2557,7 +2565,9 @@ if ($debug_mode && !$is_ajax) {
       const btn = e.target.closest('.btn-act-relogin');
       if (!btn) return;
       const username = btn.getAttribute('data-user') || '';
-      if (username) openReloginModal(username);
+      const blok = btn.getAttribute('data-blok') || '';
+      const profile = btn.getAttribute('data-profile') || '';
+      if (username) openReloginModal(username, blok, profile);
     });
   }
   if (reloginClose) {
@@ -2566,9 +2576,7 @@ if ($debug_mode && !$is_ajax) {
   if (reloginPrint) {
     reloginPrint.addEventListener('click', () => {
       if (!reloginPrintPayload || !reloginPrintPayload.events) return;
-      const { username, events } = reloginPrintPayload;
-      const firstDateTime = events.find(ev => ev.login_time || ev.logout_time);
-      const headerDate = firstDateTime ? formatDateHeader(firstDateTime.login_time || firstDateTime.logout_time) : '';
+      const { username, events, headerDate, blok, profile } = reloginPrintPayload;
       const rows = events.map((ev, idx) => {
         const seq = ev.seq || (idx + 1);
         const loginLabel = formatTimeOnly(ev.login_time);
@@ -2576,6 +2584,11 @@ if ($debug_mode && !$is_ajax) {
         const note = (!ev.login_time && ev.logout_time) ? ' (logout tanpa login)' : '';
         return `<tr><td>#${seq}</td><td>${loginLabel}${note}</td><td>${logoutLabel}</td></tr>`;
       }).join('');
+      const metaParts = [];
+      if (headerDate) metaParts.push(headerDate);
+      if (blok) metaParts.push(`Blok ${blok.replace(/^BLOK-?/i, '')}`);
+      if (profile) metaParts.push(profile);
+      const metaLine = metaParts.length ? `<div style="margin:6px 0 10px 0;font-size:12px;color:#444;">${metaParts.join(' · ')}</div>` : '';
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Detail Relogin</title>
         <style>
           body{font-family:Arial,sans-serif;color:#111;margin:20px;}
@@ -2585,7 +2598,8 @@ if ($debug_mode && !$is_ajax) {
           th{background:#f0f0f0;text-align:left;}
         </style>
       </head><body>
-        <h3>Detail Relogin - ${username}${headerDate ? ' | ' + headerDate : ''}</h3>
+        <h3>Detail Relogin - ${username}</h3>
+        ${metaLine}
         <table><thead><tr><th>#</th><th>Login</th><th>Logout</th></tr></thead><tbody>${rows}</tbody></table>
       </body></html>`;
       const w = window.open('', '_blank');
