@@ -932,6 +932,13 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             });
     }
 
+    function closeSettlementModal(){
+        var closeBtn = document.getElementById('settlement-close');
+        if (closeBtn && closeBtn.disabled) return;
+        var modal = document.getElementById('settlement-modal');
+        if (modal) modal.style.display = 'none';
+    }
+
     (function(){
         var closeBtn = document.getElementById('settlement-close');
         if (closeBtn) {
@@ -1478,11 +1485,6 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             <span id="processStatus" style="font-size:12px;color:#ff9800;"><i class="fa fa-refresh fa-spin"></i> Menunggu proses...</span>
             <button id="settlement-close" type="button" class="btn-print" onclick="closeSettlementModal()">Tutup</button>
         </div>
-            var closeBtn = document.getElementById('settlement-close');
-            if (closeBtn && closeBtn.disabled) return;
-            var modal = document.getElementById('settlement-modal');
-            if (modal) modal.style.display = 'none';
-        }
     </div>
 </div>
 <?php endif; ?>
