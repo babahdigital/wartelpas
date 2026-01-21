@@ -94,11 +94,16 @@ if ($action === 'logs') {
                     continue;
                 }
 
+                if (stripos($msgTrim, '[ARP Cleanup]') !== false || stripos($msgTrim, 'SYNC USAGE: OK') !== false) {
+                    continue;
+                }
+
                 $msgUpper = strtoupper($msgTrim);
                 $topicUpper = strtoupper($topics);
-                $startsOk = preg_match('/^(SETTLE:|SYNC USAGE:|CLEANUP:|SYNC:|MAINT:|SUKSES:)/i', $msgTrim);
+                $startsOk = preg_match('/^(SETTLE:|CLEANUP:|SYNC:|MAINT:|SUKSES:)/i', $msgTrim);
                 $isScriptTopic = (strpos($topicUpper, 'SCRIPT') !== false);
-                if (!($startsOk || $isScriptTopic)) {
+                $isFetchTopic = (strpos($topicUpper, 'FETCH') !== false) && (strpos($msgUpper, 'WARTELPAS') !== false || strpos($msgUpper, 'SOBIGIDUL') !== false);
+                if (!($startsOk || $isScriptTopic || $isFetchTopic)) {
                     continue;
                 }
 
