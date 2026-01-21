@@ -158,6 +158,11 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
 
         $status = $is_active ? 'online' : '';
 
+        // Skip READY users to avoid storing unused vouchers in DB
+        if (!$is_active && ($bytes <= 0) && ($uptime === '' || $uptime === '0s')) {
+            continue;
+        }
+
         $stmt->execute([
             ':u' => $name,
             ':ip' => $ip ?: '-',

@@ -270,6 +270,11 @@ foreach ($all_users as $u) {
                 updated_at = CASE WHEN excluded.last_status = 'online' THEN excluded.updated_at ELSE login_history.updated_at END
         ");
 
+    // Skip READY users to avoid storing unused vouchers in DB
+    if ($status === 'ready' && !$is_active && $bytes <= 0 && ($uptime == '' || $uptime == '0s') && $blok === '') {
+        continue;
+    }
+
     $stmt->execute([
         ':u' => $name,
         ':ip' => $ip,
