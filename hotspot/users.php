@@ -1276,7 +1276,6 @@ if ($db) {
         $mac_use = $mac_hist !== '' && $mac_hist !== '-' ? $mac_hist : ($cm['mac'] ?? '');
 
         $h_comment_rusak = preg_match('/\bAudit:\s*RUSAK\b/i', $comment) || preg_match('/^\s*RUSAK\b/i', $comment);
-        $h_has_retur_comment = (stripos($comment, '(Retur)') !== false) || (stripos($comment, 'Retur Ref:') !== false);
         $h_is_rusak = ($st === 'rusak') || $h_comment_rusak;
         $h_is_retur = ($st === 'retur') || (stripos($comment, '(Retur)') !== false) || (stripos($comment, 'Retur Ref:') !== false);
         if ($st === 'retur') {
@@ -1299,7 +1298,6 @@ if ($db) {
         elseif ($h_is_used) $h_status = 'TERPAKAI';
 
         if ($h_status === 'READY') continue;
-        if ($h_status === 'RETUR' && !$h_has_retur_comment) continue;
         if ($req_status === 'used' && $h_status !== 'TERPAKAI') continue;
         if ($req_status === 'rusak' && $h_status !== 'RUSAK') continue;
         if ($req_status === 'retur' && $h_status !== 'RETUR') continue;
