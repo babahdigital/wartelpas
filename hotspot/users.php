@@ -2208,6 +2208,7 @@ if ($debug_mode && !$is_ajax) {
   const reloginBody = document.getElementById('relogin-body');
   const reloginTitle = document.getElementById('relogin-title');
   const reloginClose = document.getElementById('relogin-close');
+  const reloginPrint = document.getElementById('relogin-print');
   if (!searchInput || !tbody || !totalBadge || !paginationWrap) return;
 
   if (clearBtn) {
@@ -2332,11 +2333,14 @@ if ($debug_mode && !$is_ajax) {
     if (reloginModal) reloginModal.style.display = 'none';
   }
 
+  let reloginPrintPayload = null;
+
   async function openReloginModal(username) {
     if (!reloginModal || !reloginBody) return;
     if (reloginTitle) reloginTitle.textContent = `Detail Relogin - ${username}`;
     reloginBody.innerHTML = '<div style="text-align:center;color:#9aa0a6;">Memuat...</div>';
     reloginModal.style.display = 'flex';
+    reloginPrintPayload = null;
     try {
       const params = new URLSearchParams();
       params.set('action', 'login_events');
@@ -2357,18 +2361,19 @@ if ($debug_mode && !$is_ajax) {
         reloginBody.innerHTML = '<div style="text-align:center;color:#9aa0a6;">Tidak ada data relogin.</div>';
         return;
       }
-      let html = '<ul class="relogin-list">';
+      let html = '<table class="relogin-table"><thead><tr><th>#</th><th>Login</th><th>Logout</th></tr></thead><tbody>';
       events.forEach((ev, idx) => {
         const seq = ev.seq || (idx + 1);
         const loginLabel = ev.login_label || '-';
         const logoutLabel = ev.logout_label || '-';
-        html += `<li><div class="relogin-row"><span class="relogin-seq">#${seq}</span><div><div>Login: ${loginLabel}</div><div>Logout: ${logoutLabel}</div></div></div></li>`;
+        html += `<tr><td>#${seq}</td><td>${loginLabel}</td><td>${logoutLabel}</td></tr>`;
       });
+      html += '</tbody></table>';
       if ((data.total || 0) > events.length) {
-        html += '<li class="relogin-more">lebih...</li>';
+        html += '<div class="relogin-more">lebih...</div>';
       }
-      html += '</ul>';
       reloginBody.innerHTML = html;
+      reloginPrintPayload = { username, events };
     } catch (e) {
       reloginBody.innerHTML = '<div style="text-align:center;color:#ff6b6b;">Gagal memuat data.</div>';
     }
@@ -2473,6 +2478,37 @@ if ($debug_mode && !$is_ajax) {
   }
   if (reloginClose) {
     reloginClose.addEventListener('click', closeReloginModal);
+  }
+  if (reloginPrint) {
+    reloginPrint.addEventListener('click', () => {
+      if (!reloginPrintPayload || !reloginPrintPayload.events) return;
+      const { username, events } = reloginPrintPayload;
+      const rows = events.map((ev, idx) => {
+        const seq = ev.seq || (idx + 1);
+        const loginLabel = ev.login_label || '-';
+        const logoutLabel = ev.logout_label || '-';
+        return `<tr><td>#${seq}</td><td>${loginLabel}</td><td>${logoutLabel}</td></tr>`;
+      }).join('');
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Detail Relogin</title>
+        <style>
+          body{font-family:Arial,sans-serif;color:#111;margin:20px;}
+          h3{margin:0 0 10px 0;}
+          table{width:100%;border-collapse:collapse;font-size:12px;}
+          th,td{border:1px solid #444;padding:6px 8px;}
+          th{background:#f0f0f0;text-align:left;}
+        </style>
+      </head><body>
+        <h3>Detail Relogin - ${username}</h3>
+        <table><thead><tr><th>#</th><th>Login</th><th>Logout</th></tr></thead><tbody>${rows}</tbody></table>
+      </body></html>`;
+      const w = window.open('', '_blank');
+      if (!w) return;
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+      w.focus();
+      w.print();
+    });
   }
   if (reloginModal) {
     reloginModal.addEventListener('click', (e) => {
