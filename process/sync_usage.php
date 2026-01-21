@@ -271,7 +271,7 @@ foreach ($all_users as $u) {
         ");
 
     // Skip READY users to avoid storing unused vouchers in DB
-    if ($status === 'ready' && !$is_active && $bytes <= 0 && ($uptime == '' || $uptime == '0s') && $blok === '') {
+    if ($status === 'ready' && !$is_active && $bytes <= 0 && ($uptime == '' || $uptime == '0s')) {
         continue;
     }
 
