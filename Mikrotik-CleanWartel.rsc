@@ -121,12 +121,17 @@
         :if ([:len $isActive] > 0) do={
             :log info ("SETTLE: CLEANUP: Skip online user " . $name . ".");
         } else={
-            :if ($isReady) do={
-                :log info ("SETTLE: CLEANUP: Skip READY user " . $name . ".");
+            :if ($isMarkedBad) do={
+                /ip hotspot user remove $u;
+                :set removed ($removed + 1);
             } else={
-                :if ($isMarkedBad || $hasUsage) do={
-                    /ip hotspot user remove $u;
-                    :set removed ($removed + 1);
+                :if ($isReady) do={
+                    :log info ("SETTLE: CLEANUP: Skip READY user " . $name . ".");
+                } else={
+                    :if ($hasUsage) do={
+                        /ip hotspot user remove $u;
+                        :set removed ($removed + 1);
+                    }
                 }
             }
         }
