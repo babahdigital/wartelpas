@@ -124,6 +124,12 @@ function format_time_only($dateStr) {
     return date('H:i:s', $ts);
 }
 
+function strip_blok_prefix($blok) {
+    $raw = trim((string)$blok);
+    if ($raw === '') return '-';
+    return preg_replace('/^BLOK-?/i', '', $raw);
+}
+
 function format_date_only_indo($dateStr) {
     if (empty($dateStr) || $dateStr === '-') return '-';
     $ts = strtotime($dateStr);
@@ -471,6 +477,7 @@ function esc($s){ return htmlspecialchars((string)$s); }
         table { width:100%; border-collapse:collapse; font-size:12px; }
         th, td { border:1px solid #ddd; padding:6px; text-align:left; vertical-align:top; }
         th { background:#f5f5f5; }
+        .usage-table th { text-align:center; vertical-align:middle; }
         .status-normal { color:#0a7f2e; font-weight:700; }
         .status-rusak { color:#d35400; font-weight:700; }
         .status-retur { color:#7f8c8d; font-weight:700; }
@@ -495,7 +502,7 @@ function esc($s){ return htmlspecialchars((string)$s); }
                 Tanggal: <?= esc(format_date_long_indo($filter_date)) ?> | Jam Cetak: <?= esc(format_time_only(date('Y-m-d H:i:s'))) ?>
       </div>
 
-      <table>
+    <table class="usage-table">
           <thead>
               <tr>
                   <th colspan="3">Waktu</th>
@@ -522,17 +529,20 @@ function esc($s){ return htmlspecialchars((string)$s); }
                       <td><?= esc(format_time_only($it['first_login'] ?? '-')) ?></td>
                       <td><?= esc(format_time_only($it['login'])) ?></td>
                       <td><?= esc(format_time_only($it['logout'])) ?></td>
-                      <td><?= esc($it['username']) ?></td>
-                      <td><?= esc($it['blok']) ?></td>
+                                            <td><?= esc($it['username']) ?></td>
+                                            <td><?= esc(strip_blok_prefix($it['blok'])) ?></td>
                       <td><?= esc($it['ip']) ?></td>
                       <td><?= esc($it['mac']) ?></td>
                       <td><?= esc($it['uptime']) ?></td>
                       <td><?= esc(format_bytes_short($it['bytes'])) ?></td>
-                      <?php if (!empty($it['relogin'])): ?>
-                        <td class="status-terpakai">Relogin</td>
-                      <?php else: ?>
-                        <td>-</td>
-                      <?php endif; ?>
+                                            <?php
+                                                $st = strtolower((string)($it['status'] ?? ''));
+                                                $st_label = '-';
+                                                if (!empty($it['relogin'])) $st_label = 'Relogin';
+                                                elseif ($st === 'online') $st_label = 'Online';
+                                                elseif ($st === 'rusak') $st_label = 'Rusak';
+                                            ?>
+                                            <td><?= esc($st_label) ?></td>
                   </tr>
                   <?php endforeach; ?>
               <?php endif; ?>
