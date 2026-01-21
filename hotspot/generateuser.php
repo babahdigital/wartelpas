@@ -92,14 +92,20 @@ if (!isset($_SESSION["mikhmon"])) {
         // Ambil Data
         $qty = (int)$_POST['qty']; 
         $adcomment = isset($_POST['adcomment']) ? trim($_POST['adcomment']) : "";
-        $profile = ($_POST['profile']);
+        $profile = '';
         $userl = ($_POST['userl']);
         $prefix = isset($_POST['prefix']) ? $_POST['prefix'] : ""; 
 
         // Security Checkpoint
         $violation = false;
         if ($qty < 50) { $violation = true; }
-        if (substr($adcomment, 0, 5) !== 'Blok-') { $violation = true; }
+        $block_id = strtoupper($adcomment);
+        if (stripos($block_id, 'BLOK-') === 0) {
+            $block_id = substr($block_id, 5);
+        }
+        if (!preg_match('/^[A-Z]+(10|30)$/', $block_id)) { $violation = true; }
+        $profile = (substr($block_id, -2) === '10') ? '10Menit' : '30Menit';
+        $adcomment = 'Blok-' . $block_id;
         $allowed_profiles = ['10Menit', '30Menit'];
         if (!in_array($profile, $allowed_profiles)) { $violation = true; }
         if ($violation) { echo "<script>window.location.href='./error.php';</script>"; exit(); }
@@ -422,45 +428,33 @@ if (!isset($_SESSION["mikhmon"])) {
                         <div class="row g-3">
                             <div class="col-12 col-md-6">
                                 <div class="form-group">
-                                    <label>Profil Paket</label>
-                                    <select name="profile" id="uprof" class="form-control-mod" onchange="GetVP(); updateTimeLimit();" required>
-                                        <?php 
-                                        $allowedProfiles = ['10Menit', '30Menit'];
-                                        if ($genprof != "" && in_array($genprof, $allowedProfiles)) {
-                                            echo "<option selected>" . $genprof . "</option>";
-                                        }
-                                        if (!empty($getprofile_list)) {
-                                            foreach ($getprofile_list as $p) {
-                                                if (in_array($p['name'], $allowedProfiles) && $p['name'] != $genprof) {
-                                                    echo "<option>" . $p['name'] . "</option>";
-                                                }
-                                            }
-                                        } else {
-                                            echo "<option value=\"\" disabled>Tidak ada profil</option>";
+                                    <label>Blok ID</label>
+                                    <select name="adcomment" id="blokId" class="form-control-mod" onchange="applyBlockProfile();" required>
+                                        <?php
+                                        foreach(range('A', 'F') as $blk) {
+                                            foreach(['10', '30'] as $suf) echo "<option value='{$blk}{$suf}'>${blk}${suf}</option>";
                                         }
                                         ?>
                                     </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <div class="form-group">
+                                    <label>Profil Paket</label>
+                                    <select name="profile_display" id="uprof" class="form-control-mod" disabled>
+                                        <option value="10Menit">10Menit</option>
+                                        <option value="30Menit">30Menit</option>
+                                    </select>
+                                    <input type="hidden" name="profile" id="profileHidden" value="10Menit">
                                 </div>
                             </div>
                             <div class="col-12 col-md-6">
                                 <div class="form-group">
                                     <label>Batas Waktu</label>
                                     <input type="text" id="timelimit" name="timelimit_display" class="form-control-mod locked-input" readonly value="-">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row g-3">
-                            <div class="col-12">
-                                <div class="form-group">
-                                    <label>Komentar (Kode Blok)</label>
-                                    <select name="adcomment" class="form-control-mod" required>
-                                        <?php
-                                        foreach(range('A', 'F') as $blk) {
-                                            foreach(['10', '30'] as $suf) echo "<option value='Blok-$blk$suf'>Blok-$blk$suf</option>";
-                                        }
-                                        ?>
-                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -549,7 +543,7 @@ if (!isset($_SESSION["mikhmon"])) {
 
 <script>
 function GetVP(){
-  var prof = document.getElementById('uprof').value;
+    var prof = document.getElementById('profileHidden').value || document.getElementById('uprof').value;
   // Reload div via AJAX
   $("#GetValidPrice").load("./process/getvalidprice.php?name="+prof+"&session=<?= $session; ?> #getdata", function(response, status, xhr) {
       if (status == "error") {
@@ -559,7 +553,7 @@ function GetVP(){
 } 
 
 function updateTimeLimit() {
-    var prof = document.getElementById('uprof').value;
+        var prof = document.getElementById('profileHidden').value || document.getElementById('uprof').value;
     var timeField = document.getElementById('timelimit');
     
     if (prof === '10Menit') {
@@ -569,6 +563,18 @@ function updateTimeLimit() {
     } else {
         timeField.value = '-';
     }
+}
+
+function applyBlockProfile() {
+    var blk = document.getElementById('blokId').value || '';
+    var prof = '10Menit';
+    if (blk.endsWith('30')) {
+        prof = '30Menit';
+    }
+    document.getElementById('uprof').value = prof;
+    document.getElementById('profileHidden').value = prof;
+    updateTimeLimit();
+    GetVP();
 }
 
 function validateForm() {
@@ -582,7 +588,6 @@ function validateForm() {
 }
 
 $(document).ready(function() {
-    updateTimeLimit();
-    GetVP();
+    applyBlockProfile();
 });
 </script>
