@@ -53,7 +53,16 @@ try {
     }
 } catch (Exception $e) {}
 
-if ($action === 'logs') {
+    if ($action === 'logs') {
+    $triggeredAt = '';
+    try {
+        $stmtT = $db->prepare("SELECT triggered_at FROM settlement_log WHERE report_date = :d LIMIT 1");
+        $stmtT->execute([':d' => $date]);
+        $triggeredAt = (string)($stmtT->fetchColumn() ?: '');
+    } catch (Exception $e) {}
+
+    $triggeredTs = $triggeredAt !== '' ? strtotime($triggeredAt) : 0;
+    $nowTs = time();
     $logs = [];
     $status = 'running';
     $done = false;
@@ -93,6 +102,13 @@ if ($action === 'logs') {
                 $topics = trim((string)($l['topics'] ?? 'system,info'));
                 $msg = trim((string)($l['message'] ?? ''));
                 if ($msg === '' && $time === '') continue;
+
+                if ($triggeredTs > 0 && preg_match('/^(\d{2}:\d{2}:\d{2})$/', $time)) {
+                    $logTs = strtotime(date('Y-m-d') . ' ' . $time);
+                    if ($logTs && $logTs + 5 < $triggeredTs) {
+                        continue;
+                    }
+                }
 
                 $msgTrim = trim($msg);
                 if (strpos($msgTrim, "\r") !== false || strpos($msgTrim, "\n") !== false || strpos($msgTrim, "tool fetch url") !== false) {
