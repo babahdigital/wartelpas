@@ -14,10 +14,13 @@
     :local usermac $"mac-address";
     :local logoutTime [/system clock get time];
     :local logoutDate [/system clock get date];
-    :local userUptime [/ip hotspot user get [/ip hotspot user find where name="$username"] uptime];
-    
-    # Get current comment
-    :local currentComment [/ip hotspot user get [/ip hotspot user find where name="$username"] comment];
+    :local userId [/ip hotspot user find where name="$username"];
+    :local userUptime "";
+    :local currentComment "";
+    :if ([:len $userId] > 0) do={
+        :set userUptime [/ip hotspot user get $userId uptime];
+        :set currentComment [/ip hotspot user get $userId comment];
+    }
     # Bersihkan IP/MAC lama jika ada
     :local cleanComment $currentComment;
     :local ipPos [:find $cleanComment "| IP:"];
@@ -87,7 +90,11 @@
     :set newComment ("$newComment | IP:$userip | MAC:$usermac");
     
     # Update comment dengan data logout (tanpa menumpuk)
-    /ip hotspot user set comment=$newComment [find where name="$username"];
+    :if ([:len $userId] > 0) do={
+        /ip hotspot user set comment=$newComment $userId;
+    } else={
+        :log warning "SYNC WARN: user not found for $username (comment not set)";
+    }
 
     # REALTIME USAGE (LOGOUT)
     :local usageUrl ("http://wartelpas.sobigidul.net:8081/process/usage_ingest.php?key=WartelpasSecureKey&session=S3c7x9_LB&event=logout&user=" . $username . "&date=" . $logoutDate . "&time=" . $logoutTime . "&ip=" . $userip . "&mac=" . $usermac . "&uptime=" . $userUptime);
