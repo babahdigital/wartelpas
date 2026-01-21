@@ -781,6 +781,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
 <script>
     var settlementTimer = null;
     var hpDeleteUrl = '';
+    var settlementLastFetch = 0;
     function formatDateDMY(dateStr){
         if (!dateStr) return '-';
         var m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -822,6 +823,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         window.settleSeen = {};
         window.settleInfoShown = false;
         window.settleStatus = '';
+        window.settleFastMode = false;
         updateSettlementCloseState();
         if (modal) modal.style.display = 'flex';
         if (logBox) logBox.innerHTML = '';
@@ -914,7 +916,8 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         params.set('session', '<?= htmlspecialchars($session_id); ?>');
         params.set('date', '<?= htmlspecialchars($filter_date); ?>');
         params.set('action', 'logs');
-        fetch('report/settlement_manual.php?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        params.set('_', Date.now().toString());
+        fetch('report/settlement_manual.php?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Cache-Control': 'no-store' }, cache: 'no-store' })
             .then(function(r){ return r.json(); })
             .then(function(data){
                 if (data && Array.isArray(data.logs) && logBox) {
@@ -947,10 +950,10 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                     clearTimeout(settlementTimer);
                     return;
                 }
-                settlementTimer = setTimeout(pollSettlementLogs, 1000);
+                settlementTimer = setTimeout(pollSettlementLogs, 600);
             })
             .catch(function(){
-                settlementTimer = setTimeout(pollSettlementLogs, 1000);
+                settlementTimer = setTimeout(pollSettlementLogs, 800);
             });
     }
 
@@ -1029,8 +1032,11 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             window.settleSeen[key] = true;
             window.settleQueue.push(row);
         });
+        if (window.settleQueue.length > 12) {
+            window.settleFastMode = true;
+        }
         if (!window.settleTimer) {
-            window.settleTimer = setInterval(renderSettlementLogItem, 900);
+            window.settleTimer = setInterval(renderSettlementLogItem, 300);
         }
     }
 
@@ -1069,6 +1075,16 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (cursor) cursor.remove();
         logBox.appendChild(line);
         logBox.scrollTop = logBox.scrollHeight;
+        if (window.settleFastMode) {
+            msgSpan.textContent = String(msg);
+            var fastCursor = document.createElement('span');
+            fastCursor.className = 'cursor-blink';
+            logBox.appendChild(fastCursor);
+            logBox.scrollTop = logBox.scrollHeight;
+            updateSettlementCloseState();
+            updateSettlementStatus();
+            return;
+        }
         window.settleTyping = true;
         typeSettlementMessage(msgSpan, String(msg), function(){
             window.settleTyping = false;
@@ -1084,7 +1100,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
     function typeSettlementMessage(target, text, done){
         var i = 0;
         var len = text.length;
-        var speed = 18;
+        var speed = 12;
         var timer = setInterval(function(){
             if (i >= len) {
                 clearInterval(timer);
