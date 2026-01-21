@@ -1239,10 +1239,15 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
 <?php endif; ?>
 
 <?php if (!$is_ajax): ?>
+<style>
+    .settlement-terminal { background:#222; border:1px solid #333; border-radius:6px; padding:10px; max-height:260px; overflow:auto; font-size:12px; color:#d4d4d4; }
+    .settlement-cursor { display:inline-block; width:8px; height:14px; background:#6ee7b7; margin-left:2px; animation: blink 1s steps(2, start) infinite; }
+    @keyframes blink { to { visibility: hidden; } }
+</style>
 <div id="settlement-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:10050;">
-    <div style="background:#1f1f1f;color:#e5e5e5;border:1px solid #444;border-radius:8px;width:560px;max-width:92vw;box-shadow:0 10px 30px rgba(0,0,0,0.6);overflow:hidden;">
+    <div style="background:#1f1f1f;color:#e5e5e5;border:1px solid #444;border-radius:8px;width:620px;max-width:94vw;box-shadow:0 10px 30px rgba(0,0,0,0.6);overflow:hidden;">
         <div style="padding:12px 16px;border-bottom:1px solid #333;font-weight:600;display:flex;justify-content:space-between;align-items:center;">
-            <span>Settlement Manual</span>
+            <span><i class="fa fa-cog fa-spin" style="margin-right:6px;"></i> Settlement Manual</span>
             <span id="settlement-status" style="font-size:12px;color:#9aa0a6;">Menunggu konfirmasi</span>
         </div>
         <div style="padding:14px 16px;">
@@ -1254,9 +1259,11 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 </div>
             </div>
             <div style="font-size:12px;color:#9aa0a6;margin-bottom:8px;">Log settlement (MikroTik)</div>
-            <pre id="settlement-log" style="background:#0f0f0f;color:#d4d4d4;border:1px solid #333;border-radius:6px;padding:10px;max-height:260px;overflow:auto;font-size:12px;white-space:pre-wrap;"></pre>
+            <div id="settlement-log" class="settlement-terminal"></div>
+            <span class="settlement-cursor"></span>
         </div>
-        <div style="padding:10px 16px;border-top:1px solid #333;display:flex;justify-content:flex-end;gap:8px;">
+        <div style="padding:10px 16px;border-top:1px solid #333;display:flex;justify-content:space-between;gap:8px;align-items:center;">
+            <span id="processStatus" style="font-size:12px;color:#ff9800;"><i class="fa fa-refresh fa-spin"></i> Sedang memproses...</span>
             <button id="settlement-close" type="button" class="btn-print" style="opacity:.6;cursor:not-allowed;" disabled>Tutup</button>
         </div>
     </div>
