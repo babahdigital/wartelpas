@@ -1276,6 +1276,7 @@ if ($db) {
         $mac_use = $mac_hist !== '' && $mac_hist !== '-' ? $mac_hist : ($cm['mac'] ?? '');
 
         $h_comment_rusak = preg_match('/\bAudit:\s*RUSAK\b/i', $comment) || preg_match('/^\s*RUSAK\b/i', $comment);
+        $h_has_retur_comment = (stripos($comment, '(Retur)') !== false) || (stripos($comment, 'Retur Ref:') !== false);
         $h_is_rusak = ($st === 'rusak') || $h_comment_rusak;
         $h_is_retur = ($st === 'retur') || (stripos($comment, '(Retur)') !== false) || (stripos($comment, 'Retur Ref:') !== false);
         if ($st === 'retur') {
@@ -1298,6 +1299,7 @@ if ($db) {
         elseif ($h_is_used) $h_status = 'TERPAKAI';
 
         if ($h_status === 'READY') continue;
+        if ($h_status === 'RETUR' && !$h_has_retur_comment) continue;
         if ($req_status === 'used' && $h_status !== 'TERPAKAI') continue;
         if ($req_status === 'rusak' && $h_status !== 'RUSAK') continue;
         if ($req_status === 'retur' && $h_status !== 'RETUR') continue;
@@ -1872,19 +1874,22 @@ if ($is_ajax) {
           <?php endif; ?>
         </td>
         <td class="text-center">
-          <?php if (in_array($req_status, ['all','used','rusak','online'], true)): ?>
+          <?php if (in_array($req_status, ['all','used','rusak','online','retur'], true)): ?>
             <?php if (strtoupper($u['status']) === 'TERPAKAI' && in_array($req_status, ['all','used'], true)): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=used&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
             <?php elseif (strtoupper($u['status']) === 'ONLINE' && in_array($req_status, ['all','online'], true)): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=online&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Online"><i class="fa fa-print"></i></button>
             <?php elseif (strtoupper($u['status']) === 'RUSAK' && in_array($req_status, ['all','rusak'], true)): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=rusak&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Rusak"><i class="fa fa-print"></i></button>
+            <?php elseif (strtoupper($u['status']) === 'RETUR' && in_array($req_status, ['all','retur'], true)): ?>
+              <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher Retur"><i class="fa fa-print"></i></button>
             <?php elseif ($req_status === 'all'): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
             <?php endif; ?>
           <?php endif; ?>
           <?php if($u['uid']): ?>
             <?php if (strtoupper($u['status']) === 'RETUR'): ?>
+              <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher Retur"><i class="fa fa-print"></i></button>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&download=1&img=1&session=<?= $session ?>','_blank')" title="Download Voucher (PNG)"><i class="fa fa-download"></i></button>
             <?php elseif (strtoupper($u['status']) === 'RUSAK'): ?>
               <button type="button" class="btn-act btn-act-retur" onclick="actionRequest('./?hotspot=users&action=retur&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&p=<?= urlencode($u['profile']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','RETUR Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Retur"><i class="fa fa-exchange"></i></button>
@@ -2337,13 +2342,15 @@ if ($debug_mode && !$is_ajax) {
                       <?php endif; ?>
                     </td>
                     <td class="text-center">
-                      <?php if (in_array($req_status, ['all','used','rusak','online'], true)): ?>
+                      <?php if (in_array($req_status, ['all','used','rusak','online','retur'], true)): ?>
                         <?php if (strtoupper($u['status']) === 'TERPAKAI' && in_array($req_status, ['all','used'], true)): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=used&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
                         <?php elseif (strtoupper($u['status']) === 'ONLINE' && in_array($req_status, ['all','online'], true)): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=online&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Online"><i class="fa fa-print"></i></button>
                         <?php elseif (strtoupper($u['status']) === 'RUSAK' && in_array($req_status, ['all','rusak'], true)): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=rusak&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Rusak"><i class="fa fa-print"></i></button>
+                        <?php elseif (strtoupper($u['status']) === 'RETUR' && in_array($req_status, ['all','retur'], true)): ?>
+                          <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher Retur"><i class="fa fa-print"></i></button>
                         <?php elseif ($req_status === 'all'): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
                         <?php endif; ?>
@@ -2358,6 +2365,7 @@ if ($debug_mode && !$is_ajax) {
                             '&date=' . urlencode($filter_date);
                         ?>
                         <?php if (strtoupper($u['status']) === 'RETUR'): ?>
+                          <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher Retur"><i class="fa fa-print"></i></button>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&download=1&img=1&session=<?= $session ?>','_blank')" title="Download Voucher (PNG)"><i class="fa fa-download"></i></button>
                         <?php elseif (strtoupper($u['status']) === 'RUSAK'): ?>
                           <button type="button" class="btn-act btn-act-retur" onclick="actionRequest('./?hotspot=users&action=retur&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&p=<?= urlencode($u['profile']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','RETUR Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Retur"><i class="fa fa-exchange"></i></button>
