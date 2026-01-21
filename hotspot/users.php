@@ -15,7 +15,8 @@ $session = $_GET['session'];
 
 $req_prof = isset($_GET['profile']) ? $_GET['profile'] : 'all';
 $req_comm = isset($_GET['comment']) ? urldecode($_GET['comment']) : '';
-$req_status = isset($_GET['status']) ? $_GET['status'] : 'all';
+$req_status = isset($_GET['status']) ? strtolower(trim((string)$_GET['status'])) : 'all';
+if ($req_status === '') $req_status = 'all';
 $req_search = isset($_GET['q']) ? $_GET['q'] : '';
 $read_only = isset($_GET['readonly']) && $_GET['readonly'] == '1';
 $default_show = in_array($req_status, ['used', 'rusak', 'retur']) ? 'semua' : 'harian';
