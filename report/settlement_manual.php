@@ -129,6 +129,11 @@ try {
                 if (stripos($msgTrim, 'SETTLE: CLEANUP: Mulai') !== false || stripos($msgTrim, 'SETTLE: SYNC:') !== false) {
                     $capture = true;
                 }
+                if (!$capture && $startsOk) {
+                    if (stripos($msgTrim, 'SETTLE:') === 0 || stripos($msgTrim, 'CLEANUP:') === 0 || stripos($msgTrim, 'SYNC:') === 0 || stripos($msgTrim, 'MAINT:') === 0 || stripos($msgTrim, 'SUKSES:') === 0) {
+                        $capture = true;
+                    }
+                }
 
                 if ($startsOk || $isScriptTopic) {
                     $sawSettle = true;
