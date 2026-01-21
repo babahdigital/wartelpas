@@ -588,10 +588,29 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     }
 
     if ($act == 'check_rusak') {
+      $info_lines = [];
+      if (!empty($limits)) {
+        $info_lines[] = 'Kriteria rusak:';
+        $info_lines[] = '- Offline (tidak sedang online)';
+        $info_lines[] = '- Bytes <= ' . $limits['bytes_label'];
+        $info_lines[] = '- Uptime <= ' . $limits['uptime_label'];
+        $info_lines[] = '- Relogin >= 3 dalam 5 menit';
+        $info_lines[] = '';
+        $info_lines[] = 'Kondisi saat ini:';
+        $info_lines[] = '- Online: ' . ($is_active ? 'Ya' : 'Tidak');
+        if (function_exists('formatBytes')) {
+          $info_lines[] = '- Bytes: ' . formatBytes($bytes, 2);
+        } else {
+          $info_lines[] = '- Bytes: ' . (int)$bytes;
+        }
+        $info_lines[] = '- Uptime: ' . ($uptime ?: '0s');
+        $info_lines[] = '- Relogin: ' . (int)($recent_relogin ?? 0) . ' (5 menit terakhir)';
+      }
       header('Content-Type: application/json');
       echo json_encode([
         'ok' => !$action_blocked,
-        'message' => $action_blocked ? $action_error : 'Syarat rusak terpenuhi.'
+        'message' => $action_blocked ? $action_error : 'Syarat rusak terpenuhi.',
+        'info' => implode("\n", $info_lines)
       ]);
       exit();
     }
@@ -2404,7 +2423,10 @@ if ($debug_mode && !$is_ajax) {
       let data = null;
       try { data = JSON.parse(text); } catch (e) { data = null; }
       if (data && data.ok) {
-        window.actionRequest(url, confirmMsg);
+        const info = data.info || 'Syarat rusak terpenuhi.';
+        const ok = await showConfirm(info);
+        if (!ok) return;
+        window.actionRequest(url, null);
       } else {
         window.showActionPopup('error', (data && data.message) ? data.message : 'Voucher masih valid dan bisa digunakan.');
       }
