@@ -112,6 +112,18 @@ try {
     )");
     $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_login_history_username ON login_history(username)");
 
+    $db->exec("CREATE TABLE IF NOT EXISTS login_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT,
+        login_time DATETIME,
+        logout_time DATETIME,
+        seq INTEGER DEFAULT 1,
+        date_key TEXT,
+        created_at DATETIME,
+        updated_at DATETIME
+    )");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_login_events_user_date_seq ON login_events(username, date_key, seq)");
+
     $requiredCols = [
         'ip_address' => 'TEXT',
         'mac_address' => 'TEXT',
@@ -177,6 +189,42 @@ try {
         ':upd' => $now,
         ':cnt' => $event === 'login' ? 1 : null
     ]);
+
+    $date_key = substr($dt, 0, 10);
+    if ($event === 'login') {
+        $seq = 1;
+        $stmtSeq = $db->prepare("SELECT COALESCE(MAX(seq),0) FROM login_events WHERE username = :u AND date_key = :dk");
+        $stmtSeq->execute([':u' => $user, ':dk' => $date_key]);
+        $seq = (int)$stmtSeq->fetchColumn() + 1;
+        $stmtIns = $db->prepare("INSERT INTO login_events (username, login_time, logout_time, seq, date_key, created_at, updated_at)
+            VALUES (:u, :lt, NULL, :seq, :dk, :now, :now)");
+        $stmtIns->execute([
+            ':u' => $user,
+            ':lt' => $dt,
+            ':seq' => $seq,
+            ':dk' => $date_key,
+            ':now' => $now
+        ]);
+    } else {
+        $stmtUpd = $db->prepare("UPDATE login_events SET logout_time = :lt, updated_at = :now
+            WHERE id = (SELECT id FROM login_events WHERE username = :u AND logout_time IS NULL ORDER BY id DESC LIMIT 1)");
+        $stmtUpd->execute([':lt' => $dt, ':now' => $now, ':u' => $user]);
+        if ($stmtUpd->rowCount() === 0) {
+            $seq = 1;
+            $stmtSeq = $db->prepare("SELECT COALESCE(MAX(seq),0) FROM login_events WHERE username = :u AND date_key = :dk");
+            $stmtSeq->execute([':u' => $user, ':dk' => $date_key]);
+            $seq = (int)$stmtSeq->fetchColumn() + 1;
+            $stmtIns = $db->prepare("INSERT INTO login_events (username, login_time, logout_time, seq, date_key, created_at, updated_at)
+                VALUES (:u, NULL, :lt, :seq, :dk, :now, :now)");
+            $stmtIns->execute([
+                ':u' => $user,
+                ':lt' => $dt,
+                ':seq' => $seq,
+                ':dk' => $date_key,
+                ':now' => $now
+            ]);
+        }
+    }
 
     @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | ok | user=" . $user . " | event=" . $status . " | dt=" . $dt . " | ip=" . $ip . " | mac=" . $mac . "\n", FILE_APPEND);
 

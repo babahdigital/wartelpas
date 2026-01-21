@@ -302,6 +302,18 @@ try {
         login_count INTEGER DEFAULT 0
     )");
       $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_login_history_username ON login_history(username)");
+
+      $db->exec("CREATE TABLE IF NOT EXISTS login_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT,
+        login_time DATETIME,
+        logout_time DATETIME,
+        seq INTEGER DEFAULT 1,
+        date_key TEXT,
+        created_at DATETIME,
+        updated_at DATETIME
+      )");
+      $db->exec("CREATE INDEX IF NOT EXISTS idx_login_events_user_date_seq ON login_events(username, date_key, seq)");
     $requiredCols = [
       'ip_address' => 'TEXT',
       'mac_address' => 'TEXT',
@@ -434,6 +446,55 @@ if (isset($_GET['only_wartel']) && $_GET['only_wartel'] === '0') {
 if (isset($_GET['action']) || isset($_POST['action'])) {
   $is_action_ajax = isset($_GET['ajax']) && $_GET['ajax'] == '1' && isset($_GET['action_ajax']);
   $act = $_POST['action'] ?? $_GET['action'];
+  if ($act === 'login_events') {
+    header('Content-Type: application/json');
+    if (!$db) {
+      echo json_encode(['ok' => false, 'message' => 'DB tidak tersedia.']);
+      exit();
+    }
+    $name = trim($_GET['name'] ?? '');
+    $show = trim($_GET['show'] ?? '');
+    $date = trim($_GET['date'] ?? '');
+    if ($name === '') {
+      echo json_encode(['ok' => false, 'message' => 'User tidak ditemukan.']);
+      exit();
+    }
+    $where = "username = :u";
+    $params = [':u' => $name];
+    if ($show === 'harian' && $date !== '') {
+      $where .= " AND date_key = :d";
+      $params[':d'] = $date;
+    } elseif ($show === 'bulanan' && $date !== '') {
+      $where .= " AND substr(date_key, 1, 7) = :d";
+      $params[':d'] = $date;
+    } elseif ($show === 'tahunan' && $date !== '') {
+      $where .= " AND substr(date_key, 1, 4) = :d";
+      $params[':d'] = $date;
+    }
+    try {
+      $stmtCount = $db->prepare("SELECT COUNT(*) FROM login_events WHERE $where");
+      $stmtCount->execute($params);
+      $total = (int)$stmtCount->fetchColumn();
+
+      $stmt = $db->prepare("SELECT login_time, logout_time, seq FROM login_events WHERE $where ORDER BY COALESCE(login_time, logout_time) DESC, id DESC LIMIT 3");
+      $stmt->execute($params);
+      $events = [];
+      while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $events[] = [
+          'seq' => (int)($row['seq'] ?? 0),
+          'login_time' => $row['login_time'],
+          'logout_time' => $row['logout_time'],
+          'login_label' => formatDateIndo($row['login_time'] ?? ''),
+          'logout_label' => formatDateIndo($row['logout_time'] ?? '')
+        ];
+      }
+      echo json_encode(['ok' => true, 'total' => $total, 'events' => $events]);
+      exit();
+    } catch (Exception $e) {
+      echo json_encode(['ok' => false, 'message' => 'Gagal mengambil data relogin.']);
+      exit();
+    }
+  }
   if ($act == 'invalid' || $act == 'retur' || $act == 'rollback' || $act == 'delete' || $act == 'batch_delete' || $act == 'delete_status' || $act == 'check_rusak') {
     $uid = $_GET['uid'] ?? '';
     $name = $_GET['name'] ?? '';
@@ -1580,6 +1641,9 @@ if ($is_ajax) {
           <?php endif; ?>
         </td>
         <td class="text-center">
+          <?php if(!empty($u['relogin'])): ?>
+            <button type="button" class="btn-act btn-act-relogin" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" title="Detail Relogin"><i class="fa fa-eye"></i></button>
+          <?php endif; ?>
           <?php if (in_array($req_status, ['all','used','rusak','online'], true)): ?>
             <?php if (strtoupper($u['status']) === 'TERPAKAI' && in_array($req_status, ['all','used'], true)): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=used&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
@@ -1688,6 +1752,7 @@ if ($debug_mode && !$is_ajax) {
     .btn-act { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 4px; border: none; color: white; transition: all 0.2s; margin: 0 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     .btn-act, .btn, button, .search-clear-btn, .custom-select-solid { cursor: pointer; }
     .btn-act-print { background: var(--c-blue); } .btn-act-retur { background: var(--c-orange); } .btn-act-invalid { background: var(--c-red); }
+    .btn-act-relogin { background: #8e44ad; }
     .toolbar-container { padding: 15px; background: rgba(0,0,0,0.15); border-bottom: 1px solid var(--border-col); }
     .toolbar-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
     .toolbar-left { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex: 1 1 auto; }
@@ -1727,6 +1792,19 @@ if ($debug_mode && !$is_ajax) {
     .confirm-btn-secondary { background: #424242; color: #fff; border: 1px solid #555; }
     .confirm-btn-secondary:hover { background: #505050; }
     .confirm-btn-warning { background: #ff9800; color: #fff; }
+    .relogin-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); z-index: 10002; }
+    .relogin-card { background: #2c2c2c; color: #e0e0e0; border-radius: 8px; width: 440px; max-width: 92vw; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; }
+    .relogin-header { background: #252525; border-bottom: 1px solid #3d3d3d; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; }
+    .relogin-title { font-weight: 600; color: #fff; font-size: 15px; margin: 0; }
+    .relogin-close { background: transparent; border: none; color: #fff; opacity: 0.7; font-size: 20px; line-height: 1; cursor: pointer; }
+    .relogin-close:hover { opacity: 1; }
+    .relogin-body { padding: 16px 18px; font-size: 13px; color: #ccc; }
+    .relogin-list { list-style: none; padding: 0; margin: 0; }
+    .relogin-list li { padding: 10px 0; border-bottom: 1px solid #3d3d3d; }
+    .relogin-list li:last-child { border-bottom: none; }
+    .relogin-row { display: flex; gap: 10px; align-items: flex-start; }
+    .relogin-seq { display: inline-flex; min-width: 36px; height: 22px; align-items: center; justify-content: center; border-radius: 4px; background: #3b3b3b; color: #d2d2d2; font-size: 11px; font-weight: 700; }
+    .relogin-more { text-align: center; color: #9aa0a6; font-style: italic; }
   </style>
 
 <div class="row">
@@ -1747,6 +1825,17 @@ if ($debug_mode && !$is_ajax) {
       <div class="confirm-footer">
         <button type="button" class="confirm-btn confirm-btn-secondary" id="confirm-cancel">Batal</button>
         <button type="button" class="confirm-btn confirm-btn-warning" id="confirm-ok">Ya, Lanjutkan</button>
+      </div>
+    </div>
+  </div>
+  <div id="relogin-modal" class="relogin-modal" aria-hidden="true">
+    <div class="relogin-card">
+      <div class="relogin-header">
+        <div class="relogin-title" id="relogin-title">Detail Relogin</div>
+        <button type="button" class="relogin-close" id="relogin-close">&times;</button>
+      </div>
+      <div class="relogin-body" id="relogin-body">
+        <div style="text-align:center;color:#9aa0a6;">Memuat...</div>
       </div>
     </div>
   </div>
@@ -2010,6 +2099,9 @@ if ($debug_mode && !$is_ajax) {
                       <?php endif; ?>
                     </td>
                     <td class="text-center">
+                      <?php if(!empty($u['relogin'])): ?>
+                        <button type="button" class="btn-act btn-act-relogin" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" title="Detail Relogin"><i class="fa fa-eye"></i></button>
+                      <?php endif; ?>
                       <?php if (in_array($req_status, ['all','used','rusak','online'], true)): ?>
                         <?php if (strtoupper($u['status']) === 'TERPAKAI' && in_array($req_status, ['all','used'], true)): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=used&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
@@ -2108,6 +2200,10 @@ if ($debug_mode && !$is_ajax) {
   const confirmOk = document.getElementById('confirm-ok');
   const confirmCancel = document.getElementById('confirm-cancel');
   const confirmClose = document.getElementById('confirm-close');
+  const reloginModal = document.getElementById('relogin-modal');
+  const reloginBody = document.getElementById('relogin-body');
+  const reloginTitle = document.getElementById('relogin-title');
+  const reloginClose = document.getElementById('relogin-close');
   if (!searchInput || !tbody || !totalBadge || !paginationWrap) return;
 
   if (clearBtn) {
@@ -2228,6 +2324,52 @@ if ($debug_mode && !$is_ajax) {
     }
   };
 
+  function closeReloginModal() {
+    if (reloginModal) reloginModal.style.display = 'none';
+  }
+
+  async function openReloginModal(username) {
+    if (!reloginModal || !reloginBody) return;
+    if (reloginTitle) reloginTitle.textContent = `Detail Relogin - ${username}`;
+    reloginBody.innerHTML = '<div style="text-align:center;color:#9aa0a6;">Memuat...</div>';
+    reloginModal.style.display = 'flex';
+    try {
+      const params = new URLSearchParams();
+      params.set('action', 'login_events');
+      params.set('name', username);
+      params.set('session', '<?= $session ?>');
+      if (showSelect) params.set('show', showSelect.value);
+      if (dateInput) params.set('date', dateInput.value);
+      params.set('ajax', '1');
+      params.set('_', Date.now().toString());
+      const res = await fetch(ajaxBase + '?' + params.toString(), { cache: 'no-store' });
+      const data = await res.json();
+      if (!data || !data.ok) {
+        reloginBody.innerHTML = '<div style="text-align:center;color:#ff6b6b;">Gagal memuat data.</div>';
+        return;
+      }
+      const events = Array.isArray(data.events) ? data.events : [];
+      if (events.length === 0) {
+        reloginBody.innerHTML = '<div style="text-align:center;color:#9aa0a6;">Tidak ada data relogin.</div>';
+        return;
+      }
+      let html = '<ul class="relogin-list">';
+      events.forEach((ev, idx) => {
+        const seq = ev.seq || (idx + 1);
+        const loginLabel = ev.login_label || '-';
+        const logoutLabel = ev.logout_label || '-';
+        html += `<li><div class="relogin-row"><span class="relogin-seq">#${seq}</span><div><div>Login: ${loginLabel}</div><div>Logout: ${logoutLabel}</div></div></div></li>`;
+      });
+      if ((data.total || 0) > events.length) {
+        html += '<li class="relogin-more">lebih...</li>';
+      }
+      html += '</ul>';
+      reloginBody.innerHTML = html;
+    } catch (e) {
+      reloginBody.innerHTML = '<div style="text-align:center;color:#ff6b6b;">Gagal memuat data.</div>';
+    }
+  }
+
   function buildUrl(isSearch) {
     const params = new URLSearchParams();
     params.set('session', '<?= $session ?>');
@@ -2314,6 +2456,23 @@ if ($debug_mode && !$is_ajax) {
         const hasQuery = searchInput.value.trim() !== '';
         fetchUsers(true, hasQuery);
       }
+    });
+  }
+
+  if (tbody) {
+    tbody.addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-act-relogin');
+      if (!btn) return;
+      const username = btn.getAttribute('data-user') || '';
+      if (username) openReloginModal(username);
+    });
+  }
+  if (reloginClose) {
+    reloginClose.addEventListener('click', closeReloginModal);
+  }
+  if (reloginModal) {
+    reloginModal.addEventListener('click', (e) => {
+      if (e.target === reloginModal) closeReloginModal();
     });
   }
 
