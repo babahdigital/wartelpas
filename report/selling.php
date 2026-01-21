@@ -64,6 +64,13 @@ function sanitize_comment_short($comment) {
     return trim($comment);
 }
 
+function format_first_login($dateStr) {
+    if (empty($dateStr) || $dateStr === '-') return '-';
+    $ts = strtotime($dateStr);
+    if ($ts === false) return $dateStr;
+    return date('Y-m-d H:i:s', $ts);
+}
+
     function format_bytes_short($bytes) {
         $b = (float)$bytes;
         if ($b <= 0) return '0 B';
@@ -100,7 +107,7 @@ if (file_exists($dbFile)) {
                 sh.username, sh.profile, sh.profile_snapshot,
                 sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
             sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
-            sh.full_raw_data, lh.last_status, lh.last_bytes
+            sh.full_raw_data, lh.last_status, lh.last_bytes, lh.first_login_real
             FROM sales_history sh
             LEFT JOIN login_history lh ON lh.username = sh.username
             UNION ALL
@@ -109,7 +116,7 @@ if (file_exists($dbFile)) {
                 ls.username, ls.profile, ls.profile_snapshot,
                 ls.price, ls.price_snapshot, ls.sprice_snapshot, ls.validity,
             ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
-            ls.full_raw_data, lh2.last_status, lh2.last_bytes
+            ls.full_raw_data, lh2.last_status, lh2.last_bytes, lh2.first_login_real
             FROM live_sales ls
             LEFT JOIN login_history lh2 ON lh2.username = ls.username
             WHERE ls.sync_status = 'pending'
@@ -382,7 +389,7 @@ foreach ($rows as $r) {
         if (!$match) continue;
 
         $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
-        $comment = sanitize_comment_short($r['comment'] ?? '');
+        $comment = format_first_login($r['first_login_real'] ?? '');
         $status = strtolower((string)($r['status'] ?? ''));
         $lh_status = strtolower((string)($r['last_status'] ?? ''));
         $cmt_low = strtolower($comment);
