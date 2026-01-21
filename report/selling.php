@@ -306,6 +306,7 @@ $total_qty_retur = 0;
 $total_qty_rusak = 0;
 $total_qty_invalid = 0;
 $rusak_10m = 0;
+$total_bandwidth = 0;
 $rusak_30m = 0;
 
 $by_block = [];
@@ -442,6 +443,7 @@ foreach ($rows as $r) {
             if ($status === 'retur') $by_profile[$profile]['retur'] += 1;
         }
 
+        $total_bandwidth += (int)($r['last_bytes'] ?? 0);
         $list[] = [
                 'dt' => $sale_dt,
                 'user' => $r['username'] ?? '-',
@@ -585,7 +587,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             <div class="summary-card">
                 <div class="summary-title">Total Voucher Laku</div>
                 <div class="summary-value"><?= number_format($total_qty_laku,0,',','.') ?></div>
-                <div style="font-size:12px;color:var(--txt-muted);margin-top: 1px;">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bandwidth: -</div>
+                <div style="font-size:12px;color:var(--txt-muted);margin-top: 1px;">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bandwidth: <?= htmlspecialchars(format_bytes_short($total_bandwidth)) ?></div>
             </div>
             <div class="summary-card">
                 <div class="summary-title">Pendapatan Bersih</div>
