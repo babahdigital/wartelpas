@@ -610,7 +610,11 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         'uptime_ok' => $uptime_sec <= $uptime_limit,
         'relogin_ok' => (int)($recent_relogin ?? 0) >= 3
       ];
+      if (ob_get_length()) {
+        @ob_clean();
+      }
       header('Content-Type: application/json');
+      http_response_code(200);
       echo json_encode([
         'ok' => !$action_blocked,
         'message' => $action_blocked ? $action_error : 'Syarat rusak terpenuhi.',
