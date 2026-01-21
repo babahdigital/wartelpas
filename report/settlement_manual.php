@@ -178,6 +178,17 @@ if ($action === 'logs') {
     exit;
 }
 
+if ($action === 'reset') {
+    try {
+        $stmt = $db->prepare("DELETE FROM settlement_log WHERE report_date = :d");
+        $stmt->execute([':d' => $date]);
+        echo json_encode(['ok' => true, 'message' => 'Reset berhasil.']);
+    } catch (Exception $e) {
+        echo json_encode(['ok' => false, 'message' => 'Reset gagal.']);
+    }
+    exit;
+}
+
 // action=start
 $API = new RouterosAPI();
 $API->debug = false;
