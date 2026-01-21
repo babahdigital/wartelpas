@@ -2233,6 +2233,18 @@ if ($debug_mode && !$is_ajax) {
     return ajaxBase + '?' + params.toString();
   }
 
+  function updateSearchUrl(qValue) {
+    const url = new URL(window.location.href);
+    if (qValue) {
+      url.searchParams.set('q', qValue);
+      url.searchParams.set('page', '1');
+    } else {
+      url.searchParams.delete('q');
+      url.searchParams.delete('page');
+    }
+    try { history.replaceState(null, '', url.toString()); } catch (e) {}
+  }
+
   async function fetchUsers(isSearch, showLoading) {
     const fetchId = ++lastFetchId;
     try {
@@ -2258,6 +2270,7 @@ if ($debug_mode && !$is_ajax) {
     if (e.key === 'Enter') {
       e.preventDefault();
       const hasQuery = searchInput.value.trim() !== '';
+      updateSearchUrl(searchInput.value.trim());
       fetchUsers(true, hasQuery);
     }
   });
@@ -2271,6 +2284,7 @@ if ($debug_mode && !$is_ajax) {
       if (searchInput.value !== '') {
         searchInput.value = '';
         clearBtn.style.display = 'none';
+        updateSearchUrl('');
         fetchUsers(true, true);
       }
     });
