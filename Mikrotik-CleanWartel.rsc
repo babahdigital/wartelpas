@@ -58,6 +58,16 @@
 :delay 3s;
 
 
+# 4c. CLEAR SERVER LOG (opsional) - Hapus log ingest di server
+:log info "SETTLE: MAINT: Clear log ingest server...";
+:do {
+    /tool fetch url="http://wartelpas.sobigidul.net:8081/tools/clear_logs.php?key=WartelpasSecureKey&session=S3c7x9_LB" keep-result=no;
+    :log info "SETTLE: MAINT: Clear log ingest berhasil.";
+} on-error={ :log warning "SETTLE: MAINT: Gagal clear log ingest."; }
+
+:delay 2s;
+
+
 # 4b. CLEAR SCRIPT LOG (opsional) - HAPUS SCRIPT MIKHMON TERBENTUK SAAT LOGIN
 :log info "SETTLE: MAINT: Hapus script mikhmon...";
 :do {
