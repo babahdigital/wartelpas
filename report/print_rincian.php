@@ -355,7 +355,10 @@ if ($is_usage && file_exists($dbFile)) {
             if ($status === 'ONLINE') {
                 $logout_time = '-';
                 // gunakan waktu login dari DB agar presisi sama dengan users.php
-                if ($login_time === '') {
+                $u_sec_active = uptime_to_seconds($uptime_active);
+                if ($u_sec_active > 0) {
+                    $login_time = date('Y-m-d H:i:s', time() - $u_sec_active);
+                } elseif ($login_time === '') {
                     $u_sec = uptime_to_seconds($uptime);
                     if ($u_sec > 0) {
                         $login_time = date('Y-m-d H:i:s', time() - $u_sec);
@@ -382,7 +385,9 @@ if ($is_usage && file_exists($dbFile)) {
             }
 
             $uptime_display = $uptime;
-            if ($login_time !== '-' && $logout_time !== '-') {
+            if ($status === 'ONLINE' && $u_sec_active > 0) {
+                $uptime_display = seconds_to_uptime($u_sec_active);
+            } elseif ($login_time !== '-' && $logout_time !== '-') {
                 $diff = strtotime($logout_time) - strtotime($login_time);
                 if ($diff > 0) $uptime_display = seconds_to_uptime($diff);
             } elseif ($status === 'ONLINE' && $login_time !== '-') {
@@ -575,7 +580,8 @@ function esc($s){ return htmlspecialchars((string)$s); }
                                                 $st_label = '-';
                                                 if ($st === 'online') $st_label = 'Online';
                                                 elseif ($st === 'rusak') $st_label = 'Rusak';
-                                                elseif (!empty($it['relogin'])) $st_label = 'Relogin';
+                                                elseif ($st === 'terpakai') $st_label = 'Terpakai';
+                                                if (!empty($it['relogin'])) $st_label = 'Relogin';
                                             ?>
                                             <td><?= esc($st_label) ?></td>
                   </tr>

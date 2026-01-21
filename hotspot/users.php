@@ -1145,9 +1145,8 @@ foreach($all_users as $u) {
     $uptime_user = $u['uptime'] ?? '';
     $uptime_active = $is_active ? ($activeMap[$name]['uptime'] ?? '') : '';
     $uptime_hist = $hist['last_uptime'] ?? '';
-    $base_total = max(uptime_to_seconds($uptime_user), uptime_to_seconds($uptime_hist));
     if ($is_active) {
-      $uptime = seconds_to_uptime($base_total + uptime_to_seconds($uptime_active));
+      $uptime = $uptime_active != '' ? $uptime_active : ($uptime_user != '' ? $uptime_user : '0s');
     } else {
       $uptime = $uptime_user != '' ? $uptime_user : ($uptime_hist != '' ? $uptime_hist : '0s');
     }
@@ -1434,6 +1433,9 @@ foreach($all_users as $u) {
     $logout_disp = $logout_time_real ?? ($hist['logout_time_real'] ?? ($hist['last_login_real'] ?? '-'));
     if ($status === 'READY') {
       $login_disp = '-';
+      $logout_disp = '-';
+    }
+    if ($status === 'ONLINE') {
       $logout_disp = '-';
     }
     if ($status === 'RETUR') {
