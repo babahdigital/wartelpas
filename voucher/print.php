@@ -39,22 +39,58 @@ if (!isset($_SESSION["mikhmon"])) {
 
   if ($userp != "") {
     // A. PRINT SATUAN (BY NAME) - Tidak di-filter karena user minta spesifik
-    $pulluser = explode('-', $userp);
-    $iuser = count($pulluser);
-    $prefix = explode('-', $userp)[$iuser - 2];
-    $user = explode('-', $userp)[$iuser - 1];
-    
-    if ($iuser >= 3) {
+    if (strpos($userp, '-') === false) {
+      $user = $userp;
+      $usermode = 'vc';
+    } else {
+      $pulluser = explode('-', $userp);
+      $iuser = count($pulluser);
+      $prefix = $pulluser[$iuser - 2];
+      $user = $pulluser[$iuser - 1];
+      if ($iuser >= 3) {
         $user = $prefix . "-" . $user;
+      }
+      $usermode = $pulluser[0];
     }
-    
+
     $getuser = $API->comm("/ip/hotspot/user/print", array(
       "?name" => "$user",
       ".proplist" => ".id,name,password,profile,comment,limit-uptime,limit-bytes-total,uptime,bytes-in,bytes-out"
     ));
     $TotalReg = count($getuser);
-    $usermode = explode('-', $userp)[0];
-    
+
+    if ($TotalReg == 0) {
+      try {
+        $db = new PDO('sqlite:../db_data/mikhmon_stats.db');
+        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $stmt = $db->prepare("SELECT username, raw_comment FROM login_history WHERE username = :u LIMIT 1");
+        $stmt->execute([':u' => $user]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+          $raw_comment = $row['raw_comment'] ?? '';
+          $profile_name = '';
+          if (preg_match('/Profile:([^|]+)/i', $raw_comment, $m)) {
+            $profile_name = trim($m[1]);
+          }
+          $getuser = [[
+            '.id' => 'db-'.$row['username'],
+            'name' => $row['username'],
+            'password' => $row['username'],
+            'profile' => $profile_name,
+            'comment' => $raw_comment,
+            'limit-uptime' => '',
+            'limit-bytes-total' => 0,
+            'uptime' => '0s',
+            'bytes-in' => 0,
+            'bytes-out' => 0,
+          ]];
+          $TotalReg = count($getuser);
+        }
+      } catch (Exception $e) {
+        $getuser = [];
+        $TotalReg = 0;
+      }
+    }
   } elseif ($status != "") {
     // C. PRINT BERDASARKAN STATUS (DB)
     $target_status = strtolower($status);
