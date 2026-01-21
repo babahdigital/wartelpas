@@ -87,14 +87,15 @@
         :local dis [/ip hotspot user get $u disabled];
         :local total ($bi + $bo);
         :local isActive [/ip hotspot active find where user=$name];
-        :local isReady (( $dis = "false" ) && ( $total = 0 ) && ( ($up = "0s") || ($up = "") ));
+        :local hasUsage (( $total > 0 ) || ( $up != "0s" && $up != "" ));
+        :local isReady (( $dis = false ) && ( $total = 0 ) && ( ($up = "0s") || ($up = "") ));
         :if ([:len $isActive] > 0) do={
             :log info ("SETTLE: CLEANUP: Skip online user " . $name . ".");
         } else={
             :if ($isReady) do={
                 :log info ("SETTLE: CLEANUP: Skip READY user " . $name . ".");
             } else={
-                :if (($dis = "true") || ($total > 0) || ($up != "0s" && $up != "")) do={
+                :if (($dis = true) || $hasUsage) do={
                     /ip hotspot user remove $u;
                     :set removed ($removed + 1);
                 }
