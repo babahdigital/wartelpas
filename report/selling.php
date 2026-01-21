@@ -857,22 +857,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             .then(function(r){ return r.json(); })
             .then(function(data){
                 if (data && Array.isArray(data.logs) && logBox) {
-                    var html = '';
-                    data.logs.forEach(function(row){
-                        if (!row) return;
-                        var t = row.time || '';
-                        var topic = row.topic || 'system,info';
-                        var msg = row.message || '';
-                        var cls = row.type || 'info';
-                        html += '<div class="log-entry">'
-                            + '<span class="log-time">' + String(t).replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span>'
-                            + '<span class="log-topic">' + String(topic).replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span>'
-                            + '<span class="log-' + String(cls).replace(/[^a-z]/gi,'') + '">' + String(msg).replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span>'
-                            + '</div>';
-                    });
-                    html += '<span class="cursor-blink"></span>';
-                    logBox.innerHTML = html;
-                    logBox.scrollTop = logBox.scrollHeight;
+                    enqueueSettlementLogs(data.logs);
                 }
                 if (data && data.status) {
                     if (statusEl) statusEl.textContent = data.status === 'done' ? 'Selesai' : (data.status === 'failed' ? 'Gagal' : 'Berjalan');
@@ -888,6 +873,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                         closeBtn.style.cursor = 'pointer';
                     }
                     if (statusEl) statusEl.textContent = 'Selesai';
+                    window.settleDone = true;
                     softReloadSelling();
                     clearTimeout(settlementTimer);
                     return;
@@ -899,6 +885,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                         closeBtn.style.opacity = '1';
                         closeBtn.style.cursor = 'pointer';
                     }
+                    window.settleDone = true;
                     clearTimeout(settlementTimer);
                     return;
                 }

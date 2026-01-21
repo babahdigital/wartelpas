@@ -100,10 +100,20 @@ if ($action === 'logs') {
 
                 $msgUpper = strtoupper($msgTrim);
                 $topicUpper = strtoupper($topics);
-                $startsOk = preg_match('/^(SETTLE:|CLEANUP:|SYNC:|MAINT:|SUKSES:)/i', $msgTrim);
+                static $settleStarted = false;
+                $startsOk = preg_match('/^SETTLE:/i', $msgTrim);
                 $isScriptTopic = (strpos($topicUpper, 'SCRIPT') !== false);
                 $isFetchTopic = (strpos($topicUpper, 'FETCH') !== false) && (strpos($msgUpper, 'WARTELPAS') !== false || strpos($msgUpper, 'SOBIGIDUL') !== false);
-                if (!($startsOk || $isScriptTopic || $isFetchTopic)) {
+
+                if (stripos($msgTrim, 'SETTLE: CLEANUP: Mulai') !== false) {
+                    $settleStarted = true;
+                }
+
+                if (!$settleStarted && !$startsOk) {
+                    continue;
+                }
+
+                if (!($startsOk || $isScriptTopic || ($settleStarted && $isFetchTopic))) {
                     continue;
                 }
 
@@ -138,6 +148,10 @@ if ($action === 'logs') {
                 }
                 if (strpos($msg, 'CLEANUP: Dibatalkan') !== false || strpos($msgUpper, 'GAGAL') !== false || strpos($msgUpper, 'ERROR') !== false) {
                     $fail = true;
+                }
+
+                if ($done) {
+                    break;
                 }
             }
         } else {
