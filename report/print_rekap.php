@@ -248,6 +248,7 @@ foreach ($rows as $r) {
     if ($req_show === 'harian') {
         $qty = (int)($r['qty'] ?? 0);
         if ($qty <= 0) $qty = 1;
+        $qty_count = 1;
         $line_price = $price * $qty;
         $gross_line = ($status === 'retur' || $status === 'invalid') ? 0 : $line_price;
         $loss_rusak_line = ($status === 'rusak') ? $line_price : 0;
@@ -255,7 +256,7 @@ foreach ($rows as $r) {
         $net_line = $gross_line - $loss_rusak_line - $loss_invalid_line;
 
         if ($is_laku) {
-            $total_qty_units += $qty;
+            $total_qty_units += $qty_count;
         }
         $total_net_units += $net_line;
 
@@ -281,31 +282,31 @@ foreach ($rows as $r) {
         $bw_line = $bytes;
         if ($bucket === '10') {
             if ($is_laku) {
-                $block_summaries[$block]['qty_10'] += $qty;
+                $block_summaries[$block]['qty_10'] += $qty_count;
                 $block_summaries[$block]['amt_10'] += $net_line;
             }
-            if ($status === 'rusak') $block_summaries[$block]['rs_10'] += $qty;
-            if ($status === 'retur') $block_summaries[$block]['rt_10'] += $qty;
+            if ($status === 'rusak') $block_summaries[$block]['rs_10'] += $qty_count;
+            if ($status === 'retur') $block_summaries[$block]['rt_10'] += $qty_count;
         }
         if ($bucket === '30') {
             if ($is_laku) {
-                $block_summaries[$block]['qty_30'] += $qty;
+                $block_summaries[$block]['qty_30'] += $qty_count;
                 $block_summaries[$block]['amt_30'] += $net_line;
             }
-            if ($status === 'rusak') $block_summaries[$block]['rs_30'] += $qty;
-            if ($status === 'retur') $block_summaries[$block]['rt_30'] += $qty;
+            if ($status === 'rusak') $block_summaries[$block]['rs_30'] += $qty_count;
+            if ($status === 'retur') $block_summaries[$block]['rt_30'] += $qty_count;
         }
         if ($is_laku) {
-            $block_summaries[$block]['total_qty'] += $qty;
+            $block_summaries[$block]['total_qty'] += $qty_count;
             $block_summaries[$block]['total_amount'] += $net_line;
             $block_summaries[$block]['total_bw'] += $bw_line;
         }
-        if ($status === 'rusak') $block_summaries[$block]['rs_total'] += $qty;
-        if ($status === 'retur') $block_summaries[$block]['rt_total'] += $qty;
+        if ($status === 'rusak') $block_summaries[$block]['rs_total'] += $qty_count;
+        if ($status === 'retur') $block_summaries[$block]['rt_total'] += $qty_count;
     }
 
     $total_qty++;
-    $laku_add = ($req_show === 'harian') ? ($qty ?? 1) : 1;
+    $laku_add = ($req_show === 'harian') ? ($qty_count ?? 1) : 1;
     if ($is_laku) $total_qty_laku += $laku_add;
     if ($status === 'retur') $total_qty_retur++;
     if ($status === 'rusak') {
