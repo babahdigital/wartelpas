@@ -481,7 +481,9 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
 
 <?php $is_ajax = isset($_GET['ajax']) && $_GET['ajax'] === '1'; ?>
 
-<?php if (!empty($hp_redirect) && headers_sent()): ?>
+<?php if ($is_ajax) { ob_start(); } ?>
+
+<?php if (!empty($hp_redirect) && headers_sent() && !$is_ajax): ?>
     <script>window.location.replace('<?= htmlspecialchars($hp_redirect, ENT_QUOTES); ?>');</script>
 <?php endif; ?>
 
@@ -535,79 +537,6 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
     .btn-act-danger { background: #e74c3c; }
 </style>
 <?php endif; ?>
-
-<div class="card-solid mb-3">
-    <div class="card-header-solid">
-        <h3 class="m-0"><i class="fa fa-line-chart mr-2"></i> Laporan Penjualan</h3>
-        <div class="filter-bar">
-            <form method="get" action="" class="filter-bar">
-                <input type="hidden" name="report" value="selling">
-                <?php if ($session_id !== ''): ?>
-                    <input type="hidden" name="session" value="<?= htmlspecialchars($session_id); ?>">
-                <?php endif; ?>
-                <select name="show" onchange="this.form.submit()">
-                    <option value="harian" <?= $req_show==='harian'?'selected':''; ?>>Harian</option>
-                    <option value="bulanan" <?= $req_show==='bulanan'?'selected':''; ?>>Bulanan</option>
-                    <option value="tahunan" <?= $req_show==='tahunan'?'selected':''; ?>>Tahunan</option>
-                </select>
-                <?php if ($req_show === 'harian'): ?>
-                    <input type="date" name="date" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()">
-                <?php elseif ($req_show === 'bulanan'): ?>
-                    <input type="month" name="date" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()">
-                <?php else: ?>
-                    <input type="number" name="date" min="2000" max="2100" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" style="width:100px;">
-                <?php endif; ?>
-            </form>
-            <?php
-                $print_rekap_url = 'report/print_rekap.php?show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
-                if ($session_id !== '') $print_rekap_url .= '&session=' . urlencode($session_id);
-                $print_rincian_url = 'report/print_rincian.php?date=' . urlencode($filter_date);
-                if ($session_id !== '') $print_rincian_url .= '&session=' . urlencode($session_id);
-            ?>
-            <button class="btn-print" onclick="window.open('<?= $print_rekap_url ?>','_blank')">Print Rekap</button>
-            <?php if ($req_show === 'harian'): ?>
-                <button class="btn-print" onclick="window.open('<?= $print_rincian_url ?>','_blank')">Print Rincian</button>
-            <?php else: ?>
-                <button class="btn-print" style="opacity:.6;cursor:not-allowed;" disabled>Print Rincian</button>
-            <?php endif; ?>
-            <button class="btn-print" onclick="window.print()"><i class="fa fa-print"></i></button>
-            <button class="btn-print" type="button" onclick="openHpModal()">Input HP Blok</button>
-            <button class="btn-print" type="button" onclick="softReloadSelling()">Reload</button>
-        </div>
-    </div>
-    <div class="card-body" style="padding:16px;">
-        <div class="summary-grid">
-            <div class="summary-card">
-                <div class="summary-title">Pendapatan Kotor</div>
-                <div class="summary-value"><?= $cur ?> <?= number_format($total_gross,0,',','.') ?></div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-title">Voucher Rusak</div>
-                <div class="summary-value" ><span style="color: crimson;"><?= number_format($total_qty_rusak,0,',','.') ?></span></div>
-                <div style="font-size:12px;color:var(--txt-muted)">10 Menit: <?= number_format($rusak_10m,0,',','.') ?> | 30 Menit: <?= number_format($rusak_30m,0,',','.') ?></div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-title">Total Handphone</div>
-                <div style="margin-top:7px; margin-bottom:10px;">
-                    <span class="summary-badge badge-wartel">WARTEL: <?= number_format($hp_wartel_units,0,',','.') ?></span>
-                    <span class="summary-badge badge-kamtib">KAMTIB: <?= number_format($hp_kamtib_units,0,',','.') ?></span>
-                </div>
-                <div style="font-size:12px;color:var(--txt-muted);margin-top:6px;">
-                    Total: <span style="color:#f39c12;"><?= number_format($hp_total_units,0,',','.') ?></span> | Aktif: <span class="text-green"><?= number_format($hp_active_units,0,',','.') ?></span> | Rusak: <?= number_format($hp_rusak_units,0,',','.') ?> | Spam: <?= number_format($hp_spam_units,0,',','.') ?>
-                </div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-title">Total Voucher Laku</div>
-                <div class="summary-value"><?= number_format($total_qty_laku,0,',','.') ?></div>
-                <div style="font-size:12px;color:var(--txt-muted);margin-top: 1px;">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bandwidth: <?= htmlspecialchars(format_bytes_short($total_bandwidth)) ?></div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-title">Pendapatan Bersih</div>
-                <div class="summary-value" style="color:#2ecc71;"><?= $cur ?> <?= number_format($total_net,0,',','.') ?></div>
-            </div>
-        </div>
-    </div>
-</div>
 
 <?php if (!$is_ajax): ?>
 <div id="hpModal" class="modal-backdrop" onclick="if(event.target===this){closeHpModal();}">
@@ -832,6 +761,84 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
 </script>
 <?php endif; ?>
 
+<?php if (!$is_ajax): ?>
+<div id="selling-content">
+<?php endif; ?>
+
+<div class="card-solid mb-3">
+    <div class="card-header-solid">
+        <h3 class="m-0"><i class="fa fa-line-chart mr-2"></i> Laporan Penjualan</h3>
+        <div class="filter-bar">
+            <form method="get" action="" class="filter-bar">
+                <input type="hidden" name="report" value="selling">
+                <?php if ($session_id !== ''): ?>
+                    <input type="hidden" name="session" value="<?= htmlspecialchars($session_id); ?>">
+                <?php endif; ?>
+                <select name="show" onchange="this.form.submit()">
+                    <option value="harian" <?= $req_show==='harian'?'selected':''; ?>>Harian</option>
+                    <option value="bulanan" <?= $req_show==='bulanan'?'selected':''; ?>>Bulanan</option>
+                    <option value="tahunan" <?= $req_show==='tahunan'?'selected':''; ?>>Tahunan</option>
+                </select>
+                <?php if ($req_show === 'harian'): ?>
+                    <input type="date" name="date" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()">
+                <?php elseif ($req_show === 'bulanan'): ?>
+                    <input type="month" name="date" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()">
+                <?php else: ?>
+                    <input type="number" name="date" min="2000" max="2100" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" style="width:100px;">
+                <?php endif; ?>
+            </form>
+            <?php
+                $print_rekap_url = 'report/print_rekap.php?show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+                if ($session_id !== '') $print_rekap_url .= '&session=' . urlencode($session_id);
+                $print_rincian_url = 'report/print_rincian.php?date=' . urlencode($filter_date);
+                if ($session_id !== '') $print_rincian_url .= '&session=' . urlencode($session_id);
+            ?>
+            <button class="btn-print" onclick="window.open('<?= $print_rekap_url ?>','_blank')">Print Rekap</button>
+            <?php if ($req_show === 'harian'): ?>
+                <button class="btn-print" onclick="window.open('<?= $print_rincian_url ?>','_blank')">Print Rincian</button>
+            <?php else: ?>
+                <button class="btn-print" style="opacity:.6;cursor:not-allowed;" disabled>Print Rincian</button>
+            <?php endif; ?>
+            <button class="btn-print" onclick="window.print()"><i class="fa fa-print"></i></button>
+            <button class="btn-print" type="button" onclick="openHpModal()">Input HP Blok</button>
+            <button class="btn-print" type="button" onclick="softReloadSelling()">Reload</button>
+        </div>
+    </div>
+    <div class="card-body" style="padding:16px;">
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-title">Pendapatan Kotor</div>
+                <div class="summary-value"><?= $cur ?> <?= number_format($total_gross,0,',','.') ?></div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Voucher Rusak</div>
+                <div class="summary-value" ><span style="color: crimson;"><?= number_format($total_qty_rusak,0,',','.') ?></span></div>
+                <div style="font-size:12px;color:var(--txt-muted)">10 Menit: <?= number_format($rusak_10m,0,',','.') ?> | 30 Menit: <?= number_format($rusak_30m,0,',','.') ?></div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Total Handphone</div>
+                <div style="margin-top:7px; margin-bottom:10px;">
+                    <span class="summary-badge badge-wartel">WARTEL: <?= number_format($hp_wartel_units,0,',','.') ?></span>
+                    <span class="summary-badge badge-kamtib">KAMTIB: <?= number_format($hp_kamtib_units,0,',','.') ?></span>
+                </div>
+                <div style="font-size:12px;color:var(--txt-muted);margin-top:6px;">
+                    Total: <span style="color:#f39c12;"><?= number_format($hp_total_units,0,',','.') ?></span> | Aktif: <span class="text-green"><?= number_format($hp_active_units,0,',','.') ?></span> | Rusak: <?= number_format($hp_rusak_units,0,',','.') ?> | Spam: <?= number_format($hp_spam_units,0,',','.') ?>
+                </div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Total Voucher Laku</div>
+                <div class="summary-value"><?= number_format($total_qty_laku,0,',','.') ?></div>
+                <div style="font-size:12px;color:var(--txt-muted);margin-top: 1px;">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bandwidth: <?= htmlspecialchars(format_bytes_short($total_bandwidth)) ?></div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Pendapatan Bersih</div>
+                <div class="summary-value" style="color:#2ecc71;"><?= $cur ?> <?= number_format($total_net,0,',','.') ?></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <?php
 $hp_rows = [];
 $hp_rows_total = [];
@@ -875,10 +882,6 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
 }
 ?>
 
-<?php if ($is_ajax) { ob_start(); } ?>
-<?php if (!$is_ajax): ?>
-<div id="selling-content">
-<?php endif; ?>
 <?php if ($req_show === 'harian'): ?>
 <?php if (!empty($hp_error)): ?>
     <div class="card-solid mb-3">
@@ -958,9 +961,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             <div>Spam: <b><?= number_format($hp_spam_units,0,',','.') ?></b></div>
         </div>
     </div>
-<?php if (!$is_ajax): ?>
 </div>
-<?php endif; ?>
 
 <?php endif; ?>
 
@@ -1040,7 +1041,9 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
     </div>
 </div>
 
+<?php if (!$is_ajax): ?>
 </div>
+<?php endif; ?>
 
 <?php if ($is_ajax) { echo ob_get_clean(); exit; } ?>
 
