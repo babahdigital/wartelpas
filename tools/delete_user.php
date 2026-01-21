@@ -45,7 +45,7 @@ if (!isset($hotspot_server) || $hotspot_server !== 'wartel') {
     exit;
 }
 
-$username = trim((string)($_GET['user'] ?? ($_POST['user'] ?? '46hu6p')));
+$username = trim((string)($_GET['user'] ?? ($_POST['user'] ?? '38fpc9')));
 if ($username === '') {
     http_response_code(400);
     echo json_encode(['ok' => false, 'message' => 'User kosong.']);
