@@ -121,9 +121,9 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **Guard pemakaian**: TERPAKAI hanya jika ada bytes/uptime/login_time/logout_time valid.
 
 ### 2.15 Maintenance & Debug Tools
-- **db_check.php**: cek schema, row, path DB, dan status writable.
-- **report/clear_logs.php**: bersihkan log ingest.
-- **report/clear_block.php**: hapus `login_history` berdasarkan blok.
+- **tools/db_check.php**: cek schema, row, path DB, dan status writable.
+- **tools/clear_logs.php**: bersihkan log ingest.
+- **tools/clear_block.php**: hapus data blok lintas tabel.
 - **.htaccess**: whitelist endpoint maintenance dan ingest.
 
 ### 2.16 Stabilitas Sync Usage
@@ -148,8 +148,9 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - Backfill data historis agar rekap tidak nol setelah migrasi.
 
 ### 2.19.1 Tool Pembersih Data
-- **report/cleanup_duplicate_sales.php**: dedup penjualan berdasarkan `username + sale_date`, rebuild summary.
-- **report/cleanup_non_wartel_login_history.php**: bersihkan `login_history` tanpa BLOK.
+- **tools/cleanup_duplicate_sales.php**: dedup penjualan berdasarkan `username + sale_date`, rebuild summary.
+- **tools/cleanup_non_wartel_login_history.php**: bersihkan `login_history` tanpa BLOK.
+- **tools/cleanup_ready_login_history.php**: hapus entry `READY` di `login_history`.
 
 ### 2.20 Settlement Manual + Log Terkunci
 - Tambah **settlement manual** di **report/selling.php** untuk menjalankan scheduler MikroTik.
@@ -182,11 +183,11 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **Mikrotik-CleanWartel.rsc**:
   - Semua log diberi prefix **SETTLE** agar terfilter rapi.
   - Delay disetel ulang agar urutan log terbaca stabil.
-- **report/clear_block.php**:
+- **tools/clear_block.php**:
   - Hapus data blok lintas tabel (login_history, sales_history, live_sales).
   - Support hapus varian **BLOK-X10/BLOK-X30** saat input BLOK-X.
   - Data HP **tidak dihapus** default (opsional `delete_hp=1`).
-- **report/check_block.php** (baru):
+- **tools/check_block.php** (baru):
   - Endpoint audit untuk mengecek keberadaan blok pada semua tabel.
 - **report/live_ingest.php**:
   - Validasi session config & hanya izinkan **hotspot_server=wartel**.
