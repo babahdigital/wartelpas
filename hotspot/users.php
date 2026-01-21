@@ -1332,7 +1332,9 @@ foreach($all_users as $u) {
       $f_blok = $hist['blok_name'];
     }
     if ($only_wartel && !is_wartel_client($comment, $f_blok)) {
-      continue;
+      if ($req_status !== 'ready') {
+        continue;
+      }
     }
     if (!$is_active && $hist) {
       if ($f_ip == '-') $f_ip = $hist['ip_address'] ?? '-';
