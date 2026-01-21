@@ -114,7 +114,7 @@ $message = '';
 try {
     if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
         $sched = $API->comm('/system/scheduler/print', [
-            '?name' => 'CuciGudangManual',
+            '?name' => 'CuciGudang',
             '.proplist' => '.id,name'
         ]);
         $sid = $sched[0]['.id'] ?? '';
