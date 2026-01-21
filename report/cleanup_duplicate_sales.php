@@ -56,7 +56,21 @@ try {
 
     $db->exec("COMMIT");
 
-    $msg = "Cleanup selesai. sales_history dihapus: {$deleted_history}, live_sales dihapus: {$deleted_live}.";
+    $summary_msg = '';
+    $helper = $root_dir . '/report/sales_summary_helper.php';
+    if (file_exists($helper)) {
+        require_once $helper;
+        if (function_exists('rebuild_sales_summary')) {
+            try {
+                rebuild_sales_summary($db);
+                $summary_msg = ' Rekap otomatis diperbarui.';
+            } catch (Exception $e) {
+                $summary_msg = ' Rekap otomatis gagal diperbarui.';
+            }
+        }
+    }
+
+    $msg = "Cleanup selesai. sales_history dihapus: {$deleted_history}, live_sales dihapus: {$deleted_live}." . $summary_msg;
     @file_put_contents($logDir . '/cleanup_duplicate_sales.log', date('c') . " | " . $msg . "\n", FILE_APPEND);
     echo $msg;
 } catch (Exception $e) {
