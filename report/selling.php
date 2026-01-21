@@ -724,6 +724,10 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         var modal = document.getElementById('hp-delete-modal');
         if (modal) modal.style.display = 'none';
     }
+    function confirmDeleteHpModal(){
+        if (!hpDeleteUrl) return closeDeleteHpModal();
+        window.location.href = hpDeleteUrl;
+    }
     function openDeleteHpModal(url, blok, date){
         hpDeleteUrl = url || '';
         var modal = document.getElementById('hp-delete-modal');
@@ -1366,7 +1370,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         </div>
         <div style="background:#252525;border-top:1px solid #3d3d3d;padding:12px 16px;display:flex;justify-content:flex-end;gap:8px;">
             <button type="button" id="hp-delete-cancel" onclick="closeDeleteHpModal()" class="btn-print" style="background:#424242;border:1px solid #555;">Batal</button>
-            <button type="button" id="hp-delete-confirm" class="btn-print" style="background:#ff9800;color:#fff;">Ya, Hapus</button>
+            <button type="button" id="hp-delete-confirm" onclick="confirmDeleteHpModal()" class="btn-print" style="background:#ff9800;color:#fff;">Ya, Hapus</button>
         </div>
     </div>
 </div>
