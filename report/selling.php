@@ -814,11 +814,6 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                             btn.disabled = false;
                             btn.style.opacity = '1';
                             btn.style.cursor = 'pointer';
-                            if (closeBtn) {
-                                closeBtn.disabled = false;
-                                closeBtn.style.opacity = '1';
-                                closeBtn.style.cursor = 'pointer';
-                            }
                             if (cancelBtn) {
                                 cancelBtn.disabled = false;
                                 cancelBtn.style.opacity = '0.8';
@@ -833,11 +828,6 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                         btn.disabled = false;
                         btn.style.opacity = '1';
                         btn.style.cursor = 'pointer';
-                        if (closeBtn) {
-                            closeBtn.disabled = false;
-                            closeBtn.style.opacity = '1';
-                            closeBtn.style.cursor = 'pointer';
-                        }
                         if (cancelBtn) {
                             cancelBtn.disabled = false;
                             cancelBtn.style.opacity = '0.8';
@@ -883,12 +873,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                     return;
                 }
                 if (data && data.status === 'failed') {
-                    if (closeBtn) {
-                        closeBtn.disabled = false;
-                        closeBtn.removeAttribute('disabled');
-                        closeBtn.style.opacity = '1';
-                        closeBtn.style.cursor = 'pointer';
-                    }
+                    if (statusEl) statusEl.textContent = 'Gagal';
                     window.settleDone = true;
                     clearTimeout(settlementTimer);
                     return;
@@ -1548,7 +1533,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         </div>
         <div style="padding:10px 18px;border-top:1px solid #333;display:flex;justify-content:space-between;gap:8px;align-items:center;">
             <span id="processStatus" style="font-size:12px;color:#ff9800;"><i class="fa fa-refresh fa-spin"></i> Menunggu proses...</span>
-            <button id="settlement-close" type="button" class="btn-print" onclick="closeSettlementModal()">Tutup</button>
+            <button id="settlement-close" type="button" class="btn-print" onclick="closeSettlementModal()" disabled style="opacity:.6;cursor:not-allowed;">Tutup</button>
         </div>
     </div>
 </div>
