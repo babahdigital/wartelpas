@@ -1763,6 +1763,8 @@ foreach($all_users as $u) {
         'ip' => $f_ip,
         'mac' => $f_mac,
       'comment' => $comment,
+        'comment_rusak' => $comment_rusak ? 1 : 0,
+        'is_disabled' => ($disabled === 'true') ? 1 : 0,
         'first_login' => $first_login_disp,
         'retur_ref' => $is_retur ? extract_retur_ref($comment) : '',
         'uptime' => $uptime,
@@ -2011,7 +2013,7 @@ if ($debug_mode && !$is_ajax) {
     .id-badge { font-family: 'Courier New', monospace; background: #3d454d; color: #fff; padding: 3px 6px; border-radius: 4px; font-weight: bold; border: 1px solid #56606a; }
     .btn-act { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 4px; border: none; color: white; transition: all 0.2s; margin: 0 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     .btn-act, .btn, button, .search-clear-btn, .custom-select-solid { cursor: pointer; }
-    .btn-act-print { background: var(--c-blue); } .btn-act-retur { background: var(--c-orange); } .btn-act-invalid { background: var(--c-red); }
+    .btn-act-print { background: var(--c-blue); } .btn-act-retur { background: var(--c-orange); } .btn-act-invalid { background: var(--c-red); } .btn-act-enable { background: #16a34a; }
     .toolbar-container { padding: 15px; background: rgba(0,0,0,0.15); border-bottom: 1px solid var(--border-col); }
     .toolbar-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
     .toolbar-left { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex: 1 1 auto; }
@@ -2169,7 +2171,7 @@ if ($debug_mode && !$is_ajax) {
           </div>
           <?php
             $status_labels = ['used' => 'Terpakai', 'retur' => 'Retur', 'rusak' => 'Rusak'];
-            $can_delete_status = in_array($req_status, array_keys($status_labels));
+            $can_delete_status = in_array($req_status, array_keys($status_labels)) && $req_show === 'semua' && empty($filter_date);
             $status_label = $status_labels[$req_status] ?? '';
             $can_print_block = ($req_comm != '' && $req_status === 'ready');
             $can_print_status = ($req_comm != '' && $req_status === 'retur');
@@ -2370,17 +2372,30 @@ if ($debug_mode && !$is_ajax) {
                       <?php endif; ?>
                     </td>
                     <td class="text-center">
-                      <?php if (in_array($req_status, ['all','used','rusak','online','retur'], true)): ?>
-                        <?php if (strtoupper($u['status']) === 'TERPAKAI' && in_array($req_status, ['all','used'], true)): ?>
+                      <?php
+                        $status_upper = strtoupper($u['status'] ?? '');
+                        $is_ready = ($status_upper === 'READY');
+                        $is_online = ($status_upper === 'ONLINE');
+                        $is_used = ($status_upper === 'TERPAKAI');
+                        $is_rusak = ($status_upper === 'RUSAK');
+                        $is_retur = ($status_upper === 'RETUR');
+                        $is_invalid = ($status_upper === 'INVALID');
+                        $has_rusak_comment = !empty($u['comment_rusak']);
+                        $is_disabled = !empty($u['is_disabled']);
+                        $can_enable = $is_rusak && $is_disabled && !$has_rusak_comment;
+                        $can_mark_rusak = ($is_used || $is_invalid) && !$is_online;
+                      ?>
+                      <?php if (in_array($req_status, ['all','ready','used','rusak','online','retur'], true)): ?>
+                        <?php if ($is_used && in_array($req_status, ['all','used'], true)): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=used&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
-                        <?php elseif (strtoupper($u['status']) === 'ONLINE' && in_array($req_status, ['all','online'], true)): ?>
+                        <?php elseif ($is_online && in_array($req_status, ['all','online'], true)): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=online&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Online"><i class="fa fa-print"></i></button>
-                        <?php elseif (strtoupper($u['status']) === 'RUSAK' && in_array($req_status, ['all','rusak'], true)): ?>
+                        <?php elseif ($is_rusak && in_array($req_status, ['all','rusak'], true)): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=rusak&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Rusak"><i class="fa fa-print"></i></button>
-                        <?php elseif (strtoupper($u['status']) === 'RETUR' && in_array($req_status, ['all','retur'], true)): ?>
+                        <?php elseif ($is_retur && in_array($req_status, ['all','retur'], true)): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher Retur"><i class="fa fa-print"></i></button>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&download=1&img=1&session=<?= $session ?>','_blank')" title="Download Voucher (PNG)"><i class="fa fa-download"></i></button>
-                        <?php elseif ($req_status === 'all'): ?>
+                        <?php elseif ($is_ready && in_array($req_status, ['all','ready'], true)): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
                         <?php endif; ?>
                       <?php endif; ?>
@@ -2393,12 +2408,14 @@ if ($debug_mode && !$is_ajax) {
                             '&show=' . urlencode($req_show) .
                             '&date=' . urlencode($filter_date);
                         ?>
-                        <?php if (strtoupper($u['status']) === 'RUSAK'): ?>
+                        <?php if ($is_rusak && !$can_enable): ?>
                           <button type="button" class="btn-act btn-act-retur" onclick="actionRequest('./?hotspot=users&action=retur&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&p=<?= urlencode($u['profile']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','RETUR Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Retur"><i class="fa fa-exchange"></i></button>
                           <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=rollback&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','Rollback RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rollback"><i class="fa fa-undo"></i></button>
-                        <?php elseif (strtoupper($u['status']) === 'READY'): ?>
+                        <?php elseif ($can_enable): ?>
+                          <button type="button" class="btn-act btn-act-enable" onclick="actionRequest('./?hotspot=users&action=enable&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Enable Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Enable"><i class="fa fa-check"></i></button>
+                        <?php elseif ($is_ready): ?>
                           <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=disable&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Disable Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Disable"><i class="fa fa-ban"></i></button>
-                        <?php else: ?>
+                        <?php elseif ($can_mark_rusak): ?>
                           <button type="button" class="btn-act btn-act-invalid" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'], ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'], ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'], ENT_QUOTES) ?>" data-login="<?= htmlspecialchars($u['login_time'], ENT_QUOTES) ?>" data-logout="<?= htmlspecialchars($u['logout_time'], ENT_QUOTES) ?>" data-bytes="<?= (int)$u['bytes'] ?>" data-uptime="<?= htmlspecialchars($u['uptime'], ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'], ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" onclick="actionRequestRusak(this,'./?hotspot=users&action=invalid&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','SET RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rusak"><i class="fa fa-ban"></i></button>
                         <?php endif; ?>
                       <?php endif; ?>
