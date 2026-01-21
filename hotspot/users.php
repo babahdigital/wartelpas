@@ -1706,9 +1706,6 @@ if ($is_ajax) {
           <?php endif; ?>
         </td>
         <td class="text-center">
-          <?php if(!empty($u['relogin'])): ?>
-            <span class="status-badge st-relogin clickable" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'], ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'], ENT_QUOTES) ?>" title="Detail Relogin">RELOGIN</span>
-          <?php endif; ?>
           <?php if (in_array($req_status, ['all','used','rusak','online'], true)): ?>
             <?php if (strtoupper($u['status']) === 'TERPAKAI' && in_array($req_status, ['all','used'], true)): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=used&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
@@ -2173,9 +2170,6 @@ if ($debug_mode && !$is_ajax) {
                       <?php endif; ?>
                     </td>
                     <td class="text-center">
-                      <?php if(!empty($u['relogin'])): ?>
-                        <span class="status-badge st-relogin clickable" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'], ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'], ENT_QUOTES) ?>" title="Detail Relogin">RELOGIN</span>
-                      <?php endif; ?>
                       <?php if (in_array($req_status, ['all','used','rusak','online'], true)): ?>
                         <?php if (strtoupper($u['status']) === 'TERPAKAI' && in_array($req_status, ['all','used'], true)): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=used&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
