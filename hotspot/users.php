@@ -2459,6 +2459,8 @@ if ($debug_mode && !$is_ajax) {
         if (mt && mt.blok) metaRows.push(`<tr><td>Blok</td><td>${mt.blok}</td></tr>`);
         if (mt && mt.profile) metaRows.push(`<tr><td>Profile</td><td>${mt.profile}</td></tr>`);
         if (mt && mt.first_login) metaRows.push(`<tr><td>First Login</td><td>${mt.first_login}</td></tr>`);
+        if (mt && mt.login) metaRows.push(`<tr><td>Login</td><td>${mt.login}</td></tr>`);
+        if (mt && mt.logout) metaRows.push(`<tr><td>Logout</td><td>${mt.logout}</td></tr>`);
         const metaBlock = metaRows.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;margin:6px 0 10px 0;">
           <thead><tr><th style="text-align:left;padding:6px 8px;border:1px solid #444;background:#f0f0f0;">Info</th><th style="text-align:left;padding:6px 8px;border:1px solid #444;background:#f0f0f0;">Nilai</th></tr></thead>
           <tbody>${metaRows.join('')}</tbody></table>` : '';
@@ -2574,7 +2576,9 @@ if ($debug_mode && !$is_ajax) {
         blok: formatBlokLabel(blok),
         profile: formatProfileLabel(profile),
         date: headerDate,
-        first_login: firstLogin || '-'
+        first_login: firstLogin || '-',
+        login: loginTime || '-',
+        logout: logoutTime || '-'
       },
       criteria,
       values: {
@@ -2652,6 +2656,7 @@ if ($debug_mode && !$is_ajax) {
   window.actionRequestRusak = async function(elOrUrl, urlMaybe, confirmMsg) {
     let el = null;
     let url = '';
+    let reloginEvents = [];
     if (typeof elOrUrl === 'string') {
       url = elOrUrl;
       confirmMsg = urlMaybe;
@@ -2673,8 +2678,7 @@ if ($debug_mode && !$is_ajax) {
             const resp = await fetch(ajaxBase + '?' + params.toString(), { cache: 'no-store' });
             const evData = await resp.json();
             if (evData && Array.isArray(evData.events)) {
-              const base = buildRusakDataFromElement(el);
-              if (base) base.meta.relogin_events = evData.events;
+              reloginEvents = evData.events;
             }
           } catch (e) {}
         }
@@ -2695,11 +2699,8 @@ if ($debug_mode && !$is_ajax) {
           meta: {}
         };
       }
-      if (el && data && data.meta && !data.meta.relogin_events) {
-        const fallback = buildRusakDataFromElement(el);
-        if (fallback && fallback.meta.relogin_events) {
-          data.meta.relogin_events = fallback.meta.relogin_events;
-        }
+      if (data && data.meta) {
+        if (reloginEvents.length > 0) data.meta.relogin_events = reloginEvents;
       }
       const ok = await showRusakChecklist(data);
       if (!ok) return;
