@@ -1881,15 +1881,13 @@ if ($is_ajax) {
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=rusak&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Rusak"><i class="fa fa-print"></i></button>
             <?php elseif (strtoupper($u['status']) === 'RETUR' && in_array($req_status, ['all','retur'], true)): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher Retur"><i class="fa fa-print"></i></button>
+              <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&download=1&img=1&session=<?= $session ?>','_blank')" title="Download Voucher (PNG)"><i class="fa fa-download"></i></button>
             <?php elseif ($req_status === 'all'): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
             <?php endif; ?>
           <?php endif; ?>
           <?php if($u['uid']): ?>
-            <?php if (strtoupper($u['status']) === 'RETUR'): ?>
-              <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher Retur"><i class="fa fa-print"></i></button>
-              <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&download=1&img=1&session=<?= $session ?>','_blank')" title="Download Voucher (PNG)"><i class="fa fa-download"></i></button>
-            <?php elseif (strtoupper($u['status']) === 'RUSAK'): ?>
+            <?php if (strtoupper($u['status']) === 'RUSAK'): ?>
               <button type="button" class="btn-act btn-act-retur" onclick="actionRequest('./?hotspot=users&action=retur&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&p=<?= urlencode($u['profile']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','RETUR Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Retur"><i class="fa fa-exchange"></i></button>
               <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=rollback&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','Rollback RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rollback"><i class="fa fa-undo"></i></button>
             <?php elseif (strtoupper($u['status']) === 'READY'): ?>
@@ -2349,6 +2347,7 @@ if ($debug_mode && !$is_ajax) {
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=rusak&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Rusak"><i class="fa fa-print"></i></button>
                         <?php elseif (strtoupper($u['status']) === 'RETUR' && in_array($req_status, ['all','retur'], true)): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher Retur"><i class="fa fa-print"></i></button>
+                          <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&download=1&img=1&session=<?= $session ?>','_blank')" title="Download Voucher (PNG)"><i class="fa fa-download"></i></button>
                         <?php elseif ($req_status === 'all'): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
                         <?php endif; ?>
@@ -2362,10 +2361,7 @@ if ($debug_mode && !$is_ajax) {
                             '&show=' . urlencode($req_show) .
                             '&date=' . urlencode($filter_date);
                         ?>
-                        <?php if (strtoupper($u['status']) === 'RETUR'): ?>
-                          <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher Retur"><i class="fa fa-print"></i></button>
-                          <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&download=1&img=1&session=<?= $session ?>','_blank')" title="Download Voucher (PNG)"><i class="fa fa-download"></i></button>
-                        <?php elseif (strtoupper($u['status']) === 'RUSAK'): ?>
+                        <?php if (strtoupper($u['status']) === 'RUSAK'): ?>
                           <button type="button" class="btn-act btn-act-retur" onclick="actionRequest('./?hotspot=users&action=retur&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&p=<?= urlencode($u['profile']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','RETUR Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Retur"><i class="fa fa-exchange"></i></button>
                           <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=rollback&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','Rollback RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rollback"><i class="fa fa-undo"></i></button>
                         <?php elseif (strtoupper($u['status']) === 'READY'): ?>
