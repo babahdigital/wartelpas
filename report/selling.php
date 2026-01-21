@@ -711,44 +711,58 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
     function manualSettlement(){
         var btn = document.getElementById('btn-settlement');
         if (!btn || btn.disabled) return;
-        if (!confirm('Jalankan settlement manual sekarang?')) return;
         var modal = document.getElementById('settlement-modal');
         var logBox = document.getElementById('settlement-log');
         var statusEl = document.getElementById('settlement-status');
         var closeBtn = document.getElementById('settlement-close');
+        var confirmBox = document.getElementById('settlement-confirm');
+        var startBtn = document.getElementById('settlement-start');
+        var cancelBtn = document.getElementById('settlement-cancel');
         if (modal) modal.style.display = 'flex';
         if (logBox) logBox.textContent = '';
-        if (statusEl) statusEl.textContent = 'Menjalankan settlement...';
+        if (statusEl) statusEl.textContent = 'Menunggu konfirmasi';
         if (closeBtn) {
             closeBtn.disabled = true;
             closeBtn.style.opacity = '0.6';
             closeBtn.style.cursor = 'not-allowed';
         }
-        btn.disabled = true;
-        btn.style.opacity = '0.6';
-        btn.style.cursor = 'not-allowed';
-        var params = new URLSearchParams();
-        params.set('session', '<?= htmlspecialchars($session_id); ?>');
-        params.set('date', '<?= htmlspecialchars($filter_date); ?>');
-        params.set('action', 'start');
-        fetch('report/settlement_manual.php?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-            .then(function(r){ return r.json(); })
-            .then(function(data){
-                if (!data || !data.ok) {
-                    if (statusEl) statusEl.textContent = (data && data.message) ? data.message : 'Settlement gagal.';
-                    btn.disabled = false;
-                    btn.style.opacity = '1';
-                    btn.style.cursor = 'pointer';
-                    return;
-                }
-                pollSettlementLogs();
-            })
-            .catch(function(){
-                if (statusEl) statusEl.textContent = 'Settlement gagal.';
-                btn.disabled = false;
-                btn.style.opacity = '1';
-                btn.style.cursor = 'pointer';
-            });
+        if (confirmBox) confirmBox.style.display = 'flex';
+        if (cancelBtn) {
+            cancelBtn.onclick = function(){
+                if (modal) modal.style.display = 'none';
+            };
+        }
+        if (startBtn) {
+            startBtn.onclick = function(){
+                if (confirmBox) confirmBox.style.display = 'none';
+                if (statusEl) statusEl.textContent = 'Menjalankan settlement...';
+                btn.disabled = true;
+                btn.style.opacity = '0.6';
+                btn.style.cursor = 'not-allowed';
+                var params = new URLSearchParams();
+                params.set('session', '<?= htmlspecialchars($session_id); ?>');
+                params.set('date', '<?= htmlspecialchars($filter_date); ?>');
+                params.set('action', 'start');
+                fetch('report/settlement_manual.php?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function(r){ return r.json(); })
+                    .then(function(data){
+                        if (!data || !data.ok) {
+                            if (statusEl) statusEl.textContent = (data && data.message) ? data.message : 'Settlement gagal.';
+                            btn.disabled = false;
+                            btn.style.opacity = '1';
+                            btn.style.cursor = 'pointer';
+                            return;
+                        }
+                        pollSettlementLogs();
+                    })
+                    .catch(function(){
+                        if (statusEl) statusEl.textContent = 'Settlement gagal.';
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                        btn.style.cursor = 'pointer';
+                    });
+            };
+        }
     }
 
     function pollSettlementLogs(){
@@ -1229,9 +1243,16 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
     <div style="background:#1f1f1f;color:#e5e5e5;border:1px solid #444;border-radius:8px;width:560px;max-width:92vw;box-shadow:0 10px 30px rgba(0,0,0,0.6);overflow:hidden;">
         <div style="padding:12px 16px;border-bottom:1px solid #333;font-weight:600;display:flex;justify-content:space-between;align-items:center;">
             <span>Settlement Manual</span>
-            <span id="settlement-status" style="font-size:12px;color:#9aa0a6;">Menyiapkan...</span>
+            <span id="settlement-status" style="font-size:12px;color:#9aa0a6;">Menunggu konfirmasi</span>
         </div>
         <div style="padding:14px 16px;">
+            <div id="settlement-confirm" style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:#111;border:1px solid #333;border-radius:6px;padding:10px;margin-bottom:10px;">
+                <div style="font-size:12px;color:#cbd5e1;">Jalankan settlement manual sekarang?</div>
+                <div style="display:flex;gap:8px;">
+                    <button id="settlement-start" type="button" class="btn-print">Mulai</button>
+                    <button id="settlement-cancel" type="button" class="btn-print" style="opacity:.8;">Batal</button>
+                </div>
+            </div>
             <div style="font-size:12px;color:#9aa0a6;margin-bottom:8px;">Log settlement (MikroTik)</div>
             <pre id="settlement-log" style="background:#0f0f0f;color:#d4d4d4;border:1px solid #333;border-radius:6px;padding:10px;max-height:260px;overflow:auto;font-size:12px;white-space:pre-wrap;"></pre>
         </div>
