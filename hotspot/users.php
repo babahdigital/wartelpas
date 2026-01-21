@@ -570,7 +570,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       exit();
     }
   }
-  if ($act == 'invalid' || $act == 'retur' || $act == 'rollback' || $act == 'delete' || $act == 'batch_delete' || $act == 'delete_status' || $act == 'check_rusak') {
+  if ($act == 'invalid' || $act == 'retur' || $act == 'rollback' || $act == 'delete' || $act == 'batch_delete' || $act == 'delete_status' || $act == 'check_rusak' || $act == 'disable' || $act == 'enable') {
     $uid = $_GET['uid'] ?? '';
     $name = $_GET['name'] ?? '';
     $comm = $_GET['c'] ?? '';
@@ -591,7 +591,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $is_rusak_target = true;
     }
 
-    if ($uid == '' && $name != '' && in_array($act, ['invalid','retur','rollback','delete'])) {
+    if ($uid == '' && $name != '' && in_array($act, ['invalid','retur','rollback','delete','disable','enable'])) {
       $uget = $API->comm('/ip/hotspot/user/print', [
         '?server' => $hotspot_server,
         '?name' => $name,
@@ -958,6 +958,38 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         if ($db && $name != '') {
           try {
             $stmt = $db->prepare("DELETE FROM login_history WHERE username = :u");
+            $stmt->execute([':u' => $name]);
+          } catch(Exception $e) {}
+        }
+      } elseif ($act == 'disable') {
+        $active_check = $API->comm('/ip/hotspot/active/print', [
+          '?server' => $hotspot_server,
+          '?user' => $name,
+          '.proplist' => 'user'
+        ]);
+        if (!empty($active_check)) {
+          $action_blocked = true;
+          $action_error = 'Gagal: user sedang online.';
+        } else {
+          $API->write('/ip/hotspot/user/set', false);
+          $API->write('=.id='.$uid, false);
+          $API->write('=disabled=yes');
+          $API->read();
+          if ($db && $name != '') {
+            try {
+              $stmt = $db->prepare("UPDATE login_history SET last_status='rusak', updated_at=CURRENT_TIMESTAMP WHERE username = :u");
+              $stmt->execute([':u' => $name]);
+            } catch(Exception $e) {}
+          }
+        }
+      } elseif ($act == 'enable') {
+        $API->write('/ip/hotspot/user/set', false);
+        $API->write('=.id='.$uid, false);
+        $API->write('=disabled=no');
+        $API->read();
+        if ($db && $name != '') {
+          try {
+            $stmt = $db->prepare("UPDATE login_history SET last_status='ready', updated_at=CURRENT_TIMESTAMP WHERE username = :u");
             $stmt->execute([':u' => $name]);
           } catch(Exception $e) {}
         }
@@ -1858,7 +1890,7 @@ if ($is_ajax) {
               <button type="button" class="btn-act btn-act-retur" onclick="actionRequest('./?hotspot=users&action=retur&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&p=<?= urlencode($u['profile']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','RETUR Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Retur"><i class="fa fa-exchange"></i></button>
               <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=rollback&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','Rollback RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rollback"><i class="fa fa-undo"></i></button>
             <?php elseif (strtoupper($u['status']) === 'READY'): ?>
-              <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?disable-hotspot-user=<?= $u['uid'] ?>&session=<?= $session ?>','Disable Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Disable"><i class="fa fa-ban"></i></button>
+              <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=disable&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Disable Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Disable"><i class="fa fa-ban"></i></button>
             <?php else: ?>
               <button type="button" class="btn-act btn-act-invalid" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'], ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'], ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'], ENT_QUOTES) ?>" data-login="<?= htmlspecialchars($u['login_time'], ENT_QUOTES) ?>" data-logout="<?= htmlspecialchars($u['logout_time'], ENT_QUOTES) ?>" data-bytes="<?= (int)$u['bytes'] ?>" data-uptime="<?= htmlspecialchars($u['uptime'], ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'], ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" onclick="actionRequestRusak(this,'./?hotspot=users&action=invalid&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','SET RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rusak"><i class="fa fa-ban"></i></button>
             <?php endif; ?>
@@ -2331,7 +2363,7 @@ if ($debug_mode && !$is_ajax) {
                           <button type="button" class="btn-act btn-act-retur" onclick="actionRequest('./?hotspot=users&action=retur&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&p=<?= urlencode($u['profile']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','RETUR Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Retur"><i class="fa fa-exchange"></i></button>
                           <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=rollback&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','Rollback RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rollback"><i class="fa fa-undo"></i></button>
                         <?php elseif (strtoupper($u['status']) === 'READY'): ?>
-                          <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?disable-hotspot-user=<?= $u['uid'] ?>&session=<?= $session ?>','Disable Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Disable"><i class="fa fa-ban"></i></button>
+                          <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=disable&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Disable Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Disable"><i class="fa fa-ban"></i></button>
                         <?php else: ?>
                           <button type="button" class="btn-act btn-act-invalid" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'], ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'], ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'], ENT_QUOTES) ?>" data-login="<?= htmlspecialchars($u['login_time'], ENT_QUOTES) ?>" data-logout="<?= htmlspecialchars($u['logout_time'], ENT_QUOTES) ?>" data-bytes="<?= (int)$u['bytes'] ?>" data-uptime="<?= htmlspecialchars($u['uptime'], ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'], ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" onclick="actionRequestRusak(this,'./?hotspot=users&action=invalid&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','SET RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rusak"><i class="fa fa-ban"></i></button>
                         <?php endif; ?>
