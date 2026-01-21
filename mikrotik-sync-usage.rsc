@@ -6,7 +6,8 @@
 
 # Script utama (buat sekali)
 /system script
-add name=Wartel-SyncUsage policy=read,write,test source={
+add name=Wartel-SyncUsage policy=read,write,test source=
+{
 	:global syncUsageLock;
 	:if ([:typeof $syncUsageLock] = "nothing") do={ :set syncUsageLock false; }
 	:if ($syncUsageLock = true) do={ :log warning "SYNC USAGE: masih berjalan, skip"; :return; }
