@@ -764,6 +764,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         window.settleQueue = [];
         window.settleSeen = {};
         window.settleInfoShown = false;
+        updateSettlementCloseState();
         if (modal) modal.style.display = 'flex';
         if (logBox) logBox.innerHTML = '';
         if (logWrap) logWrap.style.display = 'none';
@@ -872,14 +873,9 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                         : (data.status === 'failed' ? '<i class="fa fa-times-circle"></i> Gagal' : '<i class="fa fa-refresh fa-spin"></i> Sedang memproses...');
                 }
                 if (data && data.status === 'done') {
-                    if (closeBtn) {
-                        closeBtn.disabled = false;
-                        closeBtn.removeAttribute('disabled');
-                        closeBtn.style.opacity = '1';
-                        closeBtn.style.cursor = 'pointer';
-                    }
                     if (statusEl) statusEl.textContent = 'Selesai';
                     window.settleDone = true;
+                    updateSettlementCloseState();
                     softReloadSelling();
                     clearTimeout(settlementTimer);
                     return;
@@ -887,6 +883,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 if (data && data.status === 'failed') {
                     if (statusEl) statusEl.textContent = 'Gagal';
                     window.settleDone = true;
+                    updateSettlementCloseState();
                     clearTimeout(settlementTimer);
                     return;
                 }
@@ -927,6 +924,22 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (modal) modal.style.display = 'none';
     }
 
+    function updateSettlementCloseState(){
+        var closeBtn = document.getElementById('settlement-close');
+        if (!closeBtn) return;
+        var canClose = !!window.settleDone && !window.settleTyping && (!window.settleQueue || window.settleQueue.length === 0);
+        if (canClose) {
+            closeBtn.disabled = false;
+            closeBtn.removeAttribute('disabled');
+            closeBtn.style.opacity = '1';
+            closeBtn.style.cursor = 'pointer';
+        } else {
+            closeBtn.disabled = true;
+            closeBtn.style.opacity = '0.6';
+            closeBtn.style.cursor = 'not-allowed';
+        }
+    }
+
     function enqueueSettlementLogs(logs){
         if (!window.settleQueue) window.settleQueue = [];
         if (!window.settleSeen) window.settleSeen = {};
@@ -948,6 +961,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             if (window.settleDone) {
                 clearInterval(window.settleTimer);
                 window.settleTimer = null;
+                updateSettlementCloseState();
             }
             return;
         }
@@ -983,6 +997,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             newCursor.className = 'cursor-blink';
             logBox.appendChild(newCursor);
             logBox.scrollTop = logBox.scrollHeight;
+            updateSettlementCloseState();
         });
     }
 
