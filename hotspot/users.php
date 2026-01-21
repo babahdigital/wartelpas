@@ -419,13 +419,17 @@ function get_user_history($name) {
     }
 }
 
-function count_recent_relogin_events($username, $minutes = 5) {
+function count_recent_relogin_events($username, $minutes = 10) {
   global $db;
   if (!$db || empty($username)) return 0;
-  $since = date('Y-m-d H:i:s', time() - ($minutes * 60));
   try {
-    $stmt = $db->prepare("SELECT COUNT(*) FROM login_events WHERE username = :u AND ((login_time IS NOT NULL AND login_time >= :since) OR (logout_time IS NOT NULL AND logout_time >= :since))");
-    $stmt->execute([':u' => $username, ':since' => $since]);
+    $stmtLatest = $db->prepare("SELECT MAX(event_time) FROM (SELECT login_time AS event_time FROM login_events WHERE username = :u AND login_time IS NOT NULL UNION ALL SELECT logout_time AS event_time FROM login_events WHERE username = :u AND logout_time IS NOT NULL)");
+    $stmtLatest->execute([':u' => $username]);
+    $latest = $stmtLatest->fetchColumn();
+    if (!$latest) return 0;
+    $since = date('Y-m-d H:i:s', strtotime($latest) - ($minutes * 60));
+    $stmt = $db->prepare("SELECT COUNT(*) FROM login_events WHERE username = :u AND ((login_time IS NOT NULL AND login_time >= :since AND login_time <= :latest) OR (logout_time IS NOT NULL AND logout_time >= :since AND logout_time <= :latest))");
+    $stmt->execute([':u' => $username, ':since' => $since, ':latest' => $latest]);
     return (int)$stmt->fetchColumn();
   } catch (Exception $e) {
     return 0;
@@ -592,7 +596,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $bytes_limit = $limits['bytes'];
       $uptime_limit = $limits['uptime'];
       $is_active = isset($arow['user']);
-      $recent_relogin = count_recent_relogin_events($name, 5);
+      $recent_relogin = count_recent_relogin_events($name, 10);
     }
 
     if ($enforce_rusak_rules && ($act == 'invalid' || $act == 'retur' || $act == 'check_rusak')) {
@@ -2399,12 +2403,12 @@ if ($debug_mode && !$is_ajax) {
       if (meta && (meta.relogin_count === undefined || meta.relogin_count === null)) {
         meta.relogin_count = Number(values.relogin ?? 0);
       }
-      if (meta && !meta.relogin_window) meta.relogin_window = 5;
+      if (meta && !meta.relogin_window) meta.relogin_window = 10;
       const items = [
         { label: `Offline (tidak sedang online)`, ok: !!criteria.offline, value: values.online || '-' },
         { label: `Bytes maksimal ${limits.bytes || '-'}`, ok: !!criteria.bytes_ok, value: values.bytes || '-' },
         { label: `Uptime maksimal ${limits.uptime || '-'}`, ok: !!criteria.uptime_ok, value: values.uptime || '-' },
-        { label: `Relogin minimal 3 (5 menit)`, ok: !!criteria.relogin_ok, value: String(values.relogin ?? '-') }
+        { label: `Relogin minimal 3 (10 menit)`, ok: !!criteria.relogin_ok, value: String(values.relogin ?? '-') }
       ];
       const rows = items.map(it => {
         const icon = it.ok ? 'fa-check-circle' : 'fa-times-circle';
