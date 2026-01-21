@@ -1601,7 +1601,7 @@ foreach($all_users as $u) {
 
     // Filter status
     if ($req_status == 'ready') {
-      if ($is_used || $is_rusak || $disabled == 'true' || $is_retur) continue;
+      if ($status !== 'READY') continue;
     }
     if ($req_status == 'online' && !$is_active) continue;
     if ($req_status == 'online' && $f_blok == '') continue;
