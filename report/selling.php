@@ -1125,6 +1125,38 @@ $hp_rows_total = [];
 $hp_summary = [];
 if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         try {
+                // Auto-carry over data HP dari tanggal terakhir jika tanggal ini kosong
+                $stmtCount = $db->prepare("SELECT COUNT(*) FROM phone_block_daily WHERE report_date = :d");
+                $stmtCount->execute([':d' => $filter_date]);
+                $hasRows = (int)$stmtCount->fetchColumn();
+                if ($hasRows === 0) {
+                    $stmtLast = $db->prepare("SELECT MAX(report_date) FROM phone_block_daily WHERE report_date < :d");
+                    $stmtLast->execute([':d' => $filter_date]);
+                    $lastDate = $stmtLast->fetchColumn();
+                    if ($lastDate) {
+                        $db->beginTransaction();
+                        $stmtSrc = $db->prepare("SELECT blok_name, unit_type, total_units, active_units, rusak_units, spam_units, notes
+                            FROM phone_block_daily WHERE report_date = :d");
+                        $stmtSrc->execute([':d' => $lastDate]);
+                        $stmtIns = $db->prepare("INSERT OR IGNORE INTO phone_block_daily
+                            (report_date, blok_name, unit_type, total_units, active_units, rusak_units, spam_units, notes, updated_at)
+                            VALUES (:rd, :bn, :ut, :t, :a, :r, :s, :n, CURRENT_TIMESTAMP)");
+                        while ($row = $stmtSrc->fetch(PDO::FETCH_ASSOC)) {
+                            $stmtIns->execute([
+                                ':rd' => $filter_date,
+                                ':bn' => $row['blok_name'],
+                                ':ut' => $row['unit_type'],
+                                ':t' => (int)($row['total_units'] ?? 0),
+                                ':a' => (int)($row['active_units'] ?? 0),
+                                ':r' => (int)($row['rusak_units'] ?? 0),
+                                ':s' => (int)($row['spam_units'] ?? 0),
+                                ':n' => (string)($row['notes'] ?? '')
+                            ]);
+                        }
+                        $db->commit();
+                    }
+                }
+
                 $stmt = $db->prepare("SELECT * FROM phone_block_daily WHERE report_date = :d ORDER BY blok_name,
                     CASE unit_type WHEN 'TOTAL' THEN 0 WHEN 'WARTEL' THEN 1 WHEN 'KAMTIB' THEN 2 ELSE 3 END");
                 $stmt->execute([':d' => $filter_date]);
