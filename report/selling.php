@@ -886,10 +886,10 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                     clearTimeout(settlementTimer);
                     return;
                 }
-                settlementTimer = setTimeout(pollSettlementLogs, 2000);
+                settlementTimer = setTimeout(pollSettlementLogs, 1000);
             })
             .catch(function(){
-                settlementTimer = setTimeout(pollSettlementLogs, 2000);
+                settlementTimer = setTimeout(pollSettlementLogs, 1000);
             });
     }
 
