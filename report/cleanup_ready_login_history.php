@@ -42,13 +42,12 @@ try {
     $db = new PDO('sqlite:' . $dbFile);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    $sql = "DELETE FROM login_history
-        WHERE (last_status IS NULL OR LOWER(last_status) = 'ready' OR TRIM(last_status) = '')
-          AND (last_bytes IS NULL OR last_bytes = 0)
-          AND (last_uptime IS NULL OR last_uptime = '' OR last_uptime = '0s')
-          AND (login_time_real IS NULL OR login_time_real = '')
-          AND (logout_time_real IS NULL OR logout_time_real = '')
-          AND (raw_comment IS NULL OR raw_comment = '' OR raw_comment NOT LIKE '%blok%')";
+        $sql = "DELETE FROM login_history
+                WHERE (last_status IS NULL OR LOWER(last_status) = 'ready' OR TRIM(last_status) = '')
+                    AND (last_bytes IS NULL OR last_bytes = 0)
+                    AND (last_uptime IS NULL OR last_uptime = '' OR last_uptime = '0s')
+                    AND (login_time_real IS NULL OR login_time_real = '')
+                    AND (logout_time_real IS NULL OR logout_time_real = '')";
 
     $deleted = $db->exec($sql);
     echo "OK deleted=" . (int)$deleted;
