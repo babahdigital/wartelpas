@@ -124,6 +124,7 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **tools/db_check.php**: cek schema, row, path DB, dan status writable.
 - **tools/clear_logs.php**: bersihkan log ingest.
 - **tools/clear_block.php**: hapus data blok lintas tabel.
+- **tools/delete_user.php**: hapus data user spesifik dari DB (login_history/login_events/sales_history/live_sales).
 - **.htaccess**: whitelist endpoint maintenance dan ingest.
 
 ### 2.16 Stabilitas Sync Usage
@@ -312,6 +313,7 @@ File diagnostik & migrasi sementara yang sudah tidak diperlukan:
 - report/live_ingest.php
 - tools/clear_logs.php
 - tools/clear_block.php
+- tools/delete_user.php
 - tools/db_check.php
 - .htaccess
 - Mikrotik-CleanWartel.rsc

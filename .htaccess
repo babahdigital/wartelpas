@@ -122,6 +122,11 @@ Require all denied
     Require all granted
 </If>
 
+# Delete user endpoint (manual maintenance)
+<If "%{REQUEST_URI} =~ m#^/tools/delete_user\.php$#">
+    Require all granted
+</If>
+
 # Print report endpoints
 <If "%{REQUEST_URI} =~ m#^/report/print_rekap\.php$#">
     Require all granted
