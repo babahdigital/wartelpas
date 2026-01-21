@@ -1928,6 +1928,7 @@ if ($debug_mode && !$is_ajax) {
     .relogin-more { text-align: center; color: #9aa0a6; font-style: italic; padding-top: 8px; }
     .relogin-actions { display: flex; gap: 6px; align-items: center; }
     .relogin-print { background: #2d8cff; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+    .fa-print:before { top: 3px; position: relative; margin-right: 7px; }
   </style>
 
 <div class="row">
@@ -2452,15 +2453,15 @@ if ($debug_mode && !$is_ajax) {
           const status = it.ok ? 'OK' : 'TIDAK';
           return `<tr><td>${it.label}</td><td>${it.value}</td><td>${status}</td></tr>`;
         }).join('');
-        const metaLines = [];
-        if (mt && mt.date) metaLines.push(`Tanggal: ${mt.date}`);
-        if (mt && mt.username) metaLines.push(`User: ${mt.username}`);
-        if (mt && mt.blok) metaLines.push(`Blok: ${mt.blok}`);
-        if (mt && mt.profile) metaLines.push(`Profile: ${mt.profile}`);
-        if (mt && (mt.login || mt.logout)) {
-          metaLines.push(`Login: ${mt.login} | Logout: ${mt.logout}`);
-        }
-        const metaBlock = metaLines.length ? `<div style="margin:6px 0 10px 0;font-size:12px;color:#444;">${metaLines.join(' · ')}</div>` : '';
+        const metaRows = [];
+        if (mt && mt.date) metaRows.push(`<tr><td>Tanggal</td><td>${mt.date}</td></tr>`);
+        if (mt && mt.username) metaRows.push(`<tr><td>User</td><td>${mt.username}</td></tr>`);
+        if (mt && mt.blok) metaRows.push(`<tr><td>Blok</td><td>${mt.blok}</td></tr>`);
+        if (mt && mt.profile) metaRows.push(`<tr><td>Profile</td><td>${mt.profile}</td></tr>`);
+        if (mt && (mt.login || mt.logout)) metaRows.push(`<tr><td>Login</td><td>${mt.login}</td></tr><tr><td>Logout</td><td>${mt.logout}</td></tr>`);
+        const metaBlock = metaRows.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;margin:6px 0 10px 0;">
+          <thead><tr><th style="text-align:left;padding:6px 8px;border:1px solid #444;background:#f0f0f0;">Info</th><th style="text-align:left;padding:6px 8px;border:1px solid #444;background:#f0f0f0;">Nilai</th></tr></thead>
+          <tbody>${metaRows.join('')}</tbody></table>` : '';
         const msgLine = hm ? `<div style="margin:6px 0 10px 0;font-size:12px;color:#444;">${hm}</div>` : '';
         const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cek Kelayakan Rusak</title>
           <style>
