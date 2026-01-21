@@ -751,13 +751,15 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (!btn || btn.disabled) return;
         var modal = document.getElementById('settlement-modal');
         var logBox = document.getElementById('settlement-log');
+        var logWrap = document.getElementById('settlement-log-wrap');
         var statusEl = document.getElementById('settlement-status');
         var closeBtn = document.getElementById('settlement-close');
         var confirmBox = document.getElementById('settlement-confirm');
         var startBtn = document.getElementById('settlement-start');
         var cancelBtn = document.getElementById('settlement-cancel');
         if (modal) modal.style.display = 'flex';
-        if (logBox) logBox.textContent = '';
+        if (logBox) logBox.innerHTML = '';
+        if (logWrap) logWrap.style.display = 'none';
         if (statusEl) statusEl.textContent = 'Menunggu konfirmasi';
         if (closeBtn) {
             closeBtn.disabled = false;
@@ -773,6 +775,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (startBtn) {
             startBtn.onclick = function(){
                 if (confirmBox) confirmBox.style.display = 'none';
+                if (logWrap) logWrap.style.display = 'block';
                 if (statusEl) statusEl.textContent = 'Menjalankan settlement...';
                 btn.disabled = true;
                 btn.style.opacity = '0.6';
@@ -786,6 +789,9 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                     cancelBtn.disabled = true;
                     cancelBtn.style.opacity = '0.6';
                     cancelBtn.style.cursor = 'not-allowed';
+                }
+                if (logBox) {
+                    logBox.innerHTML = '<span class="cursor-blink"></span>';
                 }
                 var params = new URLSearchParams();
                 params.set('session', '<?= htmlspecialchars($session_id); ?>');
@@ -846,9 +852,21 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             .then(function(r){ return r.json(); })
             .then(function(data){
                 if (data && Array.isArray(data.logs) && logBox) {
-                    logBox.innerHTML = data.logs.map(function(line){
-                        return '<div>' + line.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
-                    }).join('');
+                    var html = '';
+                    data.logs.forEach(function(row){
+                        if (!row) return;
+                        var t = row.time || '';
+                        var topic = row.topic || 'system,info';
+                        var msg = row.message || '';
+                        var cls = row.type || 'info';
+                        html += '<div class="log-entry">'
+                            + '<span class="log-time">' + String(t).replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span>'
+                            + '<span class="log-topic">' + String(topic).replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span>'
+                            + '<span class="log-' + String(cls).replace(/[^a-z]/gi,'') + '">' + String(msg).replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span>'
+                            + '</div>';
+                    });
+                    html += '<span class="cursor-blink"></span>';
+                    logBox.innerHTML = html;
                     logBox.scrollTop = logBox.scrollHeight;
                 }
                 if (data && data.status) {
@@ -1089,9 +1107,6 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             <?php endif; ?>
             <button class="btn-print" type="button" onclick="openHpModal()">Input HP Blok</button>
             <button class="btn-print" type="button" id="btn-settlement" onclick="manualSettlement()" <?= (!empty($settled_today) ? 'disabled style="opacity:.6;cursor:not-allowed;"' : '') ?>>Settlement</button>
-            <span id="settlement-time" style="margin-left:8px;font-size:12px;color:var(--txt-muted);">
-                Settlement terakhir: <?= $settlement_time ? date('d-m-Y H:i:s', strtotime($settlement_time)) : '-' ?>
-            </span>
         </div>
     </div>
     <div class="card-body" style="padding:16px;">
@@ -1124,6 +1139,9 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 <div class="summary-title">Pendapatan Bersih</div>
                 <div class="summary-value" style="color:#2ecc71;"><?= $cur ?> <?= number_format($total_net,0,',','.') ?></div>
             </div>
+        </div>
+        <div id="settlement-time" style="margin-top:12px;font-size:12px;color:var(--txt-muted);">
+            Settlement terakhir: <?= $settlement_time ? date('d-m-Y H:i:s', strtotime($settlement_time)) : '-' ?>
         </div>
     </div>
 </div>
