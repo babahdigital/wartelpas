@@ -862,6 +862,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
 }
 ?>
 
+<?php if ($is_ajax) { ob_start(); } ?>
+<div id="selling-content">
 <?php if ($req_show === 'harian'): ?>
 <?php if (!empty($hp_error)): ?>
     <div class="card-solid mb-3">
@@ -1020,5 +1022,27 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         <?php endif; ?>
     </div>
 </div>
+
+</div>
+
+<?php if ($is_ajax) { echo ob_get_clean(); exit; } ?>
+
+<?php if (!$is_ajax): ?>
+<script>
+    function softReloadSelling(){
+        var content = document.getElementById('selling-content');
+        if (!content) return;
+        var modal = document.getElementById('hpModal');
+        if (modal && modal.style.display === 'flex') return;
+        var url = new URL(window.location.href);
+        url.searchParams.set('ajax','1');
+        fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r){ return r.text(); })
+            .then(function(html){ content.innerHTML = html; })
+            .catch(function(){});
+    }
+    setInterval(softReloadSelling, 30000);
+</script>
+<?php endif; ?>
 
 <!-- Pendapatan per Blok/Profile sementara disembunyikan sesuai permintaan -->
