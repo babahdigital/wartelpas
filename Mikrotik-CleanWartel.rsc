@@ -12,7 +12,7 @@
 }
 :set isCleaning true;
 
-:log info "CLEANUP: Mulai proses cuci gudang (settlement manual).";
+:log info "CLEANUP: Mulai proses cuci gudang.";
 
 :global syncStatsOk;
 :global syncSalesOk;
