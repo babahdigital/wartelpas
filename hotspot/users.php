@@ -419,18 +419,41 @@ function get_user_history($name) {
     }
 }
 
-function count_recent_relogin_events($username, $minutes = 10) {
+function get_cumulative_uptime_from_events($username, $first_login_real = '', $fallback_logout = '') {
   global $db;
   if (!$db || empty($username)) return 0;
+  $params = [':u' => $username];
+  $where = "username = :u";
+  if (!empty($first_login_real)) {
+    $date_key = date('Y-m-d', strtotime($first_login_real));
+    if (!empty($date_key)) {
+      $where .= " AND date_key = :d";
+      $params[':d'] = $date_key;
+    }
+  }
   try {
-    $stmtLatest = $db->prepare("SELECT MAX(event_time) FROM (SELECT login_time AS event_time FROM login_events WHERE username = :u AND login_time IS NOT NULL UNION ALL SELECT logout_time AS event_time FROM login_events WHERE username = :u AND logout_time IS NOT NULL)");
-    $stmtLatest->execute([':u' => $username]);
-    $latest = $stmtLatest->fetchColumn();
-    if (!$latest) return 0;
-    $since = date('Y-m-d H:i:s', strtotime($latest) - ($minutes * 60));
-    $stmt = $db->prepare("SELECT COUNT(*) FROM login_events WHERE username = :u AND ((login_time IS NOT NULL AND login_time >= :since AND login_time <= :latest) OR (logout_time IS NOT NULL AND logout_time >= :since AND logout_time <= :latest))");
-    $stmt->execute([':u' => $username, ':since' => $since, ':latest' => $latest]);
-    return (int)$stmt->fetchColumn();
+    $stmt = $db->prepare("SELECT login_time, logout_time FROM login_events WHERE $where ORDER BY seq ASC, id ASC");
+    foreach ($params as $k => $v) {
+      $stmt->bindValue($k, $v);
+    }
+    $stmt->execute();
+    $total = 0;
+    $fallback_ts = !empty($fallback_logout) ? strtotime($fallback_logout) : 0;
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+      $login_time = $row['login_time'] ?? '';
+      $logout_time = $row['logout_time'] ?? '';
+      if (empty($login_time)) continue;
+      $login_ts = strtotime($login_time);
+      if (!$login_ts) continue;
+      $logout_ts = !empty($logout_time) ? strtotime($logout_time) : 0;
+      if (!$logout_ts && $fallback_ts && $fallback_ts >= $login_ts) {
+        $logout_ts = $fallback_ts;
+      }
+      if ($logout_ts && $logout_ts >= $login_ts) {
+        $total += ($logout_ts - $login_ts);
+      }
+    }
+    return (int)$total;
   } catch (Exception $e) {
     return 0;
   }
@@ -596,16 +619,19 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $bytes_limit = $limits['bytes'];
       $uptime_limit = $limits['uptime'];
       $is_active = isset($arow['user']);
-      $recent_relogin = count_recent_relogin_events($name, 10);
+      $hist_check = $hist_action ?: get_user_history($name);
+      $first_login_real = $hist_check['first_login_real'] ?? ($hist_check['login_time_real'] ?? '');
+      $fallback_logout = $hist_check['logout_time_real'] ?? ($hist_check['last_login_real'] ?? '');
+      $total_uptime_sec = get_cumulative_uptime_from_events($name, $first_login_real, $fallback_logout);
     }
 
     if ($enforce_rusak_rules && ($act == 'invalid' || $act == 'retur' || $act == 'check_rusak')) {
-      $relogin_ok = (!$is_active) && ($bytes <= $bytes_limit) && ($uptime_sec <= $uptime_limit) && ($recent_relogin >= 3);
+      $total_uptime_ok = (!$is_active) && ($bytes <= $bytes_limit) && ($total_uptime_sec <= $uptime_limit);
       if (!($act == 'retur' && $is_rusak_target) && ($is_active || $bytes > $bytes_limit || $uptime_sec > $uptime_limit)) {
         $action_blocked = true;
         $action_error = 'Voucher masih valid, tidak bisa dianggap rusak (online / bytes > ' . $limits['bytes_label'] . ' / uptime > ' . $limits['uptime_label'] . ').';
       }
-      if ($action_blocked && $relogin_ok) {
+      if ($action_blocked && $total_uptime_ok) {
         $action_blocked = false;
         $action_error = '';
       }
@@ -617,7 +643,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         'offline' => !$is_active,
         'bytes_ok' => $bytes <= $bytes_limit,
         'uptime_ok' => $uptime_sec <= $uptime_limit,
-        'relogin_ok' => (int)($recent_relogin ?? 0) >= 3
+        'total_uptime_ok' => $total_uptime_sec <= $uptime_limit
       ];
       if (ob_get_length()) {
         @ob_clean();
@@ -632,7 +658,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           'online' => $is_active ? 'Ya' : 'Tidak',
           'bytes' => $bytes_label,
           'uptime' => $uptime ?: '0s',
-          'relogin' => (int)($recent_relogin ?? 0)
+          'total_uptime' => seconds_to_uptime($total_uptime_sec)
         ],
         'limits' => [
           'bytes' => $limits['bytes_label'] ?? '',
@@ -2400,15 +2426,11 @@ if ($debug_mode && !$is_ajax) {
       const limits = data.limits || {};
       const headerMsg = data.message || '';
       const meta = data.meta || {};
-      if (meta && (meta.relogin_count === undefined || meta.relogin_count === null)) {
-        meta.relogin_count = Number(values.relogin ?? 0);
-      }
-      if (meta && !meta.relogin_window) meta.relogin_window = 10;
       const items = [
         { label: `Offline (tidak sedang online)`, ok: !!criteria.offline, value: values.online || '-' },
         { label: `Bytes maksimal ${limits.bytes || '-'}`, ok: !!criteria.bytes_ok, value: values.bytes || '-' },
-        { label: `Uptime maksimal ${limits.uptime || '-'}`, ok: !!criteria.uptime_ok, value: values.uptime || '-' },
-        { label: `Relogin minimal 3 (10 menit)`, ok: !!criteria.relogin_ok, value: String(values.relogin ?? '-') }
+        { label: `Uptime sesi maksimal ${limits.uptime || '-'}`, ok: !!criteria.uptime_ok, value: values.uptime || '-' },
+        { label: `Akumulasi uptime maksimal ${limits.uptime || '-'}`, ok: !!criteria.total_uptime_ok, value: values.total_uptime || '-' }
       ];
       const rows = items.map(it => {
         const icon = it.ok ? 'fa-check-circle' : 'fa-times-circle';
@@ -2502,9 +2524,10 @@ if ($debug_mode && !$is_ajax) {
           ${msgLine}
           <table><thead><tr><th>Kriteria</th><th>Nilai</th><th>Status</th></tr></thead><tbody>${rowsPrint}</tbody></table>
           ${(() => {
+            const reloginTitle = (mt && mt.relogin_date) ? `Rincian Relogin (Tanggal ${mt.relogin_date})` : 'Rincian Relogin';
             if (!mt || !Array.isArray(mt.relogin_events) || mt.relogin_events.length === 0) {
               if (mt && (mt.relogin_count || 0) > 0) {
-                return `<div style="margin:10px 0 6px 0;font-size:12px;font-weight:600;">Rincian Relogin (${mt.relogin_window || 10} menit terakhir)</div>
+                return `<div style="margin:10px 0 6px 0;font-size:12px;font-weight:600;">${reloginTitle}</div>
                   <table><thead><tr><th>#</th><th>Login</th><th>Logout</th></tr></thead><tbody>
                     <tr><td colspan="3" style="text-align:center;">Detail relogin tidak tersedia</td></tr>
                   </tbody></table>`;
@@ -2518,7 +2541,7 @@ if ($debug_mode && !$is_ajax) {
               const note = (!ev.login_time && ev.logout_time) ? ' (logout tanpa login)' : '';
               return `<tr><td>#${seq}</td><td>${loginLabel}${note}</td><td>${logoutLabel}</td></tr>`;
             }).join('');
-            return `<div style="margin:10px 0 6px 0;font-size:12px;font-weight:600;">Rincian Relogin (${mt.relogin_window || 10} menit terakhir)</div>
+            return `<div style="margin:10px 0 6px 0;font-size:12px;font-weight:600;">${reloginTitle}</div>
               <table><thead><tr><th>#</th><th>Login</th><th>Logout</th></tr></thead><tbody>${rows}</tbody></table>`;
           })()}
         </body></html>`;
@@ -2586,19 +2609,19 @@ if ($debug_mode && !$is_ajax) {
     const firstLogin = el.getAttribute('data-first-login') || '';
     const loginTime = el.getAttribute('data-login') || '';
     const logoutTime = el.getAttribute('data-logout') || '';
-    const relogin = Number(el.getAttribute('data-relogin') || 0);
     const limits = resolveRusakLimits(profile);
     const uptimeSec = uptimeToSeconds(uptime);
     const offline = status !== 'ONLINE';
     const dateBase = loginTime && loginTime !== '-' ? loginTime : (logoutTime && logoutTime !== '-' ? logoutTime : '');
     const headerDate = dateBase ? formatDateHeader(dateBase) : formatDateNow();
+    const totalUptimeSec = uptimeSec;
     const criteria = {
       offline,
       bytes_ok: bytes <= limits.bytes,
       uptime_ok: uptimeSec <= limits.uptime,
-      relogin_ok: relogin >= 3
+      total_uptime_ok: totalUptimeSec <= limits.uptime
     };
-    const ok = criteria.offline && criteria.bytes_ok && criteria.uptime_ok && criteria.relogin_ok;
+    const ok = criteria.offline && criteria.bytes_ok && criteria.uptime_ok && criteria.total_uptime_ok;
     return {
       ok,
       message: ok ? 'Syarat rusak terpenuhi.' : 'Syarat rusak belum terpenuhi.',
@@ -2616,7 +2639,7 @@ if ($debug_mode && !$is_ajax) {
         online: offline ? 'Tidak' : 'Ya',
         bytes: formatBytesSimple(bytes),
         uptime,
-        relogin
+        total_uptime: uptime
       },
       limits: {
         bytes: limits.bytesLabel,
@@ -2762,6 +2785,11 @@ if ($debug_mode && !$is_ajax) {
     const d = parts[0].split('-');
     if (d.length !== 3) return '';
     return `${d[2]}-${d[1]}-${d[0]}`;
+  }
+  function extractDateKey(dt) {
+    if (!dt) return '';
+    const part = dt.split(' ')[0] || '';
+    return /^\d{4}-\d{2}-\d{2}$/.test(part) ? part : '';
   }
   function formatDateNow() {
     const d = new Date();
