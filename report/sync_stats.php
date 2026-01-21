@@ -30,6 +30,14 @@ if (!isset($hotspot_server) || $hotspot_server !== 'wartel') {
     http_response_code(403); die("Error: Hanya untuk server wartel.");
 }
 
+function extract_blok_name_sync_stats($comment) {
+    if (empty($comment)) return '';
+    if (preg_match('/\bblok\s*[-_]?\s*([A-Za-z0-9]+)/i', $comment, $m)) {
+        return 'BLOK-' . strtoupper($m[1]);
+    }
+    return '';
+}
+
 // SETTING MIKROTIK DARI KONFIG
 $use_ip   = $iphost;       
 $use_user = $userhost;         
@@ -84,6 +92,7 @@ $API = new RouterosAPI();
 if ($API->connect($use_ip, $use_user, $use_pass)) {
 
     $active_list = $API->comm('/ip/hotspot/active/print', [
+        '?server' => $hotspot_server,
         '.proplist' => 'user,uptime,bytes-in,bytes-out,address,mac-address'
     ]);
     $activeMap = [];
@@ -92,6 +101,7 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
     }
 
     $users = $API->comm('/ip/hotspot/user/print', [
+        '?server' => $hotspot_server,
         '.proplist' => '.id,name,uptime,bytes-in,bytes-out,comment,mac-address,disabled'
     ]);
 
@@ -115,6 +125,9 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
         if ($name === '') continue;
 
         $comment = $u['comment'] ?? '';
+        if (extract_blok_name_sync_stats($comment) === '') {
+            continue;
+        }
         $is_active = isset($activeMap[$name]);
 
         $bytes_total = (int)($u['bytes-in'] ?? 0) + (int)($u['bytes-out'] ?? 0);
