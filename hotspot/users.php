@@ -1856,6 +1856,7 @@ if ($debug_mode && !$is_ajax) {
     .relogin-card { background: #2c2c2c; color: #e0e0e0; border-radius: 8px; width: 440px; max-width: 92vw; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; }
     .relogin-header { background: #252525; border-bottom: 1px solid #3d3d3d; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; }
     .relogin-title { font-weight: 600; color: #fff; font-size: 15px; margin: 0; }
+    .relogin-sub { margin-top: 4px; font-size: 11px; color: #b5b5b5; }
     .relogin-close { background: transparent; border: none; color: #fff; opacity: 0.7; font-size: 20px; line-height: 1; cursor: pointer; }
     .relogin-close:hover { opacity: 1; }
     .relogin-body { padding: 16px 18px; font-size: 13px; color: #ccc; }
