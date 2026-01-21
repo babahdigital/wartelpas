@@ -62,6 +62,14 @@ function extract_ip_mac_from_comment($comment) {
     return ['ip' => $ip, 'mac' => $mac];
 }
 
+function is_wartel_client($comment, $hist_blok = '') {
+    if (!empty($hist_blok)) return true;
+    $blok = extract_blok_name($comment);
+    if (!empty($blok)) return true;
+    if (!empty($comment) && stripos($comment, 'blok-') !== false) return true;
+    return false;
+}
+
 function uptime_to_seconds($uptime) {
     if (empty($uptime) || $uptime === '0s') return 0;
     $total = 0;
@@ -161,6 +169,10 @@ function norm_date_from_raw_report($raw_date) {
 $rows = [];
 $list = [];
 $usage_list = [];
+$only_wartel = true;
+if (isset($_GET['only_wartel']) && $_GET['only_wartel'] === '0') {
+    $only_wartel = false;
+}
 
 try {
     if (file_exists($dbFile)) {
@@ -241,6 +253,9 @@ if ($is_usage && file_exists($dbFile)) {
             $hist = $histMap[$name] ?? null;
             if ($f_blok === '' && $hist && !empty($hist['blok_name'])) {
                 $f_blok = normalize_block_name_simple($hist['blok_name']);
+            }
+            if ($only_wartel && !is_wartel_client($comment, $hist['blok_name'] ?? '')) {
+                continue;
             }
             if ($filter_blok !== '') {
                 $target_blok = normalize_block_name_simple($filter_blok);
@@ -373,6 +388,9 @@ if ($is_usage && file_exists($dbFile)) {
 
             $comment = (string)($row['raw_comment'] ?? '');
             $f_blok = normalize_block_name_simple($row['blok_name'] ?? '') ?: extract_blok_name($comment);
+            if ($only_wartel && !is_wartel_client($comment, $row['blok_name'] ?? '')) {
+                continue;
+            }
             if ($filter_blok !== '') {
                 $target_blok = normalize_block_name_simple($filter_blok);
                 if ($f_blok === '' || strcasecmp($f_blok, $target_blok) !== 0) continue;
