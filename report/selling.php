@@ -1052,8 +1052,11 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         if (window.sellingPauseReload) return;
         var modal = document.getElementById('hpModal');
         if (modal && modal.style.display === 'flex') return;
-        var url = new URL(window.location.href);
-        url.searchParams.set('ajax','1');
+        var current = new URL(window.location.href);
+        var url = new URL('report/aload_selling.php', window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/'));
+        current.searchParams.forEach(function(v, k){
+            if (k !== 'ajax') url.searchParams.set(k, v);
+        });
         fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function(r){ return r.text(); })
             .then(function(html){ content.innerHTML = html; })
