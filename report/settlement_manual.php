@@ -86,6 +86,8 @@ if ($action === 'logs') {
                 if (is_array($rawLogs)) {
                     $rawLogs = array_reverse($rawLogs);
                 }
+            $sawSettle = false;
+            $sawFetch = false;
             foreach ($rawLogs as $l) {
                 $time = trim((string)($l['time'] ?? ''));
                 $topics = trim((string)($l['topics'] ?? 'system,info'));
@@ -107,7 +109,14 @@ if ($action === 'logs') {
                 $isScriptTopic = (strpos($topicUpper, 'SCRIPT') !== false);
                 $isFetchTopic = (strpos($topicUpper, 'FETCH') !== false) && (strpos($msgUpper, 'WARTELPAS') !== false || strpos($msgUpper, 'SOBIGIDUL') !== false);
 
-                if (!($startsOk || $isFetchTopic)) {
+                if ($startsOk || $isScriptTopic) {
+                    $sawSettle = true;
+                }
+                if ($isFetchTopic) {
+                    $sawFetch = true;
+                }
+
+                if (!($startsOk || $isScriptTopic || ($sawSettle && $isFetchTopic))) {
                     continue;
                 }
 
@@ -159,7 +168,11 @@ if ($action === 'logs') {
 
     $infoMessage = '';
     if (empty($logs)) {
-        $infoMessage = $message !== '' ? $message : 'Menunggu log dari MikroTik...';
+        if ($sawFetch) {
+            $infoMessage = 'Log settlement belum muncul. Pastikan script Cuci Gudang sudah terpasang dan scheduler berjalan.';
+        } else {
+            $infoMessage = $message !== '' ? $message : 'Menunggu log dari MikroTik...';
+        }
     }
 
     if ($done) $status = 'done';
