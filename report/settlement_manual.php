@@ -104,6 +104,8 @@ try {
             $sawSettle = false;
             $sawFetch = false;
             $capture = false;
+            $skipReadyCount = 0;
+            $skipReadyTime = '';
             foreach ($rawLogs as $l) {
                 $time = trim((string)($l['time'] ?? ''));
                 $topics = trim((string)($l['topics'] ?? 'system,info'));
@@ -156,6 +158,12 @@ try {
                     continue;
                 }
 
+                if (stripos($msgTrim, 'SETTLE: CLEANUP: Skip READY user') === 0) {
+                    $skipReadyCount++;
+                    if ($time !== '') $skipReadyTime = $time;
+                    continue;
+                }
+
                 $type = 'info';
                 $topicsLower = strtolower($topics);
                 if (strpos($topicsLower, 'error') !== false) {
@@ -188,6 +196,14 @@ try {
                 if (strpos($msg, 'CLEANUP: Dibatalkan') !== false || strpos($msgUpper, 'GAGAL') !== false || strpos($msgUpper, 'ERROR') !== false) {
                     $fail = true;
                 }
+            }
+            if ($skipReadyCount > 0) {
+                $logs[] = [
+                    'time' => $skipReadyTime,
+                    'topic' => 'script,info',
+                    'type' => 'system',
+                    'message' => 'SETTLE: CLEANUP: Skip READY user x' . $skipReadyCount
+                ];
             }
         } else {
             $message = 'Gagal konek ke router.';
