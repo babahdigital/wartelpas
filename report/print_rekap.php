@@ -204,6 +204,7 @@ $total_qty = 0;
 $total_qty_retur = 0;
 $total_qty_rusak = 0;
 $total_qty_invalid = 0;
+$total_qty_laku = 0;
 $rusak_10m = 0;
 $rusak_30m = 0;
 $total_qty_units = 0;
@@ -224,6 +225,8 @@ foreach ($rows as $r) {
     $lh_status = strtolower((string)($r['last_status'] ?? ''));
     $profile = $r['profile_snapshot'] ?? ($r['profile'] ?? '-');
     $cmt_low = strtolower($comment);
+    $bytes = (int)($r['last_bytes'] ?? 0);
+    if ($bytes < 0) $bytes = 0;
 
     if ($status === '' || $status === 'normal') {
         if (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
@@ -237,7 +240,10 @@ foreach ($rows as $r) {
     $loss_invalid = ($status === 'invalid') ? $price : 0;
     $net_add = $gross_add - $loss_rusak - $loss_invalid;
 
-    $total_bandwidth += (int)($r['last_bytes'] ?? 0);
+    $total_bandwidth += $bytes;
+
+    $usage_ok = ($bytes > 0 || in_array($lh_status, ['terpakai', 'online'], true));
+    $is_laku = !in_array($status, ['rusak', 'retur', 'invalid'], true) && $usage_ok;
 
     if ($req_show === 'harian') {
         $qty = (int)($r['qty'] ?? 0);
@@ -247,8 +253,6 @@ foreach ($rows as $r) {
         $loss_rusak_line = ($status === 'rusak') ? $line_price : 0;
         $loss_invalid_line = ($status === 'invalid') ? $line_price : 0;
         $net_line = $gross_line - $loss_rusak_line - $loss_invalid_line;
-
-        $is_laku = !in_array($status, ['rusak', 'retur', 'invalid'], true);
 
         if ($is_laku) {
             $total_qty_units += $qty;
@@ -274,8 +278,6 @@ foreach ($rows as $r) {
                 'rt_total' => 0
             ];
         }
-        $bytes = (int)($r['last_bytes'] ?? 0);
-        if ($bytes < 0) $bytes = 0;
         $bw_line = $bytes;
         if ($bucket === '10') {
             if ($is_laku) {
@@ -303,6 +305,8 @@ foreach ($rows as $r) {
     }
 
     $total_qty++;
+    $laku_add = ($req_show === 'harian') ? ($qty ?? 1) : 1;
+    if ($is_laku) $total_qty_laku += $laku_add;
     if ($status === 'retur') $total_qty_retur++;
     if ($status === 'rusak') {
         $total_qty_rusak++;
@@ -318,7 +322,7 @@ foreach ($rows as $r) {
     $total_net += $net_add;
 }
 
-$total_qty_laku = max(0, $total_qty - $total_qty_retur - $total_qty_rusak - $total_qty_invalid);
+$total_qty_laku = max(0, (int)$total_qty_laku);
 $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? 'Bulanan' : 'Tahunan');
 ?>
 <!DOCTYPE html>
