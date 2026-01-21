@@ -714,11 +714,18 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
 <script>
     var settlementTimer = null;
     var hpDeleteUrl = '';
+    function formatDateDMY(dateStr){
+        if (!dateStr) return '-';
+        var m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!m) return dateStr;
+        return m[3] + '-' + m[2] + '-' + m[1];
+    }
     function openDeleteHpModal(url, blok, date){
         hpDeleteUrl = url || '';
         var modal = document.getElementById('hp-delete-modal');
         var text = document.getElementById('hp-delete-text');
-        if (text) text.textContent = 'Hapus data Blok ' + (blok || '-') + ' tanggal ' + (date || '-') + '?';
+        var dateText = formatDateDMY(date || '');
+        if (text) text.textContent = 'Hapus data Blok ' + (blok || '-') + ' tanggal ' + (dateText || '-') + '?';
         if (modal) modal.style.display = 'flex';
     }
     function manualSettlement(){
