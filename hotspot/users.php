@@ -1265,6 +1265,7 @@ if ($db) {
         elseif ($h_is_retur) $h_status = 'RETUR';
         elseif ($h_is_used) $h_status = 'TERPAKAI';
 
+        if ($h_status === 'READY') continue;
         if ($req_status === 'used' && $h_status !== 'TERPAKAI') continue;
         if ($req_status === 'rusak' && $h_status !== 'RUSAK') continue;
         if ($req_status === 'retur' && $h_status !== 'RETUR') continue;
