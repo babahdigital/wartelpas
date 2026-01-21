@@ -476,8 +476,13 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $stmtCount->execute($params);
       $total = (int)$stmtCount->fetchColumn();
 
-      $stmt = $db->prepare("SELECT login_time, logout_time, seq FROM login_events WHERE $where ORDER BY seq ASC, id ASC LIMIT 3");
-      $stmt->execute($params);
+      $limit = 50;
+      $stmt = $db->prepare("SELECT login_time, logout_time, seq FROM login_events WHERE $where ORDER BY seq ASC, id ASC LIMIT :lim");
+      foreach ($params as $k => $v) {
+        $stmt->bindValue($k, $v);
+      }
+      $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+      $stmt->execute();
       $events = [];
       while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $events[] = [
@@ -488,7 +493,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           'logout_label' => formatDateIndo($row['logout_time'] ?? '')
         ];
       }
-      echo json_encode(['ok' => true, 'total' => $total, 'events' => $events]);
+      echo json_encode(['ok' => true, 'total' => $total, 'limit' => $limit, 'events' => $events]);
       exit();
     } catch (Exception $e) {
       echo json_encode(['ok' => false, 'message' => 'Gagal mengambil data relogin.']);
@@ -2410,6 +2415,18 @@ if ($debug_mode && !$is_ajax) {
     return `${d[2]}-${d[1]}-${d[0]}`;
   }
 
+  function formatBlokLabel(blok) {
+    if (!blok) return '';
+    const raw = blok.replace(/^BLOK-?/i, '').trim();
+    const m = raw.match(/^([A-Z]+)/i);
+    return m ? m[1].toUpperCase() : raw.toUpperCase();
+  }
+
+  function formatProfileLabel(profile) {
+    if (!profile) return '';
+    return profile.replace(/(\d+)\s*(menit)/i, '$1 Menit');
+  }
+
   function formatTimeOnly(dt) {
     if (!dt) return '-';
     const parts = dt.split(' ');
@@ -2448,8 +2465,8 @@ if ($debug_mode && !$is_ajax) {
       if (reloginSub) {
         const parts = [];
         if (headerDate) parts.push(headerDate);
-        if (blok) parts.push(`Blok ${blok.replace(/^BLOK-?/i, '')}`);
-        if (profile) parts.push(profile);
+        if (blok) parts.push(`Blok ${formatBlokLabel(blok)}`);
+        if (profile) parts.push(formatProfileLabel(profile));
         reloginSub.textContent = parts.join(' · ');
       }
       let html = '<table class="relogin-table"><thead><tr><th>#</th><th>Login</th><th>Logout</th></tr></thead><tbody>';
@@ -2586,8 +2603,8 @@ if ($debug_mode && !$is_ajax) {
       }).join('');
       const metaParts = [];
       if (headerDate) metaParts.push(headerDate);
-      if (blok) metaParts.push(`Blok ${blok.replace(/^BLOK-?/i, '')}`);
-      if (profile) metaParts.push(profile);
+      if (blok) metaParts.push(`Blok ${formatBlokLabel(blok)}`);
+      if (profile) metaParts.push(formatProfileLabel(profile));
       const metaLine = metaParts.length ? `<div style="margin:6px 0 10px 0;font-size:12px;color:#444;">${metaParts.join(' · ')}</div>` : '';
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Detail Relogin</title>
         <style>
