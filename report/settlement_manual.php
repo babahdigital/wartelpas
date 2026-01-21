@@ -213,16 +213,25 @@ $ok = false;
 $message = '';
 try {
     if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-        $sched = $API->comm('/system/scheduler/print', [
-            '?name' => 'CuciGudang',
-            '.proplist' => '.id,name'
-        ]);
-        $sid = $sched[0]['.id'] ?? '';
+        $candidates = ['CuciGudang', 'CuciGudangManual'];
+        $sid = '';
+        $foundName = '';
+        foreach ($candidates as $cand) {
+            $sched = $API->comm('/system/scheduler/print', [
+                '?name' => $cand,
+                '.proplist' => '.id,name'
+            ]);
+            if (!empty($sched) && isset($sched[0]['.id'])) {
+                $sid = $sched[0]['.id'];
+                $foundName = $sched[0]['name'] ?? $cand;
+                break;
+            }
+        }
         if ($sid !== '') {
             $API->comm('/system/scheduler/run', ['.id' => $sid]);
             $ok = true;
         } else {
-            $message = 'Scheduler CuciGudangManual tidak ditemukan.';
+            $message = 'Scheduler CuciGudang/CuciGudangManual tidak ditemukan.';
         }
         $API->disconnect();
     } else {
