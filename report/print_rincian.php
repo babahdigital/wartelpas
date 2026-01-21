@@ -88,6 +88,22 @@ function uptime_to_seconds($uptime) {
     return $total;
 }
 
+function seconds_to_uptime($seconds) {
+    $seconds = (int)$seconds;
+    if ($seconds <= 0) return '0s';
+    $parts = [];
+    $w = intdiv($seconds, 604800);
+    if ($w > 0) { $parts[] = $w . 'w'; $seconds %= 604800; }
+    $d = intdiv($seconds, 86400);
+    if ($d > 0) { $parts[] = $d . 'd'; $seconds %= 86400; }
+    $h = intdiv($seconds, 3600);
+    if ($h > 0) { $parts[] = $h . 'h'; $seconds %= 3600; }
+    $m = intdiv($seconds, 60);
+    if ($m > 0) { $parts[] = $m . 'm'; $seconds %= 60; }
+    if ($seconds > 0) { $parts[] = $seconds . 's'; }
+    return implode('', $parts);
+}
+
 function extract_datetime_from_comment($comment) {
     if (empty($comment)) return '';
     $first = trim(explode('|', $comment)[0] ?? '');
@@ -310,7 +326,7 @@ if ($is_usage && file_exists($dbFile)) {
                 (int)($hist['last_bytes'] ?? 0) > 0
             );
             $is_used = (!$is_retur && !$is_rusak && $disabled !== 'true') &&
-                ($is_active || $bytes > 50 || $uptime != '0s' || $hist_used);
+                (!$is_active && ($bytes > 50 || $uptime != '0s' || $hist_used));
 
             $status = 'READY';
             if ($is_active) $status = 'ONLINE';
@@ -318,7 +334,6 @@ if ($is_usage && file_exists($dbFile)) {
             elseif ($disabled === 'true') $status = 'RUSAK';
             elseif ($is_retur) $status = 'RETUR';
             elseif ($is_used) $status = 'TERPAKAI';
-            if ($status === 'READY') continue;
 
             $status_match = true;
             if ($req_status === 'online') $status_match = ($status === 'ONLINE');
@@ -361,6 +376,19 @@ if ($is_usage && file_exists($dbFile)) {
             }
             if ($login_time === '') $login_time = '-';
             if ($logout_time === '') $logout_time = '-';
+            $has_logout = ($logout_time !== '-' && $logout_time !== '');
+            if ($status === 'TERPAKAI' && !$has_logout) {
+                continue;
+            }
+
+            $uptime_display = $uptime;
+            if ($login_time !== '-' && $logout_time !== '-') {
+                $diff = strtotime($logout_time) - strtotime($login_time);
+                if ($diff > 0) $uptime_display = seconds_to_uptime($diff);
+            } elseif ($status === 'ONLINE' && $login_time !== '-') {
+                $diff = time() - strtotime($login_time);
+                if ($diff > 0) $uptime_display = seconds_to_uptime($diff);
+            }
 
             $relogin = ((int)($hist['login_count'] ?? 0) > 1);
             $first_login = $hist['first_login_real'] ?? $login_time;
@@ -372,7 +400,7 @@ if ($is_usage && file_exists($dbFile)) {
                 'blok' => $f_blok ?: '-',
                 'ip' => $f_ip,
                 'mac' => $f_mac,
-                'uptime' => $uptime,
+                'uptime' => $uptime_display,
                 'bytes' => $bytes,
                 'status' => strtolower($status),
                 'comment' => $comment,
@@ -386,11 +414,11 @@ if ($is_usage && file_exists($dbFile)) {
             if ($filter_user !== '' && $uname !== $filter_user) continue;
             $hist_status = strtolower((string)($row['last_status'] ?? ''));
             if (!in_array($hist_status, ['rusak','retur','terpakai','online'])) continue;
-            $status = ($hist_status === 'rusak') ? 'RUSAK' : ($hist_status === 'retur' ? 'RETUR' : 'TERPAKAI');
-            if ($req_status === 'online') continue;
+            $status = ($hist_status === 'rusak') ? 'RUSAK' : ($hist_status === 'retur' ? 'RETUR' : ($hist_status === 'online' ? 'ONLINE' : 'TERPAKAI'));
+            if ($req_status === 'online' && $status !== 'ONLINE') continue;
             if ($req_status === 'rusak' && $status !== 'RUSAK') continue;
             if ($req_status === 'used' && $status !== 'TERPAKAI') continue;
-            if ($req_status === 'all' && !in_array($status, ['RUSAK','TERPAKAI'])) continue;
+            if ($req_status === 'all' && !in_array($status, ['RUSAK','TERPAKAI','ONLINE'])) continue;
 
             $comment = (string)($row['raw_comment'] ?? '');
             $f_blok = normalize_block_name_simple($row['blok_name'] ?? '') ?: extract_blok_name($comment);
@@ -406,6 +434,13 @@ if ($is_usage && file_exists($dbFile)) {
             $logout_time = $row['logout_time_real'] ?? '-';
             $has_usage = ((int)($row['last_bytes'] ?? 0) > 0) || (!empty($row['last_uptime']) && $row['last_uptime'] != '0s') || (!empty($row['login_time_real']) || !empty($row['logout_time_real']));
             if ($status === 'TERPAKAI' && !$has_usage) continue;
+            $has_logout = ($logout_time !== '-' && $logout_time !== '');
+            if ($status === 'TERPAKAI' && !$has_logout) continue;
+            $uptime_display = $row['last_uptime'] ?? '-';
+            if ($login_time !== '-' && $logout_time !== '-') {
+                $diff = strtotime($logout_time) - strtotime($login_time);
+                if ($diff > 0) $uptime_display = seconds_to_uptime($diff);
+            }
             $relogin = ((int)($row['login_count'] ?? 0) > 1);
             $usage_list[] = [
                 'first_login' => $row['first_login_real'] ?? $login_time,
@@ -415,7 +450,7 @@ if ($is_usage && file_exists($dbFile)) {
                 'blok' => $f_blok ?: '-',
                 'ip' => $row['ip_address'] ?? '-',
                 'mac' => $row['mac_address'] ?? '-',
-                'uptime' => $row['last_uptime'] ?? '-',
+                'uptime' => $uptime_display,
                 'bytes' => (int)($row['last_bytes'] ?? 0),
                 'status' => strtolower($status),
                 'comment' => $comment,
