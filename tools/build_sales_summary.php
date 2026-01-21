@@ -1,5 +1,5 @@
 <?php
-// FILE: report/build_sales_summary.php
+// FILE: tools/build_sales_summary.php
 // Build materialized sales summary tables (harian/bulanan/tahunan)
 
 ini_set('display_errors', 1);

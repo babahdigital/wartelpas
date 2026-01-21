@@ -1,5 +1,5 @@
 <?php
-// FILE: report/migrate_sales_reporting.php
+// FILE: tools/migrate_sales_reporting.php
 // MIGRASI DATABASE UNTUK LAPORAN PENJUALAN (WARTELPAS)
 // Jalankan sekali untuk menambahkan kolom-kolom laporan baru pada sales_history.
 

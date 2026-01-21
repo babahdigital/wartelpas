@@ -1,5 +1,5 @@
 <?php
-// FILE: report/clear_all.php
+// FILE: tools/clear_all.php
 // Clear semua data laporan & history
 
 ini_set('display_errors', 1);
