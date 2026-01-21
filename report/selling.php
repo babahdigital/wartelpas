@@ -722,9 +722,9 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (logBox) logBox.textContent = '';
         if (statusEl) statusEl.textContent = 'Menunggu konfirmasi';
         if (closeBtn) {
-            closeBtn.disabled = true;
-            closeBtn.style.opacity = '0.6';
-            closeBtn.style.cursor = 'not-allowed';
+            closeBtn.disabled = false;
+            closeBtn.style.opacity = '1';
+            closeBtn.style.cursor = 'pointer';
         }
         if (confirmBox) confirmBox.style.display = 'flex';
         if (cancelBtn) {
@@ -739,6 +739,16 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 btn.disabled = true;
                 btn.style.opacity = '0.6';
                 btn.style.cursor = 'not-allowed';
+                if (closeBtn) {
+                    closeBtn.disabled = true;
+                    closeBtn.style.opacity = '0.6';
+                    closeBtn.style.cursor = 'not-allowed';
+                }
+                if (cancelBtn) {
+                    cancelBtn.disabled = true;
+                    cancelBtn.style.opacity = '0.6';
+                    cancelBtn.style.cursor = 'not-allowed';
+                }
                 var params = new URLSearchParams();
                 params.set('session', '<?= htmlspecialchars($session_id); ?>');
                 params.set('date', '<?= htmlspecialchars($filter_date); ?>');
@@ -751,6 +761,16 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                             btn.disabled = false;
                             btn.style.opacity = '1';
                             btn.style.cursor = 'pointer';
+                            if (closeBtn) {
+                                closeBtn.disabled = false;
+                                closeBtn.style.opacity = '1';
+                                closeBtn.style.cursor = 'pointer';
+                            }
+                            if (cancelBtn) {
+                                cancelBtn.disabled = false;
+                                cancelBtn.style.opacity = '0.8';
+                                cancelBtn.style.cursor = 'pointer';
+                            }
                             return;
                         }
                         pollSettlementLogs();
@@ -760,6 +780,16 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                         btn.disabled = false;
                         btn.style.opacity = '1';
                         btn.style.cursor = 'pointer';
+                        if (closeBtn) {
+                            closeBtn.disabled = false;
+                            closeBtn.style.opacity = '1';
+                            closeBtn.style.cursor = 'pointer';
+                        }
+                        if (cancelBtn) {
+                            cancelBtn.disabled = false;
+                            cancelBtn.style.opacity = '0.8';
+                            cancelBtn.style.cursor = 'pointer';
+                        }
                     });
             };
         }
@@ -797,6 +827,15 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                     }
                     if (statusEl) statusEl.textContent = 'Selesai';
                     softReloadSelling();
+                    clearTimeout(settlementTimer);
+                    return;
+                }
+                if (data && data.status === 'failed') {
+                    if (closeBtn) {
+                        closeBtn.disabled = false;
+                        closeBtn.style.opacity = '1';
+                        closeBtn.style.cursor = 'pointer';
+                    }
                     clearTimeout(settlementTimer);
                     return;
                 }
