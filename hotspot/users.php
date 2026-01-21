@@ -459,6 +459,30 @@ function get_cumulative_uptime_from_events($username, $first_login_real = '', $f
   }
 }
 
+function get_relogin_count_from_events($username, $first_login_real = '') {
+  global $db;
+  if (!$db || empty($username)) return 0;
+  $params = [':u' => $username];
+  $where = "username = :u AND login_time IS NOT NULL";
+  if (!empty($first_login_real)) {
+    $date_key = date('Y-m-d', strtotime($first_login_real));
+    if (!empty($date_key)) {
+      $where .= " AND date_key = :d";
+      $params[':d'] = $date_key;
+    }
+  }
+  try {
+    $stmt = $db->prepare("SELECT COUNT(*) FROM login_events WHERE $where");
+    foreach ($params as $k => $v) {
+      $stmt->bindValue($k, $v);
+    }
+    $stmt->execute();
+    return (int)$stmt->fetchColumn();
+  } catch (Exception $e) {
+    return 0;
+  }
+}
+
 function is_wartel_client($comment, $hist_blok = '') {
   if (!empty($hist_blok)) return true;
   $blok = extract_blok_name($comment);
@@ -623,15 +647,17 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $first_login_real = $hist_check['first_login_real'] ?? ($hist_check['login_time_real'] ?? '');
       $fallback_logout = $hist_check['logout_time_real'] ?? ($hist_check['last_login_real'] ?? '');
       $total_uptime_sec = get_cumulative_uptime_from_events($name, $first_login_real, $fallback_logout);
+      $relogin_count = get_relogin_count_from_events($name, $first_login_real);
     }
 
     if ($enforce_rusak_rules && ($act == 'invalid' || $act == 'retur' || $act == 'check_rusak')) {
       $total_uptime_ok = (!$is_active) && ($bytes <= $bytes_limit) && ($total_uptime_sec <= $uptime_limit);
-      if (!($act == 'retur' && $is_rusak_target) && ($is_active || $bytes > $bytes_limit || $uptime_sec > $uptime_limit)) {
+      $relogin_count_ok = (int)($relogin_count ?? 0) >= 3;
+      if (!($act == 'retur' && $is_rusak_target) && ($is_active || $bytes > $bytes_limit || $total_uptime_sec > $uptime_limit)) {
         $action_blocked = true;
         $action_error = 'Voucher masih valid, tidak bisa dianggap rusak (online / bytes > ' . $limits['bytes_label'] . ' / uptime > ' . $limits['uptime_label'] . ').';
       }
-      if ($action_blocked && $total_uptime_ok) {
+      if ($action_blocked && $total_uptime_ok && $relogin_count_ok) {
         $action_blocked = false;
         $action_error = '';
       }
@@ -642,8 +668,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $criteria = [
         'offline' => !$is_active,
         'bytes_ok' => $bytes <= $bytes_limit,
-        'uptime_ok' => $uptime_sec <= $uptime_limit,
-        'total_uptime_ok' => $total_uptime_sec <= $uptime_limit
+        'total_uptime_ok' => $total_uptime_sec <= $uptime_limit,
+        'relogin_count_ok' => (int)($relogin_count ?? 0) >= 3
       ];
       if (ob_get_length()) {
         @ob_clean();
@@ -658,7 +684,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           'online' => $is_active ? 'Ya' : 'Tidak',
           'bytes' => $bytes_label,
           'uptime' => $uptime ?: '0s',
-          'total_uptime' => seconds_to_uptime($total_uptime_sec)
+          'total_uptime' => seconds_to_uptime($total_uptime_sec),
+          'relogin_count' => (int)($relogin_count ?? 0)
         ],
         'limits' => [
           'bytes' => $limits['bytes_label'] ?? '',
@@ -2429,8 +2456,8 @@ if ($debug_mode && !$is_ajax) {
       const items = [
         { label: `Offline (tidak sedang online)`, ok: !!criteria.offline, value: values.online || '-' },
         { label: `Bytes maksimal ${limits.bytes || '-'}`, ok: !!criteria.bytes_ok, value: values.bytes || '-' },
-        { label: `Uptime sesi maksimal ${limits.uptime || '-'}`, ok: !!criteria.uptime_ok, value: values.uptime || '-' },
-        { label: `Akumulasi uptime maksimal ${limits.uptime || '-'}`, ok: !!criteria.total_uptime_ok, value: values.total_uptime || '-' }
+        { label: `Akumulasi uptime maksimal ${limits.uptime || '-'}`, ok: !!criteria.total_uptime_ok, value: values.total_uptime || '-' },
+        { label: `Relogin minimal 3x`, ok: !!criteria.relogin_count_ok, value: String(values.relogin_count ?? '-') }
       ];
       const rows = items.map(it => {
         const icon = it.ok ? 'fa-check-circle' : 'fa-times-circle';
@@ -2615,13 +2642,14 @@ if ($debug_mode && !$is_ajax) {
     const dateBase = loginTime && loginTime !== '-' ? loginTime : (logoutTime && logoutTime !== '-' ? logoutTime : '');
     const headerDate = dateBase ? formatDateHeader(dateBase) : formatDateNow();
     const totalUptimeSec = uptimeSec;
+    const reloginCount = Number(el.getAttribute('data-relogin') || 0);
     const criteria = {
       offline,
       bytes_ok: bytes <= limits.bytes,
-      uptime_ok: uptimeSec <= limits.uptime,
-      total_uptime_ok: totalUptimeSec <= limits.uptime
+      total_uptime_ok: totalUptimeSec <= limits.uptime,
+      relogin_count_ok: reloginCount >= 3
     };
-    const ok = criteria.offline && criteria.bytes_ok && criteria.uptime_ok && criteria.total_uptime_ok;
+    const ok = criteria.offline && criteria.bytes_ok && criteria.total_uptime_ok && criteria.relogin_count_ok;
     return {
       ok,
       message: ok ? 'Syarat rusak terpenuhi.' : 'Syarat rusak belum terpenuhi.',
@@ -2639,7 +2667,8 @@ if ($debug_mode && !$is_ajax) {
         online: offline ? 'Tidak' : 'Ya',
         bytes: formatBytesSimple(bytes),
         uptime,
-        total_uptime: uptime
+        total_uptime: uptime,
+        relogin_count: reloginCount
       },
       limits: {
         bytes: limits.bytesLabel,
