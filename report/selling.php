@@ -918,6 +918,9 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             <?php endif; ?>
             <button class="btn-print" type="button" onclick="openHpModal()">Input HP Blok</button>
             <button class="btn-print" type="button" id="btn-settlement" onclick="manualSettlement()" <?= (!empty($settled_today) ? 'disabled style="opacity:.6;cursor:not-allowed;"' : '') ?>>Settlement</button>
+            <span id="settlement-time" style="margin-left:8px;font-size:12px;color:var(--txt-muted);">
+                Settlement terakhir: <?= $settlement_time ? date('d-m-Y H:i:s', strtotime($settlement_time)) : '-' ?>
+            </span>
         </div>
     </div>
     <div class="card-body" style="padding:16px;">
@@ -1158,6 +1161,24 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
 </div>
 
 <?php if (!$is_ajax): ?>
+</div>
+<?php endif; ?>
+
+<?php if (!$is_ajax): ?>
+<div id="settlement-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:10050;">
+    <div style="background:#1f1f1f;color:#e5e5e5;border:1px solid #444;border-radius:8px;width:560px;max-width:92vw;box-shadow:0 10px 30px rgba(0,0,0,0.6);overflow:hidden;">
+        <div style="padding:12px 16px;border-bottom:1px solid #333;font-weight:600;display:flex;justify-content:space-between;align-items:center;">
+            <span>Settlement Manual</span>
+            <span id="settlement-status" style="font-size:12px;color:#9aa0a6;">Menyiapkan...</span>
+        </div>
+        <div style="padding:14px 16px;">
+            <div style="font-size:12px;color:#9aa0a6;margin-bottom:8px;">Log settlement (MikroTik)</div>
+            <pre id="settlement-log" style="background:#0f0f0f;color:#d4d4d4;border:1px solid #333;border-radius:6px;padding:10px;max-height:260px;overflow:auto;font-size:12px;white-space:pre-wrap;"></pre>
+        </div>
+        <div style="padding:10px 16px;border-top:1px solid #333;display:flex;justify-content:flex-end;gap:8px;">
+            <button id="settlement-close" type="button" class="btn-print" style="opacity:.6;cursor:not-allowed;" disabled>Tutup</button>
+        </div>
+    </div>
 </div>
 <?php endif; ?>
 
