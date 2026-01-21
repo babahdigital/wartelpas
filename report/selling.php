@@ -439,6 +439,11 @@ foreach ($rows as $r) {
 
         $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
         $comment = format_first_login($r['first_login_real'] ?? '');
+        $raw_comment = (string)($r['comment'] ?? '');
+        $blok_row = (string)($r['blok_name'] ?? '');
+        if ($blok_row === '' && !preg_match('/\bblok\s*[-_]?\s*[A-Za-z0-9]+/i', $raw_comment)) {
+            continue;
+        }
         $status = strtolower((string)($r['status'] ?? ''));
         $lh_status = strtolower((string)($r['last_status'] ?? ''));
         $cmt_low = strtolower($comment);

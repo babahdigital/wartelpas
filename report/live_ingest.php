@@ -107,6 +107,10 @@ try {
     if ($comment && preg_match('/\bblok\s*[-_]?\s*([A-Za-z0-9]+)/i', $comment, $m)) {
         $blok_name = 'BLOK-' . strtoupper($m[1]);
     }
+    if ($blok_name === '') {
+        echo "OK";
+        exit;
+    }
 
     $sale_date = '';
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw_date)) {

@@ -168,6 +168,12 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
             if ($comment && preg_match('/\bblok\s*[-_]?\s*([A-Za-z0-9]+)/i', $comment, $m)) {
                 $blok_name = 'BLOK-' . strtoupper($m[1]);
             }
+            if ($blok_name === '') {
+                $API->write('/system/script/remove', false);
+                $API->write('=.id=' . $s['.id']);
+                $API->read();
+                continue;
+            }
 
             $sale_date = '';
             if (preg_match('/^[a-zA-Z]{3}\/\d{2}\/\d{4}$/', $raw_date)) {
