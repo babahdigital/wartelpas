@@ -77,9 +77,14 @@ if ($action === 'logs') {
 
                 $rawLogs = $API->comm('/log/print', [
                     '.proplist' => 'time,topics,message',
-                    '?topics' => 'script',
                     '?message~' => 'SETTLE'
                 ]);
+                if (!is_array($rawLogs) || count($rawLogs) === 0) {
+                    $rawLogs = $API->comm('/log/print', [
+                        '.proplist' => 'time,topics,message',
+                        '?topics~' => 'script'
+                    ]);
+                }
                 if (!is_array($rawLogs) || count($rawLogs) === 0) {
                     $rawLogs = [];
                 }
