@@ -315,8 +315,8 @@ if ($is_usage && file_exists($dbFile)) {
             if ($hist_status === 'rusak') $is_rusak = true;
             if ($hist_status === 'retur') $is_retur = true;
             if ($disabled === 'true') $is_rusak = true;
-            if ($is_retur && $hist_status !== 'rusak' && $disabled !== 'true') $is_rusak = false;
-            if ($is_rusak || $hist_status === 'rusak') $is_retur = false;
+            if ($is_retur && $disabled !== 'true') $is_rusak = false;
+            if ($is_rusak && !$is_retur) $is_retur = false;
 
             $hist_used = $hist && (
                 in_array($hist_status, ['online','terpakai','rusak','retur']) ||

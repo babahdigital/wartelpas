@@ -1413,13 +1413,12 @@ foreach($all_users as $u) {
       $is_rusak = false;
     } elseif ($hist_status === 'rusak') {
       $is_rusak = true;
-      $is_retur = false;
     }
     // Retur harus tetap retur meski Retur Ref memuat kata RUSAK
-    if ($is_retur && $hist_status !== 'rusak' && $disabled !== 'true') {
+    if ($is_retur && $disabled !== 'true') {
       $is_rusak = false;
     }
-    if ($is_rusak || $hist_status === 'rusak') {
+    if ($is_rusak && !$is_retur) {
       $is_retur = false;
     }
     $hist_used = $hist && (
