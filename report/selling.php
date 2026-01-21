@@ -68,7 +68,7 @@ function format_first_login($dateStr) {
     if (empty($dateStr) || $dateStr === '-') return '-';
     $ts = strtotime($dateStr);
     if ($ts === false) return $dateStr;
-    return date('Y-m-d H:i:s', $ts);
+    return date('d-m-Y H:i:s', $ts);
 }
 
     function format_bytes_short($bytes) {
