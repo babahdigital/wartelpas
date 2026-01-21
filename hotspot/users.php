@@ -2451,16 +2451,17 @@ if ($debug_mode && !$is_ajax) {
         const { headerMsg: hm, items: itms, meta: mt } = rusakPrintPayload;
         const rowsPrint = itms.map(it => {
           const status = it.ok ? 'OK' : 'TIDAK';
-          return `<tr><td>${it.label}</td><td>${it.value}</td><td>${status}</td></tr>`;
+          const statusClass = it.ok ? 'status-ok' : 'status-bad';
+          return `<tr><td>${it.label}</td><td>${it.value}</td><td class="${statusClass}">${status}</td></tr>`;
         }).join('');
         const metaRows = [];
         if (mt && mt.date) metaRows.push(`<tr><td>Tanggal</td><td>${mt.date}</td></tr>`);
         if (mt && mt.username) metaRows.push(`<tr><td>User</td><td>${mt.username}</td></tr>`);
         if (mt && mt.blok) metaRows.push(`<tr><td>Blok</td><td>${mt.blok}</td></tr>`);
         if (mt && mt.profile) metaRows.push(`<tr><td>Profile</td><td>${mt.profile}</td></tr>`);
-        if (mt && mt.first_login) metaRows.push(`<tr><td>First Login</td><td>${mt.first_login}</td></tr>`);
-        if (mt && mt.login) metaRows.push(`<tr><td>Login</td><td>${mt.login}</td></tr>`);
-        if (mt && mt.logout) metaRows.push(`<tr><td>Logout</td><td>${mt.logout}</td></tr>`);
+        if (mt && mt.first_login) metaRows.push(`<tr class="meta-first-login"><td>First Login</td><td>${mt.first_login}</td></tr>`);
+        if (mt && mt.login) metaRows.push(`<tr class="meta-login"><td>Login</td><td>${mt.login}</td></tr>`);
+        if (mt && mt.logout) metaRows.push(`<tr class="meta-logout"><td>Logout</td><td>${mt.logout}</td></tr>`);
         const metaBlock = metaRows.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;margin:6px 0 10px 0;">
           <thead><tr><th style="text-align:left;padding:6px 8px;border:1px solid #444;background:#f0f0f0;">Info</th><th style="text-align:left;padding:6px 8px;border:1px solid #444;background:#f0f0f0;">Nilai</th></tr></thead>
           <tbody>${metaRows.join('')}</tbody></table>` : '';
@@ -2472,6 +2473,11 @@ if ($debug_mode && !$is_ajax) {
             table{width:100%;border-collapse:collapse;font-size:12px;}
             th,td{border:1px solid #444;padding:6px 8px;text-align:left;}
             th{background:#f0f0f0;}
+            .status-ok{color:#0b7a0b;font-weight:700;}
+            .status-bad{color:#c62828;font-weight:700;}
+            .meta-first-login td{background:#e3f2fd;}
+            .meta-login td{background:#e8f5e9;}
+            .meta-logout td{background:#fff3e0;}
           </style>
         </head><body>
           <h3>Cek Kelayakan Rusak</h3>
