@@ -244,7 +244,14 @@ if ($is_usage && file_exists($dbFile)) {
         $stmt = $db->query("SELECT username, blok_name, ip_address, mac_address, last_uptime, last_bytes, login_time_real, logout_time_real, raw_comment, last_status, login_count, first_login_real, last_login_real FROM login_history");
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
             $uname = $row['username'] ?? '';
-            if ($uname !== '') $histMap[$uname] = $row;
+            if ($uname !== '') {
+                $raw_comment = (string)($row['raw_comment'] ?? '');
+                $has_retur = (stripos($raw_comment, '(Retur)') !== false) || (stripos($raw_comment, 'Retur Ref:') !== false);
+                if ($has_retur) {
+                    $row['last_status'] = 'retur';
+                }
+                $histMap[$uname] = $row;
+            }
             $ref_user = extract_retur_user_from_ref($row['raw_comment'] ?? '');
             if ($ref_user !== '') $retur_ref_map[strtolower($ref_user)] = true;
         }
