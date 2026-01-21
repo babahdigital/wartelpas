@@ -545,7 +545,19 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       }
     }
 
-    if ($enforce_rusak_rules && ($act == 'invalid' || $act == 'retur' || $act == 'check_rusak')) {
+    $urow = [];
+    $arow = [];
+    $bytes = 0;
+    $uptime = '0s';
+    $uptime_sec = 0;
+    $profile_name = $prof ?: '';
+    $limits = resolve_rusak_limits($profile_name);
+    $bytes_limit = $limits['bytes'];
+    $uptime_limit = $limits['uptime'];
+    $is_active = false;
+    $recent_relogin = 0;
+
+    if ($act == 'invalid' || $act == 'retur' || $act == 'check_rusak') {
       $uinfo = $API->comm('/ip/hotspot/user/print', [
         '?server' => $hotspot_server,
         '?name' => $name,
@@ -570,12 +582,15 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $bytes = max((int)$bytes_total, (int)$bytes_active);
       $uptime = $urow['uptime'] ?? ($arow['uptime'] ?? '0s');
       $uptime_sec = uptime_to_seconds($uptime);
-      $profile_name = $prof ?: ($urow['profile'] ?? '');
+      $profile_name = $prof ?: ($urow['profile'] ?? $profile_name);
       $limits = resolve_rusak_limits($profile_name);
       $bytes_limit = $limits['bytes'];
       $uptime_limit = $limits['uptime'];
       $is_active = isset($arow['user']);
       $recent_relogin = count_recent_relogin_events($name, 5);
+    }
+
+    if ($enforce_rusak_rules && ($act == 'invalid' || $act == 'retur' || $act == 'check_rusak')) {
       $relogin_ok = (!$is_active) && ($bytes <= $bytes_limit) && ($uptime_sec <= $uptime_limit) && ($recent_relogin >= 3);
       if (!($act == 'retur' && $is_rusak_target) && ($is_active || $bytes > $bytes_limit || $uptime_sec > $uptime_limit)) {
         $action_blocked = true;
