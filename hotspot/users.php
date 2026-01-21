@@ -2718,14 +2718,6 @@ if ($debug_mode && !$is_ajax) {
   }
 
   async function openReloginModal(username, blok, profile) {
-      meta: {
-        username,
-        blok: formatBlokLabel(blok),
-        profile: formatProfileLabel(profile),
-        date: headerDate,
-        login: loginTime || '-',
-        logout: logoutTime || '-'
-      },
     if (!reloginModal || !reloginBody) return;
     if (reloginTitle) reloginTitle.textContent = `Detail Relogin - ${username}`;
     if (reloginSub) reloginSub.textContent = '';
