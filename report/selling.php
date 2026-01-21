@@ -396,6 +396,19 @@ $rusak_30m = 0;
 
 $seen_sales = [];
 
+$valid_blocks = [];
+if ($req_show === 'harian' && isset($db) && $db instanceof PDO) {
+    try {
+        $stmtBlk = $db->prepare("SELECT DISTINCT blok_name FROM phone_block_daily WHERE report_date = :d AND unit_type = 'TOTAL'");
+        $stmtBlk->execute([':d' => $filter_date]);
+        $blkRows = $stmtBlk->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($blkRows as $br) {
+            $nb = normalize_block_name($br['blok_name'] ?? '');
+            if ($nb !== '') $valid_blocks[$nb] = true;
+        }
+    } catch (Exception $e) {}
+}
+
 $by_block = [];
 $by_profile = [];
 
@@ -486,6 +499,7 @@ foreach ($rows as $r) {
             continue;
         }
         $profile = $r['profile_snapshot'] ?? ($r['profile'] ?? '-');
+        $blok = normalize_block_name($r['blok_name'] ?? '', $raw_comment);
         $status = strtolower((string)($r['status'] ?? ''));
         $lh_status = strtolower((string)($r['last_status'] ?? ''));
         $cmt_low = strtolower($raw_comment);
@@ -503,6 +517,9 @@ foreach ($rows as $r) {
         $net_add = $gross_add - $loss_rusak - $loss_invalid;
 
         if (!$use_summary) {
+            if (!empty($valid_blocks) && !isset($valid_blocks[$blok])) {
+                continue;
+            }
             $total_qty++;
             if ($status === 'retur') $total_qty_retur++;
             if ($status === 'rusak') {
@@ -520,8 +537,6 @@ foreach ($rows as $r) {
             $total_rusak += $loss_rusak;
             $total_invalid += $loss_invalid;
             $total_net += $net_add;
-
-            $blok = normalize_block_name($r['blok_name'] ?? '', $raw_comment);
 
             if (!isset($by_block[$blok])) {
                 $by_block[$blok] = ['qty'=>0,'gross'=>0,'rusak'=>0,'invalid'=>0,'net'=>0,'retur'=>0];
@@ -545,7 +560,9 @@ foreach ($rows as $r) {
             if ($status === 'retur') $by_profile[$profile]['retur'] += 1;
         }
 
-        $total_bandwidth += (int)($r['last_bytes'] ?? 0);
+        if (empty($valid_blocks) || isset($valid_blocks[$blok])) {
+            $total_bandwidth += (int)($r['last_bytes'] ?? 0);
+        }
         $list[] = [
                 'dt' => $sale_dt,
                 'user' => $r['username'] ?? '-',

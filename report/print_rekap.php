@@ -99,6 +99,7 @@ $hp_active_by_block = [];
 $hp_stats_by_block = [];
 $hp_units_by_block = [];
 $block_summaries = [];
+$valid_blocks = [];
 
 try {
     if (file_exists($dbFile)) {
@@ -189,6 +190,7 @@ try {
             foreach ($hpBlockRows as $hb) {
                 $blk = normalize_block_name($hb['blok_name'] ?? '');
                 $hp_active_by_block[$blk] = (int)($hb['active_units'] ?? 0);
+                if ($blk !== '') $valid_blocks[$blk] = true;
             }
 
             $stmtHpStats = $db->prepare("SELECT blok_name,
@@ -283,6 +285,10 @@ foreach ($rows as $r) {
     if ($blok_row === '' && !preg_match('/\bblok\s*[-_]?\s*[A-Za-z0-9]+/i', $comment)) {
         continue;
     }
+    $block = normalize_block_name($r['blok_name'] ?? '', $comment);
+    if ($req_show === 'harian' && !empty($valid_blocks) && !isset($valid_blocks[$block])) {
+        continue;
+    }
     $status = strtolower((string)($r['status'] ?? ''));
     $lh_status = strtolower((string)($r['last_status'] ?? ''));
     $profile = $r['profile_snapshot'] ?? ($r['profile'] ?? '-');
@@ -318,7 +324,6 @@ foreach ($rows as $r) {
         }
         $total_net_units += $net_line;
 
-        $block = normalize_block_name($r['blok_name'] ?? '', $comment);
         $bucket = detect_profile_minutes($profile);
         if (!isset($block_summaries[$block])) {
             $block_summaries[$block] = [

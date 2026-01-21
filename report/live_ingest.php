@@ -23,6 +23,18 @@ if ($session === '') {
     die("Error: Session tidak valid.");
 }
 
+$root_dir = dirname(__DIR__);
+require_once($root_dir . '/include/config.php');
+if (!isset($data[$session])) {
+    http_response_code(403);
+    die("Error: Session tidak terdaftar.");
+}
+require_once($root_dir . '/include/readcfg.php');
+if (!isset($hotspot_server) || $hotspot_server !== 'wartel') {
+    http_response_code(403);
+    die("Error: Hanya untuk server wartel.");
+}
+
 $raw = '';
 if (isset($_POST['data'])) $raw = trim($_POST['data']);
 if ($raw === '' && isset($_GET['data'])) $raw = trim($_GET['data']);
@@ -49,7 +61,6 @@ if ($raw === '') {
     exit;
 }
 
-$root_dir = dirname(__DIR__);
 $dbFile = $root_dir . '/db_data/mikhmon_stats.db';
 if (!is_dir($root_dir . '/db_data')) mkdir($root_dir . '/db_data', 0777, true);
 
