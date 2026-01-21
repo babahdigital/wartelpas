@@ -2535,10 +2535,16 @@ if ($debug_mode && !$is_ajax) {
     const uptime = el.getAttribute('data-uptime') || '0s';
     const status = el.getAttribute('data-status') || '';
     const profile = el.getAttribute('data-profile') || '';
+    const username = el.getAttribute('data-user') || '';
+    const blok = el.getAttribute('data-blok') || '';
+    const loginTime = el.getAttribute('data-login') || '';
+    const logoutTime = el.getAttribute('data-logout') || '';
     const relogin = Number(el.getAttribute('data-relogin') || 0);
     const limits = resolveRusakLimits(profile);
     const uptimeSec = uptimeToSeconds(uptime);
     const offline = status !== 'ONLINE';
+    const dateBase = loginTime && loginTime !== '-' ? loginTime : (logoutTime && logoutTime !== '-' ? logoutTime : '');
+    const headerDate = dateBase ? formatDateHeader(dateBase) : formatDateNow();
     const criteria = {
       offline,
       bytes_ok: bytes <= limits.bytes,
@@ -2549,6 +2555,14 @@ if ($debug_mode && !$is_ajax) {
     return {
       ok,
       message: ok ? 'Syarat rusak terpenuhi.' : 'Syarat rusak belum terpenuhi.',
+      meta: {
+        username,
+        blok: formatBlokLabel(blok),
+        profile: formatProfileLabel(profile),
+        date: headerDate,
+        login: loginTime || '-',
+        logout: logoutTime || '-'
+      },
       criteria,
       values: {
         online: offline ? 'Tidak' : 'Ya',
@@ -2677,8 +2691,6 @@ if ($debug_mode && !$is_ajax) {
     if (d.length !== 3) return '';
     return `${d[2]}-${d[1]}-${d[0]}`;
   }
-
-  function formatBlokLabel(blok) {
   function formatDateNow() {
     const d = new Date();
     const dd = String(d.getDate()).padStart(2, '0');
@@ -2686,22 +2698,18 @@ if ($debug_mode && !$is_ajax) {
     const yy = d.getFullYear();
     return `${dd}-${mm}-${yy}`;
   }
+
+  function formatBlokLabel(blok) {
     if (!blok) return '';
     const raw = blok.replace(/^BLOK-?/i, '').trim();
     const m = raw.match(/^([A-Z]+)/i);
     return m ? m[1].toUpperCase() : raw.toUpperCase();
   }
 
-    const username = el.getAttribute('data-user') || '';
-    const blok = el.getAttribute('data-blok') || '';
-    const loginTime = el.getAttribute('data-login') || '';
-    const logoutTime = el.getAttribute('data-logout') || '';
   function formatProfileLabel(profile) {
     if (!profile) return '';
     return profile.replace(/(\d+)\s*(menit)/i, '$1 Menit');
   }
-    const dateBase = loginTime && loginTime !== '-' ? loginTime : (logoutTime && logoutTime !== '-' ? logoutTime : '');
-    const headerDate = dateBase ? formatDateHeader(dateBase) : formatDateNow();
 
   function formatTimeOnly(dt) {
     if (!dt) return '-';
