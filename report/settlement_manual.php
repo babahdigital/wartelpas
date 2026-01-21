@@ -80,15 +80,7 @@ if ($action === 'logs') {
                     '?message~' => 'SETTLE|CLEANUP|SYNC|CUCI GUDANG|SUKSES|MAINT'
                 ]);
                 if (!is_array($rawLogs) || count($rawLogs) === 0) {
-                    $rawLogs = $API->comm('/log/print', [
-                        '.proplist' => 'time,topics,message',
-                        '?topics~' => 'script|system|info|warning|error'
-                    ]);
-                }
-                if (!is_array($rawLogs) || count($rawLogs) === 0) {
-                    $rawLogs = $API->comm('/log/print', [
-                        '.proplist' => 'time,topics,message'
-                    ]);
+                    $rawLogs = [];
                 }
                 $API->disconnect();
                 $rawLogs = is_array($rawLogs) ? array_slice($rawLogs, -60) : [];
@@ -98,9 +90,18 @@ if ($action === 'logs') {
                 $msg = trim((string)($l['message'] ?? ''));
                 if ($msg === '' && $time === '') continue;
 
+                $msgUpper = strtoupper($msg);
+                $topicUpper = strtoupper($topics);
+                $isRelevant = (strpos($msgUpper, 'SETTLE') !== false)
+                    || (strpos($msgUpper, 'CLEANUP') !== false)
+                    || (strpos($msgUpper, 'SYNC') !== false)
+                    || (strpos($msgUpper, 'MAINT') !== false)
+                    || (strpos($msgUpper, 'CUCI GUDANG') !== false)
+                    || (strpos($topicUpper, 'SCRIPT') !== false);
+                if (!$isRelevant) continue;
+
                 $type = 'info';
                 $topicsLower = strtolower($topics);
-                $msgUpper = strtoupper($msg);
                 if (strpos($topicsLower, 'error') !== false) {
                     $type = 'error';
                 } elseif (strpos($topicsLower, 'warning') !== false) {
