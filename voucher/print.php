@@ -24,6 +24,7 @@ if (!isset($_SESSION["mikhmon"])) {
   $small = $_GET['small'];
   $userp = $_GET['user'];
   $status = isset($_GET['status']) ? $_GET['status'] : '';
+  $mode = isset($_GET['mode']) ? $_GET['mode'] : '';
   $blok = isset($_GET['blok']) ? $_GET['blok'] : '';
   $download = isset($_GET['download']) && $_GET['download'] == '1';
   $img = isset($_GET['img']) && $_GET['img'] == '1';
@@ -37,7 +38,137 @@ if (!isset($_SESSION["mikhmon"])) {
 
   $count_hidden = 0; // Menghitung voucher yang disembunyikan
 
-  if ($userp != "") {
+  if ($status != "" && $mode === 'status') {
+    // C. PRINT BERDASARKAN STATUS (DB) - MODE STATUS TEMPLATE
+    $target_status = strtolower($status);
+    $filter_user_raw = $userp ?? '';
+    $filter_user = '';
+    if ($filter_user_raw !== '') {
+      if (strpos($filter_user_raw, '-') !== false) {
+        $parts = explode('-', $filter_user_raw);
+        $cnt = count($parts);
+        $filter_user = $cnt >= 3 ? ($parts[$cnt - 2] . '-' . $parts[$cnt - 1]) : $parts[$cnt - 1];
+      } else {
+        $filter_user = $filter_user_raw;
+      }
+    }
+    $getuser = [];
+    try {
+      $db = new PDO('sqlite:../db_data/mikhmon_stats.db');
+      $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+      if ($blok != '') {
+        $stmt = $db->prepare("SELECT username, blok_name, raw_comment FROM login_history WHERE lower(last_status)=:st");
+        $stmt->execute([':st' => $target_status]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as $r) {
+          if ($filter_user !== '' && $r['username'] !== $filter_user) continue;
+          $row_blok = $r['blok_name'] ?? '';
+          $raw_comment = $r['raw_comment'] ?? '';
+          $is_retur_comment = (stripos($raw_comment, '(Retur)') !== false) || (stripos($raw_comment, 'Retur Ref:') !== false);
+          $cm_blok = extract_blok_from_comment($raw_comment);
+          $match = (stripos($row_blok, $blok) !== false) || (stripos($cm_blok, $blok) !== false) || (stripos($raw_comment, $blok) !== false);
+          if (!$match) continue;
+          if ($target_status === 'retur' && !$is_retur_comment) continue;
+          if ($target_status === 'rusak' && $is_retur_comment) continue;
+          $u = $API->comm('/ip/hotspot/user/print', [
+            '?name' => $r['username'],
+            '.proplist' => '.id,name,password,profile,comment,limit-uptime,limit-bytes-total,uptime,bytes-in,bytes-out'
+          ]);
+          if (isset($u[0])) {
+            $router_comment = $u[0]['comment'] ?? '';
+            $router_is_retur = (stripos($router_comment, '(Retur)') !== false) || (stripos($router_comment, 'Retur Ref:') !== false);
+            if ($target_status === 'retur' && !$router_is_retur) continue;
+            if ($target_status === 'rusak' && $router_is_retur) continue;
+            $getuser[] = $u[0];
+          } else {
+            $profile_name = '';
+            if (preg_match('/Profile:([^|]+)/i', $raw_comment, $m)) {
+              $profile_name = trim($m[1]);
+            }
+            if ($target_status === 'retur' && !$is_retur_comment) continue;
+            if ($target_status === 'rusak' && $is_retur_comment) continue;
+            $getuser[] = [
+              '.id' => 'db-'.$r['username'],
+              'name' => $r['username'],
+              'password' => $r['username'],
+              'profile' => $profile_name,
+              'comment' => $raw_comment,
+              'limit-uptime' => '',
+              'limit-bytes-total' => 0,
+              'uptime' => '0s',
+              'bytes-in' => 0,
+              'bytes-out' => 0,
+            ];
+          }
+        }
+      } else {
+        $stmt = $db->prepare("SELECT username, raw_comment FROM login_history WHERE lower(last_status)=:st");
+        $stmt->execute([':st' => $target_status]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as $r) {
+          if ($filter_user !== '' && $r['username'] !== $filter_user) continue;
+          $u = $API->comm('/ip/hotspot/user/print', [
+            '?name' => $r['username'],
+            '.proplist' => '.id,name,password,profile,comment,limit-uptime,limit-bytes-total,uptime,bytes-in,bytes-out'
+          ]);
+          if (isset($u[0])) {
+            $router_comment = $u[0]['comment'] ?? '';
+            $router_is_retur = (stripos($router_comment, '(Retur)') !== false) || (stripos($router_comment, 'Retur Ref:') !== false);
+            if ($target_status === 'retur' && !$router_is_retur) continue;
+            if ($target_status === 'rusak' && $router_is_retur) continue;
+            $getuser[] = $u[0];
+          } else {
+            $raw_comment = $r['raw_comment'] ?? '';
+            $is_retur_comment = (stripos($raw_comment, '(Retur)') !== false) || (stripos($raw_comment, 'Retur Ref:') !== false);
+            $profile_name = '';
+            if (preg_match('/Profile:([^|]+)/i', $raw_comment, $m)) {
+              $profile_name = trim($m[1]);
+            }
+            if ($target_status === 'retur' && !$is_retur_comment) continue;
+            if ($target_status === 'rusak' && $is_retur_comment) continue;
+            $getuser[] = [
+              '.id' => 'db-'.$r['username'],
+              'name' => $r['username'],
+              'password' => $r['username'],
+              'profile' => $profile_name,
+              'comment' => $raw_comment,
+              'limit-uptime' => '',
+              'limit-bytes-total' => 0,
+              'uptime' => '0s',
+              'bytes-in' => 0,
+              'bytes-out' => 0,
+            ];
+          }
+        }
+      }
+    } catch (Exception $e) {
+      $getuser = [];
+    }
+    $TotalReg = count($getuser);
+    $usermode = "vc";
+
+    if ($TotalReg == 0 && in_array($target_status, ['retur','rusak'])) {
+      $key = $target_status === 'retur' ? 'Retur' : 'RUSAK';
+      $raw_users = $API->comm('/ip/hotspot/user/print', array(
+        ".proplist" => ".id,name,password,profile,comment,limit-uptime,limit-bytes-total,uptime,bytes-in,bytes-out"
+      ));
+      foreach ($raw_users as $u) {
+        if ($filter_user !== '' && ($u['name'] ?? '') !== $filter_user) continue;
+        $u_comment = $u['comment'] ?? '';
+        $is_retur_comment = (stripos($u_comment, '(Retur)') !== false) || (stripos($u_comment, 'Retur Ref:') !== false);
+        if ($target_status === 'retur' && !$is_retur_comment) continue;
+        if ($target_status === 'rusak' && $is_retur_comment) continue;
+        if (stripos($u_comment, $key) === false) continue;
+        if ($blok != '') {
+          $cm_blok = extract_blok_from_comment($u_comment);
+          $match = (stripos($u_comment, $blok) !== false) || (stripos($cm_blok, $blok) !== false);
+          if (!$match) continue;
+        }
+        $getuser[] = $u;
+      }
+      $TotalReg = count($getuser);
+    }
+  } elseif ($userp != "") {
     // A. PRINT SATUAN (BY NAME) - Tidak di-filter karena user minta spesifik
     if (strpos($userp, '-') === false) {
       $user = $userp;
