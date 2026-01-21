@@ -455,7 +455,27 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
     </div>
 
     <?php if ($req_show === 'harian'): ?>
-        <?php ksort($block_summaries); ?>
+        <?php
+            if (!empty($block_summaries)) {
+                foreach ($block_summaries as $blk => $bdata) {
+                    $has_data = ((int)($bdata['total_qty'] ?? 0) > 0)
+                        || ((int)($bdata['total_amount'] ?? 0) > 0)
+                        || ((int)($bdata['total_bw'] ?? 0) > 0)
+                        || ((int)($bdata['qty_10'] ?? 0) > 0)
+                        || ((int)($bdata['qty_30'] ?? 0) > 0)
+                        || ((int)($bdata['rs_10'] ?? 0) > 0)
+                        || ((int)($bdata['rs_30'] ?? 0) > 0)
+                        || ((int)($bdata['rt_10'] ?? 0) > 0)
+                        || ((int)($bdata['rt_30'] ?? 0) > 0)
+                        || ((int)($bdata['rs_total'] ?? 0) > 0)
+                        || ((int)($bdata['rt_total'] ?? 0) > 0);
+                    if (!$has_data) {
+                        unset($block_summaries[$blk]);
+                    }
+                }
+            }
+            ksort($block_summaries);
+        ?>
         <table class="rekap-table">
             <thead>
                 <tr>
