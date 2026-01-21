@@ -768,6 +768,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
     function pollSettlementLogs(){
         var logBox = document.getElementById('settlement-log');
         var statusEl = document.getElementById('settlement-status');
+        var processEl = document.getElementById('processStatus');
         var closeBtn = document.getElementById('settlement-close');
         var params = new URLSearchParams();
         params.set('session', '<?= htmlspecialchars($session_id); ?>');
@@ -777,11 +778,16 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             .then(function(r){ return r.json(); })
             .then(function(data){
                 if (data && Array.isArray(data.logs) && logBox) {
-                    logBox.textContent = data.logs.join('\n');
+                    logBox.innerHTML = data.logs.map(function(line){
+                        return '<div>' + line.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
+                    }).join('');
                     logBox.scrollTop = logBox.scrollHeight;
                 }
                 if (data && data.status) {
                     if (statusEl) statusEl.textContent = data.status === 'done' ? 'Selesai' : (data.status === 'failed' ? 'Gagal' : 'Berjalan');
+                    if (processEl) processEl.innerHTML = data.status === 'done'
+                        ? '<i class="fa fa-check-circle"></i> Selesai'
+                        : (data.status === 'failed' ? '<i class="fa fa-times-circle"></i> Gagal' : '<i class="fa fa-refresh fa-spin"></i> Sedang memproses...');
                 }
                 if (data && data.status === 'done') {
                     if (closeBtn) {
