@@ -10,7 +10,11 @@
 :put (",remc,20000,1d,20000,,Enable,");
 
 {
-    :local comment [/ip hotspot user get [/ip hotspot user find where name="$user"] comment];
+    :local userId [/ip hotspot user find where name="$user"];
+    :local comment "";
+    :if ([:len $userId] > 0) do={
+        :set comment [/ip hotspot user get $userId comment];
+    }
     :local ucode [:pick $comment 0 2];
     :local date [/system clock get date];
     :local time [/system clock get time];
@@ -45,8 +49,13 @@
         
         /sys sch add name="$user" disable=no start-date=$date interval="1d";
         :delay 5s;
-        
-        :local exp [/sys sch get [/sys sch find where name="$user"] next-run];
+        :local schId [/sys sch find where name="$user"];
+        :local exp "";
+        :if ([:len $schId] > 0) do={
+            :set exp [/sys sch get $schId next-run];
+        } else={
+            :log warning "SYNC WARN: scheduler not found for $user";
+        }
         :local getxp [:len $exp];
         :local newComment "";
         :local existingDate "";
@@ -83,7 +92,9 @@
         }
         
         :delay 5s;
-        /sys sch remove [find where name="$user"];
+        :if ([:len $schId] > 0) do={
+            /sys sch remove $schId;
+        }
         
         
         # SAVE KE DATABASE LOG (Format untuk PHP parsing)
@@ -96,10 +107,13 @@
         /tool fetch url=$url http-method=post http-data=("data=" . $payload) keep-result=no;
 
         # SET COMMENT BARU (DENGAN BLOK) - TANPA MENUMPUK
-        /ip hotspot user set comment=$newComment [find where name=$user];
-        
-        # SET MAC ADDRESS
-        /ip hotspot user set mac-address=$mac [find where name=$user];
+        :if ([:len $userId] > 0) do={
+            /ip hotspot user set comment=$newComment $userId;
+            # SET MAC ADDRESS
+            /ip hotspot user set mac-address=$mac $userId;
+        } else={
+            :log warning "SYNC WARN: user not found for $user (comment/mac not set)";
+        }
     }
 
     # REALTIME USAGE (LOGIN) - kirim untuk semua login
