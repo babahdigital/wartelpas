@@ -44,6 +44,7 @@ $use_glob = !preg_match('/\d$/', $blok_upper);
 $glob_pattern = $use_glob ? ($blok_upper . '[0-9]*') : '';
 
 $date = trim((string)($_GET['date'] ?? ''));
+$delete_hp = isset($_GET['delete_hp']) && $_GET['delete_hp'] === '1';
 $dateClause = '';
 $dateParams = [];
 if ($date !== '') {
@@ -74,11 +75,14 @@ try {
     $stmt->execute(array_merge($use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern] : [':b' => $blok_upper], $dateParams));
     $deleted_live = $stmt->rowCount();
 
-    $stmt = $db->prepare("DELETE FROM phone_block_daily WHERE (" . $whereBlok . ")" . ($date !== '' ? " AND report_date = :d" : ""));
-    $stmt->execute(array_merge($use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern] : [':b' => $blok_upper], $date !== '' ? [':d' => $date] : []));
-    $deleted_hp = $stmt->rowCount();
+    $deleted_hp = 0;
+    if ($delete_hp) {
+        $stmt = $db->prepare("DELETE FROM phone_block_daily WHERE (" . $whereBlok . ")" . ($date !== '' ? " AND report_date = :d" : ""));
+        $stmt->execute(array_merge($use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern] : [':b' => $blok_upper], $date !== '' ? [':d' => $date] : []));
+        $deleted_hp = $stmt->rowCount();
+    }
 
-    echo "OK login=" . $deleted_login . ", sales=" . $deleted_sales . ", live=" . $deleted_live . ", hp=" . $deleted_hp;
+    echo "OK login=" . $deleted_login . ", sales=" . $deleted_sales . ", live=" . $deleted_live . ", hp=" . ($delete_hp ? $deleted_hp : 'skipped');
 } catch (Exception $e) {
     http_response_code(500);
     echo "Error";
