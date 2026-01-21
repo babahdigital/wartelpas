@@ -518,6 +518,8 @@ function esc($s){ return htmlspecialchars((string)$s); }
         th, td { border:1px solid #ddd; padding:6px; text-align:left; vertical-align:top; }
         th { background:#f5f5f5; }
         .usage-table th { text-align:center; vertical-align:middle; }
+        .usage-table td { text-align:center; vertical-align:middle; }
+        .usage-table td.col-uptime, .usage-table td.col-bytes { text-align:right; }
         .status-normal { color:#0a7f2e; font-weight:700; }
         .status-rusak { color:#d35400; font-weight:700; }
         .status-retur { color:#7f8c8d; font-weight:700; }
@@ -573,8 +575,8 @@ function esc($s){ return htmlspecialchars((string)$s); }
                                             <td><?= esc(strip_blok_prefix($it['blok'])) ?></td>
                       <td><?= esc($it['ip']) ?></td>
                       <td><?= esc($it['mac']) ?></td>
-                      <td><?= esc($it['uptime']) ?></td>
-                      <td><?= esc(format_bytes_short($it['bytes'])) ?></td>
+                      <td class="col-uptime"><?= esc($it['uptime']) ?></td>
+                      <td class="col-bytes"><?= esc(format_bytes_short($it['bytes'])) ?></td>
                                             <?php
                                                 $st = strtolower((string)($it['status'] ?? ''));
                                                 $st_label = '-';
