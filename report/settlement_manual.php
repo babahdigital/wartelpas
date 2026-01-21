@@ -97,7 +97,7 @@ try {
                     $rawLogs = [];
                 }
                 $API->disconnect();
-                $rawLogs = is_array($rawLogs) ? array_slice($rawLogs, -400) : [];
+                $rawLogs = is_array($rawLogs) ? array_slice($rawLogs, -1000) : [];
                 if (is_array($rawLogs)) {
                     $rawLogs = array_reverse($rawLogs);
                 }
@@ -111,13 +111,6 @@ try {
                 $topics = trim((string)($l['topics'] ?? 'system,info'));
                 $msg = trim((string)($l['message'] ?? ''));
                 if ($msg === '' && $time === '') continue;
-
-                if ($triggeredTs > 0 && preg_match('/^(\d{2}:\d{2}:\d{2})$/', $time)) {
-                    $logTs = strtotime(date('Y-m-d') . ' ' . $time);
-                    if ($logTs && $logTs + 5 < $triggeredTs) {
-                        continue;
-                    }
-                }
 
                 $msgTrim = trim($msg);
                 if (strpos($msgTrim, "\r") !== false || strpos($msgTrim, "\n") !== false || strpos($msgTrim, "tool fetch url") !== false) {
@@ -133,6 +126,7 @@ try {
                 $startsOk = preg_match('/^(SETTLE:|CLEANUP:|SYNC:|MAINT:|SUKSES:)/i', $msgTrim);
                 $isScriptTopic = (strpos($topicUpper, 'SCRIPT') !== false);
                 $isFetchTopic = (strpos($topicUpper, 'FETCH') !== false) && (strpos($msgUpper, 'WARTELPAS') !== false || strpos($msgUpper, 'SOBIGIDUL') !== false);
+                $isSettleMsg = ($startsOk || stripos($msgTrim, 'SETTLE:') !== false || stripos($msgTrim, 'CLEANUP:') !== false || stripos($msgTrim, 'SYNC:') !== false || stripos($msgTrim, 'MAINT:') !== false);
 
                 if (stripos($msgTrim, 'SETTLE: CLEANUP: Mulai') !== false || stripos($msgTrim, 'SETTLE: SYNC:') !== false) {
                     $capture = true;
@@ -150,11 +144,7 @@ try {
                     $sawFetch = true;
                 }
 
-                if (!$capture && !$startsOk) {
-                    continue;
-                }
-
-                if (!($startsOk || $isScriptTopic || ($sawSettle && $isFetchTopic))) {
+                if (!$isSettleMsg && !($isScriptTopic && $sawSettle)) {
                     continue;
                 }
 
