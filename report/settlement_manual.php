@@ -86,7 +86,6 @@ if ($action === 'logs') {
                 if (is_array($rawLogs)) {
                     $rawLogs = array_reverse($rawLogs);
                 }
-            $settleStarted = false;
             foreach ($rawLogs as $l) {
                 $time = trim((string)($l['time'] ?? ''));
                 $topics = trim((string)($l['topics'] ?? 'system,info'));
@@ -108,15 +107,7 @@ if ($action === 'logs') {
                 $isScriptTopic = (strpos($topicUpper, 'SCRIPT') !== false);
                 $isFetchTopic = (strpos($topicUpper, 'FETCH') !== false) && (strpos($msgUpper, 'WARTELPAS') !== false || strpos($msgUpper, 'SOBIGIDUL') !== false);
 
-                if (stripos($msgTrim, 'SETTLE: CLEANUP: Mulai') !== false) {
-                    $settleStarted = true;
-                }
-
-                if (!$settleStarted && !$startsOk) {
-                    continue;
-                }
-
-                if (!($startsOk || ($settleStarted && $isFetchTopic))) {
+                if (!($startsOk || $isFetchTopic)) {
                     continue;
                 }
 
