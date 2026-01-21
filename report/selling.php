@@ -571,7 +571,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 <button class="btn-print" style="opacity:.6;cursor:not-allowed;" disabled>Print Rincian</button>
             <?php endif; ?>
             <button class="btn-print" onclick="window.print()"><i class="fa fa-print"></i></button>
-            <button class="btn-print" onclick="document.getElementById('hpModal').style.display='flex'">Input HP Blok</button>
+            <button class="btn-print" type="button" onclick="openHpModal()">Input HP Blok</button>
             <button class="btn-print" type="button" onclick="softReloadSelling()">Reload</button>
         </div>
     </div>
@@ -610,10 +610,10 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
 </div>
 
 <?php if (!$is_ajax): ?>
-<div id="hpModal" class="modal-backdrop" onclick="if(event.target===this){this.style.display='none';}">
+<div id="hpModal" class="modal-backdrop" onclick="if(event.target===this){closeHpModal();}">
     <div class="modal-card">
         <div class="modal-title">Input Handphone per Blok (Harian)</div>
-        <form id="hpForm" method="post" action="report/hp_save.php">
+        <form id="hpForm" method="post" action="./?report=selling<?= $session_qs; ?>">
             <input type="hidden" name="report" value="selling">
             <?php if ($session_id !== ''): ?>
                 <input type="hidden" name="session" value="<?= htmlspecialchars($session_id); ?>">
@@ -683,7 +683,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 <input class="form-input" name="notes" placeholder="opsional">
             </div>
             <div class="modal-actions">
-                <button type="button" class="btn-print" onclick="document.getElementById('hpModal').style.display='none'">Batal</button>
+                <button type="button" class="btn-print" onclick="closeHpModal()">Batal</button>
                 <button type="submit" id="hpSubmitBtn" name="hp_submit" class="btn-print" disabled>Simpan</button>
             </div>
         </form>
@@ -760,6 +760,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             form.addEventListener('submit', function(e){
                 e.preventDefault();
                 if (btn && btn.disabled) return;
+                window.sellingPauseReload = true;
                 var fd = new FormData(form);
                 fetch(form.action, { method: 'POST', body: fd })
                     .then(function(r){ return r.text(); })
@@ -784,6 +785,18 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         }
         toggle();
     })();
+
+    function openHpModal(){
+        var modal = document.getElementById('hpModal');
+        if (modal) modal.style.display = 'flex';
+        window.sellingPauseReload = true;
+    }
+
+    function closeHpModal(){
+        var modal = document.getElementById('hpModal');
+        if (modal) modal.style.display = 'none';
+        window.sellingPauseReload = false;
+    }
 
     window.openHpEdit = function(btn){
         var form = document.getElementById('hpForm');
@@ -814,7 +827,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             if (k) k.dispatchEvent(evt);
         }
 
-        document.getElementById('hpModal').style.display = 'flex';
+        openHpModal();
     };
 </script>
 <?php endif; ?>
@@ -863,7 +876,9 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
 ?>
 
 <?php if ($is_ajax) { ob_start(); } ?>
+<?php if (!$is_ajax): ?>
 <div id="selling-content">
+<?php endif; ?>
 <?php if ($req_show === 'harian'): ?>
 <?php if (!empty($hp_error)): ?>
     <div class="card-solid mb-3">
@@ -943,7 +958,9 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             <div>Spam: <b><?= number_format($hp_spam_units,0,',','.') ?></b></div>
         </div>
     </div>
+<?php if (!$is_ajax): ?>
 </div>
+<?php endif; ?>
 
 <?php endif; ?>
 
@@ -1032,6 +1049,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
     function softReloadSelling(){
         var content = document.getElementById('selling-content');
         if (!content) return;
+        if (window.sellingPauseReload) return;
         var modal = document.getElementById('hpModal');
         if (modal && modal.style.display === 'flex') return;
         var url = new URL(window.location.href);
@@ -1041,6 +1059,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             .then(function(html){ content.innerHTML = html; })
             .catch(function(){});
     }
+    window.sellingPauseReload = false;
     setInterval(softReloadSelling, 30000);
 </script>
 <?php endif; ?>
