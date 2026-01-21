@@ -53,37 +53,39 @@
 
 :delay 5s;
 
-# 4b. CLEAR SERVER LOGS (optional)
-:log info "MAINT: Clear server logs...";
+# 4b. CLEAR SCRIPT LOG (opsional) - HAPUS SCRIPT MIKHMON TERBENTUK SAAT LOGIN
+:log info "MAINT: Hapus script mikhmon...";
 :do {
-    /tool fetch url="http://wartelpas.sobigidul.net:8081/report/clear_logs.php?key=WartelpasSecureKey&session=S3c7x9_LB" keep-result=no;
-    :log info "MAINT: Clear logs OK.";
-} on-error={ :log warning "MAINT: Clear logs gagal."; }
+    :local scr [/system script find where comment="mikhmon"];
+    :if ([:len $scr] > 0) do={
+        /system script remove $scr;
+        :log info ("MAINT: Script mikhmon terhapus " . [:len $scr] . ".");
+    } else={
+        :log info "MAINT: Tidak ada script mikhmon.";
+    }
+} on-error={ :log warning "MAINT: Gagal hapus script mikhmon."; }
 
 :delay 2s;
 
-# 5. HAPUS USER EXPIRED (CLEANUP)
-:log info "CLEANUP: Menghapus user Disabled...";
+# 5. HAPUS USER NON-READY (SUDAH PERNAH TERPAKAI)
+:log info "CLEANUP: Hapus user terpakai (bytes/uptime/disabled)...";
 
-# Hapus Profile 10Menit
+# Hapus Profile 10Menit & 30Menit (hanya yang sudah terpakai)
 :do {
-    :local deadUsers10 [/ip hotspot user find where profile="10Menit" and disabled=yes];
-    :if ([:len $deadUsers10] > 0) do={
-        /ip hotspot user remove $deadUsers10;
-        :log info ("CLEANUP: Terhapus " . [:len $deadUsers10] . " user 10Menit.");
+    :local removed 0;
+    :foreach u in=[/ip hotspot user find where (profile="10Menit" or profile="30Menit")] do={
+        :local bi [/ip hotspot user get $u bytes-in];
+        :local bo [/ip hotspot user get $u bytes-out];
+        :local up [/ip hotspot user get $u uptime];
+        :local dis [/ip hotspot user get $u disabled];
+        :local total ($bi + $bo);
+        :if (($dis = true) || ($total > 0) || ($up != "0s" && $up != "")) do={
+            /ip hotspot user remove $u;
+            :set removed ($removed + 1);
+        }
     }
-} on-error={ :log warning "CLEANUP: Gagal hapus 10Menit"; }
-
-:delay 2s;
-
-# Hapus Profile 30Menit
-:do {
-    :local deadUsers30 [/ip hotspot user find where profile="30Menit" and disabled=yes];
-    :if ([:len $deadUsers30] > 0) do={
-        /ip hotspot user remove $deadUsers30;
-        :log info ("CLEANUP: Terhapus " . [:len $deadUsers30] . " user 30Menit.");
-    }
-} on-error={ :log warning "CLEANUP: Gagal hapus 30Menit"; }
+    :log info ("CLEANUP: Terhapus " . $removed . " user (10/30Menit) terpakai.");
+} on-error={ :log warning "CLEANUP: Gagal hapus user terpakai."; }
 
 # Buka Kunci
 :set isCleaning false;
