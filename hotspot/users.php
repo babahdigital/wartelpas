@@ -1416,6 +1416,11 @@ foreach($all_users as $u) {
     elseif ($is_retur) $status = 'RETUR';
     elseif ($is_used) $status = 'TERPAKAI';
 
+    $is_ready_now = (!$is_active && !$is_rusak && !$is_retur && $disabled !== 'true' && $bytes <= 50 && ($uptime == '0s' || $uptime == ''));
+    if ($req_status == 'ready' && $is_ready_now) {
+      $status = 'READY';
+    }
+
     // Pastikan data usage tampil saat RUSAK
     if ($status === 'RUSAK' && $hist) {
       if ($bytes == 0 && (int)($hist['last_bytes'] ?? 0) > 0) {
@@ -1602,7 +1607,7 @@ foreach($all_users as $u) {
 
     // Filter status
     if ($req_status == 'ready') {
-      if ($status !== 'READY') continue;
+      if (!$is_ready_now) continue;
     }
     if ($req_status == 'online' && !$is_active) continue;
     if ($req_status == 'online' && $f_blok == '') continue;
