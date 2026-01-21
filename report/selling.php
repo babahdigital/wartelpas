@@ -720,6 +720,10 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (!m) return dateStr;
         return m[3] + '-' + m[2] + '-' + m[1];
     }
+    function closeDeleteHpModal(){
+        var modal = document.getElementById('hp-delete-modal');
+        if (modal) modal.style.display = 'none';
+    }
     function openDeleteHpModal(url, blok, date){
         hpDeleteUrl = url || '';
         var modal = document.getElementById('hp-delete-modal');
@@ -1354,14 +1358,14 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
     <div style="background:#2c2c2c;color:#e0e0e0;border:1px solid #444;border-radius:8px;width:420px;max-width:92vw;box-shadow:0 10px 30px rgba(0,0,0,0.5);overflow:hidden;">
         <div style="background:#252525;border-bottom:1px solid #3d3d3d;padding:14px 16px;font-weight:600;display:flex;justify-content:space-between;align-items:center;">
             <span>Konfirmasi Hapus</span>
-            <button type="button" id="hp-delete-close" style="background:transparent;border:none;color:#fff;opacity:.7;font-size:20px;line-height:1;cursor:pointer;">&times;</button>
+            <button type="button" id="hp-delete-close" onclick="closeDeleteHpModal()" style="background:transparent;border:none;color:#fff;opacity:.7;font-size:20px;line-height:1;cursor:pointer;">&times;</button>
         </div>
         <div style="padding:18px 16px;color:#ccc;">
             <div style="font-size:36px;color:#ff9800;text-align:center;margin-bottom:10px;"><i class="fa fa-exclamation-triangle"></i></div>
             <div id="hp-delete-text" style="text-align:center;line-height:1.5;">Hapus data ini?</div>
         </div>
         <div style="background:#252525;border-top:1px solid #3d3d3d;padding:12px 16px;display:flex;justify-content:flex-end;gap:8px;">
-            <button type="button" id="hp-delete-cancel" class="btn-print" style="background:#424242;border:1px solid #555;">Batal</button>
+            <button type="button" id="hp-delete-cancel" onclick="closeDeleteHpModal()" class="btn-print" style="background:#424242;border:1px solid #555;">Batal</button>
             <button type="button" id="hp-delete-confirm" class="btn-print" style="background:#ff9800;color:#fff;">Ya, Hapus</button>
         </div>
     </div>
