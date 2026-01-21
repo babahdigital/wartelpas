@@ -2354,6 +2354,57 @@ if ($debug_mode && !$is_ajax) {
     });
   }
 
+  function showRusakChecklist(data) {
+    return new Promise((resolve) => {
+      if (!confirmModal || !confirmMessage || !confirmOk || !confirmCancel) {
+        resolve(false);
+        return;
+      }
+      const criteria = data.criteria || {};
+      const values = data.values || {};
+      const limits = data.limits || {};
+      const items = [
+        { label: `Offline (tidak sedang online)`, ok: !!criteria.offline, value: values.online || '-' },
+        { label: `Bytes <= ${limits.bytes || '-'}`, ok: !!criteria.bytes_ok, value: values.bytes || '-' },
+        { label: `Uptime <= ${limits.uptime || '-'}`, ok: !!criteria.uptime_ok, value: values.uptime || '-' },
+        { label: `Relogin >= 3 (5 menit)`, ok: !!criteria.relogin_ok, value: String(values.relogin ?? '-') }
+      ];
+      const rows = items.map(it => {
+        const icon = it.ok ? 'fa-check-circle' : 'fa-times-circle';
+        const color = it.ok ? '#16a34a' : '#dc2626';
+        return `<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #3d3d3d;">
+          <div><i class="fa ${icon}" style="color:${color};margin-right:6px;"></i>${it.label}</div>
+          <div style="color:#cbd5e1;">${it.value}</div>
+        </div>`;
+      }).join('');
+      confirmMessage.innerHTML = `
+        <div style="text-align:left;">
+          <div style="margin-bottom:8px;font-weight:600;">Cek Kelayakan Rusak</div>
+          ${rows}
+        </div>`;
+      const isValid = !!data.ok;
+      confirmOk.textContent = 'Ya, Lanjutkan';
+      confirmOk.disabled = !isValid;
+      confirmOk.style.opacity = isValid ? '1' : '0.5';
+      confirmOk.style.cursor = isValid ? 'pointer' : 'not-allowed';
+      confirmModal.style.display = 'flex';
+      const cleanup = (result) => {
+        confirmModal.style.display = 'none';
+        confirmOk.onclick = null;
+        confirmCancel.onclick = null;
+        confirmOk.disabled = false;
+        confirmOk.style.opacity = '1';
+        confirmOk.style.cursor = 'pointer';
+        try { document.activeElement && document.activeElement.blur(); } catch (e) {}
+        try { document.body.focus(); } catch (e) {}
+        resolve(result);
+      };
+      confirmOk.onclick = () => cleanup(true);
+      confirmCancel.onclick = () => cleanup(false);
+      if (confirmClose) confirmClose.onclick = () => cleanup(false);
+    });
+  }
+
   window.actionRequest = async function(url, confirmMsg) {
     if (confirmMsg) {
       const ok = await showConfirm(confirmMsg);
@@ -2421,16 +2472,15 @@ if ($debug_mode && !$is_ajax) {
       const text = await res.text();
       let data = null;
       try { data = JSON.parse(text); } catch (e) { data = null; }
-      if (data && data.ok) {
-        const info = data.info || 'Syarat rusak terpenuhi.';
-        const ok = await showConfirm(info);
+      if (data) {
+        const ok = await showRusakChecklist(data);
         if (!ok) return;
         window.actionRequest(url, null);
       } else {
-        window.showActionPopup('error', (data && data.message) ? data.message : 'Voucher masih valid dan bisa digunakan.');
+        window.showActionPopup('error', 'Gagal memproses.');
       }
     } catch (e) {
-      window.showActionPopup('error', 'Voucher masih valid dan bisa digunakan.');
+      window.showActionPopup('error', 'Gagal memproses.');
     }
   };
 
