@@ -94,7 +94,7 @@ if ($action === 'logs') {
                     continue;
                 }
 
-                if (stripos($msgTrim, '[ARP Cleanup]') !== false || stripos($msgTrim, 'SYNC USAGE: OK') !== false) {
+                if (stripos($msgTrim, '[ARP Cleanup]') !== false || stripos($msgTrim, '[DHCP Cleanup]') !== false || stripos($msgTrim, 'SYNC USAGE: OK') !== false) {
                     continue;
                 }
 

@@ -1476,8 +1476,13 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         </div>
         <div style="padding:10px 18px;border-top:1px solid #333;display:flex;justify-content:space-between;gap:8px;align-items:center;">
             <span id="processStatus" style="font-size:12px;color:#ff9800;"><i class="fa fa-refresh fa-spin"></i> Menunggu proses...</span>
-            <button id="settlement-close" type="button" class="btn-print">Tutup</button>
+            <button id="settlement-close" type="button" class="btn-print" onclick="closeSettlementModal()">Tutup</button>
         </div>
+            var closeBtn = document.getElementById('settlement-close');
+            if (closeBtn && closeBtn.disabled) return;
+            var modal = document.getElementById('settlement-modal');
+            if (modal) modal.style.display = 'none';
+        }
     </div>
 </div>
 <?php endif; ?>
