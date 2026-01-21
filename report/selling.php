@@ -752,6 +752,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         var modal = document.getElementById('settlement-modal');
         var logBox = document.getElementById('settlement-log');
         var logWrap = document.getElementById('settlement-log-wrap');
+        var footer = document.getElementById('settlement-footer');
         var statusEl = document.getElementById('settlement-status');
         var processEl = document.getElementById('processStatus');
         var closeBtn = document.getElementById('settlement-close');
@@ -765,6 +766,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (modal) modal.style.display = 'flex';
         if (logBox) logBox.innerHTML = '';
         if (logWrap) logWrap.style.display = 'none';
+        if (footer) footer.style.display = 'none';
         if (statusEl) statusEl.textContent = 'Menunggu konfirmasi';
         if (processEl) processEl.innerHTML = '<i class="fa fa-refresh"></i> Menunggu proses...';
         if (closeBtn) {
@@ -785,6 +787,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             startBtn.onclick = function(){
                 if (confirmBox) confirmBox.style.display = 'none';
                 if (logWrap) logWrap.style.display = 'block';
+                if (footer) footer.style.display = 'flex';
                 if (statusEl) statusEl.textContent = 'Menjalankan settlement...';
                 btn.disabled = true;
                 btn.style.opacity = '0.6';
@@ -1531,7 +1534,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 <div id="settlement-log" class="terminal-window"></div>
             </div>
         </div>
-        <div style="padding:10px 18px;border-top:1px solid #333;display:flex;justify-content:space-between;gap:8px;align-items:center;">
+        <div id="settlement-footer" style="padding:10px 18px;border-top:1px solid #333;display:none;justify-content:space-between;gap:8px;align-items:center;">
             <span id="processStatus" style="font-size:12px;color:#ff9800;"><i class="fa fa-refresh fa-spin"></i> Menunggu proses...</span>
             <button id="settlement-close" type="button" class="btn-print" onclick="closeSettlementModal()" disabled style="opacity:.6;cursor:not-allowed;">Tutup</button>
         </div>
