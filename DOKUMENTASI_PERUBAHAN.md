@@ -18,6 +18,13 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 13. **READY bocor ke TERPAKAI** pada tampilan/print karena deteksi pemakaian terlalu longgar.
 14. **Sync Usage timeout di MikroTik** karena respons endpoint terlambat (router API call lama).
 15. **Data “ready” tetap muncul** setelah DB dikosongkan (dianggap error padahal hasil sync).
+16. **Relogin & detail pemakaian tidak transparan** (tidak ada detail popup + print).
+17. **Pendapatan ganda** karena relogin masuk ke rekap penjualan.
+18. **Data non‑Wartel** (tanpa BLOK) ikut terbawa ke rekap dan live sales.
+19. **Schema sales_history/live_sales tidak lengkap**, membuat rekap nol dan insert gagal.
+20. **Konfirmasi hapus/edit masih pakai alert/confirm**, tidak konsisten dengan UI design.
+21. **Proses settlement manual belum ada** dan perlu log proses yang terkunci.
+22. **Input HP Blok error “Respon tidak valid dari server”.**
 
 ## 2) Solusi & Penyempurnaan yang Diterapkan
 ### 2.1 Optimalisasi RouterOS API
@@ -124,6 +131,38 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - Logging **sync_usage.log** untuk audit proses dan durasi.
 - Script MikroTik diubah ke **port 8081** agar sesuai container.
 
+### 2.17 Relogin Detail, Print, dan Validasi Rusak
+- **hotspot/users.php**: tambah popup detail relogin (tanggal, total relogin, waktu login/logout, durasi, bytes, IP/MAC) dan tombol print.
+- Perbaiki **sinkronisasi jumlah relogin** antara tabel list dan print.
+- **Rusak checklist** ditambahkan agar validasi transparan (kriteria waktu & relogin).
+- Kriteria rusak disempurnakan menggunakan **akumulasi uptime** dari `login_events` + **minimum relogin >= 3**.
+- Print rusak menampilkan tabel relogin dengan rentang waktu yang selaras dengan perhitungan.
+
+### 2.18 Perbaikan Rekap Penjualan (Dedup & Non‑Wartel)
+- **report/print_rekap.php** dan **report/selling.php**: deduplikasi penjualan berdasarkan `username + sale_date` agar relogin tidak menghitung ganda.
+- **report/live_ingest.php** dan **report/sync_sales.php**: menolak data tanpa BLOK (non‑Wartel).
+- Rekap hanya menampilkan blok yang memiliki metrik > 0 (mengurangi baris kosong).
+
+### 2.19 Perbaikan Schema & Migrasi Otomatis Penjualan
+- Auto‑create/alter kolom **sales_history** dan **live_sales** saat runtime jika belum ada.
+- Backfill data historis agar rekap tidak nol setelah migrasi.
+
+### 2.19.1 Tool Pembersih Data
+- **report/cleanup_duplicate_sales.php**: dedup penjualan berdasarkan `username + sale_date`, rebuild summary.
+- **report/cleanup_non_wartel_login_history.php**: bersihkan `login_history` tanpa BLOK.
+
+### 2.20 Settlement Manual + Log Terkunci
+- Tambah **settlement manual** di **report/selling.php** untuk menjalankan scheduler MikroTik.
+- Endpoint **report/settlement_manual.php** menjalankan scheduler dan menulis log ke `settlement_log`.
+- Modal log bergaya terminal dengan **lock** saat proses berjalan (tidak bisa ditutup sampai selesai).
+
+### 2.21 Perbaikan Input HP Blok
+- **report/selling.php**: form HP mengirim `ajax=1` dan dialihkan ke **report/hp_save.php**.
+- **report/hp_save.php**: validasi & response JSON konsisten.
+
+### 2.22 UI Konfirmasi Tanpa Alert
+- Konfirmasi hapus/edit diganti menjadi **modal** bergaya design.html (tanpa `alert/confirm`).
+
 ## 3) Masalah Khusus dan Fix Terkait
 ### 3.1 Waktu/Bytes/Uptime kosong saat RUSAK
 - Parsing comment diperluas untuk format:
@@ -152,6 +191,36 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **Gejala**: fetch timeout waiting data / receiving content.
 - **Akar masalah**: proses router API lama, respons endpoint telat.
 - **Solusi**: endpoint mengirim respons JSON **lebih dulu**, lanjut proses di belakang.
+
+### 3.6 Relogin tidak sinkron & tidak ada detail
+- **Gejala**: jumlah relogin di list berbeda dengan hasil print.
+- **Akar masalah**: perhitungan belum diseragamkan antara list/print.
+- **Solusi**: standar perhitungan di satu sumber, dan tabel print relogin diselaraskan rentang waktunya.
+
+### 3.7 Pendapatan ganda (relogin terhitung ulang)
+- **Gejala**: rekap penjualan membengkak.
+- **Akar masalah**: relogin dari user yang sama masuk berulang.
+- **Solusi**: dedup berdasarkan `username + sale_date` di selling/print + ingest/sync.
+
+### 3.8 Data non‑Wartel ikut terhitung
+- **Gejala**: rekap berisi transaksi tanpa BLOK.
+- **Akar masalah**: tidak ada filter data non‑Wartel saat ingest/sync.
+- **Solusi**: skip data tanpa BLOK di `live_ingest` dan `sync_sales`.
+
+### 3.9 Rekap nol karena schema tidak lengkap
+- **Gejala**: rekap kosong, insert gagal.
+- **Akar masalah**: kolom `sale_date`/`blok_name` belum ada.
+- **Solusi**: auto‑migrate kolom + backfill data historis.
+
+### 3.10 Error input HP Blok
+- **Gejala**: “Respon tidak valid dari server”.
+- **Akar masalah**: endpoint tidak mengirim JSON yang diharapkan.
+- **Solusi**: kirim `ajax=1`, arahkan ke `report/hp_save.php`, respons JSON konsisten.
+
+### 3.11 Konfirmasi masih pakai alert/confirm
+- **Gejala**: UX tidak konsisten dengan design.html.
+- **Akar masalah**: masih menggunakan `alert/confirm` bawaan browser.
+- **Solusi**: ganti ke modal konfirmasi custom.
 
 ## 4) File yang Dibersihkan (Dihapus)
 File diagnostik & migrasi sementara yang sudah tidak diperlukan:
@@ -186,6 +255,9 @@ File diagnostik & migrasi sementara yang sudah tidak diperlukan:
 - report/sync_stats.php
 - report/sync_sales.php
 - report/selling.php
+- report/settlement_manual.php
+- report/cleanup_duplicate_sales.php
+- report/cleanup_non_wartel_login_history.php
 - report/hp_save.php
 - report/print_rekap.php
 - report/print_rincian.php
@@ -211,6 +283,9 @@ File diagnostik & migrasi sementara yang sudah tidak diperlukan:
 - Cookie dibersihkan aman tanpa mengganggu klien non‑Wartel.
 - Login/logout tercatat real‑time dan relogin terlihat.
 - Sync Usage tidak timeout di MikroTik.
+- Rekap penjualan akurat (dedup relogin, filter non‑Wartel).
+- Settlement manual tersedia dengan log proses.
+- Konfirmasi aksi menggunakan modal (tanpa alert/confirm).
 
 ## 7) Catatan Operasional
 - Pastikan script `mikrotik-onlogout.rsc` sudah dipasang pada server profile hotspot.
