@@ -1592,10 +1592,14 @@ foreach($all_users as $u) {
 
     if ($db && !$read_only && $name != '') {
         $should_save = false;
+        $skip_ready_save = ($next_status === 'ready' && !$is_active && (int)$bytes <= 0 && ($uptime === '' || $uptime === '0s'));
+        if ($skip_ready_save) {
+          $should_save = false;
+        }
         if (!$hist) {
-          $should_save = true;
+          $should_save = !$skip_ready_save;
         } else {
-          $should_save = (
+          $should_save = (!$skip_ready_save) && (
             strtolower((string)($hist['last_status'] ?? '')) !== $next_status ||
             (string)($hist['last_uptime'] ?? '') !== (string)$uptime ||
             (int)($hist['last_bytes'] ?? 0) !== (int)$bytes ||
