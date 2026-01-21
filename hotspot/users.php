@@ -1266,7 +1266,6 @@ if ($db) {
         if ($req_status === 'used' && $h_status !== 'TERPAKAI') continue;
         if ($req_status === 'rusak' && $h_status !== 'RUSAK') continue;
         if ($req_status === 'retur' && $h_status !== 'RETUR') continue;
-        if ($req_status === 'all' && $h_status === 'READY') continue;
         $all_users[] = [
           'name' => $uname,
           'comment' => $comment,
@@ -1681,22 +1680,7 @@ foreach($all_users as $u) {
 
     // Filter tanggal (harian/bulanan/tahunan) memakai last_used
     if ($req_status !== 'used' && $req_show !== 'semua' && !empty($filter_date)) {
-      if ($status === 'READY') {
-        $today_key = date('Y-m-d');
-        $month_key = date('Y-m');
-        $year_key = date('Y');
-        $allow_ready = false;
-        if ($req_show === 'harian') {
-          $allow_ready = ($filter_date >= $today_key);
-        } elseif ($req_show === 'bulanan') {
-          $allow_ready = ($filter_date >= $month_key);
-        } else {
-          $allow_ready = ($filter_date >= $year_key);
-        }
-        if (!$allow_ready) {
-          continue;
-        }
-      } else {
+      if ($status !== 'READY') {
         $date_key = normalize_date_key($last_used_disp, $req_show);
         if ($date_key === '' || $date_key !== $filter_date) {
           continue;
@@ -1728,11 +1712,7 @@ foreach($all_users as $u) {
 }
 $API->disconnect();
 
-if ($filtering_by_date && $has_transactions_in_filter) {
-  $display_data = array_values(array_filter($display_data, function($row) {
-    return ($row['status'] ?? '') !== 'READY';
-  }));
-}
+// READY tetap ditampilkan walau ada transaksi pada tanggal filter
 
 // Sorting (before pagination)
 $status_rank = [
