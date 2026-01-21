@@ -220,6 +220,13 @@ foreach ($all_users as $u) {
     $uptime_active = $is_active ? ($activeMap[$name]['uptime'] ?? '') : '';
     $uptime = $uptime_active != '' ? $uptime_active : $uptime_user;
 
+    $disabled_str = strtolower(trim((string)$disabled));
+    $is_disabled = ($disabled_str === 'true' || $disabled_str === 'yes' || $disabled_str === '1');
+    $is_ready = (!$is_active && !$is_disabled && $bytes <= 0 && ($uptime === '' || $uptime === '0s'));
+    if ($is_ready) {
+        continue;
+    }
+
     $cm = extract_ip_mac_from_comment_sync($comment);
     $ip = $is_active ? ($activeMap[$name]['address'] ?? '-') : ($cm['ip'] ?: '-');
     $mac = $is_active ? ($activeMap[$name]['mac-address'] ?? '-') : ($cm['mac'] ?: '-');
@@ -231,13 +238,6 @@ foreach ($all_users as $u) {
     else {
         $is_used = ($bytes > 50 || ($uptime != '' && $uptime != '0s') || ($ip != '-' && $ip != ''));
         if ($is_used) $status = 'terpakai';
-    }
-
-    $disabled_str = strtolower(trim((string)$disabled));
-    $is_disabled = ($disabled_str === 'true' || $disabled_str === 'yes' || $disabled_str === '1');
-    $is_ready = (!$is_active && !$is_disabled && $bytes <= 0 && ($uptime === '' || $uptime === '0s'));
-    if ($is_ready) {
-        continue;
     }
 
     // Ambil history untuk locking
