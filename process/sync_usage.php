@@ -78,6 +78,16 @@ function log_sync_usage($message) {
     @file_put_contents($logFile, $line, FILE_APPEND);
 }
 
+function log_ready_skip($message) {
+    $logDir = dirname(__DIR__) . '/logs';
+    if (!is_dir($logDir)) {
+        @mkdir($logDir, 0755, true);
+    }
+    $logFile = $logDir . '/ready_skip.log';
+    $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
+    @file_put_contents($logFile, $line, FILE_APPEND);
+}
+
 // Respond early to avoid MikroTik fetch timeout
 $requestId = substr(md5(uniqid('', true)), 0, 8);
 $startTime = microtime(true);
@@ -224,6 +234,7 @@ foreach ($all_users as $u) {
     $is_disabled = ($disabled_str === 'true' || $disabled_str === 'yes' || $disabled_str === '1');
     $is_ready = (!$is_active && !$is_disabled && $bytes <= 0 && ($uptime === '' || $uptime === '0s'));
     if ($is_ready) {
+        log_ready_skip("sync_usage skip READY user={$name}");
         continue;
     }
 
@@ -279,6 +290,7 @@ foreach ($all_users as $u) {
 
     // Skip READY users to avoid storing unused vouchers in DB
     if ($status === 'ready' && !$is_active && $bytes <= 0 && ($uptime == '' || $uptime == '0s')) {
+        log_ready_skip("sync_usage skip READY pre-insert user={$name}");
         continue;
     }
 

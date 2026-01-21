@@ -38,6 +38,16 @@ function extract_blok_name_sync_stats($comment) {
     return '';
 }
 
+function log_ready_skip_stats($message) {
+    $logDir = dirname(__DIR__) . '/logs';
+    if (!is_dir($logDir)) {
+        @mkdir($logDir, 0755, true);
+    }
+    $logFile = $logDir . '/ready_skip.log';
+    $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
+    @file_put_contents($logFile, $line, FILE_APPEND);
+}
+
 // SETTING MIKROTIK DARI KONFIG
 $use_ip   = $iphost;       
 $use_user = $userhost;         
@@ -160,6 +170,7 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
 
         // Skip READY users to avoid storing unused vouchers in DB
         if (!$is_active && ($bytes <= 0) && ($uptime === '' || $uptime === '0s')) {
+            log_ready_skip_stats("sync_stats skip READY user={$name}");
             continue;
         }
 

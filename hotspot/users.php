@@ -408,6 +408,16 @@ function save_user_history($name, $data) {
     }
 }
 
+function log_ready_skip_users($message) {
+  $logDir = dirname(__DIR__) . '/logs';
+  if (!is_dir($logDir)) {
+    @mkdir($logDir, 0755, true);
+  }
+  $logFile = $logDir . '/ready_skip.log';
+  $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
+  @file_put_contents($logFile, $line, FILE_APPEND);
+}
+
 function get_user_history($name) {
     global $db;
     if(!$db) return null;
@@ -1595,6 +1605,7 @@ foreach($all_users as $u) {
         $skip_ready_save = ($next_status === 'ready' && !$is_active && (int)$bytes <= 0 && ($uptime === '' || $uptime === '0s'));
         if ($skip_ready_save) {
           $should_save = false;
+          log_ready_skip_users("users.php skip READY user={$name}");
         }
         if (!$hist) {
           $should_save = !$skip_ready_save;
