@@ -88,11 +88,22 @@
         :local comm [/ip hotspot user get $u comment];
         :local biVal [:tonum $bi];
         :local boVal [:tonum $bo];
+        :if ([:typeof $biVal] = "nil") do={ :set biVal 0; }
+        :if ([:typeof $boVal] = "nil") do={ :set boVal 0; }
         :local total ($biVal + $boVal);
         :local isActive [/ip hotspot active find where user=$name];
-        :local isDisabled (( $dis = true ) || ( $dis = "true" ));
-        :local hasUsage (( $total > 0 ) || ( $up != "0s" && $up != "" ));
-        :local isReady (( $isDisabled = false ) && ( $total = 0 ) && ( ($up = "0s") || ($up = "") ));
+        :local isDisabled (( $dis = true ) || ( $dis = "true" ) || ( $dis = "yes" ) || ( $dis = "1" ));
+        :local upVal $up;
+        :local uptimeZero true;
+        :if ([:typeof $upVal] = "time") do={
+            :if ($upVal > 0s) do={ :set uptimeZero false; }
+        } else={
+            :if (($upVal != "") && ($upVal != "0s")) do={ :set uptimeZero false; }
+        }
+        :local hasUsage false;
+        :if ($total > 0) do={ :set hasUsage true; }
+        :if ($uptimeZero = false) do={ :set hasUsage true; }
+        :local isReady (( $isDisabled = false ) && ( $total = 0 ) && $uptimeZero );
         :local commPrefix [:pick $comm 0 3];
         :local isVcPrefix (( $commPrefix = "vc-" ) || ( $commPrefix = "VC-" ));
         :local isVcReady ($isVcPrefix && ( $isDisabled = false ) && ( $total = 0 ) && ( ($up = "0s") || ($up = "") ));
