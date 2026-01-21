@@ -99,8 +99,6 @@
                     :set removed ($removed + 1);
                 }
             }
-        } else={
-            # no-op
         }
     }
     :log info ("SETTLE: CLEANUP: Terhapus " . $removed . " user (10/30Menit) terpakai.");
