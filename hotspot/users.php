@@ -1308,6 +1308,8 @@ if (!$is_ajax) {
 }
 
 $display_data = [];
+$has_transactions_in_filter = false;
+$filtering_by_date = ($req_status === 'all' && $req_show !== 'semua' && !empty($filter_date));
 $debug_rows = [];
 $search_terms = array_filter(array_map('trim', preg_split('/[,\s]+/', $req_search)));
 foreach($all_users as $u) {
@@ -1693,6 +1695,13 @@ foreach($all_users as $u) {
     $relogin_flag = ((int)($hist['login_count'] ?? 0) > 1);
     $relogin_count = (int)($hist['login_count'] ?? 0);
     $first_login_disp = $first_login_real ?? ($hist['first_login_real'] ?? '-');
+    $last_used_disp = $hist['last_login_real'] ?? ($logout_disp !== '-' ? $logout_disp : ($login_disp !== '-' ? $login_disp : ($hist['first_login_real'] ?? '-')));
+    if ($status === 'ONLINE' && $login_disp !== '-') {
+      $last_used_disp = $login_disp;
+    }
+    if ($filtering_by_date && $status !== 'READY') {
+      $has_transactions_in_filter = true;
+    }
     $display_data[] = [
       'uid' => $u['.id'] ?? '',
         'name' => $name,
@@ -1708,11 +1717,18 @@ foreach($all_users as $u) {
         'status' => $status,
         'login_time' => $login_disp,
         'logout_time' => $logout_disp,
+        'last_used' => $last_used_disp,
         'relogin' => $relogin_flag,
         'relogin_count' => $relogin_count
     ];
 }
 $API->disconnect();
+
+if ($filtering_by_date && $has_transactions_in_filter) {
+  $display_data = array_values(array_filter($display_data, function($row) {
+    return ($row['status'] ?? '') !== 'READY';
+  }));
+}
 
 // Sorting (before pagination)
 $status_rank = [
@@ -1767,8 +1783,8 @@ if (!empty($display_data)) {
     $ra = $status_rank[$sa] ?? 99;
     $rb = $status_rank[$sb] ?? 99;
     if ($ra !== $rb) return $ra <=> $rb;
-    $ta = $to_ts($sa === 'ONLINE' ? ($a['login_time'] ?? '-') : ($a['logout_time'] ?? '-'));
-    $tb = $to_ts($sb === 'ONLINE' ? ($b['login_time'] ?? '-') : ($b['logout_time'] ?? '-'));
+    $ta = $to_ts($a['last_used'] ?? '-');
+    $tb = $to_ts($b['last_used'] ?? '-');
     if ($ta !== $tb) return $tb <=> $ta;
     return strcmp((string)($a['name'] ?? ''), (string)($b['name'] ?? ''));
   });
