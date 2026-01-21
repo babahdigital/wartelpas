@@ -2335,6 +2335,21 @@ if ($debug_mode && !$is_ajax) {
 
   let reloginPrintPayload = null;
 
+  function formatDateHeader(dt) {
+    if (!dt) return '';
+    const parts = dt.split(' ');
+    if (!parts[0]) return '';
+    const d = parts[0].split('-');
+    if (d.length !== 3) return '';
+    return `${d[2]}-${d[1]}-${d[0]}`;
+  }
+
+  function formatTimeOnly(dt) {
+    if (!dt) return '-';
+    const parts = dt.split(' ');
+    return parts[1] || '-';
+  }
+
   async function openReloginModal(username) {
     if (!reloginModal || !reloginBody) return;
     if (reloginTitle) reloginTitle.textContent = `Detail Relogin - ${username}`;
@@ -2361,11 +2376,14 @@ if ($debug_mode && !$is_ajax) {
         reloginBody.innerHTML = '<div style="text-align:center;color:#9aa0a6;">Tidak ada data relogin.</div>';
         return;
       }
+      const firstDateTime = events.find(ev => ev.login_time || ev.logout_time);
+      const headerDate = firstDateTime ? formatDateHeader(firstDateTime.login_time || firstDateTime.logout_time) : '';
+      if (reloginTitle && headerDate) reloginTitle.textContent = `Detail Relogin - ${username} | ${headerDate}`;
       let html = '<table class="relogin-table"><thead><tr><th>#</th><th>Login</th><th>Logout</th></tr></thead><tbody>';
       events.forEach((ev, idx) => {
         const seq = ev.seq || (idx + 1);
-        const loginLabel = ev.login_label || '-';
-        const logoutLabel = ev.logout_label || '-';
+        const loginLabel = formatTimeOnly(ev.login_time);
+        const logoutLabel = formatTimeOnly(ev.logout_time);
         html += `<tr><td>#${seq}</td><td>${loginLabel}</td><td>${logoutLabel}</td></tr>`;
       });
       html += '</tbody></table>';
@@ -2483,10 +2501,12 @@ if ($debug_mode && !$is_ajax) {
     reloginPrint.addEventListener('click', () => {
       if (!reloginPrintPayload || !reloginPrintPayload.events) return;
       const { username, events } = reloginPrintPayload;
+      const firstDateTime = events.find(ev => ev.login_time || ev.logout_time);
+      const headerDate = firstDateTime ? formatDateHeader(firstDateTime.login_time || firstDateTime.logout_time) : '';
       const rows = events.map((ev, idx) => {
         const seq = ev.seq || (idx + 1);
-        const loginLabel = ev.login_label || '-';
-        const logoutLabel = ev.logout_label || '-';
+        const loginLabel = formatTimeOnly(ev.login_time);
+        const logoutLabel = formatTimeOnly(ev.logout_time);
         return `<tr><td>#${seq}</td><td>${loginLabel}</td><td>${logoutLabel}</td></tr>`;
       }).join('');
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Detail Relogin</title>
@@ -2498,7 +2518,7 @@ if ($debug_mode && !$is_ajax) {
           th{background:#f0f0f0;text-align:left;}
         </style>
       </head><body>
-        <h3>Detail Relogin - ${username}</h3>
+        <h3>Detail Relogin - ${username}${headerDate ? ' | ' + headerDate : ''}</h3>
         <table><thead><tr><th>#</th><th>Login</th><th>Logout</th></tr></thead><tbody>${rows}</tbody></table>
       </body></html>`;
       const w = window.open('', '_blank');
