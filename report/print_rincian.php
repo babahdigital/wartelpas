@@ -548,7 +548,11 @@ function normalize_uptime_diff($diff, $snap = 2) {
         .status-online { color:#1976d2; font-weight:700; }
         .status-terpakai { color:#0a7f2e; font-weight:700; }
         .status-relogin { color:#fff; background:#6f42c1; font-weight:700; padding:2px 6px; border-radius:4px; display:inline-block; }
-        @media print { .toolbar { display:none; } }
+        @media print {
+            .toolbar { display:none; }
+            .status-relogin { color:#fff !important; background:#6f42c1 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
     </style>
 </head>
 <body>
