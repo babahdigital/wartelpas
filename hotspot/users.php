@@ -1276,7 +1276,7 @@ foreach($all_users as $u) {
     }
 
       // Filter tanggal (harian/bulanan/tahunan) - abaikan untuk READY
-      if ($req_status !== 'used' && $req_show !== 'semua' && !empty($filter_date) && $status !== 'READY' && $status !== 'TERPAKAI') {
+      if ($req_status !== 'used' && $req_show !== 'semua' && !empty($filter_date) && $status !== 'READY' && $status !== 'TERPAKAI' && $status !== 'ONLINE') {
         $comment_dt = extract_datetime_from_comment($comment);
         $hist_dt = $hist['last_login_real'] ?? ($hist['first_login_real'] ?? ($hist['updated_at'] ?? ''));
         $date_candidate = $comment_dt !== '' ? $comment_dt : ($login_time_real ?: $logout_time_real ?: $hist_dt);
