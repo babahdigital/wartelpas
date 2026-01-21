@@ -97,6 +97,7 @@ try {
                 }
             $sawSettle = false;
             $sawFetch = false;
+            $capture = false;
             foreach ($rawLogs as $l) {
                 $time = trim((string)($l['time'] ?? ''));
                 $topics = trim((string)($l['topics'] ?? 'system,info'));
@@ -125,11 +126,19 @@ try {
                 $isScriptTopic = (strpos($topicUpper, 'SCRIPT') !== false);
                 $isFetchTopic = (strpos($topicUpper, 'FETCH') !== false) && (strpos($msgUpper, 'WARTELPAS') !== false || strpos($msgUpper, 'SOBIGIDUL') !== false);
 
+                if (stripos($msgTrim, 'SETTLE: CLEANUP: Mulai') !== false || stripos($msgTrim, 'SETTLE: SYNC:') !== false) {
+                    $capture = true;
+                }
+
                 if ($startsOk || $isScriptTopic) {
                     $sawSettle = true;
                 }
                 if ($isFetchTopic) {
                     $sawFetch = true;
+                }
+
+                if (!$capture) {
+                    continue;
                 }
 
                 if (!($startsOk || $isScriptTopic || ($sawSettle && $isFetchTopic))) {
