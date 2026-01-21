@@ -67,6 +67,12 @@ if ($action === 'logs') {
                 '.proplist' => 'time,topics,message',
                 '?message~' => 'CLEANUP|SYNC|CUCI GUDANG|SUKSES|MAINT'
             ]);
+            if (!is_array($rawLogs) || count($rawLogs) === 0) {
+                $rawLogs = $API->comm('/log/print', [
+                    '.proplist' => 'time,topics,message',
+                    '?topics~' => 'script|info|warning|error|system'
+                ]);
+            }
             $API->disconnect();
             $rawLogs = is_array($rawLogs) ? array_slice($rawLogs, -60) : [];
             foreach ($rawLogs as $l) {
@@ -76,7 +82,15 @@ if ($action === 'logs') {
                 if ($msg === '' && $time === '') continue;
 
                 $type = 'info';
+                $topicsLower = strtolower($topics);
                 $msgUpper = strtoupper($msg);
+                if (strpos($topicsLower, 'error') !== false) {
+                    $type = 'error';
+                } elseif (strpos($topicsLower, 'warning') !== false) {
+                    $type = 'warning';
+                } elseif (strpos($topicsLower, 'system') !== false || strpos($topicsLower, 'script') !== false) {
+                    $type = 'system';
+                }
                 if (strpos($msgUpper, 'SUKSES') !== false || strpos($msgUpper, 'BERHASIL') !== false) {
                     $type = 'success';
                 } elseif (strpos($msgUpper, 'GAGAL') !== false || strpos($msgUpper, 'ERROR') !== false || strpos($msgUpper, 'DIBATALKAN') !== false) {
