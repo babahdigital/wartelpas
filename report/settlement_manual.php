@@ -83,6 +83,10 @@ if ($action === 'logs') {
                 }
                 $API->disconnect();
                 $rawLogs = is_array($rawLogs) ? array_slice($rawLogs, -400) : [];
+                if (is_array($rawLogs)) {
+                    $rawLogs = array_reverse($rawLogs);
+                }
+            $settleStarted = false;
             foreach ($rawLogs as $l) {
                 $time = trim((string)($l['time'] ?? ''));
                 $topics = trim((string)($l['topics'] ?? 'system,info'));
@@ -100,7 +104,6 @@ if ($action === 'logs') {
 
                 $msgUpper = strtoupper($msgTrim);
                 $topicUpper = strtoupper($topics);
-                static $settleStarted = false;
                 $startsOk = preg_match('/^(SETTLE:|CLEANUP:|SYNC:|MAINT:|SUKSES:)/i', $msgTrim);
                 $isScriptTopic = (strpos($topicUpper, 'SCRIPT') !== false);
                 $isFetchTopic = (strpos($topicUpper, 'FETCH') !== false) && (strpos($msgUpper, 'WARTELPAS') !== false || strpos($msgUpper, 'SOBIGIDUL') !== false);
@@ -113,7 +116,7 @@ if ($action === 'logs') {
                     continue;
                 }
 
-                if (!($startsOk || $isScriptTopic || $isFetchTopic)) {
+                if (!($startsOk || ($settleStarted && $isFetchTopic))) {
                     continue;
                 }
 
