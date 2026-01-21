@@ -758,6 +758,10 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         var confirmBox = document.getElementById('settlement-confirm');
         var startBtn = document.getElementById('settlement-start');
         var cancelBtn = document.getElementById('settlement-cancel');
+        window.settleDone = false;
+        if (window.settleTimer) { clearInterval(window.settleTimer); window.settleTimer = null; }
+        window.settleQueue = [];
+        window.settleSeen = {};
         if (modal) modal.style.display = 'flex';
         if (logBox) logBox.innerHTML = '';
         if (logWrap) logWrap.style.display = 'none';
@@ -924,6 +928,50 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (closeBtn && closeBtn.disabled) return;
         var modal = document.getElementById('settlement-modal');
         if (modal) modal.style.display = 'none';
+    }
+
+    function enqueueSettlementLogs(logs){
+        if (!window.settleQueue) window.settleQueue = [];
+        if (!window.settleSeen) window.settleSeen = {};
+        logs.forEach(function(row){
+            if (!row) return;
+            var key = [row.time || '', row.topic || '', row.message || ''].join('|');
+            if (window.settleSeen[key]) return;
+            window.settleSeen[key] = true;
+            window.settleQueue.push(row);
+        });
+        if (!window.settleTimer) {
+            window.settleTimer = setInterval(renderSettlementLogItem, 500);
+        }
+    }
+
+    function renderSettlementLogItem(){
+        if (!window.settleQueue || window.settleQueue.length === 0) {
+            if (window.settleDone) {
+                clearInterval(window.settleTimer);
+                window.settleTimer = null;
+            }
+            return;
+        }
+        var logBox = document.getElementById('settlement-log');
+        if (!logBox) return;
+        var row = window.settleQueue.shift();
+        var t = row.time || '';
+        var topic = row.topic || 'system,info';
+        var msg = row.message || '';
+        var cls = row.type || 'info';
+        var line = document.createElement('div');
+        line.className = 'log-entry';
+        line.innerHTML = '<span class="log-time">' + String(t).replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span>'
+            + '<span class="log-topic">' + String(topic).replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span>'
+            + '<span class="log-' + String(cls).replace(/[^a-z]/gi,'') + '">' + String(msg).replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span>';
+        var cursor = logBox.querySelector('.cursor-blink');
+        if (cursor) cursor.remove();
+        logBox.appendChild(line);
+        var newCursor = document.createElement('span');
+        newCursor.className = 'cursor-blink';
+        logBox.appendChild(newCursor);
+        logBox.scrollTop = logBox.scrollHeight;
     }
 
     (function(){
