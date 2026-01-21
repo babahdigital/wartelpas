@@ -1482,14 +1482,26 @@ foreach($all_users as $u) {
       $logout_time_real = null;
     }
 
-      // Filter tanggal (harian/bulanan/tahunan) - abaikan untuk READY
-      if ($req_status !== 'used' && $req_show !== 'semua' && !empty($filter_date) && $status !== 'READY' && $status !== 'TERPAKAI' && $status !== 'ONLINE') {
-        $comment_dt = extract_datetime_from_comment($comment);
-        $hist_dt = $hist['last_login_real'] ?? ($hist['first_login_real'] ?? ($hist['updated_at'] ?? ''));
-        $date_candidate = $comment_dt !== '' ? $comment_dt : ($login_time_real ?: $logout_time_real ?: $hist_dt);
-        $date_key = normalize_date_key($date_candidate, $req_show);
-        if ($date_key !== '' && $date_key !== $filter_date) {
-          continue;
+      // Filter tanggal (harian/bulanan/tahunan)
+      if ($req_status !== 'used' && $req_show !== 'semua' && !empty($filter_date)) {
+        if ($status === 'READY') {
+          $today_key = date('Y-m-d');
+          $month_key = date('Y-m');
+          $year_key = date('Y');
+          $match_ready = ($req_show === 'harian' && $filter_date === $today_key)
+            || ($req_show === 'bulanan' && $filter_date === $month_key)
+            || ($req_show === 'tahunan' && $filter_date === $year_key);
+          if (!$match_ready) {
+            continue;
+          }
+        } else {
+          $comment_dt = extract_datetime_from_comment($comment);
+          $hist_dt = $hist['last_login_real'] ?? ($hist['first_login_real'] ?? ($hist['updated_at'] ?? ''));
+          $date_candidate = $comment_dt !== '' ? $comment_dt : ($login_time_real ?: $logout_time_real ?: $hist_dt);
+          $date_key = normalize_date_key($date_candidate, $req_show);
+          if ($date_key === '' || $date_key !== $filter_date) {
+            continue;
+          }
         }
       }
 
@@ -1885,9 +1897,6 @@ if ($is_ajax) {
           <a class="btn btn-sm btn-secondary" href="<?= $link($page + 1) ?>">Next ›</a>
           <a class="btn btn-sm btn-secondary" href="<?= $link($total_pages) ?>">Last »</a>
         <?php endif; ?>
-      </div>
-      <div class="text-center mt-2" style="font-size:12px;color:var(--txt-muted);">
-        Menampilkan <?= ($total_items == 0) ? 0 : ($offset + 1) ?> - <?= min($offset + $per_page, $total_items) ?> dari <?= $total_items ?> data
       </div>
     </div>
     <?php
@@ -2358,9 +2367,6 @@ if ($debug_mode && !$is_ajax) {
                   <a class="btn btn-sm btn-secondary" href="<?= $link($page + 1) ?>">Next ›</a>
                   <a class="btn btn-sm btn-secondary" href="<?= $link($total_pages) ?>">Last »</a>
                 <?php endif; ?>
-              </div>
-              <div class="text-center mt-2" style="font-size:12px;color:var(--txt-muted);">
-                Menampilkan <?= ($total_items == 0) ? 0 : ($offset + 1) ?> - <?= min($offset + $per_page, $total_items) ?> dari <?= $total_items ?> data
               </div>
             </div>
           <?php endif; ?>
