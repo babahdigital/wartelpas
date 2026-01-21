@@ -132,9 +132,11 @@ if (file_exists($dbFile)) {
             report_date TEXT PRIMARY KEY,
             status TEXT,
             triggered_at DATETIME,
+            completed_at DATETIME,
             source TEXT,
             message TEXT
         )");
+        try { $db->exec("ALTER TABLE settlement_log ADD COLUMN completed_at DATETIME"); } catch (Exception $e) {}
         $db->exec("CREATE TABLE IF NOT EXISTS phone_block_daily (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             report_date TEXT,
@@ -171,11 +173,15 @@ if (file_exists($dbFile)) {
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
 
         $settled_today = false;
+        $settlement_time = '';
         try {
-            $stmtSet = $db->prepare("SELECT status FROM settlement_log WHERE report_date = :d LIMIT 1");
+            $stmtSet = $db->prepare("SELECT status, triggered_at, completed_at FROM settlement_log WHERE report_date = :d LIMIT 1");
             $stmtSet->execute([':d' => $filter_date]);
             $srow = $stmtSet->fetch(PDO::FETCH_ASSOC);
             $settled_today = $srow && strtolower((string)$srow['status']) === 'done';
+            if ($srow) {
+                $settlement_time = $srow['completed_at'] ?: ($srow['triggered_at'] ?? '');
+            }
         } catch (Exception $e) {
             $settled_today = false;
         }
