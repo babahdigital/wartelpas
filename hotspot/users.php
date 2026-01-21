@@ -2504,7 +2504,7 @@ if ($debug_mode && !$is_ajax) {
           ${(() => {
             if (!mt || !Array.isArray(mt.relogin_events) || mt.relogin_events.length === 0) {
               if (mt && (mt.relogin_count || 0) > 0) {
-                return `<div style="margin:10px 0 6px 0;font-size:12px;font-weight:600;">Rincian Relogin (${mt.relogin_window || 5} menit terakhir)</div>
+                return `<div style="margin:10px 0 6px 0;font-size:12px;font-weight:600;">Rincian Relogin (${mt.relogin_window || 10} menit terakhir)</div>
                   <table><thead><tr><th>#</th><th>Login</th><th>Logout</th></tr></thead><tbody>
                     <tr><td colspan="3" style="text-align:center;">Detail relogin tidak tersedia</td></tr>
                   </tbody></table>`;
@@ -2518,7 +2518,7 @@ if ($debug_mode && !$is_ajax) {
               const note = (!ev.login_time && ev.logout_time) ? ' (logout tanpa login)' : '';
               return `<tr><td>#${seq}</td><td>${loginLabel}${note}</td><td>${logoutLabel}</td></tr>`;
             }).join('');
-            return `<div style="margin:10px 0 6px 0;font-size:12px;font-weight:600;">Rincian Relogin (${mt.relogin_window || 5} menit terakhir)</div>
+            return `<div style="margin:10px 0 6px 0;font-size:12px;font-weight:600;">Rincian Relogin (${mt.relogin_window || 10} menit terakhir)</div>
               <table><thead><tr><th>#</th><th>Login</th><th>Logout</th></tr></thead><tbody>${rows}</tbody></table>`;
           })()}
         </body></html>`;
@@ -2704,7 +2704,7 @@ if ($debug_mode && !$is_ajax) {
             params.set('action', 'login_events');
             params.set('name', uname);
             params.set('session', '<?= $session ?>');
-            params.set('recent', '5');
+            params.set('recent', '10');
             params.set('ajax', '1');
             params.set('_', Date.now().toString());
             const resp = await fetch(ajaxBase + '?' + params.toString(), { cache: 'no-store' });
