@@ -1270,7 +1270,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         </div>
         <div style="padding:10px 16px;border-top:1px solid #333;display:flex;justify-content:space-between;gap:8px;align-items:center;">
             <span id="processStatus" style="font-size:12px;color:#ff9800;"><i class="fa fa-refresh fa-spin"></i> Sedang memproses...</span>
-            <button id="settlement-close" type="button" class="btn-print" style="opacity:.6;cursor:not-allowed;" disabled>Tutup</button>
+            <button id="settlement-close" type="button" class="btn-print">Tutup</button>
         </div>
     </div>
 </div>
