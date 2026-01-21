@@ -384,6 +384,15 @@ if (!isset($_SESSION["mikhmon"])) {
     .text-red { color: var(--danger); }
     .text-yellow { color: var(--warning); }
     .text-info-xxs { font-size: 0.75rem; color: var(--text-sec); margin-top: 4px; }
+
+    /* Hide dropdown arrow for locked profile select */
+    #uprof {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        background-image: none;
+        padding-right: 12px;
+    }
     
     /* Custom Scrollbar */
     ::-webkit-scrollbar { width: 6px; }
