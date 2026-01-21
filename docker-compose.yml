@@ -61,7 +61,6 @@ services:
       - ./error.php:/var/www/html/error.php
       - ./index.php:/var/www/html/index.php
       - ./lang/id.php:/var/www/html/lang/id.php
-      - ./tools/db_check.php:/var/www/html/tools/db_check.php
 
       # ==========================================
       # 6. INCLUDE LAINNYA
