@@ -389,10 +389,16 @@ if ($is_usage && file_exists($dbFile)) {
                 $uptime_display = seconds_to_uptime($u_sec_active);
             } elseif ($login_time !== '-' && $logout_time !== '-') {
                 $diff = strtotime($logout_time) - strtotime($login_time);
-                if ($diff > 0) $uptime_display = seconds_to_uptime($diff);
+                if ($diff > 0) {
+                    $diff = normalize_uptime_diff($diff, 2);
+                    $uptime_display = seconds_to_uptime($diff);
+                }
             } elseif ($status === 'ONLINE' && $login_time !== '-') {
                 $diff = time() - strtotime($login_time);
-                if ($diff > 0) $uptime_display = seconds_to_uptime($diff);
+                if ($diff > 0) {
+                    $diff = normalize_uptime_diff($diff, 2);
+                    $uptime_display = seconds_to_uptime($diff);
+                }
             }
 
             $relogin = ((int)($hist['login_count'] ?? 0) > 1);
@@ -444,7 +450,10 @@ if ($is_usage && file_exists($dbFile)) {
             $uptime_display = $row['last_uptime'] ?? '-';
             if ($login_time !== '-' && $logout_time !== '-') {
                 $diff = strtotime($logout_time) - strtotime($login_time);
-                if ($diff > 0) $uptime_display = seconds_to_uptime($diff);
+                if ($diff > 0) {
+                    $diff = normalize_uptime_diff($diff, 2);
+                    $uptime_display = seconds_to_uptime($diff);
+                }
             }
             $relogin = ((int)($row['login_count'] ?? 0) > 1);
             $usage_list[] = [
@@ -501,6 +510,18 @@ foreach ($rows as $r) {
 }
 
 function esc($s){ return htmlspecialchars((string)$s); }
+
+function normalize_uptime_diff($diff, $snap = 2) {
+    $d = (int)$diff;
+    if ($d <= 0) return 0;
+    $mod = $d % 60;
+    if ($mod <= $snap) {
+        $d -= $mod;
+    } elseif ($mod >= (60 - $snap)) {
+        $d += (60 - $mod);
+    }
+    return $d;
+}
 ?>
 <!DOCTYPE html>
 <html>
