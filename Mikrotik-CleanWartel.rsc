@@ -80,14 +80,20 @@
 :do {
     :local removed 0;
     :foreach u in=[/ip hotspot user find where (profile="10Menit" or profile="30Menit")] do={
+        :local name [/ip hotspot user get $u name];
         :local bi [/ip hotspot user get $u bytes-in];
         :local bo [/ip hotspot user get $u bytes-out];
         :local up [/ip hotspot user get $u uptime];
         :local dis [/ip hotspot user get $u disabled];
         :local total ($bi + $bo);
-        :if (($dis = true) || ($total > 0) || ($up != "0s" && $up != "")) do={
-            /ip hotspot user remove $u;
-            :set removed ($removed + 1);
+        :local isActive [/ip hotspot active find where user=$name];
+        :if ([:len $isActive] > 0) do={
+            :log info ("SETTLE: CLEANUP: Skip online user " . $name . ".");
+        } else={
+            :if (($dis = true) || ($total > 0) || ($up != "0s" && $up != "")) do={
+                /ip hotspot user remove $u;
+                :set removed ($removed + 1);
+            }
         }
     }
     :log info ("SETTLE: CLEANUP: Terhapus " . $removed . " user (10/30Menit) terpakai.");
