@@ -85,17 +85,20 @@
         :local bo [/ip hotspot user get $u bytes-out];
         :local up [/ip hotspot user get $u uptime];
         :local dis [/ip hotspot user get $u disabled];
-        :local total ($bi + $bo);
+        :local biVal [:tonum $bi];
+        :local boVal [:tonum $bo];
+        :local total ($biVal + $boVal);
         :local isActive [/ip hotspot active find where user=$name];
+        :local isDisabled (( $dis = true ) || ( $dis = "true" ));
         :local hasUsage (( $total > 0 ) || ( $up != "0s" && $up != "" ));
-        :local isReady (( $dis = false ) && ( $total = 0 ) && ( ($up = "0s") || ($up = "") ));
+        :local isReady (( $isDisabled = false ) && ( $total = 0 ) && ( ($up = "0s") || ($up = "") ));
         :if ([:len $isActive] > 0) do={
             :log info ("SETTLE: CLEANUP: Skip online user " . $name . ".");
         } else={
             :if ($isReady) do={
                 :log info ("SETTLE: CLEANUP: Skip READY user " . $name . ".");
             } else={
-                :if (($dis = true) || $hasUsage) do={
+                :if ($isDisabled || $hasUsage) do={
                     /ip hotspot user remove $u;
                     :set removed ($removed + 1);
                 }
