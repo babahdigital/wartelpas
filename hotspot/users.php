@@ -1484,28 +1484,7 @@ foreach($all_users as $u) {
       $logout_time_real = null;
     }
 
-      // Filter tanggal (harian/bulanan/tahunan)
-      if ($req_status !== 'used' && $req_show !== 'semua' && !empty($filter_date)) {
-        if ($status === 'READY') {
-          $today_key = date('Y-m-d');
-          $month_key = date('Y-m');
-          $year_key = date('Y');
-          $match_ready = ($req_show === 'harian' && $filter_date === $today_key)
-            || ($req_show === 'bulanan' && $filter_date === $month_key)
-            || ($req_show === 'tahunan' && $filter_date === $year_key);
-          if (!$match_ready) {
-            continue;
-          }
-        } else {
-          $comment_dt = extract_datetime_from_comment($comment);
-          $hist_dt = $hist['last_login_real'] ?? ($hist['first_login_real'] ?? ($hist['updated_at'] ?? ''));
-          $date_candidate = $comment_dt !== '' ? $comment_dt : ($login_time_real ?: $logout_time_real ?: $hist_dt);
-          $date_key = normalize_date_key($date_candidate, $req_show);
-          if ($date_key === '' || $date_key !== $filter_date) {
-            continue;
-          }
-        }
-      }
+      // (tanggal filter dipindah setelah last_used dihitung)
 
     // Jika voucher pernah login (ada IP/MAC) namun waktu/uptime masih kosong, coba isi dari selisih login/logout
     if (!$is_active && $uptime == '0s' && !empty($logout_time_real) && !empty($login_time_real)) {
@@ -1699,8 +1678,33 @@ foreach($all_users as $u) {
     if ($status === 'ONLINE' && $login_disp !== '-') {
       $last_used_disp = $login_disp;
     }
-    if ($filtering_by_date && $status !== 'READY') {
-      $has_transactions_in_filter = true;
+
+    // Filter tanggal (harian/bulanan/tahunan) memakai last_used
+    if ($req_status !== 'used' && $req_show !== 'semua' && !empty($filter_date)) {
+      if ($status === 'READY') {
+        $today_key = date('Y-m-d');
+        $month_key = date('Y-m');
+        $year_key = date('Y');
+        $allow_ready = false;
+        if ($req_show === 'harian') {
+          $allow_ready = ($filter_date >= $today_key);
+        } elseif ($req_show === 'bulanan') {
+          $allow_ready = ($filter_date >= $month_key);
+        } else {
+          $allow_ready = ($filter_date >= $year_key);
+        }
+        if (!$allow_ready) {
+          continue;
+        }
+      } else {
+        $date_key = normalize_date_key($last_used_disp, $req_show);
+        if ($date_key === '' || $date_key !== $filter_date) {
+          continue;
+        }
+        if ($filtering_by_date) {
+          $has_transactions_in_filter = true;
+        }
+      }
     }
     $display_data[] = [
       'uid' => $u['.id'] ?? '',
