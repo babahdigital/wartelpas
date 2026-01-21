@@ -6,7 +6,7 @@
 
 # Script utama (buat sekali)
 /system script
-add name=sync_usage_2m policy=read,write,test source={
+add name=Wartel-SyncUsage policy=read,write,test source={
 	:global syncUsageLock;
 	:if ([:typeof $syncUsageLock] = "nothing") do={ :set syncUsageLock false; }
 	:if ($syncUsageLock = true) do={ :log warning "SYNC USAGE: masih berjalan, skip"; :return; }
@@ -25,4 +25,4 @@ add name=sync_usage_2m policy=read,write,test source={
 
 # Scheduler 2 menit sekali (buat sekali)
 /system scheduler
-add name=sync_usage_2m interval=2m on-event=sync_usage_2m start-time=startup
+add name=Wartel-SyncUsage interval=2m on-event=Wartel-SyncUsage start-time=startup
