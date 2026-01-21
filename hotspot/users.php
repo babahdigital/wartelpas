@@ -2327,6 +2327,7 @@ if ($debug_mode && !$is_ajax) {
   const confirmOk = document.getElementById('confirm-ok');
   const confirmCancel = document.getElementById('confirm-cancel');
   const confirmClose = document.getElementById('confirm-close');
+  const confirmPrint = document.getElementById('confirm-print');
   const reloginModal = document.getElementById('relogin-modal');
   const reloginBody = document.getElementById('relogin-body');
   const reloginTitle = document.getElementById('relogin-title');
@@ -2376,6 +2377,8 @@ if ($debug_mode && !$is_ajax) {
     });
   }
 
+  let rusakPrintPayload = null;
+
   function showRusakChecklist(data) {
     return new Promise((resolve) => {
       if (!confirmModal || !confirmMessage || !confirmOk || !confirmCancel) {
@@ -2388,38 +2391,52 @@ if ($debug_mode && !$is_ajax) {
       const headerMsg = data.message || '';
       const items = [
         { label: `Offline (tidak sedang online)`, ok: !!criteria.offline, value: values.online || '-' },
-        { label: `Bytes <= ${limits.bytes || '-'}`, ok: !!criteria.bytes_ok, value: values.bytes || '-' },
-        { label: `Uptime <= ${limits.uptime || '-'}`, ok: !!criteria.uptime_ok, value: values.uptime || '-' },
-        { label: `Relogin >= 3 (5 menit)`, ok: !!criteria.relogin_ok, value: String(values.relogin ?? '-') }
+        { label: `Bytes maksimal ${limits.bytes || '-'}`, ok: !!criteria.bytes_ok, value: values.bytes || '-' },
+        { label: `Uptime maksimal ${limits.uptime || '-'}`, ok: !!criteria.uptime_ok, value: values.uptime || '-' },
+        { label: `Relogin minimal 3 (5 menit)`, ok: !!criteria.relogin_ok, value: String(values.relogin ?? '-') }
       ];
       const rows = items.map(it => {
         const icon = it.ok ? 'fa-check-circle' : 'fa-times-circle';
         const color = it.ok ? '#16a34a' : '#dc2626';
-        return `<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #3d3d3d;">
-          <div><i class="fa ${icon}" style="color:${color};margin-right:6px;"></i>${it.label}</div>
-          <div style="color:#cbd5e1;">${it.value}</div>
-        </div>`;
+        return `<tr>
+          <td style="padding:6px 8px;border-bottom:1px solid #3d3d3d;"><i class="fa ${icon}" style="color:${color};margin-right:6px;"></i>${it.label}</td>
+          <td style="padding:6px 8px;border-bottom:1px solid #3d3d3d;color:#cbd5e1;text-align:right;">${it.value}</td>
+        </tr>`;
       }).join('');
       const msgHtml = headerMsg ? `<div style="margin-bottom:8px;color:#f3c969;">${headerMsg}</div>` : '';
       confirmMessage.innerHTML = `
         <div style="text-align:left;">
           <div style="margin-bottom:8px;font-weight:600;">Cek Kelayakan Rusak</div>
           ${msgHtml}
-          ${rows}
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr>
+                <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #3d3d3d;">Kriteria</th>
+                <th style="text-align:right;padding:6px 8px;border-bottom:1px solid #3d3d3d;">Nilai</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
         </div>`;
       const isValid = !!data.ok;
       confirmOk.textContent = 'Ya, Lanjutkan';
       confirmOk.disabled = !isValid;
       confirmOk.style.opacity = isValid ? '1' : '0.5';
       confirmOk.style.cursor = isValid ? 'pointer' : 'not-allowed';
+      if (confirmPrint) confirmPrint.style.display = 'inline-flex';
       confirmModal.style.display = 'flex';
+      rusakPrintPayload = { headerMsg, items };
       const cleanup = (result) => {
         confirmModal.style.display = 'none';
         confirmOk.onclick = null;
         confirmCancel.onclick = null;
+        if (confirmPrint) confirmPrint.onclick = null;
         confirmOk.disabled = false;
         confirmOk.style.opacity = '1';
         confirmOk.style.cursor = 'pointer';
+        if (confirmPrint) confirmPrint.style.display = 'none';
         try { document.activeElement && document.activeElement.blur(); } catch (e) {}
         try { document.body.focus(); } catch (e) {}
         resolve(result);
@@ -2427,6 +2444,35 @@ if ($debug_mode && !$is_ajax) {
       confirmOk.onclick = () => cleanup(true);
       confirmCancel.onclick = () => cleanup(false);
       if (confirmClose) confirmClose.onclick = () => cleanup(false);
+      if (confirmPrint) confirmPrint.onclick = () => {
+        if (!rusakPrintPayload) return;
+        const { headerMsg: hm, items: itms } = rusakPrintPayload;
+        const rowsPrint = itms.map(it => {
+          const status = it.ok ? 'OK' : 'TIDAK';
+          return `<tr><td>${it.label}</td><td>${it.value}</td><td>${status}</td></tr>`;
+        }).join('');
+        const msgLine = hm ? `<div style="margin:6px 0 10px 0;font-size:12px;color:#444;">${hm}</div>` : '';
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cek Kelayakan Rusak</title>
+          <style>
+            body{font-family:Arial,sans-serif;color:#111;margin:20px;}
+            h3{margin:0 0 6px 0;}
+            table{width:100%;border-collapse:collapse;font-size:12px;}
+            th,td{border:1px solid #444;padding:6px 8px;text-align:left;}
+            th{background:#f0f0f0;}
+          </style>
+        </head><body>
+          <h3>Cek Kelayakan Rusak</h3>
+          ${msgLine}
+          <table><thead><tr><th>Kriteria</th><th>Nilai</th><th>Status</th></tr></thead><tbody>${rowsPrint}</tbody></table>
+        </body></html>`;
+        const w = window.open('', '_blank');
+        if (!w) return;
+        w.document.open();
+        w.document.write(html);
+        w.document.close();
+        w.focus();
+        w.print();
+      };
     });
   }
 
