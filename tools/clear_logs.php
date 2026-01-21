@@ -1,26 +1,38 @@
 <?php
-// tools/clear_logs.php
-// Clears both security_log and login_history tables
+// Clear server log files (protected)
+ini_set('display_errors', 0);
+error_reporting(0);
+header('Content-Type: text/plain');
 
-header('Content-Type: application/json');
-
-$dbFile = dirname(__DIR__) . '/db_data/mikhmon_stats.db';
-
-try {
-    $db = new PDO('sqlite:' . $dbFile);
-    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-    $db->exec("DELETE FROM security_log");
-    $db->exec("DELETE FROM login_history");
-
-    echo json_encode([
-        'status' => 'success',
-        'message' => 'security_log and login_history tables cleared'
-    ]);
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode([
-        'status' => 'error',
-        'message' => $e->getMessage()
-    ]);
+$secret_token = "WartelpasSecureKey";
+if (!isset($_GET['key']) || $_GET['key'] !== $secret_token) {
+    http_response_code(403);
+    die("Error: Token Salah.");
 }
+
+$session = $_GET['session'] ?? '';
+if ($session === '') {
+    http_response_code(403);
+    die("Error: Session tidak valid.");
+}
+
+$logDir = dirname(__DIR__) . '/logs';
+if (!is_dir($logDir)) {
+    echo "No logs dir";
+    exit;
+}
+
+$targets = [
+    $logDir . '/usage_ingest.log',
+    $logDir . '/live_ingest.log'
+];
+
+$cleared = 0;
+foreach ($targets as $file) {
+    if (file_exists($file)) {
+        @file_put_contents($file, '');
+        $cleared++;
+    }
+}
+
+echo "OK cleared=" . $cleared;

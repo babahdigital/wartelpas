@@ -1,38 +1,54 @@
 <?php
-// tools/clear_all.php
-// Clear multiple tables at once
+// FILE: report/clear_all.php
+// Clear semua data laporan & history
 
-header('Content-Type: application/json');
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+header('Content-Type: text/plain');
 
-$dbFile = dirname(__DIR__) . '/db_data/mikhmon_stats.db';
+$secret_token = "WartelpasSecureKey";
+if (!isset($_GET['key']) || $_GET['key'] !== $secret_token) {
+    http_response_code(403);
+    die("Error: Token Salah.");
+}
 
-$tables = [
-    'security_log',
-    'login_history',
-    'login_events',
-    'sales_history',
-    'live_sales',
-    'phone_block_daily',
-    'settlement_log'
-];
+$session = isset($_GET['session']) ? $_GET['session'] : '';
+if ($session === '') {
+    http_response_code(403);
+    die("Error: Session tidak valid.");
+}
+
+$confirm = isset($_GET['confirm']) ? $_GET['confirm'] : '';
+if ($confirm !== 'YES') {
+    die("Error: Tambahkan confirm=YES untuk menjalankan reset total.\n");
+}
+
+$root_dir = dirname(__DIR__);
+$dbFile = $root_dir . '/db_data/mikhmon_stats.db';
+if (!file_exists($dbFile)) {
+    die("Error: Database tidak ditemukan.\n");
+}
 
 try {
     $db = new PDO('sqlite:' . $dbFile);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $db->exec("PRAGMA journal_mode=WAL;");
+    $db->exec("PRAGMA synchronous=NORMAL;");
+    $db->exec("PRAGMA busy_timeout=2000;");
 
-    foreach ($tables as $table) {
-        $db->exec("DELETE FROM $table");
-    }
+    $db->beginTransaction();
+    $db->exec("DELETE FROM sales_history");
+    $db->exec("DELETE FROM live_sales");
+    $db->exec("DELETE FROM sales_summary_period");
+    $db->exec("DELETE FROM sales_summary_block");
+    $db->exec("DELETE FROM sales_summary_profile");
+    $db->exec("DELETE FROM login_history");
+    $db->commit();
 
-    echo json_encode([
-        'status' => 'success',
-        'message' => 'All tables cleared',
-        'tables' => $tables
-    ]);
+    echo "OK: Semua data laporan, live, summary, dan login_history sudah dikosongkan.\n";
 } catch (Exception $e) {
+    if ($db && $db->inTransaction()) $db->rollBack();
     http_response_code(500);
-    echo json_encode([
-        'status' => 'error',
-        'message' => $e->getMessage()
-    ]);
+    echo "Error: " . $e->getMessage();
 }
+?>

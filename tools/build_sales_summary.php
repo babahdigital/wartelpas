@@ -1,58 +1,33 @@
 <?php
-// tools/build_sales_summary.php
-header('Content-Type: application/json');
+// FILE: report/build_sales_summary.php
+// Build materialized sales summary tables (harian/bulanan/tahunan)
 
-$dbFile = dirname(__DIR__) . '/db_data/mikhmon_stats.db';
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+header('Content-Type: text/plain');
+
+$root_dir = dirname(__DIR__);
+$dbFile = $root_dir . '/db_data/mikhmon_stats.db';
+if (!file_exists($dbFile)) {
+    die("Error: Database tidak ditemukan.\n");
+}
+
+require_once($root_dir . '/report/sales_summary_helper.php');
 
 try {
     $db = new PDO('sqlite:' . $dbFile);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-    $db->exec("CREATE TABLE IF NOT EXISTS sales_summary (
-        summary_date TEXT PRIMARY KEY,
-        total_sales INTEGER DEFAULT 0,
-        total_retur INTEGER DEFAULT 0,
-        total_rusak INTEGER DEFAULT 0,
-        updated_at TEXT
-    )");
-
-    $rows = $db->query("
-        SELECT
-            DATE(login_time_real) AS summary_date,
-            SUM(CASE WHEN status='RETUR' THEN 0 ELSE price END) AS total_sales,
-            SUM(CASE WHEN status='RETUR' THEN price ELSE 0 END) AS total_retur,
-            SUM(CASE WHEN status='RUSAK' THEN price ELSE 0 END) AS total_rusak
-        FROM sales_history
-        GROUP BY DATE(login_time_real)
-    ")->fetchAll(PDO::FETCH_ASSOC);
-
-    $db->beginTransaction();
-    $stmt = $db->prepare("INSERT OR REPLACE INTO sales_summary
-        (summary_date, total_sales, total_retur, total_rusak, updated_at)
-        VALUES (?, ?, ?, ?, datetime('now'))
-    ");
-
-    foreach ($rows as $row) {
-        $stmt->execute([
-            $row['summary_date'],
-            (int)$row['total_sales'],
-            (int)$row['total_retur'],
-            (int)$row['total_rusak']
-        ]);
-    }
-    $db->commit();
-
-    echo json_encode([
-        'status' => 'success',
-        'rows' => count($rows)
-    ]);
-} catch (Exception $e) {
-    if ($db && $db->inTransaction()) {
-        $db->rollBack();
-    }
-    http_response_code(500);
-    echo json_encode([
-        'status' => 'error',
-        'message' => $e->getMessage()
-    ]);
+    $db->exec("PRAGMA journal_mode=WAL;");
+    $db->exec("PRAGMA synchronous=NORMAL;");
+    $db->exec("PRAGMA busy_timeout=2000;");
+} catch (PDOException $e) {
+    die("Error DB: " . $e->getMessage() . "\n");
 }
+
+try {
+    rebuild_sales_summary($db);
+    echo "Rekap penjualan berhasil diperbarui.\n";
+} catch (Exception $e) {
+    echo "Error: " . $e->getMessage() . "\n";
+}
+?>

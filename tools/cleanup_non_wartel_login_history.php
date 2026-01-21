@@ -1,76 +1,45 @@
 <?php
-// tools/cleanup_non_wartel_login_history.php
-header('Content-Type: application/json');
+// Cleanup non-wartel entries in login_history (no BLOK info)
 
-$dbFile = dirname(__DIR__) . '/db_data/mikhmon_stats.db';
+ini_set('display_errors', 0);
+error_reporting(0);
+
+$root_dir = dirname(__DIR__);
+$dbFile = $root_dir . '/db_data/mikhmon_stats.db';
+$logDir = $root_dir . '/logs';
+if (!is_dir($logDir)) {
+    @mkdir($logDir, 0755, true);
+}
+
+if (!file_exists($dbFile)) {
+    http_response_code(404);
+    echo "DB tidak ditemukan.";
+    exit;
+}
 
 try {
     $db = new PDO('sqlite:' . $dbFile);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $db->exec("PRAGMA journal_mode=WAL;");
+    $db->exec("PRAGMA synchronous=NORMAL;");
+    $db->exec("PRAGMA busy_timeout=5000;");
 
-    $patterns = [
-        '%00%',
-        '%/%',
-        '%.%',
-        '%@%',
-        '%vlan%',
-        '%hotspot%',
-        '%@%',
-        '%HS%',
-        '%IP%',
-        '%VM%',
-        '%UEFI%',
-        '%intern%',
-        '%local%',
-        '%localhost%',
-        '%mikrotik%',
-        '%admin%',
-        '%operator%',
-        '%scheduler%',
-        '%user@%',
-        '%test%',
-        '%trial%',
-        '%debug%',
-        '%system%',
-        '%pppoe%',
-        '%cctv%',
-        '%wifi%',
-        '%wa%',
-        '%download%',
-        '%upload%',
-        '%wa-',
-        '%wash%',
-        '%beta%',
-        '%backup%',
-        '%_tmp%'
-    ];
+    $db->exec("BEGIN IMMEDIATE TRANSACTION");
 
-    $clauses = [];
-    $params = [];
-    foreach ($patterns as $pattern) {
-        $clauses[] = "username LIKE ?";
-        $params[] = $pattern;
-    }
+    $del = $db->prepare("DELETE FROM login_history
+        WHERE (blok_name IS NULL OR blok_name = '')
+          AND (raw_comment IS NULL OR raw_comment = '' OR raw_comment NOT LIKE '%blok%')");
+    $del->execute();
+    $deleted = (int)$del->rowCount();
 
-    $where = implode(' OR ', $clauses);
+    $db->exec("COMMIT");
 
-    $stmt = $db->prepare("SELECT COUNT(1) FROM login_history WHERE $where");
-    $stmt->execute($params);
-    $count = (int)$stmt->fetchColumn();
-
-    $del = $db->prepare("DELETE FROM login_history WHERE $where");
-    $del->execute($params);
-    $deleted = $del->rowCount();
-
-    echo json_encode([
-        'status' => 'success',
-        'matched' => $count,
-        'deleted' => $deleted
-    ]);
+    $msg = "Cleanup login_history selesai. Terhapus: {$deleted}.";
+    @file_put_contents($logDir . '/cleanup_non_wartel_login_history.log', date('c') . " | " . $msg . "\n", FILE_APPEND);
+    echo $msg;
 } catch (Exception $e) {
+    try { $db->exec("ROLLBACK"); } catch (Exception $e2) {}
+    @file_put_contents($logDir . '/cleanup_non_wartel_login_history.log', date('c') . " | ERROR | " . $e->getMessage() . "\n", FILE_APPEND);
     http_response_code(500);
-    echo json_encode([
-        'status' => 'error',
-        'message' => $e->getMessage()
-    ]);
+    echo "Cleanup gagal.";
 }
