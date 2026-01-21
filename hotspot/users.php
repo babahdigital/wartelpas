@@ -588,29 +588,28 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     }
 
     if ($act == 'check_rusak') {
-      $info_lines = [];
-      if (!empty($limits)) {
-        $info_lines[] = 'Kriteria rusak:';
-        $info_lines[] = '- Offline (tidak sedang online)';
-        $info_lines[] = '- Bytes <= ' . $limits['bytes_label'];
-        $info_lines[] = '- Uptime <= ' . $limits['uptime_label'];
-        $info_lines[] = '- Relogin >= 3 dalam 5 menit';
-        $info_lines[] = '';
-        $info_lines[] = 'Kondisi saat ini:';
-        $info_lines[] = '- Online: ' . ($is_active ? 'Ya' : 'Tidak');
-        if (function_exists('formatBytes')) {
-          $info_lines[] = '- Bytes: ' . formatBytes($bytes, 2);
-        } else {
-          $info_lines[] = '- Bytes: ' . (int)$bytes;
-        }
-        $info_lines[] = '- Uptime: ' . ($uptime ?: '0s');
-        $info_lines[] = '- Relogin: ' . (int)($recent_relogin ?? 0) . ' (5 menit terakhir)';
-      }
+      $bytes_label = function_exists('formatBytes') ? formatBytes($bytes, 2) : (string)(int)$bytes;
+      $criteria = [
+        'offline' => !$is_active,
+        'bytes_ok' => $bytes <= $bytes_limit,
+        'uptime_ok' => $uptime_sec <= $uptime_limit,
+        'relogin_ok' => (int)($recent_relogin ?? 0) >= 3
+      ];
       header('Content-Type: application/json');
       echo json_encode([
         'ok' => !$action_blocked,
         'message' => $action_blocked ? $action_error : 'Syarat rusak terpenuhi.',
-        'info' => implode("\n", $info_lines)
+        'criteria' => $criteria,
+        'values' => [
+          'online' => $is_active ? 'Ya' : 'Tidak',
+          'bytes' => $bytes_label,
+          'uptime' => $uptime ?: '0s',
+          'relogin' => (int)($recent_relogin ?? 0)
+        ],
+        'limits' => [
+          'bytes' => $limits['bytes_label'] ?? '',
+          'uptime' => $limits['uptime_label'] ?? ''
+        ]
       ]);
       exit();
     }
