@@ -24,6 +24,7 @@ $hp_kamtib_units = 0;
 // Filter periode
 $req_show = $_GET['show'] ?? 'harian';
 $date_param_provided = isset($_GET['date']) && trim((string)$_GET['date']) !== '';
+$auto_date_mode = isset($_GET['auto_date']) && $_GET['auto_date'] == '1';
 $auto_date_applied = false;
 $last_available_date = '';
 $mode = 'final';
@@ -197,7 +198,7 @@ if (file_exists($dbFile)) {
                     $last_available_date = $cand;
                 }
             }
-            if ($last_available_date !== '' && $last_available_date !== $filter_date) {
+            if ($auto_date_mode && $last_available_date !== '' && $last_available_date !== $filter_date) {
                 $filter_date = $last_available_date;
                 $auto_date_applied = true;
             }
