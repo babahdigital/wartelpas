@@ -434,7 +434,7 @@ if (isset($_GET['only_wartel']) && $_GET['only_wartel'] === '0') {
 if (isset($_GET['action']) || isset($_POST['action'])) {
   $is_action_ajax = isset($_GET['ajax']) && $_GET['ajax'] == '1' && isset($_GET['action_ajax']);
   $act = $_POST['action'] ?? $_GET['action'];
-  if ($act == 'invalid' || $act == 'retur' || $act == 'rollback' || $act == 'delete' || $act == 'batch_delete' || $act == 'delete_status') {
+  if ($act == 'invalid' || $act == 'retur' || $act == 'rollback' || $act == 'delete' || $act == 'batch_delete' || $act == 'delete_status' || $act == 'check_rusak') {
     $uid = $_GET['uid'] ?? '';
     $name = $_GET['name'] ?? '';
     $comm = $_GET['c'] ?? '';
@@ -466,7 +466,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       }
     }
 
-    if ($enforce_rusak_rules && ($act == 'invalid' || $act == 'retur')) {
+    if ($enforce_rusak_rules && ($act == 'invalid' || $act == 'retur' || $act == 'check_rusak')) {
       $uinfo = $API->comm('/ip/hotspot/user/print', [
         '?server' => $hotspot_server,
         '?name' => $name,
@@ -498,8 +498,17 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $is_active = isset($arow['user']);
       if (!($act == 'retur' && $is_rusak_target) && ($is_active || $bytes > $bytes_limit || $uptime_sec > $uptime_limit)) {
         $action_blocked = true;
-        $action_error = 'Gagal: data sudah terpakai (online / bytes > ' . $limits['bytes_label'] . ' / uptime > ' . $limits['uptime_label'] . ').';
+        $action_error = 'Voucher masih valid, tidak bisa dianggap rusak (online / bytes > ' . $limits['bytes_label'] . ' / uptime > ' . $limits['uptime_label'] . ').';
       }
+    }
+
+    if ($act == 'check_rusak') {
+      header('Content-Type: application/json');
+      echo json_encode([
+        'ok' => !$action_blocked,
+        'message' => $action_blocked ? $action_error : 'Syarat rusak terpenuhi.'
+      ]);
+      exit();
     }
     if (!$action_blocked && $act == 'retur') {
       $hist = $hist_action ?: get_user_history($name);
@@ -1589,7 +1598,7 @@ if ($is_ajax) {
               <button type="button" class="btn-act btn-act-retur" onclick="actionRequest('./?hotspot=users&action=retur&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&p=<?= urlencode($u['profile']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','RETUR Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Retur"><i class="fa fa-exchange"></i></button>
               <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=rollback&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','Rollback RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rollback"><i class="fa fa-undo"></i></button>
             <?php else: ?>
-              <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=invalid&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','SET RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rusak"><i class="fa fa-ban"></i></button>
+              <button type="button" class="btn-act btn-act-invalid" onclick="actionRequestRusak('./?hotspot=users&action=invalid&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','SET RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rusak"><i class="fa fa-ban"></i></button>
             <?php endif; ?>
           <?php endif; ?>
         </td>
@@ -2011,7 +2020,7 @@ if ($debug_mode && !$is_ajax) {
                           <button type="button" class="btn-act btn-act-retur" onclick="actionRequest('./?hotspot=users&action=retur&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&p=<?= urlencode($u['profile']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','RETUR Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Retur"><i class="fa fa-exchange"></i></button>
                           <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=rollback&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','Rollback RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rollback"><i class="fa fa-undo"></i></button>
                         <?php else: ?>
-                          <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=invalid&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','SET RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rusak"><i class="fa fa-ban"></i></button>
+                          <button type="button" class="btn-act btn-act-invalid" onclick="actionRequestRusak('./?hotspot=users&action=invalid&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','SET RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rusak"><i class="fa fa-ban"></i></button>
                         <?php endif; ?>
                       <?php endif; ?>
                     </td>
@@ -2180,6 +2189,24 @@ if ($debug_mode && !$is_ajax) {
       window.showActionPopup('error', 'Gagal memproses.');
     } finally {
       if (pageDim) pageDim.style.display = 'none';
+    }
+  };
+
+  window.actionRequestRusak = async function(url, confirmMsg) {
+    try {
+      const checkUrl = url.replace('action=invalid', 'action=check_rusak');
+      const ajaxCheck = checkUrl + (checkUrl.includes('?') ? '&' : '?') + 'ajax=1&action_ajax=1&_=' + Date.now();
+      const res = await fetch(ajaxCheck, { cache: 'no-store' });
+      const text = await res.text();
+      let data = null;
+      try { data = JSON.parse(text); } catch (e) { data = null; }
+      if (data && data.ok) {
+        window.actionRequest(url, confirmMsg);
+      } else {
+        window.showActionPopup('error', (data && data.message) ? data.message : 'Voucher masih valid dan bisa digunakan.');
+      }
+    } catch (e) {
+      window.showActionPopup('error', 'Voucher masih valid dan bisa digunakan.');
     }
   };
 
