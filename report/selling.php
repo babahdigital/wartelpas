@@ -56,6 +56,14 @@ function norm_date_from_raw_report($raw_date) {
         return '';
 }
 
+function sanitize_comment_short($comment) {
+    $comment = (string)$comment;
+    $comment = preg_replace('/\s*\|\s*IP\s*:[^|]+/i', '', $comment);
+    $comment = preg_replace('/\s*\|\s*MAC\s*:[^|]+/i', '', $comment);
+    $comment = preg_replace('/\s+\|\s+/', ' | ', $comment);
+    return trim($comment);
+}
+
     function format_bytes_short($bytes) {
         $b = (float)$bytes;
         if ($b <= 0) return '0 B';
@@ -373,7 +381,7 @@ foreach ($rows as $r) {
         if (!$match) continue;
 
         $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
-        $comment = (string)($r['comment'] ?? '');
+        $comment = sanitize_comment_short($r['comment'] ?? '');
         $status = strtolower((string)($r['status'] ?? ''));
         $lh_status = strtolower((string)($r['last_status'] ?? ''));
         $cmt_low = strtolower($comment);
