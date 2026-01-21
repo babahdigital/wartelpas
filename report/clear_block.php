@@ -5,7 +5,12 @@ error_reporting(0);
 header('Content-Type: text/plain');
 
 $secret_token = "WartelpasSecureKey";
-if (!isset($_GET['key']) || $_GET['key'] !== $secret_token) {
+$key = $_GET['key'] ?? ($_POST['key'] ?? '');
+if ($key === '' && isset($_SERVER['HTTP_X_WARTELPAS_KEY'])) {
+    $key = $_SERVER['HTTP_X_WARTELPAS_KEY'];
+}
+$key = trim((string)$key);
+if ($key === '' || !hash_equals($secret_token, $key)) {
     http_response_code(403);
     die("Error: Token Salah.");
 }
