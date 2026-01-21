@@ -528,8 +528,13 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
     .filter-bar select, .filter-bar input { background: #343a40; border: 1px solid var(--border-col); color: #fff; padding: 6px 10px; border-radius: 6px; }
     .btn-print { background: var(--c-blue); color: #fff; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
     .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 10000; }
-    .modal-card { background: #1f2937; color: #e5e7eb; border-radius: 10px; width: 480px; max-width: 90vw; padding: 16px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); }
-    .modal-title { font-weight: 700; margin-bottom: 12px; }
+    .modal-card { background: #2c2c2c; color: #e0e0e0; border-radius: 8px; width: 520px; max-width: 92vw; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; }
+    .modal-header { background: #252525; border-bottom: 1px solid #3d3d3d; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; }
+    .modal-title { font-weight: 600; color: #fff; font-size: 16px; margin: 0; }
+    .modal-close { background: transparent; border: none; color: #fff; opacity: 0.7; font-size: 20px; line-height: 1; cursor: pointer; }
+    .modal-close:hover { opacity: 1; }
+    .modal-body { padding: 20px; color: #ccc; }
+    .modal-footer { background: #252525; border-top: 1px solid #3d3d3d; padding: 12px 20px; display: flex; gap: 8px; justify-content: flex-end; }
     .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
     .form-input { width: 100%; background: #343a40; border: 1px solid var(--border-col); color: #fff; padding: 8px 10px; border-radius: 6px; }
     .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -541,7 +546,10 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
 <?php if (!$is_ajax): ?>
 <div id="hpModal" class="modal-backdrop" onclick="if(event.target===this){closeHpModal();}">
     <div class="modal-card">
-        <div class="modal-title">Input Handphone per Blok (Harian)</div>
+        <div class="modal-header">
+            <div class="modal-title">Input Handphone per Blok (Harian)</div>
+            <button type="button" class="modal-close" onclick="closeHpModal()">&times;</button>
+        </div>
         <form id="hpForm" method="post" action="./?report=selling<?= $session_qs; ?>">
             <input type="hidden" name="report" value="selling">
             <?php if ($session_id !== ''): ?>
@@ -550,6 +558,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             <input type="hidden" name="ajax" value="1">
             <input type="hidden" name="show" value="<?= htmlspecialchars($req_show); ?>">
             <input type="hidden" name="date" value="<?= htmlspecialchars($filter_date); ?>">
+            <div class="modal-body">
             <div class="form-grid-2">
                 <div>
                     <label>Blok</label>
@@ -611,7 +620,8 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 <label>Catatan</label>
                 <input class="form-input" name="notes" placeholder="opsional">
             </div>
-            <div class="modal-actions">
+            </div>
+            <div class="modal-footer">
                 <button type="button" class="btn-print" onclick="closeHpModal()">Batal</button>
                 <button type="submit" id="hpSubmitBtn" name="hp_submit" class="btn-print" disabled>Simpan</button>
             </div>
