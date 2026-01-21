@@ -299,6 +299,11 @@ File diagnostik & migrasi sementara yang sudah tidak diperlukan:
 - report/settlement_manual.php
 - tools/cleanup_duplicate_sales.php
 - tools/cleanup_non_wartel_login_history.php
+- tools/cleanup_ready_login_history.php
+- tools/check_block.php
+- tools/clear_all.php
+- tools/build_sales_summary.php
+- tools/migrate_sales_reporting.php
 - report/hp_save.php
 - report/print_rekap.php
 - report/print_rincian.php
