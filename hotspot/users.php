@@ -2429,6 +2429,82 @@ if ($debug_mode && !$is_ajax) {
     });
   }
 
+  function uptimeToSeconds(uptime) {
+    if (!uptime) return 0;
+    const re = /(\d+)(w|d|h|m|s)/gi;
+    let total = 0;
+    let m;
+    while ((m = re.exec(uptime)) !== null) {
+      const val = parseInt(m[1], 10) || 0;
+      const unit = m[2].toLowerCase();
+      if (unit === 'w') total += val * 7 * 24 * 3600;
+      if (unit === 'd') total += val * 24 * 3600;
+      if (unit === 'h') total += val * 3600;
+      if (unit === 'm') total += val * 60;
+      if (unit === 's') total += val;
+    }
+    return total;
+  }
+
+  function formatBytesSimple(bytes) {
+    const b = Number(bytes) || 0;
+    if (b <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let idx = 0;
+    let val = b;
+    while (val >= 1024 && idx < units.length - 1) {
+      val /= 1024;
+      idx++;
+    }
+    const dec = idx >= 2 ? 2 : 0;
+    return val.toFixed(dec).replace('.', ',') + ' ' + units[idx];
+  }
+
+  function resolveRusakLimits(profile) {
+    const p = (profile || '').toLowerCase();
+    if (/(\b10\s*(menit|m)\b|10menit)/i.test(p)) {
+      return { uptime: 180, bytes: 1 * 1024 * 1024, uptimeLabel: '3 menit', bytesLabel: '1MB' };
+    }
+    if (/(\b30\s*(menit|m)\b|30menit)/i.test(p)) {
+      return { uptime: 300, bytes: 2 * 1024 * 1024, uptimeLabel: '5 menit', bytesLabel: '2MB' };
+    }
+    return { uptime: 300, bytes: 2 * 1024 * 1024, uptimeLabel: '5 menit', bytesLabel: '2MB' };
+  }
+
+  function buildRusakDataFromElement(el) {
+    if (!el) return null;
+    const bytes = Number(el.getAttribute('data-bytes') || 0);
+    const uptime = el.getAttribute('data-uptime') || '0s';
+    const status = el.getAttribute('data-status') || '';
+    const profile = el.getAttribute('data-profile') || '';
+    const relogin = Number(el.getAttribute('data-relogin') || 0);
+    const limits = resolveRusakLimits(profile);
+    const uptimeSec = uptimeToSeconds(uptime);
+    const offline = status !== 'ONLINE';
+    const criteria = {
+      offline,
+      bytes_ok: bytes <= limits.bytes,
+      uptime_ok: uptimeSec <= limits.uptime,
+      relogin_ok: relogin >= 3
+    };
+    const ok = criteria.offline && criteria.bytes_ok && criteria.uptime_ok && criteria.relogin_ok;
+    return {
+      ok,
+      message: ok ? 'Syarat rusak terpenuhi.' : 'Syarat rusak belum terpenuhi.',
+      criteria,
+      values: {
+        online: offline ? 'Tidak' : 'Ya',
+        bytes: formatBytesSimple(bytes),
+        uptime,
+        relogin
+      },
+      limits: {
+        bytes: limits.bytesLabel,
+        uptime: limits.uptimeLabel
+      }
+    };
+  }
+
   window.actionRequest = async function(url, confirmMsg) {
     if (confirmMsg) {
       const ok = await showConfirm(confirmMsg);
@@ -2488,7 +2564,16 @@ if ($debug_mode && !$is_ajax) {
     }
   };
 
-  window.actionRequestRusak = async function(url, confirmMsg) {
+  window.actionRequestRusak = async function(elOrUrl, urlMaybe, confirmMsg) {
+    let el = null;
+    let url = '';
+    if (typeof elOrUrl === 'string') {
+      url = elOrUrl;
+      confirmMsg = urlMaybe;
+    } else {
+      el = elOrUrl;
+      url = urlMaybe;
+    }
     try {
       const checkUrl = url.replace('action=invalid', 'action=check_rusak');
       const ajaxCheck = checkUrl + (checkUrl.includes('?') ? '&' : '?') + 'ajax=1&action_ajax=1&_=' + Date.now();
@@ -2497,7 +2582,7 @@ if ($debug_mode && !$is_ajax) {
       let data = null;
       try { data = JSON.parse(text); } catch (e) { data = null; }
       if (!data) {
-        data = {
+        data = buildRusakDataFromElement(el) || {
           ok: false,
           message: 'Gagal memproses. Data validasi tidak terbaca.',
           criteria: {},
@@ -2509,7 +2594,7 @@ if ($debug_mode && !$is_ajax) {
       if (!ok) return;
       window.actionRequest(url, null);
     } catch (e) {
-      const data = {
+      const data = buildRusakDataFromElement(el) || {
         ok: false,
         message: 'Gagal memproses. Tidak bisa mengambil data validasi.',
         criteria: {},
