@@ -1671,7 +1671,7 @@ if ($is_ajax) {
         <td>
           <div style="font-size:15px; font-weight:bold; color:var(--txt-main)">
             <?= htmlspecialchars($u['name']) ?>
-            <?php if(!empty($u['relogin'])): ?><span class="status-badge st-relogin" style="margin-left:6px;">RELOGIN</span><?php endif; ?>
+            <?php if(!empty($u['relogin'])): ?><span class="status-badge st-relogin clickable" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'], ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'], ENT_QUOTES) ?>" style="margin-left:6px;">RELOGIN</span><?php endif; ?>
           </div>
           <div style="font-size:11px; color:var(--txt-muted); max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="<?= htmlspecialchars($u['comment']) ?>">
             First login: <?= formatDateIndo($u['first_login'] ?? '-') ?>
@@ -1707,7 +1707,7 @@ if ($is_ajax) {
         </td>
         <td class="text-center">
           <?php if(!empty($u['relogin'])): ?>
-            <button type="button" class="btn-act btn-act-relogin" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'], ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'], ENT_QUOTES) ?>" title="Detail Relogin"><i class="fa fa-eye"></i></button>
+            <span class="status-badge st-relogin clickable" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'], ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'], ENT_QUOTES) ?>" title="Detail Relogin">RELOGIN</span>
           <?php endif; ?>
           <?php if (in_array($req_status, ['all','used','rusak','online'], true)): ?>
             <?php if (strtoupper($u['status']) === 'TERPAKAI' && in_array($req_status, ['all','used'], true)): ?>
