@@ -71,34 +71,25 @@ if ($action === 'logs') {
                     $API->comm('/system/logging/add', [
                         'action' => 'memory',
                         'prefix' => 'SETTLE',
-                        'topics' => 'script,info,warning,error,system'
+                        'topics' => 'script'
                     ]);
                 }
 
                 $rawLogs = $API->comm('/log/print', [
                     '.proplist' => 'time,topics,message',
-                    '?message~' => 'SETTLE|CLEANUP|SYNC|CUCI GUDANG|SUKSES|MAINT'
+                    '?topics' => 'script',
+                    '?message~' => 'SETTLE'
                 ]);
                 if (!is_array($rawLogs) || count($rawLogs) === 0) {
                     $rawLogs = [];
                 }
                 $API->disconnect();
-                $rawLogs = is_array($rawLogs) ? array_slice($rawLogs, -60) : [];
+                $rawLogs = is_array($rawLogs) ? array_slice($rawLogs, -40) : [];
             foreach ($rawLogs as $l) {
                 $time = trim((string)($l['time'] ?? ''));
                 $topics = trim((string)($l['topics'] ?? 'system,info'));
                 $msg = trim((string)($l['message'] ?? ''));
                 if ($msg === '' && $time === '') continue;
-
-                $msgUpper = strtoupper($msg);
-                $topicUpper = strtoupper($topics);
-                $isRelevant = (strpos($msgUpper, 'SETTLE') !== false)
-                    || (strpos($msgUpper, 'CLEANUP') !== false)
-                    || (strpos($msgUpper, 'SYNC') !== false)
-                    || (strpos($msgUpper, 'MAINT') !== false)
-                    || (strpos($msgUpper, 'CUCI GUDANG') !== false)
-                    || (strpos($topicUpper, 'SCRIPT') !== false);
-                if (!$isRelevant) continue;
 
                 $type = 'info';
                 $topicsLower = strtolower($topics);
