@@ -26,7 +26,7 @@ $profile_display = isset($profile_name) ? preg_replace('/(\d+)([A-Za-z]+)/', '$1
 $display_paket = trim($waktu_custom) !== "" ? ($waktu_custom . " / ") : (trim($profile_display) !== "" ? ($profile_display . " / ") : (trim($validity_display) !== "" ? ($validity_display . " / ") : ""));
 ?>
 
-<table class="voucher" data-username="<?= htmlspecialchars($user) ?>" style="width: 160px;">
+<table class="voucher" data-username="<?= htmlspecialchars($username) ?>" style="width: 160px;">
   <tbody>
     <tr>
       <td style="text-align: left; font-size: 12px; font-weight:bold; border-bottom: 1px black solid;">
