@@ -547,6 +547,7 @@ function normalize_uptime_diff($diff, $snap = 2) {
         .status-invalid { color:#c0392b; font-weight:700; }
         .status-online { color:#1976d2; font-weight:700; }
         .status-terpakai { color:#0a7f2e; font-weight:700; }
+        .status-relogin { color:#6f42c1; font-weight:700; }
         @media print { .toolbar { display:none; } }
     </style>
 </head>
@@ -601,12 +602,13 @@ function normalize_uptime_diff($diff, $snap = 2) {
                                             <?php
                                                 $st = strtolower((string)($it['status'] ?? ''));
                                                 $st_label = '-';
-                                                if ($st === 'online') $st_label = 'Online';
-                                                elseif ($st === 'rusak') $st_label = 'Rusak';
-                                                elseif ($st === 'terpakai') $st_label = 'Terpakai';
-                                                if (!empty($it['relogin'])) $st_label = 'Relogin';
+                                                $st_class = '';
+                                                if ($st === 'online') { $st_label = 'Online'; $st_class = 'status-online'; }
+                                                elseif ($st === 'rusak') { $st_label = 'Rusak'; $st_class = 'status-rusak'; }
+                                                elseif ($st === 'terpakai') { $st_label = 'Terpakai'; $st_class = 'status-terpakai'; }
+                                                if (!empty($it['relogin'])) { $st_label = 'Relogin'; $st_class = 'status-relogin'; }
                                             ?>
-                                            <td><?= esc($st_label) ?></td>
+                                            <td><span class="<?= esc($st_class) ?>"><?= esc($st_label) ?></span></td>
                   </tr>
                   <?php endforeach; ?>
               <?php endif; ?>
