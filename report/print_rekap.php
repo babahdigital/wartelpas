@@ -304,8 +304,7 @@ foreach ($rows as $r) {
 
     $total_bandwidth += $bytes;
 
-    $usage_ok = ($bytes > 50 || in_array($lh_status, ['terpakai', 'online'], true));
-    $is_laku = !in_array($status, ['rusak', 'retur', 'invalid'], true) && $usage_ok;
+    $is_laku = !in_array($status, ['rusak', 'retur', 'invalid'], true);
 
     if ($req_show === 'harian') {
         $qty_count = 1;
