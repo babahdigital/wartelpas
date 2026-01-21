@@ -1205,6 +1205,7 @@ $all_users = $API->comm("/ip/hotspot/user/print", array(
     "?server" => $hotspot_server,
   ".proplist" => ".id,name,comment,profile,disabled,bytes-in,bytes-out,uptime"
 ));
+$router_users = $all_users;
 $active = $API->comm("/ip/hotspot/active/print", array(
   "?server" => $hotspot_server,
   ".proplist" => "user,uptime,address,mac-address,bytes-in,bytes-out"
@@ -1282,22 +1283,11 @@ if ($db) {
   } catch (Exception $e) {}
 }
 
-// List blok untuk dropdown (DB + data router agar langsung muncul)
+// List blok untuk dropdown (pakai data router agar blok lama tidak muncul)
 $list_blok = [];
 if (!$is_ajax) {
-  if ($db) {
-    try {
-      $res = $db->query("SELECT DISTINCT blok_name FROM login_history WHERE blok_name IS NOT NULL AND blok_name != ''");
-      if ($res) {
-        foreach ($res as $row) {
-          $bn = extract_blok_name($row['blok_name']);
-          if ($bn && !in_array($bn, $list_blok)) $list_blok[] = $bn;
-        }
-      }
-    } catch(Exception $e) {}
-  }
-  if (!empty($all_users)) {
-    foreach ($all_users as $u) {
+  if (!empty($router_users)) {
+    foreach ($router_users as $u) {
       $bn = extract_blok_name($u['comment'] ?? '');
       if ($bn && !in_array($bn, $list_blok)) $list_blok[] = $bn;
     }
