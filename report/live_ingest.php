@@ -136,6 +136,21 @@ try {
     elseif (strpos($cmt_low, 'rusak') !== false) $status = 'rusak';
     elseif (strpos($cmt_low, 'retur') !== false) $status = 'retur';
 
+    if ($username !== '' && $sale_date !== '') {
+        $dupStmt = $db->prepare("SELECT 1 FROM sales_history WHERE username = :u AND sale_date = :d LIMIT 1");
+        $dupStmt->execute([':u' => $username, ':d' => $sale_date]);
+        if ($dupStmt->fetchColumn()) {
+            echo "OK";
+            exit;
+        }
+        $dupStmt = $db->prepare("SELECT 1 FROM live_sales WHERE username = :u AND sale_date = :d LIMIT 1");
+        $dupStmt->execute([':u' => $username, ':d' => $sale_date]);
+        if ($dupStmt->fetchColumn()) {
+            echo "OK";
+            exit;
+        }
+    }
+
     $stmt = $db->prepare("INSERT OR IGNORE INTO live_sales (
         raw_date, raw_time, sale_date, sale_time, sale_datetime,
         username, profile, profile_snapshot, price, price_snapshot, sprice_snapshot, validity,

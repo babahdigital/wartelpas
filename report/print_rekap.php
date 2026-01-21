@@ -217,6 +217,8 @@ $total_qty_units = 0;
 $total_net_units = 0;
 $total_bandwidth = 0;
 
+$seen_sales = [];
+
 foreach ($rows as $r) {
     $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
     $match = false;
@@ -224,6 +226,13 @@ foreach ($rows as $r) {
     elseif ($req_show === 'bulanan') $match = (strpos((string)$sale_date, $filter_date) === 0);
     else $match = (strpos((string)$sale_date, $filter_date) === 0);
     if (!$match) continue;
+
+    $username = $r['username'] ?? '';
+    if ($username !== '' && $sale_date !== '') {
+        $sale_key = $username . '|' . $sale_date;
+        if (isset($seen_sales[$sale_key])) continue;
+        $seen_sales[$sale_key] = true;
+    }
 
     $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
     $comment = (string)($r['comment'] ?? '');

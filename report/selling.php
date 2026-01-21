@@ -316,6 +316,8 @@ $rusak_10m = 0;
 $total_bandwidth = 0;
 $rusak_30m = 0;
 
+$seen_sales = [];
+
 $by_block = [];
 $by_profile = [];
 
@@ -387,6 +389,13 @@ foreach ($rows as $r) {
         elseif ($req_show === 'bulanan') $match = (strpos((string)$sale_date, $filter_date) === 0);
         else $match = (strpos((string)$sale_date, $filter_date) === 0);
         if (!$match) continue;
+
+        $username = $r['username'] ?? '';
+        if ($username !== '' && $sale_date !== '') {
+            $sale_key = $username . '|' . $sale_date;
+            if (isset($seen_sales[$sale_key])) continue;
+            $seen_sales[$sale_key] = true;
+        }
 
         $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
         $comment = format_first_login($r['first_login_real'] ?? '');

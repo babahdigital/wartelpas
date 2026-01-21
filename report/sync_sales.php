@@ -194,6 +194,17 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
             if (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
             elseif (strpos($cmt_low, 'rusak') !== false) $status = 'rusak';
             elseif (strpos($cmt_low, 'retur') !== false) $status = 'retur';
+
+            if ($username !== '' && $sale_date !== '') {
+                $dupStmt = $db->prepare("SELECT 1 FROM sales_history WHERE username = :u AND sale_date = :d LIMIT 1");
+                $dupStmt->execute([':u' => $username, ':d' => $sale_date]);
+                if ($dupStmt->fetchColumn()) {
+                    $API->write('/system/script/remove', false);
+                    $API->write('=.id=' . $s['.id']);
+                    $API->read();
+                    continue;
+                }
+            }
             
             // Simpan ke DB
             $stmt->bindValue(':rd', $raw_date);
