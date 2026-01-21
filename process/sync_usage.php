@@ -233,6 +233,13 @@ foreach ($all_users as $u) {
         if ($is_used) $status = 'terpakai';
     }
 
+    $disabled_str = strtolower(trim((string)$disabled));
+    $is_disabled = ($disabled_str === 'true' || $disabled_str === 'yes' || $disabled_str === '1');
+    $is_ready = (!$is_active && !$is_disabled && $bytes <= 0 && ($uptime === '' || $uptime === '0s'));
+    if ($is_ready) {
+        continue;
+    }
+
     // Ambil history untuk locking
     $hist = null;
     try {
