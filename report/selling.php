@@ -883,6 +883,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 if (data && data.status === 'done') {
                     if (closeBtn) {
                         closeBtn.disabled = false;
+                        closeBtn.removeAttribute('disabled');
                         closeBtn.style.opacity = '1';
                         closeBtn.style.cursor = 'pointer';
                     }
@@ -894,6 +895,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 if (data && data.status === 'failed') {
                     if (closeBtn) {
                         closeBtn.disabled = false;
+                        closeBtn.removeAttribute('disabled');
                         closeBtn.style.opacity = '1';
                         closeBtn.style.cursor = 'pointer';
                     }
