@@ -89,16 +89,16 @@ if ($action === 'logs') {
                 $msg = trim((string)($l['message'] ?? ''));
                 if ($msg === '' && $time === '') continue;
 
-                $msgUpper = strtoupper($msg);
+                $msgTrim = trim($msg);
+                if (strpos($msgTrim, "\r") !== false || strpos($msgTrim, "\n") !== false || strpos($msgTrim, "tool fetch url") !== false) {
+                    continue;
+                }
+
+                $msgUpper = strtoupper($msgTrim);
                 $topicUpper = strtoupper($topics);
-                $hasSettle = (strpos($msgUpper, 'SETTLE') !== false);
-                $hasKeywords = (strpos($msgUpper, 'CLEANUP') !== false)
-                    || (strpos($msgUpper, 'SYNC') !== false)
-                    || (strpos($msgUpper, 'MAINT') !== false)
-                    || (strpos($msgUpper, 'CUCI GUDANG') !== false)
-                    || (strpos($msgUpper, 'SUKSES') !== false);
+                $startsOk = preg_match('/^(SETTLE:|SYNC USAGE:|CLEANUP:|SYNC:|MAINT:|SUKSES:)/i', $msgTrim);
                 $isScriptTopic = (strpos($topicUpper, 'SCRIPT') !== false);
-                if (!($hasSettle || $hasKeywords || $isScriptTopic)) {
+                if (!($startsOk || $isScriptTopic)) {
                     continue;
                 }
 
