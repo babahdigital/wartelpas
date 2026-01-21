@@ -907,6 +907,29 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             });
     }
 
+    function openSettlementResetModal(){
+        var modal = document.getElementById('settlement-reset-modal');
+        if (modal) modal.style.display = 'flex';
+    }
+    function closeSettlementResetModal(){
+        var modal = document.getElementById('settlement-reset-modal');
+        if (modal) modal.style.display = 'none';
+    }
+    function confirmSettlementReset(){
+        var params = new URLSearchParams();
+        params.set('session', '<?= htmlspecialchars($session_id); ?>');
+        params.set('date', '<?= htmlspecialchars($filter_date); ?>');
+        params.set('action', 'reset');
+        fetch('report/settlement_manual.php?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r){ return r.json(); })
+            .then(function(){
+                window.location.reload();
+            })
+            .catch(function(){
+                window.location.reload();
+            });
+    }
+
     (function(){
         var closeBtn = document.getElementById('settlement-close');
         if (closeBtn) {
@@ -1112,6 +1135,9 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             <?php endif; ?>
             <button class="btn-print" type="button" onclick="openHpModal()">Input HP Blok</button>
             <button class="btn-print" type="button" id="btn-settlement" onclick="manualSettlement()" <?= (!empty($settled_today) ? 'disabled style="opacity:.6;cursor:not-allowed;"' : '') ?>>Settlement</button>
+            <?php if (!empty($settled_today)): ?>
+                <button class="btn-print" type="button" id="btn-settlement-reset" onclick="openSettlementResetModal()" style="background:#ff9800;color:#fff;">Reset</button>
+            <?php endif; ?>
         </div>
     </div>
     <div class="card-body" style="padding:16px;">
@@ -1387,6 +1413,25 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
 </div>
 
 <?php if (!$is_ajax): ?>
+</div>
+<?php endif; ?>
+
+<?php if (!$is_ajax): ?>
+<div id="settlement-reset-modal" class="modal-backdrop" onclick="if(event.target===this){closeSettlementResetModal();}">
+    <div class="modal-card" style="width:440px;">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fa fa-refresh" style="color:#ff9800;margin-right:6px;"></i> Reset Settlement</div>
+            <button type="button" class="modal-close" onclick="closeSettlementResetModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div style="line-height:1.6;">Reset status settlement untuk tanggal ini agar tombol Settlement bisa dipakai lagi?</div>
+            <div class="modal-note">Tindakan ini hanya menghapus status selesai pada sistem, tidak mengubah data MikroTik.</div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-print btn-default-dark" onclick="closeSettlementResetModal()">Batal</button>
+            <button type="button" class="btn-print" style="background:#ff9800;color:#fff;" onclick="confirmSettlementReset()">Ya, Reset</button>
+        </div>
+    </div>
 </div>
 <?php endif; ?>
 
