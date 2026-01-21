@@ -44,6 +44,10 @@ if ($blok === '') {
     exit;
 }
 
+$blok_upper = strtoupper($blok);
+$use_glob = !preg_match('/\d$/', $blok_upper);
+$glob_pattern = $use_glob ? ($blok_upper . '[0-9]*') : '';
+
 $date = trim((string)($_GET['date'] ?? ''));
 
 $dbFile = $root_dir . '/db_data/mikhmon_stats.db';
@@ -64,27 +68,29 @@ try {
         'phone_block_daily' => 0
     ];
 
-    $stmt = $db->prepare("SELECT COUNT(*) FROM login_history WHERE LOWER(blok_name) = LOWER(:b)");
-    $stmt->execute([':b' => $blok]);
+    $whereBlok = "UPPER(blok_name) = :b" . ($use_glob ? " OR UPPER(blok_name) GLOB :bg" : "");
+
+    $stmt = $db->prepare("SELECT COUNT(*) FROM login_history WHERE " . $whereBlok);
+    $stmt->execute($use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern] : [':b' => $blok_upper]);
     $counts['login_history'] = (int)$stmt->fetchColumn();
 
     $dateClause = $date !== '' ? ' AND sale_date = :d' : '';
     $params = [':b' => $blok];
     if ($date !== '') $params[':d'] = $date;
 
-    $stmt = $db->prepare("SELECT COUNT(*) FROM sales_history WHERE LOWER(blok_name) = LOWER(:b)" . $dateClause);
-    $stmt->execute($params);
+    $stmt = $db->prepare("SELECT COUNT(*) FROM sales_history WHERE (" . $whereBlok . ")" . $dateClause);
+    $stmt->execute(array_merge($use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern] : [':b' => $blok_upper], $date !== '' ? [':d' => $date] : []));
     $counts['sales_history'] = (int)$stmt->fetchColumn();
 
-    $stmt = $db->prepare("SELECT COUNT(*) FROM live_sales WHERE LOWER(blok_name) = LOWER(:b)" . $dateClause);
-    $stmt->execute($params);
+    $stmt = $db->prepare("SELECT COUNT(*) FROM live_sales WHERE (" . $whereBlok . ")" . $dateClause);
+    $stmt->execute(array_merge($use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern] : [':b' => $blok_upper], $date !== '' ? [':d' => $date] : []));
     $counts['live_sales'] = (int)$stmt->fetchColumn();
 
     $dateClauseHp = $date !== '' ? ' AND report_date = :d' : '';
     $paramsHp = [':b' => $blok];
     if ($date !== '') $paramsHp[':d'] = $date;
-    $stmt = $db->prepare("SELECT COUNT(*) FROM phone_block_daily WHERE LOWER(blok_name) = LOWER(:b)" . $dateClauseHp);
-    $stmt->execute($paramsHp);
+    $stmt = $db->prepare("SELECT COUNT(*) FROM phone_block_daily WHERE (" . $whereBlok . ")" . $dateClauseHp);
+    $stmt->execute(array_merge($use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern] : [':b' => $blok_upper], $date !== '' ? [':d' => $date] : []));
     $counts['phone_block_daily'] = (int)$stmt->fetchColumn();
 
     echo json_encode(['ok' => true, 'blok' => $blok, 'date' => $date, 'counts' => $counts]);

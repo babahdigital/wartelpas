@@ -39,6 +39,10 @@ if ($blok === '') {
     die("Error: Blok kosong.");
 }
 
+$blok_upper = strtoupper($blok);
+$use_glob = !preg_match('/\d$/', $blok_upper);
+$glob_pattern = $use_glob ? ($blok_upper . '[0-9]*') : '';
+
 $date = trim((string)($_GET['date'] ?? ''));
 $dateClause = '';
 $dateParams = [];
@@ -56,20 +60,22 @@ try {
     $db = new PDO('sqlite:' . $dbFile);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    $stmt = $db->prepare("DELETE FROM login_history WHERE LOWER(blok_name) = LOWER(:b)");
-    $stmt->execute([':b' => $blok]);
+    $whereBlok = "UPPER(blok_name) = :b" . ($use_glob ? " OR UPPER(blok_name) GLOB :bg" : "");
+
+    $stmt = $db->prepare("DELETE FROM login_history WHERE " . $whereBlok);
+    $stmt->execute($use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern] : [':b' => $blok_upper]);
     $deleted_login = $stmt->rowCount();
 
-    $stmt = $db->prepare("DELETE FROM sales_history WHERE LOWER(blok_name) = LOWER(:b)" . $dateClause);
-    $stmt->execute(array_merge([':b' => $blok], $dateParams));
+    $stmt = $db->prepare("DELETE FROM sales_history WHERE (" . $whereBlok . ")" . $dateClause);
+    $stmt->execute(array_merge($use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern] : [':b' => $blok_upper], $dateParams));
     $deleted_sales = $stmt->rowCount();
 
-    $stmt = $db->prepare("DELETE FROM live_sales WHERE LOWER(blok_name) = LOWER(:b)" . $dateClause);
-    $stmt->execute(array_merge([':b' => $blok], $dateParams));
+    $stmt = $db->prepare("DELETE FROM live_sales WHERE (" . $whereBlok . ")" . $dateClause);
+    $stmt->execute(array_merge($use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern] : [':b' => $blok_upper], $dateParams));
     $deleted_live = $stmt->rowCount();
 
-    $stmt = $db->prepare("DELETE FROM phone_block_daily WHERE LOWER(blok_name) = LOWER(:b)" . ($date !== '' ? " AND report_date = :d" : ""));
-    $stmt->execute(array_merge([':b' => $blok], $date !== '' ? [':d' => $date] : []));
+    $stmt = $db->prepare("DELETE FROM phone_block_daily WHERE (" . $whereBlok . ")" . ($date !== '' ? " AND report_date = :d" : ""));
+    $stmt->execute(array_merge($use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern] : [':b' => $blok_upper], $date !== '' ? [':d' => $date] : []));
     $deleted_hp = $stmt->rowCount();
 
     echo "OK login=" . $deleted_login . ", sales=" . $deleted_sales . ", live=" . $deleted_live . ", hp=" . $deleted_hp;
