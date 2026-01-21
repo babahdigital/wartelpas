@@ -63,18 +63,35 @@ if ($action === 'logs') {
     $API->debug = false;
     try {
         if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-            $rawLogs = $API->comm('/log/print', [
-                '.proplist' => 'time,topics,message',
-                '?message~' => 'CLEANUP|SYNC|CUCI GUDANG|SUKSES|MAINT'
-            ]);
-            if (!is_array($rawLogs) || count($rawLogs) === 0) {
+                // Pastikan logging rule untuk script ada (mirip hotspot/log.php)
+                $logging = $API->comm('/system/logging/print', [
+                    '?prefix' => 'SETTLE'
+                ]);
+                if (!is_array($logging) || count($logging) === 0) {
+                    $API->comm('/system/logging/add', [
+                        'action' => 'memory',
+                        'prefix' => 'SETTLE',
+                        'topics' => 'script,info,warning,error,system'
+                    ]);
+                }
+
                 $rawLogs = $API->comm('/log/print', [
                     '.proplist' => 'time,topics,message',
-                    '?topics~' => 'script|info|warning|error|system'
+                    '?message~' => 'SETTLE|CLEANUP|SYNC|CUCI GUDANG|SUKSES|MAINT'
                 ]);
-            }
-            $API->disconnect();
-            $rawLogs = is_array($rawLogs) ? array_slice($rawLogs, -60) : [];
+                if (!is_array($rawLogs) || count($rawLogs) === 0) {
+                    $rawLogs = $API->comm('/log/print', [
+                        '.proplist' => 'time,topics,message',
+                        '?topics~' => 'script|system|info|warning|error'
+                    ]);
+                }
+                if (!is_array($rawLogs) || count($rawLogs) === 0) {
+                    $rawLogs = $API->comm('/log/print', [
+                        '.proplist' => 'time,topics,message'
+                    ]);
+                }
+                $API->disconnect();
+                $rawLogs = is_array($rawLogs) ? array_slice($rawLogs, -60) : [];
             foreach ($rawLogs as $l) {
                 $time = trim((string)($l['time'] ?? ''));
                 $topics = trim((string)($l['topics'] ?? 'system,info'));
