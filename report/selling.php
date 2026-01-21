@@ -1369,30 +1369,43 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
 
 <?php if (!$is_ajax): ?>
 <style>
-    .settlement-terminal { background:#222; border:1px solid #333; border-radius:6px; padding:10px; max-height:260px; overflow:auto; font-size:12px; color:#d4d4d4; }
-    .settlement-cursor { display:inline-block; width:8px; height:14px; background:#6ee7b7; margin-left:2px; animation: blink 1s steps(2, start) infinite; }
-    @keyframes blink { to { visibility: hidden; } }
+    .terminal-window { background-color:#000; border:1px solid #555; padding:12px; font-family:'Courier New', Courier, monospace; font-size:12px; max-height:260px; overflow-y:auto; border-radius:4px; color:#d0d0d0; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); }
+    .terminal-window::-webkit-scrollbar { width:10px; }
+    .terminal-window::-webkit-scrollbar-track { background:#111; }
+    .terminal-window::-webkit-scrollbar-thumb { background:#444; border-radius:2px; }
+    .terminal-window::-webkit-scrollbar-thumb:hover { background:#666; }
+    .log-entry { margin-bottom:4px; line-height:1.4; display:block; }
+    .log-time { color:#888; margin-right:8px; }
+    .log-topic { color:#aaa; margin-right:8px; font-weight:bold; }
+    .log-info { color:#d0d0d0; }
+    .log-success { color:#00ff00; }
+    .log-warning { color:#ffeb3b; }
+    .log-error { color:#ff5252; }
+    .log-system { color:#00bcd4; }
+    .cursor-blink { display:inline-block; width:8px; height:15px; background-color:#00ff00; animation: blink 1s infinite; vertical-align:middle; margin-left:5px; }
+    @keyframes blink { 0%{opacity:0;} 50%{opacity:1;} 100%{opacity:0;} }
 </style>
 <div id="settlement-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:10050;">
-    <div style="background:#1f1f1f;color:#e5e5e5;border:1px solid #444;border-radius:8px;width:620px;max-width:94vw;box-shadow:0 10px 30px rgba(0,0,0,0.6);overflow:hidden;">
-        <div style="padding:12px 16px;border-bottom:1px solid #333;font-weight:600;display:flex;justify-content:space-between;align-items:center;">
+    <div style="background:#1f1f1f;color:#e5e5e5;border:1px solid #444;border-radius:8px;width:640px;max-width:94vw;box-shadow:0 10px 30px rgba(0,0,0,0.6);overflow:hidden;">
+        <div style="padding:14px 18px;border-bottom:1px solid #333;font-weight:600;display:flex;justify-content:space-between;align-items:center;">
             <span><i class="fa fa-cog fa-spin" style="margin-right:6px;"></i> Settlement Manual</span>
             <span id="settlement-status" style="font-size:12px;color:#9aa0a6;">Menunggu konfirmasi</span>
         </div>
-        <div style="padding:14px 16px;">
-            <div id="settlement-confirm" style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:#111;border:1px solid #333;border-radius:6px;padding:10px;margin-bottom:10px;">
+        <div style="padding:16px 18px;">
+            <div id="settlement-confirm" style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:#111;border:1px solid #333;border-radius:6px;padding:12px;margin-bottom:12px;">
                 <div style="font-size:12px;color:#cbd5e1;">Jalankan settlement manual sekarang?</div>
                 <div style="display:flex;gap:8px;">
                     <button id="settlement-start" type="button" class="btn-print">Mulai</button>
                     <button id="settlement-cancel" type="button" class="btn-print" style="opacity:.8;">Batal</button>
                 </div>
             </div>
-            <div style="font-size:12px;color:#9aa0a6;margin-bottom:8px;">Log settlement (MikroTik)</div>
-            <div id="settlement-log" class="settlement-terminal"></div>
-            <span class="settlement-cursor"></span>
+            <div id="settlement-log-wrap" style="display:none;">
+                <div style="font-size:12px;color:#9aa0a6;margin-bottom:8px;">Log settlement (MikroTik)</div>
+                <div id="settlement-log" class="terminal-window"></div>
+            </div>
         </div>
-        <div style="padding:10px 16px;border-top:1px solid #333;display:flex;justify-content:space-between;gap:8px;align-items:center;">
-            <span id="processStatus" style="font-size:12px;color:#ff9800;"><i class="fa fa-refresh fa-spin"></i> Sedang memproses...</span>
+        <div style="padding:10px 18px;border-top:1px solid #333;display:flex;justify-content:space-between;gap:8px;align-items:center;">
+            <span id="processStatus" style="font-size:12px;color:#ff9800;"><i class="fa fa-refresh fa-spin"></i> Menunggu proses...</span>
             <button id="settlement-close" type="button" class="btn-print">Tutup</button>
         </div>
     </div>
