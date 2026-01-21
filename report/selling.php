@@ -875,6 +875,8 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 params.set('session', '<?= htmlspecialchars($session_id); ?>');
                 params.set('date', '<?= htmlspecialchars($filter_date); ?>');
                 params.set('action', 'start');
+                // Mulai polling lebih dulu agar log tampil real-time walau start request lambat
+                pollSettlementLogs();
                 fetch('report/settlement_manual.php?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                     .then(function(r){ return r.json(); })
                     .then(function(data){
@@ -890,7 +892,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                             }
                             return;
                         }
-                        pollSettlementLogs();
+                        // polling sudah berjalan
                     })
                     .catch(function(){
                         if (statusEl) statusEl.textContent = 'Settlement gagal.';
