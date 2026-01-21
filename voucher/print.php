@@ -542,6 +542,14 @@ for ($i = 0; $i < $TotalReg; $i++) {
 <script>
   window.addEventListener('load', async () => {
     const vouchers = Array.from(document.querySelectorAll('table.voucher'));
+    if (!vouchers.length) return;
+    const images = Array.from(document.images || []);
+    await Promise.all(images.map(img => new Promise(resolve => {
+      if (img.complete) return resolve();
+      img.addEventListener('load', resolve, { once: true });
+      img.addEventListener('error', resolve, { once: true });
+    })));
+    await new Promise(r => setTimeout(r, 300));
     for (let i = 0; i < vouchers.length; i++) {
       const canvas = await html2canvas(vouchers[i], {scale: 2, backgroundColor: '#fff'});
       const link = document.createElement('a');
