@@ -1250,6 +1250,19 @@ foreach($active as $a) {
 
 $is_ajax = isset($_GET['ajax']) && $_GET['ajax'] == '1';
 
+$retur_ref_map = [];
+if ($db) {
+  try {
+    $stmtRefs = $db->query("SELECT raw_comment FROM login_history WHERE raw_comment IS NOT NULL AND raw_comment != ''");
+    foreach ($stmtRefs->fetchAll(PDO::FETCH_ASSOC) as $row) {
+      $ref_user = extract_retur_user_from_ref($row['raw_comment'] ?? '');
+      if ($ref_user !== '') {
+        $retur_ref_map[strtolower($ref_user)] = true;
+      }
+    }
+  } catch (Exception $e) {}
+}
+
 // Tambahkan data history-only agar TERPAKAI/RUSAK/RETUR tetap tampil
 if ($db) {
   try {
@@ -1278,6 +1291,10 @@ if ($db) {
         $h_comment_rusak = preg_match('/\bAudit:\s*RUSAK\b/i', $comment) || preg_match('/^\s*RUSAK\b/i', $comment);
         $h_is_rusak = ($st === 'rusak') || $h_comment_rusak;
         $h_is_retur = ($st === 'retur') || (stripos($comment, '(Retur)') !== false) || (stripos($comment, 'Retur Ref:') !== false);
+        if (isset($retur_ref_map[strtolower($uname)])) {
+          $h_is_retur = true;
+          $h_is_rusak = false;
+        }
         if ($st === 'retur') {
           $h_is_retur = true;
           $h_is_rusak = false;
@@ -1412,6 +1429,10 @@ foreach($all_users as $u) {
       $is_retur = true;
     } elseif ($hist_status === 'rusak') {
       $is_rusak = true;
+    }
+    if (isset($retur_ref_map[strtolower($name)])) {
+      $is_retur = true;
+      $is_rusak = false;
     }
     // Retur harus tetap retur meski ada Audit: RUSAK atau disabled
     if ($is_retur) {

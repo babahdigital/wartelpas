@@ -113,6 +113,16 @@ function extract_datetime_from_comment($comment) {
     return date('Y-m-d H:i:s', $ts);
 }
 
+function extract_retur_user_from_ref($comment) {
+    if (empty($comment)) return '';
+    if (preg_match('/Retur\s*Ref\s*:\s*([^|]+)/i', $comment, $m)) {
+        $ref = trim($m[1]);
+        if (preg_match('/\b(vc-[A-Za-z0-9._-]+)/', $ref, $m2)) return $m2[1];
+        if (preg_match('/\b([a-z0-9]{6})\b/i', $ref, $m2)) return $m2[1];
+    }
+    return '';
+}
+
 function format_date_indo($dateStr) {
     if (empty($dateStr) || $dateStr === '-') return '-';
     $ts = strtotime($dateStr);
@@ -189,6 +199,7 @@ function norm_date_from_raw_report($raw_date) {
 }
 
 $rows = [];
+$retur_ref_map = [];
 $list = [];
 $usage_list = [];
 $only_wartel = true;
@@ -234,6 +245,8 @@ if ($is_usage && file_exists($dbFile)) {
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
             $uname = $row['username'] ?? '';
             if ($uname !== '') $histMap[$uname] = $row;
+            $ref_user = extract_retur_user_from_ref($row['raw_comment'] ?? '');
+            if ($ref_user !== '') $retur_ref_map[strtolower($ref_user)] = true;
         }
     } catch (Exception $e) {
         $histMap = [];
@@ -343,7 +356,7 @@ if ($is_usage && file_exists($dbFile)) {
             elseif ($req_status === 'all') $status_match = in_array($status, ['RUSAK','TERPAKAI']);
             else $status_match = ($status === 'TERPAKAI');
 
-            if ($req_status === 'rusak' && ($is_retur || $hist_is_retur)) {
+            if ($req_status === 'rusak' && ($is_retur || $hist_is_retur || isset($retur_ref_map[strtolower($name)]))) {
                 continue;
             }
 
@@ -440,7 +453,7 @@ if ($is_usage && file_exists($dbFile)) {
             if ($req_status === 'all' && !in_array($status, ['RUSAK','TERPAKAI','ONLINE'])) continue;
 
             if ($req_status === 'rusak') {
-                $is_retur_hist = (stripos($row['raw_comment'] ?? '', '(Retur)') !== false) || (stripos($row['raw_comment'] ?? '', 'Retur Ref:') !== false) || ($hist_status === 'retur');
+                $is_retur_hist = (stripos($row['raw_comment'] ?? '', '(Retur)') !== false) || (stripos($row['raw_comment'] ?? '', 'Retur Ref:') !== false) || ($hist_status === 'retur') || isset($retur_ref_map[strtolower($uname)]);
                 if ($is_retur_hist) continue;
             }
 
