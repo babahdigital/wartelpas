@@ -468,6 +468,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     $name = trim($_GET['name'] ?? '');
     $show = trim($_GET['show'] ?? '');
     $date = trim($_GET['date'] ?? '');
+    $recent = (int)($_GET['recent'] ?? 0);
     if ($name === '') {
       echo json_encode(['ok' => false, 'message' => 'User tidak ditemukan.']);
       exit();
@@ -483,6 +484,10 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     } elseif ($show === 'tahunan' && $date !== '') {
       $where .= " AND substr(date_key, 1, 4) = :d";
       $params[':d'] = $date;
+    }
+    if ($recent > 0) {
+      $where .= " AND ((login_time IS NOT NULL AND login_time >= :since) OR (logout_time IS NOT NULL AND logout_time >= :since))";
+      $params[':since'] = date('Y-m-d H:i:s', time() - ($recent * 60));
     }
     try {
       $stmtCount = $db->prepare("SELECT COUNT(*) FROM login_events WHERE $where");
@@ -2390,6 +2395,11 @@ if ($debug_mode && !$is_ajax) {
       const values = data.values || {};
       const limits = data.limits || {};
       const headerMsg = data.message || '';
+      const meta = data.meta || {};
+      if (meta && (meta.relogin_count === undefined || meta.relogin_count === null)) {
+        meta.relogin_count = Number(values.relogin ?? 0);
+      }
+      if (meta && !meta.relogin_window) meta.relogin_window = 5;
       const items = [
         { label: `Offline (tidak sedang online)`, ok: !!criteria.offline, value: values.online || '-' },
         { label: `Bytes maksimal ${limits.bytes || '-'}`, ok: !!criteria.bytes_ok, value: values.bytes || '-' },
@@ -2428,7 +2438,6 @@ if ($debug_mode && !$is_ajax) {
       confirmOk.style.cursor = isValid ? 'pointer' : 'not-allowed';
       if (confirmPrint) confirmPrint.style.display = 'inline-flex';
       confirmModal.style.display = 'flex';
-      const meta = data.meta || {};
       rusakPrintPayload = { headerMsg, items, meta };
       const cleanup = (result) => {
         confirmModal.style.display = 'none';
@@ -2489,7 +2498,15 @@ if ($debug_mode && !$is_ajax) {
           ${msgLine}
           <table><thead><tr><th>Kriteria</th><th>Nilai</th><th>Status</th></tr></thead><tbody>${rowsPrint}</tbody></table>
           ${(() => {
-            if (!mt || !Array.isArray(mt.relogin_events) || mt.relogin_events.length === 0) return '';
+            if (!mt || !Array.isArray(mt.relogin_events) || mt.relogin_events.length === 0) {
+              if (mt && (mt.relogin_count || 0) > 0) {
+                return `<div style="margin:10px 0 6px 0;font-size:12px;font-weight:600;">Rincian Relogin (${mt.relogin_window || 5} menit terakhir)</div>
+                  <table><thead><tr><th>#</th><th>Login</th><th>Logout</th></tr></thead><tbody>
+                    <tr><td colspan="3" style="text-align:center;">Detail relogin tidak tersedia</td></tr>
+                  </tbody></table>`;
+              }
+              return '';
+            }
             const rows = mt.relogin_events.map((ev, idx) => {
               const seq = ev.seq || (idx + 1);
               const loginLabel = formatTimeOnly(ev.login_time);
@@ -2497,7 +2514,7 @@ if ($debug_mode && !$is_ajax) {
               const note = (!ev.login_time && ev.logout_time) ? ' (logout tanpa login)' : '';
               return `<tr><td>#${seq}</td><td>${loginLabel}${note}</td><td>${logoutLabel}</td></tr>`;
             }).join('');
-            return `<div style="margin:10px 0 6px 0;font-size:12px;font-weight:600;">Rincian Relogin</div>
+            return `<div style="margin:10px 0 6px 0;font-size:12px;font-weight:600;">Rincian Relogin (${mt.relogin_window || 5} menit terakhir)</div>
               <table><thead><tr><th>#</th><th>Login</th><th>Logout</th></tr></thead><tbody>${rows}</tbody></table>`;
           })()}
         </body></html>`;
@@ -2683,6 +2700,7 @@ if ($debug_mode && !$is_ajax) {
             params.set('action', 'login_events');
             params.set('name', uname);
             params.set('session', '<?= $session ?>');
+            params.set('recent', '5');
             params.set('ajax', '1');
             params.set('_', Date.now().toString());
             const resp = await fetch(ajaxBase + '?' + params.toString(), { cache: 'no-store' });
