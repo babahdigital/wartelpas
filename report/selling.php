@@ -764,12 +764,15 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (statusEl) statusEl.textContent = 'Menunggu konfirmasi';
         if (processEl) processEl.innerHTML = '<i class="fa fa-refresh"></i> Menunggu proses...';
         if (closeBtn) {
-            closeBtn.disabled = false;
-            closeBtn.style.opacity = '1';
-            closeBtn.style.cursor = 'pointer';
+            closeBtn.disabled = true;
+            closeBtn.style.opacity = '0.6';
+            closeBtn.style.cursor = 'not-allowed';
         }
         if (confirmBox) confirmBox.style.display = 'flex';
         if (cancelBtn) {
+            cancelBtn.disabled = false;
+            cancelBtn.style.opacity = '1';
+            cancelBtn.style.cursor = 'pointer';
             cancelBtn.onclick = function(){
                 if (modal) modal.style.display = 'none';
             };
