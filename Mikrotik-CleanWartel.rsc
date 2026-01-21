@@ -12,6 +12,8 @@
 }
 :set isCleaning true;
 
+:log info "CLEANUP: Mulai proses cuci gudang (settlement manual).";
+
 :global syncStatsOk;
 :global syncSalesOk;
 :set syncStatsOk true;
