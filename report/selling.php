@@ -763,6 +763,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (window.settleTimer) { clearInterval(window.settleTimer); window.settleTimer = null; }
         window.settleQueue = [];
         window.settleSeen = {};
+        window.settleInfoShown = false;
         if (modal) modal.style.display = 'flex';
         if (logBox) logBox.innerHTML = '';
         if (logWrap) logWrap.style.display = 'none';
