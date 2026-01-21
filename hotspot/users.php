@@ -146,6 +146,18 @@ function seconds_to_uptime($seconds) {
   return implode('', $parts);
 }
 
+// Helper: Ambil batas rusak/retur per profil
+function resolve_rusak_limits($profile) {
+  $p = strtolower((string)$profile);
+  if (preg_match('/\b10\s*(menit|m)\b|10menit/i', $p)) {
+    return ['uptime' => 180, 'bytes' => 1 * 1024 * 1024, 'uptime_label' => '3 menit', 'bytes_label' => '1MB'];
+  }
+  if (preg_match('/\b30\s*(menit|m)\b|30menit/i', $p)) {
+    return ['uptime' => 300, 'bytes' => 2 * 1024 * 1024, 'uptime_label' => '5 menit', 'bytes_label' => '2MB'];
+  }
+  return ['uptime' => 300, 'bytes' => 2 * 1024 * 1024, 'uptime_label' => '5 menit', 'bytes_label' => '2MB'];
+}
+
 // Helper: Ekstrak datetime dari comment (format umum MikroTik)
 function extract_datetime_from_comment($comment) {
   if (empty($comment)) return '';
@@ -458,7 +470,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $uinfo = $API->comm('/ip/hotspot/user/print', [
         '?server' => $hotspot_server,
         '?name' => $name,
-        '.proplist' => '.id,name,comment,disabled,bytes-in,bytes-out,uptime'
+        '.proplist' => '.id,name,comment,profile,disabled,bytes-in,bytes-out,uptime'
       ]);
       $ainfo = $API->comm('/ip/hotspot/active/print', [
         '?server' => $hotspot_server,
@@ -479,11 +491,14 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $bytes = max((int)$bytes_total, (int)$bytes_active);
       $uptime = $urow['uptime'] ?? ($arow['uptime'] ?? '0s');
       $uptime_sec = uptime_to_seconds($uptime);
-      $bytes_limit = 2 * 1024 * 1024; // 2 MB
+      $profile_name = $prof ?: ($urow['profile'] ?? '');
+      $limits = resolve_rusak_limits($profile_name);
+      $bytes_limit = $limits['bytes'];
+      $uptime_limit = $limits['uptime'];
       $is_active = isset($arow['user']);
-      if (!($act == 'retur' && $is_rusak_target) && ($is_active || $bytes > $bytes_limit || $uptime_sec > 300)) {
+      if (!($act == 'retur' && $is_rusak_target) && ($is_active || $bytes > $bytes_limit || $uptime_sec > $uptime_limit)) {
         $action_blocked = true;
-        $action_error = 'Gagal: data sudah terpakai (online / bytes > 2MB / uptime > 5 menit).';
+        $action_error = 'Gagal: data sudah terpakai (online / bytes > ' . $limits['bytes_label'] . ' / uptime > ' . $limits['uptime_label'] . ').';
       }
     }
     if (!$action_blocked && $act == 'retur') {
@@ -986,7 +1001,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     exit();
   }
   if ($action_blocked) {
-    echo "<script>if(window.showActionPopup){window.showActionPopup('error','" . addslashes($action_error) . "');}else{alert('" . addslashes($action_error) . "');}</script>";
+    echo "<script>if(window.showActionPopup){window.showActionPopup('error','" . addslashes($action_error) . "');}</script>";
   } else {
     echo "<script>if(window.showActionPopup){window.showActionPopup('success','Berhasil diproses.','{$redir}');}else{window.location.href='{$redir}';}</script>";
   }
@@ -1451,8 +1466,10 @@ foreach($all_users as $u) {
       }
     }
     if ($status === 'RUSAK') {
+      $profile_name = $u['profile'] ?? '';
+      $limits = resolve_rusak_limits($profile_name);
       $uptime_sec = uptime_to_seconds($uptime);
-      $show_rusak_times = ($uptime_sec > 0 || $bytes > 0) && $uptime_sec <= 300 && $bytes <= (2 * 1024 * 1024);
+      $show_rusak_times = ($uptime_sec > 0 || $bytes > 0) && $uptime_sec <= $limits['uptime'] && $bytes <= $limits['bytes'];
       if (!$show_rusak_times) {
         $login_disp = '-';
         $logout_disp = '-';
