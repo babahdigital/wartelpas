@@ -275,6 +275,9 @@ foreach ($rows as $r) {
     }
 
     $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
+    $qty = (int)($r['qty'] ?? 0);
+    if ($qty <= 0) $qty = 1;
+    $line_price = $price * $qty;
     $comment = (string)($r['comment'] ?? '');
     $blok_row = (string)($r['blok_name'] ?? '');
     if ($blok_row === '' && !preg_match('/\bblok\s*[-_]?\s*[A-Za-z0-9]+/i', $comment)) {
@@ -294,9 +297,9 @@ foreach ($rows as $r) {
         else $status = 'normal';
     }
 
-    $gross_add = ($status === 'retur' || $status === 'invalid') ? 0 : $price;
-    $loss_rusak = ($status === 'rusak') ? $price : 0;
-    $loss_invalid = ($status === 'invalid') ? $price : 0;
+    $gross_add = ($status === 'retur' || $status === 'invalid') ? 0 : $line_price;
+    $loss_rusak = ($status === 'rusak') ? $line_price : 0;
+    $loss_invalid = ($status === 'invalid') ? $line_price : 0;
     $net_add = $gross_add - $loss_rusak - $loss_invalid;
 
     $total_bandwidth += $bytes;
@@ -305,10 +308,7 @@ foreach ($rows as $r) {
     $is_laku = !in_array($status, ['rusak', 'retur', 'invalid'], true) && $usage_ok;
 
     if ($req_show === 'harian') {
-        $qty = (int)($r['qty'] ?? 0);
-        if ($qty <= 0) $qty = 1;
         $qty_count = 1;
-        $line_price = $price * $qty;
         $gross_line = ($status === 'retur' || $status === 'invalid') ? 0 : $line_price;
         $loss_rusak_line = ($status === 'rusak') ? $line_price : 0;
         $loss_invalid_line = ($status === 'invalid') ? $line_price : 0;

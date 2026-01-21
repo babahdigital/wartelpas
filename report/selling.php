@@ -56,6 +56,21 @@ function norm_date_from_raw_report($raw_date) {
         return '';
 }
 
+function normalize_block_name($blok_name, $comment = '') {
+    $raw = strtoupper(trim((string)$blok_name));
+    if ($raw === '' && $comment !== '') {
+        if (preg_match('/\bblok\s*[-_]?\s*([A-Z0-9]+)\b/i', $comment, $m)) {
+            $raw = strtoupper($m[1]);
+        }
+    }
+    if ($raw === '') return 'BLOK-LAIN';
+    $raw = preg_replace('/^BLOK[-_\s]*/', '', $raw);
+    if (preg_match('/^([A-Z]+)/', $raw, $m)) {
+        $raw = $m[1];
+    }
+    return 'BLOK-' . $raw;
+}
+
 function sanitize_comment_short($comment) {
     $comment = (string)$comment;
     $comment = preg_replace('/\s*\|\s*IP\s*:[^|]+/i', '', $comment);
@@ -461,15 +476,19 @@ foreach ($rows as $r) {
         }
 
         $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
+        $qty = (int)($r['qty'] ?? 0);
+        if ($qty <= 0) $qty = 1;
+        $line_price = $price * $qty;
         $comment = format_first_login($r['first_login_real'] ?? '');
         $raw_comment = (string)($r['comment'] ?? '');
         $blok_row = (string)($r['blok_name'] ?? '');
         if ($blok_row === '' && !preg_match('/\bblok\s*[-_]?\s*[A-Za-z0-9]+/i', $raw_comment)) {
             continue;
         }
+        $profile = $r['profile_snapshot'] ?? ($r['profile'] ?? '-');
         $status = strtolower((string)($r['status'] ?? ''));
         $lh_status = strtolower((string)($r['last_status'] ?? ''));
-        $cmt_low = strtolower($comment);
+        $cmt_low = strtolower($raw_comment);
 
         if ($status === '' || $status === 'normal') {
                 if (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
@@ -478,9 +497,9 @@ foreach ($rows as $r) {
                 else $status = 'normal';
         }
 
-        $gross_add = ($status === 'retur' || $status === 'invalid') ? 0 : $price;
-        $loss_rusak = ($status === 'rusak') ? $price : 0;
-        $loss_invalid = ($status === 'invalid') ? $price : 0;
+        $gross_add = ($status === 'retur' || $status === 'invalid') ? 0 : $line_price;
+        $loss_rusak = ($status === 'rusak') ? $line_price : 0;
+        $loss_invalid = ($status === 'invalid') ? $line_price : 0;
         $net_add = $gross_add - $loss_rusak - $loss_invalid;
 
         if (!$use_summary) {
@@ -502,8 +521,7 @@ foreach ($rows as $r) {
             $total_invalid += $loss_invalid;
             $total_net += $net_add;
 
-            $blok = $r['blok_name'] ?? '-';
-            $profile = $r['profile_snapshot'] ?? ($r['profile'] ?? '-');
+            $blok = normalize_block_name($r['blok_name'] ?? '', $raw_comment);
 
             if (!isset($by_block[$blok])) {
                 $by_block[$blok] = ['qty'=>0,'gross'=>0,'rusak'=>0,'invalid'=>0,'net'=>0,'retur'=>0];
@@ -534,7 +552,7 @@ foreach ($rows as $r) {
                 'profile' => $profile,
                 'blok' => $blok,
                 'status' => strtoupper($status),
-                'price' => $price,
+                'price' => $line_price,
                 'net' => $net_add,
                 'bytes' => (int)($r['last_bytes'] ?? 0),
             'comment' => $comment
