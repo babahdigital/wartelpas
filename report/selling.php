@@ -604,14 +604,17 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
     .filter-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
     .filter-bar select, .filter-bar input { background: #343a40; border: 1px solid var(--border-col); color: #fff; padding: 6px 10px; border-radius: 6px; }
     .btn-print { background: var(--c-blue); color: #fff; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
-    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 10000; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(18,18,18,0.95); display: none; align-items: center; justify-content: center; z-index: 10000; }
     .modal-card { background: #2c2c2c; color: #e0e0e0; border-radius: 8px; width: 520px; max-width: 92vw; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; }
-    .modal-header { background: #252525; border-bottom: 1px solid #3d3d3d; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; }
-    .modal-title { font-weight: 600; color: #fff; font-size: 16px; margin: 0; }
-    .modal-close { background: transparent; border: none; color: #fff; opacity: 0.7; font-size: 20px; line-height: 1; cursor: pointer; }
+    .modal-header { background: #252525; border-bottom: 1px solid #3d3d3d; padding: 20px; display: flex; align-items: center; justify-content: space-between; }
+    .modal-title { font-weight: 600; color: #fff; font-size: 18px; margin: 0; }
+    .modal-close { background: transparent; border: none; color: #fff; opacity: 0.7; font-size: 22px; line-height: 1; cursor: pointer; }
     .modal-close:hover { opacity: 1; }
-    .modal-body { padding: 20px; color: #ccc; }
-    .modal-footer { background: #252525; border-top: 1px solid #3d3d3d; padding: 12px 20px; display: flex; gap: 8px; justify-content: flex-end; }
+    .modal-body { padding: 25px; color: #ccc; }
+    .modal-footer { background: #252525; border-top: 1px solid #3d3d3d; padding: 15px 25px; display: flex; gap: 8px; justify-content: flex-end; }
+    .modal-note { font-size: 12px; color: #9aa0a6; margin-top: 8px; line-height: 1.4; }
+    .btn-default-dark { background:#424242; color:#fff; border:1px solid #555; }
+    .btn-default-dark:hover { background:#505050; color:#fff; }
     .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
     .form-input { width: 100%; background: #343a40; border: 1px solid var(--border-col); color: #fff; padding: 8px 10px; border-radius: 6px; }
     .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -641,6 +644,13 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             <input type="hidden" name="show" value="<?= htmlspecialchars($req_show); ?>">
             <input type="hidden" name="date" value="<?= htmlspecialchars($filter_date); ?>">
             <div class="modal-body">
+            <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;">
+                <div style="font-size:22px;color:#4caf50;line-height:1;"><i class="fa fa-info-circle"></i></div>
+                <div style="font-size:12px;color:#9aa0a6;line-height:1.4;">
+                    Data harian akan otomatis mengikuti data tanggal terakhir jika belum ada input untuk hari ini.
+                    Edit hanya diperlukan saat ada perubahan atau penambahan.
+                </div>
+            </div>
             <div class="form-grid-2">
                 <div>
                     <label>Blok</label>
@@ -1390,18 +1400,18 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
 <?php endif; ?>
 
 <?php if (!$is_ajax): ?>
-<div id="hp-delete-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:10060;">
-    <div style="background:#2c2c2c;color:#e0e0e0;border:1px solid #444;border-radius:8px;width:420px;max-width:92vw;box-shadow:0 10px 30px rgba(0,0,0,0.5);overflow:hidden;">
-        <div style="background:#252525;border-bottom:1px solid #3d3d3d;padding:14px 16px;font-weight:600;display:flex;justify-content:space-between;align-items:center;">
-            <span>Konfirmasi Hapus</span>
-            <button type="button" id="hp-delete-close" onclick="closeDeleteHpModal()" style="background:transparent;border:none;color:#fff;opacity:.7;font-size:20px;line-height:1;cursor:pointer;">&times;</button>
+<div id="hp-delete-modal" class="modal-backdrop" onclick="if(event.target===this){closeDeleteHpModal();}">
+    <div class="modal-card" style="width:440px;">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fa fa-exclamation-triangle" style="color:#ff9800;margin-right:6px;"></i> Konfirmasi Hapus</div>
+            <button type="button" id="hp-delete-close" onclick="closeDeleteHpModal()" class="modal-close">&times;</button>
         </div>
-        <div style="padding:18px 16px;color:#ccc;">
-            <div style="font-size:36px;color:#ff9800;text-align:center;margin-bottom:10px;"><i class="fa fa-exclamation-triangle"></i></div>
-            <div id="hp-delete-text" style="text-align:center;line-height:1.5;">Hapus data ini?</div>
+        <div class="modal-body">
+            <div id="hp-delete-text" style="text-align:left;line-height:1.6;">Hapus data ini?</div>
+            <div class="modal-note">Tindakan ini menghapus seluruh data untuk Blok terkait (TOTAL, WARTEL, KAMTIB) pada tanggal tersebut.</div>
         </div>
-        <div style="background:#252525;border-top:1px solid #3d3d3d;padding:12px 16px;display:flex;justify-content:flex-end;gap:8px;">
-            <button type="button" id="hp-delete-cancel" onclick="closeDeleteHpModal()" class="btn-print" style="background:#424242;border:1px solid #555;">Batal</button>
+        <div class="modal-footer">
+            <button type="button" id="hp-delete-cancel" onclick="closeDeleteHpModal()" class="btn-print btn-default-dark">Batal</button>
             <button type="button" id="hp-delete-confirm" onclick="confirmDeleteHpModal()" class="btn-print" style="background:#ff9800;color:#fff;">Ya, Hapus</button>
         </div>
     </div>
