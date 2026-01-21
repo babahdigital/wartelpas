@@ -1186,9 +1186,9 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                         data-kamtib="<?= (int)$bk; ?>">
                                         <i class="fa fa-edit"></i>
                                     </button>
-                                    <a class="btn-act btn-act-danger" href="./?report=selling<?= $session_qs; ?>&show=<?= $req_show; ?>&date=<?= urlencode($filter_date); ?>&hp_delete=1&blok=<?= urlencode($bname); ?>&hp_date=<?= urlencode($filter_date); ?>" onclick="return confirm('Hapus data blok <?= htmlspecialchars($bname); ?> untuk <?= htmlspecialchars($filter_date); ?>?')">
+                                    <button type="button" class="btn-act btn-act-danger" onclick="openDeleteHpModal('<?= './?report=selling' . $session_qs . '&show=' . $req_show . '&date=' . urlencode($filter_date) . '&hp_delete=1&blok=' . urlencode($bname) . '&hp_date=' . urlencode($filter_date); ?>','<?= htmlspecialchars($bname); ?>','<?= htmlspecialchars($filter_date); ?>')">
                                         <i class="fa fa-trash"></i>
-                                    </a>
+                                    </button>
                                 <?php else: ?>
                                     <span style="color:var(--txt-muted);">-</span>
                                 <?php endif; ?>
@@ -1316,6 +1316,25 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         <div style="padding:10px 16px;border-top:1px solid #333;display:flex;justify-content:space-between;gap:8px;align-items:center;">
             <span id="processStatus" style="font-size:12px;color:#ff9800;"><i class="fa fa-refresh fa-spin"></i> Sedang memproses...</span>
             <button id="settlement-close" type="button" class="btn-print">Tutup</button>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if (!$is_ajax): ?>
+<div id="hp-delete-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:10060;">
+    <div style="background:#2c2c2c;color:#e0e0e0;border:1px solid #444;border-radius:8px;width:420px;max-width:92vw;box-shadow:0 10px 30px rgba(0,0,0,0.5);overflow:hidden;">
+        <div style="background:#252525;border-bottom:1px solid #3d3d3d;padding:14px 16px;font-weight:600;display:flex;justify-content:space-between;align-items:center;">
+            <span>Konfirmasi Hapus</span>
+            <button type="button" id="hp-delete-close" style="background:transparent;border:none;color:#fff;opacity:.7;font-size:20px;line-height:1;cursor:pointer;">&times;</button>
+        </div>
+        <div style="padding:18px 16px;color:#ccc;">
+            <div style="font-size:36px;color:#ff9800;text-align:center;margin-bottom:10px;"><i class="fa fa-exclamation-triangle"></i></div>
+            <div id="hp-delete-text" style="text-align:center;line-height:1.5;">Hapus data ini?</div>
+        </div>
+        <div style="background:#252525;border-top:1px solid #3d3d3d;padding:12px 16px;display:flex;justify-content:flex-end;gap:8px;">
+            <button type="button" id="hp-delete-cancel" class="btn-print" style="background:#424242;border:1px solid #555;">Batal</button>
+            <button type="button" id="hp-delete-confirm" class="btn-print" style="background:#ff9800;color:#fff;">Ya, Hapus</button>
         </div>
     </div>
 </div>
