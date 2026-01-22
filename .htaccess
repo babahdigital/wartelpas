@@ -154,6 +154,11 @@ Require all denied
 <If "%{REQUEST_URI} =~ m#^/tools/cleanup_users_today\.php$#">
     Require all granted
 </If>
+
+# Login events cleanup endpoint
+<If "%{REQUEST_URI} =~ m#^/tools/cleanup_login_events\.php$#">
+    Require all granted
+</If>
 <If "%{REQUEST_URI} =~ m#^/report/print_rincian\.php$#">
     Require all granted
 </If>
