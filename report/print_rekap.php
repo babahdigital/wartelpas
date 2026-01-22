@@ -583,7 +583,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             </tbody>
                         </table>
                     </td>
-                    <td style="text-align:center; font-weight:700; font-size:14px;">-</td>
+                    <td style="text-align:center; font-weight:700; font-size:14px;"><?= number_format((int)$total_qty_laku,0,',','.') ?></td>
                     <td style="text-align:right; font-weight:700; font-size:14px;"><?= number_format((int)$total_net_units,0,',','.') ?></td>
                 </tr>
             </tbody>
