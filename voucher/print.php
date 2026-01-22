@@ -23,15 +23,35 @@ if (!isset($_SESSION["mikhmon"])) {
   include('../include/readcfg.php');
   include('../lib/formatbytesbites.php');
 
-  $id = $_GET['id'];       // Ini nama BLOK/GRUP yang dipilih
-  $qr = $_GET['qr'];
-  $small = $_GET['small'];
-  $userp = $_GET['user'];
-  $status = isset($_GET['status']) ? $_GET['status'] : '';
-  $mode = isset($_GET['mode']) ? $_GET['mode'] : '';
-  $blok = isset($_GET['blok']) ? $_GET['blok'] : '';
+  $id = $_GET['id'] ?? '';       // Ini nama BLOK/GRUP yang dipilih
+  $qr = $_GET['qr'] ?? '';
+  $small = $_GET['small'] ?? '';
+  $userp = $_GET['user'] ?? '';
+  $status = isset($_GET['status']) ? strtolower(trim((string)$_GET['status'])) : '';
+  $mode = isset($_GET['mode']) ? strtolower(trim((string)$_GET['mode'])) : '';
+  $blok = isset($_GET['blok']) ? trim((string)$_GET['blok']) : '';
   $download = isset($_GET['download']) && $_GET['download'] == '1';
   $img = isset($_GET['img']) && $_GET['img'] == '1';
+
+  $allowed_status = ['ready','online','terpakai','rusak','retur','used','all'];
+  if ($status !== '' && !in_array($status, $allowed_status, true)) {
+    $status = '';
+  }
+  $allowed_mode = ['status',''];
+  if (!in_array($mode, $allowed_mode, true)) {
+    $mode = '';
+  }
+  if ($blok !== '' && !preg_match('/^[A-Za-z0-9_-]{1,20}$/', $blok)) {
+    $blok = '';
+  }
+  if ($userp !== '' && !preg_match('/^[A-Za-z0-9._-]{2,32}$/', $userp)) {
+    $userp = '';
+  }
+  if ($id !== '' && !preg_match('/^[A-Za-z0-9._-]{1,40}$/', $id)) {
+    $id = '';
+  }
+  $qr = ($qr === 'yes') ? 'yes' : (($qr === 'no') ? 'no' : $qr);
+  $small = ($small === 'yes') ? 'yes' : (($small === 'no') ? 'no' : $small);
 
   require('../lib/routeros_api.class.php');
   $API = new RouterosAPI();
