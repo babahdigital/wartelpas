@@ -681,7 +681,9 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         $audit_blok_raw = trim($_POST['audit_blok'] ?? '');
         $audit_date = trim($_POST['audit_date'] ?? '');
         $audit_blok = normalize_block_name($audit_blok_raw);
-        $audit_user = trim($_POST['audit_username'] ?? '');
+        $audit_user_raw = trim($_POST['audit_username'] ?? '');
+        $audit_users = array_values(array_unique(array_filter(array_map('trim', preg_split('/[\n,]+/', $audit_user_raw)))));
+        $audit_user_list = implode(', ', $audit_users);
         $audit_qty = (int)($_POST['audit_qty'] ?? 0);
         $audit_setoran = (int)($_POST['audit_setoran'] ?? 0);
         $audit_note = trim($_POST['audit_note'] ?? '');
@@ -691,34 +693,38 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         if ($audit_blok_raw === '' || $audit_date === '') {
             $audit_error = 'Blok dan tanggal wajib diisi.';
         } else {
-            $user_row = null;
-            $user_exists = false;
-            $user_has_date = false;
+            $user_rows = [];
+            $user_events = [];
             $blok_from_user = '';
-            if ($audit_user !== '') {
-                if (table_exists($db, 'login_history')) {
-                    $stmtU = $db->prepare("SELECT username, blok_name, raw_comment, first_login_real, last_login_real, login_time_real, logout_time_real, last_status, last_bytes, last_uptime, first_ip, first_mac, last_ip, last_mac
-                        FROM login_history WHERE username = :u LIMIT 1");
-                    $stmtU->execute([':u' => $audit_user]);
-                    $user_row = $stmtU->fetch(PDO::FETCH_ASSOC);
-                    if ($user_row) $user_exists = true;
-                }
-                if (!$user_exists && table_exists($db, 'sales_history')) {
-                    $stmtU2 = $db->prepare("SELECT username FROM sales_history WHERE username = :u LIMIT 1");
-                    $stmtU2->execute([':u' => $audit_user]);
-                    if ($stmtU2->fetchColumn()) $user_exists = true;
-                }
-                if (!$user_exists && table_exists($db, 'live_sales')) {
-                    $stmtU3 = $db->prepare("SELECT username FROM live_sales WHERE username = :u LIMIT 1");
-                    $stmtU3->execute([':u' => $audit_user]);
-                    if ($stmtU3->fetchColumn()) $user_exists = true;
-                }
-                if (!$user_exists) {
-                    $audit_error = 'Username tidak ditemukan di sistem.';
-                } else {
+            if (!empty($audit_users)) {
+                foreach ($audit_users as $u) {
+                    $user_row = null;
+                    $user_exists = false;
+                    $user_has_date = false;
+                    if (table_exists($db, 'login_history')) {
+                        $stmtU = $db->prepare("SELECT username, blok_name, raw_comment, first_login_real, last_login_real, login_time_real, logout_time_real, last_status, last_bytes, last_uptime, first_ip, first_mac, last_ip, last_mac
+                            FROM login_history WHERE username = :u LIMIT 1");
+                        $stmtU->execute([':u' => $u]);
+                        $user_row = $stmtU->fetch(PDO::FETCH_ASSOC);
+                        if ($user_row) $user_exists = true;
+                    }
+                    if (!$user_exists && table_exists($db, 'sales_history')) {
+                        $stmtU2 = $db->prepare("SELECT username FROM sales_history WHERE username = :u LIMIT 1");
+                        $stmtU2->execute([':u' => $u]);
+                        if ($stmtU2->fetchColumn()) $user_exists = true;
+                    }
+                    if (!$user_exists && table_exists($db, 'live_sales')) {
+                        $stmtU3 = $db->prepare("SELECT username FROM live_sales WHERE username = :u LIMIT 1");
+                        $stmtU3->execute([':u' => $u]);
+                        if ($stmtU3->fetchColumn()) $user_exists = true;
+                    }
+                    if (!$user_exists) {
+                        $audit_error = 'Username tidak ditemukan: ' . $u;
+                        break;
+                    }
                     if (table_exists($db, 'login_events')) {
                         $stmtEv = $db->prepare("SELECT COUNT(*) FROM login_events WHERE username = :u AND date_key = :d");
-                        $stmtEv->execute([':u' => $audit_user, ':d' => $audit_date]);
+                        $stmtEv->execute([':u' => $u, ':d' => $audit_date]);
                         $user_has_date = ((int)$stmtEv->fetchColumn() > 0);
                     }
                     if (!$user_has_date && $user_row) {
@@ -730,23 +736,31 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     }
                     if (!$user_has_date && table_exists($db, 'sales_history')) {
                         $stmtU4 = $db->prepare("SELECT 1 FROM sales_history WHERE username = :u AND sale_date = :d LIMIT 1");
-                        $stmtU4->execute([':u' => $audit_user, ':d' => $audit_date]);
+                        $stmtU4->execute([':u' => $u, ':d' => $audit_date]);
                         if ($stmtU4->fetchColumn()) $user_has_date = true;
                     }
                     if (!$user_has_date && table_exists($db, 'live_sales')) {
                         $stmtU5 = $db->prepare("SELECT 1 FROM live_sales WHERE username = :u AND sale_date = :d LIMIT 1");
-                        $stmtU5->execute([':u' => $audit_user, ':d' => $audit_date]);
+                        $stmtU5->execute([':u' => $u, ':d' => $audit_date]);
                         if ($stmtU5->fetchColumn()) $user_has_date = true;
                     }
                     if (!$user_has_date) {
-                        $audit_error = 'Username tidak ditemukan pada tanggal tersebut.';
-                    } else {
-                        if ($user_row) {
-                            $blok_from_user = normalize_block_name($user_row['blok_name'] ?? '', $user_row['raw_comment'] ?? '');
-                        }
-                        if ($blok_from_user !== '' && $blok_from_user !== $audit_blok) {
-                            $audit_error = 'Username tidak sesuai dengan blok yang dipilih.';
-                        }
+                        $audit_error = 'Username tidak ditemukan pada tanggal tersebut: ' . $u;
+                        break;
+                    }
+                    $blok_from_user = '';
+                    if ($user_row) {
+                        $blok_from_user = normalize_block_name($user_row['blok_name'] ?? '', $user_row['raw_comment'] ?? '');
+                    }
+                    if ($blok_from_user !== '' && $blok_from_user !== $audit_blok) {
+                        $audit_error = 'Username tidak sesuai blok: ' . $u;
+                        break;
+                    }
+                    if ($user_row) $user_rows[$u] = $user_row;
+                    if (table_exists($db, 'login_events')) {
+                        $stmtEv2 = $db->prepare("SELECT seq, login_time, logout_time FROM login_events WHERE username = :u AND date_key = :d ORDER BY seq ASC, id ASC");
+                        $stmtEv2->execute([':u' => $u, ':d' => $audit_date]);
+                        $user_events[$u] = $stmtEv2->fetchAll(PDO::FETCH_ASSOC);
                     }
                 }
             }
@@ -756,26 +770,30 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             $selisih_setoran = $audit_setoran - $expected_setoran;
             if (empty($audit_error)) {
                 $evidence = [];
-                if ($user_row) {
-                    $evidence['user'] = $user_row['username'] ?? $audit_user;
-                    $evidence['blok'] = $blok_from_user;
-                    $evidence['first_login_real'] = $user_row['first_login_real'] ?? '';
-                    $evidence['last_login_real'] = $user_row['last_login_real'] ?? '';
-                    $evidence['login_time_real'] = $user_row['login_time_real'] ?? '';
-                    $evidence['logout_time_real'] = $user_row['logout_time_real'] ?? '';
-                    $evidence['last_status'] = $user_row['last_status'] ?? '';
-                    $evidence['last_bytes'] = (int)($user_row['last_bytes'] ?? 0);
-                    $evidence['last_uptime'] = $user_row['last_uptime'] ?? '';
-                    $evidence['first_ip'] = $user_row['first_ip'] ?? '';
-                    $evidence['first_mac'] = $user_row['first_mac'] ?? '';
-                    $evidence['last_ip'] = $user_row['last_ip'] ?? '';
-                    $evidence['last_mac'] = $user_row['last_mac'] ?? '';
-                }
-                if ($audit_user !== '' && table_exists($db, 'login_events')) {
-                    $stmtEv2 = $db->prepare("SELECT seq, login_time, logout_time FROM login_events WHERE username = :u AND date_key = :d ORDER BY seq ASC, id ASC");
-                    $stmtEv2->execute([':u' => $audit_user, ':d' => $audit_date]);
-                    $events = $stmtEv2->fetchAll(PDO::FETCH_ASSOC);
-                    $evidence['events'] = $events;
+                if (!empty($audit_users)) {
+                    $evidence['users'] = [];
+                    foreach ($audit_users as $u) {
+                        $ur = $user_rows[$u] ?? null;
+                        $blok_u = '';
+                        if ($ur) {
+                            $blok_u = normalize_block_name($ur['blok_name'] ?? '', $ur['raw_comment'] ?? '');
+                        }
+                        $evidence['users'][$u] = [
+                            'blok' => $blok_u,
+                            'first_login_real' => $ur['first_login_real'] ?? '',
+                            'last_login_real' => $ur['last_login_real'] ?? '',
+                            'login_time_real' => $ur['login_time_real'] ?? '',
+                            'logout_time_real' => $ur['logout_time_real'] ?? '',
+                            'last_status' => $ur['last_status'] ?? '',
+                            'last_bytes' => (int)($ur['last_bytes'] ?? 0),
+                            'last_uptime' => $ur['last_uptime'] ?? '',
+                            'first_ip' => $ur['first_ip'] ?? '',
+                            'first_mac' => $ur['first_mac'] ?? '',
+                            'last_ip' => $ur['last_ip'] ?? '',
+                            'last_mac' => $ur['last_mac'] ?? '',
+                            'events' => $user_events[$u] ?? []
+                        ];
+                    }
                 }
                 $evidence_json = !empty($evidence) ? json_encode($evidence) : '';
                 try {
@@ -798,7 +816,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     $stmt->execute([
                         ':d' => $audit_date,
                         ':b' => $audit_blok,
-                        ':u' => $audit_user,
+                        ':u' => $audit_user_list,
                         ':eq' => $expected_qty,
                         ':es' => $expected_setoran,
                         ':rq' => $audit_qty,
