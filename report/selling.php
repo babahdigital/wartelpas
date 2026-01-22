@@ -12,10 +12,6 @@ $cur = isset($currency) ? $currency : 'Rp';
 $session_id = $_GET['session'] ?? '';
 $session_qs = $session_id !== '' ? '&session=' . urlencode($session_id) : '';
 $hp_redirect = '';
-
-// Ringkasan HP (harian)
-$hp_total_units = 0;
-$hp_active_units = 0;
 $hp_rusak_units = 0;
 $hp_spam_units = 0;
 $hp_wartel_units = 0;
@@ -576,6 +572,9 @@ foreach ($rows as $r) {
         }
 
         $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
+        if ($price <= 0) {
+            $price = (int)($r['sprice_snapshot'] ?? 0);
+        }
         $qty = (int)($r['qty'] ?? 0);
         if ($qty <= 0) $qty = 1;
         $line_price = $price * $qty;
@@ -606,13 +605,13 @@ foreach ($rows as $r) {
         $loss_invalid = ($status === 'invalid') ? $line_price : 0;
         $net_add = $gross_add - $loss_rusak - $loss_invalid;
         $is_laku = !in_array($status, ['rusak', 'retur', 'invalid'], true);
-        if ($is_laku && $username !== '') {
-            $unique_laku_users[$username] = true;
-        }
 
         if (!$use_summary) {
             if (!empty($valid_blocks) && !isset($valid_blocks[$blok])) {
                 continue;
+            }
+            if ($is_laku && $username !== '') {
+                $unique_laku_users[$username] = true;
             }
             $total_qty++;
             if ($status === 'retur') $total_qty_retur++;
@@ -1005,9 +1004,10 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
     .audit-user-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; }
     .audit-user-chip { display:inline-flex; align-items:center; gap:6px; background:#343a40; border:1px solid var(--border-col); color:#e9ecef; border-radius:999px; padding:2px 8px; font-size:12px; }
     .audit-user-chip button { background:transparent; border:none; color:#fff; cursor:pointer; font-size:12px; line-height:1; padding:0; }
-    .audit-user-suggest { position:absolute; left:0; right:0; top:100%; background:#2a3036; border:1px solid var(--border-col); border-radius:6px; max-height:180px; overflow:auto; z-index:10002; display:none; margin-top:4px; }
-    .audit-user-suggest .item { padding:6px 8px; cursor:pointer; font-size:12px; }
-    .audit-user-suggest .item:hover { background:#32383e; }
+    .audit-user-suggest { position:absolute; left:0; right:0; top:100%; background:#1f2328; border:1px solid #5a646e; border-radius:6px; max-height:180px; overflow:auto; z-index:10002; display:none; margin-top:4px; box-shadow:0 8px 18px rgba(0,0,0,0.45); }
+    .audit-user-suggest .item { padding:7px 10px; cursor:pointer; font-size:12px; color:#e6edf3; border-bottom:1px solid #2c3238; }
+    .audit-user-suggest .item:last-child { border-bottom:none; }
+    .audit-user-suggest .item:hover { background:#2b3137; }
 </style>
 <?php endif; ?>
 
