@@ -243,6 +243,17 @@ if (file_exists($dbFile)) {
     .toolbar select:focus, .toolbar input:focus { outline:none; box-shadow:none; border-color: var(--border-col); }
     .btn-solid { background:#2d8cff;color:#fff;border:none;padding:6px 10px;border-radius:4px; cursor:pointer; }
     .muted { color: var(--txt-muted); }
+    @media print {
+        body { background: #fff; color: #111; }
+        .card-solid { box-shadow: none; border: 1px solid #ddd; }
+        .card-header-solid { background: #f5f5f5; color: #111; }
+        .summary-card { background: #fff; border: 1px solid #ddd; }
+        .table-dark-solid th { background: #f0f0f0; color: #111; }
+        .table-dark-solid td { color: #111; }
+        .btn-solid { display: none; }
+        .toolbar { display: none; }
+        .section-title { page-break-after: avoid; }
+    }
 </style>
 
 <div class="card card-solid">
@@ -290,7 +301,7 @@ if (file_exists($dbFile)) {
             </div>
         <?php endif; ?>
 
-        <div class="section-title">Duplikasi Berdasar full_raw_data</div>
+        <div class="section-title">Voucher Double (full_raw_data)</div>
         <table class="table-dark-solid">
             <thead><tr><th>Sale Date</th><th>Username</th><th>Count</th><th>Raw</th></tr></thead>
             <tbody>
@@ -309,7 +320,7 @@ if (file_exists($dbFile)) {
             </tbody>
         </table>
 
-        <div class="section-title">Duplikasi Berdasar Username + Tanggal</div>
+        <div class="section-title">Voucher Double (Username + Tanggal)</div>
         <table class="table-dark-solid">
             <thead><tr><th>Sale Date</th><th>Username</th><th>Count</th></tr></thead>
             <tbody>
@@ -341,7 +352,7 @@ if (file_exists($dbFile)) {
                             $blokLabel = format_blok_label($r['blok_name'] ?? '');
                         ?>
                         <tr>
-                            <td><?= htmlspecialchars($r['date_key'] ?? '-') ?></td>
+                            <td><?= htmlspecialchars(format_date_dmy($r['date_key'] ?? '-')) ?></td>
                             <td><?= htmlspecialchars($r['username'] ?? '-') ?></td>
                             <td><?= htmlspecialchars($blokLabel ?: '-') ?></td>
                             <td><?= htmlspecialchars($p ?: '-') ?></td>
