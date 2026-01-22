@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login - Wartelpas (Dark Mode)</title>
+
+    <!-- Bootstrap 3.3.7 CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <!-- Font Awesome 4.7.0 for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <style>
+        /* Dark Mode Global Styles */
+        body {
+            background-color: #121212; /* Latar belakang sangat gelap */
+            color: #e0e0e0; /* Teks terang */
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 15px;
+            margin: auto;
+        }
+
+        /* Panel Login Dark Mode */
+        .panel-login {
+            border: 1px solid #333;
+            border-radius: 8px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.5); /* Shadow lebih pekat */
+            background: #1e1e1e; /* Panel abu-abu gelap */
+        }
+
+        .panel-login .panel-heading {
+            background-color: #1e1e1e;
+            border-bottom: 1px solid #333;
+            border-radius: 8px 8px 0 0;
+            padding: 25px 15px;
+            text-align: center;
+        }
+
+        .logo-img {
+            max-height: 80px; 
+            width: auto;
+            margin-bottom: 10px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            /* Opsional: Jika logo hitam, perlu filter invert agar terlihat */
+            /* filter: brightness(0) invert(1); */ 
+        }
+
+        .app-title {
+            color: #fff; /* Judul putih */
+            font-weight: 700;
+            font-size: 20px;
+            margin-top: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .panel-login .panel-body {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        /* Styling Input Group Bootstrap 3 Overrides for Dark Mode */
+        .input-group-addon {
+            background-color: #2c2c2c;
+            border-color: #444;
+            color: #aaa;
+        }
+
+        .form-control {
+            background-color: #2c2c2c; /* Input gelap */
+            border-color: #444;
+            color: #fff; /* Teks input putih */
+            height: 45px;
+            box-shadow: none;
+        }
+
+        .form-control:focus {
+            background-color: #333;
+            border-color: #337ab7;
+            box-shadow: 0 0 5px rgba(51, 122, 183, 0.5);
+            color: #fff;
+        }
+
+        /* Placeholder color styling */
+        .form-control::-webkit-input-placeholder { color: #777; }
+        .form-control:-moz-placeholder { color: #777; }
+        .form-control::-moz-placeholder { color: #777; }
+        .form-control:-ms-input-placeholder { color: #777; }
+
+        /* Error States Styling */
+        .has-error .form-control {
+            border-color: #e74c3c;
+            box-shadow: none;
+        }
+        
+        .has-error .input-group-addon {
+            background-color: #3e2b2b; /* Merah gelap transparan */
+            border-color: #e74c3c;
+            color: #e74c3c;
+        }
+
+        .help-block {
+            display: none;
+            font-size: 12px;
+            margin-bottom: 0;
+            text-align: left;
+            color: #e74c3c; /* Warna error merah terang */
+        }
+
+        .has-error .help-block {
+            display: block;
+        }
+
+        .btn-login {
+            background-color: #337ab7;
+            border-color: #2e6da4;
+            color: #fff;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+
+        .btn-login:hover, .btn-login:focus {
+            background-color: #286090;
+            color: #fff;
+            border-color: #204d74;
+        }
+
+        /* Checkbox & Links Dark Mode */
+        .checkbox label {
+            color: #ccc;
+        }
+
+        .login-footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 13px;
+            color: #777;
+        }
+        
+        .login-footer a, .checkbox a {
+            color: #5bc0de; /* Biru muda agar kontras di gelap */
+            text-decoration: none;
+        }
+
+        .login-footer a:hover, .checkbox a:hover {
+            color: #fff;
+        }
+
+        /* Animation for shake effect on error */
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+
+        .shake-element {
+            animation: shake 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="login-container">
+            <div class="panel panel-default panel-login">
+                <div class="panel-heading">
+                    <!-- Menggunakan file logo yang diupload -->
+                    <img src="logo.png" alt="Logo Wartelpas" class="logo-img" onerror="this.style.display='none'; document.getElementById('text-logo').style.display='block';">
+                    <div id="text-logo" class="app-title" style="display:none;">WARTELPAS</div>
+                    <div class="app-title">Login Sistem</div>
+                </div>
+                <div class="panel-body">
+                    <form id="loginForm" action="#" method="POST">
+                        
+                        <!-- Username Input -->
+                        <div class="form-group" id="group-username">
+                            <label class="sr-only" for="username">Username</label>
+                            <div class="input-group">
+                                <span class="input-group-addon"><i class="fa fa-user"></i></span>
+                                <input type="text" class="form-control" id="username" name="username" placeholder="Masukkan Username" autocomplete="off">
+                            </div>
+                            <span class="help-block" id="error-username">Username tidak boleh kosong.</span>
+                        </div>
+
+                        <!-- Password Input -->
+                        <div class="form-group" id="group-password">
+                            <label class="sr-only" for="password">Password</label>
+                            <div class="input-group">
+                                <span class="input-group-addon"><i class="fa fa-lock"></i></span>
+                                <input type="password" class="form-control" id="password" name="password" placeholder="Masukkan Password">
+                            </div>
+                            <span class="help-block" id="error-password">Password wajib diisi.</span>
+                        </div>
+
+                        <div class="checkbox">
+                            <label>
+                                <input type="checkbox" name="remember"> Ingat Saya
+                            </label>
+                            <a href="#" class="pull-right">Lupa Password?</a>
+                        </div>
+
+                        <button type="submit" class="btn btn-login btn-block">
+                            <i class="fa fa-sign-in"></i> Masuk Aplikasi
+                        </button>
+
+                    </form>
+                </div>
+            </div>
+            
+            <div class="login-footer">
+                &copy; 2024 Wartelpas System. All rights reserved.
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery & Bootstrap 3 JS -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            // Handler saat form disubmit
+            $('#loginForm').on('submit', function(e) {
+                e.preventDefault(); // Mencegah submit default browser
+
+                // Reset state error sebelumnya
+                $('.form-group').removeClass('has-error');
+                $('.help-block').hide();
+                $('.panel-login').removeClass('shake-element');
+
+                var username = $('#username').val().trim();
+                var password = $('#password').val().trim();
+                var hasError = false;
+
+                // Validasi Username
+                if (username === '') {
+                    $('#group-username').addClass('has-error');
+                    $('#error-username').text('Username wajib diisi untuk masuk.').show();
+                    hasError = true;
+                } else if (username.length < 4) {
+                    $('#group-username').addClass('has-error');
+                    $('#error-username').text('Username minimal 4 karakter.').show();
+                    hasError = true;
+                }
+
+                // Validasi Password
+                if (password === '') {
+                    $('#group-password').addClass('has-error');
+                    $('#error-password').text('Password tidak boleh kosong.').show();
+                    hasError = true;
+                }
+
+                // Jika ada error
+                if (hasError) {
+                    // Tambahkan efek getar untuk feedback visual
+                    $('.panel-login').addClass('shake-element');
+                    
+                    // Hapus class animasi setelah selesai agar bisa dipicu lagi
+                    setTimeout(function() {
+                        $('.panel-login').removeClass('shake-element');
+                    }, 300);
+                } else {
+                    // Jika lolos validasi (Simulasi sukses)
+                    var $btn = $('button[type="submit"]');
+                    $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Memproses...');
+                    
+                    setTimeout(function() {
+                        alert("Login Berhasil! (Simulasi Mode Gelap)");
+                        $btn.prop('disabled', false).html('<i class="fa fa-sign-in"></i> Masuk Aplikasi');
+                        // document.getElementById('loginForm').submit(); // Uncomment untuk submit asli
+                    }, 1000);
+                }
+            });
+
+            // Hilangkan error real-time saat user mulai mengetik
+            $('#username, #password').on('input', function() {
+                $(this).closest('.form-group').removeClass('has-error');
+                $(this).closest('.form-group').find('.help-block').hide();
+            });
+        });
+    </script>
+</body>
+</html>
