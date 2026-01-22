@@ -243,12 +243,14 @@ if (file_exists($dbFile)) {
     .toolbar select:focus, .toolbar input:focus { outline:none; box-shadow:none; border-color: var(--border-col); }
     .btn-solid { background:#2d8cff;color:#fff;border:none;padding:6px 10px;border-radius:4px; cursor:pointer; }
     .muted { color: var(--txt-muted); }
+    .print-title { display: none; font-weight: 700; font-size: 16px; margin: 0 0 8px 0; }
     @media print {
-        html, body { background: #fff; color: #111; width: 100%; margin: 0; padding: 0; }
+        html, body { background: #fff; color: #111; width: 100%; margin: 0; padding: 0; border: 0 !important; }
         .main-header, .navbar, .nav, .sidebar, .main-sidebar, .content-header, .brand-link, .preloader { display: none !important; }
         .wrapper, .content-wrapper, .main-container, #main, .card-solid { width: 100% !important; margin: 0 !important; padding: 0 !important; }
         .card-solid { box-shadow: none; border: none; }
         .card-header-solid { display: none; }
+        .print-title { display: block; }
         .summary-card { background: #fff; border: 1px solid #ddd; }
         .table-dark-solid th { background: #f0f0f0; color: #111; padding: 6px; font-size: 11px; }
         .table-dark-solid td { color: #111; padding: 6px; font-size: 11px; }
@@ -272,6 +274,7 @@ if (file_exists($dbFile)) {
         <button class="btn-solid" onclick="window.print()"><i class="fa fa-print"></i> Print</button>
     </div>
     <div class="card-body">
+        <h2 class="print-title">Audit Penjualan & Voucher</h2>
         <form method="GET" class="toolbar" action="?">
             <input type="hidden" name="report" value="audit">
             <input type="hidden" name="session" value="<?= htmlspecialchars($session_id) ?>">
