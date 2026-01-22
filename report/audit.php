@@ -39,6 +39,31 @@ function format_bytes_short($bytes) {
     return number_format($b, $dec, ',', '.') . ' ' . $units[$i];
 }
 
+function format_date_dmy($date) {
+    if (!$date) return '';
+    if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $m)) {
+        return $m[3] . '-' . $m[2] . '-' . $m[1];
+    }
+    if (preg_match('/^(\d{4})-(\d{2})$/', $date, $m)) {
+        return $m[2] . '-' . $m[1];
+    }
+    return $date;
+}
+
+function format_blok_label($blok) {
+    $blok = (string)$blok;
+    if ($blok === '') return '';
+    return preg_replace('/^BLOK-?/i', '', $blok);
+}
+
+function infer_profile_from_blok($blok) {
+    $blok = strtoupper((string)$blok);
+    if (preg_match('/(10|30)\b/', $blok, $m)) {
+        return $m[1] . ' Menit';
+    }
+    return '';
+}
+
 function extract_profile_from_comment($comment) {
     $comment = (string)$comment;
     if (preg_match('/\bProfile\s*:\s*([^|]+)/i', $comment, $m)) {
@@ -63,6 +88,14 @@ $relogin_rows = [];
 $bandwidth_rows = [];
 $security_logs = [];
 $sales_status_rows = [];
+$pending_summary = [
+    'total' => 0,
+    'gross' => 0,
+    'rusak' => 0,
+    'retur' => 0,
+    'invalid' => 0,
+    'net' => 0,
+];
 
 if (file_exists($dbFile)) {
     try {
@@ -128,8 +161,30 @@ if (file_exists($dbFile)) {
         }
 
         if (table_exists($db, 'live_sales')) {
-            $pendingSql = "SELECT COUNT(*) FROM live_sales WHERE sync_status='pending'";
-            $sales_summary['pending'] = (int)($db->query($pendingSql)->fetchColumn() ?: 0);
+            $pendingSql = "SELECT COUNT(*) FROM live_sales WHERE sync_status='pending' AND $dateFilter";
+            $stmt = $db->prepare($pendingSql);
+            foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
+            $stmt->execute();
+            $sales_summary['pending'] = (int)($stmt->fetchColumn() ?: 0);
+
+            $pendingSumSql = "SELECT
+                SUM(CASE WHEN COALESCE(is_invalid,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS invalid_sum,
+                SUM(CASE WHEN COALESCE(is_rusak,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS rusak_sum,
+                SUM(CASE WHEN COALESCE(is_retur,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS retur_sum,
+                SUM(CASE WHEN COALESCE(is_invalid,0)=1 THEN 0 ELSE COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) END) AS gross_sum,
+                COUNT(1) AS total_cnt
+                FROM live_sales
+                WHERE sync_status='pending' AND $dateFilter";
+            $stmt = $db->prepare($pendingSumSql);
+            foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
+            $stmt->execute();
+            $p = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            $pending_summary['invalid'] = (int)($p['invalid_sum'] ?? 0);
+            $pending_summary['rusak'] = (int)($p['rusak_sum'] ?? 0);
+            $pending_summary['retur'] = (int)($p['retur_sum'] ?? 0);
+            $pending_summary['gross'] = (int)($p['gross_sum'] ?? 0);
+            $pending_summary['total'] = (int)($p['total_cnt'] ?? 0);
+            $pending_summary['net'] = $pending_summary['gross'] - $pending_summary['rusak'] - $pending_summary['invalid'];
         }
 
         if (table_exists($db, 'login_events')) {
