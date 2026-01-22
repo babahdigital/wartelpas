@@ -13,7 +13,7 @@ add name=Wartel-SyncUsage policy=read,write,test source=
 	:if ($syncUsageLock = true) do={ :log warning "SYNC USAGE: masih berjalan, skip"; :return; }
 	:set syncUsageLock true;
 
-	:local url "http://wartelpas.sobigidul.net:8081/process/sync_usage.php?session=S3c7x9_LB";
+	:local url "http://wartelpas.sobigidul.net/process/sync_usage.php?session=S3c7x9_LB";
 	:do {
 		/tool fetch url=$url keep-result=no;
 		:log info "SYNC USAGE: OK (2m)";

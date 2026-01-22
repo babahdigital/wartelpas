@@ -103,7 +103,7 @@
         :if ([:len $encTp] = 0)  do={ :set encTp $rawTopic; }
 
         # Kirim ke Server
-        /tool fetch url=("http://wartelpas.sobigidul.net:8081/tools/settlement_log_ingest.php?key=WartelpasSecureKey&session=S3c7x9_LB&date=" . $encDt . "&time=" . $encTm . "&topic=" . $encTp . "&msg=" . $encMsg) keep-result=no;
+        /tool fetch url=("http://wartelpas.sobigidul.net/tools/settlement_log_ingest.php?key=WartelpasSecureKey&session=S3c7x9_LB&date=" . $encDt . "&time=" . $encTm . "&topic=" . $encTp . "&msg=" . $encMsg) keep-result=no;
         
     } on-error={
         :log warning "SETTLE: LOG: Gagal kirim log ke server (koneksi/url error).";
@@ -137,7 +137,7 @@
     :log info "SETTLE: SYNC: Mengirim data statistik ke Mikhmon...";
     $sendSettleLog "SETTLE: SYNC: Mengirim data statistik ke Mikhmon..." "info";
     :do {
-        /tool fetch url="http://wartelpas.sobigidul.net:8081/report/sync_stats.php?key=WartelpasSecureKey&session=S3c7x9_LB" keep-result=no;
+        /tool fetch url="http://wartelpas.sobigidul.net/report/sync_stats.php?key=WartelpasSecureKey&session=S3c7x9_LB" keep-result=no;
         $logSettle "info" "SETTLE: SYNC STATS: Berhasil.";
     } on-error={ 
         $logSettle "error" "SETTLE: SYNC STATS: GAGAL KONEKSI! Cek IP Server/Jaringan."; 
@@ -150,7 +150,7 @@
     :log info "SETTLE: SYNC: Mengirim laporan penjualan...";
     $sendSettleLog "SETTLE: SYNC: Mengirim laporan penjualan..." "info";
     :do {
-        /tool fetch url="http://wartelpas.sobigidul.net:8081/report/sync_sales.php?key=WartelpasSecureKey&session=S3c7x9_LB" keep-result=no;
+        /tool fetch url="http://wartelpas.sobigidul.net/report/sync_sales.php?key=WartelpasSecureKey&session=S3c7x9_LB" keep-result=no;
         $logSettle "info" "SETTLE: SYNC SALES: Berhasil terkirim.";
     } on-error={ 
         $logSettle "error" "SETTLE: SYNC SALES: GAGAL KONEKSI! Data penjualan tidak masuk DB.";
@@ -170,7 +170,7 @@
     :log info "SETTLE: SYNC: Mengirim data pemakaian (usage) ...";
     $sendSettleLog "SETTLE: SYNC: Mengirim data pemakaian (usage) ..." "info";
     :do {
-        /tool fetch url="http://wartelpas.sobigidul.net:8081/process/sync_usage.php?session=S3c7x9_LB" keep-result=no;
+        /tool fetch url="http://wartelpas.sobigidul.net/process/sync_usage.php?session=S3c7x9_LB" keep-result=no;
         $logSettle "info" "SETTLE: SYNC USAGE: Berhasil.";
     } on-error={ $logSettle "warning" "SETTLE: SYNC USAGE: Gagal koneksi."; }
 
@@ -179,7 +179,7 @@
     # 4c. CLEAR SERVER LOG (DINONAKTIFKAN - PINDAH SCHEDULER TERPISAH)
     # :log info "SETTLE: MAINT: Clear log ingest server...";
     # :do {
-    #    /tool fetch url="http://wartelpas.sobigidul.net:8081/tools/clear_logs.php?key=WartelpasSecureKey&session=S3c7x9_LB&scope=all&purge=1" keep-result=no;
+    #    /tool fetch url="http://wartelpas.sobigidul.net/tools/clear_logs.php?key=WartelpasSecureKey&session=S3c7x9_LB&scope=all&purge=1" keep-result=no;
     #    $logSettle "info" "SETTLE: MAINT: Clear log ingest berhasil.";
     # } on-error={ $logSettle "warning" "SETTLE: MAINT: Gagal clear log ingest."; }
 

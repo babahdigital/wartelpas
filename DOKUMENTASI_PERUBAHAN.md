@@ -130,7 +130,6 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 ### 2.16 Stabilitas Sync Usage
 - **process/sync_usage.php**: respons cepat (early response + flush) agar MikroTik tidak timeout.
 - Logging **sync_usage.log** untuk audit proses dan durasi.
-- Script MikroTik diubah ke **port 8081** agar sesuai container.
 
 ### 2.17 Relogin Detail, Print, dan Validasi Rusak
 - **hotspot/users.php**: tambah popup detail relogin (tanggal, total relogin, waktu login/logout, durasi, bytes, IP/MAC) dan tombol print.
@@ -416,7 +415,6 @@ File diagnostik & migrasi sementara yang sudah tidak diperlukan:
 
 ## 7) Catatan Operasional
 - Pastikan script `mikrotik-onlogout.rsc` sudah dipasang pada server profile hotspot.
-- Gunakan URL port **8081** pada semua script MikroTik sesuai container.
 - Jika ada data yang masih kosong, pastikan voucher pernah login agar DB terisi.
 - Jika diperlukan debug, gunakan parameter `?debug=1` pada users.php.
 
