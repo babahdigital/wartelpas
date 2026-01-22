@@ -1070,7 +1070,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             window.settleFastMode = true;
         }
         if (!window.settleTimer) {
-            window.settleTimer = setInterval(renderSettlementLogItem, 50);
+            window.settleTimer = setInterval(renderSettlementLogItem, 100);
         }
     }
 
@@ -1124,15 +1124,18 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             return;
         }
         window.settleTyping = true;
-        typeSettlementMessage(msgSpan, String(msg), 5, function(){
-            window.settleTyping = false;
-            var newCursor = document.createElement('span');
-            newCursor.className = 'cursor-blink';
-            logBox.appendChild(newCursor);
-            logBox.scrollTop = logBox.scrollHeight;
-            updateSettlementCloseState();
-            updateSettlementStatus();
-        });
+        var lineDelay = 150;
+        setTimeout(function(){
+            typeSettlementMessage(msgSpan, String(msg), 15, function(){
+                window.settleTyping = false;
+                var newCursor = document.createElement('span');
+                newCursor.className = 'cursor-blink';
+                logBox.appendChild(newCursor);
+                logBox.scrollTop = logBox.scrollHeight;
+                updateSettlementCloseState();
+                updateSettlementStatus();
+            });
+        }, lineDelay);
     }
 
     function typeSettlementMessage(target, text, speed, done){

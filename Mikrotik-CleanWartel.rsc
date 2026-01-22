@@ -183,7 +183,7 @@
     #    $logSettle "info" "SETTLE: MAINT: Clear log ingest berhasil.";
     # } on-error={ $logSettle "warning" "SETTLE: MAINT: Gagal clear log ingest."; }
 
-    :delay 1s;
+    # :delay 1s;
 
     # 4b. CLEAR SCRIPT LOG (Mikhmon Script)
     :log info "SETTLE: MAINT: Hapus script mikhmon...";
