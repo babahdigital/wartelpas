@@ -1048,6 +1048,12 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (window.settleStatus === 'done') {
             if (statusEl) statusEl.textContent = 'Selesai';
             if (processEl) processEl.innerHTML = '<i class="fa fa-check-circle"></i> Selesai';
+            if (!window.settleFinalInfoShown) {
+                enqueueSettlementLogs([
+                    { time: '', topic: 'system,info', type: 'system', message: 'Semua proses selesai. Silakan tutup terminal.' }
+                ]);
+                window.settleFinalInfoShown = true;
+            }
         } else if (window.settleStatus === 'failed') {
             if (statusEl) statusEl.textContent = 'Gagal';
             if (processEl) processEl.innerHTML = '<i class="fa fa-times-circle"></i> Gagal';
@@ -1078,6 +1084,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (window.settleTyping && !window.settleFastMode) return;
         if (!window.settleQueue || window.settleQueue.length === 0) {
             if (window.settleDone) {
+                updateSettlementStatus();
                 clearInterval(window.settleTimer);
                 window.settleTimer = null;
                 updateSettlementCloseState();
