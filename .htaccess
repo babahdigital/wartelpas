@@ -136,7 +136,7 @@ Require all denied
 <If "%{REQUEST_URI} =~ m#^/tools/audit_sales\.php$#">
     Require all granted
 </If>
-    
+
 # Print report endpoints
 <If "%{REQUEST_URI} =~ m#^/report/print_rekap\.php$#">
     Require all granted
@@ -146,6 +146,9 @@ Require all denied
 </If>
 <If "%{REQUEST_URI} =~ m#^/report/print_rincian\.php$#">
     Require all granted
+</If>
+<If "%{REQUEST_URI} =~ m#^/report/print_audit\.php$#">
+     Require all granted
 </If>
 
 # Sync usage endpoint
