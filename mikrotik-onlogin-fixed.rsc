@@ -7,7 +7,7 @@
 :local key "WartelpasSecureKey";
 :local session "S3c7x9_LB";
 
-:put (",remc,20000,1d,5000,,Enable,");
+:put (",remc,20000,1d,20000,,Enable,");
 
 {
     :local username "$user";
@@ -56,8 +56,8 @@
             /ip hotspot user set mac-address=$mac $uId;
         }
 
-        :local price "5000";
-        :local rawData "$date-|-$time-|-$username-|-$price-|-$address-|-$mac-|-1d-|-10Menit-|-$newComment";
+        :local price "20000";
+        :local rawData "$date-|-$time-|-$username-|-$price-|-$address-|-$mac-|-1d-|-30Menit-|-$newComment";
         /system script add name=$rawData owner="$month$year" source="$date" comment="mikhmon";
 
         :local payload ("data=" . [:url-encode $rawData] . "&key=" . $key . "&session=" . $session);
