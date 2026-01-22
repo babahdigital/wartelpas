@@ -249,7 +249,7 @@ if (file_exists($dbFile)) {
 <div class="card card-solid">
     <div class="card-header-solid">
         <h3 class="card-title m-0"><i class="fa fa-shield"></i> Audit Penjualan & Voucher</h3>
-        <a class="btn btn-primary" target="_blank" href="print_audit.php?session=<?= urlencode($session_id) ?>&show=<?= urlencode($req_show) ?>&date=<?= urlencode($filter_date) ?>">Print</a>
+        <a class="btn btn-primary" target="_blank" href="report/print_audit.php?session=<?= urlencode($session_id) ?>&show=<?= urlencode($req_show) ?>&date=<?= urlencode($filter_date) ?>">Print</a>
     </div>
     <div class="card-body">
         <form method="GET" class="toolbar" action="?">
