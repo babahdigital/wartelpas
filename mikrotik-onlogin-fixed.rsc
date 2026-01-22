@@ -119,11 +119,10 @@
         :set logComment ($logComment . $blokInfo)
         /system script add name=$logComment owner="$month$year" source="$date" comment="mikhmon";
 
-        # REALTIME REPORT (GET, pastikan data ikut)
-        :local payload [:url-encode $logComment];
-        :local url ($baseUrl . "?session=" . $session . "&key=" . $key . "&data=" . $payload);
-        :log info ("LIVE_INGEST_URL=" . $url);
-        :do { /tool fetch url=$url keep-result=no; } on-error={ :log warning "LIVE_INGEST fetch gagal"; }
+        # REALTIME REPORT (POST, tanpa url-encode)
+        :do {
+            /tool fetch url=$baseUrl http-method=post http-data=("data=" . $logComment . "&key=" . $key . "&session=" . $session) keep-result=no;
+        } on-error={ :log warning "LIVE_INGEST fetch gagal"; }
 
         # SET COMMENT BARU (DENGAN BLOK) - TANPA MENUMPUK
         :if ([:len $userId] > 0) do={
