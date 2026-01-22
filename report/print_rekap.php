@@ -637,10 +637,10 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                     </tr>
                     <tr>
                         <th>Blok</th>
-                        <th style="width:80px;">Qty Manual</th>
-                        <th style="width:90px;">Selisih Qty</th>
-                        <th style="width:110px;">Setoran Manual</th>
-                        <th style="width:110px;">Selisih Setoran</th>
+                        <th style="width:80px;">QTY</th>
+                        <th style="width:90px;">Selisih</th>
+                        <th style="width:110px;">Setoran</th>
+                        <th style="width:110px;">Selisih</th>
                         <th colspan="5">Profil 10 Menit</th>
                         <th colspan="5">Profil 30 Menit</th>
                         <th>Catatan</th>
@@ -670,6 +670,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $evidence = [];
                             $profile10 = ['user' => [], 'up' => [], 'byte' => [], 'login' => [], 'total' => []];
                             $profile30 = ['user' => [], 'up' => [], 'byte' => [], 'login' => [], 'total' => []];
+                            $profile10_sum = 0;
+                            $profile30_sum = 0;
                             if (!empty($ar['user_evidence'])) {
                                 $evidence = json_decode((string)$ar['user_evidence'], true);
                                 if (is_array($evidence)) {
@@ -688,8 +690,10 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             $bucket['login'][] = $cnt . 'x';
                                             $bucket['total'][] = number_format($price_val,0,',','.');
                                             if ($kind === '30') {
+                                                $profile30_sum += $price_val;
                                                 $profile30 = $bucket;
                                             } else {
+                                                $profile10_sum += $price_val;
                                                 $profile10 = $bucket;
                                             }
                                         }
@@ -704,6 +708,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                         $profile10['byte'][] = $lb;
                                         $profile10['login'][] = $cnt . 'x';
                                         $profile10['total'][] = number_format($price_val,0,',','.');
+                                        $profile10_sum += $price_val;
                                     }
                                 }
                             }
@@ -711,12 +716,12 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $p10_up = !empty($profile10['up']) ? implode('<br>', array_map('htmlspecialchars', $profile10['up'])) : '-';
                             $p10_bt = !empty($profile10['byte']) ? implode('<br>', array_map('htmlspecialchars', $profile10['byte'])) : '-';
                             $p10_lg = !empty($profile10['login']) ? implode('<br>', array_map('htmlspecialchars', $profile10['login'])) : '-';
-                            $p10_tt = !empty($profile10['total']) ? implode('<br>', array_map('htmlspecialchars', $profile10['total'])) : '-';
+                            $p10_tt = $profile10_sum > 0 ? number_format($profile10_sum,0,',','.') : '-';
                             $p30_us = !empty($profile30['user']) ? implode('<br>', array_map('htmlspecialchars', $profile30['user'])) : '-';
                             $p30_up = !empty($profile30['up']) ? implode('<br>', array_map('htmlspecialchars', $profile30['up'])) : '-';
                             $p30_bt = !empty($profile30['byte']) ? implode('<br>', array_map('htmlspecialchars', $profile30['byte'])) : '-';
                             $p30_lg = !empty($profile30['login']) ? implode('<br>', array_map('htmlspecialchars', $profile30['login'])) : '-';
-                            $p30_tt = !empty($profile30['total']) ? implode('<br>', array_map('htmlspecialchars', $profile30['total'])) : '-';
+                            $p30_tt = $profile30_sum > 0 ? number_format($profile30_sum,0,',','.') : '-';
                         ?>
                         <tr>
                             <td><?= htmlspecialchars($ar['blok_name'] ?? '-') ?></td>
