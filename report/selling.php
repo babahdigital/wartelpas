@@ -876,6 +876,24 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         $stmtTx2->execute([':u' => $u, ':d' => $audit_date]);
                         $tx_count += (int)$stmtTx2->fetchColumn();
                     }
+                    $profile_label = '';
+                    if (table_exists($db, 'sales_history')) {
+                        $stmtPf = $db->prepare("SELECT profile_snapshot, profile, validity FROM sales_history WHERE username = :u AND sale_date = :d ORDER BY sale_time DESC LIMIT 1");
+                        $stmtPf->execute([':u' => $u, ':d' => $audit_date]);
+                        $pf = $stmtPf->fetch(PDO::FETCH_ASSOC) ?: [];
+                        $profile_label = (string)($pf['profile_snapshot'] ?? ($pf['profile'] ?? ($pf['validity'] ?? '')));
+                    }
+                    if ($profile_label === '' && table_exists($db, 'live_sales')) {
+                        $stmtPf2 = $db->prepare("SELECT profile_snapshot, profile, validity FROM live_sales WHERE username = :u AND sale_date = :d ORDER BY sale_time DESC LIMIT 1");
+                        $stmtPf2->execute([':u' => $u, ':d' => $audit_date]);
+                        $pf2 = $stmtPf2->fetch(PDO::FETCH_ASSOC) ?: [];
+                        $profile_label = (string)($pf2['profile_snapshot'] ?? ($pf2['profile'] ?? ($pf2['validity'] ?? '')));
+                    }
+                    $profile_kind = '';
+                    $profile_low = strtolower($profile_label);
+                    if (preg_match('/\b30\s*(menit|m)\b|30menit/', $profile_low)) $profile_kind = '30';
+                    elseif (preg_match('/\b10\s*(menit|m)\b|10menit/', $profile_low)) $profile_kind = '10';
+                    else $profile_kind = '10';
                     if ($tx_count > 1) {
                         $audit_error = 'Username terdeteksi lebih dari 1 transaksi pada tanggal tersebut: ' . $u;
                         break;
@@ -912,6 +930,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         }
                         $evidence['users'][$u] = [
                             'blok' => $blok_u,
+                            'profile_label' => $profile_label,
+                            'profile_kind' => $profile_kind,
                             'first_login_real' => $ur['first_login_real'] ?? '',
                             'last_login_real' => $ur['last_login_real'] ?? '',
                             'login_time_real' => $ur['login_time_real'] ?? '',
@@ -2282,13 +2302,15 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         <th class="text-right">Setoran Sistem</th>
                         <th class="text-right">Setoran Manual</th>
                         <th class="text-right">Selisih Setoran</th>
-                        <th class="text-right">Catatan/Bukti</th>
+                        <th>Catatan</th>
+                        <th>Profil 10 Menit</th>
+                        <th>Profil 30 Menit</th>
                         <th class="text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($audit_rows)): ?>
-                        <tr><td colspan="10" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
+                        <tr><td colspan="12" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
                     <?php else: foreach ($audit_rows as $ar): ?>
                         <?php
                             $sq = (int)($ar['selisih_qty'] ?? 0);
@@ -2296,40 +2318,36 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             $cls_q = $sq > 0 ? 'audit-pos' : ($sq < 0 ? 'audit-neg' : 'audit-zero');
                             $cls_s = $ss > 0 ? 'audit-pos' : ($ss < 0 ? 'audit-neg' : 'audit-zero');
                             $evidence = [];
-                            $evidence_summary_html = '';
+                            $profile10_html = '';
+                            $profile30_html = '';
                             if (!empty($ar['user_evidence'])) {
                                 $evidence = json_decode((string)$ar['user_evidence'], true);
                                 if (is_array($evidence)) {
-                                    $lines = [];
+                                    $lines10 = [];
+                                    $lines30 = [];
                                     if (!empty($evidence['users']) && is_array($evidence['users'])) {
                                         foreach ($evidence['users'] as $uname => $ud) {
                                             $cnt = isset($ud['events']) && is_array($ud['events']) ? count($ud['events']) : 0;
-                                            $fl = $ud['first_login_real'] ?? '';
-                                            $ll = $ud['last_login_real'] ?? '';
-                                            $lb = isset($ud['last_bytes']) ? format_bytes_short((int)$ud['last_bytes']) : '';
-                                            $parts = [];
-                                            if ($cnt > 0) $parts[] = 'Login: ' . $cnt . 'x';
-                                            if ($fl !== '') $parts[] = 'First: ' . format_first_login($fl);
-                                            if ($ll !== '') $parts[] = 'Last: ' . format_first_login($ll);
-                                            if ($lb !== '' && $lb !== '0 B') $parts[] = 'Bytes: ' . $lb;
-                                            $line = (string)$uname;
-                                            if (!empty($parts)) $line .= ': ' . implode(' | ', $parts);
-                                            $lines[] = $line;
+                                            $upt = trim((string)($ud['last_uptime'] ?? ''));
+                                            $lb = format_bytes_short((int)($ud['last_bytes'] ?? 0));
+                                            $upt = $upt !== '' ? $upt : '-';
+                                            $line = (string)$uname . ' | Uptime: ' . $upt . ' | Bytes: ' . $lb . ' | Login: ' . $cnt . 'x';
+                                            $kind = (string)($ud['profile_kind'] ?? '10');
+                                            if ($kind === '30') $lines30[] = $line; else $lines10[] = $line;
                                         }
                                     } else {
                                         $cnt = isset($evidence['events']) && is_array($evidence['events']) ? count($evidence['events']) : 0;
-                                        $fl = $evidence['first_login_real'] ?? '';
-                                        $ll = $evidence['last_login_real'] ?? '';
-                                        $lb = isset($evidence['last_bytes']) ? format_bytes_short((int)$evidence['last_bytes']) : '';
-                                        $parts = [];
-                                        if ($cnt > 0) $parts[] = 'Login: ' . $cnt . 'x';
-                                        if ($fl !== '') $parts[] = 'First: ' . format_first_login($fl);
-                                        if ($ll !== '') $parts[] = 'Last: ' . format_first_login($ll);
-                                        if ($lb !== '' && $lb !== '0 B') $parts[] = 'Bytes: ' . $lb;
-                                        if (!empty($parts)) $lines[] = implode(' | ', $parts);
+                                        $upt = trim((string)($evidence['last_uptime'] ?? ''));
+                                        $lb = format_bytes_short((int)($evidence['last_bytes'] ?? 0));
+                                        $upt = $upt !== '' ? $upt : '-';
+                                        $line = 'Uptime: ' . $upt . ' | Bytes: ' . $lb . ' | Login: ' . $cnt . 'x';
+                                        $lines10[] = $line;
                                     }
-                                    if (!empty($lines)) {
-                                        $evidence_summary_html = implode('<br>', array_map('htmlspecialchars', $lines));
+                                    if (!empty($lines10)) {
+                                        $profile10_html = implode('<br>', array_map('htmlspecialchars', $lines10));
+                                    }
+                                    if (!empty($lines30)) {
+                                        $profile30_html = implode('<br>', array_map('htmlspecialchars', $lines30));
                                     }
                                 }
                             }
@@ -2343,7 +2361,9 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             <td class="text-right"><?= number_format((int)($ar['expected_setoran'] ?? 0),0,',','.') ?></td>
                             <td class="text-right"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
                             <td class="text-right"><span class="<?= $cls_s; ?>"><?= number_format($ss,0,',','.') ?></span></td>
-                            <td class="text-right"><small><?= htmlspecialchars($ar['note'] ?? '') ?><?= $evidence_summary_html !== '' ? '<br>' . $evidence_summary_html : '' ?></small></td>
+                            <td><small><?= htmlspecialchars($ar['note'] ?? '') ?></small></td>
+                            <td><small><?= $profile10_html !== '' ? $profile10_html : '-' ?></small></td>
+                            <td><small><?= $profile30_html !== '' ? $profile30_html : '-' ?></small></td>
                             <td class="text-right">
                                 <button type="button" class="btn-act" onclick="openAuditEdit(this)"
                                     data-blok="<?= htmlspecialchars($ar['blok_name'] ?? ''); ?>"
