@@ -38,13 +38,12 @@
         :if ($ch = " ") do={ :set out ($out . "%20") } else={
         :if ($ch = ":") do={ :set out ($out . "%3A") } else={
         :if ($ch = "/") do={ :set out ($out . "%2F") } else={
-        :if ($ch = "\"") do={ :set out ($out . "%22") } else={
         :if ($ch = "&") do={ :set out ($out . "%26") } else={
         :if ($ch = "|") do={ :set out ($out . "%7C") } else={
         :if ($ch = "[") do={ :set out ($out . "%5B") } else={
         :if ($ch = "]") do={ :set out ($out . "%5D") } else={
             :set out ($out . $ch)
-        }}}}}}}}};
+        }}}}}}};
         }
     }
     :return $out;
@@ -60,10 +59,10 @@
         :local tp ("script," . $lvl);
         :local dt [/system clock get date];
         :local tm [/system clock get time];
-        :local esc ($msg . "");
-        :local denc ($dt . "");
-        :local tenc ($tm . "");
-        :local penc ($tp . "");
+        :local esc [$urlEncode $msg];
+        :local denc [$urlEncode $dt];
+        :local tenc [$urlEncode $tm];
+        :local penc [$urlEncode $tp];
         /tool fetch url=("http://wartelpas.sobigidul.net:8081/tools/settlement_log_ingest.php?key=WartelpasSecureKey&session=S3c7x9_LB&date=" . $denc . "&time=" . $tenc . "&topic=" . $penc . "&msg=" . $esc) keep-result=no;
     } on-error={
         :log warning "SETTLE: LOG: Gagal kirim log ke server.";
