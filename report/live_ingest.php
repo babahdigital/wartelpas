@@ -36,6 +36,7 @@ if (!isset($hotspot_server) || $hotspot_server !== 'wartel') {
 }
 
 $raw = '';
+@file_put_contents($logDir . '/live_ingest.log', date('c') . " | hit | ip=" . ($_SERVER['REMOTE_ADDR'] ?? '-') . " | qs=" . ($_SERVER['QUERY_STRING'] ?? '') . "\n", FILE_APPEND);
 if (isset($_POST['data'])) $raw = trim($_POST['data']);
 if ($raw === '' && isset($_GET['data'])) $raw = trim($_GET['data']);
 
@@ -120,6 +121,7 @@ try {
         $blok_name = 'BLOK-' . strtoupper($m[1]);
     }
     if ($blok_name === '') {
+        @file_put_contents($logDir . '/live_ingest.log', date('c') . " | blok empty | " . $raw . "\n", FILE_APPEND);
         echo "OK";
         exit;
     }
@@ -156,12 +158,14 @@ try {
         $dupStmt = $db->prepare("SELECT 1 FROM sales_history WHERE username = :u AND sale_date = :d LIMIT 1");
         $dupStmt->execute([':u' => $username, ':d' => $sale_date]);
         if ($dupStmt->fetchColumn()) {
+            @file_put_contents($logDir . '/live_ingest.log', date('c') . " | duplicate sales_history | " . $raw . "\n", FILE_APPEND);
             echo "OK";
             exit;
         }
         $dupStmt = $db->prepare("SELECT 1 FROM live_sales WHERE username = :u AND sale_date = :d LIMIT 1");
         $dupStmt->execute([':u' => $username, ':d' => $sale_date]);
         if ($dupStmt->fetchColumn()) {
+            @file_put_contents($logDir . '/live_ingest.log', date('c') . " | duplicate live_sales | " . $raw . "\n", FILE_APPEND);
             echo "OK";
             exit;
         }
@@ -199,6 +203,7 @@ try {
         ':qty' => 1,
         ':raw' => $raw
     ]);
+    @file_put_contents($logDir . '/live_ingest.log', date('c') . " | inserted | user=" . $username . " | date=" . $sale_date . " | blok=" . $blok_name . "\n", FILE_APPEND);
 
     echo "OK";
 } catch (Exception $e) {

@@ -197,26 +197,30 @@ if (file_exists($dbFile)) {
         )");
         try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN audit_username TEXT"); } catch (Exception $e) {}
         try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN user_evidence TEXT"); } catch (Exception $e) {}
-        $res = $db->query("SELECT 
-                sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
-                sh.username, sh.profile, sh.profile_snapshot,
-                sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
-            sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
-            sh.full_raw_data, lh.last_status, lh.last_bytes, lh.first_login_real
-            FROM sales_history sh
-            LEFT JOIN login_history lh ON lh.username = sh.username
-            UNION ALL
-            SELECT 
-                ls.raw_date, ls.raw_time, ls.sale_date, ls.sale_time, ls.sale_datetime,
-                ls.username, ls.profile, ls.profile_snapshot,
-                ls.price, ls.price_snapshot, ls.sprice_snapshot, ls.validity,
-            ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
-            ls.full_raw_data, lh2.last_status, lh2.last_bytes, lh2.first_login_real
-            FROM live_sales ls
-            LEFT JOIN login_history lh2 ON lh2.username = ls.username
-            WHERE ls.sync_status = 'pending'
-            ORDER BY sale_datetime DESC, raw_date DESC");
-        if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $res = $db->query("SELECT 
+                    sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
+                    sh.username, sh.profile, sh.profile_snapshot,
+                    sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
+                sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
+                sh.full_raw_data, lh.last_status, lh.last_bytes, lh.first_login_real
+                FROM sales_history sh
+                LEFT JOIN login_history lh ON lh.username = sh.username
+                UNION ALL
+                SELECT 
+                    ls.raw_date, ls.raw_time, ls.sale_date, ls.sale_time, ls.sale_datetime,
+                    ls.username, ls.profile, ls.profile_snapshot,
+                    ls.price, ls.price_snapshot, ls.sprice_snapshot, ls.validity,
+                ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
+                ls.full_raw_data, lh2.last_status, lh2.last_bytes, lh2.first_login_real
+                FROM live_sales ls
+                LEFT JOIN login_history lh2 ON lh2.username = ls.username
+                WHERE ls.sync_status = 'pending'
+                ORDER BY sale_datetime DESC, raw_date DESC");
+            if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $rows = [];
+        }
 
         if ($req_show === 'harian' && table_exists($db, 'login_history')) {
             try {
