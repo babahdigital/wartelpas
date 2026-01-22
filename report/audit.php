@@ -254,19 +254,23 @@ if (file_exists($dbFile)) {
         <form method="GET" class="toolbar" action="?">
             <input type="hidden" name="report" value="audit">
             <input type="hidden" name="session" value="<?= htmlspecialchars($session_id) ?>">
-            <select name="show" onchange="this.form.submit()">
-                <option value="harian" <?= $req_show==='harian'?'selected':''; ?>>Harian</option>
-                <option value="bulanan" <?= $req_show==='bulanan'?'selected':''; ?>>Bulanan</option>
-                <option value="tahunan" <?= $req_show==='tahunan'?'selected':''; ?>>Tahunan</option>
-            </select>
-            <?php if ($req_show === 'harian'): ?>
-                <input type="date" name="date" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()">
-            <?php elseif ($req_show === 'bulanan'): ?>
-                <input type="month" name="date" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()">
-            <?php else: ?>
-                <input type="number" name="date" min="2000" max="2100" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" style="width:120px;">
-            <?php endif; ?>
-            <span class="muted">Filter: <?= htmlspecialchars($filter_date) ?></span>
+            <div class="toolbar-left">
+                <select name="show" onchange="this.form.submit()">
+                    <option value="harian" <?= $req_show==='harian'?'selected':''; ?>>Harian</option>
+                    <option value="bulanan" <?= $req_show==='bulanan'?'selected':''; ?>>Bulanan</option>
+                    <option value="tahunan" <?= $req_show==='tahunan'?'selected':''; ?>>Tahunan</option>
+                </select>
+                <?php if ($req_show === 'harian'): ?>
+                    <input type="date" name="date" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()">
+                <?php elseif ($req_show === 'bulanan'): ?>
+                    <input type="month" name="date" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()">
+                <?php else: ?>
+                    <input type="number" name="date" min="2000" max="2100" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" style="width:120px;">
+                <?php endif; ?>
+            </div>
+            <div class="toolbar-right muted">
+                Filter: <?= htmlspecialchars(format_date_dmy($filter_date)) ?>
+            </div>
         </form>
 
         <div class="summary-grid">
@@ -276,12 +280,13 @@ if (file_exists($dbFile)) {
             <div class="summary-card"><div class="summary-title">Potongan Invalid</div><div class="summary-value">Rp <?= number_format($sales_summary['invalid'],0,',','.') ?></div></div>
             <div class="summary-card"><div class="summary-title">Pendapatan Bersih</div><div class="summary-value">Rp <?= number_format($sales_summary['net'],0,',','.') ?></div></div>
             <div class="summary-card"><div class="summary-title">Pending Live Sales</div><div class="summary-value"><?= number_format($sales_summary['pending'],0,',','.') ?></div></div>
+            <div class="summary-card"><div class="summary-title">Pending Gross (Live)</div><div class="summary-value">Rp <?= number_format($pending_summary['gross'],0,',','.') ?></div></div>
         </div>
 
         <?php if ($sales_summary['pending'] > 0 && $sales_summary['total'] === 0): ?>
             <div class="summary-card" style="border:1px solid #3a4046;background:#1f2327;">
                 <div class="summary-title">Catatan</div>
-                <div class="summary-value" style="font-size:13px;">Ada transaksi live yang belum dipindahkan ke sales_history.</div>
+                <div class="summary-value" style="font-size:13px;">Transaksi final kosong. Data sementara ada di live_sales (pending).</div>
             </div>
         <?php endif; ?>
 
@@ -330,11 +335,15 @@ if (file_exists($dbFile)) {
                     <tr><td colspan="5" class="text-center muted">Tidak ada relogin</td></tr>
                 <?php else: ?>
                     <?php foreach ($relogin_rows as $r): ?>
-                        <?php $p = extract_profile_from_comment($r['raw_comment'] ?? ''); ?>
+                        <?php
+                            $p = extract_profile_from_comment($r['raw_comment'] ?? '');
+                            if ($p === '') $p = infer_profile_from_blok($r['blok_name'] ?? '');
+                            $blokLabel = format_blok_label($r['blok_name'] ?? '');
+                        ?>
                         <tr>
                             <td><?= htmlspecialchars($r['date_key'] ?? '-') ?></td>
                             <td><?= htmlspecialchars($r['username'] ?? '-') ?></td>
-                            <td><?= htmlspecialchars($r['blok_name'] ?? '-') ?></td>
+                            <td><?= htmlspecialchars($blokLabel ?: '-') ?></td>
                             <td><?= htmlspecialchars($p ?: '-') ?></td>
                             <td><span class="pill pill-ok"><?= (int)($r['cnt'] ?? 0) ?></span></td>
                         </tr>
@@ -351,10 +360,14 @@ if (file_exists($dbFile)) {
                     <tr><td colspan="7" class="text-center muted">Tidak ada data</td></tr>
                 <?php else: ?>
                     <?php foreach ($bandwidth_rows as $r): ?>
-                        <?php $p = extract_profile_from_comment($r['raw_comment'] ?? ''); ?>
+                        <?php
+                            $p = extract_profile_from_comment($r['raw_comment'] ?? '');
+                            if ($p === '') $p = infer_profile_from_blok($r['blok_name'] ?? '');
+                            $blokLabel = format_blok_label($r['blok_name'] ?? '');
+                        ?>
                         <tr>
                             <td><?= htmlspecialchars($r['username'] ?? '-') ?></td>
-                            <td><?= htmlspecialchars($r['blok_name'] ?? '-') ?></td>
+                            <td><?= htmlspecialchars($blokLabel ?: '-') ?></td>
                             <td><?= htmlspecialchars($p ?: '-') ?></td>
                             <td><?= htmlspecialchars(format_bytes_short($r['last_bytes'] ?? 0)) ?></td>
                             <td><?= htmlspecialchars($r['last_uptime'] ?? '-') ?></td>
