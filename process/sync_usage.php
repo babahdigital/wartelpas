@@ -14,6 +14,11 @@ if (!isset($_GET['session'])) {
 $session = $_GET['session'];
 
 include('../include/config.php');
+if (!isset($data[$session])) {
+    http_response_code(403);
+    echo "Invalid session";
+    exit;
+}
 include('../include/readcfg.php');
 include_once('../lib/routeros_api.class.php');
 
