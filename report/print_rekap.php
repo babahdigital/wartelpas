@@ -633,7 +633,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             <table class="rekap-table" style="margin-top:12px;">
                 <thead>
                     <tr>
-                        <th colspan="9">Audit Manual Rekap Harian</th>
+                        <th colspan="11">Audit Manual Rekap Harian</th>
                     </tr>
                     <tr>
                         <th>Blok</th>
@@ -644,7 +644,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <th style="width:110px;">Setoran Sistem</th>
                         <th style="width:110px;">Setoran Manual</th>
                         <th style="width:110px;">Selisih Setoran</th>
-                        <th>Catatan/Bukti</th>
+                        <th>Catatan</th>
+                        <th>Profil 10 Menit</th>
+                        <th>Profil 30 Menit</th>
                     </tr>
                 </thead>
                 <tbody>
