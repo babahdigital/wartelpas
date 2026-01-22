@@ -413,7 +413,6 @@ $total_qty_invalid = 0;
 $rusak_10m = 0;
 $total_bandwidth = 0;
 $rusak_30m = 0;
-$total_laku_unique = 0;
 $unique_laku_users = [];
 
 $seen_sales = [];
@@ -619,8 +618,7 @@ foreach ($rows as $r) {
 
 ksort($by_block, SORT_NATURAL | SORT_FLAG_CASE);
 ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
-$total_qty_laku = max(0, $total_qty - $total_qty_retur - $total_qty_rusak - $total_qty_invalid);
-$total_laku_unique = count($unique_laku_users);
+$total_qty_laku = count($unique_laku_users);
 
 if (empty($list) && $last_available_date !== '' && $filter_date !== $last_available_date) {
     $no_sales_message = 'Tidak ada data untuk tanggal ini. Data terakhir: ' . $last_available_date . '.';
@@ -1383,14 +1381,9 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 </div>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Total Transaksi Voucher</div>
+                <div class="summary-title">Total Voucher Laku</div>
                 <div class="summary-value"><?= number_format($total_qty_laku,0,',','.') ?></div>
                 <div style="font-size:12px;color:var(--txt-muted);margin-top: 1px;">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bandwidth: <?= htmlspecialchars(format_bytes_short($total_bandwidth)) ?></div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-title">Voucher Unik (Username)</div>
-                <div class="summary-value"><?= number_format($total_laku_unique,0,',','.') ?></div>
-                <div style="font-size:12px;color:var(--txt-muted);margin-top: 1px;">Hitung 1x per username di tanggal ini</div>
             </div>
             <div class="summary-card">
                 <div class="summary-title">Pendapatan Bersih</div>
