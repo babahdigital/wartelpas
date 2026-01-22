@@ -2587,7 +2587,7 @@ if ($debug_mode && !$is_ajax) {
             <thead>
               <tr>
                 <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #3d3d3d;">Kriteria</th>
-                <th style="text-align:right;padding:6px 8px;border-bottom:1px solid #3d3d3d;">Nilai</th>
+                <th style="text-align:right;padding:6px 8px;border-bottom:1px solid #3d3d3d;">Deskripsi</th>
               </tr>
             </thead>
             <tbody>
