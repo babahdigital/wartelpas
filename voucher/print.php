@@ -13,9 +13,13 @@ if (!isset($_SESSION["mikhmon"])) {
 } else {
   
   date_default_timezone_set($_SESSION['timezone']);
-  $session = $_GET['session'];
+  $session = $_GET['session'] ?? '';
 
   include('../include/config.php');
+  if ($session === '' || !isset($data[$session])) {
+    header("Location:../admin.php?id=login");
+    exit;
+  }
   include('../include/readcfg.php');
   include('../lib/formatbytesbites.php');
 

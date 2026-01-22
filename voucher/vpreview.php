@@ -26,10 +26,14 @@ if (!isset($_SESSION["mikhmon"])) {
 } else {
 
 // load session MikroTik
-  $session = $_GET['session'];
+  $session = $_GET['session'] ?? '';
 
 // load config
   include('../include/config.php');
+  if ($session === '' || !isset($data[$session])) {
+    header("Location:../admin.php?id=login");
+    exit;
+  }
   include('../include/readcfg.php');
 
   include('../lib/formatbytesbites.php');
