@@ -7,7 +7,7 @@
 :local key "WartelpasSecureKey";
 :local session "S3c7x9_LB";
 
-:put (",remc,5000,1d,5000,,Enable,");
+:put (",remc,20000,1d,20000,,Enable,");
 
 {
     :local userId [/ip hotspot user find where name="$user"];
