@@ -500,10 +500,21 @@ foreach ($rows as $r) {
         if (!$match) continue;
 
         $username = $r['username'] ?? '';
-        if ($username !== '' && $sale_date !== '') {
-            $sale_key = $username . '|' . $sale_date;
-            if (isset($seen_sales[$sale_key])) continue;
-            $seen_sales[$sale_key] = true;
+        $raw_key = trim((string)($r['full_raw_data'] ?? ''));
+        $unique_key = '';
+        if ($raw_key !== '') {
+            $unique_key = 'raw|' . $raw_key;
+        } elseif ($username !== '' && $sale_date !== '') {
+            $unique_key = $username . '|' . ($r['sale_datetime'] ?? ($sale_date . ' ' . ($sale_time ?? '')));
+            if ($unique_key === $username . '|') {
+                $unique_key = $username . '|' . $sale_date . '|' . ($sale_time ?? '');
+            }
+        } elseif ($sale_date !== '') {
+            $unique_key = 'date|' . $sale_date . '|' . ($sale_time ?? '');
+        }
+        if ($unique_key !== '') {
+            if (isset($seen_sales[$unique_key])) continue;
+            $seen_sales[$unique_key] = true;
         }
 
         $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
@@ -523,10 +534,13 @@ foreach ($rows as $r) {
         $cmt_low = strtolower($raw_comment);
 
         if ($status === '' || $status === 'normal') {
-                if (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
-                elseif (strpos($cmt_low, 'rusak') !== false || $lh_status === 'rusak') $status = 'rusak';
-                elseif (strpos($cmt_low, 'retur') !== false || $lh_status === 'retur') $status = 'retur';
-                else $status = 'normal';
+            if ((int)($r['is_invalid'] ?? 0) === 1) $status = 'invalid';
+            elseif ((int)($r['is_rusak'] ?? 0) === 1) $status = 'rusak';
+            elseif ((int)($r['is_retur'] ?? 0) === 1) $status = 'retur';
+            elseif (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
+            elseif (strpos($cmt_low, 'rusak') !== false || $lh_status === 'rusak') $status = 'rusak';
+            elseif (strpos($cmt_low, 'retur') !== false) $status = 'retur';
+            else $status = 'normal';
         }
 
         $gross_add = ($status === 'retur' || $status === 'invalid') ? 0 : $line_price;
