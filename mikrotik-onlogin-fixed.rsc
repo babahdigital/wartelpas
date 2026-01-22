@@ -3,12 +3,11 @@
 # Update: 2026-01-19 - PRESERVE BLOK INFO
 
 # Realtime report endpoint (sesuaikan)
-# NOTE: gunakan port yang sama dengan panel (contoh 8081)
-:local baseUrl "http://wartelpas.sobigidul.net:8081/report/live_ingest.php";
+:local baseUrl "http://wartelpas.sobigidul.net/report/live_ingest.php?session=S3c7x9_LB&key=WartelpasSecureKey";
 :local key "WartelpasSecureKey";
 :local session "S3c7x9_LB";
 
-:put (",remc,5000,1d,5000,,Enable,");
+:put (",remc,20000,1d,20000,,Enable,");
 
 {
     :local userId [/ip hotspot user find where name="$user"];
@@ -99,7 +98,7 @@
         
         
         # SAVE KE DATABASE LOG (Format untuk PHP parsing)
-        :local logComment "$date-|-$time-|-$user-|-5000-|-$address-|-$mac-|-1d-|-10Menit-|-$blokInfo";
+        :local logComment "$date-|-$time-|-$user-|-20000-|-$address-|-$mac-|-1d-|-30Menit-|-$blokInfo";
         /system script add name=$logComment owner="$month$year" source="$date" comment="mikhmon";
 
         # REALTIME REPORT (HTTP POST)
@@ -118,6 +117,6 @@
     }
 
     # REALTIME USAGE (LOGIN) - kirim untuk semua login
-    :local usageUrl ("http://wartelpas.sobigidul.net:8081/process/usage_ingest.php?key=" . $key . "&session=" . $session . "&event=login" . "&user=" . $user . "&date=" . $date . "&time=" . $time . "&ip=" . $address . "&mac=" . $mac . "&uptime=" . $uptime);
+    :local usageUrl ("http://wartelpas.sobigidul.net/process/usage_ingest.php?key=" . $key . "&session=" . $session . "&event=login" . "&user=" . $user . "&date=" . $date . "&time=" . $time . "&ip=" . $address . "&mac=" . $mac . "&uptime=" . $uptime);
     /tool fetch url=$usageUrl keep-result=no;
 }
