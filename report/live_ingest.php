@@ -12,12 +12,13 @@ if (!is_dir($logDir)) {
 }
 
 $secret_token = "WartelpasSecureKey";
-if (!isset($_GET['key']) || $_GET['key'] !== $secret_token) {
+$req_key = $_GET['key'] ?? ($_POST['key'] ?? '');
+if ($req_key === '' || $req_key !== $secret_token) {
     http_response_code(403);
     die("Error: Token Salah.");
 }
 
-$session = isset($_GET['session']) ? $_GET['session'] : '';
+$session = $_GET['session'] ?? ($_POST['session'] ?? '');
 if ($session === '') {
     http_response_code(403);
     die("Error: Session tidak valid.");
@@ -37,8 +38,8 @@ if (!isset($hotspot_server) || $hotspot_server !== 'wartel') {
 
 $raw = '';
 @file_put_contents($logDir . '/live_ingest.log', date('c') . " | hit | ip=" . ($_SERVER['REMOTE_ADDR'] ?? '-') . " | qs=" . ($_SERVER['QUERY_STRING'] ?? '') . "\n", FILE_APPEND);
-if (isset($_POST['data'])) $raw = trim($_POST['data']);
-if ($raw === '' && isset($_GET['data'])) $raw = trim($_GET['data']);
+if (isset($_POST['data'])) $raw = trim((string)$_POST['data']);
+if ($raw === '' && isset($_GET['data'])) $raw = trim((string)$_GET['data']);
 
 if ($raw === '') {
     // fallback dari parameter terpisah
