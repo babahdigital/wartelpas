@@ -247,7 +247,8 @@ if (file_exists($dbFile)) {
     @media print {
         html, body { background: #fff; color: #111; width: 100%; margin: 0; padding: 0; border: 0 !important; }
         .main-header, .navbar, .nav, .sidebar, .main-sidebar, .content-header, .brand-link, .preloader { display: none !important; }
-        .wrapper, .content-wrapper, .main-container, #main, .card-solid { width: 100% !important; margin: 0 !important; padding: 0 !important; }
+        .wrapper, .content-wrapper, .main-container, #main, .card-solid, .container, .container-fluid, .row, .col-12 { width: 100% !important; margin: 0 !important; padding: 0 !important; border: 0 !important; }
+        * { box-shadow: none !important; }
         .card-solid { box-shadow: none; border: none; }
         .card-header-solid { display: none; }
         .print-title { display: block; }
