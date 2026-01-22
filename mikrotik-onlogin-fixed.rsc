@@ -3,7 +3,7 @@
 # Update: 2026-01-19 - PRESERVE BLOK INFO
 
 # Realtime report endpoint (sesuaikan)
-:local baseUrl "http://wartelpas.sobigidul.net/report/live_ingest.php?session=S3c7x9_LB&key=WartelpasSecureKey";
+:local baseUrl "http://wartelpas.sobigidul.net/report/live_ingest.php";
 :local key "WartelpasSecureKey";
 :local session "S3c7x9_LB";
 
@@ -102,7 +102,7 @@
         /system script add name=$logComment owner="$month$year" source="$date" comment="mikhmon";
 
         # REALTIME REPORT (GET fallback agar data pasti terbaca)
-        :local payload $logComment;
+        :local payload [:url-encode $logComment];
         :local url ($baseUrl . "?key=" . $key . "&session=" . $session . "&data=" . $payload);
         /tool fetch url=$url keep-result=no;
 
