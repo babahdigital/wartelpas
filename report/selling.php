@@ -1995,6 +1995,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 <thead>
                     <tr>
                         <th>Blok</th>
+                        <th>User</th>
                         <th class="text-center">Qty Sistem</th>
                         <th class="text-center">Qty Manual</th>
                         <th class="text-center">Selisih Qty</th>
@@ -2002,22 +2003,40 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         <th class="text-right">Setoran Manual</th>
                         <th class="text-right">Selisih Setoran</th>
                         <th>Status</th>
-                        <th class="text-right">Catatan</th>
+                        <th class="text-right">Catatan/Bukti</th>
                         <th class="text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($audit_rows)): ?>
-                        <tr><td colspan="10" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
+                        <tr><td colspan="11" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
                     <?php else: foreach ($audit_rows as $ar): ?>
                         <?php
                             $sq = (int)($ar['selisih_qty'] ?? 0);
                             $ss = (int)($ar['selisih_setoran'] ?? 0);
                             $cls_q = $sq > 0 ? 'audit-pos' : ($sq < 0 ? 'audit-neg' : 'audit-zero');
                             $cls_s = $ss > 0 ? 'audit-pos' : ($ss < 0 ? 'audit-neg' : 'audit-zero');
+                            $evidence = [];
+                            $evidence_summary = '';
+                            if (!empty($ar['user_evidence'])) {
+                                $evidence = json_decode((string)$ar['user_evidence'], true);
+                                if (is_array($evidence)) {
+                                    $cnt = isset($evidence['events']) && is_array($evidence['events']) ? count($evidence['events']) : 0;
+                                    $fl = $evidence['first_login_real'] ?? '';
+                                    $ll = $evidence['last_login_real'] ?? '';
+                                    $lb = isset($evidence['last_bytes']) ? format_bytes_short((int)$evidence['last_bytes']) : '';
+                                    $parts = [];
+                                    if ($cnt > 0) $parts[] = 'Login: ' . $cnt . 'x';
+                                    if ($fl !== '') $parts[] = 'First: ' . format_first_login($fl);
+                                    if ($ll !== '') $parts[] = 'Last: ' . format_first_login($ll);
+                                    if ($lb !== '') $parts[] = 'Bytes: ' . $lb;
+                                    $evidence_summary = implode(' | ', $parts);
+                                }
+                            }
                         ?>
                         <tr>
                             <td><?= htmlspecialchars($ar['blok_name'] ?? '-') ?></td>
+                            <td><?= htmlspecialchars($ar['audit_username'] ?? '-') ?></td>
                             <td class="text-center"><?= number_format((int)($ar['expected_qty'] ?? 0),0,',','.') ?></td>
                             <td class="text-center"><?= number_format((int)($ar['reported_qty'] ?? 0),0,',','.') ?></td>
                             <td class="text-center"><span class="<?= $cls_q; ?>"><?= number_format($sq,0,',','.') ?></span></td>
@@ -2025,10 +2044,11 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             <td class="text-right"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
                             <td class="text-right"><span class="<?= $cls_s; ?>"><?= number_format($ss,0,',','.') ?></span></td>
                             <td><?= htmlspecialchars(strtoupper((string)($ar['status'] ?? 'OPEN'))) ?></td>
-                            <td class="text-right"><small><?= htmlspecialchars($ar['note'] ?? '') ?></small></td>
+                            <td class="text-right"><small><?= htmlspecialchars($ar['note'] ?? '') ?><?= $evidence_summary !== '' ? '<br>' . htmlspecialchars($evidence_summary) : '' ?></small></td>
                             <td class="text-right">
                                 <button type="button" class="btn-act" onclick="openAuditEdit(this)"
                                     data-blok="<?= htmlspecialchars($ar['blok_name'] ?? ''); ?>"
+                                    data-user="<?= htmlspecialchars($ar['audit_username'] ?? ''); ?>"
                                     data-date="<?= htmlspecialchars($ar['report_date'] ?? $filter_date); ?>"
                                     data-qty="<?= (int)($ar['reported_qty'] ?? 0); ?>"
                                     data-setoran="<?= (int)($ar['actual_setoran'] ?? 0); ?>"
