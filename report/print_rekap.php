@@ -628,6 +628,50 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                 </tr>
             </tbody>
         </table>
+        <?php if (!empty($audit_rows)): ?>
+            <table class="rekap-table" style="margin-top:12px;">
+                <thead>
+                    <tr>
+                        <th colspan="8">Audit Manual Rekap Harian</th>
+                    </tr>
+                    <tr>
+                        <th>Blok</th>
+                        <th style="width:80px;">Qty Sistem</th>
+                        <th style="width:80px;">Qty Manual</th>
+                        <th style="width:90px;">Selisih Qty</th>
+                        <th style="width:110px;">Setoran Sistem</th>
+                        <th style="width:110px;">Setoran Manual</th>
+                        <th style="width:110px;">Selisih Setoran</th>
+                        <th>Catatan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($audit_rows as $ar): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($ar['blok_name'] ?? '-') ?></td>
+                            <td style="text-align:center;"><?= number_format((int)($ar['expected_qty'] ?? 0),0,',','.') ?></td>
+                            <td style="text-align:center;"><?= number_format((int)($ar['reported_qty'] ?? 0),0,',','.') ?></td>
+                            <td style="text-align:center;"><?= number_format((int)($ar['selisih_qty'] ?? 0),0,',','.') ?></td>
+                            <td style="text-align:right;"><?= number_format((int)($ar['expected_setoran'] ?? 0),0,',','.') ?></td>
+                            <td style="text-align:right;"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
+                            <td style="text-align:right;"><?= number_format((int)($ar['selisih_setoran'] ?? 0),0,',','.') ?></td>
+                            <td><?= htmlspecialchars($ar['note'] ?? '') ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <tr>
+                        <td style="text-align:right;"><b>Total</b></td>
+                        <td style="text-align:center;"><b><?= number_format($audit_total_expected_qty,0,',','.') ?></b></td>
+                        <td style="text-align:center;"><b><?= number_format($audit_total_reported_qty,0,',','.') ?></b></td>
+                        <td style="text-align:center;"><b><?= number_format($audit_total_selisih_qty,0,',','.') ?></b></td>
+                        <td style="text-align:right;"><b><?= number_format($audit_total_expected_setoran,0,',','.') ?></b></td>
+                        <td style="text-align:right;"><b><?= number_format($audit_total_actual_setoran,0,',','.') ?></b></td>
+                        <td style="text-align:right;"><b><?= number_format($audit_total_selisih_setoran,0,',','.') ?></b></td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div style="margin-top:6px; font-size:11px; color:#444;">Audit manual adalah catatan koreksi dari laporan lapangan, tidak mengubah rekap transaksi sistem.</div>
+        <?php endif; ?>
         <div style="margin-top:8px; font-size:11px; color:#444;">
             Keterangan: RS = Rusak, RT = Retur, SP = Spam, WR = Wartel, KM = Kamtib.
         </div>
