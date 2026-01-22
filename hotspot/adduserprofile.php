@@ -22,6 +22,10 @@ if (!isset($_SESSION["mikhmon"])) {
   header("Location:../admin.php?id=login");
 } else {
 
+  if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+  }
+
   $getallqueue = $API->comm("/queue/simple/print", array(
     "?dynamic" => "false",
   ));
@@ -29,6 +33,10 @@ if (!isset($_SESSION["mikhmon"])) {
   $getpool = $API->comm("/ip/pool/print");
 
   if (isset($_POST['name'])) {
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+      echo "<script>window.location='./error.php';</script>";
+      exit;
+    }
     $name = (preg_replace('/\s+/', '-',$_POST['name']));
     $sharedusers = ($_POST['sharedusers']);
     $ratelimit = ($_POST['ratelimit']);
@@ -268,6 +276,7 @@ if (!isset($_SESSION["mikhmon"])) {
         </div>
         <div class="card-body-mod">
           <form autocomplete="off" method="post" action="" style="display:flex; flex-direction:column; height:100%;">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES); ?>">
             <div class="btn-row">
               <a class="btn-warning-modern" href="./?hotspot=user-profiles&session=<?= $session; ?>">
                 <i class="fa fa-close"></i> <?= $_close ?>

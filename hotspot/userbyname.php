@@ -23,6 +23,10 @@ if (!isset($_SESSION["mikhmon"])) {
   header("Location:../admin.php?id=login");
 } else {
 
+  if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+  }
+
   date_default_timezone_set($_SESSION['timezone']);
 
   $getprofile = $API->comm("/ip/hotspot/user/profile/print");
@@ -215,6 +219,10 @@ if ($currency == in_array($currency, $cekindo['indo'])) {
 
 
   if (isset($_POST['name'])) {
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+      echo "<script>window.location='./error.php';</script>";
+      exit;
+    }
     $server = ($_POST['server']);
     $name = ($_POST['name']);
     $password = ($_POST['pass']);
@@ -287,6 +295,7 @@ include('./voucher/printbt.php');
 </div>
 <div class="card-body">
 <form autocomplete="new-password" method="post" action="">
+  <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES); ?>">
   <div>
     <?php if ($_SESSION['ubp'] != "") {
       echo "    <a class='btn bg-warning' href='./?hotspot=users&profile=" . $_SESSION['ubp'] . "&session=" . $session . "'><i class='fa fa-close'></i> ".$_close."</a>";
