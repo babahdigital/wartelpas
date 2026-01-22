@@ -176,12 +176,15 @@
 
     :delay 2s;
 
-    # 4c. CLEAR SERVER LOG
-    :log info "SETTLE: MAINT: Clear log ingest server...";
-    $sendSettleLog "SETTLE: MAINT: Clear log ingest server..." "info";
+#   4c. CLEAR SERVER LOG (GLOBAL PURGE)
+    # Update: Menambahkan scope=all & purge=1 agar bersih total setelah settlement
+    :log info "SETTLE: MAINT: Clear ALL server logs...";
+    $sendSettleLog "SETTLE: MAINT: Clear ALL server logs..." "info";
     :do {
-        /tool fetch url="http://wartelpas.sobigidul.net:8081/tools/clear_logs.php?key=WartelpasSecureKey&session=S3c7x9_LB" keep-result=no;
-        $logSettle "info" "SETTLE: MAINT: Clear log ingest berhasil.";
+        # PERUBAHAN DISINI: Tambah &scope=all&purge=1
+        /tool fetch url="http://wartelpas.sobigidul.net:8081/tools/clear_logs.php?key=WartelpasSecureKey&session=S3c7x9_LB&scope=all&purge=1" keep-result=no;
+        
+        $logSettle "info" "SETTLE: MAINT: Clear log ingest berhasil (Full Purge).";
     } on-error={ $logSettle "warning" "SETTLE: MAINT: Gagal clear log ingest."; }
 
     :delay 1s;
