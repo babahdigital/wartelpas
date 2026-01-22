@@ -91,7 +91,7 @@ $_please_login = isset($_please_login) ? $_please_login : 'Silakan Login';
         .input-group {
             width: 100%;
             border-collapse: separate;
-            display: table;
+            display: flex;
         }
         
         /* Styling Input Group Addon (Icon Box) */
