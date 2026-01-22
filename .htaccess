@@ -117,6 +117,11 @@ Require all denied
     Require all granted
 </If>
 
+# Settlement log ingest endpoint
+<If "%{REQUEST_URI} =~ m#^/tools/settlement_log_ingest\.php$#">
+    Require all granted
+</If>
+
 # Clear block endpoint
 <If "%{REQUEST_URI} =~ m#^/tools/clear_block\.php$#">
     Require all granted
@@ -195,6 +200,7 @@ Require all denied
 <FilesMatch "^(sync_stats|sync_sales|live_ingest)\.php$">
     <RequireAny>
         Require ip 10.10.83.1
+        Require ip 10.10.83.2
         Require ip 172.19.0.0/16
         Require ip 127.0.0.1
     </RequireAny>
