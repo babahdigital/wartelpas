@@ -1,200 +1,217 @@
+/* 2. CONTAINER LOGIN */
+.login-container {
+    width: 100%;
+    max-width: 450px; /* Lebar card proporsional */
+    padding: 15px;
+    /* Margin auto tidak diperlukan lagi karena body sudah flex-center, 
+       tapi dibiarkan aman untuk fallback */
+    margin: auto; 
+}
 
- 
-        .login-container {
-            width: 100%;
-            max-width: 450px; /* Lebar card proporsional */
-            padding: 15px;
-            margin: auto;
-        }
+/* 3. PANEL STYLING */
+.panel-login {
+    border: none;
+    border-radius: 10px;
+    background: #333333; 
+    box-shadow: 0 15px 35px rgba(0,0,0,0.5); /* Shadow diperhalus sedikit */
+    overflow: hidden; /* Mencegah konten keluar dari radius */
+}
 
-        /* Panel Login Styling */
-        .panel-login {
-            border: none;
-            border-radius: 10px;
-            background: #333333; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.4); 
-        }
+.panel-login .panel-heading {
+    background-color: #2b2b2b; /* Sedikit lebih gelap untuk kontras header */
+    border-bottom: 1px solid #444;
+    padding: 30px 15px 10px 15px;
+    text-align: center;
+}
 
-        .panel-login .panel-heading {
-            background-color: #333333;
-            border-bottom: 1px solid #444;
-            border-radius: 10px 10px 0 0;
-            padding: 30px 15px 10px 15px;
-            text-align: center;
-        }
+.logo-img {
+    max-height: 90px;
+    width: auto;
+    margin: 0 auto 5px auto; /* Shorthand margin center */
+    display: block;
+}
 
-        .logo-img {
-            max-height: 90px;
-            width: auto;
-            margin-bottom: 5px;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
-        }
+.panel-login .panel-body {
+    padding: 40px;
+}
 
-        .panel-login .panel-body {
-            padding: 40px;
-        }
+.form-group {
+    margin-bottom: 25px;
+}
 
-        .form-group {
-            margin-bottom: 25px;
-        }
+/* 4. FLEXBOX INPUT GROUP (OPTIMAL) */
+.input-group {
+    display: flex; 
+    width: 100%;
+    align-items: stretch; /* Tinggi addon dan input otomatis sama */
+    position: relative;
+}
 
-        /* --- SEMPURNAKAN FLEXBOX INPUT GROUP --- */
-        
-        .input-group {
-            /* 1. Aktifkan Flex pada Container Utama */
-            display: flex; 
-            width: 100%;
-            /* 'stretch' memastikan tinggi Addon dan Input otomatis sama */
-            align-items: stretch; 
-        }
-        
-        .input-group-addon {
-            /* 2. Aktifkan Flex pada Kotak Ikon (Addon) */
-            display: flex;
-            align-items: center;     /* Tengahkan Vertikal secara otomatis */
-            justify-content: center; /* Tengahkan Horizontal secara otomatis */
-            
-            width: 50px;      /* Lebar fix */
-            min-width: 50px;  /* Pastikan tidak mengecil */
-            padding: 0;       /* Reset padding bawaan bootstrap */
-            
-            background-color: #444;
-            border: 1px solid #555;
-            border-right: 0;  /* Hilangkan border kanan agar menyatu dengan input */
-            color: #ccc;
-            font-size: 18px;
-            border-radius: 4px 0 0 4px;
-        }
+.input-group-addon {
+    display: flex;
+    align-items: center;    
+    justify-content: center; 
+    
+    width: 50px;      
+    min-width: 50px;  
+    padding: 0;       
+    
+    background-color: #444;
+    border: 1px solid #555;
+    border-right: 0;  
+    color: #ccc;
+    font-size: 18px;
+    border-radius: 4px 0 0 4px;
+    transition: border-color 0.3s ease;
+}
 
-        .input-group .form-control {
-            /* 3. Input mengisi sisa ruang yang tersedia */
-            flex: 1; 
-            width: auto !important; /* Override width 100% bawaan */
-            float: none; /* Matikan float bawaan */
-            
-            height: 50px;
-            background-color: #444;
-            border: 1px solid #555;
-            color: #fff;
-            font-size: 16px;
-            padding-left: 15px; /* Spasi teks di dalam input */
-            
-            border-radius: 0 4px 4px 0;
-            box-shadow: none;
-            z-index: 1; /* Manajemen tumpukan layer */
-        }
+.input-group .form-control {
+    flex: 1; /* Mengisi sisa ruang */
+    width: auto !important; 
+    float: none; 
+    
+    height: 50px;
+    background-color: #444;
+    border: 1px solid #555;
+    color: #fff;
+    font-size: 16px;
+    padding-left: 15px; 
+    
+    border-radius: 0 4px 4px 0;
+    box-shadow: none;
+    transition: all 0.3s ease;
+    z-index: 1;
+}
 
-        /* Hapus margin/padding manual pada icon karena sudah dicenter oleh Flexbox */
-        .input-group-addon i {
-            margin: 0; 
-        }
+.input-group-addon i {
+    margin: 0; 
+}
 
-        /* Efek Focus */
-        .form-control:focus {
-            background-color: #505050;
-            border-color: #337ab7;
-            /* Tambahkan z-index agar border focus muncul di atas addon */
-            z-index: 2; 
-            position: relative;
-            color: #fff;
-        }
-        
-        /* Saat input focus, border addon juga ikut berubah warna agar terlihat menyatu */
-        .form-control:focus + .input-group-addon, /* Selector jaga-jaga */
-        .input-group:focus-within .input-group-addon {
-            border-color: #337ab7;
-        }
+/* Efek Focus */
+.form-control:focus {
+    background-color: #505050;
+    border-color: #337ab7;
+    z-index: 2; 
+    position: relative;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(51, 122, 183, 0.2); /* Glow halus saat fokus */
+}
 
-        /* Placeholder color */
-        .form-control::-webkit-input-placeholder { color: #888; }
-        .form-control:-moz-placeholder { color: #888; }
-        .form-control::-moz-placeholder { color: #888; }
-        .form-control:-ms-input-placeholder { color: #888; }
+/* Warna border addon mengikuti input saat fokus */
+.form-control:focus + .input-group-addon, 
+.input-group:focus-within .input-group-addon {
+    border-color: #337ab7;
+    background-color: #3a3a3a;
+    color: #fff;
+}
 
-        /* Error States Styling */
-        .has-error .form-control {
-            border-color: #e74c3c;
-        }
-        
-        .has-error .input-group-addon {
-            background-color: #3e2b2b;
-            border-color: #e74c3c;
-            color: #e74c3c;
-        }
+/* Placeholder Styling */
+.form-control::placeholder { color: #888; opacity: 1; }
+.form-control:-ms-input-placeholder { color: #888; }
+.form-control::-ms-input-placeholder { color: #888; }
 
-        .help-block {
-            display: none;
-            font-size: 13px;
-            margin-top: 5px;
-            margin-bottom: 0;
-            text-align: left;
-            color: #ff6b6b;
-        }
+/* 5. ERROR STATES */
+.has-error .form-control {
+    border-color: #e74c3c;
+}
 
-        .has-error .help-block {
-            display: block;
-        }
+.has-error .input-group-addon {
+    background-color: #3e2b2b;
+    border-color: #e74c3c;
+    color: #e74c3c;
+}
 
-        /* Tombol Login */
-        .btn-login {
-            background-color: #337ab7;
-            border-color: #2e6da4;
-            color: #fff;
-            padding: 0; /* Reset padding karena menggunakan flex center/height */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            
-            font-size: 18px;
-            font-weight: 600;
-            border-radius: 4px;
-            transition: all 0.3s;
-            margin-top: 15px;
-            height: 50px;
-            width: 100%;
-        }
+.help-block {
+    display: none;
+    font-size: 13px;
+    margin-top: 8px;
+    margin-bottom: 0;
+    text-align: left;
+    color: #ff6b6b;
+    font-weight: 500;
+}
 
-        .btn-login i {
-            margin-right: 8px;
-        }
+.has-error .help-block {
+    display: block;
+    animation: fadeIn 0.3s;
+}
 
-        .btn-login:hover, .btn-login:focus {
-            background-color: #286090;
-            color: #fff;
-            border-color: #204d74;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
+/* 6. TOMBOL LOGIN */
+.btn-login {
+    background-color: #337ab7;
+    border: 1px solid #2e6da4;
+    color: #fff;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    font-size: 18px;
+    font-weight: 600;
+    border-radius: 4px;
+    transition: all 0.2s ease-in-out;
+    margin-top: 15px;
+    height: 50px;
+    width: 100%;
+    cursor: pointer;
+}
 
-        /* Alert Styling for PHP Errors */
-        .alert-custom {
-            background-color: #3e2b2b;
-            color: #ff6b6b;
-            border: 1px solid #e74c3c;
-            border-radius: 4px;
-            padding: 12px;
-            margin-top: 25px;
-            font-size: 14px;
-            text-align: center;
-        }
+.btn-login i {
+    margin-right: 10px;
+}
 
-        .login-footer {
-            margin-top: 25px;
-            text-align: center;
-            font-size: 13px;
-            color: #888;
-        }
+.btn-login:hover, .btn-login:focus {
+    background-color: #286090;
+    border-color: #204d74;
+    transform: translateY(-1px); /* Efek naik sedikit saat hover */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
 
-        /* Animation for shake effect on error */
-        @keyframes shake {
-            0% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            50% { transform: translateX(5px); }
-            75% { transform: translateX(-5px); }
-            100% { transform: translateX(0); }
-        }
+.btn-login:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
 
-        .shake-element {
-            animation: shake 0.3s ease-in-out;
-        }
+/* 7. UTILITIES & ANIMASI */
+.alert-custom {
+    background-color: #3e2b2b;
+    color: #ff6b6b;
+    border: 1px solid #e74c3c;
+    border-radius: 4px;
+    padding: 12px;
+    margin-top: 25px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.login-footer {
+    margin-top: 25px;
+    text-align: center;
+    font-size: 13px;
+    color: #777;
+}
+
+.login-footer a {
+    color: #999;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.login-footer a:hover {
+    color: #337ab7;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.shake-element {
+    animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
