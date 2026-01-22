@@ -1075,6 +1075,9 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         var cls = row.type || 'info';
         var line = document.createElement('div');
         line.className = 'log-entry';
+        var promptSpan = document.createElement('span');
+        promptSpan.className = 'log-prompt';
+        promptSpan.textContent = '> ';
         var timeSpan = document.createElement('span');
         timeSpan.className = 'log-time';
         timeSpan.textContent = t ? (String(t) + ' ') : '';
@@ -1084,6 +1087,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         var msgSpan = document.createElement('span');
         msgSpan.className = 'log-' + String(cls).replace(/[^a-z]/gi,'');
         msgSpan.textContent = '';
+        line.appendChild(promptSpan);
         line.appendChild(timeSpan);
         line.appendChild(topicSpan);
         line.appendChild(msgSpan);
@@ -1650,6 +1654,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
     .terminal-window::-webkit-scrollbar-thumb { background:#444; border-radius:2px; }
     .terminal-window::-webkit-scrollbar-thumb:hover { background:#666; }
     .log-entry { margin-bottom:4px; line-height:1.4; display:block; }
+    .log-prompt { color:#00ff00; margin-right:6px; font-weight:700; }
     .log-time { color:#888; margin-right:8px; }
     .log-topic { color:#aaa; margin-right:8px; font-weight:bold; }
     .log-info { color:#d0d0d0; }
