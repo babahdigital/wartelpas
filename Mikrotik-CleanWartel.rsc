@@ -42,6 +42,9 @@
 :set sendSettleLog do={
     :local msg $1;
     :local lvl $2;
+    :if ([:typeof $msg] = "nothing") do={ :set msg ""; }
+    :if ([:typeof $lvl] = "nothing") do={ :set lvl "info"; }
+    :if ($msg = "") do={ :return; }
     :local tp ("script," . $lvl);
     :local dt [/system clock get date];
     :local tm [/system clock get time];
