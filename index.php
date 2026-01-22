@@ -139,7 +139,7 @@ if (!isset($_SESSION["mikhmon"])) {
   $pageppp = array('secrets','profiles','active',);
   $pagereport = array('userlog','selling','livereport','resume-report','export');
 
-
+  include_once('./include/headhtml.php');
   include_once('./include/menu.php');
 
   $disable_sci = '<script>
