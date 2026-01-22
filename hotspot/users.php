@@ -37,6 +37,10 @@ $debug_mode = isset($_GET['debug']) && $_GET['debug'] == '1';
 $enforce_rusak_rules = !(isset($_GET['rusak_free']) && $_GET['rusak_free'] == '1');
 
 include('../include/config.php');
+if (!isset($data[$session])) {
+  header("Location:../admin.php?id=login");
+  exit();
+}
 include('../include/readcfg.php');
 include_once('../lib/routeros_api.class.php');
 include_once('../lib/formatbytesbites.php');
