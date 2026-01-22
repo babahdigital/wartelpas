@@ -243,39 +243,15 @@ if (file_exists($dbFile)) {
     .toolbar select:focus, .toolbar input:focus { outline:none; box-shadow:none; border-color: var(--border-col); }
     .btn-solid { background:#2d8cff;color:#fff;border:none;padding:6px 10px;border-radius:4px; cursor:pointer; }
     .muted { color: var(--txt-muted); }
-    .print-title { display: none; font-weight: 700; font-size: 16px; margin: 0 0 8px 0; }
-    @media print {
-        html, body { background: #fff; color: #111; width: 100%; margin: 0; padding: 0; border: 0 !important; }
-        .main-header, .navbar, .nav, .sidebar, .main-sidebar, .content-header, .brand-link, .preloader { display: none !important; }
-        .wrapper, .content-wrapper, .main-container, #main, .card-solid, .container, .container-fluid, .row, .col-12 { width: 100% !important; margin: 0 !important; padding: 0 !important; border: 0 !important; }
-        * { box-shadow: none !important; }
-        .card-solid { box-shadow: none; border: none; }
-        .card-header-solid { display: none; }
-        .print-title { display: block; }
-        .summary-card { background: #fff; border: 1px solid #ddd; }
-        .table-dark-solid th { background: #f0f0f0; color: #111; padding: 6px; font-size: 11px; }
-        .table-dark-solid td { color: #111; padding: 6px; font-size: 11px; }
-        .btn-solid { display: none; }
-        .toolbar { display: none; }
-        .section-title { page-break-after: avoid; margin-top: 10px; }
-        .summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-        .summary-card { padding: 8px; }
-        .summary-title { font-size: 10px; }
-        .summary-value { font-size: 14px; }
-        .table-dark-solid { border-collapse: collapse; border-left: 0 !important; }
-        .table-dark-solid th, .table-dark-solid td { border: 1px solid #ddd; border-left: 0 !important; }
-        tr { page-break-inside: avoid; }
-        @page { margin: 0; }
-    }
+    .print-title { display: none; }
 </style>
 
 <div class="card card-solid">
     <div class="card-header-solid">
         <h3 class="card-title m-0"><i class="fa fa-shield"></i> Audit Penjualan & Voucher</h3>
-        <button class="btn-solid" onclick="window.print()"><i class="fa fa-print"></i> Print</button>
+        <a class="btn btn-primary" target="_blank" href="print_audit.php?session=<?= urlencode($session_id) ?>&show=<?= urlencode($req_show) ?>&date=<?= urlencode($filter_date) ?>">Print</a>
     </div>
     <div class="card-body">
-        <h2 class="print-title">Audit Penjualan & Voucher</h2>
         <form method="GET" class="toolbar" action="?">
             <input type="hidden" name="report" value="audit">
             <input type="hidden" name="session" value="<?= htmlspecialchars($session_id) ?>">
