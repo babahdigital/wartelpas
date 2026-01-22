@@ -262,10 +262,10 @@ if (file_exists($dbFile)) {
         .summary-card { padding: 8px; }
         .summary-title { font-size: 10px; }
         .summary-value { font-size: 14px; }
-        .table-dark-solid { border-collapse: collapse; }
-        .table-dark-solid th, .table-dark-solid td { border: 1px solid #ddd; }
+        .table-dark-solid { border-collapse: collapse; border-left: 0 !important; }
+        .table-dark-solid th, .table-dark-solid td { border: 1px solid #ddd; border-left: 0 !important; }
         tr { page-break-inside: avoid; }
-        @page { margin: 8mm; }
+        @page { margin: 0; }
     }
 </style>
 
