@@ -185,6 +185,7 @@ if (file_exists($dbFile)) {
         $db->exec("CREATE TABLE IF NOT EXISTS audit_rekap_manual (
             report_date TEXT,
             blok_name TEXT,
+            audit_username TEXT,
             expected_qty INTEGER,
             expected_setoran INTEGER,
             reported_qty INTEGER,
@@ -192,11 +193,14 @@ if (file_exists($dbFile)) {
             selisih_qty INTEGER,
             selisih_setoran INTEGER,
             note TEXT,
+            user_evidence TEXT,
             status TEXT DEFAULT 'OPEN',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (report_date, blok_name)
         )");
+        try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN audit_username TEXT"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN user_evidence TEXT"); } catch (Exception $e) {}
         $res = $db->query("SELECT 
                 sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
                 sh.username, sh.profile, sh.profile_snapshot,
