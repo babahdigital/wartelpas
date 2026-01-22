@@ -13,6 +13,28 @@
 :set isCleaning true;
 
 # Helper kirim log ke server realtime
+:global urlEncode;
+:set urlEncode do={
+    :local s $1;
+    :local out "";
+    :local i 0;
+    :local len [:len $s];
+    :for i from=0 to=($len - 1) do={
+        :local ch [:pick $s $i ($i + 1)];
+        :if ($ch = "%") do={ :set out ($out . "%25") } else={
+        :if ($ch = " ") do={ :set out ($out . "%20") } else={
+        :if ($ch = ":") do={ :set out ($out . "%3A") } else={
+        :if ($ch = "/") do={ :set out ($out . "%2F") } else={
+        :if ($ch = "\"") do={ :set out ($out . "%22") } else={
+        :if ($ch = "&") do={ :set out ($out . "%26") } else={
+        :if ($ch = "|") do={ :set out ($out . "%7C") } else={
+        :if ($ch = "[") do={ :set out ($out . "%5B") } else={
+        :if ($ch = "]") do={ :set out ($out . "%5D") } else={
+            :set out ($out . $ch)
+        }}}}}}}}};
+    }
+    :return $out;
+};
 :global sendSettleLog;
 :set sendSettleLog do={
     :local msg $1;
@@ -20,14 +42,11 @@
     :local tp ("script," . $lvl);
     :local dt [/system clock get date];
     :local tm [/system clock get time];
-    :local esc $msg;
-    :set esc [:replace $esc "%" "%25"];
-    :set esc [:replace $esc " " "%20"];
-    :set esc [:replace $esc ":" "%3A"];
-    :set esc [:replace $esc "|" "%7C"];
-    :set esc [:replace $esc "[" "%5B"];
-    :set esc [:replace $esc "]" "%5D"];
-    /tool fetch url=("http://wartelpas.sobigidul.net:8081/tools/settlement_log_ingest.php?key=WartelpasSecureKey&session=S3c7x9_LB&date=" . $dt . "&time=" . $tm . "&topic=" . $tp . "&msg=" . $esc) keep-result=no;
+    :local esc [$urlEncode $msg];
+    :local denc [$urlEncode $dt];
+    :local tenc [$urlEncode $tm];
+    :local penc [$urlEncode $tp];
+    /tool fetch url=("http://wartelpas.sobigidul.net:8081/tools/settlement_log_ingest.php?key=WartelpasSecureKey&session=S3c7x9_LB&date=" . $denc . "&time=" . $tenc . "&topic=" . $penc . "&msg=" . $esc) keep-result=no;
 };
 :global logSettle;
 :set logSettle do={
