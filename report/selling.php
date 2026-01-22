@@ -2015,7 +2015,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 <thead>
                     <tr>
                         <th>Blok</th>
-                        <th>User</th>
+                        <th>User(s)</th>
                         <th class="text-center">Qty Sistem</th>
                         <th class="text-center">Qty Manual</th>
                         <th class="text-center">Selisih Qty</th>
@@ -2037,20 +2037,41 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             $cls_q = $sq > 0 ? 'audit-pos' : ($sq < 0 ? 'audit-neg' : 'audit-zero');
                             $cls_s = $ss > 0 ? 'audit-pos' : ($ss < 0 ? 'audit-neg' : 'audit-zero');
                             $evidence = [];
-                            $evidence_summary = '';
+                            $evidence_summary_html = '';
                             if (!empty($ar['user_evidence'])) {
                                 $evidence = json_decode((string)$ar['user_evidence'], true);
                                 if (is_array($evidence)) {
-                                    $cnt = isset($evidence['events']) && is_array($evidence['events']) ? count($evidence['events']) : 0;
-                                    $fl = $evidence['first_login_real'] ?? '';
-                                    $ll = $evidence['last_login_real'] ?? '';
-                                    $lb = isset($evidence['last_bytes']) ? format_bytes_short((int)$evidence['last_bytes']) : '';
-                                    $parts = [];
-                                    if ($cnt > 0) $parts[] = 'Login: ' . $cnt . 'x';
-                                    if ($fl !== '') $parts[] = 'First: ' . format_first_login($fl);
-                                    if ($ll !== '') $parts[] = 'Last: ' . format_first_login($ll);
-                                    if ($lb !== '') $parts[] = 'Bytes: ' . $lb;
-                                    $evidence_summary = implode(' | ', $parts);
+                                    $lines = [];
+                                    if (!empty($evidence['users']) && is_array($evidence['users'])) {
+                                        foreach ($evidence['users'] as $uname => $ud) {
+                                            $cnt = isset($ud['events']) && is_array($ud['events']) ? count($ud['events']) : 0;
+                                            $fl = $ud['first_login_real'] ?? '';
+                                            $ll = $ud['last_login_real'] ?? '';
+                                            $lb = isset($ud['last_bytes']) ? format_bytes_short((int)$ud['last_bytes']) : '';
+                                            $parts = [];
+                                            if ($cnt > 0) $parts[] = 'Login: ' . $cnt . 'x';
+                                            if ($fl !== '') $parts[] = 'First: ' . format_first_login($fl);
+                                            if ($ll !== '') $parts[] = 'Last: ' . format_first_login($ll);
+                                            if ($lb !== '' && $lb !== '0 B') $parts[] = 'Bytes: ' . $lb;
+                                            $line = (string)$uname;
+                                            if (!empty($parts)) $line .= ': ' . implode(' | ', $parts);
+                                            $lines[] = $line;
+                                        }
+                                    } else {
+                                        $cnt = isset($evidence['events']) && is_array($evidence['events']) ? count($evidence['events']) : 0;
+                                        $fl = $evidence['first_login_real'] ?? '';
+                                        $ll = $evidence['last_login_real'] ?? '';
+                                        $lb = isset($evidence['last_bytes']) ? format_bytes_short((int)$evidence['last_bytes']) : '';
+                                        $parts = [];
+                                        if ($cnt > 0) $parts[] = 'Login: ' . $cnt . 'x';
+                                        if ($fl !== '') $parts[] = 'First: ' . format_first_login($fl);
+                                        if ($ll !== '') $parts[] = 'Last: ' . format_first_login($ll);
+                                        if ($lb !== '' && $lb !== '0 B') $parts[] = 'Bytes: ' . $lb;
+                                        if (!empty($parts)) $lines[] = implode(' | ', $parts);
+                                    }
+                                    if (!empty($lines)) {
+                                        $evidence_summary_html = implode('<br>', array_map('htmlspecialchars', $lines));
+                                    }
                                 }
                             }
                         ?>
@@ -2064,7 +2085,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             <td class="text-right"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
                             <td class="text-right"><span class="<?= $cls_s; ?>"><?= number_format($ss,0,',','.') ?></span></td>
                             <td><?= htmlspecialchars(strtoupper((string)($ar['status'] ?? 'OPEN'))) ?></td>
-                            <td class="text-right"><small><?= htmlspecialchars($ar['note'] ?? '') ?><?= $evidence_summary !== '' ? '<br>' . htmlspecialchars($evidence_summary) : '' ?></small></td>
+                            <td class="text-right"><small><?= htmlspecialchars($ar['note'] ?? '') ?><?= $evidence_summary_html !== '' ? '<br>' . $evidence_summary_html : '' ?></small></td>
                             <td class="text-right">
                                 <button type="button" class="btn-act" onclick="openAuditEdit(this)"
                                     data-blok="<?= htmlspecialchars($ar['blok_name'] ?? ''); ?>"
