@@ -236,8 +236,11 @@ if (file_exists($dbFile)) {
     .pill-warn { background:#f39c12;color:#fff; }
     .pill-bad { background:#c0392b;color:#fff; }
     .section-title { font-weight:700; margin:14px 0 8px; font-size:14px; }
-    .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
+    .toolbar-left { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .toolbar-right { display:flex; gap:8px; align-items:center; }
     .toolbar select, .toolbar input { background:#343a40; color:#fff; border:1px solid var(--border-col); height:36px; padding:0 10px; border-radius:4px; }
+    .toolbar select:focus, .toolbar input:focus { outline:none; box-shadow:none; border-color: var(--border-col); }
     .btn-solid { background:#2d8cff;color:#fff;border:none;padding:6px 10px;border-radius:4px; cursor:pointer; }
     .muted { color: var(--txt-muted); }
 </style>
