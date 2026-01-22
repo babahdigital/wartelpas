@@ -244,7 +244,9 @@ if (file_exists($dbFile)) {
     .btn-solid { background:#2d8cff;color:#fff;border:none;padding:6px 10px;border-radius:4px; cursor:pointer; }
     .muted { color: var(--txt-muted); }
     @media print {
-        body { background: #fff; color: #111; }
+        html, body { background: #fff; color: #111; width: 100%; margin: 0; padding: 0; }
+        .main-header, .navbar, .nav, .sidebar, .main-sidebar, .content-header, .brand-link, .preloader { display: none !important; }
+        .wrapper, .content-wrapper, .main-container, #main, .card-solid { width: 100% !important; margin: 0 !important; padding: 0 !important; }
         .card-solid { box-shadow: none; border: none; }
         .card-header-solid { display: none; }
         .summary-card { background: #fff; border: 1px solid #ddd; }
@@ -260,7 +262,7 @@ if (file_exists($dbFile)) {
         .table-dark-solid { border-collapse: collapse; }
         .table-dark-solid th, .table-dark-solid td { border: 1px solid #ddd; }
         tr { page-break-inside: avoid; }
-        @page { margin: 10mm; }
+        @page { margin: 8mm; }
     }
 </style>
 
