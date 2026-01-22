@@ -49,10 +49,10 @@
         :local tp ("script," . $lvl);
         :local dt [/system clock get date];
         :local tm [/system clock get time];
-        :local esc [$urlEncode $msg];
-        :local denc [$urlEncode $dt];
-        :local tenc [$urlEncode $tm];
-        :local penc [$urlEncode $tp];
+        :local esc ($msg . "");
+        :local denc ($dt . "");
+        :local tenc ($tm . "");
+        :local penc ($tp . "");
         /tool fetch url=("http://wartelpas.sobigidul.net:8081/tools/settlement_log_ingest.php?key=WartelpasSecureKey&session=S3c7x9_LB&date=" . $denc . "&time=" . $tenc . "&topic=" . $penc . "&msg=" . $esc) keep-result=no;
     } on-error={
         :log warning "SETTLE: LOG: Gagal kirim log ke server.";
