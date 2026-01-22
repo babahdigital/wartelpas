@@ -681,48 +681,135 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         $audit_blok_raw = trim($_POST['audit_blok'] ?? '');
         $audit_date = trim($_POST['audit_date'] ?? '');
         $audit_blok = normalize_block_name($audit_blok_raw);
+        $audit_user = trim($_POST['audit_username'] ?? '');
         $audit_qty = (int)($_POST['audit_qty'] ?? 0);
         $audit_setoran = (int)($_POST['audit_setoran'] ?? 0);
         $audit_note = trim($_POST['audit_note'] ?? '');
         $audit_status = strtoupper(trim($_POST['audit_status'] ?? 'OPEN'));
         if ($audit_status !== 'DONE') $audit_status = 'OPEN';
 
-        if ($audit_blok_raw === '' || $audit_date === '') {
-            $audit_error = 'Blok dan tanggal wajib diisi.';
+        if ($audit_blok_raw === '' || $audit_date === '' || $audit_user === '') {
+            $audit_error = 'Blok, tanggal, dan username wajib diisi.';
         } else {
+            $user_row = null;
+            $user_exists = false;
+            $user_has_date = false;
+            if (table_exists($db, 'login_history')) {
+                $stmtU = $db->prepare("SELECT username, blok_name, raw_comment, first_login_real, last_login_real, login_time_real, logout_time_real, last_status, last_bytes, last_uptime, first_ip, first_mac, last_ip, last_mac
+                    FROM login_history WHERE username = :u LIMIT 1");
+                $stmtU->execute([':u' => $audit_user]);
+                $user_row = $stmtU->fetch(PDO::FETCH_ASSOC);
+                if ($user_row) $user_exists = true;
+            }
+            if (!$user_exists && table_exists($db, 'sales_history')) {
+                $stmtU2 = $db->prepare("SELECT username FROM sales_history WHERE username = :u LIMIT 1");
+                $stmtU2->execute([':u' => $audit_user]);
+                if ($stmtU2->fetchColumn()) $user_exists = true;
+            }
+            if (!$user_exists && table_exists($db, 'live_sales')) {
+                $stmtU3 = $db->prepare("SELECT username FROM live_sales WHERE username = :u LIMIT 1");
+                $stmtU3->execute([':u' => $audit_user]);
+                if ($stmtU3->fetchColumn()) $user_exists = true;
+            }
+            if (!$user_exists) {
+                $audit_error = 'Username tidak ditemukan di sistem.';
+            } else {
+                if (table_exists($db, 'login_events')) {
+                    $stmtEv = $db->prepare("SELECT COUNT(*) FROM login_events WHERE username = :u AND date_key = :d");
+                    $stmtEv->execute([':u' => $audit_user, ':d' => $audit_date]);
+                    $user_has_date = ((int)$stmtEv->fetchColumn() > 0);
+                }
+                if (!$user_has_date && $user_row) {
+                    $d1 = substr((string)($user_row['first_login_real'] ?? ''), 0, 10);
+                    $d2 = substr((string)($user_row['last_login_real'] ?? ''), 0, 10);
+                    $d3 = substr((string)($user_row['login_time_real'] ?? ''), 0, 10);
+                    $d4 = substr((string)($user_row['logout_time_real'] ?? ''), 0, 10);
+                    if (in_array($audit_date, [$d1, $d2, $d3, $d4], true)) $user_has_date = true;
+                }
+                if (!$user_has_date && table_exists($db, 'sales_history')) {
+                    $stmtU4 = $db->prepare("SELECT 1 FROM sales_history WHERE username = :u AND sale_date = :d LIMIT 1");
+                    $stmtU4->execute([':u' => $audit_user, ':d' => $audit_date]);
+                    if ($stmtU4->fetchColumn()) $user_has_date = true;
+                }
+                if (!$user_has_date && table_exists($db, 'live_sales')) {
+                    $stmtU5 = $db->prepare("SELECT 1 FROM live_sales WHERE username = :u AND sale_date = :d LIMIT 1");
+                    $stmtU5->execute([':u' => $audit_user, ':d' => $audit_date]);
+                    if ($stmtU5->fetchColumn()) $user_has_date = true;
+                }
+                if (!$user_has_date) {
+                    $audit_error = 'Username tidak ditemukan pada tanggal tersebut.';
+                } else {
+                    $blok_from_user = '';
+                    if ($user_row) {
+                        $blok_from_user = normalize_block_name($user_row['blok_name'] ?? '', $user_row['raw_comment'] ?? '');
+                    }
+                    if ($blok_from_user !== '' && $blok_from_user !== $audit_blok) {
+                        $audit_error = 'Username tidak sesuai dengan blok yang dipilih.';
+                    }
+                }
+            }
             $expected_qty = (int)($by_block[$audit_blok]['qty'] ?? 0);
             $expected_setoran = (int)($by_block[$audit_blok]['net'] ?? 0);
             $selisih_qty = $audit_qty - $expected_qty;
             $selisih_setoran = $audit_setoran - $expected_setoran;
-            try {
-                $stmt = $db->prepare("INSERT INTO audit_rekap_manual
-                    (report_date, blok_name, expected_qty, expected_setoran, reported_qty, actual_setoran, selisih_qty, selisih_setoran, note, status, updated_at)
-                    VALUES (:d, :b, :eq, :es, :rq, :as, :sq, :ss, :n, :st, CURRENT_TIMESTAMP)
-                    ON CONFLICT(report_date, blok_name) DO UPDATE SET
-                        expected_qty=excluded.expected_qty,
-                        expected_setoran=excluded.expected_setoran,
-                        reported_qty=excluded.reported_qty,
-                        actual_setoran=excluded.actual_setoran,
-                        selisih_qty=excluded.selisih_qty,
-                        selisih_setoran=excluded.selisih_setoran,
-                        note=excluded.note,
-                        status=excluded.status,
-                        updated_at=CURRENT_TIMESTAMP
-                ");
-                $stmt->execute([
-                    ':d' => $audit_date,
-                    ':b' => $audit_blok,
-                    ':eq' => $expected_qty,
-                    ':es' => $expected_setoran,
-                    ':rq' => $audit_qty,
-                    ':as' => $audit_setoran,
-                    ':sq' => $selisih_qty,
-                    ':ss' => $selisih_setoran,
-                    ':n' => $audit_note,
-                    ':st' => $audit_status
-                ]);
-            } catch (Exception $e) {
-                $audit_error = 'Gagal menyimpan audit.';
+            if (empty($audit_error)) {
+                $evidence = [];
+                if ($user_row) {
+                    $evidence['user'] = $user_row['username'] ?? $audit_user;
+                    $evidence['blok'] = $blok_from_user;
+                    $evidence['first_login_real'] = $user_row['first_login_real'] ?? '';
+                    $evidence['last_login_real'] = $user_row['last_login_real'] ?? '';
+                    $evidence['login_time_real'] = $user_row['login_time_real'] ?? '';
+                    $evidence['logout_time_real'] = $user_row['logout_time_real'] ?? '';
+                    $evidence['last_status'] = $user_row['last_status'] ?? '';
+                    $evidence['last_bytes'] = (int)($user_row['last_bytes'] ?? 0);
+                    $evidence['last_uptime'] = $user_row['last_uptime'] ?? '';
+                    $evidence['first_ip'] = $user_row['first_ip'] ?? '';
+                    $evidence['first_mac'] = $user_row['first_mac'] ?? '';
+                    $evidence['last_ip'] = $user_row['last_ip'] ?? '';
+                    $evidence['last_mac'] = $user_row['last_mac'] ?? '';
+                }
+                if (table_exists($db, 'login_events')) {
+                    $stmtEv2 = $db->prepare("SELECT seq, login_time, logout_time FROM login_events WHERE username = :u AND date_key = :d ORDER BY seq ASC, id ASC");
+                    $stmtEv2->execute([':u' => $audit_user, ':d' => $audit_date]);
+                    $events = $stmtEv2->fetchAll(PDO::FETCH_ASSOC);
+                    $evidence['events'] = $events;
+                }
+                $evidence_json = !empty($evidence) ? json_encode($evidence) : '';
+                try {
+                    $stmt = $db->prepare("INSERT INTO audit_rekap_manual
+                        (report_date, blok_name, audit_username, expected_qty, expected_setoran, reported_qty, actual_setoran, selisih_qty, selisih_setoran, note, user_evidence, status, updated_at)
+                        VALUES (:d, :b, :u, :eq, :es, :rq, :as, :sq, :ss, :n, :ev, :st, CURRENT_TIMESTAMP)
+                        ON CONFLICT(report_date, blok_name) DO UPDATE SET
+                            audit_username=excluded.audit_username,
+                            expected_qty=excluded.expected_qty,
+                            expected_setoran=excluded.expected_setoran,
+                            reported_qty=excluded.reported_qty,
+                            actual_setoran=excluded.actual_setoran,
+                            selisih_qty=excluded.selisih_qty,
+                            selisih_setoran=excluded.selisih_setoran,
+                            note=excluded.note,
+                            user_evidence=excluded.user_evidence,
+                            status=excluded.status,
+                            updated_at=CURRENT_TIMESTAMP
+                    ");
+                    $stmt->execute([
+                        ':d' => $audit_date,
+                        ':b' => $audit_blok,
+                        ':u' => $audit_user,
+                        ':eq' => $expected_qty,
+                        ':es' => $expected_setoran,
+                        ':rq' => $audit_qty,
+                        ':as' => $audit_setoran,
+                        ':sq' => $selisih_qty,
+                        ':ss' => $selisih_setoran,
+                        ':n' => $audit_note,
+                        ':ev' => $evidence_json,
+                        ':st' => $audit_status
+                    ]);
+                } catch (Exception $e) {
+                    $audit_error = 'Gagal menyimpan audit.';
+                }
             }
         }
 
@@ -981,6 +1068,10 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                         <label>Tanggal</label>
                         <input class="form-input" type="date" name="audit_date" value="<?= htmlspecialchars($filter_date); ?>" required>
                     </div>
+                </div>
+                <div style="margin-top:10px;">
+                    <label>Username (wajib, harus valid)</label>
+                    <input class="form-input" type="text" name="audit_username" placeholder="contoh: sdftyp" required>
                 </div>
                 <div class="form-grid-2" style="margin-top:10px;">
                     <div>
@@ -1547,6 +1638,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (!form || !btn) return;
         var blok = btn.getAttribute('data-blok') || '';
         var date = btn.getAttribute('data-date') || '';
+        var user = btn.getAttribute('data-user') || '';
         var qty = btn.getAttribute('data-qty') || '0';
         var setoran = btn.getAttribute('data-setoran') || '0';
         var note = btn.getAttribute('data-note') || '';
@@ -1555,6 +1647,8 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (blokSelect) blokSelect.value = blok;
         var dateInput = form.querySelector('input[name="audit_date"]');
         if (dateInput) dateInput.value = date;
+        var userInput = form.querySelector('input[name="audit_username"]');
+        if (userInput) userInput.value = user;
         var qtyInput = form.querySelector('input[name="audit_qty"]');
         if (qtyInput) qtyInput.value = qty;
         var setInput = form.querySelector('input[name="audit_setoran"]');
