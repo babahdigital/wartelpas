@@ -98,6 +98,13 @@ $hp_rusak_units = 0;
 $hp_spam_units = 0;
 $hp_wartel_units = 0;
 $hp_kamtib_units = 0;
+$audit_rows = [];
+$audit_total_expected_qty = 0;
+$audit_total_reported_qty = 0;
+$audit_total_expected_setoran = 0;
+$audit_total_actual_setoran = 0;
+$audit_total_selisih_qty = 0;
+$audit_total_selisih_setoran = 0;
 $hp_active_by_block = [];
 $hp_stats_by_block = [];
 $hp_units_by_block = [];
@@ -148,6 +155,21 @@ try {
         try { $db->exec("ALTER TABLE sales_history ADD COLUMN qty INTEGER"); } catch (Exception $e) {}
         try { $db->exec("ALTER TABLE sales_history ADD COLUMN blok_name TEXT"); } catch (Exception $e) {}
         try { $db->exec("ALTER TABLE sales_history ADD COLUMN full_raw_data TEXT"); } catch (Exception $e) {}
+        $db->exec("CREATE TABLE IF NOT EXISTS audit_rekap_manual (
+            report_date TEXT,
+            blok_name TEXT,
+            expected_qty INTEGER,
+            expected_setoran INTEGER,
+            reported_qty INTEGER,
+            actual_setoran INTEGER,
+            selisih_qty INTEGER,
+            selisih_setoran INTEGER,
+            note TEXT,
+            status TEXT DEFAULT 'OPEN',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (report_date, blok_name)
+        )");
         $res = $db->query("SELECT 
                 sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
                 sh.username, sh.profile, sh.profile_snapshot,
@@ -240,6 +262,18 @@ try {
                 $ut = strtoupper((string)($hr['unit_type'] ?? ''));
                 if ($ut === 'WARTEL') $hp_wartel_units = (int)($hr['total_units'] ?? 0);
                 if ($ut === 'KAMTIB') $hp_kamtib_units = (int)($hr['total_units'] ?? 0);
+            }
+
+            $stmtAudit = $db->prepare("SELECT * FROM audit_rekap_manual WHERE report_date = :d ORDER BY blok_name");
+            $stmtAudit->execute([':d' => $filter_date]);
+            $audit_rows = $stmtAudit->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($audit_rows as $ar) {
+                $audit_total_expected_qty += (int)($ar['expected_qty'] ?? 0);
+                $audit_total_reported_qty += (int)($ar['reported_qty'] ?? 0);
+                $audit_total_expected_setoran += (int)($ar['expected_setoran'] ?? 0);
+                $audit_total_actual_setoran += (int)($ar['actual_setoran'] ?? 0);
+                $audit_total_selisih_qty += (int)($ar['selisih_qty'] ?? 0);
+                $audit_total_selisih_setoran += (int)($ar['selisih_setoran'] ?? 0);
             }
         }
     }

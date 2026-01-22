@@ -20,6 +20,15 @@ $hp_rusak_units = 0;
 $hp_spam_units = 0;
 $hp_wartel_units = 0;
 $hp_kamtib_units = 0;
+$audit_rows = [];
+$audit_error = '';
+$audit_redirect = '';
+$audit_total_expected_qty = 0;
+$audit_total_reported_qty = 0;
+$audit_total_expected_setoran = 0;
+$audit_total_actual_setoran = 0;
+$audit_total_selisih_qty = 0;
+$audit_total_selisih_setoran = 0;
 
 // Filter periode
 $req_show = $_GET['show'] ?? 'harian';
@@ -173,6 +182,21 @@ if (file_exists($dbFile)) {
             UNIQUE(report_date, blok_name, unit_type)
         )");
         try { $db->exec("ALTER TABLE phone_block_daily ADD COLUMN unit_type TEXT"); } catch (Exception $e) {}
+        $db->exec("CREATE TABLE IF NOT EXISTS audit_rekap_manual (
+            report_date TEXT,
+            blok_name TEXT,
+            expected_qty INTEGER,
+            expected_setoran INTEGER,
+            reported_qty INTEGER,
+            actual_setoran INTEGER,
+            selisih_qty INTEGER,
+            selisih_setoran INTEGER,
+            note TEXT,
+            status TEXT DEFAULT 'OPEN',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (report_date, blok_name)
+        )");
         $res = $db->query("SELECT 
                 sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
                 sh.username, sh.profile, sh.profile_snapshot,
@@ -385,8 +409,26 @@ if (isset($db) && $db instanceof PDO && isset($_GET['hp_delete'])) {
     }
 }
 
-if (!empty($hp_redirect) && headers_sent()) {
-    echo '<script>window.location.replace(' . json_encode($hp_redirect) . ');</script>';
+// Hapus audit manual rekap (harian)
+if (isset($db) && $db instanceof PDO && isset($_GET['audit_delete'])) {
+    $del_date = trim($_GET['audit_date'] ?? '');
+    $del_blok = strtoupper(trim($_GET['audit_blok'] ?? ''));
+    if ($del_date !== '' && $del_blok !== '') {
+        try {
+            $stmt = $db->prepare("DELETE FROM audit_rekap_manual WHERE report_date = :d AND UPPER(blok_name) = :b");
+            $stmt->execute([':d' => $del_date, ':b' => $del_blok]);
+        } catch (Exception $e) {}
+        $audit_redirect = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+        if (!headers_sent()) {
+            header('Location: ' . $audit_redirect);
+            exit;
+        }
+    }
+}
+
+if ((!empty($hp_redirect) || !empty($audit_redirect)) && headers_sent()) {
+    $redir = $audit_redirect ?: $hp_redirect;
+    echo '<script>window.location.replace(' . json_encode($redir) . ');</script>';
     exit;
 }
 
@@ -628,6 +670,94 @@ ksort($by_block, SORT_NATURAL | SORT_FLAG_CASE);
 ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
 $total_qty_laku = count($unique_laku_users);
 
+// Simpan audit manual rekap harian (qty + uang)
+if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
+    if (isset($_POST['audit_submit'])) {
+        $audit_is_ajax = isset($_POST['ajax']) && $_POST['ajax'] === '1';
+        $audit_blok_raw = trim($_POST['audit_blok'] ?? '');
+        $audit_date = trim($_POST['audit_date'] ?? '');
+        $audit_blok = normalize_block_name($audit_blok_raw);
+        $audit_qty = (int)($_POST['audit_qty'] ?? 0);
+        $audit_setoran = (int)($_POST['audit_setoran'] ?? 0);
+        $audit_note = trim($_POST['audit_note'] ?? '');
+        $audit_status = strtoupper(trim($_POST['audit_status'] ?? 'OPEN'));
+        if ($audit_status !== 'DONE') $audit_status = 'OPEN';
+
+        if ($audit_blok_raw === '' || $audit_date === '') {
+            $audit_error = 'Blok dan tanggal wajib diisi.';
+        } else {
+            $expected_qty = (int)($by_block[$audit_blok]['qty'] ?? 0);
+            $expected_setoran = (int)($by_block[$audit_blok]['net'] ?? 0);
+            $selisih_qty = $audit_qty - $expected_qty;
+            $selisih_setoran = $audit_setoran - $expected_setoran;
+            try {
+                $stmt = $db->prepare("INSERT INTO audit_rekap_manual
+                    (report_date, blok_name, expected_qty, expected_setoran, reported_qty, actual_setoran, selisih_qty, selisih_setoran, note, status, updated_at)
+                    VALUES (:d, :b, :eq, :es, :rq, :as, :sq, :ss, :n, :st, CURRENT_TIMESTAMP)
+                    ON CONFLICT(report_date, blok_name) DO UPDATE SET
+                        expected_qty=excluded.expected_qty,
+                        expected_setoran=excluded.expected_setoran,
+                        reported_qty=excluded.reported_qty,
+                        actual_setoran=excluded.actual_setoran,
+                        selisih_qty=excluded.selisih_qty,
+                        selisih_setoran=excluded.selisih_setoran,
+                        note=excluded.note,
+                        status=excluded.status,
+                        updated_at=CURRENT_TIMESTAMP
+                ");
+                $stmt->execute([
+                    ':d' => $audit_date,
+                    ':b' => $audit_blok,
+                    ':eq' => $expected_qty,
+                    ':es' => $expected_setoran,
+                    ':rq' => $audit_qty,
+                    ':as' => $audit_setoran,
+                    ':sq' => $selisih_qty,
+                    ':ss' => $selisih_setoran,
+                    ':n' => $audit_note,
+                    ':st' => $audit_status
+                ]);
+            } catch (Exception $e) {
+                $audit_error = 'Gagal menyimpan audit.';
+            }
+        }
+
+        if (empty($audit_error)) {
+            $audit_redirect = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+            if (!headers_sent() && !$audit_is_ajax) {
+                header('Location: ' . $audit_redirect);
+                exit;
+            }
+        }
+
+        if ($audit_is_ajax) {
+            header('Content-Type: application/json');
+            if (!empty($audit_error)) {
+                echo json_encode(['ok' => false, 'message' => $audit_error]);
+            } else {
+                echo json_encode(['ok' => true, 'redirect' => $audit_redirect]);
+            }
+            exit;
+        }
+    }
+
+    try {
+        $stmtAudit = $db->prepare("SELECT * FROM audit_rekap_manual WHERE report_date = :d ORDER BY blok_name");
+        $stmtAudit->execute([':d' => $filter_date]);
+        $audit_rows = $stmtAudit->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($audit_rows as $ar) {
+            $audit_total_expected_qty += (int)($ar['expected_qty'] ?? 0);
+            $audit_total_reported_qty += (int)($ar['reported_qty'] ?? 0);
+            $audit_total_expected_setoran += (int)($ar['expected_setoran'] ?? 0);
+            $audit_total_actual_setoran += (int)($ar['actual_setoran'] ?? 0);
+            $audit_total_selisih_qty += (int)($ar['selisih_qty'] ?? 0);
+            $audit_total_selisih_setoran += (int)($ar['selisih_setoran'] ?? 0);
+        }
+    } catch (Exception $e) {
+        $audit_rows = [];
+    }
+}
+
 if (empty($list) && $last_available_date !== '' && $filter_date !== $last_available_date) {
     $no_sales_message = 'Tidak ada data untuk tanggal ini. Data terakhir: ' . $last_available_date . '.';
 }
@@ -707,6 +837,9 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
     .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .btn-act { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 4px; border: none; color: #fff; background: #3a4046; cursor: pointer; }
     .btn-act-danger { background: #e74c3c; }
+    .audit-neg { color:#ff6b6b; font-weight:700; }
+    .audit-pos { color:#8bd0ff; font-weight:700; }
+    .audit-zero { color:var(--txt-muted); }
 </style>
 <?php endif; ?>
 
@@ -803,6 +936,75 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             <div class="modal-footer">
                 <button type="button" class="btn-print" onclick="closeHpModal()">Batal</button>
                 <button type="submit" id="hpSubmitBtn" name="hp_submit" class="btn-print" disabled>Simpan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="auditModal" class="modal-backdrop" onclick="if(event.target===this){closeAuditModal();}">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title">Audit Manual Rekap Harian</div>
+            <button type="button" class="modal-close" onclick="closeAuditModal()">&times;</button>
+        </div>
+        <form id="auditForm" method="post" action="report/selling.php">
+            <?php if ($session_id !== ''): ?>
+                <input type="hidden" name="session" value="<?= htmlspecialchars($session_id); ?>">
+            <?php endif; ?>
+            <input type="hidden" name="show" value="<?= htmlspecialchars($req_show); ?>">
+            <input type="hidden" name="date" value="<?= htmlspecialchars($filter_date); ?>">
+            <input type="hidden" name="report" value="selling">
+            <input type="hidden" name="ajax" value="1">
+            <div class="modal-body">
+                <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;">
+                    <div style="font-size:22px;color:#4ea8ff;line-height:1;"><i class="fa fa-edit"></i></div>
+                    <div style="font-size:12px;color:#9aa0a6;line-height:1.4;">
+                        Isi laporan manual untuk membandingkan dengan rekap sistem (qty dan uang). Selisih akan dihitung otomatis.
+                    </div>
+                </div>
+                <div class="form-grid-2">
+                    <div>
+                        <label>Blok</label>
+                        <select class="form-input" name="audit_blok" required>
+                            <option value="" disabled selected>Pilih Blok</option>
+                            <?php foreach (range('A','F') as $b): ?>
+                                <option value="BLOK-<?= $b ?>">BLOK-<?= $b ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Tanggal</label>
+                        <input class="form-input" type="date" name="audit_date" value="<?= htmlspecialchars($filter_date); ?>" required>
+                    </div>
+                </div>
+                <div class="form-grid-2" style="margin-top:10px;">
+                    <div>
+                        <label>Qty Manual</label>
+                        <input class="form-input" type="number" name="audit_qty" min="0" value="0" required>
+                    </div>
+                    <div>
+                        <label>Setoran Manual (Rp)</label>
+                        <input class="form-input" type="number" name="audit_setoran" min="0" value="0" required>
+                    </div>
+                </div>
+                <div class="form-grid-2" style="margin-top:10px;">
+                    <div>
+                        <label>Status</label>
+                        <select class="form-input" name="audit_status">
+                            <option value="OPEN">OPEN</option>
+                            <option value="DONE">DONE</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Catatan</label>
+                        <input class="form-input" name="audit_note" placeholder="contoh: Blok F kurang bayar 1 voucher">
+                    </div>
+                </div>
+                <div id="auditClientError" style="display:none;margin-top:8px;color:#fca5a5;font-size:12px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-print" onclick="closeAuditModal()">Batal</button>
+                <button type="submit" id="auditSubmitBtn" name="audit_submit" class="btn-print">Simpan</button>
             </div>
         </form>
     </div>
@@ -1322,6 +1524,94 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
 
         openHpModal();
     };
+
+    function openAuditModal(){
+        var modal = document.getElementById('auditModal');
+        if (modal) modal.style.display = 'flex';
+        window.sellingPauseReload = true;
+    }
+
+    function closeAuditModal(){
+        var modal = document.getElementById('auditModal');
+        if (modal) modal.style.display = 'none';
+        window.sellingPauseReload = false;
+    }
+
+    window.openAuditEdit = function(btn){
+        var form = document.getElementById('auditForm');
+        if (!form || !btn) return;
+        var blok = btn.getAttribute('data-blok') || '';
+        var date = btn.getAttribute('data-date') || '';
+        var qty = btn.getAttribute('data-qty') || '0';
+        var setoran = btn.getAttribute('data-setoran') || '0';
+        var note = btn.getAttribute('data-note') || '';
+        var status = btn.getAttribute('data-status') || 'OPEN';
+        var blokSelect = form.querySelector('select[name="audit_blok"]');
+        if (blokSelect) blokSelect.value = blok;
+        var dateInput = form.querySelector('input[name="audit_date"]');
+        if (dateInput) dateInput.value = date;
+        var qtyInput = form.querySelector('input[name="audit_qty"]');
+        if (qtyInput) qtyInput.value = qty;
+        var setInput = form.querySelector('input[name="audit_setoran"]');
+        if (setInput) setInput.value = setoran;
+        var noteInput = form.querySelector('input[name="audit_note"]');
+        if (noteInput) noteInput.value = note;
+        var stSelect = form.querySelector('select[name="audit_status"]');
+        if (stSelect) stSelect.value = status;
+        openAuditModal();
+    };
+
+    function closeDeleteAuditModal(){
+        var modal = document.getElementById('audit-delete-modal');
+        if (modal) modal.style.display = 'none';
+    }
+    function confirmDeleteAuditModal(){
+        if (!window.auditDeleteUrl) return closeDeleteAuditModal();
+        window.location.href = window.auditDeleteUrl;
+    }
+    function openDeleteAuditModal(url, blok, date){
+        window.auditDeleteUrl = url || '';
+        var modal = document.getElementById('audit-delete-modal');
+        var text = document.getElementById('audit-delete-text');
+        var dateText = formatDateDMY(date || '');
+        if (text) text.textContent = 'Hapus audit Blok ' + (blok || '-') + ' tanggal ' + (dateText || '-') + '?';
+        if (modal) modal.style.display = 'flex';
+    }
+
+    (function(){
+        var form = document.getElementById('auditForm');
+        var btn = document.getElementById('auditSubmitBtn');
+        var err = document.getElementById('auditClientError');
+        if (!form) return;
+        form.addEventListener('submit', function(e){
+            e.preventDefault();
+            if (btn && btn.disabled) return;
+            window.sellingPauseReload = true;
+            var fd = new FormData(form);
+            fd.append('ajax', '1');
+            fetch(form.action, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function(r){ return r.text(); })
+                .then(function(text){
+                    var data = null;
+                    try { data = JSON.parse(text); } catch (e) {}
+                    if (data && data.ok && data.redirect) {
+                        window.location.replace(data.redirect);
+                        return;
+                    }
+                    var msg = (data && data.message) ? data.message : 'Respon tidak valid dari server.';
+                    if (err) {
+                        err.textContent = msg;
+                        err.style.display = 'block';
+                    }
+                })
+                .catch(function(){
+                    if (err) {
+                        err.textContent = 'Gagal mengirim data. Coba lagi.';
+                        err.style.display = 'block';
+                    }
+                });
+        });
+    })();
 </script>
 <?php endif; ?>
 
@@ -1364,6 +1654,9 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 <button class="btn-print" style="opacity:.6;cursor:not-allowed;" disabled>Print Rincian</button>
             <?php endif; ?>
             <button class="btn-print" type="button" onclick="openHpModal()">Input HP Blok</button>
+            <?php if ($req_show === 'harian'): ?>
+                <button class="btn-print" type="button" onclick="openAuditModal()">Audit Manual</button>
+            <?php endif; ?>
             <button class="btn-print" type="button" id="btn-settlement" onclick="manualSettlement()" <?= (!empty($settled_today) ? 'disabled style="opacity:.6;cursor:not-allowed;"' : '') ?>>Settlement</button>
             <?php if (!empty($settled_today)): ?>
                 <button class="btn-print" type="button" id="btn-settlement-reset" onclick="openSettlementResetModal()" style="background:#ff9800;color:#fff;">Reset</button>
@@ -1381,6 +1674,10 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             </div>
         <?php endif; ?>
         <div class="summary-grid">
+            <?php
+                $audit_qty_cls = $audit_total_selisih_qty > 0 ? 'audit-pos' : ($audit_total_selisih_qty < 0 ? 'audit-neg' : 'audit-zero');
+                $audit_setoran_cls = $audit_total_selisih_setoran > 0 ? 'audit-pos' : ($audit_total_selisih_setoran < 0 ? 'audit-neg' : 'audit-zero');
+            ?>
             <div class="summary-card">
                 <div class="summary-title">Pendapatan Kotor</div>
                 <div class="summary-value"><?= $cur ?> <?= number_format($total_gross,0,',','.') ?></div>
@@ -1404,6 +1701,14 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 <div class="summary-title">Total Voucher Laku</div>
                 <div class="summary-value"><?= number_format($total_qty_laku,0,',','.') ?></div>
                 <div style="font-size:12px;color:var(--txt-muted);margin-top: 1px;">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bandwidth: <?= htmlspecialchars(format_bytes_short($total_bandwidth)) ?></div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Audit Manual</div>
+                <div class="summary-value" style="font-size:1.1rem;">
+                    Qty Δ <span class="<?= $audit_qty_cls; ?>"><?= number_format($audit_total_selisih_qty,0,',','.') ?></span>
+                    | Rp Δ <span class="<?= $audit_setoran_cls; ?>"><?= number_format($audit_total_selisih_setoran,0,',','.') ?></span>
+                </div>
+                <div style="font-size:12px;color:var(--txt-muted);margin-top:6px;">Sistem: <?= number_format($audit_total_expected_qty,0,',','.') ?> / <?= $cur ?> <?= number_format($audit_total_expected_setoran,0,',','.') ?> | Manual: <?= number_format($audit_total_reported_qty,0,',','.') ?> / <?= $cur ?> <?= number_format($audit_total_actual_setoran,0,',','.') ?></div>
             </div>
             <div class="summary-card">
                 <div class="summary-title">Pendapatan Bersih</div>
@@ -1569,6 +1874,85 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             <div>Aktif: <b><?= number_format($hp_active_units,0,',','.') ?></b></div>
             <div>Rusak: <b><?= number_format($hp_rusak_units,0,',','.') ?></b></div>
             <div>Spam: <b><?= number_format($hp_spam_units,0,',','.') ?></b></div>
+        </div>
+    </div>
+</div>
+
+<?php if (!empty($audit_error)): ?>
+    <div class="card-solid mb-3">
+        <div class="card-body" style="padding:12px;color:#fca5a5;">
+            <?= htmlspecialchars($audit_error); ?>
+        </div>
+    </div>
+<?php endif; ?>
+
+<div class="card-solid mb-3">
+    <div class="card-header-solid">
+        <h3 class="m-0"><i class="fa fa-check-square-o mr-2"></i> Audit Manual Rekap (Harian)</h3>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table-dark-solid text-nowrap">
+                <thead>
+                    <tr>
+                        <th>Blok</th>
+                        <th class="text-center">Qty Sistem</th>
+                        <th class="text-center">Qty Manual</th>
+                        <th class="text-center">Selisih Qty</th>
+                        <th class="text-right">Setoran Sistem</th>
+                        <th class="text-right">Setoran Manual</th>
+                        <th class="text-right">Selisih Setoran</th>
+                        <th>Status</th>
+                        <th class="text-right">Catatan</th>
+                        <th class="text-right">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($audit_rows)): ?>
+                        <tr><td colspan="10" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
+                    <?php else: foreach ($audit_rows as $ar): ?>
+                        <?php
+                            $sq = (int)($ar['selisih_qty'] ?? 0);
+                            $ss = (int)($ar['selisih_setoran'] ?? 0);
+                            $cls_q = $sq > 0 ? 'audit-pos' : ($sq < 0 ? 'audit-neg' : 'audit-zero');
+                            $cls_s = $ss > 0 ? 'audit-pos' : ($ss < 0 ? 'audit-neg' : 'audit-zero');
+                        ?>
+                        <tr>
+                            <td><?= htmlspecialchars($ar['blok_name'] ?? '-') ?></td>
+                            <td class="text-center"><?= number_format((int)($ar['expected_qty'] ?? 0),0,',','.') ?></td>
+                            <td class="text-center"><?= number_format((int)($ar['reported_qty'] ?? 0),0,',','.') ?></td>
+                            <td class="text-center"><span class="<?= $cls_q; ?>"><?= number_format($sq,0,',','.') ?></span></td>
+                            <td class="text-right"><?= number_format((int)($ar['expected_setoran'] ?? 0),0,',','.') ?></td>
+                            <td class="text-right"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
+                            <td class="text-right"><span class="<?= $cls_s; ?>"><?= number_format($ss,0,',','.') ?></span></td>
+                            <td><?= htmlspecialchars(strtoupper((string)($ar['status'] ?? 'OPEN'))) ?></td>
+                            <td class="text-right"><small><?= htmlspecialchars($ar['note'] ?? '') ?></small></td>
+                            <td class="text-right">
+                                <button type="button" class="btn-act" onclick="openAuditEdit(this)"
+                                    data-blok="<?= htmlspecialchars($ar['blok_name'] ?? ''); ?>"
+                                    data-date="<?= htmlspecialchars($ar['report_date'] ?? $filter_date); ?>"
+                                    data-qty="<?= (int)($ar['reported_qty'] ?? 0); ?>"
+                                    data-setoran="<?= (int)($ar['actual_setoran'] ?? 0); ?>"
+                                    data-note="<?= htmlspecialchars($ar['note'] ?? ''); ?>"
+                                    data-status="<?= htmlspecialchars(strtoupper((string)($ar['status'] ?? 'OPEN'))); ?>">
+                                    <i class="fa fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn-act btn-act-danger" onclick="openDeleteAuditModal('<?= './?report=selling' . $session_qs . '&show=' . $req_show . '&date=' . urlencode($filter_date) . '&audit_delete=1&audit_blok=' . urlencode($ar['blok_name'] ?? '') . '&audit_date=' . urlencode($filter_date); ?>','<?= htmlspecialchars($ar['blok_name'] ?? '-'); ?>','<?= htmlspecialchars($filter_date); ?>')">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    <?php endforeach; endif; ?>
+                </tbody>
+            </table>
+        </div>
+        <div class="hp-total-bar">
+            <div>Sistem Qty: <b><?= number_format($audit_total_expected_qty,0,',','.') ?></b></div>
+            <div>Manual Qty: <b><?= number_format($audit_total_reported_qty,0,',','.') ?></b></div>
+            <div>Selisih Qty: <b><?= number_format($audit_total_selisih_qty,0,',','.') ?></b></div>
+            <div>Sistem Rp: <b><?= number_format($audit_total_expected_setoran,0,',','.') ?></b></div>
+            <div>Manual Rp: <b><?= number_format($audit_total_actual_setoran,0,',','.') ?></b></div>
+            <div>Selisih Rp: <b><?= number_format($audit_total_selisih_setoran,0,',','.') ?></b></div>
         </div>
     </div>
 </div>
@@ -1739,6 +2123,25 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
 </div>
 <?php endif; ?>
 
+<?php if (!$is_ajax): ?>
+<div id="audit-delete-modal" class="modal-backdrop" onclick="if(event.target===this){closeDeleteAuditModal();}">
+    <div class="modal-card" style="width:440px;">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fa fa-exclamation-triangle" style="color:#ff9800;margin-right:6px;"></i> Konfirmasi Hapus</div>
+            <button type="button" onclick="closeDeleteAuditModal()" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="audit-delete-text" style="text-align:left;line-height:1.6;">Hapus audit ini?</div>
+            <div class="modal-note">Tindakan ini hanya menghapus catatan audit manual untuk blok dan tanggal tersebut.</div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" onclick="closeDeleteAuditModal()" class="btn-print btn-default-dark">Batal</button>
+            <button type="button" onclick="confirmDeleteAuditModal()" class="btn-print" style="background:#ff9800;color:#fff;">Ya, Hapus</button>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <?php if ($is_ajax) { echo ob_get_clean(); exit; } ?>
 
 <?php if (!$is_ajax): ?>
@@ -1749,6 +2152,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         if (window.sellingPauseReload) return;
         var modal = document.getElementById('hpModal');
         if (modal && modal.style.display === 'flex') return;
+        var auditModal = document.getElementById('auditModal');
+        if (auditModal && auditModal.style.display === 'flex') return;
         var current = new URL(window.location.href);
         var url = new URL('report/aload_selling.php', window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/'));
         current.searchParams.forEach(function(v, k){
