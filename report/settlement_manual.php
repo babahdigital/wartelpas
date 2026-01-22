@@ -260,22 +260,7 @@ try {
         ]);
         $sid = $script[0]['.id'] ?? '';
         if ($sid !== '') {
-            $schedName = 'SETTLE_MANUAL_' . str_replace('-', '', $date) . '_' . date('His');
-            $existing = $API->comm('/system/scheduler/print', [
-                '?name' => $schedName,
-                '.proplist' => '.id'
-            ]);
-            if (is_array($existing) && isset($existing[0]['.id'])) {
-                $API->comm('/system/scheduler/remove', ['.id' => $existing[0]['.id']]);
-            }
-            $onEvent = '/system script run name=' . $scriptName . '; /system scheduler remove [find name="' . $schedName . '"]';
-            $API->comm('/system/scheduler/add', [
-                'name' => $schedName,
-                'start-time' => 'now',
-                'interval' => '1d',
-                'disabled' => 'no',
-                'on-event' => $onEvent
-            ]);
+            $API->comm('/system/script/run', ['.id' => $sid]);
             $ok = true;
         } else {
             $message = 'Script CuciGudangManual tidak ditemukan.';
