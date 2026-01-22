@@ -105,7 +105,8 @@
         # REALTIME REPORT (GET, pastikan data ikut)
         :local payload [:url-encode $logComment];
         :local url ($baseUrl . "?session=" . $session . "&key=" . $key . "&data=" . $payload);
-        /tool fetch url=$url keep-result=no;
+        :log info ("LIVE_INGEST_URL=" . $url);
+        :do { /tool fetch url=$url keep-result=no; } on-error={ :log warning "LIVE_INGEST fetch gagal"; }
 
         # SET COMMENT BARU (DENGAN BLOK) - TANPA MENUMPUK
         :if ([:len $userId] > 0) do={
