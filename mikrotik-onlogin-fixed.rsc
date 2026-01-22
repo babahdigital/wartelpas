@@ -19,6 +19,10 @@
     :local date [/system clock get date];
     :local time [/system clock get time];
     :local mac $"mac-address";
+    :local profile "";
+    :if ([:len $userId] > 0) do={
+        :set profile [/ip hotspot user get $userId profile];
+    }
     
     # EKSTRAK BLOK DARI COMMENT LAMA (SEBELUM DIGANTI)
     :local blokInfo "";
@@ -99,7 +103,22 @@
         }
         
         # SAVE KE DATABASE LOG (Format untuk PHP parsing)
-        :local logComment "$date-|-$time-|-$user-|-5000-|-$address-|-$mac-|-1d-|-10Menit-|-$blokInfo";
+        :local price "5000";
+        :local validity "1d";
+        :local profileLabel "10Menit";
+        :if ($profile = "30Menit") do={
+            :set price "20000";
+            :set profileLabel "30Menit";
+        }
+        :local logComment ($date . "-|-")
+        :set logComment ($logComment . $time . "-|-")
+        :set logComment ($logComment . $user . "-|-")
+        :set logComment ($logComment . $price . "-|-")
+        :set logComment ($logComment . $address . "-|-")
+        :set logComment ($logComment . $mac . "-|-")
+        :set logComment ($logComment . $validity . "-|-")
+        :set logComment ($logComment . $profileLabel . "-|-")
+        :set logComment ($logComment . $blokInfo)
         /system script add name=$logComment owner="$month$year" source="$date" comment="mikhmon";
 
         # REALTIME REPORT (GET, pastikan data ikut)
