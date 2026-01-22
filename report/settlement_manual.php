@@ -294,26 +294,14 @@ try {
         }
 
         if ($sid !== '') {
-            $schedName = 'SETTLE_MANUAL_' . str_replace('-', '', $date) . '_' . date('His');
-            $existing = $API->comm('/system/scheduler/print', [
-                '?name' => $schedName,
-                '.proplist' => '.id'
-            ]);
-            if (is_array($existing) && isset($existing[0]['.id'])) {
-                $API->comm('/system/scheduler/remove', ['.id' => $existing[0]['.id']]);
-            }
             $scriptNameEsc = addslashes($scriptName);
-            $onEvent = ':log info "SETTLE: MANUAL: Mulai"; /system script run name="' . $scriptNameEsc . '"; /system scheduler remove [find name="' . $schedName . '"]';
-            $API->comm('/system/scheduler/add', [
-                'name' => $schedName,
-                'start-time' => 'now',
-                'interval' => '1d',
-                'disabled' => 'no',
-                'on-event' => $onEvent
+            $API->comm('/log/info', ['message' => 'SETTLE: MANUAL: Mulai']);
+            $API->comm('/system/script/run', [
+                'name' => $scriptNameEsc
             ]);
             $ok = true;
         } else {
-            $message = 'Script Cuci Gudang tidak ditemukan. Pastikan ada script bernama CuciGudangManual atau mengandung "CuciGudang".';
+            $message = 'Script Cuci Gudang tidak ditemukan. Pastikan ada script bernama CuciGudang atau CuciGudangManual.';
         }
         $API->disconnect();
     } else {
