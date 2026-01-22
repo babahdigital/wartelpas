@@ -248,11 +248,18 @@ if (file_exists($dbFile)) {
         .card-solid { box-shadow: none; border: 1px solid #ddd; }
         .card-header-solid { background: #f5f5f5; color: #111; }
         .summary-card { background: #fff; border: 1px solid #ddd; }
-        .table-dark-solid th { background: #f0f0f0; color: #111; }
-        .table-dark-solid td { color: #111; }
+        .table-dark-solid th { background: #f0f0f0; color: #111; padding: 6px; font-size: 11px; }
+        .table-dark-solid td { color: #111; padding: 6px; font-size: 11px; }
         .btn-solid { display: none; }
         .toolbar { display: none; }
-        .section-title { page-break-after: avoid; }
+        .section-title { page-break-after: avoid; margin-top: 10px; }
+        .summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+        .summary-card { padding: 8px; }
+        .summary-title { font-size: 10px; }
+        .summary-value { font-size: 14px; }
+        .table-dark-solid { border-collapse: collapse; }
+        .table-dark-solid th, .table-dark-solid td { border: 1px solid #ddd; }
+        tr { page-break-inside: avoid; }
     }
 </style>
 
