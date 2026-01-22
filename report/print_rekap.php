@@ -633,7 +633,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             <table class="rekap-table" style="margin-top:12px;">
                 <thead>
                     <tr>
-                        <th colspan="11">Audit Manual Rekap Harian</th>
+                        <th colspan="16">Audit Manual Rekap Harian</th>
                     </tr>
                     <tr>
                         <th>Blok</th>
@@ -670,43 +670,54 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                     <?php foreach ($audit_rows as $ar): ?>
                         <?php
                             $evidence = [];
-                            $profile10_html = '';
-                            $profile30_html = '';
+                            $profile10 = ['up' => [], 'byte' => [], 'login' => [], 'total' => []];
+                            $profile30 = ['up' => [], 'byte' => [], 'login' => [], 'total' => []];
                             if (!empty($ar['user_evidence'])) {
                                 $evidence = json_decode((string)$ar['user_evidence'], true);
                                 if (is_array($evidence)) {
-                                    $lines10 = [];
-                                    $lines30 = [];
                                     if (!empty($evidence['users']) && is_array($evidence['users'])) {
                                         foreach ($evidence['users'] as $uname => $ud) {
                                             $cnt = isset($ud['events']) && is_array($ud['events']) ? count($ud['events']) : 0;
                                             $upt = trim((string)($ud['last_uptime'] ?? ''));
                                             $lb = format_bytes_short((int)($ud['last_bytes'] ?? 0));
+                                            $price_val = (int)($ud['price'] ?? 0);
                                             $upt = $upt !== '' ? $upt : '-';
-                                            $line = (string)$uname . ' | Uptime: ' . $upt . ' | Bytes: ' . $lb . ' | Login: ' . $cnt . 'x';
                                             $kind = (string)($ud['profile_kind'] ?? '10');
-                                            if ($kind === '30') $lines30[] = $line; else $lines10[] = $line;
+                                            $bucket = ($kind === '30') ? $profile30 : $profile10;
+                                            $bucket['up'][] = (string)$uname . ': ' . $upt;
+                                            $bucket['byte'][] = (string)$uname . ': ' . $lb;
+                                            $bucket['login'][] = (string)$uname . ': ' . $cnt . 'x';
+                                            $bucket['total'][] = (string)$uname . ': ' . number_format($price_val,0,',','.');
+                                            if ($kind === '30') {
+                                                $profile30 = $bucket;
+                                            } else {
+                                                $profile10 = $bucket;
+                                            }
                                         }
                                     } else {
                                         $cnt = isset($evidence['events']) && is_array($evidence['events']) ? count($evidence['events']) : 0;
                                         $upt = trim((string)($evidence['last_uptime'] ?? ''));
                                         $lb = format_bytes_short((int)($evidence['last_bytes'] ?? 0));
+                                        $price_val = (int)($evidence['price'] ?? 0);
                                         $upt = $upt !== '' ? $upt : '-';
-                                        $line = 'Uptime: ' . $upt . ' | Bytes: ' . $lb . ' | Login: ' . $cnt . 'x';
-                                        $lines10[] = $line;
-                                    }
-                                    if (!empty($lines10)) {
-                                        $profile10_html = implode('<br>', array_map('htmlspecialchars', $lines10));
-                                    }
-                                    if (!empty($lines30)) {
-                                        $profile30_html = implode('<br>', array_map('htmlspecialchars', $lines30));
+                                        $profile10['up'][] = 'Uptime: ' . $upt;
+                                        $profile10['byte'][] = 'Bytes: ' . $lb;
+                                        $profile10['login'][] = 'Login: ' . $cnt . 'x';
+                                        $profile10['total'][] = 'Total: ' . number_format($price_val,0,',','.');
                                     }
                                 }
                             }
+                            $p10_up = !empty($profile10['up']) ? implode('<br>', array_map('htmlspecialchars', $profile10['up'])) : '-';
+                            $p10_bt = !empty($profile10['byte']) ? implode('<br>', array_map('htmlspecialchars', $profile10['byte'])) : '-';
+                            $p10_lg = !empty($profile10['login']) ? implode('<br>', array_map('htmlspecialchars', $profile10['login'])) : '-';
+                            $p10_tt = !empty($profile10['total']) ? implode('<br>', array_map('htmlspecialchars', $profile10['total'])) : '-';
+                            $p30_up = !empty($profile30['up']) ? implode('<br>', array_map('htmlspecialchars', $profile30['up'])) : '-';
+                            $p30_bt = !empty($profile30['byte']) ? implode('<br>', array_map('htmlspecialchars', $profile30['byte'])) : '-';
+                            $p30_lg = !empty($profile30['login']) ? implode('<br>', array_map('htmlspecialchars', $profile30['login'])) : '-';
+                            $p30_tt = !empty($profile30['total']) ? implode('<br>', array_map('htmlspecialchars', $profile30['total'])) : '-';
                         ?>
                         <tr>
                             <td><?= htmlspecialchars($ar['blok_name'] ?? '-') ?></td>
-                            <td><?= htmlspecialchars($ar['audit_username'] ?? '-') ?></td>
                             <td style="text-align:center;"><?= number_format((int)($ar['expected_qty'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:center;"><?= number_format((int)($ar['reported_qty'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:center;"><?= number_format((int)($ar['selisih_qty'] ?? 0),0,',','.') ?></td>
@@ -714,19 +725,30 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             <td style="text-align:right;"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)($ar['selisih_setoran'] ?? 0),0,',','.') ?></td>
                             <td><?= htmlspecialchars($ar['note'] ?? '') ?></td>
-                            <td><?= $profile10_html !== '' ? $profile10_html : '-' ?></td>
-                            <td><?= $profile30_html !== '' ? $profile30_html : '-' ?></td>
+                            <td><?= $p10_up ?></td>
+                            <td><?= $p10_bt ?></td>
+                            <td><?= $p10_lg ?></td>
+                            <td><?= $p10_tt ?></td>
+                            <td><?= $p30_up ?></td>
+                            <td><?= $p30_bt ?></td>
+                            <td><?= $p30_lg ?></td>
+                            <td><?= $p30_tt ?></td>
                         </tr>
                     <?php endforeach; ?>
                     <tr>
                         <td style="text-align:right;"><b>Total</b></td>
-                        <td></td>
                         <td style="text-align:center;"><b><?= number_format($audit_total_expected_qty,0,',','.') ?></b></td>
                         <td style="text-align:center;"><b><?= number_format($audit_total_reported_qty,0,',','.') ?></b></td>
                         <td style="text-align:center;"><b><?= number_format($audit_total_selisih_qty,0,',','.') ?></b></td>
                         <td style="text-align:right;"><b><?= number_format($audit_total_expected_setoran,0,',','.') ?></b></td>
                         <td style="text-align:right;"><b><?= number_format($audit_total_actual_setoran,0,',','.') ?></b></td>
                         <td style="text-align:right;"><b><?= number_format($audit_total_selisih_setoran,0,',','.') ?></b></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                         <td></td>
                         <td></td>
                         <td></td>
