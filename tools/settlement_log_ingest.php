@@ -11,9 +11,41 @@ if (!is_dir($logDir)) {
     @mkdir($logDir, 0755, true);
 }
 $debugLog = $logDir . '/settlement_ingest_debug.log';
+$archiveDir = $logDir . '/settlement_archive';
+if (!is_dir($archiveDir)) {
+    @mkdir($archiveDir, 0755, true);
+}
+$keepDays = 14;
+$archiveKeepDays = 60;
+$debugMaxBytes = 1024 * 1024; // 1MB
 function append_debug_log($file, $message) {
     $line = date('Y-m-d H:i:s') . "\t" . $message . "\n";
     @file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
+}
+
+function prune_settlement_logs($logDir, $archiveDir, $keepDays, $archiveKeepDays) {
+    $now = time();
+    $cutoff = $now - ($keepDays * 86400);
+    $files = glob($logDir . '/settlement_*_????-??-??.log');
+    if (is_array($files)) {
+        foreach ($files as $file) {
+            $base = basename($file);
+            if (preg_match('/_(\d{4}-\d{2}-\d{2})\.log$/', $base, $m)) {
+                $ts = strtotime($m[1]);
+                if ($ts !== false && $ts < $cutoff) {
+                    @rename($file, $archiveDir . '/' . $base);
+                }
+            }
+        }
+    }
+    $archiveFiles = glob($archiveDir . '/settlement_*.log');
+    if (is_array($archiveFiles)) {
+        foreach ($archiveFiles as $file) {
+            if (@filemtime($file) < ($now - ($archiveKeepDays * 86400))) {
+                @unlink($file);
+            }
+        }
+    }
 }
 
 $key = $_GET['key'] ?? '';
@@ -99,5 +131,12 @@ $logFile = $logDir . '/settlement_' . $safe_session . '_' . $safe_date . '.log';
 $line = $time . "\t" . $topic . "\t" . $msg . "\n";
 @file_put_contents($logFile, $line, FILE_APPEND | LOCK_EX);
 append_debug_log($debugLog, 'ok ip=' . ($_SERVER['REMOTE_ADDR'] ?? '-') . ' session=' . $session . ' file=' . basename($logFile));
+
+if (is_file($debugLog) && filesize($debugLog) > $debugMaxBytes) {
+    $rotated = $archiveDir . '/settlement_ingest_debug_' . date('Ymd_His') . '.log';
+    @rename($debugLog, $rotated);
+}
+
+prune_settlement_logs($logDir, $archiveDir, $keepDays, $archiveKeepDays);
 
 echo json_encode(['ok' => true]);
