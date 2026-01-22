@@ -347,9 +347,6 @@ foreach ($rows as $r) {
         continue;
     }
     $block = normalize_block_name($r['blok_name'] ?? '', $comment);
-    if ($req_show === 'harian' && !empty($valid_blocks) && !isset($valid_blocks[$block])) {
-        continue;
-    }
     $status = strtolower((string)($r['status'] ?? ''));
     $lh_status = strtolower((string)($r['last_status'] ?? ''));
     $profile = $r['profile_snapshot'] ?? ($r['profile'] ?? '-');
