@@ -899,7 +899,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                     logBox.innerHTML = '<span class="cursor-blink"></span>';
                 }
                 enqueueSettlementLogs([
-                    { time: '', topic: 'system,info', type: 'info', message: 'Menunggu koneksi ke MikroTik dan log settlement...' }
+                    { time: '', topic: 'system,info', type: 'info', message: 'Sabar, sedang mengambil log settlement...' }
                 ]);
                 var params = new URLSearchParams();
                 params.set('session', '<?= htmlspecialchars($session_id); ?>');
@@ -1687,7 +1687,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
     @keyframes blink { 0%{opacity:0;} 50%{opacity:1;} 100%{opacity:0;} }
 </style>
 <div id="settlement-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:10050;">
-    <div style="background:#1f1f1f;color:#e5e5e5;border:1px solid #444;border-radius:8px;width:640px;max-width:94vw;box-shadow:0 10px 30px rgba(0,0,0,0.6);overflow:hidden;">
+    <div style="background:#1f1f1f;color:#e5e5e5;border:1px solid #444;border-radius:8px;width:720px;max-width:94vw;box-shadow:0 10px 30px rgba(0,0,0,0.6);overflow:hidden;">
         <div style="padding:14px 18px;border-bottom:1px solid #333;font-weight:600;display:flex;justify-content:space-between;align-items:center;">
             <span><i class="fa fa-cog fa-spin" style="margin-right:6px;"></i> Settlement Manual</span>
             <span id="settlement-status" style="font-size:12px;color:#9aa0a6;">Menunggu konfirmasi</span>
