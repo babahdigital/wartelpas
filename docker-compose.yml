@@ -15,6 +15,7 @@ services:
       - ./mikhmon_session:/var/www/html/mikhmon_session
       - ./db_data:/var/www/html/db_data
       - ./img:/var/www/html/img
+      - ./css:/var/www/html/css
 
       # ==========================================
       # 2. KONFIGURASI SERVER & PHP
