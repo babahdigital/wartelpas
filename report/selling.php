@@ -685,9 +685,6 @@ foreach ($rows as $r) {
         $is_laku = !in_array($status, ['rusak', 'retur', 'invalid'], true);
 
         if (!$use_summary) {
-            if (!empty($valid_blocks) && !isset($valid_blocks[$blok])) {
-                continue;
-            }
             if ($is_laku && $username !== '') {
                 $unique_laku_users[$username] = true;
             }
