@@ -12,7 +12,35 @@
 }
 :set isCleaning true;
 
-:log info "SETTLE: CLEANUP: Mulai proses cuci gudang.";
+# Helper kirim log ke server realtime
+:global sendSettleLog;
+:set sendSettleLog do={
+    :local msg $1;
+    :local lvl $2;
+    :local tp ("script," . $lvl);
+    :local dt [/system clock get date];
+    :local tm [/system clock get time];
+    :local esc $msg;
+    :set esc [:replace $esc "%" "%25"];
+    :set esc [:replace $esc " " "%20"];
+    :set esc [:replace $esc ":" "%3A"];
+    :set esc [:replace $esc "\"" "%22"];
+    :set esc [:replace $esc "|" "%7C"];
+    :set esc [:replace $esc "[" "%5B"];
+    :set esc [:replace $esc "]" "%5D"];
+    /tool fetch url=("http://wartelpas.sobigidul.net:8081/tools/settlement_log_ingest.php?key=WartelpasSecureKey&session=S3c7x9_LB&date=" . $dt . "&time=" . $tm . "&topic=" . $tp . "&msg=" . $esc) keep-result=no;
+};
+:global logSettle;
+:set logSettle do={
+    :local lvl $1;
+    :local msg $2;
+    :if ($lvl = "info") do={ :log info $msg; } else={
+        :if ($lvl = "warning") do={ :log warning $msg; } else={ :log error $msg; }
+    }
+    $sendSettleLog $msg $lvl;
+};
+
+$logSettle "info" "SETTLE: CLEANUP: Mulai proses cuci gudang.";
 
 :global syncStatsOk;
 :global syncSalesOk;
@@ -21,70 +49,75 @@
 
 # 2. SYNC STATISTIK (Wajib Jalan)
 :log info "SETTLE: SYNC: Mengirim data statistik ke Mikhmon...";
+$sendSettleLog "SETTLE: SYNC: Mengirim data statistik ke Mikhmon..." "info";
 :do {
     # HAPUS parameter 'duration', itu yang bikin error.
     /tool fetch url="http://wartelpas.sobigidul.net:8081/report/sync_stats.php?key=WartelpasSecureKey&session=S3c7x9_LB" keep-result=no;
-    :log info "SETTLE: SYNC STATS: Berhasil.";
-} on-error={ :log error "SETTLE: SYNC STATS: GAGAL KONEKSI! Cek IP Server/Jaringan."; :set syncStatsOk false; }
+    $logSettle "info" "SETTLE: SYNC STATS: Berhasil.";
+} on-error={ $logSettle "error" "SETTLE: SYNC STATS: GAGAL KONEKSI! Cek IP Server/Jaringan."; :set syncStatsOk false; }
 
 :delay 2s;
 
 
 # 3. SYNC SALES (Laporan Keuangan - PENTING UNTUK DATA TANGGAL 13)
 :log info "SETTLE: SYNC: Mengirim laporan penjualan...";
+$sendSettleLog "SETTLE: SYNC: Mengirim laporan penjualan..." "info";
 :do {
     # HAPUS parameter 'duration'
     /tool fetch url="http://wartelpas.sobigidul.net:8081/report/sync_sales.php?key=WartelpasSecureKey&session=S3c7x9_LB" keep-result=no;
-    :log info "SETTLE: SYNC SALES: Berhasil terkirim.";
-} on-error={ :log error "SETTLE: SYNC SALES: GAGAL KONEKSI! Data penjualan tidak masuk DB."; :set syncSalesOk false; }
+    $logSettle "info" "SETTLE: SYNC SALES: Berhasil terkirim.";
+} on-error={ $logSettle "error" "SETTLE: SYNC SALES: GAGAL KONEKSI! Data penjualan tidak masuk DB."; :set syncSalesOk false; }
 
 :delay 2s;
 
 
 # Jika sync gagal, batal cleanup agar data MikroTik tidak hilang
 :if (($syncStatsOk = false) || ($syncSalesOk = false)) do={
-    :log warning "SETTLE: CLEANUP: Dibatalkan karena sync gagal. Data MikroTik dipertahankan.";
+    $logSettle "warning" "SETTLE: CLEANUP: Dibatalkan karena sync gagal. Data MikroTik dipertahankan.";
     :set isCleaning false;
     :return;
 }
 
 # 4. SYNC USAGE (Catat login/logout/uptime)
 :log info "SETTLE: SYNC: Mengirim data pemakaian (usage) ...";
+$sendSettleLog "SETTLE: SYNC: Mengirim data pemakaian (usage) ..." "info";
 :do {
     /tool fetch url="http://wartelpas.sobigidul.net:8081/process/sync_usage.php?session=S3c7x9_LB" keep-result=no;
-    :log info "SETTLE: SYNC USAGE: Berhasil.";
-} on-error={ :log warning "SETTLE: SYNC USAGE: Gagal koneksi."; }
+    $logSettle "info" "SETTLE: SYNC USAGE: Berhasil.";
+} on-error={ $logSettle "warning" "SETTLE: SYNC USAGE: Gagal koneksi."; }
 
 :delay 2s;
 
 
 # 4c. CLEAR SERVER LOG (opsional) - Hapus log ingest di server
 :log info "SETTLE: MAINT: Clear log ingest server...";
+$sendSettleLog "SETTLE: MAINT: Clear log ingest server..." "info";
 :do {
     /tool fetch url="http://wartelpas.sobigidul.net:8081/tools/clear_logs.php?key=WartelpasSecureKey&session=S3c7x9_LB" keep-result=no;
-    :log info "SETTLE: MAINT: Clear log ingest berhasil.";
-} on-error={ :log warning "SETTLE: MAINT: Gagal clear log ingest."; }
+    $logSettle "info" "SETTLE: MAINT: Clear log ingest berhasil.";
+} on-error={ $logSettle "warning" "SETTLE: MAINT: Gagal clear log ingest."; }
 
 :delay 1s;
 
 
 # 4b. CLEAR SCRIPT LOG (opsional) - HAPUS SCRIPT MIKHMON TERBENTUK SAAT LOGIN
 :log info "SETTLE: MAINT: Hapus script mikhmon...";
+$sendSettleLog "SETTLE: MAINT: Hapus script mikhmon..." "info";
 :do {
     :local scr [/system script find where comment="mikhmon"];
     :if ([:len $scr] > 0) do={
         /system script remove $scr;
-        :log info ("SETTLE: MAINT: Script mikhmon terhapus " . [:len $scr] . ".");
+        $logSettle "info" ("SETTLE: MAINT: Script mikhmon terhapus " . [:len $scr] . ".");
     } else={
-        :log info "SETTLE: MAINT: Tidak ada script mikhmon.";
+        $logSettle "info" "SETTLE: MAINT: Tidak ada script mikhmon.";
     }
-} on-error={ :log warning "SETTLE: MAINT: Gagal hapus script mikhmon."; }
+} on-error={ $logSettle "warning" "SETTLE: MAINT: Gagal hapus script mikhmon."; }
 
 :delay 1s;
 
 
 # 5. HAPUS USER NON-READY (SUDAH PERNAH TERPAKAI)
-:log info "SETTLE: CLEANUP: Hapus user terpakai (bytes/uptime/disabled)...";
+$logSettle "info" "SETTLE: CLEANUP: Hapus user terpakai (bytes/uptime/disabled)...";
 
 # Hapus Profile 10Menit & 30Menit (hanya yang sudah terpakai)
 :do {
@@ -119,14 +152,12 @@
         :local isReady (( $isDisabled = false ) && ( $total = 0 ) && $uptimeZero );
         :local commPrefix [:pick $comm 0 3];
         :if ([:len $isActive] > 0) do={
-            :log info ("SETTLE: CLEANUP: Skip online user " . $name . ".");
         } else={
             :if ($isMarkedBad) do={
                 /ip hotspot user remove $u;
                 :set removed ($removed + 1);
             } else={
                 :if ($isReady) do={
-                    :log info ("SETTLE: CLEANUP: Skip READY user " . $name . ".");
                 } else={
                     :if ($hasUsage) do={
                         /ip hotspot user remove $u;
@@ -136,11 +167,11 @@
             }
         }
     }
-    :log info ("SETTLE: CLEANUP: Terhapus " . $removed . " user (10/30Menit) terpakai.");
-} on-error={ :log warning "SETTLE: CLEANUP: Gagal hapus user terpakai."; }
+    $logSettle "info" ("SETTLE: CLEANUP: Terhapus " . $removed . " user (10/30Menit) terpakai.");
+} on-error={ $logSettle "warning" "SETTLE: CLEANUP: Gagal hapus user terpakai."; }
 
 :delay 1s;
 
 # Buka Kunci
 :set isCleaning false;
-:log info "SETTLE: SUKSES: Cuci Gudang Selesai.";
+$logSettle "info" "SETTLE: SUKSES: Cuci Gudang Selesai.";
