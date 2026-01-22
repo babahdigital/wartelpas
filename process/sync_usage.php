@@ -14,6 +14,33 @@ if (!isset($_GET['session'])) {
 $session = $_GET['session'];
 
 include('../include/config.php');
+// Optional IP allowlist (comma-separated)
+$allowlist_raw = getenv('WARTELPAS_SYNC_USAGE_ALLOWLIST');
+if ($allowlist_raw !== false && trim((string)$allowlist_raw) !== '') {
+    $allowed = array_filter(array_map('trim', explode(',', $allowlist_raw)));
+    $remote_ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    if ($remote_ip === '' || !in_array($remote_ip, $allowed, true)) {
+        http_response_code(403);
+        echo "IP not allowed";
+        exit;
+    }
+}
+
+// Optional token: only enforced if configured
+$opt_token = getenv('WARTELPAS_SYNC_USAGE_TOKEN');
+if ($opt_token === false || trim((string)$opt_token) === '') {
+    if (defined('WARTELPAS_SYNC_USAGE_TOKEN')) {
+        $opt_token = WARTELPAS_SYNC_USAGE_TOKEN;
+    } else {
+        $opt_token = '';
+    }
+}
+if ($opt_token !== '' && (!isset($_GET['key']) || $_GET['key'] !== $opt_token)) {
+    http_response_code(403);
+    echo "Invalid token";
+    exit;
+}
+
 if (!isset($data[$session])) {
     http_response_code(403);
     echo "Invalid session";

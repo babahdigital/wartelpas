@@ -13,7 +13,29 @@ if (!is_dir($logDir)) {
 
 @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | hit | ip=" . ($_SERVER['REMOTE_ADDR'] ?? '-') . " | qs=" . ($_SERVER['QUERY_STRING'] ?? '') . "\n", FILE_APPEND);
 
-$secret_token = "WartelpasSecureKey";
+$root_dir = dirname(__DIR__);
+require_once($root_dir . '/include/config.php');
+
+// Optional IP allowlist (comma-separated)
+$allowlist_raw = getenv('WARTELPAS_INGEST_ALLOWLIST');
+if ($allowlist_raw !== false && trim((string)$allowlist_raw) !== '') {
+    $allowed = array_filter(array_map('trim', explode(',', $allowlist_raw)));
+    $remote_ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    if ($remote_ip === '' || !in_array($remote_ip, $allowed, true)) {
+        @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | reject | reason=ip_deny | ip=" . $remote_ip . " | qs=" . ($_SERVER['QUERY_STRING'] ?? '') . "\n", FILE_APPEND);
+        http_response_code(403);
+        die("Error: IP tidak diizinkan.");
+    }
+}
+
+$secret_token = getenv('WARTELPAS_INGEST_TOKEN');
+if ($secret_token === false || trim((string)$secret_token) === '') {
+    if (defined('WARTELPAS_INGEST_TOKEN')) {
+        $secret_token = WARTELPAS_INGEST_TOKEN;
+    } else {
+        $secret_token = "WartelpasSecureKey";
+    }
+}
 if (!isset($_GET['key']) || $_GET['key'] !== $secret_token) {
     @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | reject | reason=bad_key | qs=" . ($_SERVER['QUERY_STRING'] ?? '') . "\n", FILE_APPEND);
     http_response_code(403);
@@ -21,7 +43,7 @@ if (!isset($_GET['key']) || $_GET['key'] !== $secret_token) {
 }
 
 $session = $_GET['session'] ?? '';
-if ($session === '') {
+if ($session === '' || !isset($data[$session])) {
     @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | reject | reason=missing_session | qs=" . ($_SERVER['QUERY_STRING'] ?? '') . "\n", FILE_APPEND);
     http_response_code(403);
     die("Error: Session tidak valid.");
