@@ -1399,8 +1399,7 @@ foreach($all_users as $u) {
     }
     $bytes_hist = (int)($hist['last_bytes'] ?? 0);
     if ($is_active) {
-      $candidate = $bytes_hist + $bytes_active;
-      $bytes = max($bytes_total, $candidate, $bytes_hist);
+      $bytes = max($bytes_total, $bytes_active, $bytes_hist);
     } else {
       $bytes = max($bytes_total, $bytes_hist);
     }
