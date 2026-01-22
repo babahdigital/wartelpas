@@ -1,16 +1,5 @@
 
-        /* --- DARK MODE REFINED STYLES --- */
-        body {
-            background-color: #252525; /* Abu-abu gelap lembut */
-            color: #eeeeee;
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0;
-        }
-
+ 
         .login-container {
             width: 100%;
             max-width: 450px; /* Lebar card proporsional */
