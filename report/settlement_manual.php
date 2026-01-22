@@ -209,7 +209,7 @@ try {
     $infoMessage = '';
     if (empty($logs)) {
         if ($sawFetch) {
-            $infoMessage = 'Log settlement belum muncul. Pastikan script Cuci Gudang sudah terpasang dan scheduler berjalan.';
+            $infoMessage = 'Log settlement belum muncul, mohon bersabar.';
         } else {
             $infoMessage = $message !== '' ? $message : 'Menunggu log dari MikroTik...';
         }
