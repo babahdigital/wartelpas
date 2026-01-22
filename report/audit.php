@@ -383,7 +383,7 @@ if (file_exists($dbFile)) {
                             <td><?= htmlspecialchars(format_bytes_short($r['last_bytes'] ?? 0)) ?></td>
                             <td><?= htmlspecialchars($r['last_uptime'] ?? '-') ?></td>
                             <td><?= strtoupper(htmlspecialchars($r['last_status'] ?? '-')) ?></td>
-                            <td><?= htmlspecialchars($r['last_login_real'] ?? '-') ?></td>
+                            <td><?= htmlspecialchars(format_date_dmy(substr((string)($r['last_login_real'] ?? ''), 0, 10))) ?> <?= htmlspecialchars(substr((string)($r['last_login_real'] ?? ''), 11, 8)) ?></td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
