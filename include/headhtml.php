@@ -40,7 +40,7 @@ error_reporting(0);
 		<script src="js/jquery.min.js"></script>
 		<!-- pace -->
 		<link href="css/pace.<?= $theme; ?>.css" rel="stylesheet" />
-		<link href="css/login.<?= $theme; ?>.css" rel="stylesheet" />
+		<link href="css/login.css" rel="stylesheet" />
 		<script src="js/pace.min.js"></script>
 
 		
