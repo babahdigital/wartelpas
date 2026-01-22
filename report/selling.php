@@ -1070,8 +1070,8 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                     </div>
                 </div>
                 <div style="margin-top:10px;">
-                    <label>Username (wajib, harus valid)</label>
-                    <input class="form-input" type="text" name="audit_username" placeholder="contoh: sdftyp" required>
+                    <label>Username (opsional, jika diisi harus valid)</label>
+                    <input class="form-input" type="text" name="audit_username" placeholder="contoh: sdftyp">
                 </div>
                 <div class="form-grid-2" style="margin-top:10px;">
                     <div>
@@ -1093,7 +1093,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                     </div>
                     <div>
                         <label>Catatan</label>
-                        <input class="form-input" name="audit_note" placeholder="contoh: Blok F kurang bayar 1 voucher">
+                        <textarea class="form-input" name="audit_note" rows="3" placeholder="contoh: Blok F kurang bayar 1 voucher"></textarea>
                     </div>
                 </div>
                 <div id="auditClientError" style="display:none;margin-top:8px;color:#fca5a5;font-size:12px;"></div>
