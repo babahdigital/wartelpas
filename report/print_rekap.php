@@ -640,7 +640,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                     </tr>
                     <tr>
                         <th>Blok</th>
-                        <th>User</th>
+                        <th>User(s)</th>
                         <th style="width:80px;">Qty Sistem</th>
                         <th style="width:80px;">Qty Manual</th>
                         <th style="width:90px;">Selisih Qty</th>
@@ -654,20 +654,41 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                     <?php foreach ($audit_rows as $ar): ?>
                         <?php
                             $evidence = [];
-                            $evidence_summary = '';
+                            $evidence_summary_html = '';
                             if (!empty($ar['user_evidence'])) {
                                 $evidence = json_decode((string)$ar['user_evidence'], true);
                                 if (is_array($evidence)) {
-                                    $cnt = isset($evidence['events']) && is_array($evidence['events']) ? count($evidence['events']) : 0;
-                                    $fl = $evidence['first_login_real'] ?? '';
-                                    $ll = $evidence['last_login_real'] ?? '';
-                                    $lb = isset($evidence['last_bytes']) ? format_bytes_short((int)$evidence['last_bytes']) : '';
-                                    $parts = [];
-                                    if ($cnt > 0) $parts[] = 'Login: ' . $cnt . 'x';
-                                    if ($fl !== '') $parts[] = 'First: ' . format_date_ddmmyyyy($fl) . ' ' . substr($fl, 11, 8);
-                                    if ($ll !== '') $parts[] = 'Last: ' . format_date_ddmmyyyy($ll) . ' ' . substr($ll, 11, 8);
-                                    if ($lb !== '') $parts[] = 'Bytes: ' . $lb;
-                                    $evidence_summary = implode(' | ', $parts);
+                                    $lines = [];
+                                    if (!empty($evidence['users']) && is_array($evidence['users'])) {
+                                        foreach ($evidence['users'] as $uname => $ud) {
+                                            $cnt = isset($ud['events']) && is_array($ud['events']) ? count($ud['events']) : 0;
+                                            $fl = $ud['first_login_real'] ?? '';
+                                            $ll = $ud['last_login_real'] ?? '';
+                                            $lb = isset($ud['last_bytes']) ? format_bytes_short((int)$ud['last_bytes']) : '';
+                                            $parts = [];
+                                            if ($cnt > 0) $parts[] = 'Login: ' . $cnt . 'x';
+                                            if ($fl !== '') $parts[] = 'First: ' . format_date_ddmmyyyy($fl) . ' ' . substr($fl, 11, 8);
+                                            if ($ll !== '') $parts[] = 'Last: ' . format_date_ddmmyyyy($ll) . ' ' . substr($ll, 11, 8);
+                                            if ($lb !== '' && $lb !== '0 B') $parts[] = 'Bytes: ' . $lb;
+                                            $line = (string)$uname;
+                                            if (!empty($parts)) $line .= ': ' . implode(' | ', $parts);
+                                            $lines[] = $line;
+                                        }
+                                    } else {
+                                        $cnt = isset($evidence['events']) && is_array($evidence['events']) ? count($evidence['events']) : 0;
+                                        $fl = $evidence['first_login_real'] ?? '';
+                                        $ll = $evidence['last_login_real'] ?? '';
+                                        $lb = isset($evidence['last_bytes']) ? format_bytes_short((int)$evidence['last_bytes']) : '';
+                                        $parts = [];
+                                        if ($cnt > 0) $parts[] = 'Login: ' . $cnt . 'x';
+                                        if ($fl !== '') $parts[] = 'First: ' . format_date_ddmmyyyy($fl) . ' ' . substr($fl, 11, 8);
+                                        if ($ll !== '') $parts[] = 'Last: ' . format_date_ddmmyyyy($ll) . ' ' . substr($ll, 11, 8);
+                                        if ($lb !== '' && $lb !== '0 B') $parts[] = 'Bytes: ' . $lb;
+                                        if (!empty($parts)) $lines[] = implode(' | ', $parts);
+                                    }
+                                    if (!empty($lines)) {
+                                        $evidence_summary_html = implode('<br>', array_map('htmlspecialchars', $lines));
+                                    }
                                 }
                             }
                         ?>
@@ -680,7 +701,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             <td style="text-align:right;"><?= number_format((int)($ar['expected_setoran'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)($ar['selisih_setoran'] ?? 0),0,',','.') ?></td>
-                            <td><?= htmlspecialchars($ar['note'] ?? '') ?><?= $evidence_summary !== '' ? '<br>' . htmlspecialchars($evidence_summary) : '' ?></td>
+                            <td><?= htmlspecialchars($ar['note'] ?? '') ?><?= $evidence_summary_html !== '' ? '<br>' . $evidence_summary_html : '' ?></td>
                         </tr>
                     <?php endforeach; ?>
                     <tr>
