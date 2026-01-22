@@ -636,34 +636,56 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             <table class="rekap-table" style="margin-top:12px;">
                 <thead>
                     <tr>
-                        <th colspan="8">Audit Manual Rekap Harian</th>
+                        <th colspan="9">Audit Manual Rekap Harian</th>
                     </tr>
                     <tr>
                         <th>Blok</th>
+                        <th>User</th>
                         <th style="width:80px;">Qty Sistem</th>
                         <th style="width:80px;">Qty Manual</th>
                         <th style="width:90px;">Selisih Qty</th>
                         <th style="width:110px;">Setoran Sistem</th>
                         <th style="width:110px;">Setoran Manual</th>
                         <th style="width:110px;">Selisih Setoran</th>
-                        <th>Catatan</th>
+                        <th>Catatan/Bukti</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($audit_rows as $ar): ?>
+                        <?php
+                            $evidence = [];
+                            $evidence_summary = '';
+                            if (!empty($ar['user_evidence'])) {
+                                $evidence = json_decode((string)$ar['user_evidence'], true);
+                                if (is_array($evidence)) {
+                                    $cnt = isset($evidence['events']) && is_array($evidence['events']) ? count($evidence['events']) : 0;
+                                    $fl = $evidence['first_login_real'] ?? '';
+                                    $ll = $evidence['last_login_real'] ?? '';
+                                    $lb = isset($evidence['last_bytes']) ? format_bytes_short((int)$evidence['last_bytes']) : '';
+                                    $parts = [];
+                                    if ($cnt > 0) $parts[] = 'Login: ' . $cnt . 'x';
+                                    if ($fl !== '') $parts[] = 'First: ' . format_date_ddmmyyyy($fl) . ' ' . substr($fl, 11, 8);
+                                    if ($ll !== '') $parts[] = 'Last: ' . format_date_ddmmyyyy($ll) . ' ' . substr($ll, 11, 8);
+                                    if ($lb !== '') $parts[] = 'Bytes: ' . $lb;
+                                    $evidence_summary = implode(' | ', $parts);
+                                }
+                            }
+                        ?>
                         <tr>
                             <td><?= htmlspecialchars($ar['blok_name'] ?? '-') ?></td>
+                            <td><?= htmlspecialchars($ar['audit_username'] ?? '-') ?></td>
                             <td style="text-align:center;"><?= number_format((int)($ar['expected_qty'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:center;"><?= number_format((int)($ar['reported_qty'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:center;"><?= number_format((int)($ar['selisih_qty'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)($ar['expected_setoran'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)($ar['selisih_setoran'] ?? 0),0,',','.') ?></td>
-                            <td><?= htmlspecialchars($ar['note'] ?? '') ?></td>
+                            <td><?= htmlspecialchars($ar['note'] ?? '') ?><?= $evidence_summary !== '' ? '<br>' . htmlspecialchars($evidence_summary) : '' ?></td>
                         </tr>
                     <?php endforeach; ?>
                     <tr>
                         <td style="text-align:right;"><b>Total</b></td>
+                        <td></td>
                         <td style="text-align:center;"><b><?= number_format($audit_total_expected_qty,0,',','.') ?></b></td>
                         <td style="text-align:center;"><b><?= number_format($audit_total_reported_qty,0,',','.') ?></b></td>
                         <td style="text-align:center;"><b><?= number_format($audit_total_selisih_qty,0,',','.') ?></b></td>
