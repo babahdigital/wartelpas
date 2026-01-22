@@ -218,9 +218,21 @@ if (file_exists($dbFile)) {
             ORDER BY sale_datetime DESC, raw_date DESC");
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
 
-        if ($req_show === 'harian' && empty($rows) && table_exists($db, 'login_history')) {
+        if ($req_show === 'harian' && table_exists($db, 'login_history')) {
             try {
-                $stmtFallback = $db->prepare("SELECT
+                $salesCount = 0;
+                if (table_exists($db, 'sales_history')) {
+                    $stmtCnt = $db->prepare("SELECT COUNT(*) FROM sales_history WHERE sale_date = :d");
+                    $stmtCnt->execute([':d' => $filter_date]);
+                    $salesCount += (int)$stmtCnt->fetchColumn();
+                }
+                if (table_exists($db, 'live_sales')) {
+                    $stmtCnt2 = $db->prepare("SELECT COUNT(*) FROM live_sales WHERE sale_date = :d");
+                    $stmtCnt2->execute([':d' => $filter_date]);
+                    $salesCount += (int)$stmtCnt2->fetchColumn();
+                }
+                if ($salesCount === 0) {
+                    $stmtFallback = $db->prepare("SELECT
                         '' AS raw_date,
                         '' AS raw_time,
                         COALESCE(NULLIF(substr(login_time_real,1,10),''), login_date) AS sale_date,
@@ -249,8 +261,9 @@ if (file_exists($dbFile)) {
                       AND (substr(login_time_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR login_date = :d)
                       AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'
                     ORDER BY sale_datetime DESC");
-                $stmtFallback->execute([':d' => $filter_date]);
-                $rows = $stmtFallback->fetchAll(PDO::FETCH_ASSOC);
+                    $stmtFallback->execute([':d' => $filter_date]);
+                    $rows = $stmtFallback->fetchAll(PDO::FETCH_ASSOC);
+                }
             } catch (Exception $e) {
                 $rows = [];
             }
