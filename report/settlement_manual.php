@@ -341,12 +341,16 @@ try {
         }
 
         if ($sid !== '') {
-            $scriptNameEsc = addslashes($scriptName);
             $API->comm('/log/info', ['message' => 'SETTLE: MANUAL: Mulai']);
-            $API->comm('/system/script/run', [
-                'name' => $scriptNameEsc
-            ]);
-            $ok = true;
+            try {
+                $API->comm('/system/script/run', [
+                    '.id' => $sid
+                ]);
+                $ok = true;
+            } catch (Exception $e) {
+                $message = 'Gagal menjalankan script Cuci Gudang.';
+                $ok = false;
+            }
         } else {
             $message = 'Script Cuci Gudang tidak ditemukan. Pastikan ada script bernama CuciGudang atau CuciGudangManual.';
         }
