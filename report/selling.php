@@ -218,6 +218,44 @@ if (file_exists($dbFile)) {
             ORDER BY sale_datetime DESC, raw_date DESC");
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
 
+        if ($req_show === 'harian' && empty($rows) && table_exists($db, 'login_history')) {
+            try {
+                $stmtFallback = $db->prepare("SELECT
+                        '' AS raw_date,
+                        '' AS raw_time,
+                        COALESCE(NULLIF(substr(login_time_real,1,10),''), login_date) AS sale_date,
+                        COALESCE(NULLIF(substr(login_time_real,12,8),''), login_time) AS sale_time,
+                        COALESCE(NULLIF(login_time_real,''), NULLIF(last_login_real,'')) AS sale_datetime,
+                        username,
+                        COALESCE(NULLIF(validity,''), '-') AS profile,
+                        COALESCE(NULLIF(validity,''), '-') AS profile_snapshot,
+                        CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price,
+                        CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price_snapshot,
+                        CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS sprice_snapshot,
+                        validity,
+                        raw_comment AS comment,
+                        blok_name,
+                        '' AS status,
+                        0 AS is_rusak,
+                        0 AS is_retur,
+                        0 AS is_invalid,
+                        1 AS qty,
+                        '' AS full_raw_data,
+                        last_status,
+                        last_bytes,
+                        first_login_real
+                    FROM login_history
+                    WHERE username != ''
+                      AND (substr(login_time_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR login_date = :d)
+                      AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'
+                    ORDER BY sale_datetime DESC");
+                $stmtFallback->execute([':d' => $filter_date]);
+                $rows = $stmtFallback->fetchAll(PDO::FETCH_ASSOC);
+            } catch (Exception $e) {
+                $rows = [];
+            }
+        }
+
         if (!$date_param_provided && $req_show === 'harian' && !empty($rows)) {
             foreach ($rows as $r) {
                 $cand = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
@@ -695,6 +733,14 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         }
         if (table_exists($db, 'live_sales')) {
             $stmtOpt = $db->prepare("SELECT DISTINCT username FROM live_sales WHERE sale_date = :d AND username != ''");
+            $stmtOpt->execute([':d' => $filter_date]);
+            foreach ($stmtOpt->fetchAll(PDO::FETCH_COLUMN, 0) as $u) {
+                $u = trim((string)$u);
+                if ($u !== '') $user_set[$u] = true;
+            }
+        }
+        if (table_exists($db, 'login_history')) {
+            $stmtOpt = $db->prepare("SELECT DISTINCT username FROM login_history WHERE username != '' AND (substr(login_time_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR login_date = :d) AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'");
             $stmtOpt->execute([':d' => $filter_date]);
             foreach ($stmtOpt->fetchAll(PDO::FETCH_COLUMN, 0) as $u) {
                 $u = trim((string)$u);
