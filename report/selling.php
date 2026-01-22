@@ -416,6 +416,7 @@ $rusak_30m = 0;
 $unique_laku_users = [];
 
 $seen_sales = [];
+$seen_user_day = [];
 
 $valid_blocks = [];
 if ($req_show === 'harian' && isset($db) && $db instanceof PDO) {
@@ -504,6 +505,13 @@ foreach ($rows as $r) {
         if (!$match) continue;
 
         $username = $r['username'] ?? '';
+        if ($username !== '' && $sale_date !== '') {
+            $user_day_key = $username . '|' . $sale_date;
+            if (isset($seen_user_day[$user_day_key])) {
+                continue;
+            }
+            $seen_user_day[$user_day_key] = true;
+        }
         $raw_key = trim((string)($r['full_raw_data'] ?? ''));
         $unique_key = '';
         if ($raw_key !== '') {

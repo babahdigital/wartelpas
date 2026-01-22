@@ -263,6 +263,7 @@ $total_net_units = 0;
 $total_bandwidth = 0;
 
 $seen_sales = [];
+$seen_user_day = [];
 $unique_laku_users = [];
 
 foreach ($rows as $r) {
@@ -276,6 +277,11 @@ foreach ($rows as $r) {
     if (!$match) continue;
 
     $username = $r['username'] ?? '';
+    if ($username !== '' && $sale_date !== '') {
+        $user_day_key = $username . '|' . $sale_date;
+        if (isset($seen_user_day[$user_day_key])) continue;
+        $seen_user_day[$user_day_key] = true;
+    }
     $raw_key = trim((string)($r['full_raw_data'] ?? ''));
     $unique_key = '';
     if ($raw_key !== '') {
