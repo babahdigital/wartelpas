@@ -967,6 +967,16 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
 if (empty($list) && $last_available_date !== '' && $filter_date !== $last_available_date) {
     $no_sales_message = 'Tidak ada data untuk tanggal ini. Data terakhir: ' . $last_available_date . '.';
 }
+if (empty($list) && $req_show === 'harian' && isset($db) && $db instanceof PDO && table_exists($db, 'login_history')) {
+    try {
+        $stmtLH = $db->prepare("SELECT COUNT(*) FROM login_history WHERE username != '' AND (substr(login_time_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR login_date = :d) AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'");
+        $stmtLH->execute([':d' => $filter_date]);
+        $lhCount = (int)$stmtLH->fetchColumn();
+        if ($lhCount > 0) {
+            $no_sales_message = 'Data penjualan belum tersinkron. Jalankan sync_sales.php agar transaksi muncul di laporan.';
+        }
+    } catch (Exception $e) {}
+}
 
 $tx_page_size = 50;
 $tx_page = isset($_GET['tx_page']) ? (int)$_GET['tx_page'] : 1;
