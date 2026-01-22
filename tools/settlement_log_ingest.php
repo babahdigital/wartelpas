@@ -81,7 +81,9 @@ $topic = trim((string)$topic);
 if ($topic === '') $topic = 'script,info';
 $msg = trim((string)$msg);
 if ($msg === '') {
-    append_debug_log($debugLog, 'skip=empty_msg ip=' . ($_SERVER['REMOTE_ADDR'] ?? '-') . ' session=' . $session);
+    $query = $_SERVER['QUERY_STRING'] ?? '';
+    $keys = implode(',', array_keys($_GET));
+    append_debug_log($debugLog, 'skip=empty_msg ip=' . ($_SERVER['REMOTE_ADDR'] ?? '-') . ' session=' . $session . ' keys=' . $keys . ' qs=' . $query);
     echo json_encode(['ok' => true, 'message' => 'Empty']);
     exit;
 }
