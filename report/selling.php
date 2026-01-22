@@ -688,63 +688,65 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         $audit_status = strtoupper(trim($_POST['audit_status'] ?? 'OPEN'));
         if ($audit_status !== 'DONE') $audit_status = 'OPEN';
 
-        if ($audit_blok_raw === '' || $audit_date === '' || $audit_user === '') {
-            $audit_error = 'Blok, tanggal, dan username wajib diisi.';
+        if ($audit_blok_raw === '' || $audit_date === '') {
+            $audit_error = 'Blok dan tanggal wajib diisi.';
         } else {
             $user_row = null;
             $user_exists = false;
             $user_has_date = false;
-            if (table_exists($db, 'login_history')) {
-                $stmtU = $db->prepare("SELECT username, blok_name, raw_comment, first_login_real, last_login_real, login_time_real, logout_time_real, last_status, last_bytes, last_uptime, first_ip, first_mac, last_ip, last_mac
-                    FROM login_history WHERE username = :u LIMIT 1");
-                $stmtU->execute([':u' => $audit_user]);
-                $user_row = $stmtU->fetch(PDO::FETCH_ASSOC);
-                if ($user_row) $user_exists = true;
-            }
-            if (!$user_exists && table_exists($db, 'sales_history')) {
-                $stmtU2 = $db->prepare("SELECT username FROM sales_history WHERE username = :u LIMIT 1");
-                $stmtU2->execute([':u' => $audit_user]);
-                if ($stmtU2->fetchColumn()) $user_exists = true;
-            }
-            if (!$user_exists && table_exists($db, 'live_sales')) {
-                $stmtU3 = $db->prepare("SELECT username FROM live_sales WHERE username = :u LIMIT 1");
-                $stmtU3->execute([':u' => $audit_user]);
-                if ($stmtU3->fetchColumn()) $user_exists = true;
-            }
-            if (!$user_exists) {
-                $audit_error = 'Username tidak ditemukan di sistem.';
-            } else {
-                if (table_exists($db, 'login_events')) {
-                    $stmtEv = $db->prepare("SELECT COUNT(*) FROM login_events WHERE username = :u AND date_key = :d");
-                    $stmtEv->execute([':u' => $audit_user, ':d' => $audit_date]);
-                    $user_has_date = ((int)$stmtEv->fetchColumn() > 0);
+            $blok_from_user = '';
+            if ($audit_user !== '') {
+                if (table_exists($db, 'login_history')) {
+                    $stmtU = $db->prepare("SELECT username, blok_name, raw_comment, first_login_real, last_login_real, login_time_real, logout_time_real, last_status, last_bytes, last_uptime, first_ip, first_mac, last_ip, last_mac
+                        FROM login_history WHERE username = :u LIMIT 1");
+                    $stmtU->execute([':u' => $audit_user]);
+                    $user_row = $stmtU->fetch(PDO::FETCH_ASSOC);
+                    if ($user_row) $user_exists = true;
                 }
-                if (!$user_has_date && $user_row) {
-                    $d1 = substr((string)($user_row['first_login_real'] ?? ''), 0, 10);
-                    $d2 = substr((string)($user_row['last_login_real'] ?? ''), 0, 10);
-                    $d3 = substr((string)($user_row['login_time_real'] ?? ''), 0, 10);
-                    $d4 = substr((string)($user_row['logout_time_real'] ?? ''), 0, 10);
-                    if (in_array($audit_date, [$d1, $d2, $d3, $d4], true)) $user_has_date = true;
+                if (!$user_exists && table_exists($db, 'sales_history')) {
+                    $stmtU2 = $db->prepare("SELECT username FROM sales_history WHERE username = :u LIMIT 1");
+                    $stmtU2->execute([':u' => $audit_user]);
+                    if ($stmtU2->fetchColumn()) $user_exists = true;
                 }
-                if (!$user_has_date && table_exists($db, 'sales_history')) {
-                    $stmtU4 = $db->prepare("SELECT 1 FROM sales_history WHERE username = :u AND sale_date = :d LIMIT 1");
-                    $stmtU4->execute([':u' => $audit_user, ':d' => $audit_date]);
-                    if ($stmtU4->fetchColumn()) $user_has_date = true;
+                if (!$user_exists && table_exists($db, 'live_sales')) {
+                    $stmtU3 = $db->prepare("SELECT username FROM live_sales WHERE username = :u LIMIT 1");
+                    $stmtU3->execute([':u' => $audit_user]);
+                    if ($stmtU3->fetchColumn()) $user_exists = true;
                 }
-                if (!$user_has_date && table_exists($db, 'live_sales')) {
-                    $stmtU5 = $db->prepare("SELECT 1 FROM live_sales WHERE username = :u AND sale_date = :d LIMIT 1");
-                    $stmtU5->execute([':u' => $audit_user, ':d' => $audit_date]);
-                    if ($stmtU5->fetchColumn()) $user_has_date = true;
-                }
-                if (!$user_has_date) {
-                    $audit_error = 'Username tidak ditemukan pada tanggal tersebut.';
+                if (!$user_exists) {
+                    $audit_error = 'Username tidak ditemukan di sistem.';
                 } else {
-                    $blok_from_user = '';
-                    if ($user_row) {
-                        $blok_from_user = normalize_block_name($user_row['blok_name'] ?? '', $user_row['raw_comment'] ?? '');
+                    if (table_exists($db, 'login_events')) {
+                        $stmtEv = $db->prepare("SELECT COUNT(*) FROM login_events WHERE username = :u AND date_key = :d");
+                        $stmtEv->execute([':u' => $audit_user, ':d' => $audit_date]);
+                        $user_has_date = ((int)$stmtEv->fetchColumn() > 0);
                     }
-                    if ($blok_from_user !== '' && $blok_from_user !== $audit_blok) {
-                        $audit_error = 'Username tidak sesuai dengan blok yang dipilih.';
+                    if (!$user_has_date && $user_row) {
+                        $d1 = substr((string)($user_row['first_login_real'] ?? ''), 0, 10);
+                        $d2 = substr((string)($user_row['last_login_real'] ?? ''), 0, 10);
+                        $d3 = substr((string)($user_row['login_time_real'] ?? ''), 0, 10);
+                        $d4 = substr((string)($user_row['logout_time_real'] ?? ''), 0, 10);
+                        if (in_array($audit_date, [$d1, $d2, $d3, $d4], true)) $user_has_date = true;
+                    }
+                    if (!$user_has_date && table_exists($db, 'sales_history')) {
+                        $stmtU4 = $db->prepare("SELECT 1 FROM sales_history WHERE username = :u AND sale_date = :d LIMIT 1");
+                        $stmtU4->execute([':u' => $audit_user, ':d' => $audit_date]);
+                        if ($stmtU4->fetchColumn()) $user_has_date = true;
+                    }
+                    if (!$user_has_date && table_exists($db, 'live_sales')) {
+                        $stmtU5 = $db->prepare("SELECT 1 FROM live_sales WHERE username = :u AND sale_date = :d LIMIT 1");
+                        $stmtU5->execute([':u' => $audit_user, ':d' => $audit_date]);
+                        if ($stmtU5->fetchColumn()) $user_has_date = true;
+                    }
+                    if (!$user_has_date) {
+                        $audit_error = 'Username tidak ditemukan pada tanggal tersebut.';
+                    } else {
+                        if ($user_row) {
+                            $blok_from_user = normalize_block_name($user_row['blok_name'] ?? '', $user_row['raw_comment'] ?? '');
+                        }
+                        if ($blok_from_user !== '' && $blok_from_user !== $audit_blok) {
+                            $audit_error = 'Username tidak sesuai dengan blok yang dipilih.';
+                        }
                     }
                 }
             }
@@ -769,7 +771,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     $evidence['last_ip'] = $user_row['last_ip'] ?? '';
                     $evidence['last_mac'] = $user_row['last_mac'] ?? '';
                 }
-                if (table_exists($db, 'login_events')) {
+                if ($audit_user !== '' && table_exists($db, 'login_events')) {
                     $stmtEv2 = $db->prepare("SELECT seq, login_time, logout_time FROM login_events WHERE username = :u AND date_key = :d ORDER BY seq ASC, id ASC");
                     $stmtEv2->execute([':u' => $audit_user, ':d' => $audit_date]);
                     $events = $stmtEv2->fetchAll(PDO::FETCH_ASSOC);
@@ -955,74 +957,74 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             <input type="hidden" name="show" value="<?= htmlspecialchars($req_show); ?>">
             <input type="hidden" name="date" value="<?= htmlspecialchars($filter_date); ?>">
             <div class="modal-body">
-            <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;">
-                <div style="font-size:22px;color:#4caf50;line-height:1;"><i class="fa fa-info-circle"></i></div>
-                <div style="font-size:12px;color:#9aa0a6;line-height:1.4;">
-                    Data harian akan otomatis mengikuti data tanggal terakhir jika belum ada input untuk hari ini.
-                    Edit hanya diperlukan saat ada perubahan atau penambahan.
-                </div>
-            </div>
-            <div class="form-grid-2">
-                <div>
-                    <label>Blok</label>
-                    <select class="form-input" name="blok_name" required>
-                        <option value="" disabled selected>Pilih Blok</option>
-                        <?php foreach (range('A','F') as $b): ?>
-                            <option value="BLOK-<?= $b ?>">BLOK-<?= $b ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div>
-                    <label>Tanggal</label>
-                    <input class="form-input" type="date" name="report_date" value="<?= htmlspecialchars($filter_date); ?>" required>
-                </div>
-            </div>
-            <div class="form-grid-2" style="margin-top:10px;">
-                <div>
-                    <label>Total Unit</label>
-                    <input class="form-input" type="number" name="total_units" min="0" value="0" required>
-                </div>
-                <div>
-                    <label>Rusak</label>
-                    <input class="form-input" type="number" name="rusak_units" min="0" value="0">
-                </div>
-                <div>
-                    <label>Spam</label>
-                    <input class="form-input" type="number" name="spam_units" min="0" value="0">
-                </div>
-            </div>
-            <input type="hidden" name="active_units" value="0">
-            <div style="margin-top:10px;">
-                <label>Distribusi Unit (wajib pilih salah satu)</label>
-                <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-top:6px;">
-                    <label style="display:flex; gap:6px; align-items:center;">
-                        <input type="checkbox" id="chk_wartel" name="unit_wartel" value="1">
-                        <span>WARTEL</span>
-                    </label>
-                    <label style="display:flex; gap:6px; align-items:center;">
-                        <input type="checkbox" id="chk_kamtib" name="unit_kamtib" value="1">
-                        <span>KAMTIB</span>
-                    </label>
-                </div>
-                <div class="form-grid-2" style="margin-top:8px;">
-                    <div id="wartel_wrap" style="display:none;">
-                        <label>Jumlah WARTEL</label>
-                        <input class="form-input" type="number" name="wartel_units" min="0" value="0">
-                    </div>
-                    <div id="kamtib_wrap" style="display:none;">
-                        <label>Jumlah KAMTIB</label>
-                        <input class="form-input" type="number" name="kamtib_units" min="0" value="0">
+                <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;">
+                    <div style="font-size:22px;color:#4caf50;line-height:1;"><i class="fa fa-info-circle"></i></div>
+                    <div style="font-size:12px;color:#9aa0a6;line-height:1.4;">
+                        Data harian akan otomatis mengikuti data tanggal terakhir jika belum ada input untuk hari ini.
+                        Edit hanya diperlukan saat ada perubahan atau penambahan.
                     </div>
                 </div>
-                <div style="font-size:12px;color:var(--txt-muted);margin-top:6px;">
-                    Jika memilih satu unit saja, jumlahnya harus sama dengan Total Unit.
+                <div class="form-grid-2">
+                    <div>
+                        <label>Blok</label>
+                        <select class="form-input" name="blok_name" required>
+                            <option value="" disabled selected>Pilih Blok</option>
+                            <?php foreach (range('A','F') as $b): ?>
+                                <option value="BLOK-<?= $b ?>">BLOK-<?= $b ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Tanggal</label>
+                        <input class="form-input" type="date" name="report_date" value="<?= htmlspecialchars($filter_date); ?>" required>
+                    </div>
                 </div>
-                <div id="hpClientError" style="display:none;margin-top:8px;color:#fca5a5;font-size:12px;"></div>
-            </div>
-            <div style="margin-top:10px;">
-                <label>Catatan</label>
-                <input class="form-input" name="notes" placeholder="opsional">
-            </div>
+                <div class="form-grid-2" style="margin-top:10px;">
+                    <div>
+                        <label>Total Unit</label>
+                        <input class="form-input" type="number" name="total_units" min="0" value="0" required>
+                    </div>
+                    <div>
+                        <label>Rusak</label>
+                        <input class="form-input" type="number" name="rusak_units" min="0" value="0">
+                    </div>
+                    <div>
+                        <label>Spam</label>
+                        <input class="form-input" type="number" name="spam_units" min="0" value="0">
+                    </div>
+                </div>
+                <input type="hidden" name="active_units" value="0">
+                <div style="margin-top:10px;">
+                    <label>Distribusi Unit (wajib pilih salah satu)</label>
+                    <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-top:6px;">
+                        <label style="display:flex; gap:6px; align-items:center;">
+                            <input type="checkbox" id="chk_wartel" name="unit_wartel" value="1">
+                            <span>WARTEL</span>
+                        </label>
+                        <label style="display:flex; gap:6px; align-items:center;">
+                            <input type="checkbox" id="chk_kamtib" name="unit_kamtib" value="1">
+                            <span>KAMTIB</span>
+                        </label>
+                    </div>
+                    <div class="form-grid-2" style="margin-top:8px;">
+                        <div id="wartel_wrap" style="display:none;">
+                            <label>Jumlah WARTEL</label>
+                            <input class="form-input" type="number" name="wartel_units" min="0" value="0">
+                        </div>
+                        <div id="kamtib_wrap" style="display:none;">
+                            <label>Jumlah KAMTIB</label>
+                            <input class="form-input" type="number" name="kamtib_units" min="0" value="0">
+                        </div>
+                    </div>
+                    <div style="font-size:12px;color:var(--txt-muted);margin-top:6px;">
+                        Jika memilih satu unit saja, jumlahnya harus sama dengan Total Unit.
+                    </div>
+                    <div id="hpClientError" style="display:none;margin-top:8px;color:#fca5a5;font-size:12px;"></div>
+                </div>
+                <div style="margin-top:10px;">
+                    <label>Catatan</label>
+                    <input class="form-input" name="notes" placeholder="opsional">
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn-print" onclick="closeHpModal()">Batal</button>
@@ -1070,8 +1072,8 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                     </div>
                 </div>
                 <div style="margin-top:10px;">
-                    <label>Username (opsional, jika diisi harus valid)</label>
-                    <input class="form-input" type="text" name="audit_username" placeholder="contoh: sdftyp">
+                    <label>Username (opsional, pisahkan dengan koma)</label>
+                    <input class="form-input" type="text" name="audit_username" placeholder="contoh: sdftyp, user2">
                 </div>
                 <div class="form-grid-2" style="margin-top:10px;">
                     <div>
