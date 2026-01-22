@@ -7,6 +7,8 @@
 :local key "WartelpasSecureKey";
 :local session "S3c7x9_LB";
 
+:put (",remc,20000,1d,5000,,Enable,");
+
 {
     :local username "$user";
     :local address "$address";
