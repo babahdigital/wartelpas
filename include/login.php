@@ -105,6 +105,10 @@ $_please_login = isset($_please_login) ? $_please_login : 'Silakan Login';
             border-right: 0; 
         }
 
+        .input-group-addon i.fa.fa-user {
+          margin-top: 10px;
+        }
+
         /* Input Field Styling */
         .form-control {
             background-color: #444;
