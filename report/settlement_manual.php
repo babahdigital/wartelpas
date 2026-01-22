@@ -365,7 +365,14 @@ try {
 } catch (Exception $e) {}
 
 if (is_file($logFile)) {
-    @unlink($logFile);
+    $archiveDir = $logDir . '/settlement_archive';
+    if (!is_dir($archiveDir)) {
+        @mkdir($archiveDir, 0755, true);
+    }
+    $archiveName = $archiveDir . '/settlement_' . $safe_session . '_' . $safe_date . '_' . date('Ymd_His') . '.log';
+    if (!@rename($logFile, $archiveName)) {
+        @unlink($logFile);
+    }
 }
 
 if (!headers_sent()) {
