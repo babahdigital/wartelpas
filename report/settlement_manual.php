@@ -350,7 +350,6 @@ $API = new RouterosAPI();
 $API->debug = false;
 $ok = false;
 $message = '';
-$earlyResponded = false;
 
 try {
     $now = date('Y-m-d H:i:s');
@@ -375,16 +374,6 @@ if (is_file($logFile)) {
     }
 }
 
-if (!headers_sent()) {
-    echo json_encode(['ok' => true, 'message' => 'OK']);
-    if (function_exists('fastcgi_finish_request')) {
-        fastcgi_finish_request();
-    } else {
-        @ob_flush();
-        @flush();
-    }
-    $earlyResponded = true;
-}
 ignore_user_abort(true);
 try {
     if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
@@ -406,7 +395,7 @@ try {
                     $nm = (string)($row['name'] ?? '');
                     $src = (string)($row['source'] ?? '');
                     if ($nm === '') continue;
-                    if (preg_match('/cucigudang|cleanwartel/i', $nm) || stripos($src, 'SETTLE: CLEANUP') !== false || stripos($src, 'Cuci Gudang') !== false) {
+                    if (preg_match('/cucigudang|cleanwartel|settle/i', $nm) || stripos($src, 'SETTLE: CLEANUP') !== false || stripos($src, 'Cuci Gudang') !== false) {
                         $scriptName = $nm;
                         $sid = $row['.id'] ?? '';
                         break;
@@ -422,12 +411,13 @@ try {
                     '.id' => $sid
                 ]);
                 $ok = true;
+                $message = 'Script dijalankan: ' . $scriptName;
             } catch (Exception $e) {
                 $message = 'Gagal menjalankan script Cuci Gudang.';
                 $ok = false;
             }
         } else {
-            $message = 'Script Cuci Gudang tidak ditemukan. Pastikan ada script bernama CuciGudang atau CuciGudangManual.';
+            $message = 'Script Cuci Gudang tidak ditemukan. Pastikan ada script bernama CuciGudangManual atau sesuai pola (cucigudang/cleanwartel/settle).';
         }
         $API->disconnect();
     } else {
@@ -449,6 +439,4 @@ try {
     ]);
 } catch (Exception $e) {}
 
-if (!$earlyResponded) {
-    echo json_encode(['ok' => $ok, 'message' => $ok ? 'OK' : ($message ?: 'Gagal')]);
-}
+echo json_encode(['ok' => $ok, 'message' => $ok ? $message : ($message ?: 'Gagal')]);
