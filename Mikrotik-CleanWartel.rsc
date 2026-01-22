@@ -24,7 +24,6 @@
     :set esc [:replace $esc "%" "%25"];
     :set esc [:replace $esc " " "%20"];
     :set esc [:replace $esc ":" "%3A"];
-    :set esc [:replace $esc "\"" "%22"];
     :set esc [:replace $esc "|" "%7C"];
     :set esc [:replace $esc "[" "%5B"];
     :set esc [:replace $esc "]" "%5D"];
