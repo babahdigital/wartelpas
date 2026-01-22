@@ -267,31 +267,53 @@ $message = '';
 try {
     if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
         $scriptName = 'CuciGudangManual';
+        $sid = '';
+
         $script = $API->comm('/system/script/print', [
             '?name' => $scriptName,
-            '.proplist' => '.id,name'
+            '.proplist' => '.id,name,comment,source'
         ]);
         $sid = $script[0]['.id'] ?? '';
-        if ($sid !== '') {
-                $schedName = 'SETTLE_MANUAL_' . str_replace('-', '', $date) . '_' . date('His');
-                $existing = $API->comm('/system/scheduler/print', [
-                    '?name' => $schedName,
-                    '.proplist' => '.id'
-                ]);
-                if (is_array($existing) && isset($existing[0]['.id'])) {
-                    $API->comm('/system/scheduler/remove', ['.id' => $existing[0]['.id']]);
+
+        if ($sid === '') {
+            $all = $API->comm('/system/script/print', [
+                '.proplist' => '.id,name,comment,source'
+            ]);
+            if (is_array($all)) {
+                foreach ($all as $row) {
+                    $nm = (string)($row['name'] ?? '');
+                    $src = (string)($row['source'] ?? '');
+                    if ($nm === '') continue;
+                    if (preg_match('/cucigudang|cleanwartel/i', $nm) || stripos($src, 'SETTLE: CLEANUP') !== false || stripos($src, 'Cuci Gudang') !== false) {
+                        $scriptName = $nm;
+                        $sid = $row['.id'] ?? '';
+                        break;
+                    }
                 }
-                $onEvent = ':log info "SETTLE: MANUAL: Mulai"; /system script run name=' . $scriptName . '; /system scheduler remove [find name="' . $schedName . '"]';
-                $API->comm('/system/scheduler/add', [
-                    'name' => $schedName,
-                    'start-time' => 'now',
-                    'interval' => '1d',
-                    'disabled' => 'no',
-                    'on-event' => $onEvent
-                ]);
-                $ok = true;
+            }
+        }
+
+        if ($sid !== '') {
+            $schedName = 'SETTLE_MANUAL_' . str_replace('-', '', $date) . '_' . date('His');
+            $existing = $API->comm('/system/scheduler/print', [
+                '?name' => $schedName,
+                '.proplist' => '.id'
+            ]);
+            if (is_array($existing) && isset($existing[0]['.id'])) {
+                $API->comm('/system/scheduler/remove', ['.id' => $existing[0]['.id']]);
+            }
+            $scriptNameEsc = addslashes($scriptName);
+            $onEvent = ':log info "SETTLE: MANUAL: Mulai"; /system script run name="' . $scriptNameEsc . '"; /system scheduler remove [find name="' . $schedName . '"]';
+            $API->comm('/system/scheduler/add', [
+                'name' => $schedName,
+                'start-time' => 'now',
+                'interval' => '1d',
+                'disabled' => 'no',
+                'on-event' => $onEvent
+            ]);
+            $ok = true;
         } else {
-            $message = 'Script CuciGudangManual tidak ditemukan.';
+            $message = 'Script Cuci Gudang tidak ditemukan. Pastikan ada script bernama CuciGudangManual atau mengandung "CuciGudang".';
         }
         $API->disconnect();
     } else {
