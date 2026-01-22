@@ -63,8 +63,9 @@ try {
         $triggeredAt = (string)($stmtT->fetchColumn() ?: '');
     } catch (Exception $e) {}
 
-    $triggeredTs = $triggeredAt !== '' ? strtotime($triggeredAt) : 0;
-    $nowTs = time();
+        $triggeredTs = $triggeredAt !== '' ? strtotime($triggeredAt) : 0;
+        $nowTs = time();
+        $elapsed = $triggeredTs > 0 ? max(0, $nowTs - $triggeredTs) : 0;
     $logs = [];
     $status = 'running';
     $done = false;
@@ -208,11 +209,15 @@ try {
 
     $infoMessage = '';
     if (empty($logs)) {
-        if ($sawFetch) {
-            $infoMessage = 'Log settlement belum muncul, mohon bersabar.';
-        } else {
-            $infoMessage = $message !== '' ? $message : 'Menunggu log dari MikroTik...';
-        }
+            if ($elapsed > 15) {
+                if ($sawFetch) {
+                    $infoMessage = 'Log settlement belum muncul. Pastikan script Cuci Gudang sudah terpasang.';
+                } else {
+                    $infoMessage = $message !== '' ? $message : 'Menunggu log dari MikroTik...';
+                }
+            } else {
+                $infoMessage = 'Menunggu log dari MikroTik...';
+            }
     }
 
     if ($done) $status = 'done';
@@ -260,8 +265,23 @@ try {
         ]);
         $sid = $script[0]['.id'] ?? '';
         if ($sid !== '') {
-            $API->comm('/system/script/run', ['.id' => $sid]);
-            $ok = true;
+                $schedName = 'SETTLE_MANUAL_' . str_replace('-', '', $date) . '_' . date('His');
+                $existing = $API->comm('/system/scheduler/print', [
+                    '?name' => $schedName,
+                    '.proplist' => '.id'
+                ]);
+                if (is_array($existing) && isset($existing[0]['.id'])) {
+                    $API->comm('/system/scheduler/remove', ['.id' => $existing[0]['.id']]);
+                }
+                $onEvent = ':log info "SETTLE: MANUAL: Mulai"; /system script run name=' . $scriptName . '; /system scheduler remove [find name="' . $schedName . '"]';
+                $API->comm('/system/scheduler/add', [
+                    'name' => $schedName,
+                    'start-time' => 'now',
+                    'interval' => '1d',
+                    'disabled' => 'no',
+                    'on-event' => $onEvent
+                ]);
+                $ok = true;
         } else {
             $message = 'Script CuciGudangManual tidak ditemukan.';
         }
