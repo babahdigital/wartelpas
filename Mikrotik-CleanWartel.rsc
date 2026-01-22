@@ -28,6 +28,7 @@
 :set urlEncode do={
     :local s $1;
     :if ([:typeof $s] = "nothing") do={ :set s ""; }
+    :set s ($s . "");
     :local out "";
     :local i 0;
     :local len [:len $s];
@@ -56,10 +57,14 @@
         :local lvl $2;
         :if ([:typeof $msg] = "nothing") do={ :set msg ""; }
         :if ([:typeof $lvl] = "nothing") do={ :set lvl "info"; }
+        :set msg ($msg . "");
         :if ($msg = "") do={ :return; }
         :local tp ("script," . $lvl);
+        :set tp ($tp . "");
         :local dt [/system clock get date];
         :local tm [/system clock get time];
+        :set dt ($dt . "");
+        :set tm ($tm . "");
         :local esc [$urlEncode $msg];
         :local denc [$urlEncode $dt];
         :local tenc [$urlEncode $tm];
