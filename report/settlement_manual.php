@@ -24,6 +24,11 @@ require_once($root_dir . '/lib/routeros_api.class.php');
 require_once($root_dir . '/include/config.php');
 require_once($root_dir . '/include/readcfg.php');
 
+$logDir = $root_dir . '/logs';
+$safe_session = preg_replace('/[^A-Za-z0-9_-]/', '', $session);
+$safe_date = preg_replace('/[^0-9-]/', '', $date);
+$logFile = $logDir . '/settlement_' . $safe_session . '_' . $safe_date . '.log';
+
 $dbFile = $root_dir . '/db_data/mikhmon_stats.db';
 try {
     $db = new PDO('sqlite:' . $dbFile);
@@ -71,10 +76,52 @@ try {
     $done = false;
     $fail = false;
     $message = '';
+    $useFileLogs = is_file($logFile) && filesize($logFile) > 0;
     $API = new RouterosAPI();
     $API->debug = false;
     try {
-        if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
+        if ($useFileLogs) {
+            $lines = @file($logFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            if (is_array($lines)) {
+                foreach ($lines as $line) {
+                    $parts = explode("\t", $line, 3);
+                    if (count($parts) < 3) continue;
+                    $time = trim($parts[0]);
+                    $topics = trim($parts[1]);
+                    $msg = trim($parts[2]);
+                    if ($msg === '') continue;
+
+                    $msgUpper = strtoupper($msg);
+                    $type = 'info';
+                    $topicsLower = strtolower($topics);
+                    if (strpos($topicsLower, 'error') !== false) $type = 'error';
+                    elseif (strpos($topicsLower, 'warning') !== false) $type = 'warning';
+                    elseif (strpos($topicsLower, 'system') !== false || strpos($topicsLower, 'script') !== false) $type = 'system';
+                    if (strpos($msgUpper, 'SUKSES') !== false || strpos($msgUpper, 'BERHASIL') !== false) $type = 'success';
+                    elseif (strpos($msgUpper, 'GAGAL') !== false || strpos($msgUpper, 'ERROR') !== false || strpos($msgUpper, 'DIBATALKAN') !== false) $type = 'error';
+                    elseif (strpos($msgUpper, 'WARNING') !== false || strpos($msgUpper, 'WARN') !== false) $type = 'warning';
+                    elseif (strpos($msgUpper, 'SYNC') !== false || strpos($msgUpper, 'CLEANUP') !== false || strpos($msgUpper, 'MAINT') !== false) $type = 'system';
+
+                    $logs[] = [
+                        'time' => $time,
+                        'topic' => $topics,
+                        'type' => $type,
+                        'message' => $msg
+                    ];
+
+                    if (strpos($msg, 'SUKSES: Cuci Gudang Selesai') !== false) {
+                        $done = true;
+                    }
+                    if (strpos($msg, 'CLEANUP: Dibatalkan') !== false || strpos($msgUpper, 'ERROR') !== false) {
+                        $fail = true;
+                    } elseif (strpos($msgUpper, 'GAGAL') !== false) {
+                        if (stripos($msg, 'SYNC USAGE: Gagal koneksi') === false) {
+                            $fail = true;
+                        }
+                    }
+                }
+            }
+        } elseif ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
                 // Pastikan logging rule untuk script ada (mirip hotspot/log.php)
                 $logging = $API->comm('/system/logging/print', [
                     '?prefix' => 'SETTLE'
@@ -316,6 +363,10 @@ try {
         ':m' => 'Menjalankan settlement...'
     ]);
 } catch (Exception $e) {}
+
+if (is_file($logFile)) {
+    @unlink($logFile);
+}
 
 if (!headers_sent()) {
     echo json_encode(['ok' => true, 'message' => 'OK']);
