@@ -1741,11 +1741,15 @@ foreach($all_users as $u) {
     if ($status === 'ONLINE' && $login_disp !== '-') {
       $last_used_disp = $login_disp;
     }
+    $last_used_filter = $hist['last_login_real'] ?? ($hist['logout_time_real'] ?? ($hist['login_time_real'] ?? ($hist['first_login_real'] ?? '-')));
+    if ($status === 'ONLINE' && !empty($hist['login_time_real'])) {
+      $last_used_filter = $hist['login_time_real'];
+    }
 
     // Filter tanggal (harian/bulanan/tahunan) memakai last_used
     if ($req_status !== 'used' && $req_show !== 'semua' && !empty($filter_date)) {
       if ($status !== 'READY') {
-        $date_key = normalize_date_key($last_used_disp, $req_show);
+        $date_key = normalize_date_key($last_used_filter, $req_show);
         if ($date_key === '' || $date_key !== $filter_date) {
           continue;
         }

@@ -28,8 +28,8 @@ if ($req_show === 'harian') {
 function norm_date_from_raw_report($raw_date) {
     $raw = trim((string)$raw_date);
     if ($raw === '') return '';
-    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw)) {
-        return $raw;
+    if (preg_match('/^\d{4}-\d{2}-\d{2}/', $raw)) {
+        return substr($raw, 0, 10);
     }
     if (preg_match('/^[a-zA-Z]{3}\/\d{2}\/\d{4}$/', $raw)) {
         $mon = strtolower(substr($raw, 0, 3));
