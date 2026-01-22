@@ -123,6 +123,8 @@ try {
         updated_at DATETIME
     )");
     $db->exec("CREATE INDEX IF NOT EXISTS idx_login_events_user_date_seq ON login_events(username, date_key, seq)");
+    $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_login_events_unique_login ON login_events(username, date_key, login_time)");
+    $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_login_events_unique_logout ON login_events(username, date_key, logout_time)");
 
     $requiredCols = [
         'ip_address' => 'TEXT',
@@ -192,6 +194,13 @@ try {
 
     $date_key = substr($dt, 0, 10);
     if ($event === 'login') {
+        $dupStmt = $db->prepare("SELECT 1 FROM login_events WHERE username = :u AND date_key = :dk AND login_time = :lt LIMIT 1");
+        $dupStmt->execute([':u' => $user, ':dk' => $date_key, ':lt' => $dt]);
+        if ($dupStmt->fetchColumn()) {
+            @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | skip_dup_login | user=" . $user . " | dt=" . $dt . "\n", FILE_APPEND);
+            echo "OK";
+            exit;
+        }
         $seq = 1;
         $stmtSeq = $db->prepare("SELECT COALESCE(MAX(seq),0) FROM login_events WHERE username = :u AND date_key = :dk");
         $stmtSeq->execute([':u' => $user, ':dk' => $date_key]);
@@ -210,6 +219,13 @@ try {
             WHERE id = (SELECT id FROM login_events WHERE username = :u AND logout_time IS NULL ORDER BY id DESC LIMIT 1)");
         $stmtUpd->execute([':lt' => $dt, ':now' => $now, ':u' => $user]);
         if ($stmtUpd->rowCount() === 0) {
+            $dupStmt = $db->prepare("SELECT 1 FROM login_events WHERE username = :u AND date_key = :dk AND logout_time = :lt LIMIT 1");
+            $dupStmt->execute([':u' => $user, ':dk' => $date_key, ':lt' => $dt]);
+            if ($dupStmt->fetchColumn()) {
+                @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | skip_dup_logout | user=" . $user . " | dt=" . $dt . "\n", FILE_APPEND);
+                echo "OK";
+                exit;
+            }
             $seq = 1;
             $stmtSeq = $db->prepare("SELECT COALESCE(MAX(seq),0) FROM login_events WHERE username = :u AND date_key = :dk");
             $stmtSeq->execute([':u' => $user, ':dk' => $date_key]);

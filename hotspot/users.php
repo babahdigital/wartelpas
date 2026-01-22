@@ -315,6 +315,8 @@ try {
         updated_at DATETIME
       )");
       $db->exec("CREATE INDEX IF NOT EXISTS idx_login_events_user_date_seq ON login_events(username, date_key, seq)");
+      $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_login_events_unique_login ON login_events(username, date_key, login_time)");
+      $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_login_events_unique_logout ON login_events(username, date_key, logout_time)");
     $requiredCols = [
       'ip_address' => 'TEXT',
       'mac_address' => 'TEXT',
