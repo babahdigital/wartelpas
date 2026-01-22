@@ -3,8 +3,8 @@
 # Update: 2026-01-19 - Save IP & MAC to comment on logout
 # 
 # INSTALASI:
-# 1. MikroTik → IP → Hotspot → Server Profiles
-# 2. Pilih profile Anda → Tab "Login"
+# 1. MikroTik ? IP ? Hotspot ? Server Profiles
+# 2. Pilih profile Anda ? Tab "Login"
 # 3. Paste script ini di bagian "On Logout"
 # 4. Apply & OK
 
@@ -97,7 +97,7 @@
     }
 
     # REALTIME USAGE (LOGOUT)
-    :local usageUrl ("http://wartelpas.sobigidul.net:8081/process/usage_ingest.php?key=WartelpasSecureKey&session=S3c7x9_LB&event=logout&user=" . $username . "&date=" . $logoutDate . "&time=" . $logoutTime . "&ip=" . $userip . "&mac=" . $usermac . "&uptime=" . $userUptime);
+    :local usageUrl ("http://wartelpas.sobigidul.net/process/usage_ingest.php?key=WartelpasSecureKey&session=S3c7x9_LB&event=logout&user=" . $username . "&date=" . $logoutDate . "&time=" . $logoutTime . "&ip=" . $userip . "&mac=" . $usermac . "&uptime=" . $userUptime);
     /tool fetch url=$usageUrl keep-result=no;
 
     # Hapus cookie + putus koneksi untuk user wartel saja (hindari user non-wartel)
