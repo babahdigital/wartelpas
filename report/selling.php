@@ -1383,9 +1383,14 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 </div>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Total Voucher Laku</div>
+                <div class="summary-title">Total Transaksi Voucher</div>
                 <div class="summary-value"><?= number_format($total_qty_laku,0,',','.') ?></div>
                 <div style="font-size:12px;color:var(--txt-muted);margin-top: 1px;">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bandwidth: <?= htmlspecialchars(format_bytes_short($total_bandwidth)) ?></div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Voucher Unik (Username)</div>
+                <div class="summary-value"><?= number_format($total_laku_unique,0,',','.') ?></div>
+                <div style="font-size:12px;color:var(--txt-muted);margin-top: 1px;">Hitung 1x per username di tanggal ini</div>
             </div>
             <div class="summary-card">
                 <div class="summary-title">Pendapatan Bersih</div>
