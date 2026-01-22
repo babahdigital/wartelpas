@@ -176,6 +176,10 @@ try {
                     $type = 'system';
                 }
 
+                if (stripos($msgTrim, 'SYNC USAGE: Gagal koneksi') !== false) {
+                    $type = 'warning';
+                }
+
                 $logs[] = [
                     'time' => $time,
                     'topic' => $topics,
@@ -186,8 +190,12 @@ try {
                 if (strpos($msg, 'SUKSES: Cuci Gudang Selesai') !== false) {
                     $done = true;
                 }
-                if (strpos($msg, 'CLEANUP: Dibatalkan') !== false || strpos($msgUpper, 'GAGAL') !== false || strpos($msgUpper, 'ERROR') !== false) {
+                if (strpos($msg, 'CLEANUP: Dibatalkan') !== false || strpos($msgUpper, 'ERROR') !== false) {
                     $fail = true;
+                } elseif (strpos($msgUpper, 'GAGAL') !== false) {
+                    if (stripos($msgTrim, 'SYNC USAGE: Gagal koneksi') === false) {
+                        $fail = true;
+                    }
                 }
             }
             if ($skipReadyCount > 0) {
