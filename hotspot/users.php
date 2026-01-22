@@ -2637,7 +2637,7 @@ if ($debug_mode && !$is_ajax) {
         if (mt && mt.login) metaRows.push(`<tr class="meta-login"><td>Login</td><td>${mt.login}</td></tr>`);
         if (mt && mt.logout) metaRows.push(`<tr class="meta-logout"><td>Logout</td><td>${mt.logout}</td></tr>`);
         const metaBlock = metaRows.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;margin:6px 0 10px 0;">
-          <thead><tr><th style="text-align:left;padding:6px 8px;border:1px solid #444;background:#f0f0f0;">Info</th><th style="text-align:left;padding:6px 8px;border:1px solid #444;background:#f0f0f0;">Nilai</th></tr></thead>
+          <thead><tr><th style="text-align:left;padding:6px 8px;border:1px solid #444;background:#f0f0f0;">Info</th><th style="text-align:left;padding:6px 8px;border:1px solid #444;background:#f0f0f0;">Deskripsi</th></tr></thead>
           <tbody>${metaRows.join('')}</tbody></table>` : '';
         const msgLine = hm ? `<div style="margin:6px 0 10px 0;font-size:12px;color:#444;">${hm}</div>` : '';
         const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cek Kelayakan Rusak</title>
@@ -2660,7 +2660,7 @@ if ($debug_mode && !$is_ajax) {
           <h3>Cek Kelayakan Rusak</h3>
           ${metaBlock}
           ${msgLine}
-          <table><thead><tr><th>Kriteria</th><th>Deskripsi</th><th>Status</th></tr></thead><tbody>${rowsPrint}</tbody></table>
+          <table><thead><tr><th>Kriteria</th><th>Nilai</th><th>Status</th></tr></thead><tbody>${rowsPrint}</tbody></table>
           ${(() => {
             const reloginTitle = (mt && mt.relogin_date) ? `Rincian Relogin (Tanggal ${mt.relogin_date})` : 'Rincian Relogin';
             if (!mt || !Array.isArray(mt.relogin_events) || mt.relogin_events.length === 0) {
