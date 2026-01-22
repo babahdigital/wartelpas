@@ -70,6 +70,7 @@ try {
                                 full_raw_data TEXT UNIQUE,
                                 sync_date DATETIME DEFAULT CURRENT_TIMESTAMP
                             )");
+                        try { $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_sales_user_date ON sales_history(username, sale_date)"); } catch(Exception $e) {}
         try { $db->exec("ALTER TABLE sales_history ADD COLUMN raw_time TEXT"); } catch(Exception $e) {}
         try { $db->exec("ALTER TABLE sales_history ADD COLUMN sale_date TEXT"); } catch(Exception $e) {}
         try { $db->exec("ALTER TABLE sales_history ADD COLUMN sale_time TEXT"); } catch(Exception $e) {}
@@ -118,6 +119,7 @@ try {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             synced_at DATETIME
         )");
+        try { $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_live_user_date ON live_sales(username, sale_date)"); } catch(Exception $e) {}
         try { $db->exec("ALTER TABLE live_sales ADD COLUMN sprice_snapshot INTEGER"); } catch (Exception $e) {}
 } catch (PDOException $e) {
     die("Error DB: " . $e->getMessage());

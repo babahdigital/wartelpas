@@ -97,6 +97,7 @@ try {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         synced_at DATETIME
     )");
+    try { $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_live_user_date ON live_sales(username, sale_date)"); } catch (Exception $e) {}
     try { $db->exec("ALTER TABLE live_sales ADD COLUMN sprice_snapshot INTEGER"); } catch (Exception $e) {}
 
     $d = explode('-|-', $raw);
