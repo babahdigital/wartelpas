@@ -2660,7 +2660,7 @@ if ($debug_mode && !$is_ajax) {
           <h3>Cek Kelayakan Rusak</h3>
           ${metaBlock}
           ${msgLine}
-          <table><thead><tr><th>Kriteria</th><th>Nilai</th><th>Status</th></tr></thead><tbody>${rowsPrint}</tbody></table>
+          <table><thead><tr><th>Kriteria</th><th>Deskripsi</th><th>Status</th></tr></thead><tbody>${rowsPrint}</tbody></table>
           ${(() => {
             const reloginTitle = (mt && mt.relogin_date) ? `Rincian Relogin (Tanggal ${mt.relogin_date})` : 'Rincian Relogin';
             if (!mt || !Array.isArray(mt.relogin_events) || mt.relogin_events.length === 0) {
