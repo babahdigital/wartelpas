@@ -16,19 +16,112 @@ $error = isset($error) ? $error : '';
 $_please_login = isset($_please_login) ? $_please_login : 'Silakan Login';
 
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Login - Wartelpas System</title>
+    <div class="container">
+        <div class="login-container">
+            <div class="panel panel-default panel-login">
+                <div class="panel-heading">
+                    <!-- Logo Utama -->
+                    <img src="img/logo.png" alt="Logo" class="logo-img" onerror="this.onerror=null;this.src='logo.png';">
+                </div>
+                <div class="panel-body">
+                    <form id="loginForm" action="" method="post" autocomplete="off">
+                        
+                        <!-- Username Input -->
+                        <div class="form-group" id="group-username">
+                            <label class="sr-only" for="_username">Username</label>
+                            <div class="input-group">
+                                <span class="input-group-addon"><i class="fa fa-user"></i></span>
+                                <input type="text" class="form-control" id="_username" name="user" placeholder="Username" required autofocus>
+                            </div>
+                            <span class="help-block" id="error-username">Username wajib diisi.</span>
+                        </div>
 
-    <!-- Bootstrap 3.3.7 CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
-    <!-- Font Awesome 4.7.0 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+                        <!-- Password Input -->
+                        <div class="form-group" id="group-password">
+                            <label class="sr-only" for="password">Password</label>
+                            <div class="input-group">
+                                <span class="input-group-addon"><i class="fa fa-lock"></i></span>
+                                <input type="password" class="form-control" id="password" name="pass" placeholder="Password" required>
+                            </div>
+                            <span class="help-block" id="error-password">Password wajib diisi.</span>
+                        </div>
 
+                        <!-- Tombol Login -->
+                        <button type="submit" name="login" value="Login" class="btn btn-login btn-block">
+                            <i class="fa fa-sign-in"></i> Masuk Aplikasi
+                        </button>
+
+                        <!-- Error PHP -->
+                        <?php if (!empty($error)): ?>
+                        <div class="alert-custom shake-element">
+                            <i class="fa fa-exclamation-circle"></i> <?= $error; ?>
+                        </div>
+                        <?php endif; ?>
+
+                    </form>
+                </div>
+            </div>
+            
+            <div class="login-footer">
+                &copy; <?= date('Y') ?> Wartelpas System. All rights reserved.
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery & Bootstrap 3 JS -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            // Handler saat form disubmit (Validasi Sisi Klien)
+            $('#loginForm').on('submit', function(e) {
+                
+                // Reset state error sebelumnya
+                $('.form-group').removeClass('has-error');
+                $('.help-block').hide();
+                $('.panel-login').removeClass('shake-element');
+
+                var username = $('#_username').val().trim();
+                var password = $('#password').val().trim();
+                var hasError = false;
+
+                // Validasi Username
+                if (username === '') {
+                    $('#group-username').addClass('has-error');
+                    $('#error-username').text('Username wajib diisi.').show();
+                    hasError = true;
+                }
+
+                // Validasi Password
+                if (password === '') {
+                    $('#group-password').addClass('has-error');
+                    $('#error-password').text('Password tidak boleh kosong.').show();
+                    hasError = true;
+                }
+
+                // Jika ada error, batalkan submit dan getarkan panel
+                if (hasError) {
+                    e.preventDefault(); // Mencegah submit ke PHP
+                    $('.panel-login').addClass('shake-element');
+                    
+                    setTimeout(function() {
+                        $('.panel-login').removeClass('shake-element');
+                    }, 300);
+                } else {
+                    // Jika valid, submit normal ke PHP
+                    var $btn = $('button[type="submit"]');
+                    $btn.html('<i class="fa fa-spinner fa-spin"></i> Memproses...');
+                }
+            });
+
+            // Hilangkan error saat mengetik
+            $('#_username, #password').on('input', function() {
+                $(this).closest('.form-group').removeClass('has-error');
+                $(this).closest('.form-group').find('.help-block').hide();
+            });
+        });
+    </script>
     <style>
         /* --- DARK MODE REFINED STYLES --- */
         body {
@@ -241,114 +334,5 @@ $_please_login = isset($_please_login) ? $_please_login : 'Silakan Login';
             animation: shake 0.3s ease-in-out;
         }
     </style>
-</head>
-<body>
-
-    <div class="container">
-        <div class="login-container">
-            <div class="panel panel-default panel-login">
-                <div class="panel-heading">
-                    <!-- Logo Utama -->
-                    <img src="img/logo.png" alt="Logo" class="logo-img" onerror="this.onerror=null;this.src='logo.png';">
-                </div>
-                <div class="panel-body">
-                    <form id="loginForm" action="" method="post" autocomplete="off">
-                        
-                        <!-- Username Input -->
-                        <div class="form-group" id="group-username">
-                            <label class="sr-only" for="_username">Username</label>
-                            <div class="input-group">
-                                <span class="input-group-addon"><i class="fa fa-user"></i></span>
-                                <input type="text" class="form-control" id="_username" name="user" placeholder="Username" required autofocus>
-                            </div>
-                            <span class="help-block" id="error-username">Username wajib diisi.</span>
-                        </div>
-
-                        <!-- Password Input -->
-                        <div class="form-group" id="group-password">
-                            <label class="sr-only" for="password">Password</label>
-                            <div class="input-group">
-                                <span class="input-group-addon"><i class="fa fa-lock"></i></span>
-                                <input type="password" class="form-control" id="password" name="pass" placeholder="Password" required>
-                            </div>
-                            <span class="help-block" id="error-password">Password wajib diisi.</span>
-                        </div>
-
-                        <!-- Tombol Login -->
-                        <button type="submit" name="login" value="Login" class="btn btn-login btn-block">
-                            <i class="fa fa-sign-in"></i> Masuk Aplikasi
-                        </button>
-
-                        <!-- Error PHP -->
-                        <?php if (!empty($error)): ?>
-                        <div class="alert-custom shake-element">
-                            <i class="fa fa-exclamation-circle"></i> <?= $error; ?>
-                        </div>
-                        <?php endif; ?>
-
-                    </form>
-                </div>
-            </div>
-            
-            <div class="login-footer">
-                &copy; <?= date('Y') ?> Wartelpas System. All rights reserved.
-            </div>
-        </div>
-    </div>
-
-    <!-- jQuery & Bootstrap 3 JS -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-
-    <script>
-        $(document).ready(function() {
-            // Handler saat form disubmit (Validasi Sisi Klien)
-            $('#loginForm').on('submit', function(e) {
-                
-                // Reset state error sebelumnya
-                $('.form-group').removeClass('has-error');
-                $('.help-block').hide();
-                $('.panel-login').removeClass('shake-element');
-
-                var username = $('#_username').val().trim();
-                var password = $('#password').val().trim();
-                var hasError = false;
-
-                // Validasi Username
-                if (username === '') {
-                    $('#group-username').addClass('has-error');
-                    $('#error-username').text('Username wajib diisi.').show();
-                    hasError = true;
-                }
-
-                // Validasi Password
-                if (password === '') {
-                    $('#group-password').addClass('has-error');
-                    $('#error-password').text('Password tidak boleh kosong.').show();
-                    hasError = true;
-                }
-
-                // Jika ada error, batalkan submit dan getarkan panel
-                if (hasError) {
-                    e.preventDefault(); // Mencegah submit ke PHP
-                    $('.panel-login').addClass('shake-element');
-                    
-                    setTimeout(function() {
-                        $('.panel-login').removeClass('shake-element');
-                    }, 300);
-                } else {
-                    // Jika valid, submit normal ke PHP
-                    var $btn = $('button[type="submit"]');
-                    $btn.html('<i class="fa fa-spinner fa-spin"></i> Memproses...');
-                }
-            });
-
-            // Hilangkan error saat mengetik
-            $('#_username, #password').on('input', function() {
-                $(this).closest('.form-group').removeClass('has-error');
-                $(this).closest('.form-group').find('.help-block').hide();
-            });
-        });
-    </script>
 </body>
 </html>
