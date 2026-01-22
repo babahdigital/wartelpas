@@ -723,8 +723,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         $audit_qty = (int)($_POST['audit_qty'] ?? 0);
         $audit_setoran = (int)($_POST['audit_setoran'] ?? 0);
         $audit_note = trim($_POST['audit_note'] ?? '');
-        $audit_status = strtoupper(trim($_POST['audit_status'] ?? 'OPEN'));
-        if ($audit_status !== 'DONE') $audit_status = 'OPEN';
+        $audit_status = 'OPEN';
 
         if ($audit_blok_raw === '' || $audit_date === '') {
             $audit_error = 'Blok dan tanggal wajib diisi.';
@@ -782,6 +781,21 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     }
                     if (!$user_has_date) {
                         $audit_error = 'Username tidak ditemukan pada tanggal tersebut: ' . $u;
+                        break;
+                    }
+                    $tx_count = 0;
+                    if (table_exists($db, 'sales_history')) {
+                        $stmtTx = $db->prepare("SELECT COUNT(*) FROM sales_history WHERE username = :u AND sale_date = :d");
+                        $stmtTx->execute([':u' => $u, ':d' => $audit_date]);
+                        $tx_count += (int)$stmtTx->fetchColumn();
+                    }
+                    if (table_exists($db, 'live_sales')) {
+                        $stmtTx2 = $db->prepare("SELECT COUNT(*) FROM live_sales WHERE username = :u AND sale_date = :d");
+                        $stmtTx2->execute([':u' => $u, ':d' => $audit_date]);
+                        $tx_count += (int)$stmtTx2->fetchColumn();
+                    }
+                    if ($tx_count > 1) {
+                        $audit_error = 'Username terdeteksi lebih dari 1 transaksi pada tanggal tersebut: ' . $u;
                         break;
                     }
                     $blok_from_user = '';
@@ -1132,22 +1146,13 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                         <input class="form-input" type="date" name="audit_date" value="<?= htmlspecialchars($filter_date); ?>" required>
                     </div>
                 </div>
-                <div class="form-grid-2" style="margin-top:10px;">
-                    <div>
-                        <label>Username (opsional)</label>
-                        <input type="hidden" name="audit_username" id="auditUsernameHidden">
-                        <div class="audit-user-picker">
-                            <div id="audit-user-chips" class="audit-user-chips"></div>
-                            <input class="form-input" type="text" id="audit-user-input" placeholder="ketik untuk cari username">
-                            <div id="audit-user-suggest" class="audit-user-suggest"></div>
-                        </div>
-                    </div>
-                    <div>
-                        <label>Status</label>
-                        <select class="form-input" name="audit_status">
-                            <option value="OPEN">OPEN</option>
-                            <option value="DONE">DONE</option>
-                        </select>
+                <div style="margin-top:10px;">
+                    <label>Username (opsional)</label>
+                    <input type="hidden" name="audit_username" id="auditUsernameHidden">
+                    <div class="audit-user-picker">
+                        <div id="audit-user-chips" class="audit-user-chips"></div>
+                        <input class="form-input" type="text" id="audit-user-input" placeholder="ketik untuk cari username">
+                        <div id="audit-user-suggest" class="audit-user-suggest"></div>
                     </div>
                 </div>
                 <div class="form-grid-2" style="margin-top:10px;">
@@ -1718,7 +1723,6 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         var qty = btn.getAttribute('data-qty') || '0';
         var setoran = btn.getAttribute('data-setoran') || '0';
         var note = btn.getAttribute('data-note') || '';
-        var status = btn.getAttribute('data-status') || 'OPEN';
         var blokSelect = form.querySelector('select[name="audit_blok"]');
         if (blokSelect) blokSelect.value = blok;
         var dateInput = form.querySelector('input[name="audit_date"]');
@@ -1732,8 +1736,6 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (setInput) setInput.value = setoran;
         var noteInput = form.querySelector('input[name="audit_note"]');
         if (noteInput) noteInput.value = note;
-        var stSelect = form.querySelector('select[name="audit_status"]');
-        if (stSelect) stSelect.value = status;
         openAuditModal();
     };
 
@@ -2187,14 +2189,13 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         <th class="text-right">Setoran Sistem</th>
                         <th class="text-right">Setoran Manual</th>
                         <th class="text-right">Selisih Setoran</th>
-                        <th>Status</th>
                         <th class="text-right">Catatan/Bukti</th>
                         <th class="text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($audit_rows)): ?>
-                        <tr><td colspan="11" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
+                        <tr><td colspan="10" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
                     <?php else: foreach ($audit_rows as $ar): ?>
                         <?php
                             $sq = (int)($ar['selisih_qty'] ?? 0);
@@ -2249,7 +2250,6 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             <td class="text-right"><?= number_format((int)($ar['expected_setoran'] ?? 0),0,',','.') ?></td>
                             <td class="text-right"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
                             <td class="text-right"><span class="<?= $cls_s; ?>"><?= number_format($ss,0,',','.') ?></span></td>
-                            <td><?= htmlspecialchars(strtoupper((string)($ar['status'] ?? 'OPEN'))) ?></td>
                             <td class="text-right"><small><?= htmlspecialchars($ar['note'] ?? '') ?><?= $evidence_summary_html !== '' ? '<br>' . $evidence_summary_html : '' ?></small></td>
                             <td class="text-right">
                                 <button type="button" class="btn-act" onclick="openAuditEdit(this)"
@@ -2258,8 +2258,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                     data-date="<?= htmlspecialchars($ar['report_date'] ?? $filter_date); ?>"
                                     data-qty="<?= (int)($ar['reported_qty'] ?? 0); ?>"
                                     data-setoran="<?= (int)($ar['actual_setoran'] ?? 0); ?>"
-                                    data-note="<?= htmlspecialchars($ar['note'] ?? ''); ?>"
-                                    data-status="<?= htmlspecialchars(strtoupper((string)($ar['status'] ?? 'OPEN'))); ?>">
+                                    data-note="<?= htmlspecialchars($ar['note'] ?? ''); ?>">
                                     <i class="fa fa-edit"></i>
                                 </button>
                                 <button type="button" class="btn-act btn-act-danger" onclick="openDeleteAuditModal('<?= './?report=selling' . $session_qs . '&show=' . $req_show . '&date=' . urlencode($filter_date) . '&audit_delete=1&audit_blok=' . urlencode($ar['blok_name'] ?? '') . '&audit_date=' . urlencode($filter_date); ?>','<?= htmlspecialchars($ar['blok_name'] ?? '-'); ?>','<?= htmlspecialchars($filter_date); ?>')">
