@@ -462,10 +462,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             <div class="value"><?= $cur ?> <?= number_format($total_net,0,',','.') ?></div>
         </div>
         <div class="card">
-            <div class="label">Total Voucher Laku (Unik)</div>
+            <div class="label">Total Voucher Laku</div>
             <div class="value"><?= number_format($total_qty_laku,0,',','.') ?></div>
-            <div class="small">Transaksi: <?= number_format((int)$total_qty_units,0,',','.') ?> | Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?></div>
-            <div class="small">Bytes: <?= htmlspecialchars(format_bytes_short($total_bandwidth)) ?></div>
+            <div class="small">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bytes: <?= htmlspecialchars(format_bytes_short($total_bandwidth)) ?></div>
         </div>
         <div class="card">
             <div class="label">Voucher Rusak</div>
@@ -508,7 +507,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             <thead>
                 <tr>
                     <th>Rincian Penjualan</th>
-                    <th style="width:90px;">QTY Transaksi</th>
+                    <th style="width:90px;">QTY</th>
                     <th style="width:90px;">Pendapatan</th>
                 </tr>
             </thead>
@@ -584,7 +583,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             </tbody>
                         </table>
                     </td>
-                    <td style="text-align:center; font-weight:700; font-size:14px;"><?= number_format((int)$total_qty_units,0,',','.') ?></td>
+                    <td style="text-align:center; font-weight:700; font-size:14px;">-</td>
                     <td style="text-align:right; font-weight:700; font-size:14px;"><?= number_format((int)$total_net_units,0,',','.') ?></td>
                 </tr>
             </tbody>
