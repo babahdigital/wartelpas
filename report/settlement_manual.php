@@ -244,15 +244,7 @@ try {
                     }
                 }
             }
-            if ($skipReadyCount > 0) {
-                $summaryCount = $skipReadyMax > 0 ? $skipReadyMax : $skipReadyCount;
-                $logs[] = [
-                    'time' => $skipReadyTime,
-                    'topic' => 'script,info',
-                    'type' => 'system',
-                    'message' => 'SETTLE: CLEANUP: Skip READY user x' . $summaryCount
-                ];
-            }
+            // Skip READY detail intentionally hidden from popup
         } else {
             $message = 'Gagal konek ke router.';
             $fail = true;
@@ -311,6 +303,31 @@ $API = new RouterosAPI();
 $API->debug = false;
 $ok = false;
 $message = '';
+$earlyResponded = false;
+
+try {
+    $now = date('Y-m-d H:i:s');
+    $stmt = $db->prepare("INSERT OR REPLACE INTO settlement_log (report_date, status, triggered_at, completed_at, source, message)
+        VALUES (:d, :s, :t, NULL, 'manual', :m)");
+    $stmt->execute([
+        ':d' => $date,
+        ':s' => 'running',
+        ':t' => $now,
+        ':m' => 'Menjalankan settlement...'
+    ]);
+} catch (Exception $e) {}
+
+if (!headers_sent()) {
+    echo json_encode(['ok' => true, 'message' => 'OK']);
+    if (function_exists('fastcgi_finish_request')) {
+        fastcgi_finish_request();
+    } else {
+        @ob_flush();
+        @flush();
+    }
+    $earlyResponded = true;
+}
+ignore_user_abort(true);
 try {
     if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
         $scriptName = 'CuciGudangManual';
@@ -374,4 +391,6 @@ try {
     ]);
 } catch (Exception $e) {}
 
-echo json_encode(['ok' => $ok, 'message' => $ok ? 'OK' : ($message ?: 'Gagal')]);
+if (!$earlyResponded) {
+    echo json_encode(['ok' => $ok, 'message' => $ok ? 'OK' : ($message ?: 'Gagal')]);
+}
