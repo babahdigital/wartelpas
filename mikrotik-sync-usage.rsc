@@ -1,25 +1,124 @@
-# ==========================================
-# MIKROTIK SYNC USAGE - 2 MENIT SEKALI
-# File: mikrotik-sync-usage.rsc
-# Tujuan: menjaga data usage (login/logout/uptime/bytes) tetap update
-# ==========================================
+# SCRIPT MIKROTIK ON-LOGOUT (CAPTURE IP & MAC)
+# File: mikrotik-onlogout.rsc
+# Update: 2026-01-19 - Save IP & MAC to comment on logout
+# 
+# INSTALASI:
+# 1. MikroTik ? IP ? Hotspot ? Server Profiles
+# 2. Pilih profile Anda ? Tab "Login"
+# 3. Paste script ini di bagian "On Logout"
+# 4. Apply & OK
 
-# Script utama (buat sekali)
-/system script
-add name=Wartel-SyncUsage policy=read,write,test source=
 {
-	:global syncUsageLock;
-	:if ([:typeof $syncUsageLock] = "nothing") do={ :set syncUsageLock false; }
-	:if ($syncUsageLock = true) do={ :log warning "SYNC USAGE: masih berjalan, skip"; :return; }
-	:set syncUsageLock true;
+    :local username "$user";
+    :local userip "$address";
+    :local usermac $"mac-address";
+    :local logoutTime [/system clock get time];
+    :local logoutDate [/system clock get date];
+    :local userId [/ip hotspot user find where name="$username"];
+    :local userUptime "";
+    :local currentComment "";
+    :if ([:len $userId] > 0) do={
+        :set userUptime [/ip hotspot user get $userId uptime];
+        :set currentComment [/ip hotspot user get $userId comment];
+    }
+    # Bersihkan IP/MAC lama jika ada
+    :local cleanComment $currentComment;
+    :local ipPos [:find $cleanComment "| IP:"];
+    :if ([:typeof $ipPos] != "nil") do={
+        :set cleanComment [:pick $cleanComment 0 $ipPos];
+    }
+    
+    # Extract Blok info dari comment (preserve)
+    :local blokInfo "";
+    :local commentLen [:len $cleanComment];
+    
+    # Cari "Blok-" atau "| Blok-" dalam comment
+    :for i from=0 to=($commentLen - 5) do={
+        :local substr [:pick $cleanComment $i ($i + 5)];
+        :if ($substr = "Blok-" or $substr = "blok-") do={
+            # Extract sampai spasi atau karakter khusus
+            :local endPos $i;
+            :for j from=$i to=$commentLen do={
+                :local char [:pick $cleanComment $j ($j + 1)];
+                :if ($char = " " or $char = ")" or $char = "-" or $char = "|" or $j = $commentLen) do={
+                    :if ($char = "-" and [:pick $currentComment ($j + 1) ($j + 2)] != " ") do={
+                        # Ini masih bagian dari Blok-A10, lanjut
+                    } else={
+                        :set endPos $j;
+                        :set j $commentLen;
+                    }
+                }
+            }
+            :set blokInfo [:pick $cleanComment $i $endPos];
+            :set i $commentLen;
+        }
+    }
+    
+    # Jika Blok tidak ditemukan, coba cari format "| Blok-"
+    :if ([:len $blokInfo] = 0) do={
+        :local pipePos [:find $cleanComment "| Blok-"];
+        :if ([:typeof $pipePos] != "nil") do={
+            :local startPos ($pipePos + 2);
+            :local endPos [:find $cleanComment " " $startPos];
+            :if ([:typeof $endPos] = "nil") do={
+                :set endPos $commentLen;
+            }
+            :set blokInfo [:pick $cleanComment $startPos $endPos];
+        }
+    }
+    
+    # Build new comment tanpa ubah tanggal (ambil tanggal lama jika ada)
+    :local baseDate "";
+    :local pipePos2 [:find $cleanComment "|"];
+    :if ([:typeof $pipePos2] != "nil") do={
+        :set baseDate [:pick $cleanComment 0 $pipePos2];
+    } else={
+        :set baseDate $cleanComment;
+    }
+    :if ([:len $baseDate] = 0) do={
+        :set baseDate ("$logoutDate $logoutTime");
+    }
+    
+    # Format: "jan/21/2026 00:25:32 | Blok-A10 | IP:192.168.1.100 | MAC:AA:BB:CC:DD:EE:FF"
+    :local newComment "$baseDate";
+    
+    :if ([:len $blokInfo] > 0) do={
+        :set newComment ("$newComment | $blokInfo");
+    }
 
-	:local url "http://wartelpas.sobigidul.net/process/sync_usage.php?session=S3c7x9_LB";
-	:do {
-		/tool fetch url=$url keep-result=no;
-		:log info "SYNC USAGE: OK (2m)";
-	} on-error={
-		:log warning "SYNC USAGE: Gagal koneksi";
-	}
+    # Hapus IP/MAC lama jika sudah ada
+    :set newComment ("$newComment | IP:$userip | MAC:$usermac");
+    
+    # Update comment dengan data logout (tanpa menumpuk)
+    :if ([:len $userId] > 0) do={
+        /ip hotspot user set comment=$newComment $userId;
+    } else={
+        :log warning "SYNC WARN: user not found for $username (comment not set)";
+    }
 
-	:set syncUsageLock false;
+    # REALTIME USAGE (LOGOUT)
+    :local usageUrl ("http://wartelpas.sobigidul.net/process/usage_ingest.php?key=WartelpasSecureKey&session=S3c7x9_LB&event=logout&user=" . $username . "&date=" . $logoutDate . "&time=" . $logoutTime . "&ip=" . $userip . "&mac=" . $usermac . "&uptime=" . $userUptime);
+    /tool fetch url=$usageUrl keep-result=no;
+
+    # Hapus cookie + putus koneksi untuk user wartel saja (hindari user non-wartel)
+    :local isWartel false;
+    :local blokPos [:find $newComment "Blok-"];
+    :if ([:typeof $blokPos] != "nil") do={ :set isWartel true; }
+    :if ($isWartel = true) do={
+        :foreach c in=[/ip hotspot cookie find where user="$username"] do={
+            /ip hotspot cookie remove $c;
+        }
+        # Kick active hanya untuk user yang logout
+        :foreach a in=[/ip hotspot active find where user="$username"] do={
+            /ip hotspot active remove $a;
+        }
+        # Putus koneksi hanya untuk user yang logout (berdasarkan IP)
+        :if ([:len $userip] > 0) do={
+            /ip firewall connection remove [find src-address=$userip];
+            /ip firewall connection remove [find dst-address=$userip];
+        }
+    }
+    
+    # Log ke system log (optional, untuk debugging)
+    :log info "LOGOUT: $username | $userip | $usermac | $blokInfo";
 }
