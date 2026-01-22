@@ -98,6 +98,13 @@ function format_first_login($dateStr) {
     return date('d-m-Y H:i:s', $ts);
 }
 
+function render_audit_lines($lines) {
+    if (empty($lines)) return '-';
+    return implode('', array_map(function($line) {
+        return '<div class="audit-line">' . htmlspecialchars((string)$line) . '</div>';
+    }, $lines));
+}
+
     function format_bytes_short($bytes) {
         $b = (float)$bytes;
         if ($b <= 0) return '0 B';
@@ -1129,6 +1136,9 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
     .audit-user-suggest .item { padding:7px 10px; cursor:pointer; font-size:12px; color:#e6edf3; border-bottom:1px solid #2c3238; }
     .audit-user-suggest .item:last-child { border-bottom:none; }
     .audit-user-suggest .item:hover { background:#2b3137; }
+    .audit-table th, .audit-table td { padding:6px 8px; font-size:11px; }
+    .audit-line { border-bottom:1px dashed #3a4046; padding:2px 0; }
+    .audit-line:last-child { border-bottom:none; }
 </style>
 <?php endif; ?>
 
@@ -2218,7 +2228,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table-dark-solid text-nowrap">
+            <table class="table-dark-solid text-nowrap audit-table">
                 <thead>
                     <tr>
                         <th>Blok</th>
@@ -2306,7 +2316,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         <th class="text-center">QTY</th>
                         <th class="text-center">Selisih</th>
                         <th class="text-right">Setoran</th>
-                        <th class="text-right">Selisih</th>
+                        <th class="text-center">Selisih</th>
                         <th class="text-center" colspan="5">Profil 10 Menit</th>
                         <th class="text-center" colspan="5">Profil 30 Menit</th>
                         <th>Catatan</th>
@@ -2386,23 +2396,23 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                     }
                                 }
                             }
-                            $p10_us = !empty($profile10['user']) ? implode('<br>', array_map('htmlspecialchars', $profile10['user'])) : '-';
-                            $p10_up = !empty($profile10['up']) ? implode('<br>', array_map('htmlspecialchars', $profile10['up'])) : '-';
-                            $p10_bt = !empty($profile10['byte']) ? implode('<br>', array_map('htmlspecialchars', $profile10['byte'])) : '-';
-                            $p10_lg = !empty($profile10['login']) ? implode('<br>', array_map('htmlspecialchars', $profile10['login'])) : '-';
-                            $p10_tt = $profile10_sum > 0 ? number_format($profile10_sum,0,',','.') : '-';
-                            $p30_us = !empty($profile30['user']) ? implode('<br>', array_map('htmlspecialchars', $profile30['user'])) : '-';
-                            $p30_up = !empty($profile30['up']) ? implode('<br>', array_map('htmlspecialchars', $profile30['up'])) : '-';
-                            $p30_bt = !empty($profile30['byte']) ? implode('<br>', array_map('htmlspecialchars', $profile30['byte'])) : '-';
-                            $p30_lg = !empty($profile30['login']) ? implode('<br>', array_map('htmlspecialchars', $profile30['login'])) : '-';
-                            $p30_tt = $profile30_sum > 0 ? number_format($profile30_sum,0,',','.') : '-';
+                            $p10_us = render_audit_lines($profile10['user'] ?? []);
+                            $p10_up = render_audit_lines($profile10['up'] ?? []);
+                            $p10_bt = render_audit_lines($profile10['byte'] ?? []);
+                            $p10_lg = render_audit_lines($profile10['login'] ?? []);
+                            $p10_tt = $profile10_sum > 0 ? render_audit_lines([number_format($profile10_sum,0,',','.')]) : '-';
+                            $p30_us = render_audit_lines($profile30['user'] ?? []);
+                            $p30_up = render_audit_lines($profile30['up'] ?? []);
+                            $p30_bt = render_audit_lines($profile30['byte'] ?? []);
+                            $p30_lg = render_audit_lines($profile30['login'] ?? []);
+                            $p30_tt = $profile30_sum > 0 ? render_audit_lines([number_format($profile30_sum,0,',','.')]) : '-';
                         ?>
                         <tr>
                             <td><?= htmlspecialchars($ar['blok_name'] ?? '-') ?></td>
                             <td class="text-center"><?= number_format((int)($ar['reported_qty'] ?? 0),0,',','.') ?></td>
                             <td class="text-center"><span class="<?= $cls_q; ?>"><?= number_format($sq,0,',','.') ?></span></td>
                             <td class="text-right"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
-                            <td class="text-right"><span class="<?= $cls_s; ?>"><?= number_format($ss,0,',','.') ?></span></td>
+                            <td class="text-center"><span class="<?= $cls_s; ?>"><?= number_format($ss,0,',','.') ?></span></td>
                             <td><small><?= $p10_us ?></small></td>
                             <td><small><?= $p10_up ?></small></td>
                             <td><small><?= $p10_bt ?></small></td>
