@@ -651,7 +651,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <th></th>
                         <th></th>
                         <th></th>
-                        <th>Username</th>
+                        <th style="width:50px;">Username</th>
                         <th>Up</th>
                         <th>Byte</th>
                         <th>Total</th>
