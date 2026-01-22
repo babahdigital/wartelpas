@@ -6,6 +6,16 @@ header('Content-Type: application/json');
 $root_dir = dirname(__DIR__);
 require_once($root_dir . '/include/config.php');
 
+$logDir = $root_dir . '/logs';
+if (!is_dir($logDir)) {
+    @mkdir($logDir, 0755, true);
+}
+$debugLog = $logDir . '/settlement_ingest_debug.log';
+function append_debug_log($file, $message) {
+    $line = date('Y-m-d H:i:s') . "\t" . $message . "\n";
+    @file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
+}
+
 $key = $_GET['key'] ?? '';
 $session = $_GET['session'] ?? '';
 $raw_date = $_GET['date'] ?? '';
@@ -23,12 +33,14 @@ if ($secret === false || trim((string)$secret) === '') {
 }
 
 if ($key === '' || $key !== $secret) {
+    append_debug_log($debugLog, 'reject=invalid_key ip=' . ($_SERVER['REMOTE_ADDR'] ?? '-') . ' session=' . $session);
     http_response_code(403);
     echo json_encode(['ok' => false, 'message' => 'Invalid key']);
     exit;
 }
 
 if ($session === '' || !isset($data[$session])) {
+    append_debug_log($debugLog, 'reject=invalid_session ip=' . ($_SERVER['REMOTE_ADDR'] ?? '-') . ' session=' . $session);
     http_response_code(403);
     echo json_encode(['ok' => false, 'message' => 'Invalid session']);
     exit;
@@ -69,17 +81,13 @@ $topic = trim((string)$topic);
 if ($topic === '') $topic = 'script,info';
 $msg = trim((string)$msg);
 if ($msg === '') {
+    append_debug_log($debugLog, 'skip=empty_msg ip=' . ($_SERVER['REMOTE_ADDR'] ?? '-') . ' session=' . $session);
     echo json_encode(['ok' => true, 'message' => 'Empty']);
     exit;
 }
 
 $msg = preg_replace('/[\r\n\t]+/', ' ', $msg);
 $topic = preg_replace('/[\r\n\t]+/', ' ', $topic);
-
-$logDir = $root_dir . '/logs';
-if (!is_dir($logDir)) {
-    @mkdir($logDir, 0755, true);
-}
 
 $safe_session = preg_replace('/[^A-Za-z0-9_-]/', '', $session);
 $safe_date = preg_replace('/[^0-9-]/', '', $date);
@@ -88,5 +96,6 @@ $logFile = $logDir . '/settlement_' . $safe_session . '_' . $safe_date . '.log';
 
 $line = $time . "\t" . $topic . "\t" . $msg . "\n";
 @file_put_contents($logFile, $line, FILE_APPEND | LOCK_EX);
+append_debug_log($debugLog, 'ok ip=' . ($_SERVER['REMOTE_ADDR'] ?? '-') . ' session=' . $session . ' file=' . basename($logFile));
 
 echo json_encode(['ok' => true]);

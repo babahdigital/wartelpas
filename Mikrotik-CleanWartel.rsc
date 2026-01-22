@@ -157,6 +157,7 @@ $sendSettleLog "SETTLE: MAINT: Hapus script mikhmon..." "info";
 
 # 5. HAPUS USER NON-READY (SUDAH PERNAH TERPAKAI)
 $logSettle "info" "SETTLE: CLEANUP: Hapus user terpakai (bytes/uptime/disabled)...";
+    :local skippedReady 0;
 
 # Hapus Profile 10Menit & 30Menit (hanya yang sudah terpakai)
 :do {
@@ -198,6 +199,7 @@ $logSettle "info" "SETTLE: CLEANUP: Hapus user terpakai (bytes/uptime/disabled).
                 :set removed ($removed + 1);
             } else={
                 :if ($isReady) do={
+                    :set skippedReady ($skippedReady + 1);
                 } else={
                     :if ($hasUsage) do={
                         /ip hotspot user remove $u;
@@ -208,6 +210,7 @@ $logSettle "info" "SETTLE: CLEANUP: Hapus user terpakai (bytes/uptime/disabled).
         }
     }
     $logSettle "info" ("SETTLE: CLEANUP: Terhapus " . $removed . " user (10/30Menit) terpakai.");
+    $logSettle "info" ("SETTLE: CLEANUP: Skip READY " . $skippedReady . " user.");
 } on-error={ $logSettle "warning" "SETTLE: CLEANUP: Gagal hapus user terpakai."; }
 
 :delay 1s;
