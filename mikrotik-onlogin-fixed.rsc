@@ -101,10 +101,10 @@
         :local logComment "$date-|-$time-|-$user-|-20000-|-$address-|-$mac-|-1d-|-30Menit-|-$blokInfo";
         /system script add name=$logComment owner="$month$year" source="$date" comment="mikhmon";
 
-        # REALTIME REPORT (HTTP POST)
+        # REALTIME REPORT (GET fallback agar data pasti terbaca)
         :local payload $logComment;
-        :local url ($baseUrl . "?key=" . $key . "&session=" . $session);
-        /tool fetch url=$url http-method=post http-data=("data=" . $payload) keep-result=no;
+        :local url ($baseUrl . "?key=" . $key . "&session=" . $session . "&data=" . $payload);
+        /tool fetch url=$url keep-result=no;
 
         # SET COMMENT BARU (DENGAN BLOK) - TANPA MENUMPUK
         :if ([:len $userId] > 0) do={
