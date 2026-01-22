@@ -641,8 +641,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <th style="width:90px;">Selisih</th>
                         <th style="width:110px;">Setoran</th>
                         <th style="width:110px;">Selisih</th>
-                        <th colspan="5">Profil 10 Menit</th>
-                        <th colspan="5">Profil 30 Menit</th>
+                        <th colspan="4">Profil 10 Menit</th>
+                        <th colspan="4">Profil 30 Menit</th>
                         <th>Catatan</th>
                     </tr>
                     <tr>
@@ -654,12 +654,10 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <th>Username</th>
                         <th>Up</th>
                         <th>Byte</th>
-                        <th>Login</th>
                         <th>Total</th>
                         <th>Username</th>
                         <th>Up</th>
                         <th>Byte</th>
-                        <th>Login</th>
                         <th>Total</th>
                         <th></th>
                     </tr>
@@ -715,12 +713,10 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $p10_us = !empty($profile10['user']) ? implode('<br>', array_map('htmlspecialchars', $profile10['user'])) : '-';
                             $p10_up = !empty($profile10['up']) ? implode('<br>', array_map('htmlspecialchars', $profile10['up'])) : '-';
                             $p10_bt = !empty($profile10['byte']) ? implode('<br>', array_map('htmlspecialchars', $profile10['byte'])) : '-';
-                            $p10_lg = !empty($profile10['login']) ? implode('<br>', array_map('htmlspecialchars', $profile10['login'])) : '-';
                             $p10_tt = $profile10_sum > 0 ? number_format($profile10_sum,0,',','.') : '-';
                             $p30_us = !empty($profile30['user']) ? implode('<br>', array_map('htmlspecialchars', $profile30['user'])) : '-';
                             $p30_up = !empty($profile30['up']) ? implode('<br>', array_map('htmlspecialchars', $profile30['up'])) : '-';
                             $p30_bt = !empty($profile30['byte']) ? implode('<br>', array_map('htmlspecialchars', $profile30['byte'])) : '-';
-                            $p30_lg = !empty($profile30['login']) ? implode('<br>', array_map('htmlspecialchars', $profile30['login'])) : '-';
                             $p30_tt = $profile30_sum > 0 ? number_format($profile30_sum,0,',','.') : '-';
                         ?>
                         <tr>
@@ -732,12 +728,10 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             <td><?= $p10_us ?></td>
                             <td><?= $p10_up ?></td>
                             <td><?= $p10_bt ?></td>
-                            <td><?= $p10_lg ?></td>
                             <td><?= $p10_tt ?></td>
                             <td><?= $p30_us ?></td>
                             <td><?= $p30_up ?></td>
                             <td><?= $p30_bt ?></td>
-                            <td><?= $p30_lg ?></td>
                             <td><?= $p30_tt ?></td>
                             <td><?= htmlspecialchars($ar['note'] ?? '') ?></td>
                         </tr>

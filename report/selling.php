@@ -2317,8 +2317,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         <th class="text-center">Selisih</th>
                         <th class="text-right">Setoran</th>
                         <th class="text-center">Selisih</th>
-                        <th class="text-center" colspan="5">Profil 10 Menit</th>
-                        <th class="text-center" colspan="5">Profil 30 Menit</th>
+                        <th class="text-center" colspan="4">Profil 10 Menit</th>
+                        <th class="text-center" colspan="4">Profil 30 Menit</th>
                         <th>Catatan</th>
                         <th class="text-right">Aksi</th>
                     </tr>
@@ -2332,12 +2332,10 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         <th>Username</th>
                         <th>Up</th>
                         <th>Byte</th>
-                        <th>Login</th>
                         <th>Total</th>
                         <th>Username</th>
                         <th>Up</th>
                         <th>Byte</th>
-                        <th>Login</th>
                         <th>Total</th>
                         <th></th>
                     </tr>
@@ -2399,12 +2397,10 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             $p10_us = render_audit_lines($profile10['user'] ?? []);
                             $p10_up = render_audit_lines($profile10['up'] ?? []);
                             $p10_bt = render_audit_lines($profile10['byte'] ?? []);
-                            $p10_lg = render_audit_lines($profile10['login'] ?? []);
                             $p10_tt = $profile10_sum > 0 ? render_audit_lines([number_format($profile10_sum,0,',','.')]) : '-';
                             $p30_us = render_audit_lines($profile30['user'] ?? []);
                             $p30_up = render_audit_lines($profile30['up'] ?? []);
                             $p30_bt = render_audit_lines($profile30['byte'] ?? []);
-                            $p30_lg = render_audit_lines($profile30['login'] ?? []);
                             $p30_tt = $profile30_sum > 0 ? render_audit_lines([number_format($profile30_sum,0,',','.')]) : '-';
                         ?>
                         <tr>
@@ -2416,12 +2412,10 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             <td><small><?= $p10_us ?></small></td>
                             <td><small><?= $p10_up ?></small></td>
                             <td><small><?= $p10_bt ?></small></td>
-                            <td><small><?= $p10_lg ?></small></td>
                             <td><small><?= $p10_tt ?></small></td>
                             <td><small><?= $p30_us ?></small></td>
                             <td><small><?= $p30_up ?></small></td>
                             <td><small><?= $p30_bt ?></small></td>
-                            <td><small><?= $p30_lg ?></small></td>
                             <td><small><?= $p30_tt ?></small></td>
                             <td><small><?= htmlspecialchars($ar['note'] ?? '') ?></small></td>
                             <td class="text-right">
