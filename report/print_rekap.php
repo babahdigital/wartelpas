@@ -653,40 +653,36 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                     <?php foreach ($audit_rows as $ar): ?>
                         <?php
                             $evidence = [];
-                            $evidence_summary_html = '';
+                            $profile10_html = '';
+                            $profile30_html = '';
                             if (!empty($ar['user_evidence'])) {
                                 $evidence = json_decode((string)$ar['user_evidence'], true);
                                 if (is_array($evidence)) {
-                                    $lines = [];
+                                    $lines10 = [];
+                                    $lines30 = [];
                                     if (!empty($evidence['users']) && is_array($evidence['users'])) {
                                         foreach ($evidence['users'] as $uname => $ud) {
                                             $cnt = isset($ud['events']) && is_array($ud['events']) ? count($ud['events']) : 0;
-                                            $fl = $ud['first_login_real'] ?? '';
-                                            $ll = $ud['last_login_real'] ?? '';
-                                            $lb = isset($ud['last_bytes']) ? format_bytes_short((int)$ud['last_bytes']) : '';
-                                            $parts = [];
-                                            if ($cnt > 0) $parts[] = 'Login: ' . $cnt . 'x';
-                                            if ($fl !== '') $parts[] = 'First: ' . format_date_ddmmyyyy($fl) . ' ' . substr($fl, 11, 8);
-                                            if ($ll !== '') $parts[] = 'Last: ' . format_date_ddmmyyyy($ll) . ' ' . substr($ll, 11, 8);
-                                            if ($lb !== '' && $lb !== '0 B') $parts[] = 'Bytes: ' . $lb;
-                                            $line = (string)$uname;
-                                            if (!empty($parts)) $line .= ': ' . implode(' | ', $parts);
-                                            $lines[] = $line;
+                                            $upt = trim((string)($ud['last_uptime'] ?? ''));
+                                            $lb = format_bytes_short((int)($ud['last_bytes'] ?? 0));
+                                            $upt = $upt !== '' ? $upt : '-';
+                                            $line = (string)$uname . ' | Uptime: ' . $upt . ' | Bytes: ' . $lb . ' | Login: ' . $cnt . 'x';
+                                            $kind = (string)($ud['profile_kind'] ?? '10');
+                                            if ($kind === '30') $lines30[] = $line; else $lines10[] = $line;
                                         }
                                     } else {
                                         $cnt = isset($evidence['events']) && is_array($evidence['events']) ? count($evidence['events']) : 0;
-                                        $fl = $evidence['first_login_real'] ?? '';
-                                        $ll = $evidence['last_login_real'] ?? '';
-                                        $lb = isset($evidence['last_bytes']) ? format_bytes_short((int)$evidence['last_bytes']) : '';
-                                        $parts = [];
-                                        if ($cnt > 0) $parts[] = 'Login: ' . $cnt . 'x';
-                                        if ($fl !== '') $parts[] = 'First: ' . format_date_ddmmyyyy($fl) . ' ' . substr($fl, 11, 8);
-                                        if ($ll !== '') $parts[] = 'Last: ' . format_date_ddmmyyyy($ll) . ' ' . substr($ll, 11, 8);
-                                        if ($lb !== '' && $lb !== '0 B') $parts[] = 'Bytes: ' . $lb;
-                                        if (!empty($parts)) $lines[] = implode(' | ', $parts);
+                                        $upt = trim((string)($evidence['last_uptime'] ?? ''));
+                                        $lb = format_bytes_short((int)($evidence['last_bytes'] ?? 0));
+                                        $upt = $upt !== '' ? $upt : '-';
+                                        $line = 'Uptime: ' . $upt . ' | Bytes: ' . $lb . ' | Login: ' . $cnt . 'x';
+                                        $lines10[] = $line;
                                     }
-                                    if (!empty($lines)) {
-                                        $evidence_summary_html = implode('<br>', array_map('htmlspecialchars', $lines));
+                                    if (!empty($lines10)) {
+                                        $profile10_html = implode('<br>', array_map('htmlspecialchars', $lines10));
+                                    }
+                                    if (!empty($lines30)) {
+                                        $profile30_html = implode('<br>', array_map('htmlspecialchars', $lines30));
                                     }
                                 }
                             }
@@ -700,7 +696,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             <td style="text-align:right;"><?= number_format((int)($ar['expected_setoran'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)($ar['selisih_setoran'] ?? 0),0,',','.') ?></td>
-                            <td><?= htmlspecialchars($ar['note'] ?? '') ?><?= $evidence_summary_html !== '' ? '<br>' . $evidence_summary_html : '' ?></td>
+                            <td><?= htmlspecialchars($ar['note'] ?? '') ?></td>
+                            <td><?= $profile10_html !== '' ? $profile10_html : '-' ?></td>
+                            <td><?= $profile30_html !== '' ? $profile30_html : '-' ?></td>
                         </tr>
                     <?php endforeach; ?>
                     <tr>
@@ -712,6 +710,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <td style="text-align:right;"><b><?= number_format($audit_total_expected_setoran,0,',','.') ?></b></td>
                         <td style="text-align:right;"><b><?= number_format($audit_total_actual_setoran,0,',','.') ?></b></td>
                         <td style="text-align:right;"><b><?= number_format($audit_total_selisih_setoran,0,',','.') ?></b></td>
+                        <td></td>
+                        <td></td>
                         <td></td>
                     </tr>
                 </tbody>
