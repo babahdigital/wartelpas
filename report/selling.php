@@ -2303,15 +2303,13 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 <thead>
                     <tr>
                         <th>Blok</th>
-                        <th class="text-center">Qty Sistem</th>
                         <th class="text-center">Qty Manual</th>
                         <th class="text-center">Selisih Qty</th>
-                        <th class="text-right">Setoran Sistem</th>
                         <th class="text-right">Setoran Manual</th>
                         <th class="text-right">Selisih Setoran</th>
+                        <th class="text-center" colspan="5">Profil 10 Menit</th>
+                        <th class="text-center" colspan="5">Profil 30 Menit</th>
                         <th>Catatan</th>
-                        <th class="text-center" colspan="4">Profil 10 Menit</th>
-                        <th class="text-center" colspan="4">Profil 30 Menit</th>
                         <th class="text-right">Aksi</th>
                     </tr>
                     <tr>
@@ -2321,12 +2319,12 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         <th></th>
                         <th></th>
                         <th></th>
-                        <th></th>
-                        <th></th>
+                        <th>Username</th>
                         <th>Up</th>
                         <th>Byte</th>
                         <th>Login</th>
                         <th>Total</th>
+                        <th>Username</th>
                         <th>Up</th>
                         <th>Byte</th>
                         <th>Login</th>
@@ -2344,8 +2342,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             $cls_q = $sq > 0 ? 'audit-pos' : ($sq < 0 ? 'audit-neg' : 'audit-zero');
                             $cls_s = $ss > 0 ? 'audit-pos' : ($ss < 0 ? 'audit-neg' : 'audit-zero');
                             $evidence = [];
-                            $profile10 = ['up' => [], 'byte' => [], 'login' => [], 'total' => []];
-                            $profile30 = ['up' => [], 'byte' => [], 'login' => [], 'total' => []];
+                            $profile10 = ['user' => [], 'up' => [], 'byte' => [], 'login' => [], 'total' => []];
+                            $profile30 = ['user' => [], 'up' => [], 'byte' => [], 'login' => [], 'total' => []];
                             if (!empty($ar['user_evidence'])) {
                                 $evidence = json_decode((string)$ar['user_evidence'], true);
                                 if (is_array($evidence)) {
@@ -2358,10 +2356,11 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                             $upt = $upt !== '' ? $upt : '-';
                                             $kind = (string)($ud['profile_kind'] ?? '10');
                                             $bucket = ($kind === '30') ? $profile30 : $profile10;
-                                            $bucket['up'][] = (string)$uname . ': ' . $upt;
-                                            $bucket['byte'][] = (string)$uname . ': ' . $lb;
-                                            $bucket['login'][] = (string)$uname . ': ' . $cnt . 'x';
-                                            $bucket['total'][] = (string)$uname . ': ' . number_format($price_val,0,',','.');
+                                            $bucket['user'][] = (string)$uname;
+                                            $bucket['up'][] = $upt;
+                                            $bucket['byte'][] = $lb;
+                                            $bucket['login'][] = $cnt . 'x';
+                                            $bucket['total'][] = number_format($price_val,0,',','.');
                                             if ($kind === '30') {
                                                 $profile30 = $bucket;
                                             } else {
@@ -2374,17 +2373,20 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                         $lb = format_bytes_short((int)($evidence['last_bytes'] ?? 0));
                                         $price_val = (int)($evidence['price'] ?? 0);
                                         $upt = $upt !== '' ? $upt : '-';
-                                        $profile10['up'][] = 'Uptime: ' . $upt;
-                                        $profile10['byte'][] = 'Bytes: ' . $lb;
-                                        $profile10['login'][] = 'Login: ' . $cnt . 'x';
-                                        $profile10['total'][] = 'Total: ' . number_format($price_val,0,',','.');
+                                        $profile10['user'][] = '-';
+                                        $profile10['up'][] = $upt;
+                                        $profile10['byte'][] = $lb;
+                                        $profile10['login'][] = $cnt . 'x';
+                                        $profile10['total'][] = number_format($price_val,0,',','.');
                                     }
                                 }
                             }
+                            $p10_us = !empty($profile10['user']) ? implode('<br>', array_map('htmlspecialchars', $profile10['user'])) : '-';
                             $p10_up = !empty($profile10['up']) ? implode('<br>', array_map('htmlspecialchars', $profile10['up'])) : '-';
                             $p10_bt = !empty($profile10['byte']) ? implode('<br>', array_map('htmlspecialchars', $profile10['byte'])) : '-';
                             $p10_lg = !empty($profile10['login']) ? implode('<br>', array_map('htmlspecialchars', $profile10['login'])) : '-';
                             $p10_tt = !empty($profile10['total']) ? implode('<br>', array_map('htmlspecialchars', $profile10['total'])) : '-';
+                            $p30_us = !empty($profile30['user']) ? implode('<br>', array_map('htmlspecialchars', $profile30['user'])) : '-';
                             $p30_up = !empty($profile30['up']) ? implode('<br>', array_map('htmlspecialchars', $profile30['up'])) : '-';
                             $p30_bt = !empty($profile30['byte']) ? implode('<br>', array_map('htmlspecialchars', $profile30['byte'])) : '-';
                             $p30_lg = !empty($profile30['login']) ? implode('<br>', array_map('htmlspecialchars', $profile30['login'])) : '-';
@@ -2392,21 +2394,21 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         ?>
                         <tr>
                             <td><?= htmlspecialchars($ar['blok_name'] ?? '-') ?></td>
-                            <td class="text-center"><?= number_format((int)($ar['expected_qty'] ?? 0),0,',','.') ?></td>
                             <td class="text-center"><?= number_format((int)($ar['reported_qty'] ?? 0),0,',','.') ?></td>
                             <td class="text-center"><span class="<?= $cls_q; ?>"><?= number_format($sq,0,',','.') ?></span></td>
-                            <td class="text-right"><?= number_format((int)($ar['expected_setoran'] ?? 0),0,',','.') ?></td>
                             <td class="text-right"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
                             <td class="text-right"><span class="<?= $cls_s; ?>"><?= number_format($ss,0,',','.') ?></span></td>
-                            <td><small><?= htmlspecialchars($ar['note'] ?? '') ?></small></td>
+                            <td><small><?= $p10_us ?></small></td>
                             <td><small><?= $p10_up ?></small></td>
                             <td><small><?= $p10_bt ?></small></td>
                             <td><small><?= $p10_lg ?></small></td>
                             <td><small><?= $p10_tt ?></small></td>
+                            <td><small><?= $p30_us ?></small></td>
                             <td><small><?= $p30_up ?></small></td>
                             <td><small><?= $p30_bt ?></small></td>
                             <td><small><?= $p30_lg ?></small></td>
                             <td><small><?= $p30_tt ?></small></td>
+                            <td><small><?= htmlspecialchars($ar['note'] ?? '') ?></small></td>
                             <td class="text-right">
                                 <button type="button" class="btn-act" onclick="openAuditEdit(this)"
                                     data-blok="<?= htmlspecialchars($ar['blok_name'] ?? ''); ?>"
