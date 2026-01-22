@@ -63,7 +63,7 @@ $_please_login = isset($_please_login) ? $_please_login : 'Silakan Login';
             </div>
             
             <div class="login-footer">
-                &copy; <?= date('Y') ?> Wartelpas System. All rights reserved.
+                &copy; <?= date('Y') ?> Security By Babah Digital. All rights reserved.
             </div>
         </div>
     </div>
