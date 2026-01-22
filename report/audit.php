@@ -39,6 +39,14 @@ function format_bytes_short($bytes) {
     return number_format($b, $dec, ',', '.') . ' ' . $units[$i];
 }
 
+function extract_profile_from_comment($comment) {
+    $comment = (string)$comment;
+    if (preg_match('/\bProfile\s*:\s*([^|]+)/i', $comment, $m)) {
+        return trim($m[1]);
+    }
+    return '';
+}
+
 $db = null;
 $sales_summary = [
     'total' => 0,
@@ -75,39 +83,23 @@ if (file_exists($dbFile)) {
         }
 
         if (table_exists($db, 'sales_history')) {
-            $statusSql = "SELECT
-                CASE
-                    WHEN COALESCE(is_invalid,0)=1 THEN 'invalid'
-                    WHEN COALESCE(is_retur,0)=1 THEN 'retur'
-                    WHEN COALESCE(is_rusak,0)=1 THEN 'rusak'
-                    WHEN lower(COALESCE(status,'')) IN ('invalid','retur','rusak') THEN lower(status)
-                    ELSE 'normal'
-                END AS st,
-                COUNT(1) AS cnt,
-                SUM(COALESCE(price_snapshot, price, 0) * COALESCE(qty,1)) AS total
+            $sumSql = "SELECT
+                SUM(CASE WHEN COALESCE(is_invalid,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS invalid_sum,
+                SUM(CASE WHEN COALESCE(is_rusak,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS rusak_sum,
+                SUM(CASE WHEN COALESCE(is_retur,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS retur_sum,
+                SUM(CASE WHEN COALESCE(is_invalid,0)=1 THEN 0 ELSE COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) END) AS gross_sum,
+                COUNT(1) AS total_cnt
                 FROM sales_history
-                WHERE $dateFilter
-                GROUP BY st";
-            $stmt = $db->prepare($statusSql);
+                WHERE $dateFilter";
+            $stmt = $db->prepare($sumSql);
             foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
             $stmt->execute();
-            $sales_status_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            foreach ($sales_status_rows as $r) {
-                $st = $r['st'] ?? 'normal';
-                $cnt = (int)($r['cnt'] ?? 0);
-                $sum = (int)($r['total'] ?? 0);
-                if ($st === 'rusak') {
-                    $sales_summary['rusak'] += $sum;
-                } elseif ($st === 'invalid') {
-                    $sales_summary['invalid'] += $sum;
-                } elseif ($st === 'retur') {
-                    $sales_summary['retur'] += $sum;
-                } else {
-                    $sales_summary['gross'] += $sum;
-                }
-                $sales_summary['total'] += $cnt;
-            }
+            $sumRow = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            $sales_summary['invalid'] = (int)($sumRow['invalid_sum'] ?? 0);
+            $sales_summary['rusak'] = (int)($sumRow['rusak_sum'] ?? 0);
+            $sales_summary['retur'] = (int)($sumRow['retur_sum'] ?? 0);
+            $sales_summary['gross'] = (int)($sumRow['gross_sum'] ?? 0);
+            $sales_summary['total'] = (int)($sumRow['total_cnt'] ?? 0);
             $sales_summary['net'] = $sales_summary['gross'] - $sales_summary['rusak'] - $sales_summary['invalid'];
 
             $dupRawSql = "SELECT full_raw_data, sale_date, username, COUNT(*) AS cnt
@@ -141,12 +133,13 @@ if (file_exists($dbFile)) {
         }
 
         if (table_exists($db, 'login_events')) {
-            $reloginSql = "SELECT username, date_key, COUNT(*) AS cnt
-                FROM login_events
-                WHERE date_key LIKE :d
-                GROUP BY username, date_key
+            $reloginSql = "SELECT le.username, le.date_key, COUNT(*) AS cnt, lh.blok_name, lh.raw_comment
+                FROM login_events le
+                LEFT JOIN login_history lh ON lh.username = le.username
+                WHERE le.date_key LIKE :d
+                GROUP BY le.username, le.date_key
                 HAVING cnt > 1
-                ORDER BY cnt DESC, date_key DESC
+                ORDER BY cnt DESC, le.date_key DESC
                 LIMIT 200";
             $dateKey = $req_show === 'harian' ? $filter_date : $filter_date . '%';
             $stmt = $db->prepare($reloginSql);
@@ -156,7 +149,7 @@ if (file_exists($dbFile)) {
         }
 
         if (table_exists($db, 'login_history')) {
-            $bwSql = "SELECT username, last_bytes, last_uptime, last_status, last_login_real
+            $bwSql = "SELECT username, last_bytes, last_uptime, last_status, last_login_real, blok_name, raw_comment
                 FROM login_history
                 WHERE last_bytes IS NOT NULL
                 ORDER BY last_bytes DESC
@@ -164,15 +157,6 @@ if (file_exists($dbFile)) {
             $stmt = $db->prepare($bwSql);
             $stmt->execute();
             $bandwidth_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        }
-
-        if (table_exists($db, 'security_log')) {
-            $secSql = "SELECT log_date, username, mac_address, ip_address, reason, comment
-                FROM security_log
-                ORDER BY log_date DESC
-                LIMIT 200";
-            $stmt = $db->query($secSql);
-            $security_logs = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
         }
     } catch (Exception $e) {
         $db = null;
@@ -236,23 +220,12 @@ if (file_exists($dbFile)) {
             <div class="summary-card"><div class="summary-title">Pending Live Sales</div><div class="summary-value"><?= number_format($sales_summary['pending'],0,',','.') ?></div></div>
         </div>
 
-        <div class="section-title">Distribusi Status Penjualan</div>
-        <table class="table-dark-solid">
-            <thead><tr><th>Status</th><th>Jumlah</th><th>Total</th></tr></thead>
-            <tbody>
-                <?php if (empty($sales_status_rows)): ?>
-                    <tr><td colspan="3" class="text-center muted">Tidak ada data</td></tr>
-                <?php else: ?>
-                    <?php foreach ($sales_status_rows as $r): ?>
-                        <tr>
-                            <td><?= strtoupper(htmlspecialchars($r['st'] ?? 'normal')) ?></td>
-                            <td><?= number_format((int)($r['cnt'] ?? 0),0,',','.') ?></td>
-                            <td>Rp <?= number_format((int)($r['total'] ?? 0),0,',','.') ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
+        <?php if ($sales_summary['pending'] > 0 && $sales_summary['total'] === 0): ?>
+            <div class="summary-card" style="border:1px solid #3a4046;background:#1f2327;">
+                <div class="summary-title">Catatan</div>
+                <div class="summary-value" style="font-size:13px;">Ada transaksi live yang belum dipindahkan ke sales_history.</div>
+            </div>
+        <?php endif; ?>
 
         <div class="section-title">Duplikasi Berdasar full_raw_data</div>
         <table class="table-dark-solid">
@@ -293,15 +266,18 @@ if (file_exists($dbFile)) {
 
         <div class="section-title">Relogin (login_events)</div>
         <table class="table-dark-solid">
-            <thead><tr><th>Tanggal</th><th>Username</th><th>Jumlah Relogin</th></tr></thead>
+            <thead><tr><th>Tanggal</th><th>Username</th><th>Blok</th><th>Profile</th><th>Jumlah Relogin</th></tr></thead>
             <tbody>
                 <?php if (empty($relogin_rows)): ?>
-                    <tr><td colspan="3" class="text-center muted">Tidak ada relogin</td></tr>
+                    <tr><td colspan="5" class="text-center muted">Tidak ada relogin</td></tr>
                 <?php else: ?>
                     <?php foreach ($relogin_rows as $r): ?>
+                        <?php $p = extract_profile_from_comment($r['raw_comment'] ?? ''); ?>
                         <tr>
                             <td><?= htmlspecialchars($r['date_key'] ?? '-') ?></td>
                             <td><?= htmlspecialchars($r['username'] ?? '-') ?></td>
+                            <td><?= htmlspecialchars($r['blok_name'] ?? '-') ?></td>
+                            <td><?= htmlspecialchars($p ?: '-') ?></td>
                             <td><span class="pill pill-ok"><?= (int)($r['cnt'] ?? 0) ?></span></td>
                         </tr>
                     <?php endforeach; ?>
@@ -311,38 +287,21 @@ if (file_exists($dbFile)) {
 
         <div class="section-title">Top Bandwidth (login_history)</div>
         <table class="table-dark-solid">
-            <thead><tr><th>Username</th><th>Last Bytes</th><th>Uptime</th><th>Status</th><th>Last Login</th></tr></thead>
+            <thead><tr><th>Username</th><th>Blok</th><th>Profile</th><th>Last Bytes</th><th>Uptime</th><th>Status</th><th>Last Login</th></tr></thead>
             <tbody>
                 <?php if (empty($bandwidth_rows)): ?>
-                    <tr><td colspan="5" class="text-center muted">Tidak ada data</td></tr>
+                    <tr><td colspan="7" class="text-center muted">Tidak ada data</td></tr>
                 <?php else: ?>
                     <?php foreach ($bandwidth_rows as $r): ?>
+                        <?php $p = extract_profile_from_comment($r['raw_comment'] ?? ''); ?>
                         <tr>
                             <td><?= htmlspecialchars($r['username'] ?? '-') ?></td>
+                            <td><?= htmlspecialchars($r['blok_name'] ?? '-') ?></td>
+                            <td><?= htmlspecialchars($p ?: '-') ?></td>
                             <td><?= htmlspecialchars(format_bytes_short($r['last_bytes'] ?? 0)) ?></td>
                             <td><?= htmlspecialchars($r['last_uptime'] ?? '-') ?></td>
                             <td><?= strtoupper(htmlspecialchars($r['last_status'] ?? '-')) ?></td>
                             <td><?= htmlspecialchars($r['last_login_real'] ?? '-') ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
-
-        <div class="section-title">Security Log (latest 200)</div>
-        <table class="table-dark-solid">
-            <thead><tr><th>Waktu</th><th>User</th><th>MAC / IP</th><th>Alasan</th><th>Catatan</th></tr></thead>
-            <tbody>
-                <?php if (empty($security_logs)): ?>
-                    <tr><td colspan="5" class="text-center muted">Tidak ada data</td></tr>
-                <?php else: ?>
-                    <?php foreach ($security_logs as $l): ?>
-                        <tr>
-                            <td><?= htmlspecialchars($l['log_date'] ?? '-') ?></td>
-                            <td><strong><?= htmlspecialchars($l['username'] ?? '-') ?></strong></td>
-                            <td><?= htmlspecialchars($l['mac_address'] ?? '-') ?><br><small class="muted"><?= htmlspecialchars($l['ip_address'] ?? '-') ?></small></td>
-                            <td><?= htmlspecialchars($l['reason'] ?? '-') ?></td>
-                            <td><?= htmlspecialchars($l['comment'] ?? '-') ?></td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
