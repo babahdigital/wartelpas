@@ -1178,6 +1178,9 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
     var settlementTimer = null;
     var hpDeleteUrl = '';
     var settlementLastFetch = 0;
+    var auditUserOptions = <?= json_encode($audit_user_options ?? []); ?>;
+    var auditSelectedUsers = [];
+    window.auditEditing = false;
     function formatDateDMY(dateStr){
         if (!dateStr) return '-';
         var m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -1693,17 +1696,22 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         var modal = document.getElementById('auditModal');
         if (modal) modal.style.display = 'flex';
         window.sellingPauseReload = true;
+        if (!window.auditEditing && typeof resetAuditUserPicker === 'function') {
+            resetAuditUserPicker();
+        }
     }
 
     function closeAuditModal(){
         var modal = document.getElementById('auditModal');
         if (modal) modal.style.display = 'none';
         window.sellingPauseReload = false;
+        window.auditEditing = false;
     }
 
     window.openAuditEdit = function(btn){
         var form = document.getElementById('auditForm');
         if (!form || !btn) return;
+        window.auditEditing = true;
         var blok = btn.getAttribute('data-blok') || '';
         var date = btn.getAttribute('data-date') || '';
         var user = btn.getAttribute('data-user') || '';
@@ -1715,8 +1723,9 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (blokSelect) blokSelect.value = blok;
         var dateInput = form.querySelector('input[name="audit_date"]');
         if (dateInput) dateInput.value = date;
-        var userInput = form.querySelector('input[name="audit_username"]');
-        if (userInput) userInput.value = user;
+        if (typeof setAuditUserPicker === 'function') {
+            setAuditUserPicker(user);
+        }
         var qtyInput = form.querySelector('input[name="audit_qty"]');
         if (qtyInput) qtyInput.value = qty;
         var setInput = form.querySelector('input[name="audit_setoran"]');
@@ -1777,6 +1786,114 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                         err.style.display = 'block';
                     }
                 });
+        });
+    })();
+
+    function renderAuditSelected(){
+        var chipWrap = document.getElementById('audit-user-chips');
+        var hidden = document.getElementById('auditUsernameHidden');
+        if (!chipWrap || !hidden) return;
+        chipWrap.innerHTML = '';
+        var list = auditSelectedUsers.slice();
+        list.forEach(function(u){
+            var chip = document.createElement('span');
+            chip.className = 'audit-user-chip';
+            chip.textContent = u;
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = '×';
+            btn.onclick = function(){ removeAuditUser(u); };
+            chip.appendChild(btn);
+            chipWrap.appendChild(chip);
+        });
+        hidden.value = list.join(', ');
+    }
+
+    function addAuditUser(u){
+        u = String(u || '').trim();
+        if (!u) return;
+        if (auditSelectedUsers.indexOf(u) !== -1) return;
+        auditSelectedUsers.push(u);
+        renderAuditSelected();
+    }
+
+    function removeAuditUser(u){
+        auditSelectedUsers = auditSelectedUsers.filter(function(x){ return x !== u; });
+        renderAuditSelected();
+    }
+
+    function setAuditUserPicker(raw){
+        auditSelectedUsers = [];
+        var arr = String(raw || '').split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+        arr.forEach(addAuditUser);
+        renderAuditSelected();
+    }
+
+    function resetAuditUserPicker(){
+        auditSelectedUsers = [];
+        renderAuditSelected();
+        var input = document.getElementById('audit-user-input');
+        if (input) input.value = '';
+        hideAuditSuggest();
+    }
+
+    function showAuditSuggest(items){
+        var box = document.getElementById('audit-user-suggest');
+        if (!box) return;
+        box.innerHTML = '';
+        if (!items || !items.length) {
+            box.style.display = 'none';
+            return;
+        }
+        items.forEach(function(u){
+            var el = document.createElement('div');
+            el.className = 'item';
+            el.textContent = u;
+            el.onclick = function(){
+                addAuditUser(u);
+                var input = document.getElementById('audit-user-input');
+                if (input) input.value = '';
+                hideAuditSuggest();
+            };
+            box.appendChild(el);
+        });
+        box.style.display = 'block';
+    }
+
+    function hideAuditSuggest(){
+        var box = document.getElementById('audit-user-suggest');
+        if (box) box.style.display = 'none';
+    }
+
+    (function(){
+        var input = document.getElementById('audit-user-input');
+        if (!input) return;
+        input.addEventListener('input', function(){
+            var q = String(input.value || '').toLowerCase().trim();
+            if (!q) return hideAuditSuggest();
+            var items = (auditUserOptions || []).filter(function(u){
+                return u.toLowerCase().indexOf(q) !== -1 && auditSelectedUsers.indexOf(u) === -1;
+            }).slice(0, 12);
+            showAuditSuggest(items);
+        });
+        input.addEventListener('keydown', function(e){
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                var q = String(input.value || '').trim();
+                if (!q) return;
+                var exact = (auditUserOptions || []).find(function(u){ return u.toLowerCase() === q.toLowerCase(); });
+                if (exact) {
+                    addAuditUser(exact);
+                    input.value = '';
+                    hideAuditSuggest();
+                }
+            }
+        });
+        document.addEventListener('click', function(e){
+            var box = document.getElementById('audit-user-suggest');
+            var wrap = document.querySelector('.audit-user-picker');
+            if (!box || !wrap) return;
+            if (!wrap.contains(e.target)) hideAuditSuggest();
         });
     })();
 </script>
