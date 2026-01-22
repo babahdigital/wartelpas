@@ -672,7 +672,7 @@ $total_qty_laku = count($unique_laku_users);
 
 // Simpan audit manual rekap harian (qty + uang)
 if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
-    if (isset($_POST['audit_submit'])) {
+    if (isset($_POST['audit_submit']) || isset($_POST['audit_blok'])) {
         $audit_is_ajax = isset($_POST['ajax']) && $_POST['ajax'] === '1';
         $audit_blok_raw = trim($_POST['audit_blok'] ?? '');
         $audit_date = trim($_POST['audit_date'] ?? '');
@@ -955,6 +955,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             <input type="hidden" name="date" value="<?= htmlspecialchars($filter_date); ?>">
             <input type="hidden" name="report" value="selling">
             <input type="hidden" name="ajax" value="1">
+            <input type="hidden" name="audit_submit" value="1">
             <div class="modal-body">
                 <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;">
                     <div style="font-size:22px;color:#4ea8ff;line-height:1;"><i class="fa fa-edit"></i></div>
