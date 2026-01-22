@@ -145,6 +145,8 @@
     height: 50px;
     width: 100%;
     cursor: pointer;
+    margin-left: 0px;
+    margin-right: 0px;
 }
 
 .btn-login i {
