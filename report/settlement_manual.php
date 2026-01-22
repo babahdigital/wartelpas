@@ -120,6 +120,14 @@ try {
                     continue;
                 }
 
+                if (strpos($msgTrim, "\\r") !== false || strpos($msgTrim, "\\n") !== false) {
+                    continue;
+                }
+
+                if (stripos($msgTrim, "on-error") !== false && stripos($msgTrim, ":log info") !== false) {
+                    continue;
+                }
+
                 if (stripos($msgTrim, '[ARP Cleanup]') !== false || stripos($msgTrim, '[DHCP Cleanup]') !== false || stripos($msgTrim, 'SYNC USAGE: OK') !== false) {
                     continue;
                 }
