@@ -5,12 +5,23 @@
 # 1. CEK KUNCI & ANTI-NYANGKUT
 # Jika variabel nyangkut lebih dari 10 menit (manual reset), kita paksa lanjut.
 :global isCleaning;
+:global cleaningSince;
 :if ([:typeof $isCleaning] = "nothing") do={ :set isCleaning false; }
+:local nowTime [/system clock get time];
+:local nowSec [:totime $nowTime];
+:if ([:typeof $cleaningSince] = "nothing") do={ :set cleaningSince $nowSec; }
 :if ($isCleaning = true) do={
-    :log warning "CUCI GUDANG: Proses sebelumnya belum selesai atau nyangkut. Set manual isCleaning=false jika perlu.";
-    :return;
+    :local diff ($nowSec - $cleaningSince);
+    :if (($diff < 0) || ($diff > 600)) do={
+        :log warning "CUCI GUDANG: Kunci auto-reset (timeout).";
+        :set isCleaning false;
+    } else={
+        :log warning "CUCI GUDANG: Proses sebelumnya belum selesai atau nyangkut. Set manual isCleaning=false jika perlu.";
+        :return;
+    }
 }
 :set isCleaning true;
+:set cleaningSince $nowSec;
 
 # Helper kirim log ke server realtime
 :global urlEncode;
@@ -68,6 +79,7 @@
     $sendSettleLog $msg $lvl;
 };
 
+:do {
 $logSettle "info" "SETTLE: CLEANUP: Mulai proses cuci gudang.";
 
 :global syncStatsOk;
@@ -157,6 +169,7 @@ $logSettle "info" "SETTLE: CLEANUP: Hapus user terpakai (bytes/uptime/disabled).
         :local up [/ip hotspot user get $u uptime];
         :local dis [/ip hotspot user get $u disabled];
         :local comm [/ip hotspot user get $u comment];
+        :if ([:typeof $comm] = "nothing") do={ :set comm ""; }
         :local biVal [:tonum $bi];
         :local boVal [:tonum $bo];
         :if ([:typeof $biVal] = "nil") do={ :set biVal 0; }
@@ -202,4 +215,10 @@ $logSettle "info" "SETTLE: CLEANUP: Hapus user terpakai (bytes/uptime/disabled).
 
 # Buka Kunci
 :set isCleaning false;
+:set cleaningSince 0;
 $logSettle "info" "SETTLE: SUKSES: Cuci Gudang Selesai.";
+} on-error={
+    :log error ("SETTLE: ERROR: " . $message);
+    :set isCleaning false;
+    :set cleaningSince 0;
+}
