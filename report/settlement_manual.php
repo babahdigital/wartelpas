@@ -76,6 +76,7 @@ try {
     $done = false;
     $fail = false;
     $message = '';
+    clearstatcache(true, $logFile);
     $useFileLogs = is_file($logFile) && filesize($logFile) > 0;
     $API = new RouterosAPI();
     $API->debug = false;
@@ -303,15 +304,7 @@ try {
 
     $infoMessage = '';
     if (empty($logs)) {
-            if ($elapsed > 15) {
-                if ($sawFetch) {
-                    $infoMessage = 'Log settlement belum muncul. Pastikan script Cuci Gudang sudah terpasang.';
-                } else {
-                    $infoMessage = $message !== '' ? $message : 'Menunggu log dari MikroTik...';
-                }
-            } else {
-                $infoMessage = 'Menunggu log dari MikroTik...';
-            }
+        $infoMessage = 'Menunggu log masuk...';
     }
 
     if ($done) $status = 'done';

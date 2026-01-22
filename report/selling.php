@@ -1057,23 +1057,25 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
     function enqueueSettlementLogs(logs){
         if (!window.settleQueue) window.settleQueue = [];
         if (!window.settleSeen) window.settleSeen = {};
+        var newItems = 0;
         logs.forEach(function(row){
             if (!row) return;
             var key = [row.time || '', row.topic || '', row.message || ''].join('|');
             if (window.settleSeen[key]) return;
             window.settleSeen[key] = true;
             window.settleQueue.push(row);
+            newItems++;
         });
-        if (window.settleQueue.length > 12) {
+        if (window.settleQueue.length > 100) {
             window.settleFastMode = true;
         }
         if (!window.settleTimer) {
-            window.settleTimer = setInterval(renderSettlementLogItem, 300);
+            window.settleTimer = setInterval(renderSettlementLogItem, 50);
         }
     }
 
     function renderSettlementLogItem(){
-        if (window.settleTyping) return;
+        if (window.settleTyping && !window.settleFastMode) return;
         if (!window.settleQueue || window.settleQueue.length === 0) {
             if (window.settleDone) {
                 clearInterval(window.settleTimer);
@@ -1122,7 +1124,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             return;
         }
         window.settleTyping = true;
-        typeSettlementMessage(msgSpan, String(msg), function(){
+        typeSettlementMessage(msgSpan, String(msg), 5, function(){
             window.settleTyping = false;
             var newCursor = document.createElement('span');
             newCursor.className = 'cursor-blink';
@@ -1133,19 +1135,19 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         });
     }
 
-    function typeSettlementMessage(target, text, done){
+    function typeSettlementMessage(target, text, speed, done){
         var i = 0;
         var len = text.length;
-        var speed = 12;
-        var timer = setInterval(function(){
+        function typeChar(){
             if (i >= len) {
-                clearInterval(timer);
                 if (done) done();
                 return;
             }
             target.textContent += text.charAt(i);
             i += 1;
-        }, speed);
+            setTimeout(typeChar, speed);
+        }
+        typeChar();
     }
 
     (function(){
