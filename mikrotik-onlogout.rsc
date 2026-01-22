@@ -33,24 +33,26 @@
     :local commentLen [:len $cleanComment];
     
     # Cari "Blok-" atau "| Blok-" dalam comment
-    :for i from=0 to=($commentLen - 5) do={
-        :local substr [:pick $cleanComment $i ($i + 5)];
-        :if ($substr = "Blok-" or $substr = "blok-") do={
-            # Extract sampai spasi atau karakter khusus
-            :local endPos $i;
-            :for j from=$i to=$commentLen do={
-                :local char [:pick $cleanComment $j ($j + 1)];
-                :if ($char = " " or $char = ")" or $char = "-" or $char = "|" or $j = $commentLen) do={
-                    :if ($char = "-" and [:pick $currentComment ($j + 1) ($j + 2)] != " ") do={
-                        # Ini masih bagian dari Blok-A10, lanjut
-                    } else={
-                        :set endPos $j;
-                        :set j $commentLen;
+    :if ($commentLen > 4) do={
+        :for i from=0 to=($commentLen - 5) do={
+            :local substr [:pick $cleanComment $i ($i + 5)];
+            :if ($substr = "Blok-" or $substr = "blok-") do={
+                # Extract sampai spasi atau karakter khusus
+                :local endPos $i;
+                :for j from=$i to=$commentLen do={
+                    :local char [:pick $cleanComment $j ($j + 1)];
+                    :if ($char = " " or $char = ")" or $char = "-" or $char = "|" or $j = $commentLen) do={
+                        :if ($char = "-" and [:pick $currentComment ($j + 1) ($j + 2)] != " ") do={
+                            # Ini masih bagian dari Blok-A10, lanjut
+                        } else={
+                            :set endPos $j;
+                            :set j $commentLen;
+                        }
                     }
                 }
+                :set blokInfo [:pick $cleanComment $i $endPos];
+                :set i $commentLen;
             }
-            :set blokInfo [:pick $cleanComment $i $endPos];
-            :set i $commentLen;
         }
     }
     
@@ -107,19 +109,27 @@
     :if ($isWartel = true) do={
         :local cookieIds [/ip hotspot cookie find where user="$username"];
         :if ([:len $cookieIds] > 0) do={
-            /ip hotspot cookie remove $cookieIds;
+            :foreach cId in=$cookieIds do={
+                :do { /ip hotspot cookie remove $cId; } on-error={}
+            }
         }
         # Kick active hanya untuk user yang logout
         :local activeIds [/ip hotspot active find where user="$username"];
         :if ([:len $activeIds] > 0) do={
-            /ip hotspot active remove $activeIds;
+            :foreach aId in=$activeIds do={
+                :do { /ip hotspot active remove $aId; } on-error={}
+            }
         }
         # Putus koneksi hanya untuk user yang logout (berdasarkan IP)
         :if ([:len $userip] > 0) do={
             :local connSrc [/ip firewall connection find src-address=$userip];
-            :if ([:len $connSrc] > 0) do={ /ip firewall connection remove $connSrc; }
+            :if ([:len $connSrc] > 0) do={
+                :foreach cSrc in=$connSrc do={ :do { /ip firewall connection remove $cSrc; } on-error={} }
+            }
             :local connDst [/ip firewall connection find dst-address=$userip];
-            :if ([:len $connDst] > 0) do={ /ip firewall connection remove $connDst; }
+            :if ([:len $connDst] > 0) do={
+                :foreach cDst in=$connDst do={ :do { /ip firewall connection remove $cDst; } on-error={} }
+            }
         }
     }
     

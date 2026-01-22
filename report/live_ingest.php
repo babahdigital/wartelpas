@@ -11,6 +11,14 @@ if (!is_dir($logDir)) {
     @mkdir($logDir, 0755, true);
 }
 
+$logFile = $logDir . '/live_ingest.log';
+$logWrite = function (string $line) use ($logFile) {
+    $ok = @file_put_contents($logFile, $line, FILE_APPEND);
+    if ($ok === false) {
+        error_log('[live_ingest] ' . trim($line));
+    }
+};
+
 $secret_token = "WartelpasSecureKey";
 $req_key = $_GET['key'] ?? ($_POST['key'] ?? '');
 if ($req_key === '' || $req_key !== $secret_token) {
@@ -37,7 +45,7 @@ if (!isset($hotspot_server) || $hotspot_server !== 'wartel') {
 }
 
 $raw = '';
-@file_put_contents($logDir . '/live_ingest.log', date('c') . " | hit | ip=" . ($_SERVER['REMOTE_ADDR'] ?? '-') . " | qs=" . ($_SERVER['QUERY_STRING'] ?? '') . "\n", FILE_APPEND);
+$logWrite(date('c') . " | hit | ip=" . ($_SERVER['REMOTE_ADDR'] ?? '-') . " | qs=" . ($_SERVER['QUERY_STRING'] ?? '') . "\n");
 if (isset($_POST['data'])) $raw = trim((string)$_POST['data']);
 if ($raw === '' && isset($_GET['data'])) $raw = trim((string)$_GET['data']);
 
@@ -58,7 +66,7 @@ if ($raw === '') {
 }
 
 if ($raw === '') {
-    @file_put_contents($logDir . '/live_ingest.log', date('c') . " | empty data | " . ($_SERVER['QUERY_STRING'] ?? '') . "\n", FILE_APPEND);
+    $logWrite(date('c') . " | empty data | " . ($_SERVER['QUERY_STRING'] ?? '') . "\n");
     echo "OK";
     exit;
 }
@@ -104,7 +112,7 @@ try {
 
     $d = explode('-|-', $raw);
     if (count($d) < 4) {
-        @file_put_contents($logDir . '/live_ingest.log', date('c') . " | invalid format | " . $raw . "\n", FILE_APPEND);
+        $logWrite(date('c') . " | invalid format | " . $raw . "\n");
         echo "OK";
         exit;
     }
@@ -122,7 +130,7 @@ try {
         $blok_name = 'BLOK-' . strtoupper($m[1]);
     }
     if ($blok_name === '') {
-        @file_put_contents($logDir . '/live_ingest.log', date('c') . " | blok empty | " . $raw . "\n", FILE_APPEND);
+        $logWrite(date('c') . " | blok empty | " . $raw . "\n");
         echo "OK";
         exit;
     }
@@ -159,14 +167,14 @@ try {
         $dupStmt = $db->prepare("SELECT 1 FROM sales_history WHERE username = :u AND sale_date = :d LIMIT 1");
         $dupStmt->execute([':u' => $username, ':d' => $sale_date]);
         if ($dupStmt->fetchColumn()) {
-            @file_put_contents($logDir . '/live_ingest.log', date('c') . " | duplicate sales_history | " . $raw . "\n", FILE_APPEND);
+            $logWrite(date('c') . " | duplicate sales_history | " . $raw . "\n");
             echo "OK";
             exit;
         }
         $dupStmt = $db->prepare("SELECT 1 FROM live_sales WHERE username = :u AND sale_date = :d LIMIT 1");
         $dupStmt->execute([':u' => $username, ':d' => $sale_date]);
         if ($dupStmt->fetchColumn()) {
-            @file_put_contents($logDir . '/live_ingest.log', date('c') . " | duplicate live_sales | " . $raw . "\n", FILE_APPEND);
+            $logWrite(date('c') . " | duplicate live_sales | " . $raw . "\n");
             echo "OK";
             exit;
         }
@@ -204,11 +212,11 @@ try {
         ':qty' => 1,
         ':raw' => $raw
     ]);
-    @file_put_contents($logDir . '/live_ingest.log', date('c') . " | inserted | user=" . $username . " | date=" . $sale_date . " | blok=" . $blok_name . "\n", FILE_APPEND);
+    $logWrite(date('c') . " | inserted | user=" . $username . " | date=" . $sale_date . " | blok=" . $blok_name . "\n");
 
     echo "OK";
 } catch (Exception $e) {
-    @file_put_contents($logDir . '/live_ingest.log', date('c') . " | error | " . $e->getMessage() . " | " . ($raw ?? '') . " | " . ($_SERVER['QUERY_STRING'] ?? '') . "\n", FILE_APPEND);
+    $logWrite(date('c') . " | error | " . $e->getMessage() . " | " . ($raw ?? '') . " | " . ($_SERVER['QUERY_STRING'] ?? '') . "\n");
     echo "OK";
 }
 ?>
