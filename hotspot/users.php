@@ -2662,7 +2662,8 @@ if ($debug_mode && !$is_ajax) {
           ${msgLine}
           <table><thead><tr><th>Kriteria</th><th>Nilai</th><th>Status</th></tr></thead><tbody>${rowsPrint}</tbody></table>
           ${(() => {
-            const reloginTitle = (mt && mt.relogin_date) ? `Rincian Relogin (Tanggal ${mt.relogin_date})` : 'Rincian Relogin';
+            const reloginDateLabel = (mt && mt.relogin_date) ? formatDateHeader(mt.relogin_date) : '';
+            const reloginTitle = reloginDateLabel ? `Rincian Relogin (Tanggal ${reloginDateLabel})` : 'Rincian Relogin';
             if (!mt || !Array.isArray(mt.relogin_events) || mt.relogin_events.length === 0) {
               if (mt && (mt.relogin_count || 0) > 0) {
                 return `<div style="margin:10px 0 6px 0;font-size:12px;font-weight:600;">${reloginTitle}</div>
