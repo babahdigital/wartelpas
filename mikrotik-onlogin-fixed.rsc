@@ -45,7 +45,7 @@
     }
     
     :local schExist [/sys sch find where name="$user"];
-    :local hasLog [/system script find where comment="mikhmon" and name~("$date-|-" ) and name~("-|-$user-|-" )];
+    :local hasLog [/system script find where comment="mikhmon" and name~("$date-\\|-" ) and name~("-\\|-" . $user . "-\\|-" )];
     :if ([:len $hasLog] = 0) do={
         :local date [/system clock get date];
         :local year [:pick $date 7 11];
