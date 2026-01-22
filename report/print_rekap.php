@@ -297,13 +297,16 @@ foreach ($rows as $r) {
     if ($bytes < 0) $bytes = 0;
 
     if ($status === '' || $status === 'normal') {
-        if (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
-        elseif (strpos($cmt_low, 'rusak') !== false || $lh_status === 'rusak') $status = 'rusak';
+        if ((int)($r['is_invalid'] ?? 0) === 1) $status = 'invalid';
+        elseif ((int)($r['is_retur'] ?? 0) === 1) $status = 'retur';
+        elseif ((int)($r['is_rusak'] ?? 0) === 1) $status = 'rusak';
+        elseif (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
         elseif (strpos($cmt_low, 'retur') !== false || $lh_status === 'retur') $status = 'retur';
+        elseif (strpos($cmt_low, 'rusak') !== false || $lh_status === 'rusak') $status = 'rusak';
         else $status = 'normal';
     }
 
-    $gross_add = ($status === 'retur' || $status === 'invalid') ? 0 : $line_price;
+    $gross_add = ($status === 'invalid') ? 0 : $line_price;
     $loss_rusak = ($status === 'rusak') ? $line_price : 0;
     $loss_invalid = ($status === 'invalid') ? $line_price : 0;
     $net_add = $gross_add - $loss_rusak - $loss_invalid;
@@ -314,7 +317,7 @@ foreach ($rows as $r) {
 
     if ($req_show === 'harian') {
         $qty_count = 1;
-        $gross_line = ($status === 'retur' || $status === 'invalid') ? 0 : $line_price;
+        $gross_line = ($status === 'invalid') ? 0 : $line_price;
         $loss_rusak_line = ($status === 'rusak') ? $line_price : 0;
         $loss_invalid_line = ($status === 'invalid') ? $line_price : 0;
         $net_line = $gross_line - $loss_rusak_line - $loss_invalid_line;

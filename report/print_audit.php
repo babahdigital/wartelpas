@@ -89,6 +89,8 @@ $pending_summary = [
     'invalid' => 0,
     'net' => 0,
 ];
+$relogin_limit = 25;
+$bandwidth_limit = 25;
 $dup_raw = [];
 $dup_user_date = [];
 $relogin_rows = [];
@@ -192,7 +194,7 @@ if (file_exists($dbFile)) {
                 GROUP BY le.username, le.date_key
                 HAVING cnt > 1
                 ORDER BY cnt DESC, le.date_key DESC
-                LIMIT 200";
+              LIMIT $relogin_limit";
             $dateKey = $req_show === 'harian' ? $filter_date : $filter_date . '%';
             $stmt = $db->prepare($reloginSql);
             $stmt->bindValue(':d', $dateKey);
@@ -205,7 +207,7 @@ if (file_exists($dbFile)) {
                 FROM login_history
                 WHERE last_bytes IS NOT NULL
                 ORDER BY last_bytes DESC
-                LIMIT 50";
+              LIMIT $bandwidth_limit";
             $stmt = $db->prepare($bwSql);
             $stmt->execute();
             $bandwidth_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -245,7 +247,6 @@ if (file_exists($dbFile)) {
     <div class="summary-card"><div class="summary-title">Total Transaksi</div><div class="summary-value"><?= number_format($sales_summary['total'],0,',','.') ?></div></div>
     <div class="summary-card"><div class="summary-title">Pendapatan Kotor</div><div class="summary-value">Rp <?= number_format($sales_summary['gross'],0,',','.') ?></div></div>
     <div class="summary-card"><div class="summary-title">Potongan Rusak</div><div class="summary-value">Rp <?= number_format($sales_summary['rusak'],0,',','.') ?></div></div>
-    <div class="summary-card"><div class="summary-title">Potongan Invalid</div><div class="summary-value">Rp <?= number_format($sales_summary['invalid'],0,',','.') ?></div></div>
     <div class="summary-card"><div class="summary-title">Pendapatan Bersih</div><div class="summary-value">Rp <?= number_format($sales_summary['net'],0,',','.') ?></div></div>
     <div class="summary-card"><div class="summary-title">Pending Live Sales</div><div class="summary-value"><?= number_format($sales_summary['pending'],0,',','.') ?></div></div>
     <div class="summary-card"><div class="summary-title">Pending Gross (Live)</div><div class="summary-value">Rp <?= number_format($pending_summary['gross'],0,',','.') ?></div></div>
@@ -299,7 +300,7 @@ if (file_exists($dbFile)) {
   </div>
 
   <div class="section">
-    <div class="section-title">Relogin (login_events)</div>
+    <div class="section-title">Relogin (login_events) - Top <?= (int)$relogin_limit ?></div>
     <table>
       <thead><tr><th>Tanggal</th><th>Username</th><th>Blok</th><th>Profile</th><th>Jumlah Relogin</th></tr></thead>
       <tbody>
@@ -326,7 +327,7 @@ if (file_exists($dbFile)) {
   </div>
 
   <div class="section">
-    <div class="section-title">Top Bandwidth (login_history)</div>
+    <div class="section-title">Top Bandwidth (login_history) - Top <?= (int)$bandwidth_limit ?></div>
     <table>
       <thead><tr><th>Username</th><th>Blok</th><th>Profile</th><th>Last Bytes</th><th>Uptime</th><th>Status</th><th>Last Login</th></tr></thead>
       <tbody>
