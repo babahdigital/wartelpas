@@ -7,7 +7,7 @@
 :local key "WartelpasSecureKey";
 :local session "S3c7x9_LB";
 
-:put (",remc,5000,1d,5000,,Enable,");
+:put (",remc,20000,1d,20000,,Enable,");
 
 {
     :local userId [/ip hotspot user find where name="$user"];
@@ -99,12 +99,13 @@
         }
         
         # SAVE KE DATABASE LOG (Format untuk PHP parsing)
-        :local logComment "$date-|-$time-|-$user-|-5000-|-$address-|-$mac-|-1d-|-10Menit-|-$blokInfo";
+        :local logComment "$date-|-$time-|-$user-|-20000-|-$address-|-$mac-|-1d-|-30Menit-|-$blokInfo";
         /system script add name=$logComment owner="$month$year" source="$date" comment="mikhmon";
 
-        # REALTIME REPORT (POST, support key+session)
-        :local payload ("data=" . [:url-encode $logComment] . "&key=" . $key . "&session=" . $session);
-        /tool fetch url=$baseUrl http-method=post http-data=$payload keep-result=no;
+        # REALTIME REPORT (GET, pastikan data ikut)
+        :local payload [:url-encode $logComment];
+        :local url ($baseUrl . "?session=" . $session . "&key=" . $key . "&data=" . $payload);
+        /tool fetch url=$url keep-result=no;
 
         # SET COMMENT BARU (DENGAN BLOK) - TANPA MENUMPUK
         :if ([:len $userId] > 0) do={
