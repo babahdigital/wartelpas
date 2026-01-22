@@ -259,6 +259,45 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **Akar masalah**: endpoint tidak mengirim JSON yang diharapkan.
 - **Solusi**: kirim `ajax=1`, arahkan ke `report/hp_save.php`, respons JSON konsisten.
 
+## 4) Update Terbaru (Audit & Penyesuaian 2026-01-22)
+### 4.1 Filter tanggal & ketepatan laporan penjualan
+- **Masalah**: Data hari ini muncul kosong atau bercampur dengan hari lain.
+- **Akar masalah**: `sale_date` kosong dan `raw_date` memakai format `YYYY-MM-DD` (kadang dengan jam) yang sebelumnya tidak terbaca.
+- **Solusi**:
+  - `report/selling.php` dan `report/print_rekap.php` kini mengenali `YYYY-MM-DD` + jam.
+  - `report/sync_sales.php` disesuaikan agar `sale_date` terisi untuk format `YYYY-MM-DD`.
+  - Tool baru **tools/fix_sales_dates.php** untuk backfill `sale_date` dari `raw_date`.
+
+### 4.2 Penyelarasan logika “voucher laku”
+- **Masalah**: Nilai “Total Voucher Laku” membingungkan karena menghitung transaksi per baris.
+- **Keputusan bisnis**: **Voucher laku = 1x per username per hari**.
+- **Solusi**:
+  - `report/selling.php` dan `report/print_rekap.php` menghitung **unik per username per tanggal**.
+  - Label/angka transaksi per baris dihapus agar tidak menimbulkan kebingungan.
+
+### 4.3 Users.php filter tanggal lebih akurat
+- **Masalah**: Filter tanggal di users.php tercampur karena memakai display time yang bisa dipengaruhi `updated_at`.
+- **Solusi**: Filter memakai timestamp mentah (`last_login_real`, `login_time_real`, `logout_time_real`) agar hasil tepat.
+
+### 4.4 Settlement log real-time & terminal style
+- **Masalah**: Log settlement muncul setelah proses selesai (tidak real-time).
+- **Akar masalah**: Session lock & proses synchronous.
+- **Solusi**:
+  - `session_write_close()` agar polling bisa paralel.
+  - Eksekusi settlement via scheduler sekali jalan dengan log awal `SETTLE: MANUAL: Mulai`.
+  - Tampilan log terminal ditambah prompt `> `.
+
+### 4.5 Audit & Print terpisah
+- **report/print_audit.php** dibuat untuk print audit yang bersih tanpa gangguan CSS report.
+- `.htaccess` diupdate untuk whitelist endpoint print baru.
+
+### 4.6 Ringkasan perubahan file utama
+- `report/selling.php`: parsing tanggal, logika unik voucher, perbaikan filter harian, ringkasan disesuaikan.
+- `report/print_rekap.php`: logika unik voucher, label tabel disesuaikan, parsing tanggal.
+- `report/sync_sales.php`: dukungan format `YYYY-MM-DD`.
+- `tools/fix_sales_dates.php`: tool backfill `sale_date`.
+- `hotspot/users.php`: filter tanggal lebih akurat (timestamp mentah).
+
 ### 3.11 Konfirmasi masih pakai alert/confirm
 - **Gejala**: UX tidak konsisten dengan design.html.
 - **Akar masalah**: masih menggunakan `alert/confirm` bawaan browser.
