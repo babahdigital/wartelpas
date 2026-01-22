@@ -23,7 +23,3 @@ add name=Wartel-SyncUsage policy=read,write,test source=
 
 	:set syncUsageLock false;
 }
-
-# Scheduler 2 menit sekali (buat sekali)
-/system scheduler
-add name=Wartel-SyncUsage interval=2m on-event=Wartel-SyncUsage start-time=startup

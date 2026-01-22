@@ -105,17 +105,21 @@
     :local blokPos [:find $newComment "Blok-"];
     :if ([:typeof $blokPos] != "nil") do={ :set isWartel true; }
     :if ($isWartel = true) do={
-        :foreach c in=[/ip hotspot cookie find where user="$username"] do={
-            /ip hotspot cookie remove $c;
+        :local cookieIds [/ip hotspot cookie find where user="$username"];
+        :if ([:len $cookieIds] > 0) do={
+            /ip hotspot cookie remove $cookieIds;
         }
         # Kick active hanya untuk user yang logout
-        :foreach a in=[/ip hotspot active find where user="$username"] do={
-            /ip hotspot active remove $a;
+        :local activeIds [/ip hotspot active find where user="$username"];
+        :if ([:len $activeIds] > 0) do={
+            /ip hotspot active remove $activeIds;
         }
         # Putus koneksi hanya untuk user yang logout (berdasarkan IP)
         :if ([:len $userip] > 0) do={
-            /ip firewall connection remove [find src-address=$userip];
-            /ip firewall connection remove [find dst-address=$userip];
+            :local connSrc [/ip firewall connection find src-address=$userip];
+            :if ([:len $connSrc] > 0) do={ /ip firewall connection remove $connSrc; }
+            :local connDst [/ip firewall connection find dst-address=$userip];
+            :if ([:len $connDst] > 0) do={ /ip firewall connection remove $connDst; }
         }
     }
     
