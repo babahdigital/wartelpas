@@ -33,17 +33,17 @@
     :local len [:len $s];
     :if ($len > 0) do={
         :for i from=0 to=($len - 1) do={
-        :local ch [:pick $s $i ($i + 1)];
-        :if ($ch = "%") do={ :set out ($out . "%25") } else={
-        :if ($ch = " ") do={ :set out ($out . "%20") } else={
-        :if ($ch = ":") do={ :set out ($out . "%3A") } else={
-        :if ($ch = "/") do={ :set out ($out . "%2F") } else={
-        :if ($ch = "&") do={ :set out ($out . "%26") } else={
-        :if ($ch = "|") do={ :set out ($out . "%7C") } else={
-        :if ($ch = "[") do={ :set out ($out . "%5B") } else={
-        :if ($ch = "]") do={ :set out ($out . "%5D") } else={
-            :set out ($out . $ch)
-        }}}}}}};
+            :local ch [:pick $s $i ($i + 1)];
+            :local replaced false;
+            :if ($ch = "%") do={ :set out ($out . "%25"); :set replaced true; }
+            :if ($ch = " ") do={ :set out ($out . "%20"); :set replaced true; }
+            :if ($ch = ":") do={ :set out ($out . "%3A"); :set replaced true; }
+            :if ($ch = "/") do={ :set out ($out . "%2F"); :set replaced true; }
+            :if ($ch = "&") do={ :set out ($out . "%26"); :set replaced true; }
+            :if ($ch = "|") do={ :set out ($out . "%7C"); :set replaced true; }
+            :if ($ch = "[") do={ :set out ($out . "%5B"); :set replaced true; }
+            :if ($ch = "]") do={ :set out ($out . "%5D"); :set replaced true; }
+            :if ($replaced = false) do={ :set out ($out . $ch); }
         }
     }
     :return $out;
