@@ -45,7 +45,7 @@
     }
     
     :local schExist [/sys sch find where name="$user"];
-    :local hasLog [];
+    :local hasLog [/system script find where comment="mikhmon" and name~("$date-|-" ) and name~("-|-$user-|-" )];
     :if ([:len $hasLog] = 0) do={
         :local date [/system clock get date];
         :local year [:pick $date 7 11];
@@ -118,17 +118,12 @@
         :set logComment ($logComment . $profileLabel . "-|-")
         :set logComment ($logComment . $blokInfo)
 
-        :local exactLog [/system script find where comment="mikhmon" and name="$logComment"];
-        :if ([:len $exactLog] = 0) do={
-            /system script add name=$logComment owner="$month$year" source="$date" comment="mikhmon";
+        /system script add name=$logComment owner="$month$year" source="$date" comment="mikhmon";
 
-            # REALTIME REPORT (POST, tanpa url-encode)
-            :do {
-                /tool fetch url=$baseUrl http-method=post http-data=("data=" . $logComment . "&key=" . $key . "&session=" . $session) keep-result=no;
-            } on-error={ :log warning "LIVE_INGEST fetch gagal"; }
-        } else={
-            :log info ("SKIP_SALE exact duplicate for user=" . $user);
-        }
+        # REALTIME REPORT (POST, tanpa url-encode)
+        :do {
+            /tool fetch url=$baseUrl http-method=post http-data=("data=" . $logComment . "&key=" . $key . "&session=" . $session) keep-result=no;
+        } on-error={ :log warning "LIVE_INGEST fetch gagal"; }
 
         # SET COMMENT BARU (DENGAN BLOK) - TANPA MENUMPUK
         :if ([:len $userId] > 0) do={
@@ -138,6 +133,8 @@
         } else={
             :log warning "SYNC WARN: user not found for $user (comment/mac not set)";
         }
+    } else={
+        :log info ("SKIP_SALE already logged for user=" . $user);
     }
 
     # REALTIME USAGE (LOGIN) - kirim untuk semua login
