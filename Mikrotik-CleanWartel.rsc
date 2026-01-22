@@ -138,13 +138,13 @@ $sendSettleLog "SETTLE: SYNC: Mengirim data pemakaian (usage) ..." "info";
 :delay 2s;
 
 
-# 4c. CLEAR SERVER LOG (opsional) - Bersihkan log server (scope=all)
-:log info "SETTLE: MAINT: Clear log server...";
-$sendSettleLog "SETTLE: MAINT: Clear log server..." "info";
+# 4c. CLEAR SERVER LOG (opsional) - Hapus log ingest di server
+:log info "SETTLE: MAINT: Clear log ingest server...";
+$sendSettleLog "SETTLE: MAINT: Clear log ingest server..." "info";
 :do {
-    /tool fetch url="http://wartelpas.sobigidul.net:8081/tools/clear_logs.php?key=WartelpasSecureKey&session=S3c7x9_LB&scope=all" keep-result=no;
-    $logSettle "info" "SETTLE: MAINT: Clear log server berhasil.";
-} on-error={ $logSettle "warning" "SETTLE: MAINT: Gagal clear log server."; }
+    /tool fetch url="http://wartelpas.sobigidul.net:8081/tools/clear_logs.php?key=WartelpasSecureKey&session=S3c7x9_LB" keep-result=no;
+    $logSettle "info" "SETTLE: MAINT: Clear log ingest berhasil.";
+} on-error={ $logSettle "warning" "SETTLE: MAINT: Gagal clear log ingest."; }
 
 :delay 1s;
 
