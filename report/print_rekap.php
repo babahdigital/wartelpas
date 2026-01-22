@@ -263,6 +263,7 @@ $total_net_units = 0;
 $total_bandwidth = 0;
 
 $seen_sales = [];
+$unique_laku_users = [];
 
 foreach ($rows as $r) {
     $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
@@ -330,6 +331,9 @@ foreach ($rows as $r) {
     $total_bandwidth += $bytes;
 
     $is_laku = !in_array($status, ['rusak', 'retur', 'invalid'], true);
+    if ($is_laku && $username !== '') {
+        $unique_laku_users[$username] = true;
+    }
 
     if ($req_show === 'harian') {
         $qty_count = 1;
@@ -405,7 +409,7 @@ foreach ($rows as $r) {
     $total_net += $net_add;
 }
 
-$total_qty_laku = max(0, (int)$total_qty_laku);
+$total_qty_laku = count($unique_laku_users);
 $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? 'Bulanan' : 'Tahunan');
 ?>
 <!DOCTYPE html>
