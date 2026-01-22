@@ -177,6 +177,11 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
     echo "Script ditemukan: " . count($scripts) . "\n";
     
     $count = 0;
+    $debug = isset($_GET['debug']) && $_GET['debug'] === '1';
+    $skip_invalid_format = 0;
+    $skip_blok = 0;
+    $skip_duplicate = 0;
+    $sample_names = [];
     $stmt = $db->prepare("INSERT OR IGNORE INTO sales_history (
         raw_date, raw_time, sale_date, sale_time, sale_datetime,
         username, profile, profile_snapshot,
@@ -193,6 +198,9 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
 
     foreach ($scripts as $s) {
         $rawData = $s['name']; // Format: jan/11/2026-|-09:00:00-|-user-|-price...
+        if ($debug && count($sample_names) < 5) {
+            $sample_names[] = $rawData;
+        }
         
         // Pecah Data (Explode)
         $d = explode("-|-", $rawData);
@@ -211,6 +219,7 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
                 $blok_name = 'BLOK-' . strtoupper($m[1]);
             }
             if ($blok_name === '') {
+                $skip_blok++;
                 $API->write('/system/script/remove', false);
                 $API->write('=.id=' . $s['.id']);
                 $API->read();
@@ -250,6 +259,7 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
                 $dupStmt = $db->prepare("SELECT 1 FROM sales_history WHERE username = :u AND sale_date = :d LIMIT 1");
                 $dupStmt->execute([':u' => $username, ':d' => $sale_date]);
                 if ($dupStmt->fetchColumn()) {
+                    $skip_duplicate++;
                     $API->write('/system/script/remove', false);
                     $API->write('=.id=' . $s['.id']);
                     $API->read();
@@ -286,6 +296,8 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
                 $API->read();
                 $count++;
             }
+        } else {
+            $skip_invalid_format++;
         }
     }
     
@@ -351,6 +363,12 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
     }
 
     echo "Sukses: $count laporan penjualan dipindahkan ke Database & dihapus dari MikroTik.\n";
+    if ($debug) {
+        echo "Debug: invalid_format={$skip_invalid_format}, blok_kosong={$skip_blok}, duplikat={$skip_duplicate}\n";
+        if (!empty($sample_names)) {
+            echo "Sample script name:\n" . implode("\n", $sample_names) . "\n";
+        }
+    }
     if ($count === 0) {
         echo "Catatan: tidak ada script penjualan baru atau comment tidak cocok.\n";
         echo "Hint: tambahkan ?comment=any untuk memindai semua script.\n";
