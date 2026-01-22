@@ -266,6 +266,8 @@ $seen_sales = [];
 
 foreach ($rows as $r) {
     $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
+    $sale_time = $r['sale_time'] ?? ($r['raw_time'] ?? '');
+    $sale_dt = $sale_date && $sale_time ? ($sale_date . ' ' . $sale_time) : ($sale_date ?: ($r['raw_date'] ?? '-'));
     $match = false;
     if ($req_show === 'harian') $match = ($sale_date === $filter_date);
     elseif ($req_show === 'bulanan') $match = (strpos((string)$sale_date, $filter_date) === 0);
@@ -273,10 +275,21 @@ foreach ($rows as $r) {
     if (!$match) continue;
 
     $username = $r['username'] ?? '';
-    if ($username !== '' && $sale_date !== '') {
-        $sale_key = $username . '|' . $sale_date;
-        if (isset($seen_sales[$sale_key])) continue;
-        $seen_sales[$sale_key] = true;
+    $raw_key = trim((string)($r['full_raw_data'] ?? ''));
+    $unique_key = '';
+    if ($raw_key !== '') {
+        $unique_key = 'raw|' . $raw_key;
+    } elseif ($username !== '' && $sale_date !== '') {
+        $unique_key = $username . '|' . ($r['sale_datetime'] ?? ($sale_date . ' ' . ($sale_time ?? '')));
+        if ($unique_key === $username . '|') {
+            $unique_key = $username . '|' . $sale_date . '|' . ($sale_time ?? '');
+        }
+    } elseif ($sale_date !== '') {
+        $unique_key = 'date|' . $sale_date . '|' . ($sale_time ?? '');
+    }
+    if ($unique_key !== '') {
+        if (isset($seen_sales[$unique_key])) continue;
+        $seen_sales[$unique_key] = true;
     }
 
     $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
