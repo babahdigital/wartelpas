@@ -139,6 +139,16 @@ try {
                 $msg = trim((string)($l['message'] ?? ''));
                 if ($msg === '' && $time === '') continue;
 
+                if ($triggeredTs > 0 && $time !== '') {
+                    $logTs = strtotime($time);
+                    if ($logTs === false && preg_match('/\d{2}:\d{2}:\d{2}/', $time)) {
+                        $logTs = strtotime($date . ' ' . $time);
+                    }
+                    if ($logTs !== false && $logTs < ($triggeredTs - 5)) {
+                        continue;
+                    }
+                }
+
                 $msgTrim = trim($msg);
                 if (strpos($msgTrim, "\r") !== false || strpos($msgTrim, "\n") !== false || strpos($msgTrim, "tool fetch url") !== false) {
                     continue;
