@@ -16,10 +16,12 @@
 :global urlEncode;
 :set urlEncode do={
     :local s $1;
+    :if ([:typeof $s] = "nothing") do={ :set s ""; }
     :local out "";
     :local i 0;
     :local len [:len $s];
-    :for i from=0 to=($len - 1) do={
+    :if ($len > 0) do={
+        :for i from=0 to=($len - 1) do={
         :local ch [:pick $s $i ($i + 1)];
         :if ($ch = "%") do={ :set out ($out . "%25") } else={
         :if ($ch = " ") do={ :set out ($out . "%20") } else={
@@ -32,6 +34,7 @@
         :if ($ch = "]") do={ :set out ($out . "%5D") } else={
             :set out ($out . $ch)
         }}}}}}}}};
+        }
     }
     :return $out;
 };
