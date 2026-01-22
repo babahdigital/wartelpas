@@ -298,6 +298,45 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - `tools/fix_sales_dates.php`: tool backfill `sale_date`.
 - `hotspot/users.php`: filter tanggal lebih akurat (timestamp mentah).
 
+## 4.7 Update Terbaru (Settlement Log & Perbaikan Real-time 2026-01-23)
+### 4.7.1 Log settlement real-time berbasis server
+- **Masalah**: log di popup sering tertunda/terbaca dari RouterOS saja, dan tidak stabil bila proses lama.
+- **Solusi**:
+  - **tools/settlement_log_ingest.php**: endpoint baru menerima log dari MikroTik dan menulis ke file `logs/settlement_<session>_<date>.log`.
+  - Validasi `key` + `session` untuk mencegah spam.
+  - Debug file `logs/settlement_ingest_debug.log` untuk audit request.
+
+### 4.7.2 Rotasi & retensi log
+- **Masalah**: log makin besar dan membebani disk.
+- **Solusi**:
+  - Retensi log harian (keep 14 hari).
+  - Arsip log lama (60 hari), debug log dipotong jika >1MB.
+  - Pembersihan diperluas di **tools/clear_logs.php** (`scope=all`, `purge=1`).
+
+### 4.7.3 Stabilitas script MikroTik
+- **Masalah**: error `replace/urlencode` dan nilai kosong saat fetch.
+- **Solusi**:
+  - Tambah `tostr` + fallback, `on-error` guards.
+  - Penguncian auto-unlock, ringkasan skip-ready, urutan log stabil.
+  - Nama script konsisten: **FIXED BY ABDULLAH**.
+
+### 4.7.4 Settlement popup terminal (UI)
+- **Masalah**: log tampil terlalu cepat, status akhir kadang belum muncul.
+- **Solusi**:
+  - Typing effect diperlambat + fast mode jika log sangat banyak.
+  - Polling log tetap berjalan walau request start lambat.
+  - Pesan final sistem ditampilkan setelah selesai: “Semua proses selesai. Silakan tutup terminal.”
+
+### 4.7.5 Settlement backend & fallback log
+- **Masalah**: response OK menutupi error trigger dan log kadang kosong.
+- **Solusi**:
+  - **report/settlement_manual.php** membaca log server lebih dulu (clearstatcache), fallback RouterOS.
+  - Response tidak dipercepat agar error trigger terlihat.
+  - Regex pencarian script diperbaiki.
+
+### 4.7.6 Whitelist & keamanan endpoint
+- **.htaccess** diperbarui untuk allowlist endpoint ingest dan IP MikroTik tambahan (termasuk 10.10.83.2).
+
 ### 3.11 Konfirmasi masih pakai alert/confirm
 - **Gejala**: UX tidak konsisten dengan design.html.
 - **Akar masalah**: masih menggunakan `alert/confirm` bawaan browser.
@@ -337,6 +376,7 @@ File diagnostik & migrasi sementara yang sudah tidak diperlukan:
 - report/sync_sales.php
 - report/selling.php
 - report/settlement_manual.php
+- tools/settlement_log_ingest.php
 - tools/cleanup_duplicate_sales.php
 - tools/cleanup_non_wartel_login_history.php
 - tools/cleanup_ready_login_history.php
