@@ -674,6 +674,42 @@ ksort($by_block, SORT_NATURAL | SORT_FLAG_CASE);
 ksort($by_profile, SORT_NATURAL | SORT_FLAG_CASE);
 $total_qty_laku = count($unique_laku_users);
 
+$audit_user_options = [];
+if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
+    try {
+        $user_set = [];
+        if (table_exists($db, 'login_events')) {
+            $stmtOpt = $db->prepare("SELECT DISTINCT username FROM login_events WHERE date_key = :d AND username != ''");
+            $stmtOpt->execute([':d' => $filter_date]);
+            foreach ($stmtOpt->fetchAll(PDO::FETCH_COLUMN, 0) as $u) {
+                $u = trim((string)$u);
+                if ($u !== '') $user_set[$u] = true;
+            }
+        }
+        if (table_exists($db, 'sales_history')) {
+            $stmtOpt = $db->prepare("SELECT DISTINCT username FROM sales_history WHERE sale_date = :d AND username != ''");
+            $stmtOpt->execute([':d' => $filter_date]);
+            foreach ($stmtOpt->fetchAll(PDO::FETCH_COLUMN, 0) as $u) {
+                $u = trim((string)$u);
+                if ($u !== '') $user_set[$u] = true;
+            }
+        }
+        if (table_exists($db, 'live_sales')) {
+            $stmtOpt = $db->prepare("SELECT DISTINCT username FROM live_sales WHERE sale_date = :d AND username != ''");
+            $stmtOpt->execute([':d' => $filter_date]);
+            foreach ($stmtOpt->fetchAll(PDO::FETCH_COLUMN, 0) as $u) {
+                $u = trim((string)$u);
+                if ($u !== '') $user_set[$u] = true;
+            }
+        }
+        $audit_user_options = array_keys($user_set);
+        natcasesort($audit_user_options);
+        $audit_user_options = array_values($audit_user_options);
+    } catch (Exception $e) {
+        $audit_user_options = [];
+    }
+}
+
 // Simpan audit manual rekap harian (qty + uang)
 if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
     if (isset($_POST['audit_submit']) || isset($_POST['audit_blok'])) {
@@ -951,6 +987,13 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
     .audit-neg { color:#ff6b6b; font-weight:700; }
     .audit-pos { color:#8bd0ff; font-weight:700; }
     .audit-zero { color:var(--txt-muted); }
+    .audit-user-picker { position: relative; }
+    .audit-user-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; }
+    .audit-user-chip { display:inline-flex; align-items:center; gap:6px; background:#343a40; border:1px solid var(--border-col); color:#e9ecef; border-radius:999px; padding:2px 8px; font-size:12px; }
+    .audit-user-chip button { background:transparent; border:none; color:#fff; cursor:pointer; font-size:12px; line-height:1; padding:0; }
+    .audit-user-suggest { position:absolute; left:0; right:0; top:100%; background:#2a3036; border:1px solid var(--border-col); border-radius:6px; max-height:180px; overflow:auto; z-index:10002; display:none; margin-top:4px; }
+    .audit-user-suggest .item { padding:6px 8px; cursor:pointer; font-size:12px; }
+    .audit-user-suggest .item:hover { background:#32383e; }
 </style>
 <?php endif; ?>
 
@@ -1089,9 +1132,23 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                         <input class="form-input" type="date" name="audit_date" value="<?= htmlspecialchars($filter_date); ?>" required>
                     </div>
                 </div>
-                <div style="margin-top:10px;">
-                    <label>Username (opsional, pisahkan dengan koma)</label>
-                    <input class="form-input" type="text" name="audit_username" placeholder="contoh: sdftyp, user2">
+                <div class="form-grid-2" style="margin-top:10px;">
+                    <div>
+                        <label>Username (opsional)</label>
+                        <input type="hidden" name="audit_username" id="auditUsernameHidden">
+                        <div class="audit-user-picker">
+                            <div id="audit-user-chips" class="audit-user-chips"></div>
+                            <input class="form-input" type="text" id="audit-user-input" placeholder="ketik untuk cari username">
+                            <div id="audit-user-suggest" class="audit-user-suggest"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <label>Status</label>
+                        <select class="form-input" name="audit_status">
+                            <option value="OPEN">OPEN</option>
+                            <option value="DONE">DONE</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="form-grid-2" style="margin-top:10px;">
                     <div>
@@ -1103,18 +1160,9 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                         <input class="form-input" type="number" name="audit_setoran" min="0" value="0" required>
                     </div>
                 </div>
-                <div class="form-grid-2" style="margin-top:10px;">
-                    <div>
-                        <label>Status</label>
-                        <select class="form-input" name="audit_status">
-                            <option value="OPEN">OPEN</option>
-                            <option value="DONE">DONE</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>Catatan</label>
-                        <textarea class="form-input" name="audit_note" rows="3" placeholder="contoh: Blok F kurang bayar 1 voucher"></textarea>
-                    </div>
+                <div style="margin-top:10px;">
+                    <label>Catatan</label>
+                    <textarea class="form-input" name="audit_note" rows="3" placeholder="contoh: Blok F kurang bayar 1 voucher"></textarea>
                 </div>
                 <div id="auditClientError" style="display:none;margin-top:8px;color:#fca5a5;font-size:12px;"></div>
             </div>
