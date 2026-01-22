@@ -105,7 +105,7 @@ $_please_login = isset($_please_login) ? $_please_login : 'Silakan Login';
             border-right: 0; 
         }
 
-        .input-group-addon i.fa.fa-user {
+        .input-group-addon i.fa.fa-user, .input-group-addon i.fa.fa-lock {
           margin-top: 10px;
         }
 
