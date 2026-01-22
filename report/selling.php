@@ -198,26 +198,49 @@ if (file_exists($dbFile)) {
         try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN audit_username TEXT"); } catch (Exception $e) {}
         try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN user_evidence TEXT"); } catch (Exception $e) {}
         try {
-            $res = $db->query("SELECT 
+            $hasSales = table_exists($db, 'sales_history');
+            $hasLive = table_exists($db, 'live_sales');
+            $hasLogin = table_exists($db, 'login_history');
+
+            $loginSelect = $hasLogin
+                ? 'lh.last_status, lh.last_bytes, lh.first_login_real'
+                : "'' AS last_status, 0 AS last_bytes, '' AS first_login_real";
+            $loginSelect2 = $hasLogin
+                ? 'lh2.last_status, lh2.last_bytes, lh2.first_login_real'
+                : "'' AS last_status, 0 AS last_bytes, '' AS first_login_real";
+            $loginJoin = $hasLogin ? 'LEFT JOIN login_history lh ON lh.username = sh.username' : '';
+            $loginJoin2 = $hasLogin ? 'LEFT JOIN login_history lh2 ON lh2.username = ls.username' : '';
+
+            $selects = [];
+            if ($hasSales) {
+                $selects[] = "SELECT 
                     sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
                     sh.username, sh.profile, sh.profile_snapshot,
                     sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
-                sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
-                sh.full_raw_data, lh.last_status, lh.last_bytes, lh.first_login_real
-                FROM sales_history sh
-                LEFT JOIN login_history lh ON lh.username = sh.username
-                UNION ALL
-                SELECT 
+                    sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
+                    sh.full_raw_data, $loginSelect
+                    FROM sales_history sh
+                    $loginJoin";
+            }
+            if ($hasLive) {
+                $selects[] = "SELECT 
                     ls.raw_date, ls.raw_time, ls.sale_date, ls.sale_time, ls.sale_datetime,
                     ls.username, ls.profile, ls.profile_snapshot,
                     ls.price, ls.price_snapshot, ls.sprice_snapshot, ls.validity,
-                ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
-                ls.full_raw_data, lh2.last_status, lh2.last_bytes, lh2.first_login_real
-                FROM live_sales ls
-                LEFT JOIN login_history lh2 ON lh2.username = ls.username
-                WHERE ls.sync_status = 'pending'
-                ORDER BY sale_datetime DESC, raw_date DESC");
-            if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
+                    ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
+                    ls.full_raw_data, $loginSelect2
+                    FROM live_sales ls
+                    $loginJoin2
+                    WHERE ls.sync_status = 'pending'";
+            }
+
+            if (!empty($selects)) {
+                $sql = implode(" UNION ALL ", $selects) . " ORDER BY sale_datetime DESC, raw_date DESC";
+                $res = $db->query($sql);
+                if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
+            } else {
+                $rows = [];
+            }
         } catch (Exception $e) {
             $rows = [];
         }
