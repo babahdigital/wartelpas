@@ -8,20 +8,41 @@ error_reporting(E_ALL);
 header('Content-Type: text/plain');
 
 // 1. TOKEN PENGAMAN
-$secret_token = "WartelpasSecureKey"; 
+$root_dir = dirname(__DIR__);
+require_once($root_dir . '/include/config.php');
+
+// Optional IP allowlist (comma-separated), e.g. "127.0.0.1,192.168.1.10"
+$allowlist_raw = getenv('WARTELPAS_SYNC_ALLOWLIST');
+if ($allowlist_raw !== false && trim((string)$allowlist_raw) !== '') {
+    $allowed = array_filter(array_map('trim', explode(',', $allowlist_raw)));
+    $remote_ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    if ($remote_ip === '' || !in_array($remote_ip, $allowed, true)) {
+        http_response_code(403);
+        die("Error: IP tidak diizinkan.");
+    }
+}
+
+$secret_token = getenv('WARTELPAS_SYNC_TOKEN');
+if ($secret_token === false || trim((string)$secret_token) === '') {
+    if (defined('WARTELPAS_SYNC_TOKEN')) {
+        $secret_token = WARTELPAS_SYNC_TOKEN;
+    } else {
+        $secret_token = "WartelpasSecureKey";
+    }
+}
 if (!isset($_GET['key']) || $_GET['key'] !== $secret_token) {
+    http_response_code(403);
     die("Error: Token Salah.");
 }
 
 $session = isset($_GET['session']) ? $_GET['session'] : '';
-if ($session === '') {
+if ($session === '' || !isset($data[$session])) {
+    http_response_code(403);
     die("Error: Session tidak valid.");
 }
 
 // 2. LIBRARY API
-$root_dir = dirname(__DIR__); 
 require_once($root_dir . '/lib/routeros_api.class.php');
-require_once($root_dir . '/include/config.php');
 require_once($root_dir . '/include/readcfg.php');
 
 if (!isset($hotspot_server) || $hotspot_server !== 'wartel') {
