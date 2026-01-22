@@ -245,8 +245,8 @@ if (file_exists($dbFile)) {
     .muted { color: var(--txt-muted); }
     @media print {
         body { background: #fff; color: #111; }
-        .card-solid { box-shadow: none; border: 1px solid #ddd; }
-        .card-header-solid { background: #f5f5f5; color: #111; }
+        .card-solid { box-shadow: none; border: none; }
+        .card-header-solid { display: none; }
         .summary-card { background: #fff; border: 1px solid #ddd; }
         .table-dark-solid th { background: #f0f0f0; color: #111; padding: 6px; font-size: 11px; }
         .table-dark-solid td { color: #111; padding: 6px; font-size: 11px; }
@@ -260,6 +260,7 @@ if (file_exists($dbFile)) {
         .table-dark-solid { border-collapse: collapse; }
         .table-dark-solid th, .table-dark-solid td { border: 1px solid #ddd; }
         tr { page-break-inside: avoid; }
+        @page { margin: 10mm; }
     }
 </style>
 
