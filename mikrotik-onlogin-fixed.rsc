@@ -3,7 +3,8 @@
 # Update: 2026-01-19 - PRESERVE BLOK INFO
 
 # Realtime report endpoint (sesuaikan)
-:local baseUrl "http://wartelpas.sobigidul.net/report/live_ingest.php";
+# NOTE: gunakan port yang sama dengan panel (contoh 8081)
+:local baseUrl "http://wartelpas.sobigidul.net:8081/report/live_ingest.php";
 :local key "WartelpasSecureKey";
 :local session "S3c7x9_LB";
 
@@ -117,6 +118,6 @@
     }
 
     # REALTIME USAGE (LOGIN) - kirim untuk semua login
-    :local usageUrl ("http://wartelpas.sobigidul.net/process/usage_ingest.php?key=" . $key . "&session=" . $session . "&event=login" . "&user=" . $user . "&date=" . $date . "&time=" . $time . "&ip=" . $address . "&mac=" . $mac . "&uptime=" . $uptime);
+    :local usageUrl ("http://wartelpas.sobigidul.net:8081/process/usage_ingest.php?key=" . $key . "&session=" . $session . "&event=login" . "&user=" . $user . "&date=" . $date . "&time=" . $time . "&ip=" . $address . "&mac=" . $mac . "&uptime=" . $uptime);
     /tool fetch url=$usageUrl keep-result=no;
 }
