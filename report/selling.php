@@ -1162,7 +1162,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 </div>
                 <div style="margin-top:10px;">
                     <label>Catatan</label>
-                    <textarea class="form-input" name="audit_note" rows="3" placeholder="contoh: Blok F kurang bayar 1 voucher"></textarea>
+                    <textarea class="form-input" style="width:448px;" name="audit_note" rows="3" placeholder="contoh: Blok F kurang bayar 1 voucher"></textarea>
                 </div>
                 <div id="auditClientError" style="display:none;margin-top:8px;color:#fca5a5;font-size:12px;"></div>
             </div>
