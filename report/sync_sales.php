@@ -151,11 +151,30 @@ $API = new RouterosAPI();
 
 if ($API->connect($use_ip, $use_user, $use_pass)) {
     
+    $commentFilter = isset($_GET['comment']) ? trim((string)$_GET['comment']) : 'mikhmon';
     // Ambil Script yang komentarnya "mikhmon" (Ciri khas script penjualan)
     $API->write('/system/script/print', false);
-    $API->write('?comment=mikhmon', false);
-    $API->write('=.proplist=.id,name');
+    if ($commentFilter !== '' && strtolower($commentFilter) !== 'any') {
+        $API->write('?comment=' . $commentFilter, false);
+    }
+    $API->write('=.proplist=.id,name,comment');
     $scripts = $API->read();
+    if (empty($scripts) && ($commentFilter === '' || strtolower($commentFilter) !== 'any')) {
+        // Fallback: ambil semua script dan filter manual berdasarkan format data penjualan
+        $API->write('/system/script/print', false);
+        $API->write('=.proplist=.id,name,comment');
+        $allScripts = $API->read();
+        $scripts = [];
+        foreach ($allScripts as $s) {
+            $nm = $s['name'] ?? '';
+            if ($nm === '') continue;
+            if (strpos($nm, '-|-') === false) continue;
+            if (preg_match('/^[A-Za-z]{3}\/[0-9]{2}\/[0-9]{4}-\|-/', $nm) || preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}-\|-/', $nm) || preg_match('/^[0-9]{2}\/[0-9]{2}\/[0-9]{4}-\|-/', $nm)) {
+                $scripts[] = $s;
+            }
+        }
+    }
+    echo "Script ditemukan: " . count($scripts) . "\n";
     
     $count = 0;
     $stmt = $db->prepare("INSERT OR IGNORE INTO sales_history (
@@ -331,7 +350,11 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
         }
     }
 
-    echo "Sukses: $count laporan penjualan dipindahkan ke Database & dihapus dari MikroTik.";
+    echo "Sukses: $count laporan penjualan dipindahkan ke Database & dihapus dari MikroTik.\n";
+    if ($count === 0) {
+        echo "Catatan: tidak ada script penjualan baru atau comment tidak cocok.\n";
+        echo "Hint: tambahkan ?comment=any untuk memindai semua script.\n";
+    }
     
 } else {
     echo "Gagal Login MikroTik.";
