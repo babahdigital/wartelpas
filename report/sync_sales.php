@@ -176,7 +176,10 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
             }
 
             $sale_date = '';
-            if (preg_match('/^[a-zA-Z]{3}\/\d{2}\/\d{4}$/', $raw_date)) {
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw_date)) {
+                $sale_date = $raw_date;
+            }
+            if ($sale_date === '' && preg_match('/^[a-zA-Z]{3}\/\d{2}\/\d{4}$/', $raw_date)) {
                 $mon = strtolower(substr($raw_date, 0, 3));
                 $map = [
                     'jan' => '01', 'feb' => '02', 'mar' => '03', 'apr' => '04', 'may' => '05', 'jun' => '06',
