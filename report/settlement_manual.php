@@ -102,13 +102,37 @@ try {
                 $API->disconnect();
                 $rawLogs = is_array($rawLogs) ? array_slice($rawLogs, -1000) : [];
                 if (is_array($rawLogs)) {
-                    $rawLogs = array_reverse($rawLogs);
+                    $seq = 0;
+                    $logItems = [];
+                    foreach ($rawLogs as $row) {
+                        $seq++;
+                        $t = trim((string)($row['time'] ?? ''));
+                        $sortKey = 0;
+                        if ($t !== '') {
+                            $ts = strtotime($t);
+                            if ($ts === false && preg_match('/\d{2}:\d{2}:\d{2}/', $t)) {
+                                $ts = strtotime($date . ' ' . $t);
+                            }
+                            if ($ts !== false) {
+                                $sortKey = $ts;
+                            }
+                        }
+                        $logItems[] = ['row' => $row, 'sort' => $sortKey, 'seq' => $seq];
+                    }
+                    usort($logItems, function($a, $b){
+                        if ($a['sort'] === $b['sort']) return $a['seq'] <=> $b['seq'];
+                        if ($a['sort'] === 0) return 1;
+                        if ($b['sort'] === 0) return -1;
+                        return $a['sort'] <=> $b['sort'];
+                    });
+                    $rawLogs = array_map(function($i){ return $i['row']; }, $logItems);
                 }
             $sawSettle = false;
             $sawFetch = false;
             $capture = false;
             $skipReadyCount = 0;
             $skipReadyTime = '';
+            $skipReadyMax = 0;
             foreach ($rawLogs as $l) {
                 $time = trim((string)($l['time'] ?? ''));
                 $topics = trim((string)($l['topics'] ?? 'system,info'));
@@ -162,6 +186,10 @@ try {
                 if (stripos($msgTrim, 'SETTLE: CLEANUP: Skip READY user') === 0) {
                     $skipReadyCount++;
                     if ($time !== '') $skipReadyTime = $time;
+                    if (preg_match('/x(\d+)/i', $msgTrim, $m)) {
+                        $val = (int)$m[1];
+                        if ($val > $skipReadyMax) $skipReadyMax = $val;
+                    }
                     continue;
                 }
 
@@ -207,11 +235,12 @@ try {
                 }
             }
             if ($skipReadyCount > 0) {
+                $summaryCount = $skipReadyMax > 0 ? $skipReadyMax : $skipReadyCount;
                 $logs[] = [
                     'time' => $skipReadyTime,
                     'topic' => 'script,info',
                     'type' => 'system',
-                    'message' => 'SETTLE: CLEANUP: Skip READY user x' . $skipReadyCount
+                    'message' => 'SETTLE: CLEANUP: Skip READY user x' . $summaryCount
                 ];
             }
         } else {
