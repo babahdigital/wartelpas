@@ -125,8 +125,8 @@ try {
     }
 
     $sale_date = '';
-    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw_date)) {
-        $sale_date = $raw_date;
+    if (preg_match('/^\d{4}-\d{2}-\d{2}/', $raw_date)) {
+        $sale_date = substr($raw_date, 0, 10);
     } elseif (preg_match('/^[a-zA-Z]{3}\/\d{2}\/\d{4}$/', $raw_date)) {
         $mon = strtolower(substr($raw_date, 0, 3));
         $map = [
