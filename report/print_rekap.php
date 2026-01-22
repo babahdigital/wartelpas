@@ -668,8 +668,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                     <?php foreach ($audit_rows as $ar): ?>
                         <?php
                             $evidence = [];
-                            $profile10 = ['up' => [], 'byte' => [], 'login' => [], 'total' => []];
-                            $profile30 = ['up' => [], 'byte' => [], 'login' => [], 'total' => []];
+                            $profile10 = ['user' => [], 'up' => [], 'byte' => [], 'login' => [], 'total' => []];
+                            $profile30 = ['user' => [], 'up' => [], 'byte' => [], 'login' => [], 'total' => []];
                             if (!empty($ar['user_evidence'])) {
                                 $evidence = json_decode((string)$ar['user_evidence'], true);
                                 if (is_array($evidence)) {
@@ -682,10 +682,11 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             $upt = $upt !== '' ? $upt : '-';
                                             $kind = (string)($ud['profile_kind'] ?? '10');
                                             $bucket = ($kind === '30') ? $profile30 : $profile10;
-                                            $bucket['up'][] = (string)$uname . ': ' . $upt;
-                                            $bucket['byte'][] = (string)$uname . ': ' . $lb;
-                                            $bucket['login'][] = (string)$uname . ': ' . $cnt . 'x';
-                                            $bucket['total'][] = (string)$uname . ': ' . number_format($price_val,0,',','.');
+                                            $bucket['user'][] = (string)$uname;
+                                            $bucket['up'][] = $upt;
+                                            $bucket['byte'][] = $lb;
+                                            $bucket['login'][] = $cnt . 'x';
+                                            $bucket['total'][] = number_format($price_val,0,',','.');
                                             if ($kind === '30') {
                                                 $profile30 = $bucket;
                                             } else {
@@ -698,17 +699,20 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                         $lb = format_bytes_short((int)($evidence['last_bytes'] ?? 0));
                                         $price_val = (int)($evidence['price'] ?? 0);
                                         $upt = $upt !== '' ? $upt : '-';
-                                        $profile10['up'][] = 'Uptime: ' . $upt;
-                                        $profile10['byte'][] = 'Bytes: ' . $lb;
-                                        $profile10['login'][] = 'Login: ' . $cnt . 'x';
-                                        $profile10['total'][] = 'Total: ' . number_format($price_val,0,',','.');
+                                        $profile10['user'][] = '-';
+                                        $profile10['up'][] = $upt;
+                                        $profile10['byte'][] = $lb;
+                                        $profile10['login'][] = $cnt . 'x';
+                                        $profile10['total'][] = number_format($price_val,0,',','.');
                                     }
                                 }
                             }
+                            $p10_us = !empty($profile10['user']) ? implode('<br>', array_map('htmlspecialchars', $profile10['user'])) : '-';
                             $p10_up = !empty($profile10['up']) ? implode('<br>', array_map('htmlspecialchars', $profile10['up'])) : '-';
                             $p10_bt = !empty($profile10['byte']) ? implode('<br>', array_map('htmlspecialchars', $profile10['byte'])) : '-';
                             $p10_lg = !empty($profile10['login']) ? implode('<br>', array_map('htmlspecialchars', $profile10['login'])) : '-';
                             $p10_tt = !empty($profile10['total']) ? implode('<br>', array_map('htmlspecialchars', $profile10['total'])) : '-';
+                            $p30_us = !empty($profile30['user']) ? implode('<br>', array_map('htmlspecialchars', $profile30['user'])) : '-';
                             $p30_up = !empty($profile30['up']) ? implode('<br>', array_map('htmlspecialchars', $profile30['up'])) : '-';
                             $p30_bt = !empty($profile30['byte']) ? implode('<br>', array_map('htmlspecialchars', $profile30['byte'])) : '-';
                             $p30_lg = !empty($profile30['login']) ? implode('<br>', array_map('htmlspecialchars', $profile30['login'])) : '-';
@@ -716,31 +720,31 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         ?>
                         <tr>
                             <td><?= htmlspecialchars($ar['blok_name'] ?? '-') ?></td>
-                            <td style="text-align:center;"><?= number_format((int)($ar['expected_qty'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:center;"><?= number_format((int)($ar['reported_qty'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:center;"><?= number_format((int)($ar['selisih_qty'] ?? 0),0,',','.') ?></td>
-                            <td style="text-align:right;"><?= number_format((int)($ar['expected_setoran'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)($ar['selisih_setoran'] ?? 0),0,',','.') ?></td>
-                            <td><?= htmlspecialchars($ar['note'] ?? '') ?></td>
+                            <td><?= $p10_us ?></td>
                             <td><?= $p10_up ?></td>
                             <td><?= $p10_bt ?></td>
                             <td><?= $p10_lg ?></td>
                             <td><?= $p10_tt ?></td>
+                            <td><?= $p30_us ?></td>
                             <td><?= $p30_up ?></td>
                             <td><?= $p30_bt ?></td>
                             <td><?= $p30_lg ?></td>
                             <td><?= $p30_tt ?></td>
+                            <td><?= htmlspecialchars($ar['note'] ?? '') ?></td>
                         </tr>
                     <?php endforeach; ?>
                     <tr>
                         <td style="text-align:right;"><b>Total</b></td>
-                        <td style="text-align:center;"><b><?= number_format($audit_total_expected_qty,0,',','.') ?></b></td>
                         <td style="text-align:center;"><b><?= number_format($audit_total_reported_qty,0,',','.') ?></b></td>
                         <td style="text-align:center;"><b><?= number_format($audit_total_selisih_qty,0,',','.') ?></b></td>
-                        <td style="text-align:right;"><b><?= number_format($audit_total_expected_setoran,0,',','.') ?></b></td>
                         <td style="text-align:right;"><b><?= number_format($audit_total_actual_setoran,0,',','.') ?></b></td>
                         <td style="text-align:right;"><b><?= number_format($audit_total_selisih_setoran,0,',','.') ?></b></td>
+                        <td></td>
+                        <td></td>
                         <td></td>
                         <td></td>
                         <td></td>
