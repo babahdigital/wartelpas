@@ -1385,7 +1385,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
     .audit-profile-item { display:flex; align-items:center; gap:8px; }
     .audit-profile-item label { display:flex; align-items:center; gap:6px; margin:0; }
     .audit-profile-item input[type="number"] { width:90px; padding:6px 8px; }
-    .audit-table th, .audit-table td { padding:6px 8px; font-size:11px; }
+    .audit-table th, .audit-table td { padding:8px 10px; font-size:0.9rem; }
     .audit-line { border-bottom:1px dashed #3a4046; padding:2px 0; }
     .audit-line:last-child { border-bottom:none; }
 </style>
