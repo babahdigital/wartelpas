@@ -3190,14 +3190,23 @@ if ($debug_mode && !$is_ajax) {
     });
   }
 
+  function canAutoRefresh() {
+    const statusOk = !statusSelect || statusSelect.value === 'all';
+    const blokOk = !commentSelect || commentSelect.value === '';
+    return statusOk && blokOk;
+  }
+
   setInterval(() => {
     if (document.hidden) return;
+    if (!canAutoRefresh()) return;
     const currentInput = searchInput.value.trim();
     if (currentInput !== appliedQuery) return;
     fetchUsers(false, false);
     refreshActiveStatus();
   }, 15000);
 
-  refreshActiveStatus();
+  if (canAutoRefresh()) {
+    refreshActiveStatus();
+  }
 })();
 </script>
