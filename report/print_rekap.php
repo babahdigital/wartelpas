@@ -13,6 +13,7 @@ include('../include/readcfg.php');
 $dbFile = dirname(__DIR__) . '/db_data/mikhmon_stats.db';
 $cur = isset($currency) ? $currency : 'Rp';
 $session_id = $_GET['session'] ?? '';
+$filter_blok = trim((string)($_GET['blok'] ?? ''));
 
 $req_show = $_GET['show'] ?? 'harian';
 $filter_date = $_GET['date'] ?? '';
@@ -491,7 +492,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
     </div>
 
     <h2>Rekap Laporan Penjualan</h2>
-    <div class="meta">Periode: <?= htmlspecialchars($period_label) ?> | Tanggal: <?= htmlspecialchars(format_date_ddmmyyyy($filter_date)) ?></div>
+    <div class="meta">Periode: <?= htmlspecialchars($period_label) ?> | Tanggal: <?= htmlspecialchars(format_date_ddmmyyyy($filter_date)) ?> | Blok: <?= htmlspecialchars($filter_blok !== '' ? strtoupper($filter_blok) : 'Semua') ?> | Dicetak: <?= date('d-m-Y H:i:s') ?></div>
 
     <div class="grid">
         <div class="card">
@@ -502,6 +503,12 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             <div class="label">Pendapatan Bersih</div>
             <div class="value"><?= $cur ?> <?= number_format($total_net,0,',','.') ?></div>
         </div>
+        <?php if ($req_show === 'harian'): ?>
+        <div class="card">
+            <div class="label">Net Laku (Setelah Rusak/Invalid + Retur)</div>
+            <div class="value"><?= $cur ?> <?= number_format($total_net_units,0,',','.') ?></div>
+        </div>
+        <?php endif; ?>
         <div class="card">
             <div class="label">Total Voucher Laku</div>
             <div class="value"><?= number_format($total_qty_laku,0,',','.') ?></div>
@@ -856,20 +863,19 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                 </tbody>
             </table>
 
-            <div style="margin-top: 10px; font-size: 11px; display: flex; gap: 15px;">
-                <div style="display:flex; align-items:center;">
-                    <span style="display:inline-block; width:15px; height:15px; background:#fef3c7; border:1px solid #ccc; margin-right:5px;"></span> User yang Tidak Dilaporkan
-                </div>
-                <div style="display:flex; align-items:center;">
-                    <span style="display:inline-block; width:15px; height:15px; background:#fecaca; border:1px solid #ccc; margin-right:5px;"></span> Voucer Rusak
-                </div>
-                <div style="display:flex; align-items:center;">
-                    <span style="display:inline-block; width:15px; height:15px; background:#dcfce7; border:1px solid #ccc; margin-right:5px;"></span> Voucer Retur
-                </div>
-            </div>
-
             <div class="audit-summary-box">
                 <div class="audit-summary-header">Kesimpulan Audit Harian</div>
+                <div style="font-size:11px; display:flex; flex-wrap:wrap; gap:15px; margin-bottom:6px;">
+                    <div style="display:flex; align-items:center;">
+                        <span style="display:inline-block; width:15px; height:15px; background:#fef3c7; border:1px solid #ccc; margin-right:5px;"></span> User Tidak Dilaporkan
+                    </div>
+                    <div style="display:flex; align-items:center;">
+                        <span style="display:inline-block; width:15px; height:15px; background:#fecaca; border:1px solid #ccc; margin-right:5px;"></span> Voucher Rusak
+                    </div>
+                    <div style="display:flex; align-items:center;">
+                        <span style="display:inline-block; width:15px; height:15px; background:#dcfce7; border:1px solid #ccc; margin-right:5px;"></span> Voucher Retur
+                    </div>
+                </div>
                 <div style="font-size:11px; color:#444; margin-bottom:6px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
                     <span><strong>Status Voucher Global:</strong></span>
                     <span>Voucher Rusak: <?= number_format((int)$total_qty_rusak,0,',','.') ?></span>
