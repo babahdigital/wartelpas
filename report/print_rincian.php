@@ -208,6 +208,7 @@ $total_qty_rusak = 0;
 $total_qty_retur = 0;
 $unique_laku_users = [];
 $bytes_by_user = [];
+$audit_net = null;
 $only_wartel = true;
 if (isset($_GET['only_wartel']) && $_GET['only_wartel'] === '0') {
     $only_wartel = false;
@@ -237,6 +238,17 @@ try {
             WHERE ls.sync_status = 'pending'
             ORDER BY sale_datetime DESC, raw_date DESC");
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $stmtChk = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='audit_rekap_manual' LIMIT 1");
+            $hasAudit = (bool)$stmtChk->fetchColumn();
+            if ($hasAudit) {
+                $stmtAudit = $db->prepare("SELECT SUM(actual_setoran) FROM audit_rekap_manual WHERE report_date = :d");
+                $stmtAudit->execute([':d' => $filter_date]);
+                $audit_net = (int)$stmtAudit->fetchColumn();
+            }
+        } catch (Exception $e) {
+            $audit_net = null;
+        }
     }
 } catch (Exception $e) {
     $rows = [];
@@ -727,8 +739,11 @@ function normalize_uptime_diff($diff, $snap = 2) {
               <div class="summary-badge"><span class="label">Voucher Retur</span> <span class="value"><?= number_format((int)$total_qty_retur,0,',','.') ?></span></div>
           <?php endif; ?>
           <div class="summary-badge"><span class="label">Net Income</span> <span class="value"><?= $cur ?> <?= number_format((int)$total_net,0,',','.') ?></span></div>
-          <div class="summary-badge"><span class="label">Total Byte</span> <span class="value"><?= esc(format_bytes_short((int)$total_bytes)) ?></span></div>
+          <div class="summary-badge"><span class="label">Byte</span> <span class="value"><?= esc(format_bytes_short((int)$total_bytes)) ?></span></div>
       </div>
+          <?php if (!is_null($audit_net)): ?>
+              <div class="summary-badge"><span class="label">Net Audit</span> <span class="value"><?= $cur ?> <?= number_format((int)$audit_net,0,',','.') ?></span></div>
+          <?php endif; ?>
     <?php endif; ?>
 
 <script>
