@@ -640,6 +640,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             <?php 
                 // Array untuk menampung data summary
                 $audit_summary_report = []; 
+                $price10 = 5000;
+                $price30 = 20000;
             ?>
             <h2 class="dul-gap" style="margin-top:35px;">Rekap Audit Penjualan Lapangan</h2>
             <div class="meta">Periode: <?= htmlspecialchars($period_label) ?> | Tanggal: <?= htmlspecialchars(format_date_ddmmyyyy($filter_date)) ?></div>
@@ -760,20 +762,54 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $p30_tt = $p30_qty > 0 ? number_format($p30_qty,0,',','.') : '-';
                             $audit_total_profile_qty_10 += $p10_qty;
                             $audit_total_profile_qty_30 += $p30_qty;
-                            $price10 = 5000;
-                            $price30 = 20000;
                             $p10_sum_calc = $profile10_sum > 0 ? $profile10_sum : ($p10_qty > 0 ? $p10_qty * $price10 : null);
                             $p30_sum_calc = $profile30_sum > 0 ? $profile30_sum : ($p30_qty > 0 ? $p30_qty * $price30 : null);
                             
-                            // Calculate Unreported Ghost Units (No User Info)
-                            $selisih_qty_total = (int)($ar['selisih_qty'] ?? 0);
-                            $identified_gap = $cnt_unreported_10 + $cnt_unreported_30;
-                            $unknown_missing = 0;
-                            // Jika ada selisih positif (kurang lapor) dan jumlah user yg teridentifikasi kurang dari total selisih
-                            if ($selisih_qty_total > 0) {
-                                $unknown_missing = $selisih_qty_total - $identified_gap;
-                                if ($unknown_missing < 0) $unknown_missing = 0;
+                            // === LOGIKA DETEKSI GHOST UNIT 10 VS 30 MENIT ===
+                            $db_selisih_qty = (int)($ar['selisih_qty'] ?? 0);
+                            // Ambil selisih uang secara absolut untuk hitungan.
+                            $db_selisih_rp = abs((int)($ar['selisih_setoran'] ?? 0)); 
+
+                            // Qty yang sudah teridentifikasi usernya
+                            $identified_unreported_qty = $cnt_unreported_10 + $cnt_unreported_30;
+
+                            // Sisa Qty yang tidak ada data usernya (Ghost)
+                            $ghost_qty = $db_selisih_qty - $identified_unreported_qty;
+                            
+                            $ghost_10 = 0;
+                            $ghost_30 = 0;
+
+                            if ($ghost_qty > 0) {
+                                // Nilai uang dari user yang sudah teridentifikasi
+                                $identified_rp = ($cnt_unreported_10 * $price10) + ($cnt_unreported_30 * $price30);
+                                
+                                // Sisa uang yang harus dijelaskan oleh Ghost Unit
+                                $ghost_rp = $db_selisih_rp - $identified_rp;
+
+                                // Matematika 2 Variabel:
+                                // x + y = ghost_qty
+                                // 5000x + 20000y = ghost_rp
+                                // y = (ghost_rp - 5000*ghost_qty) / 15000
+                                if ($ghost_rp >= 0) {
+                                     $numerator = $ghost_rp - ($ghost_qty * $price10);
+                                     $divisor = $price30 - $price10; // 15000
+                                     
+                                     if ($divisor != 0 && $numerator % $divisor == 0) {
+                                         // Jika hasil bagi bulat, berarti kombinasi valid
+                                         $ghost_30 = $numerator / $divisor;
+                                         $ghost_10 = $ghost_qty - $ghost_30;
+                                     } else {
+                                         // Fallback logika jika nominal uang tidak pas (manual)
+                                         // Cek extreme case
+                                         if ($ghost_rp == $price30 * $ghost_qty) {
+                                             $ghost_30 = $ghost_qty;
+                                         } elseif ($ghost_rp == $price10 * $ghost_qty) {
+                                             $ghost_10 = $ghost_qty;
+                                         }
+                                     }
+                                }
                             }
+                            // ===============================================
 
                             // Capture data for summary
                             $audit_summary_report[] = [
@@ -786,7 +822,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 'unreported_total' => (int)($cnt_unreported_10 + $cnt_unreported_30),
                                 'unreported_10' => (int)$cnt_unreported_10,
                                 'unreported_30' => (int)$cnt_unreported_30,
-                                'unknown_missing' => $unknown_missing,
+                                'ghost_10' => (int)$ghost_10,
+                                'ghost_30' => (int)$ghost_30,
                                 'rusak_10' => $cnt_rusak_10,
                                 'rusak_30' => $cnt_rusak_30,
                                 'retur_10' => (int)$cnt_retur_10,
@@ -906,10 +943,15 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     </li>
                                 <?php endif; ?>
 
-                                <?php if ($rep['unknown_missing'] > 0): ?>
+                                <?php if ($rep['ghost_10'] > 0 || $rep['ghost_30'] > 0): ?>
                                     <li>
-                                        <span style="color:#b45309; font-weight:bold;">Voucer tidak dilaporkan:</span>
-                                        <?= number_format($rep['unknown_missing'], 0, ',', '.') ?> Unit
+                                        <span style="color:#b45309; font-weight:bold;">Voucer Tidak Dilaporkan:</span>
+                                        <?php 
+                                            $ghost_parts = [];
+                                            if ($rep['ghost_10'] > 0) $ghost_parts[] = number_format($rep['ghost_10'], 0, ',', '.') . ' Unit (10 Menit)';
+                                            if ($rep['ghost_30'] > 0) $ghost_parts[] = number_format($rep['ghost_30'], 0, ',', '.') . ' Unit (30 Menit)';
+                                            echo implode(' | ', $ghost_parts);
+                                        ?>
                                     </li>
                                 <?php endif; ?>
 
