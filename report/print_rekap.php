@@ -937,15 +937,19 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     </li>
                                 <?php endif; ?>
 
-                                <?php if (($rep['ghost_10'] > 0 || $rep['ghost_30'] > 0) && empty($rep['unreported_total'])): ?>
+                                <?php
+                                    $ghost_parts = [];
+                                    if (($rep['ghost_10'] > 0) && empty($rep['unreported_10'])) {
+                                        $ghost_parts[] = number_format($rep['ghost_10'], 0, ',', '.') . ' Unit (10 Menit)';
+                                    }
+                                    if (($rep['ghost_30'] > 0) && empty($rep['unreported_30'])) {
+                                        $ghost_parts[] = number_format($rep['ghost_30'], 0, ',', '.') . ' Unit (30 Menit)';
+                                    }
+                                ?>
+                                <?php if (!empty($ghost_parts)): ?>
                                     <li>
                                         <span style="color:#b45309; font-weight:bold;">Voucer Tidak Dilaporkan:</span>
-                                        <?php 
-                                            $ghost_parts = [];
-                                            if ($rep['ghost_10'] > 0) $ghost_parts[] = number_format($rep['ghost_10'], 0, ',', '.') . ' Unit (10 Menit)';
-                                            if ($rep['ghost_30'] > 0) $ghost_parts[] = number_format($rep['ghost_30'], 0, ',', '.') . ' Unit (30 Menit)';
-                                            echo implode(' | ', $ghost_parts);
-                                        ?>
+                                        <?= implode(' | ', $ghost_parts) ?>
                                     </li>
                                 <?php endif; ?>
 
