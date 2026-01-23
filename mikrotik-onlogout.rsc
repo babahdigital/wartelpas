@@ -17,6 +17,18 @@
     :local userId [/ip hotspot user find where name="$username"];
     :local userUptime "";
     :local currentComment "";
+    :if ($username = "") do={
+        :log info "LOGOUT: skip empty user";
+        :return;
+    }
+    :if ([:len $userId] = 0) do={
+        :local actIds [/ip hotspot active find where user="$username"];
+        :local ckIds [/ip hotspot cookie find where user="$username"];
+        :if ([:len $actIds] = 0 && [:len $ckIds] = 0) do={
+            :log info "LOGOUT: skip user not found";
+            :return;
+        }
+    }
     :if ([:len $userId] > 0) do={
         :set userUptime [/ip hotspot user get $userId uptime];
         :set currentComment [/ip hotspot user get $userId comment];
