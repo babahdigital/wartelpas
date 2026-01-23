@@ -496,7 +496,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
     <div class="grid">
         <div class="card">
-            <div class="label">Pendapatan Kotor</div>
+            <div class="label">Gross System</div>
             <div class="value"><?= $cur ?> <?= number_format($total_gross,0,',','.') ?></div>
         </div>
         <div class="card">
