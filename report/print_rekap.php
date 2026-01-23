@@ -7,30 +7,178 @@ if (!isset($_SESSION["mikhmon"])) {
     exit;
 }
 
+$session = $_GET['session'] ?? '';
+
 include('../include/config.php');
 include('../include/readcfg.php');
+include_once('../lib/routeros_api.class.php');
 
 $dbFile = dirname(__DIR__) . '/db_data/mikhmon_stats.db';
 $cur = isset($currency) ? $currency : 'Rp';
-$session_id = $_GET['session'] ?? '';
+$session_id = $session;
 
-$req_show = $_GET['show'] ?? 'harian';
-$filter_date = $_GET['date'] ?? '';
-if ($req_show === 'harian') {
-    $filter_date = $filter_date ?: date('Y-m-d');
-} elseif ($req_show === 'bulanan') {
-    $filter_date = $filter_date ?: date('Y-m');
-} else {
-    $req_show = 'tahunan';
-    $filter_date = $filter_date ?: date('Y');
+$mode = $_GET['mode'] ?? '';
+$req_status = strtolower((string)($_GET['status'] ?? ''));
+$is_usage = ($mode === 'usage' || in_array($req_status, ['used','online','rusak','all']));
+$filter_user = trim((string)($_GET['user'] ?? ''));
+$filter_blok = trim((string)($_GET['blok'] ?? ''));
+
+$filter_date = $_GET['date'] ?? date('Y-m-d');
+
+$usage_label = 'Terpakai';
+if ($req_status === 'online') $usage_label = 'Online';
+elseif ($req_status === 'rusak') $usage_label = 'Rusak';
+elseif ($req_status === 'all') $usage_label = 'Semua';
+
+function normalize_block_name_simple($blok_name) {
+    $raw = strtoupper(trim((string)$blok_name));
+    if ($raw === '') return '';
+    $raw = preg_replace('/^BLOK[-_\s]*/', '', $raw);
+    if (preg_match('/^([A-Z0-9]+)/', $raw, $m)) {
+        $raw = $m[1];
+    }
+    return 'BLOK-' . $raw;
+}
+
+function extract_blok_name($comment) {
+    if (empty($comment)) return '';
+    if (preg_match('/\bblok\s*[-_]?\s*([A-Za-z0-9]+)/i', $comment, $m)) {
+        return 'BLOK-' . strtoupper($m[1]);
+    }
+    return '';
+}
+
+function extract_ip_mac_from_comment($comment) {
+    $ip = '';
+    $mac = '';
+    if (!empty($comment)) {
+        if (preg_match('/\bIP\s*:\s*([^|\s]+)/i', $comment, $m)) {
+            $ip = trim($m[1]);
+        }
+        if (preg_match('/\bMAC\s*:\s*([^|\s]+)/i', $comment, $m)) {
+            $mac = trim($m[1]);
+        }
+    }
+    return ['ip' => $ip, 'mac' => $mac];
+}
+
+function is_wartel_client($comment, $hist_blok = '') {
+    if (!empty($hist_blok)) return true;
+    $blok = extract_blok_name($comment);
+    if (!empty($blok)) return true;
+    if (!empty($comment) && stripos($comment, 'blok-') !== false) return true;
+    return false;
+}
+
+function uptime_to_seconds($uptime) {
+    if (empty($uptime) || $uptime === '0s') return 0;
+    $total = 0;
+    if (preg_match_all('/(\d+)(w|d|h|m|s)/i', $uptime, $m, PREG_SET_ORDER)) {
+        foreach ($m as $part) {
+            $val = (int)$part[1];
+            switch (strtolower($part[2])) {
+                case 'w': $total += $val * 7 * 24 * 3600; break;
+                case 'd': $total += $val * 24 * 3600; break;
+                case 'h': $total += $val * 3600; break;
+                case 'm': $total += $val * 60; break;
+                case 's': $total += $val; break;
+            }
+        }
+    }
+    return $total;
+}
+
+function seconds_to_uptime($seconds) {
+    $seconds = (int)$seconds;
+    if ($seconds <= 0) return '0s';
+    $parts = [];
+    $w = intdiv($seconds, 604800);
+    if ($w > 0) { $parts[] = $w . 'w'; $seconds %= 604800; }
+    $d = intdiv($seconds, 86400);
+    if ($d > 0) { $parts[] = $d . 'd'; $seconds %= 86400; }
+    $h = intdiv($seconds, 3600);
+    if ($h > 0) { $parts[] = $h . 'h'; $seconds %= 3600; }
+    $m = intdiv($seconds, 60);
+    if ($m > 0) { $parts[] = $m . 'm'; $seconds %= 60; }
+    if ($seconds > 0) { $parts[] = $seconds . 's'; }
+    return implode('', $parts);
+}
+
+function extract_datetime_from_comment($comment) {
+    if (empty($comment)) return '';
+    $first = trim(explode('|', $comment)[0] ?? '');
+    if ($first === '') return '';
+    $ts = strtotime($first);
+    if ($ts === false) return '';
+    return date('Y-m-d H:i:s', $ts);
+}
+
+function extract_retur_user_from_ref($comment) {
+    if (empty($comment)) return '';
+    if (preg_match('/Retur\s*Ref\s*:\s*([^|]+)/i', $comment, $m)) {
+        $ref = trim($m[1]);
+        if (preg_match('/\b(vc-[A-Za-z0-9._-]+)/', $ref, $m2)) return $m2[1];
+        if (preg_match('/\b([a-z0-9]{6})\b/i', $ref, $m2)) return $m2[1];
+    }
+    return '';
+}
+
+function format_date_indo($dateStr) {
+    if (empty($dateStr) || $dateStr === '-') return '-';
+    $ts = strtotime($dateStr);
+    if ($ts === false) return $dateStr;
+    return date('d-m-Y H:i:s', $ts);
+}
+
+function format_date_long_indo($dateStr) {
+    if (empty($dateStr) || $dateStr === '-') return '-';
+    $ts = strtotime($dateStr);
+    if ($ts === false) return $dateStr;
+    $months = [
+        'Januari','Februari','Maret','April','Mei','Juni',
+        'Juli','Agustus','September','Oktober','November','Desember'
+    ];
+    $m = (int)date('n', $ts);
+    $month = $months[$m - 1] ?? date('m', $ts);
+    return date('d', $ts) . ' ' . $month . ' ' . date('Y', $ts);
+}
+
+function format_time_only($dateStr) {
+    if (empty($dateStr) || $dateStr === '-') return '-';
+    $ts = strtotime($dateStr);
+    if ($ts === false) return $dateStr;
+    return date('H:i:s', $ts);
+}
+
+function strip_blok_prefix($blok) {
+    $raw = trim((string)$blok);
+    if ($raw === '') return '-';
+    return preg_replace('/^BLOK-?/i', '', $raw);
+}
+
+function format_date_only_indo($dateStr) {
+    if (empty($dateStr) || $dateStr === '-') return '-';
+    $ts = strtotime($dateStr);
+    if ($ts === false) return $dateStr;
+    return date('d-m-Y', $ts);
+}
+
+function format_bytes_short($bytes) {
+    $b = (float)$bytes;
+    if ($b <= 0) return '0 B';
+    $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    $i = 0;
+    while ($b >= 1024 && $i < count($units) - 1) {
+        $b /= 1024;
+        $i++;
+    }
+    $dec = $i >= 2 ? 2 : 0;
+    return number_format($b, $dec, ',', '.') . ' ' . $units[$i];
 }
 
 function norm_date_from_raw_report($raw_date) {
     $raw = trim((string)$raw_date);
     if ($raw === '') return '';
-    if (preg_match('/^\d{4}-\d{2}-\d{2}/', $raw)) {
-        return substr($raw, 0, 10);
-    }
     if (preg_match('/^[a-zA-Z]{3}\/\d{2}\/\d{4}$/', $raw)) {
         $mon = strtolower(substr($raw, 0, 3));
         $map = [
@@ -50,122 +198,42 @@ function norm_date_from_raw_report($raw_date) {
     return '';
 }
 
-function normalize_block_name($blok_name, $comment = '') {
-    $raw = strtoupper(trim((string)$blok_name));
-    if ($raw === '' && $comment !== '') {
-        if (preg_match('/\bblok\s*[-_]?\s*([A-Z0-9]+)\b/i', $comment, $m)) {
-            $raw = strtoupper($m[1]);
-        }
+function esc($s){ return htmlspecialchars((string)$s); }
+
+function normalize_uptime_diff($diff, $snap = 2) {
+    $d = (int)$diff;
+    if ($d <= 0) return 0;
+    $mod = $d % 60;
+    if ($mod <= $snap) {
+        $d -= $mod;
+    } elseif ($mod >= (60 - $snap)) {
+        $d += (60 - $mod);
     }
-    if ($raw === '') return 'BLOK-LAIN';
-    $raw = preg_replace('/^BLOK[-_\s]*/', '', $raw);
-    if (preg_match('/^([A-Z]+)/', $raw, $m)) {
-        $raw = $m[1];
-    }
-    return 'BLOK-' . $raw;
-}
-
-function detect_profile_minutes($profile) {
-    $p = strtolower((string)$profile);
-    if (preg_match('/\b10\s*(menit|m)\b/i', $p)) return '10';
-    if (preg_match('/\b30\s*(menit|m)\b/i', $p)) return '30';
-    return 'OTHER';
-}
-
-function format_bytes_short($bytes) {
-    $b = (float)$bytes;
-    if ($b <= 0) return '-';
-    $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    $i = 0;
-    while ($b >= 1024 && $i < count($units) - 1) {
-        $b /= 1024;
-        $i++;
-    }
-    $dec = $i >= 2 ? 2 : 0;
-    return number_format($b, $dec, ',', '.') . ' ' . $units[$i];
-}
-
-function format_date_ddmmyyyy($dateStr) {
-    $ts = strtotime((string)$dateStr);
-    if ($ts === false) return $dateStr;
-    return date('d-m-Y', $ts);
-}
-
-// Helper untuk membuat tabel bersarang di kolom audit
-function generate_nested_table($items, $align = 'left') {
-    if (empty($items)) return '-';
-    $html = '<table style="width:100%; border-collapse:collapse; margin:0; padding:0; background:transparent;">';
-    $count = count($items);
-    foreach ($items as $i => $val) {
-        $border = ($i < $count - 1) ? 'border-bottom:1px solid #999;' : ''; 
-        $html .= '<tr><td style="border:none; padding:4px 2px; '.$border.' text-align: center; vertical-align:middle; line-height:1.2; word-wrap:break-word;">'.htmlspecialchars($val).'</td></tr>';
-    }
-    $html .= '</table>';
-    return $html;
-}
-
-// Helper khusus untuk username audit (warna rusak/normal)
-function generate_nested_table_user($items, $align = 'left') {
-    if (empty($items)) return '-';
-    $html = '<table style="width:100%; border-collapse:collapse; margin:0; padding:0; background:transparent;">';
-    $count = count($items);
-    foreach ($items as $i => $item) {
-        $label = is_array($item) ? ($item['label'] ?? '-') : (string)$item;
-        $status = is_array($item) ? strtolower((string)($item['status'] ?? '')) : '';
-        
-        // Logika Warna:
-        // Merah = Rusak
-        // Hijau = Retur
-        // Kuning = Tidak Terlapor (Default evidence tapi tidak rusak/retur)
-        // Transparan = Jika labelnya "-" atau kosong
-        if ($label === '-' || trim($label) === '') {
-            $bg = 'transparent';
-        } elseif ($status === 'rusak') {
-            $bg = '#fecaca'; // Merah
-        } elseif ($status === 'retur') {
-            $bg = '#dcfce7'; // Hijau
-        } else {
-            $bg = '#fef3c7'; // Kuning
-        }
-
-        $border = ($i < $count - 1) ? 'border-bottom:1px solid #999;' : '';
-        $html .= '<tr><td style="border:none; padding:4px 2px; '.$border.' text-align:'.$align.'; vertical-align:middle; line-height:1.2; word-wrap:break-word; background:'.$bg.';">'.htmlspecialchars($label).'</td></tr>';
-    }
-    $html .= '</table>';
-    return $html;
+    return $d;
 }
 
 $rows = [];
-$hp_total_units = 0;
-$hp_active_units = 0;
-$hp_rusak_units = 0;
-$hp_spam_units = 0;
-$hp_wartel_units = 0;
-$hp_kamtib_units = 0;
-$audit_rows = [];
-$audit_total_expected_qty = 0;
-$audit_total_reported_qty = 0;
-$audit_total_expected_setoran = 0;
-$audit_total_actual_setoran = 0;
-$audit_total_selisih_qty = 0;
-$audit_total_selisih_setoran = 0;
-$hp_active_by_block = [];
-$hp_stats_by_block = [];
-$hp_units_by_block = [];
-$block_summaries = [];
-$valid_blocks = [];
+$retur_ref_map = [];
+$list = [];
+$usage_list = [];
+$summary_blocks = []; 
+
+$only_wartel = true;
+if (isset($_GET['only_wartel']) && $_GET['only_wartel'] === '0') {
+    $only_wartel = false;
+}
 
 try {
     if (file_exists($dbFile)) {
         $db = new PDO('sqlite:' . $dbFile);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-        $res = $db->query("SELECT 
+        
+        $sql = "SELECT 
                 sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
                 sh.username, sh.profile, sh.profile_snapshot,
                 sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
                 sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
-                sh.full_raw_data, lh.last_status, lh.last_bytes
+                sh.full_raw_data, lh.last_status, lh.login_time_real, lh.last_uptime
             FROM sales_history sh
             LEFT JOIN login_history lh ON lh.username = sh.username
             UNION ALL
@@ -174,313 +242,403 @@ try {
                 ls.username, ls.profile, ls.profile_snapshot,
                 ls.price, ls.price_snapshot, ls.sprice_snapshot, ls.validity,
                 ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
-                ls.full_raw_data, lh2.last_status, lh2.last_bytes
+                ls.full_raw_data, lh2.last_status, lh2.login_time_real, lh2.last_uptime
             FROM live_sales ls
             LEFT JOIN login_history lh2 ON lh2.username = ls.username
             WHERE ls.sync_status = 'pending'
-            ORDER BY sale_datetime DESC, raw_date DESC");
+            ORDER BY sale_datetime DESC, raw_date DESC";
+
+        $res = $db->query($sql);
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
-
-        if ($req_show === 'harian') {
-            $stmtHp = $db->prepare("SELECT
-                    SUM(total_units) AS total_units,
-                    SUM(active_units) AS active_units,
-                    SUM(rusak_units) AS rusak_units,
-                    SUM(spam_units) AS spam_units
-                FROM phone_block_daily
-                WHERE report_date = :d AND unit_type = 'TOTAL'");
-            $stmtHp->execute([':d' => $filter_date]);
-            $hp = $stmtHp->fetch(PDO::FETCH_ASSOC) ?: [];
-            $hp_total_units = (int)($hp['total_units'] ?? 0);
-            $hp_active_units = (int)($hp['active_units'] ?? 0);
-            $hp_rusak_units = (int)($hp['rusak_units'] ?? 0);
-            $hp_spam_units = (int)($hp['spam_units'] ?? 0);
-
-            $stmtHpBlock = $db->prepare("SELECT blok_name, SUM(active_units) AS active_units
-                FROM phone_block_daily
-                WHERE report_date = :d AND unit_type = 'TOTAL'
-                GROUP BY blok_name");
-            $stmtHpBlock->execute([':d' => $filter_date]);
-            $hpBlockRows = $stmtHpBlock->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($hpBlockRows as $hb) {
-                $blk = normalize_block_name($hb['blok_name'] ?? '');
-                $hp_active_by_block[$blk] = (int)($hb['active_units'] ?? 0);
-                if ($blk !== '') $valid_blocks[$blk] = true;
-            }
-
-            $stmtHpStats = $db->prepare("SELECT blok_name,
-                    SUM(total_units) AS total_units,
-                    SUM(active_units) AS active_units,
-                    SUM(rusak_units) AS rusak_units,
-                    SUM(spam_units) AS spam_units
-                FROM phone_block_daily
-                WHERE report_date = :d AND unit_type = 'TOTAL'
-                GROUP BY blok_name");
-            $stmtHpStats->execute([':d' => $filter_date]);
-            $hpStatsRows = $stmtHpStats->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($hpStatsRows as $hs) {
-                $blk = normalize_block_name($hs['blok_name'] ?? '');
-                $hp_stats_by_block[$blk] = [
-                    'total' => (int)($hs['total_units'] ?? 0),
-                    'active' => (int)($hs['active_units'] ?? 0),
-                    'rusak' => (int)($hs['rusak_units'] ?? 0),
-                    'spam' => (int)($hs['spam_units'] ?? 0)
-                ];
-            }
-
-            $stmtHpUnitsBlock = $db->prepare("SELECT blok_name, unit_type, SUM(total_units) AS total_units
-                FROM phone_block_daily
-                WHERE report_date = :d AND unit_type IN ('WARTEL','KAMTIB')
-                GROUP BY blok_name, unit_type");
-            $stmtHpUnitsBlock->execute([':d' => $filter_date]);
-            $hpUnitRows = $stmtHpUnitsBlock->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($hpUnitRows as $hu) {
-                $blk = normalize_block_name($hu['blok_name'] ?? '');
-                if (!isset($hp_units_by_block[$blk])) $hp_units_by_block[$blk] = ['WARTEL' => 0, 'KAMTIB' => 0];
-                $ut = strtoupper((string)($hu['unit_type'] ?? ''));
-                if ($ut === 'WARTEL') $hp_units_by_block[$blk]['WARTEL'] = (int)($hu['total_units'] ?? 0);
-                if ($ut === 'KAMTIB') $hp_units_by_block[$blk]['KAMTIB'] = (int)($hu['total_units'] ?? 0);
-            }
-
-            $stmtHp2 = $db->prepare("SELECT unit_type, SUM(total_units) AS total_units
-                FROM phone_block_daily
-                WHERE report_date = :d AND unit_type IN ('WARTEL','KAMTIB')
-                GROUP BY unit_type");
-            $stmtHp2->execute([':d' => $filter_date]);
-            $hpRows = $stmtHp2->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($hpRows as $hr) {
-                $ut = strtoupper((string)($hr['unit_type'] ?? ''));
-                if ($ut === 'WARTEL') $hp_wartel_units = (int)($hr['total_units'] ?? 0);
-                if ($ut === 'KAMTIB') $hp_kamtib_units = (int)($hr['total_units'] ?? 0);
-            }
-
-            $stmtAudit = $db->prepare("SELECT * FROM audit_rekap_manual WHERE report_date = :d ORDER BY blok_name");
-            $stmtAudit->execute([':d' => $filter_date]);
-            $audit_rows = $stmtAudit->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($audit_rows as $ar) {
-                $audit_total_expected_qty += (int)($ar['expected_qty'] ?? 0);
-                $audit_total_reported_qty += (int)($ar['reported_qty'] ?? 0);
-                $audit_total_expected_setoran += (int)($ar['expected_setoran'] ?? 0);
-                $audit_total_actual_setoran += (int)($ar['actual_setoran'] ?? 0);
-                $audit_total_selisih_qty += (int)($ar['selisih_qty'] ?? 0);
-                $audit_total_selisih_setoran += (int)($ar['selisih_setoran'] ?? 0);
-            }
-        }
     }
 } catch (Exception $e) {
     $rows = [];
 }
 
-$total_gross = 0;
-$total_rusak = 0;
-$total_invalid = 0;
-$total_net = 0;
-$total_qty = 0;
-$total_qty_retur = 0;
-$total_qty_rusak = 0;
-$total_qty_invalid = 0;
-$total_qty_laku = 0;
-$rusak_10m = 0;
-$rusak_30m = 0;
-$total_qty_units = 0;
-$total_net_units = 0;
-$total_bandwidth = 0;
+if ($is_usage && file_exists($dbFile)) {
+    $histMap = [];
+    try {
+        $db = $db ?? new PDO('sqlite:' . $dbFile);
+        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $stmt = $db->query("SELECT username, blok_name, ip_address, mac_address, last_uptime, last_bytes, login_time_real, logout_time_real, raw_comment, last_status, login_count, first_login_real, last_login_real FROM login_history");
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $uname = $row['username'] ?? '';
+            if ($uname !== '') {
+                $raw_comment = (string)($row['raw_comment'] ?? '');
+                $has_retur = (stripos($raw_comment, '(Retur)') !== false) || (stripos($raw_comment, 'Retur Ref:') !== false);
+                if ($has_retur) {
+                    $row['last_status'] = 'retur';
+                }
+                $histMap[$uname] = $row;
+            }
+            $ref_user = extract_retur_user_from_ref($row['raw_comment'] ?? '');
+            if ($ref_user !== '') $retur_ref_map[strtolower($ref_user)] = true;
+        }
+    } catch (Exception $e) {
+        $histMap = [];
+    }
 
-$seen_sales = [];
-$seen_user_day = [];
-$unique_laku_users = [];
+    $API = new RouterosAPI();
+    $API->debug = false;
+    $API->timeout = 5;
+    $API->attempts = 1;
+    $hotspot_server = $hotspot_server ?? 'wartel';
+    $connected = $API->connect($iphost, $userhost, decrypt($passwdhost));
+    if ($connected) {
+        $all_users = $API->comm("/ip/hotspot/user/print", array(
+            "?server" => $hotspot_server,
+            ".proplist" => ".id,name,comment,profile,disabled,bytes-in,bytes-out,uptime"
+        ));
+        $active = $API->comm("/ip/hotspot/active/print", array(
+            "?server" => $hotspot_server,
+            ".proplist" => "user,uptime,address,mac-address,bytes-in,bytes-out"
+        ));
+        $API->disconnect();
+
+        $activeMap = [];
+        foreach ($active as $a) {
+            if (isset($a['user'])) $activeMap[$a['user']] = $a;
+        }
+
+        $seen_users = [];
+        foreach ($all_users as $u) {
+            $name = $u['name'] ?? '';
+            if ($name === '') continue;
+            if ($filter_user !== '' && $name !== $filter_user) continue;
+
+            $comment = (string)($u['comment'] ?? '');
+            $disabled = $u['disabled'] ?? 'false';
+            $is_active = isset($activeMap[$name]);
+
+            $f_blok = extract_blok_name($comment);
+            $hist = $histMap[$name] ?? null;
+            if ($f_blok === '' && $hist && !empty($hist['blok_name'])) {
+                $f_blok = normalize_block_name_simple($hist['blok_name']);
+            }
+            if ($only_wartel && !is_wartel_client($comment, $hist['blok_name'] ?? '')) {
+                continue;
+            }
+            if ($filter_blok !== '') {
+                $target_blok = normalize_block_name_simple($filter_blok);
+                if ($f_blok === '' || strcasecmp($f_blok, $target_blok) !== 0) continue;
+            }
+
+            $f_ip = $is_active ? ($activeMap[$name]['address'] ?? '-') : '-';
+            $f_mac = $is_active ? ($activeMap[$name]['mac-address'] ?? '-') : '-';
+            if ($f_ip == '-' || $f_mac == '-') {
+                $cm = extract_ip_mac_from_comment($comment);
+                if ($f_ip == '-' && !empty($cm['ip'])) $f_ip = $cm['ip'];
+                if ($f_mac == '-' && !empty($cm['mac'])) $f_mac = $cm['mac'];
+            }
+            if (!$is_active && $hist) {
+                if ($f_ip == '-' && !empty($hist['ip_address'])) $f_ip = $hist['ip_address'];
+                if ($f_mac == '-' && !empty($hist['mac_address'])) $f_mac = $hist['mac_address'];
+            }
+
+            $bytes_total = ($u['bytes-in'] ?? 0) + ($u['bytes-out'] ?? 0);
+            $bytes_active = 0;
+            if ($is_active) {
+                $bytes_active = ($activeMap[$name]['bytes-in'] ?? 0) + ($activeMap[$name]['bytes-out'] ?? 0);
+            }
+            $bytes_hist = (int)($hist['last_bytes'] ?? 0);
+            $bytes = max((int)$bytes_total, (int)$bytes_active, $bytes_hist);
+
+            $uptime_user = $u['uptime'] ?? '';
+            $uptime_hist = $hist['last_uptime'] ?? '';
+            $uptime_active = $is_active ? ($activeMap[$name]['uptime'] ?? '') : '';
+            $uptime = $uptime_active != '' ? $uptime_active : ($uptime_user != '' ? $uptime_user : ($uptime_hist != '' ? $uptime_hist : '0s'));
+
+            $is_rusak = stripos($comment, 'RUSAK') !== false;
+            $is_retur = stripos($comment, '(Retur)') !== false || stripos($comment, 'Retur Ref:') !== false;
+            $hist_status = strtolower((string)($hist['last_status'] ?? ''));
+            $hist_comment = (string)($hist['raw_comment'] ?? '');
+            $hist_is_retur = (stripos($hist_comment, '(Retur)') !== false) || (stripos($hist_comment, 'Retur Ref:') !== false) || ($hist_status === 'retur');
+            if ($hist_status === 'rusak') $is_rusak = true;
+            if ($hist_status === 'retur' || $hist_is_retur) $is_retur = true;
+            if ($disabled === 'true') $is_rusak = true;
+            if ($is_retur) $is_rusak = false;
+
+            $hist_used = $hist && (
+                in_array($hist_status, ['online','terpakai','rusak','retur']) ||
+                !empty($hist['login_time_real']) ||
+                !empty($hist['logout_time_real']) ||
+                (!empty($hist['last_uptime']) && $hist['last_uptime'] != '0s') ||
+                (int)($hist['last_bytes'] ?? 0) > 0
+            );
+            $is_used = (!$is_retur && !$is_rusak && $disabled !== 'true') &&
+                (!$is_active && ($bytes > 50 || $uptime != '0s' || $hist_used));
+
+            $status = 'READY';
+            if ($is_active) $status = 'ONLINE';
+            elseif ($is_rusak) $status = 'RUSAK';
+            elseif ($disabled === 'true') $status = 'RUSAK';
+            elseif ($is_retur) $status = 'RETUR';
+            elseif ($is_used) $status = 'TERPAKAI';
+
+            $status_match = true;
+            if ($req_status === 'online') $status_match = ($status === 'ONLINE');
+            elseif ($req_status === 'rusak') $status_match = ($status === 'RUSAK');
+            elseif ($req_status === 'used' || $req_status === 'terpakai') $status_match = ($status === 'TERPAKAI');
+            elseif ($req_status === 'all') $status_match = in_array($status, ['RUSAK','TERPAKAI']);
+            else $status_match = ($status === 'TERPAKAI');
+
+            if ($req_status === 'rusak' && ($is_retur || $hist_is_retur || isset($retur_ref_map[strtolower($name)]))) {
+                continue;
+            }
+
+            if (!$status_match) continue;
+            if ($status === 'READY') continue;
+
+            $seen_users[$name] = true;
+
+            $login_time = $hist['login_time_real'] ?? '';
+            $logout_time = $hist['logout_time_real'] ?? '';
+            if ($logout_time === '') {
+                $logout_time = extract_datetime_from_comment($comment);
+            }
+            if ($status === 'ONLINE') {
+                $logout_time = '-';
+                $u_sec_active = uptime_to_seconds($uptime_active);
+                if ($u_sec_active > 0) {
+                    $login_time = date('Y-m-d H:i:s', time() - $u_sec_active);
+                } elseif ($login_time === '') {
+                    $u_sec = uptime_to_seconds($uptime);
+                    if ($u_sec > 0) {
+                        $login_time = date('Y-m-d H:i:s', time() - $u_sec);
+                    }
+                }
+            }
+            $has_usage = ($bytes > 0) || ($uptime != '' && $uptime != '0s') || (!empty($hist['login_time_real']) || !empty($hist['logout_time_real']));
+            if ($status === 'TERPAKAI' && !$has_usage) {
+                continue;
+            }
+            if ($login_time === '' && $logout_time !== '' && $logout_time !== '-') {
+                $u_sec = uptime_to_seconds($uptime);
+                if ($u_sec > 0) {
+                    $login_time = date('Y-m-d H:i:s', strtotime($logout_time) - $u_sec);
+                } else {
+                    $login_time = $logout_time;
+                }
+            }
+            if ($login_time === '') $login_time = '-';
+            if ($logout_time === '') $logout_time = '-';
+            $has_logout = ($logout_time !== '-' && $logout_time !== '');
+            if ($status === 'TERPAKAI' && !$has_logout) {
+                continue;
+            }
+
+            $uptime_display = $uptime;
+            if ($status === 'ONLINE' && $u_sec_active > 0) {
+                $uptime_display = seconds_to_uptime($u_sec_active);
+            } elseif ($login_time !== '-' && $logout_time !== '-') {
+                $diff = strtotime($logout_time) - strtotime($login_time);
+                if ($diff > 0) {
+                    $diff = normalize_uptime_diff($diff, 2);
+                    $uptime_display = seconds_to_uptime($diff);
+                }
+            } elseif ($status === 'ONLINE' && $login_time !== '-') {
+                $diff = time() - strtotime($login_time);
+                if ($diff > 0) {
+                    $diff = normalize_uptime_diff($diff, 2);
+                    $uptime_display = seconds_to_uptime($diff);
+                }
+            }
+
+            $relogin = ((int)($hist['login_count'] ?? 0) > 1);
+            if ($req_status === 'rusak') {
+                $relogin = false;
+            }
+            $first_login = $hist['first_login_real'] ?? $login_time;
+            $usage_list[] = [
+                'first_login' => $first_login,
+                'login' => $login_time,
+                'logout' => $logout_time,
+                'username' => $name,
+                'blok' => $f_blok ?: '-',
+                'ip' => $f_ip,
+                'mac' => $f_mac,
+                'uptime' => $uptime_display,
+                'bytes' => $bytes,
+                'status' => strtolower($status),
+                'comment' => $comment,
+                'relogin' => $relogin
+            ];
+        }
+
+        foreach ($histMap as $uname => $row) {
+            if (isset($seen_users[$uname])) continue;
+            if ($filter_user !== '' && $uname !== $filter_user) continue;
+            $hist_status = strtolower((string)($row['last_status'] ?? ''));
+            if (!in_array($hist_status, ['rusak','retur','terpakai','online'])) continue;
+            $status = ($hist_status === 'rusak') ? 'RUSAK' : ($hist_status === 'retur' ? 'RETUR' : ($hist_status === 'online' ? 'ONLINE' : 'TERPAKAI'));
+            if ($req_status === 'online' && $status !== 'ONLINE') continue;
+            if ($req_status === 'rusak' && $status !== 'RUSAK') continue;
+            if ($req_status === 'used' && $status !== 'TERPAKAI') continue;
+            if ($req_status === 'all' && !in_array($status, ['RUSAK','TERPAKAI','ONLINE'])) continue;
+
+            if ($req_status === 'rusak') {
+                $is_retur_hist = (stripos($row['raw_comment'] ?? '', '(Retur)') !== false) || (stripos($row['raw_comment'] ?? '', 'Retur Ref:') !== false) || ($hist_status === 'retur') || isset($retur_ref_map[strtolower($uname)]);
+                if ($is_retur_hist) continue;
+            }
+
+            $comment = (string)($row['raw_comment'] ?? '');
+            $f_blok = normalize_block_name_simple($row['blok_name'] ?? '') ?: extract_blok_name($comment);
+            if ($only_wartel && !is_wartel_client($comment, $row['blok_name'] ?? '')) {
+                continue;
+            }
+            if ($filter_blok !== '') {
+                $target_blok = normalize_block_name_simple($filter_blok);
+                if ($f_blok === '' || strcasecmp($f_blok, $target_blok) !== 0) continue;
+            }
+
+            $login_time = $row['login_time_real'] ?? '-';
+            $logout_time = $row['logout_time_real'] ?? '-';
+            $has_usage = ((int)($row['last_bytes'] ?? 0) > 0) || (!empty($row['last_uptime']) && $row['last_uptime'] != '0s') || (!empty($row['login_time_real']) || !empty($row['logout_time_real']));
+            if ($status === 'TERPAKAI' && !$has_usage) continue;
+            $has_logout = ($logout_time !== '-' && $logout_time !== '');
+            if ($status === 'TERPAKAI' && !$has_logout) continue;
+            $uptime_display = $row['last_uptime'] ?? '-';
+            if ($login_time !== '-' && $logout_time !== '-') {
+                $diff = strtotime($logout_time) - strtotime($login_time);
+                if ($diff > 0) {
+                    $diff = normalize_uptime_diff($diff, 2);
+                    $uptime_display = seconds_to_uptime($diff);
+                }
+            }
+            $relogin = ((int)($row['login_count'] ?? 0) > 1);
+            if ($req_status === 'rusak') {
+                $relogin = false;
+            }
+            $usage_list[] = [
+                'first_login' => $row['first_login_real'] ?? $login_time,
+                'login' => $login_time,
+                'logout' => $logout_time,
+                'username' => $uname,
+                'blok' => $f_blok ?: '-',
+                'ip' => $row['ip_address'] ?? '-',
+                'mac' => $row['mac_address'] ?? '-',
+                'uptime' => $uptime_display,
+                'bytes' => (int)($row['last_bytes'] ?? 0),
+                'status' => strtolower($status),
+                'comment' => $comment,
+                'relogin' => $relogin
+            ];
+        }
+    }
+}
 
 foreach ($rows as $r) {
     $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
-    $sale_time = $r['sale_time'] ?? ($r['raw_time'] ?? '');
-    $match = false;
-    if ($req_show === 'harian') $match = ($sale_date === $filter_date);
-    elseif ($req_show === 'bulanan') $match = (strpos((string)$sale_date, $filter_date) === 0);
-    else $match = (strpos((string)$sale_date, $filter_date) === 0);
-    if (!$match) continue;
-
-    $username = $r['username'] ?? '';
-    if ($username !== '' && $sale_date !== '') {
-        $user_day_key = $username . '|' . $sale_date;
-        if (isset($seen_user_day[$user_day_key])) continue;
-        $seen_user_day[$user_day_key] = true;
-    }
-    $raw_key = trim((string)($r['full_raw_data'] ?? ''));
-    $unique_key = '';
-    if ($raw_key !== '') {
-        $unique_key = 'raw|' . $raw_key;
-    } elseif ($username !== '' && $sale_date !== '') {
-        $unique_key = $username . '|' . ($r['sale_datetime'] ?? ($sale_date . ' ' . ($sale_time ?? '')));
-        if ($unique_key === $username . '|') {
-            $unique_key = $username . '|' . $sale_date . '|' . ($sale_time ?? '');
-        }
-    } elseif ($sale_date !== '') {
-        $unique_key = 'date|' . $sale_date . '|' . ($sale_time ?? '');
-    }
-    if ($unique_key !== '') {
-        if (isset($seen_sales[$unique_key])) continue;
-        $seen_sales[$unique_key] = true;
-    }
+    if ($sale_date !== $filter_date) continue;
 
     $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
-    $qty = (int)($r['qty'] ?? 0);
-    if ($qty <= 0) $qty = 1;
-    $line_price = $price * $qty;
     $comment = (string)($r['comment'] ?? '');
-    $blok_row = (string)($r['blok_name'] ?? '');
-    if ($blok_row === '' && !preg_match('/\bblok\s*[-_]?\s*[A-Za-z0-9]+/i', $comment)) {
-        continue;
-    }
-    $block = normalize_block_name($r['blok_name'] ?? '', $comment);
     $status = strtolower((string)($r['status'] ?? ''));
     $lh_status = strtolower((string)($r['last_status'] ?? ''));
     $profile = $r['profile_snapshot'] ?? ($r['profile'] ?? '-');
     $cmt_low = strtolower($comment);
-    $bytes = (int)($r['last_bytes'] ?? 0);
-    if ($bytes < 0) $bytes = 0;
+    $blok_raw = $r['blok_name'] ?? '';
+    
+    if (empty($blok_raw)) {
+        $blok_raw = extract_blok_name($comment);
+    }
+    $f_blok = normalize_block_name_simple($blok_raw) ?: 'TANPA-BLOK';
 
     if ($status === '' || $status === 'normal') {
-        if ((int)($r['is_invalid'] ?? 0) === 1) $status = 'invalid';
-        elseif ((int)($r['is_retur'] ?? 0) === 1) $status = 'retur';
-        elseif ((int)($r['is_rusak'] ?? 0) === 1) $status = 'rusak';
-        elseif (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
-        elseif (strpos($cmt_low, 'retur') !== false || $lh_status === 'retur') $status = 'retur';
+        if (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
         elseif (strpos($cmt_low, 'rusak') !== false || $lh_status === 'rusak') $status = 'rusak';
+        elseif (strpos($cmt_low, 'retur') !== false || $lh_status === 'retur') $status = 'retur';
         else $status = 'normal';
     }
 
-    $gross_add = ($status === 'invalid') ? 0 : $line_price;
-    $loss_rusak = ($status === 'rusak') ? $line_price : 0;
-    $loss_invalid = ($status === 'invalid') ? $line_price : 0;
+    $gross_add = ($status === 'retur' || $status === 'invalid') ? 0 : $price;
+    $loss_rusak = ($status === 'rusak') ? $price : 0;
+    $loss_invalid = ($status === 'invalid') ? $price : 0;
     $net_add = $gross_add - $loss_rusak - $loss_invalid;
 
-    $total_bandwidth += $bytes;
-
-    $is_laku = !in_array($status, ['rusak', 'retur', 'invalid'], true);
-    if ($is_laku && $username !== '') {
-        $unique_laku_users[$username] = true;
-    }
-
-    if ($req_show === 'harian') {
-        $qty_count = 1;
-        $gross_line = ($status === 'invalid') ? 0 : $line_price;
-        $loss_rusak_line = ($status === 'rusak') ? $line_price : 0;
-        $loss_invalid_line = ($status === 'invalid') ? $line_price : 0;
-        $net_line = $gross_line - $loss_rusak_line - $loss_invalid_line;
-
-        if ($is_laku) {
-            $total_qty_units += $qty_count;
-        }
-        $total_net_units += $net_line;
-
-        $bucket = detect_profile_minutes($profile);
-        if (!isset($block_summaries[$block])) {
-            $block_summaries[$block] = [
-                'total_qty' => 0,
-                'total_amount' => 0,
-                'total_bw' => 0,
-                'qty_10' => 0,
-                'qty_30' => 0,
-                'amt_10' => 0,
-                'amt_30' => 0,
-                'rs_10' => 0,
-                'rt_10' => 0,
-                'rs_30' => 0,
-                'rt_30' => 0,
-                'rs_total' => 0,
-                'rt_total' => 0
+    // Logic Audit / Summary
+    if (!$is_usage) {
+        if (!isset($summary_blocks[$f_blok])) {
+            $summary_blocks[$f_blok] = [
+                'profiles' => [],
+                'rusak_count' => 0,
+                'unreported_count' => 0,
+                'total_net' => 0
             ];
         }
-        $bw_line = $bytes;
-        if ($bucket === '10') {
-            if ($is_laku) {
-                $block_summaries[$block]['qty_10'] += $qty_count;
-                $block_summaries[$block]['amt_10'] += $net_line;
+        
+        if ($status === 'normal') {
+            if (!isset($summary_blocks[$f_blok]['profiles'][$profile])) {
+                $summary_blocks[$f_blok]['profiles'][$profile] = ['qty' => 0, 'total' => 0];
             }
-            if ($status === 'rusak') $block_summaries[$block]['rs_10'] += $qty_count;
-            if ($status === 'retur') $block_summaries[$block]['rt_10'] += $qty_count;
-        }
-        if ($bucket === '30') {
-            if ($is_laku) {
-                $block_summaries[$block]['qty_30'] += $qty_count;
-                $block_summaries[$block]['amt_30'] += $net_line;
+            $summary_blocks[$f_blok]['profiles'][$profile]['qty']++;
+            $summary_blocks[$f_blok]['profiles'][$profile]['total'] += $net_add;
+
+            // Logic Unreported: Status Normal tapi tidak ada usage (last_status kosong)
+            if (empty($lh_status) && empty($r['login_time_real']) && (empty($r['last_uptime']) || $r['last_uptime'] == '0s')) {
+                $summary_blocks[$f_blok]['unreported_count']++;
             }
-            if ($status === 'rusak') $block_summaries[$block]['rs_30'] += $qty_count;
-            if ($status === 'retur') $block_summaries[$block]['rt_30'] += $qty_count;
+        } elseif ($status === 'rusak') {
+            $summary_blocks[$f_blok]['rusak_count']++;
         }
-        if ($is_laku) {
-            $block_summaries[$block]['total_qty'] += $qty_count;
-            $block_summaries[$block]['total_amount'] += $net_line;
-            $block_summaries[$block]['total_bw'] += $bw_line;
-        }
-        if ($status === 'rusak') $block_summaries[$block]['rs_total'] += $qty_count;
-        if ($status === 'retur') $block_summaries[$block]['rt_total'] += $qty_count;
     }
 
-    $total_qty++;
-    $laku_add = ($req_show === 'harian') ? ($qty_count ?? 1) : 1;
-    if ($is_laku) $total_qty_laku += $laku_add;
-    if ($status === 'retur') $total_qty_retur++;
-    if ($status === 'rusak') {
-        $total_qty_rusak++;
-        $p = strtolower((string)$profile);
-        if (preg_match('/\b10\s*(menit|m)\b/i', $p)) $rusak_10m++;
-        elseif (preg_match('/\b30\s*(menit|m)\b/i', $p)) $rusak_30m++;
-    }
-    if ($status === 'invalid') $total_qty_invalid++;
-
-    $total_gross += $gross_add;
-    $total_rusak += $loss_rusak;
-    $total_invalid += $loss_invalid;
-    $total_net += $net_add;
+    $list[] = [
+        'time' => $r['sale_time'] ?: ($r['raw_time'] ?? ''),
+        'username' => $r['username'] ?? '-',
+        'profile' => $profile,
+        'comment' => $comment,
+        'status' => $status,
+        'last_status' => $lh_status,
+        'price' => $price,
+        'gross' => $gross_add,
+        'net' => $net_add,
+        'blok' => $f_blok
+    ];
 }
-
-$total_qty_laku = count($unique_laku_users);
-$period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? 'Bulanan' : 'Tahunan');
+ksort($summary_blocks);
 ?>
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Print Rekap Laporan</title>
+    <title><?= $is_usage ? 'Bukti Pemakaian Voucher' : 'Print Rincian Harian' ?></title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body { font-family: Arial, sans-serif; color:#111; margin:20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        body { font-family: Arial, sans-serif; color:#111; margin:20px; }
         h2 { margin:0 0 6px 0; }
+        h3 { margin: 15px 0 5px 0; font-size: 14px; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
         .meta { font-size:12px; color:#555; margin-bottom:12px; }
         .toolbar { margin-bottom:14px; display:flex; gap:8px; flex-wrap:wrap; }
         .btn { padding:6px 10px; border:1px solid #999; background:#f2f2f2; cursor:pointer; border-radius:4px; font-size:12px; }
-        .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; }
-        .card { border:1px solid #ddd; padding:10px; border-radius:6px; }
-        .label { font-size:11px; color:#666; text-transform:uppercase; letter-spacing:.5px; }
-        .value { font-size:18px; font-weight:700; margin-top:4px; }
-        .small { font-size:12px; color:#555; margin-top:4px; }
-        .rekap-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:16px; }
-        .rekap-table th, .rekap-table td { border:1px solid #000; padding:6px; vertical-align:middle; }
-        .rekap-table th { background:#f0f3f7; text-align:center; vertical-align:middle; }
-        .rekap-detail { width:100%; border-collapse:collapse; font-size:12px; }
-        .rekap-detail th, .rekap-detail td { border:1px solid #000; padding:5px; }
-        .rekap-detail th { background:#e9eef5; text-align:center; }
-        .rekap-detail td { vertical-align: middle; }
-        .rekap-detail tr:nth-child(even) td { background:#fbfbfd; }
-        .rekap-total { background:#d7dee8; font-weight:700; }
-        .rekap-subtotal { background:#e8edf4; font-weight:700; }
-        .rekap-hp { text-align:center; vertical-align:middle; font-weight:700; }
-        /* Style untuk nested table audit */
-        .nested-cell-table td { border-bottom: 1px solid #ccc; }
-        .nested-cell-table td:last-child { border-bottom: none; }
-        /* Style untuk Summary Audit Box */
-        .audit-summary-box { margin-top: 25px; border: 1px solid #000; padding: 15px; border-radius: 4px; background-color: #fdfdfd; }
-        .audit-summary-header { font-weight: bold; font-size: 14px; margin-bottom: 10px; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
-        .audit-item { font-size: 12px; margin-bottom: 8px; line-height: 1.5; }
-        .audit-item strong { color: #000; }
-        .audit-details-list { margin: 4px 0 0 15px; padding: 0; list-style-type: none; color: #444; }
-        .audit-details-list li::before { content: "- "; font-weight: bold; }
+        table { width:100%; border-collapse:collapse; font-size:12px; }
+        th, td { border:1px solid #ddd; padding:6px; text-align:left; vertical-align:top; }
+        th { background:#f5f5f5; }
+        .usage-table th { text-align:center; vertical-align:middle; }
+        .usage-table td { text-align:center; vertical-align:middle; }
+        .usage-table td.col-uptime, .usage-table td.col-bytes { text-align:right; }
+        .status-normal { color:#0a7f2e; font-weight:700; }
+        .status-rusak { color:#d35400; font-weight:700; }
+        .status-retur { color:#7f8c8d; font-weight:700; }
+        .status-invalid { color:#c0392b; font-weight:700; }
+        .status-online { color:#1976d2; font-weight:700; }
+        .status-terpakai { color:#0a7f2e; font-weight:700; }
+        .status-relogin { color:#fff; background:#6f42c1; font-weight:700; padding:2px 6px; border-radius:4px; display:inline-block; }
         
-        @media print { 
-            .toolbar { display:none; } 
-            .audit-summary-box { page-break-inside: avoid; }
-            .dul-gap { margin-top: 20% !important; padding-top:2%; }
+        .audit-box { margin-bottom: 20px; border: 1px solid #ccc; padding: 10px; border-radius: 4px; background: #fff; }
+        .audit-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; }
+        .audit-block { margin-bottom: 10px; }
+        .audit-block-title { font-weight: bold; font-size: 13px; margin-bottom: 4px; display: block; }
+        .audit-line { margin-left: 10px; font-size: 12px; line-height: 1.4; }
+        .text-red { color: #d35400; font-weight: bold; }
+        .text-orange { color: #e67e22; font-weight: bold; }
+        .text-blue { color: #0056b3; }
+
+        @media print {
+            .toolbar { display:none; }
+            .status-relogin { color:#fff !important; background:#6f42c1 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .audit-box { border: none; padding: 0; }
         }
     </style>
 </head>
@@ -490,445 +648,145 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         <button class="btn" onclick="shareReport()">Share</button>
     </div>
 
-    <h2>Rekap Laporan Penjualan</h2>
-    <div class="meta">Periode: <?= htmlspecialchars($period_label) ?> | Tanggal: <?= htmlspecialchars(format_date_ddmmyyyy($filter_date)) ?></div>
+    <?php if ($is_usage): ?>
+            <h2>Bukti Pemakaian Voucher (<?= esc($usage_label) ?>)</h2>
+            <div class="meta">
+        <?php if ($filter_user !== ''): ?>User: <?= esc($filter_user) ?> | <?php endif; ?>
+        <?php if ($filter_blok !== ''): ?>Blok: <?= esc($filter_blok) ?> | <?php endif; ?>
+                Status: <?= esc($usage_label) ?> | 
+                Tanggal: <?= esc(format_date_long_indo($filter_date)) ?> | Jam Cetak: <?= esc(format_time_only(date('Y-m-d H:i:s'))) ?>
+      </div>
 
-    <div class="grid">
-        <div class="card">
-            <div class="label">Pendapatan Kotor</div>
-            <div class="value"><?= $cur ?> <?= number_format($total_gross,0,',','.') ?></div>
-        </div>
-        <div class="card">
-            <div class="label">Pendapatan Bersih</div>
-            <div class="value"><?= $cur ?> <?= number_format($total_net,0,',','.') ?></div>
-        </div>
-        <div class="card">
-            <div class="label">Total Voucher Laku</div>
-            <div class="value"><?= number_format($total_qty_laku,0,',','.') ?></div>
-            <div class="small">Bandwith: <?= htmlspecialchars(format_bytes_short($total_bandwidth)) ?></div>
-        </div>
-        <div class="card">
-            <div class="label">Voucher Rusak</div>
-            <div class="value"><?= number_format($total_qty_rusak,0,',','.') ?></div>
-            <div class="small">10 Menit: <?= number_format($rusak_10m,0,',','.') ?> | 30 Menit: <?= number_format($rusak_30m,0,',','.') ?></div>
-        </div>
-        <?php if ($req_show === 'harian'): ?>
-        <div class="card">
-            <div class="label">Total Handphone</div>
-            <div class="value"><?= number_format($hp_total_units,0,',','.') ?></div>
-            <div class="small">WARTEL: <?= number_format($hp_wartel_units,0,',','.') ?> | KAMTIB: <?= number_format($hp_kamtib_units,0,',','.') ?></div>
-        </div>
-        <?php endif; ?>
-    </div>
+    <table class="usage-table">
+          <thead>
+              <tr>
+                  <th colspan="3">Waktu</th>
+                  <th rowspan="2">Username</th>
+                  <th rowspan="2">Blok</th>
+                  <th rowspan="2">IP</th>
+                  <th rowspan="2">MAC</th>
+                  <th rowspan="2">Uptime</th>
+                  <th rowspan="2">Bytes</th>
+                  <th rowspan="2">Status</th>
+              </tr>
+              <tr>
+                  <th>First Login</th>
+                  <th>Login</th>
+                  <th>Logout</th>
+              </tr>
+          </thead>
+          <tbody>
+              <?php if (empty($usage_list)): ?>
+                  <tr><td colspan="10" style="text-align:center;">Tidak ada data</td></tr>
+              <?php else: ?>
+                  <?php foreach ($usage_list as $it): ?>
+                  <tr>
+                      <td><?= esc(format_time_only($it['first_login'] ?? '-')) ?></td>
+                      <td><?= esc(format_time_only($it['login'])) ?></td>
+                      <td><?= esc(format_time_only($it['logout'])) ?></td>
+                                            <td><?= esc($it['username']) ?></td>
+                                            <td><?= esc(strip_blok_prefix($it['blok'])) ?></td>
+                      <td><?= esc($it['ip']) ?></td>
+                      <td><?= esc($it['mac']) ?></td>
+                      <td class="col-uptime"><?= esc($it['uptime']) ?></td>
+                      <td class="col-bytes"><?= esc(format_bytes_short($it['bytes'])) ?></td>
+                                            <?php
+                                                $st = strtolower((string)($it['status'] ?? ''));
+                                                $st_label = '-';
+                                                $st_class = '';
+                                                if ($st === 'online') { $st_label = 'Online'; $st_class = 'status-online'; }
+                                                elseif ($st === 'rusak') { $st_label = 'Rusak'; $st_class = 'status-rusak'; }
+                                                elseif ($st === 'terpakai') { $st_label = 'Terpakai'; $st_class = 'status-terpakai'; }
+                                                if (!empty($it['relogin'])) { $st_label = 'Relogin'; $st_class = 'status-relogin'; }
+                                            ?>
+                                            <td><span class="<?= esc($st_class) ?>"><?= esc($st_label) ?></span></td>
+                  </tr>
+                  <?php endforeach; ?>
+              <?php endif; ?>
+          </tbody>
+      </table>
+    <?php else: ?>
+    <h2>Kesimpulan Audit Harian</h2>
+    <div class="meta">Tanggal: <?= esc(format_date_long_indo($filter_date)) ?></div>
 
-    <?php if ($req_show === 'harian'): ?>
-        <?php
-            if (!empty($block_summaries)) {
-                foreach ($block_summaries as $blk => $bdata) {
-                    $has_data = ((int)($bdata['total_qty'] ?? 0) > 0)
-                        || ((int)($bdata['total_amount'] ?? 0) > 0)
-                        || ((int)($bdata['total_bw'] ?? 0) > 0)
-                        || ((int)($bdata['qty_10'] ?? 0) > 0)
-                        || ((int)($bdata['qty_30'] ?? 0) > 0)
-                        || ((int)($bdata['rs_10'] ?? 0) > 0)
-                        || ((int)($bdata['rs_30'] ?? 0) > 0)
-                        || ((int)($bdata['rt_10'] ?? 0) > 0)
-                        || ((int)($bdata['rt_30'] ?? 0) > 0)
-                        || ((int)($bdata['rs_total'] ?? 0) > 0)
-                        || ((int)($bdata['rt_total'] ?? 0) > 0);
-                    if (!$has_data) {
-                        unset($block_summaries[$blk]);
-                    }
-                }
-            }
-            ksort($block_summaries);
-        ?>
-        <table class="rekap-table">
-            <thead>
-                <tr>
-                    <th>Rincian Penjualan</th>
-                    <th style="width:90px;">QTY</th>
-                    <th style="width:90px;">Pendapatan</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>
-                        <table class="rekap-detail">
-                            <thead>
-                                <tr>
-                                    <th rowspan="2" style="width:170px;">Jenis Blok</th>
-                                    <th colspan="3" style="width:150px;">Qty</th>
-                                    <th rowspan="2" style="width:90px;">Pendapatan</th>
-                                    <th rowspan="2" style="width:80px;">Qty</th>
-                                    <th rowspan="2" style="width:90px;">Total Blok</th>
-                                    <th rowspan="2" style="width:90px;">Bytes</th>
-                                    <th colspan="3" style="width:210px;">Device</th>
-                                    <th colspan="2" style="width:140px;">Unit</th>
-                                    <th rowspan="2" style="width:70px;">Aktif</th>
-                                </tr>
-                                <tr>
-                                    <th style="width:50px;">Total</th>
-                                    <th style="width:50px;">RS</th>
-                                    <th style="width:50px;">RT</th>
-                                    <th style="width:70px;">Total</th>
-                                    <th style="width:70px;">RS</th>
-                                    <th style="width:70px;">SP</th>
-                                    <th style="width:70px;">WR</th>
-                                    <th style="width:70px;">KM</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (empty($block_summaries)): ?>
-                                    <tr><td colspan="14" style="text-align:center;">Tidak ada data</td></tr>
-                                <?php else: ?>
-                                    <?php foreach ($block_summaries as $blk => $bdata): ?>
-                                        <?php
-                                            $hp_active_val = (int)($hp_active_by_block[$blk] ?? 0);
-                                            $hp_stat = $hp_stats_by_block[$blk] ?? ['total' => 0, 'active' => 0, 'rusak' => 0, 'spam' => 0];
-                                            $hp_unit = $hp_units_by_block[$blk] ?? ['WARTEL' => 0, 'KAMTIB' => 0];
-                                        ?>
-                                        <tr>
-                                            <td><?= htmlspecialchars($blk) ?>10</td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['qty_10'],0,',','.') ?></td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['rs_10'],0,',','.') ?></td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['rt_10'],0,',','.') ?></td>
-                                            <td style="text-align:right;"><?= number_format((int)$bdata['amt_10'],0,',','.') ?></td>
-                                            <td style="text-align:center;" rowspan="3"><?= number_format((int)$bdata['total_qty'],0,',','.') ?></td>
-                                            <td style="text-align:right;" rowspan="3"><?= number_format((int)$bdata['total_amount'],0,',','.') ?></td>
-                                            <td style="text-align:right;" rowspan="3"><?= htmlspecialchars(format_bytes_short((int)$bdata['total_bw'])) ?></td>
-                                            <td class="rekap-hp" rowspan="3"><?= number_format((int)$hp_stat['total'],0,',','.') ?></td>
-                                            <td class="rekap-hp" rowspan="3"><?= number_format((int)$hp_stat['rusak'],0,',','.') ?></td>
-                                            <td class="rekap-hp" rowspan="3"><?= number_format((int)$hp_stat['spam'],0,',','.') ?></td>
-                                            <td class="rekap-hp" rowspan="3"><?= number_format((int)$hp_unit['WARTEL'],0,',','.') ?></td>
-                                            <td class="rekap-hp" rowspan="3"><?= number_format((int)$hp_unit['KAMTIB'],0,',','.') ?></td>
-                                            <td class="rekap-hp" rowspan="3"><?= number_format((int)$hp_stat['active'],0,',','.') ?></td>
-                                        </tr>
-                                        <tr>
-                                            <td><?= htmlspecialchars($blk) ?>30</td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['qty_30'],0,',','.') ?></td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['rs_30'],0,',','.') ?></td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['rt_30'],0,',','.') ?></td>
-                                            <td style="text-align:right;"><?= number_format((int)$bdata['amt_30'],0,',','.') ?></td>
-                                        </tr>
-                                        <tr class="rekap-subtotal">
-                                            <td style="text-align:right;">Total <?= htmlspecialchars($blk) ?> :</td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['total_qty'],0,',','.') ?></td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['rs_total'],0,',','.') ?></td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['rt_total'],0,',','.') ?></td>
-                                            <td style="text-align:right;"><?= number_format((int)$bdata['total_amount'],0,',','.') ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </td>
-                    <td style="text-align:center; font-weight:700; font-size:14px;"><?= number_format((int)$total_qty_laku,0,',','.') ?></td>
-                    <td style="text-align:right; font-weight:700; font-size:14px;"><?= number_format((int)$total_net_units,0,',','.') ?></td>
-                </tr>
-            </tbody>
-        </table>
-
-        <div style="margin-top:8px; font-size:11px; color:#444;">
-            Keterangan: RS = Rusak, RT = Retur, SP = Spam, WR = Wartel, KM = Kamtib.
-        </div>
-        <div style="margin-top:4px; font-size:11px; color:#444;">
-            Catatan: Data rekap adalah acuan resmi untuk keuangan karena berasal dari transaksi. Daftar user digunakan untuk memantau status user online/terpakai.
-        </div> 
-
-        <?php if (!empty($audit_rows)): ?>
-            <?php 
-                // Array untuk menampung data summary
-                $audit_summary_report = []; 
-            ?>
-            <h2 class="dul-gap" style="margin-top:35px;">Rekap Audit Penjualan Lapangan</h2>
-            <div class="meta">Periode: <?= htmlspecialchars($period_label) ?> | Tanggal: <?= htmlspecialchars(format_date_ddmmyyyy($filter_date)) ?></div>
-
-            <table class="rekap-table" style="margin-top:15px;">
-                <thead>
-                    <tr>
-                        <th colspan="13">Audit Manual Rekap Harian</th>
-                    </tr>
-                    <tr>
-                        <th rowspan="2" style="width:90px;">Blok</th>
-                        <th rowspan="2" style="width:70px;">QTY</th>
-                        <th rowspan="2" style="width:70px;">Selisih</th>
-                        <th rowspan="2" style="width:90px;">Setoran</th>
-                        <th rowspan="2" style="width:80px;">Selisih</th>
-                        <th colspan="4">Profil 10 Menit</th>
-                        <th colspan="4">Profil 30 Menit</th>
-                    </tr>
-                    <tr>
-                        <th style="width:90px;">User</th>
-                        <th style="width:70px;">Up</th>
-                        <th style="width:70px;">Byte</th>
-                        <th style="width:70px;">QTY</th>
-                        <th style="width:90px;">User</th>
-                        <th style="width:70px;">Up</th>
-                        <th style="width:70px;">Byte</th>
-                        <th style="width:70px;">QTY</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                        $audit_total_profile_qty_10 = 0;
-                        $audit_total_profile_qty_30 = 0;
-                    ?>
-                    <?php foreach ($audit_rows as $idx => $ar): ?>
-                        <?php
-                            $evidence = [];
-                            $profile_qty = [];
-                            $profile10 = ['user' => [], 'up' => [], 'byte' => [], 'login' => [], 'total' => []];
-                            $profile30 = ['user' => [], 'up' => [], 'byte' => [], 'login' => [], 'total' => []];
-                            $profile10_sum = 0;
-                            $profile30_sum = 0;
-                            $cnt_rusak_10 = 0;
-                            $cnt_rusak_30 = 0;
-                            $cnt_unreported_10 = 0;
-                            $cnt_unreported_30 = 0;
-                            $cnt_retur_10 = 0;
-                            $cnt_retur_30 = 0;
-
-                            if (!empty($ar['user_evidence'])) {
-                                $evidence = json_decode((string)$ar['user_evidence'], true);
-                                if (is_array($evidence)) {
-                                    if (!empty($evidence['profile_qty']) && is_array($evidence['profile_qty'])) {
-                                        $profile_qty = $evidence['profile_qty'];
-                                    }
-                                    if (!empty($evidence['users']) && is_array($evidence['users'])) {
-                                        foreach ($evidence['users'] as $uname => $ud) {
-                                            $cnt = isset($ud['events']) && is_array($ud['events']) ? count($ud['events']) : 0;
-                                            $upt = trim((string)($ud['last_uptime'] ?? ''));
-                                            $lb = format_bytes_short((int)($ud['last_bytes'] ?? 0));
-                                            $price_val = (int)($ud['price'] ?? 0);
-                                            $upt = $upt !== '' ? $upt : '-';
-                                            $kind = (string)($ud['profile_kind'] ?? '10');
-                                            $bucket = ($kind === '30') ? $profile30 : $profile10;
-                                            // Collecting data
-                                            $u_status = strtolower((string)($ud['last_status'] ?? ''));
-                                            $is_unreported = ($uname !== '' && $uname !== '-') && ($u_status !== 'rusak') && ($u_status !== 'retur');
-                                            $bucket['user'][] = ['label' => (string)$uname, 'status' => $u_status];
-                                            $bucket['up'][] = $upt;
-                                            $bucket['byte'][] = $lb;
-                                            $bucket['login'][] = $cnt . 'x';
-                                            $bucket['total'][] = number_format($price_val,0,',','.');
-                                            
-                                            if ($kind === '30') {
-                                                $profile30_sum += $price_val;
-                                                $profile30 = $bucket;
-                                                if($u_status === 'rusak') $cnt_rusak_30++;
-                                                if($u_status === 'retur') $cnt_retur_30++;
-                                                if ($is_unreported) $cnt_unreported_30++;
-                                            } else {
-                                                $profile10_sum += $price_val;
-                                                $profile10 = $bucket;
-                                                if($u_status === 'rusak') $cnt_rusak_10++;
-                                                if($u_status === 'retur') $cnt_retur_10++;
-                                                if ($is_unreported) $cnt_unreported_10++;
-                                            }
-                                        }
-                                    } else {
-                                        // Fallback legacy format
-                                        $cnt = isset($evidence['events']) && is_array($evidence['events']) ? count($evidence['events']) : 0;
-                                        $upt = trim((string)($evidence['last_uptime'] ?? ''));
-                                        $lb = format_bytes_short((int)($evidence['last_bytes'] ?? 0));
-                                        $price_val = (int)($evidence['price'] ?? 0);
-                                        $upt = $upt !== '' ? $upt : '-';
-                                        $profile10['user'][] = ['label' => '-', 'status' => ''];
-                                        $profile10['up'][] = $upt;
-                                        $profile10['byte'][] = $lb;
-                                        $profile10['login'][] = $cnt . 'x';
-                                        $profile10['total'][] = number_format($price_val,0,',','.');
-                                        $profile10_sum += $price_val;
-                                    }
-                                }
-                            }
-                            // Generate HTML Tables using helper
-                            $p10_us = generate_nested_table_user($profile10['user'], 'center');
-                            $p10_up = generate_nested_table($profile10['up'], 'right');
-                            $p10_bt = generate_nested_table($profile10['byte'], 'right');
-                            
-                            $p30_us = generate_nested_table_user($profile30['user'], 'center');
-                            $p30_up = generate_nested_table($profile30['up'], 'right');
-                            $p30_bt = generate_nested_table($profile30['byte'], 'right');
-
-                            $p10_qty = (int)($profile_qty['qty_10'] ?? 0);
-                            $p30_qty = (int)($profile_qty['qty_30'] ?? 0);
-                            if ($p10_qty <= 0) $p10_qty = count($profile10['user'] ?? []);
-                            if ($p30_qty <= 0) $p30_qty = count($profile30['user'] ?? []);
-                            $p10_tt = $p10_qty > 0 ? number_format($p10_qty,0,',','.') : '-';
-                            $p30_tt = $p30_qty > 0 ? number_format($p30_qty,0,',','.') : '-';
-                            $audit_total_profile_qty_10 += $p10_qty;
-                            $audit_total_profile_qty_30 += $p30_qty;
-                            $price10 = 5000;
-                            $price30 = 20000;
-                            $p10_sum_calc = $profile10_sum > 0 ? $profile10_sum : ($p10_qty > 0 ? $p10_qty * $price10 : null);
-                            $p30_sum_calc = $profile30_sum > 0 ? $profile30_sum : ($p30_qty > 0 ? $p30_qty * $price30 : null);
-                            
-                            // Capture data for summary
-                            $audit_summary_report[] = [
-                                'blok' => $ar['blok_name'] ?? '-',
-                                'selisih_setoran' => (int)($ar['selisih_setoran'] ?? 0),
-                                'p10_qty' => $p10_qty,
-                                'p10_sum' => $p10_sum_calc,
-                                'p30_qty' => $p30_qty,
-                                'p30_sum' => $p30_sum_calc,
-                                'unreported_total' => (int)($cnt_unreported_10 + $cnt_unreported_30),
-                                'unreported_10' => (int)$cnt_unreported_10,
-                                'unreported_30' => (int)$cnt_unreported_30,
-                                'rusak_10' => $cnt_rusak_10,
-                                'rusak_30' => $cnt_rusak_30,
-                                'retur_10' => (int)$cnt_retur_10,
-                                'retur_30' => (int)$cnt_retur_30
-                            ];
-                        ?>
-                        <tr>
-                            <td style="text-align: center;"><?= htmlspecialchars($ar['blok_name'] ?? '-') ?></td>
-                            <td style="text-align:center;"><?= number_format((int)($ar['reported_qty'] ?? 0),0,',','.') ?></td>
-                            <td style="text-align:center;"><?= number_format((int)($ar['selisih_qty'] ?? 0),0,',','.') ?></td>
-                            <td style="text-align:right;"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
-                            <td style="text-align:right;"><?= number_format((int)($ar['selisih_setoran'] ?? 0),0,',','.') ?></td>
-                            
-                            <td style="padding:0; text-align: center;"><?= $p10_us ?></td>
-                            <td style="padding:0; text-align: center;"><?= $p10_up ?></td>
-                            <td style="padding:0; text-align: center;"><?= $p10_bt ?></td>
-                            <td style="text-align: center; font-weight:bold;"><?= $p10_tt ?></td>
-                            
-                            <td style="padding:0; text-align: center;"><?= $p30_us ?></td>
-                            <td style="padding:0; text-align: center;"><?= $p30_up ?></td>
-                            <td style="padding:0; text-align: center;"><?= $p30_bt ?></td>
-                            <td style="text-align: center; font-weight:bold;"><?= $p30_tt ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                    <tr>
-                        <td style="text-align:center;"><b>Total</b></td>
-                        <td style="text-align:center;"><b><?= number_format($audit_total_reported_qty,0,',','.') ?></b></td>
-                        <td style="text-align:center;"><b><?= number_format($audit_total_selisih_qty,0,',','.') ?></b></td>
-                        <td style="text-align:right;"><b><?= number_format($audit_total_actual_setoran,0,',','.') ?></b></td>
-                        <td style="text-align:right;"><b><?= number_format($audit_total_selisih_setoran,0,',','.') ?></b></td>
-                        <td colspan="3" style="background:#eee;"></td>
-                        <td style="text-align:center;"><b><?= number_format($audit_total_profile_qty_10,0,',','.') ?></b></td>
-                        <td colspan="3" style="background:#eee;"></td>
-                        <td style="text-align:center;"><b><?= number_format($audit_total_profile_qty_30,0,',','.') ?></b></td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <div style="margin-top: 10px; font-size: 11px; display: flex; gap: 15px;">
-                <div style="display:flex; align-items:center;">
-                    <span style="display:inline-block; width:15px; height:15px; background:#fef3c7; border:1px solid #ccc; margin-right:5px;"></span> User yang Tidak Dilaporkan
-                </div>
-                <div style="display:flex; align-items:center;">
-                    <span style="display:inline-block; width:15px; height:15px; background:#fecaca; border:1px solid #ccc; margin-right:5px;"></span> Voucer Rusak
-                </div>
-                <div style="display:flex; align-items:center;">
-                    <span style="display:inline-block; width:15px; height:15px; background:#dcfce7; border:1px solid #ccc; margin-right:5px;"></span> Voucer Retur
-                </div>
-            </div>
-
-            <div class="audit-summary-box">
-                <div class="audit-summary-header">Kesimpulan Audit Harian</div>
-                <div style="font-size:11px; color:#444; margin-bottom:6px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
-                    <span><strong>Status Voucher Global:</strong></span>
-                    <span>Voucher Rusak: <?= number_format((int)$total_qty_rusak,0,',','.') ?></span>
-                    <span>Retur: <?= number_format((int)$total_qty_retur,0,',','.') ?></span>
-                    <span>Invalid: <?= number_format((int)$total_qty_invalid,0,',','.') ?></span>
-                </div>
+    <?php if (!empty($summary_blocks)): ?>
+    <div class="audit-box">
+        <?php foreach ($summary_blocks as $bk => $dat): ?>
+            <div class="audit-block">
+                <span class="audit-block-title">
+                    <?= esc($bk) ?> - <span class="text-blue">Setoran Sesuai Data</span>
+                </span>
+                <?php foreach ($dat['profiles'] as $pname => $pval): ?>
+                    <div class="audit-line">
+                        - <?= esc($pname) ?>: <?= $pval['qty'] ?> Voucher / <?= $cur ?> <?= number_format($pval['total'], 0, ',', '.') ?>
+                    </div>
+                <?php endforeach; ?>
                 
-                <hr style="border:0; border-top:1px dashed #ccc; margin:8px 0;">
+                <?php if ($dat['rusak_count'] > 0): ?>
+                    <div class="audit-line text-red">
+                        - Voucher Rusak: <?= $dat['rusak_count'] ?> User
+                    </div>
+                <?php endif; ?>
 
-                <?php if (!empty($audit_summary_report)): ?>
-                    <?php foreach ($audit_summary_report as $idx => $rep): ?>
-                        <div class="audit-item">
-                            <strong><?= ($idx + 1) ?>. Blok <?= htmlspecialchars($rep['blok']) ?></strong>
-                            <?php 
-                                if ($rep['selisih_setoran'] < 0) {
-                                    echo "- <span style='color:red;'>Kurang Setor Rp " . number_format(abs($rep['selisih_setoran']), 0, ',', '.') . "</span>";
-                                } elseif ($rep['selisih_setoran'] > 0) {
-                                    echo "- <span style='color:green;'>Lebih Setor Rp " . number_format($rep['selisih_setoran'], 0, ',', '.') . "</span>";
-                                } else {
-                                    echo "- <span style='color:blue;'>Setoran Sesuai</span>";
-                                }
-                            ?>
-                            <ul class="audit-details-list">
-                                <?php if ($rep['p10_qty'] > 0): ?>
-                                    <li>Profile 10 Menit: <?= $rep['p10_qty'] ?> Voucher / Rp <?= $rep['p10_sum'] !== null ? number_format($rep['p10_sum'], 0, ',', '.') : '-' ?></li>
-                                <?php endif; ?>
-                                
-                                <?php if ($rep['p30_qty'] > 0): ?>
-                                    <li>Profile 30 Menit: <?= $rep['p30_qty'] ?> Voucher / Rp <?= $rep['p30_sum'] !== null ? number_format($rep['p30_sum'], 0, ',', '.') : '-' ?></li>
-                                <?php endif; ?>
-
-                                <?php if ($rep['rusak_10'] > 0 || $rep['rusak_30'] > 0): ?>
-                                    <li>
-                                        <span style="color:red; font-weight:bold;">Voucher Rusak:</span>
-                                        <?php 
-                                            $rusak_parts = [];
-                                            if($rep['rusak_10'] > 0) $rusak_parts[] = number_format((int)$rep['rusak_10'],0,',','.') . ' User (10 Menit)';
-                                            if($rep['rusak_30'] > 0) $rusak_parts[] = number_format((int)$rep['rusak_30'],0,',','.') . ' User (30 Menit)';
-                                            echo implode(' | ', $rusak_parts);
-                                        ?>
-                                    </li>
-                                <?php endif; ?>
-
-                                <?php if (!empty($rep['retur_10']) || !empty($rep['retur_30'])): ?>
-                                    <li>
-                                        <span style="color:green; font-weight:bold;">Voucher Retur:</span>
-                                        <?php 
-                                            $retur_parts = [];
-                                            if(!empty($rep['retur_10'])) $retur_parts[] = number_format((int)$rep['retur_10'],0,',','.') . ' User (10 Menit)';
-                                            if(!empty($rep['retur_30'])) $retur_parts[] = number_format((int)$rep['retur_30'],0,',','.') . ' User (30 Menit)';
-                                            echo implode(' | ', $retur_parts);
-                                        ?>
-                                    </li>
-                                <?php endif; ?>
-
-                                <?php if (!empty($rep['unreported_total'])): ?>
-                                    <li>
-                                        <span style="color:#b45309; font-weight:bold;">User Tidak Dilaporkan:</span>
-                                        <?php 
-                                            $unrep_parts = [];
-                                            if (!empty($rep['unreported_10'])) $unrep_parts[] = number_format((int)$rep['unreported_10'],0,',','.') . ' User (10 Menit)';
-                                            if (!empty($rep['unreported_30'])) $unrep_parts[] = number_format((int)$rep['unreported_30'],0,',','.') . ' User (30 Menit)';
-                                            echo implode(' | ', $unrep_parts);
-                                        ?>
-                                    </li>
-                                <?php endif; ?>
-
-                                <?php if ($rep['p10_qty'] == 0 && $rep['p30_qty'] == 0): ?>
-                                    <li>Tidak ada data detail profile audit.</li>
-                                <?php endif; ?>
-                            </ul>
-                        </div>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <div class="audit-item">Tidak ada data audit yang perlu dilaporkan.</div>
+                <?php if ($dat['unreported_count'] > 0): ?>
+                    <div class="audit-line text-orange">
+                        - Voucher Tidak Dilaporkan: <?= $dat['unreported_count'] ?> Unit
+                    </div>
                 <?php endif; ?>
             </div>
-            <?php endif; ?>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
+    <h3>Rincian Transaksi</h3>
+      <table>
+          <thead>
+              <tr>
+                  <th>Jam</th>
+                  <th>Username</th>
+                  <th>Profile</th>
+                  <th>Blok</th>
+                  <th>Catatan</th>
+                  <th>Status</th>
+                  <th>Harga</th>
+                  <th>Bruto</th>
+                  <th>Netto</th>
+              </tr>
+          </thead>
+          <tbody>
+              <?php if (empty($list)): ?>
+                  <tr><td colspan="9" style="text-align:center;">Tidak ada data</td></tr>
+              <?php else: ?>
+                  <?php foreach ($list as $it): ?>
+                  <tr>
+                      <td><?= esc($it['time']) ?></td>
+                      <td><?= esc($it['username']) ?></td>
+                      <td><?= esc($it['profile']) ?></td>
+                      <td><?= esc(strip_blok_prefix($it['blok'])) ?></td>
+                      <td><?= esc($it['comment']) ?></td>
+                      <td class="status-<?= esc($it['status']) ?>"><?= strtoupper(esc($it['status'])) ?></td>
+                      <td><?= $cur ?> <?= number_format((int)$it['price'],0,',','.') ?></td>
+                      <td><?= $cur ?> <?= number_format((int)$it['gross'],0,',','.') ?></td>
+                      <td><?= $cur ?> <?= number_format((int)$it['net'],0,',','.') ?></td>
+                  </tr>
+                  <?php endforeach; ?>
+              <?php endif; ?>
+          </tbody>
+      </table>
     <?php endif; ?>
 
 <script>
 function shareReport(){
+    const title = <?= $is_usage ? "'Bukti Pemakaian Voucher'" : "'Rincian Transaksi Harian'" ?>;
     if (navigator.share) {
         navigator.share({
-            title: 'Rekap Laporan Penjualan',
+            title: title,
             url: window.location.href
         });
     } else {
         window.prompt('Salin link laporan:', window.location.href);
     }
 }
-
-function setUniquePrintTitle(){
-    var now = new Date();
-    var pad = function(n){ return String(n).padStart(2, '0'); };
-    var ts = now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate()) + '-' + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
-    document.title = 'laporan-harian-' + ts;
-}
-
-window.addEventListener('beforeprint', setUniquePrintTitle);
-
 </script>
 </body>
 </html>
