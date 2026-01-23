@@ -1021,7 +1021,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         }
 
         if (empty($audit_error)) {
-            $audit_redirect = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+            $redir_date = $audit_date !== '' ? $audit_date : $filter_date;
+            $audit_redirect = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($redir_date);
             if (!headers_sent() && !$audit_is_ajax) {
                 header('Location: ' . $audit_redirect);
                 exit;
