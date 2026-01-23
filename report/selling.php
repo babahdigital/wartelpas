@@ -827,68 +827,14 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             if (!empty($audit_users)) {
                 foreach ($audit_users as $u) {
                     $user_row = null;
-                    $user_exists = false;
-                    $user_has_date = false;
+                    $profile_label = '';
+                    $price_value = 0;
                     if (table_exists($db, 'login_history')) {
                         $stmtU = $db->prepare("SELECT username, blok_name, raw_comment, first_login_real, last_login_real, login_time_real, logout_time_real, last_status, last_bytes, last_uptime, first_ip, first_mac, last_ip, last_mac
                             FROM login_history WHERE username = :u LIMIT 1");
                         $stmtU->execute([':u' => $u]);
                         $user_row = $stmtU->fetch(PDO::FETCH_ASSOC);
-                        if ($user_row) $user_exists = true;
                     }
-                    if (!$user_exists && table_exists($db, 'sales_history')) {
-                        $stmtU2 = $db->prepare("SELECT username FROM sales_history WHERE username = :u LIMIT 1");
-                        $stmtU2->execute([':u' => $u]);
-                        if ($stmtU2->fetchColumn()) $user_exists = true;
-                    }
-                    if (!$user_exists && table_exists($db, 'live_sales')) {
-                        $stmtU3 = $db->prepare("SELECT username FROM live_sales WHERE username = :u LIMIT 1");
-                        $stmtU3->execute([':u' => $u]);
-                        if ($stmtU3->fetchColumn()) $user_exists = true;
-                    }
-                    if (!$user_exists) {
-                        $audit_error = 'Username tidak ditemukan: ' . $u;
-                        break;
-                    }
-                    if (table_exists($db, 'login_events')) {
-                        $stmtEv = $db->prepare("SELECT COUNT(*) FROM login_events WHERE username = :u AND date_key = :d");
-                        $stmtEv->execute([':u' => $u, ':d' => $audit_date]);
-                        $user_has_date = ((int)$stmtEv->fetchColumn() > 0);
-                    }
-                    if (!$user_has_date && $user_row) {
-                        $d1 = substr((string)($user_row['first_login_real'] ?? ''), 0, 10);
-                        $d2 = substr((string)($user_row['last_login_real'] ?? ''), 0, 10);
-                        $d3 = substr((string)($user_row['login_time_real'] ?? ''), 0, 10);
-                        $d4 = substr((string)($user_row['logout_time_real'] ?? ''), 0, 10);
-                        if (in_array($audit_date, [$d1, $d2, $d3, $d4], true)) $user_has_date = true;
-                    }
-                    if (!$user_has_date && table_exists($db, 'sales_history')) {
-                        $stmtU4 = $db->prepare("SELECT 1 FROM sales_history WHERE username = :u AND sale_date = :d LIMIT 1");
-                        $stmtU4->execute([':u' => $u, ':d' => $audit_date]);
-                        if ($stmtU4->fetchColumn()) $user_has_date = true;
-                    }
-                    if (!$user_has_date && table_exists($db, 'live_sales')) {
-                        $stmtU5 = $db->prepare("SELECT 1 FROM live_sales WHERE username = :u AND sale_date = :d LIMIT 1");
-                        $stmtU5->execute([':u' => $u, ':d' => $audit_date]);
-                        if ($stmtU5->fetchColumn()) $user_has_date = true;
-                    }
-                    if (!$user_has_date) {
-                        $audit_error = 'Username tidak ditemukan pada tanggal tersebut: ' . $u;
-                        break;
-                    }
-                    $tx_count = 0;
-                    if (table_exists($db, 'sales_history')) {
-                        $stmtTx = $db->prepare("SELECT COUNT(*) FROM sales_history WHERE username = :u AND sale_date = :d");
-                        $stmtTx->execute([':u' => $u, ':d' => $audit_date]);
-                        $tx_count += (int)$stmtTx->fetchColumn();
-                    }
-                    if (table_exists($db, 'live_sales')) {
-                        $stmtTx2 = $db->prepare("SELECT COUNT(*) FROM live_sales WHERE username = :u AND sale_date = :d");
-                        $stmtTx2->execute([':u' => $u, ':d' => $audit_date]);
-                        $tx_count += (int)$stmtTx2->fetchColumn();
-                    }
-                    $profile_label = '';
-                    $price_value = 0;
                     if (table_exists($db, 'sales_history')) {
                         $stmtPf = $db->prepare("SELECT profile_snapshot, profile, validity, price_snapshot, price, sprice_snapshot FROM sales_history WHERE username = :u AND sale_date = :d ORDER BY sale_time DESC LIMIT 1");
                         $stmtPf->execute([':u' => $u, ':d' => $audit_date]);
@@ -914,18 +860,6 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     else $profile_kind = '10';
                     if ($profile_kind === '30') $auto_qty_30++;
                     else $auto_qty_10++;
-                    if ($tx_count > 1) {
-                        $audit_error = 'Username terdeteksi lebih dari 1 transaksi pada tanggal tersebut: ' . $u;
-                        break;
-                    }
-                    $blok_from_user = '';
-                    if ($user_row) {
-                        $blok_from_user = normalize_block_name($user_row['blok_name'] ?? '', $user_row['raw_comment'] ?? '');
-                    }
-                    if ($blok_from_user !== '' && $blok_from_user !== $audit_blok) {
-                        $audit_error = 'Username tidak sesuai blok: ' . $u;
-                        break;
-                    }
                     if ($user_row) $user_rows[$u] = $user_row;
                     if (table_exists($db, 'login_events')) {
                         $stmtEv2 = $db->prepare("SELECT seq, login_time, logout_time FROM login_events WHERE username = :u AND date_key = :d ORDER BY seq ASC, id ASC");
@@ -939,12 +873,10 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 $audit_qty_30 = $auto_qty_30;
             }
             $profile_qty_sum = $audit_qty_10 + $audit_qty_30;
-            if ($audit_qty <= 0) {
-                $audit_error = 'Qty manual wajib diisi.';
-            } elseif ($profile_qty_sum <= 0) {
+            $audit_qty = $profile_qty_sum;
+            $audit_setoran = ($audit_qty_10 * 5000) + ($audit_qty_30 * 20000);
+            if ($profile_qty_sum <= 0) {
                 $audit_error = 'Qty per profile wajib diisi.';
-            } elseif ($profile_qty_sum !== $audit_qty) {
-                $audit_error = 'Qty per profile harus sama dengan Qty Manual.';
             }
             $expected_qty = (int)($by_block[$audit_blok]['qty'] ?? 0);
             $expected_setoran = (int)($by_block[$audit_blok]['net'] ?? 0);
@@ -1306,16 +1238,16 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 </div>
                 <div class="form-grid-2" style="margin-top:10px;">
                     <div>
-                        <label>Qty Manual</label>
-                        <input class="form-input" type="number" name="audit_qty" min="0" value="0" required>
+                        <label>Total Qty (otomatis)</label>
+                        <input class="form-input" type="number" name="audit_qty" min="0" value="0" readonly>
                     </div>
                     <div>
-                        <label>Setoran Manual (Rp)</label>
-                        <input class="form-input" type="number" name="audit_setoran" min="0" value="0" required>
+                        <label>Total Setoran (otomatis)</label>
+                        <input class="form-input" type="number" name="audit_setoran" min="0" value="0" readonly>
                     </div>
                 </div>
                 <div style="margin-top:8px;">
-                    <label>Username (opsional)</label>
+                    <label>Username (opsional, hanya informasi)</label>
                     <input type="hidden" name="audit_username" id="auditUsernameHidden">
                     <div class="audit-user-picker">
                         <div id="audit-user-chips" class="audit-user-chips"></div>
@@ -1907,6 +1839,11 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (qty10Input) qty10Input.value = qty10;
         var qty30Input = form.querySelector('input[name="audit_qty_30"]');
         if (qty30Input) qty30Input.value = qty30;
+        if (qty10Input || qty30Input) {
+            var ev = new Event('input', { bubbles: true });
+            if (qty10Input) qty10Input.dispatchEvent(ev);
+            if (qty30Input) qty30Input.dispatchEvent(ev);
+        }
         openAuditModal();
     };
 
@@ -1933,6 +1870,22 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         var err = document.getElementById('auditClientError');
         var qty10 = document.getElementById('audit_prof10_qty');
         var qty30 = document.getElementById('audit_prof30_qty');
+        var qtyTotal = form ? form.querySelector('input[name="audit_qty"]') : null;
+        var setoranTotal = form ? form.querySelector('input[name="audit_setoran"]') : null;
+        var price10 = 5000;
+        var price30 = 20000;
+
+        function updateAuditTotals(){
+            var v10 = qty10 ? parseInt(qty10.value || '0', 10) : 0;
+            var v30 = qty30 ? parseInt(qty30.value || '0', 10) : 0;
+            var sumQty = v10 + v30;
+            var sumRp = (v10 * price10) + (v30 * price30);
+            if (qtyTotal) qtyTotal.value = sumQty;
+            if (setoranTotal) setoranTotal.value = sumRp;
+        }
+        if (qty10) qty10.addEventListener('input', updateAuditTotals);
+        if (qty30) qty30.addEventListener('input', updateAuditTotals);
+        updateAuditTotals();
         if (!form) return;
         form.addEventListener('submit', function(e){
             e.preventDefault();
@@ -1946,7 +1899,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             var hasUsers = auditSelectedUsers && auditSelectedUsers.length > 0;
             if (totalQty <= 0) {
                 if (err) {
-                    err.textContent = 'Qty manual wajib diisi.';
+                    err.textContent = 'Qty per profile wajib diisi.';
                     err.style.display = 'block';
                 }
                 return;
