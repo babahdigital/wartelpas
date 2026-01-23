@@ -273,6 +273,8 @@ foreach ($rows as $r) {
             'gross' => 0,
             'net' => 0,
             'rusak_qty' => 0,
+            'loss_rusak' => 0,
+            'loss_invalid' => 0,
             'laku_users' => [],
             'bytes_by_user' => []
         ];
@@ -281,6 +283,8 @@ foreach ($rows as $r) {
     $daily[$sale_date]['gross'] += $gross_add;
     $daily[$sale_date]['net'] += $net_add;
     if ($status === 'rusak') $daily[$sale_date]['rusak_qty'] += 1;
+    $daily[$sale_date]['loss_rusak'] += $loss_rusak;
+    $daily[$sale_date]['loss_invalid'] += $loss_invalid;
 
     if (!in_array($status, ['rusak','retur','invalid'], true) && $username !== '') {
         $daily[$sale_date]['laku_users'][$username] = true;
@@ -307,6 +311,8 @@ $total_net_audit = 0;
 $total_selisih = 0;
 $total_qty_laku = 0;
 $total_voucher_rusak = 0;
+$total_voucher_loss = 0;
+$total_setoran_loss = 0;
 $total_spam = 0;
 $total_bandwidth = 0;
 $max_wr = 0;
@@ -322,6 +328,7 @@ foreach ($all_dates as $date) {
     $audit = $audit_net[$date] ?? null;
     $net_audit = $audit !== null ? (int)$audit : $net;
     $selisih = $audit !== null ? (int)($audit_selisih[$date] ?? 0) : 0;
+    $day_voucher_loss = (int)($daily[$date]['loss_rusak'] ?? 0) + (int)($daily[$date]['loss_invalid'] ?? 0);
 
     $qty_laku = isset($daily[$date]['laku_users']) ? count($daily[$date]['laku_users']) : 0;
     $rusak_qty = (int)($daily[$date]['rusak_qty'] ?? 0);
@@ -350,6 +357,8 @@ foreach ($all_dates as $date) {
     $total_selisih += $selisih;
     $total_qty_laku += $qty_laku;
     $total_voucher_rusak += $rusak_qty;
+    $total_voucher_loss += $day_voucher_loss;
+    if ($selisih < 0) $total_setoran_loss += abs($selisih);
     $total_spam += (int)($ph['spam'] ?? 0);
     $total_rusak_device += (int)($ph['rusak'] ?? 0);
     $total_bandwidth += $bandwidth;
@@ -357,6 +366,8 @@ foreach ($all_dates as $date) {
     $max_km = max($max_km, $km);
     $max_active = max($max_active, (int)($ph['active'] ?? 0));
 }
+
+$total_kerugian = $total_voucher_loss + $total_setoran_loss;
 
 $month_label = month_label_id($filter_date);
 $print_time = date('d-m-Y H:i:s');
@@ -377,7 +388,7 @@ $print_time = date('d-m-Y H:i:s');
         th, td { border:1px solid #000; padding:6px; text-align:center; }
         th { background:#f5f5f5; }
         .currency { text-align:right; white-space:nowrap; }
-        .summary-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin:12px 0 16px; }
+        .summary-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:10px; margin:12px 0 16px; }
         .summary-card { border:1px solid #ccc; padding:8px 10px; background:#f9f9f9; }
         .summary-title { font-size:10px; text-transform:uppercase; color:#666; }
         .summary-value { font-weight:700; font-size:14px; margin-top:4px; }
@@ -414,6 +425,13 @@ $print_time = date('d-m-Y H:i:s');
             <div class="summary-value" style="color:#c0392b;">
                 <?= $total_selisih >= 0 ? '+' : '' ?><?= $cur ?> <?= number_format((int)$total_selisih,0,',','.') ?>
             </div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-title">Kerugian</div>
+            <div class="summary-value" style="color:#c0392b;">
+                <?= $cur ?> <?= number_format((int)$total_kerugian,0,',','.') ?>
+            </div>
+            <div style="font-size:11px;color:#666;">Voucher: <?= $cur ?> <?= number_format((int)$total_voucher_loss,0,',','.') ?> | Setoran: <?= $cur ?> <?= number_format((int)$total_setoran_loss,0,',','.') ?></div>
         </div>
         <div class="summary-card">
             <div class="summary-title">Insiden (Rusak/Spam)</div>

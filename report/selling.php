@@ -2489,9 +2489,10 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             </div>
         <?php endif; ?>
         <?php
-            $net_system_display = ($req_show === 'harian' && $has_audit_adjusted)
-                ? (int)$audit_expected_setoran_adj_total
-                : (int)$total_net;
+            $net_system_display = (int)$total_net;
+            $voucher_loss_display = (int)$total_rusak + (int)$total_invalid;
+            $setoran_loss_display = $audit_total_selisih_setoran < 0 ? abs((int)$audit_total_selisih_setoran) : 0;
+            $kerugian_display = $voucher_loss_display + $setoran_loss_display;
         ?>
         <div class="summary-grid">
             <?php
@@ -2499,8 +2500,11 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 $audit_setoran_cls = $audit_total_selisih_setoran > 0 ? 'audit-pos' : ($audit_total_selisih_setoran < 0 ? 'audit-neg' : 'audit-zero');
             ?>
             <div class="summary-card">
-                <div class="summary-title">Gross Income</div>
-                <div class="summary-value"><?= $cur ?> <?= number_format($total_gross,0,',','.') ?></div>
+                <div class="summary-title">Kerugian</div>
+                <div class="summary-value" style="color:#c0392b;">
+                    <?= $cur ?> <?= number_format($kerugian_display,0,',','.') ?>
+                </div>
+                <div style="font-size:12px;color:var(--txt-muted)">Voucher: <?= $cur ?> <?= number_format($voucher_loss_display,0,',','.') ?> | Setoran: <?= $cur ?> <?= number_format($setoran_loss_display,0,',','.') ?></div>
             </div>
             <div class="summary-card">
                 <div class="summary-title">Voucher Rusak</div>

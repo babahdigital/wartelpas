@@ -270,6 +270,8 @@ foreach ($rows as $r) {
             'gross' => 0,
             'net' => 0,
             'rusak_qty' => 0,
+            'loss_rusak' => 0,
+            'loss_invalid' => 0,
             'laku_users' => [],
             'bytes_by_user' => []
         ];
@@ -278,6 +280,8 @@ foreach ($rows as $r) {
     $daily[$sale_date]['gross'] += $gross_add;
     $daily[$sale_date]['net'] += $net_add;
     if ($status === 'rusak') $daily[$sale_date]['rusak_qty'] += 1;
+    $daily[$sale_date]['loss_rusak'] += $loss_rusak;
+    $daily[$sale_date]['loss_invalid'] += $loss_invalid;
 
     if (!in_array($status, ['rusak','retur','invalid'], true) && $username !== '') {
         $daily[$sale_date]['laku_users'][$username] = true;
@@ -308,7 +312,9 @@ for ($m = 1; $m <= 12; $m++) {
         'wr_sum' => 0,
         'km_sum' => 0,
         'active_sum' => 0,
-        'phone_days' => 0
+        'phone_days' => 0,
+        'loss_voucher' => 0,
+        'loss_setoran' => 0
     ];
 }
 
@@ -319,13 +325,16 @@ foreach ($daily as $date => $val) {
     $system_net = isset($audit_system[$date]) ? (int)$audit_system[$date] : (int)($val['net'] ?? 0);
     $months[$mm]['net'] += $system_net;
     $months[$mm]['gross'] += $system_net;
+    $months[$mm]['loss_voucher'] += (int)($val['loss_rusak'] ?? 0) + (int)($val['loss_invalid'] ?? 0);
     $has_audit_day = isset($audit_net[$date]);
     $day_audit = $has_audit_day ? (int)$audit_net[$date] : (int)($val['net'] ?? 0);
     $months[$mm]['net_audit'] += $day_audit;
     if ($has_audit_day) {
         $months[$mm]['has_audit'] = true;
         $audit_dates_in_daily[$date] = true;
-        $months[$mm]['selisih'] += (int)($audit_selisih[$date] ?? 0);
+        $day_selisih = (int)($audit_selisih[$date] ?? 0);
+        $months[$mm]['selisih'] += $day_selisih;
+        if ($day_selisih < 0) $months[$mm]['loss_setoran'] += abs($day_selisih);
     }
     $months[$mm]['qty'] += $qty;
     $months[$mm]['bandwidth'] += isset($val['bytes_by_user']) ? array_sum($val['bytes_by_user']) : 0;
@@ -338,7 +347,9 @@ foreach ($audit_net as $date => $val) {
     if (!isset($months[$mm])) continue;
     $months[$mm]['net_audit'] += (int)$val;
     $months[$mm]['has_audit'] = true;
-    $months[$mm]['selisih'] += (int)($audit_selisih[$date] ?? 0);
+    $day_selisih = (int)($audit_selisih[$date] ?? 0);
+    $months[$mm]['selisih'] += $day_selisih;
+    if ($day_selisih < 0) $months[$mm]['loss_setoran'] += abs($day_selisih);
     if (isset($audit_system[$date])) {
         $months[$mm]['net'] += (int)$audit_system[$date];
         $months[$mm]['gross'] += (int)$audit_system[$date];
@@ -372,6 +383,8 @@ $total_wr = 0;
 $total_km = 0;
 $total_avg_days = 0;
 $total_bandwidth = 0;
+$total_voucher_loss = 0;
+$total_setoran_loss = 0;
 $months_with_data = 0;
 
 $net_for_chart = [];
@@ -407,6 +420,8 @@ foreach ($months as $mm => &$mrow) {
     $total_km += $km_avg;
     if ($mrow['days'] > 0) $total_avg_days += $avg;
     $total_bandwidth += (int)($mrow['bandwidth'] ?? 0);
+    $total_voucher_loss += (int)($mrow['loss_voucher'] ?? 0);
+    $total_setoran_loss += (int)($mrow['loss_setoran'] ?? 0);
 
     $net_million = $net_audit > 0 ? ($net_audit / 1000000) : 0;
     $insiden = $mrow['rs'] + $mrow['sp'];
@@ -418,6 +433,7 @@ foreach ($months as $mm => &$mrow) {
 unset($mrow);
 
 $total_selisih = $total_selisih;
+$total_kerugian = $total_voucher_loss + $total_setoran_loss;
 $avg_all = $months_with_data > 0 ? round($total_qty / (int)(array_sum(array_column($months, 'days')) ?: 1)) : 0;
 $print_time = date('d-m-Y H:i:s');
 ?>
@@ -486,6 +502,13 @@ $print_time = date('d-m-Y H:i:s');
             <div class="summary-value" style="color:#c0392b;">
                 <?= $total_selisih >= 0 ? '+' : '' ?><?= $cur ?> <?= number_format((int)$total_selisih,0,',','.') ?>
             </div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-title">Kerugian</div>
+            <div class="summary-value" style="color:#c0392b;">
+                <?= $cur ?> <?= number_format((int)$total_kerugian,0,',','.') ?>
+            </div>
+            <div style="font-size:11px;color:#666;">Voucher: <?= $cur ?> <?= number_format((int)$total_voucher_loss,0,',','.') ?> | Setoran: <?= $cur ?> <?= number_format((int)$total_setoran_loss,0,',','.') ?></div>
         </div>
         <div class="summary-card">
             <div class="summary-title">Total Insiden (RS+SP)</div>
