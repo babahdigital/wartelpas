@@ -663,9 +663,14 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                     </tr>
                 </thead>
                 <tbody>
+                    <?php
+                        $audit_total_profile_qty_10 = 0;
+                        $audit_total_profile_qty_30 = 0;
+                    ?>
                     <?php foreach ($audit_rows as $ar): ?>
                         <?php
                             $evidence = [];
+                            $profile_qty = [];
                             $profile10 = ['user' => [], 'up' => [], 'byte' => [], 'login' => [], 'total' => []];
                             $profile30 = ['user' => [], 'up' => [], 'byte' => [], 'login' => [], 'total' => []];
                             $profile10_sum = 0;
@@ -673,6 +678,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             if (!empty($ar['user_evidence'])) {
                                 $evidence = json_decode((string)$ar['user_evidence'], true);
                                 if (is_array($evidence)) {
+                                    if (!empty($evidence['profile_qty']) && is_array($evidence['profile_qty'])) {
+                                        $profile_qty = $evidence['profile_qty'];
+                                    }
                                     if (!empty($evidence['users']) && is_array($evidence['users'])) {
                                         foreach ($evidence['users'] as $uname => $ud) {
                                             $cnt = isset($ud['events']) && is_array($ud['events']) ? count($ud['events']) : 0;
@@ -718,6 +726,10 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $p30_up = !empty($profile30['up']) ? implode('<br>', array_map('htmlspecialchars', $profile30['up'])) : '-';
                             $p30_bt = !empty($profile30['byte']) ? implode('<br>', array_map('htmlspecialchars', $profile30['byte'])) : '-';
                             $p30_tt = $profile30_sum > 0 ? number_format($profile30_sum,0,',','.') : '-';
+                            $p10_qty = (int)($profile_qty['qty_10'] ?? 0);
+                            $p30_qty = (int)($profile_qty['qty_30'] ?? 0);
+                            $audit_total_profile_qty_10 += $p10_qty;
+                            $audit_total_profile_qty_30 += $p30_qty;
                         ?>
                         <tr>
                             <td><?= htmlspecialchars($ar['blok_name'] ?? '-') ?></td>
@@ -745,13 +757,11 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <td></td>
                         <td></td>
                         <td></td>
+                        <td style="text-align:center;"><b><?= number_format($audit_total_profile_qty_10,0,',','.') ?></b></td>
                         <td></td>
                         <td></td>
                         <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
+                        <td style="text-align:center;"><b><?= number_format($audit_total_profile_qty_30,0,',','.') ?></b></td>
                         <td></td>
                     </tr>
                 </tbody>
