@@ -204,6 +204,8 @@ $list = [];
 $usage_list = [];
 $total_gross = 0;
 $total_net = 0;
+$total_qty_rusak = 0;
+$total_qty_retur = 0;
 $unique_laku_users = [];
 $bytes_by_user = [];
 $only_wartel = true;
@@ -555,6 +557,8 @@ foreach ($rows as $r) {
     }
     $total_gross += $gross_add;
     $total_net += $net_add;
+    if ($status === 'rusak') $total_qty_rusak += 1;
+    if ($status === 'retur') $total_qty_retur += 1;
     if (!empty($r['username'])) {
         $u = $r['username'];
         $bytes_by_user[$u] = max((int)($bytes_by_user[$u] ?? 0), $bytes);
