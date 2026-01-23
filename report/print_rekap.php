@@ -937,7 +937,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     </li>
                                 <?php endif; ?>
 
-                                <?php if ($rep['ghost_10'] > 0 || $rep['ghost_30'] > 0): ?>
+                                <?php if (($rep['ghost_10'] > 0 || $rep['ghost_30'] > 0) && empty($rep['unreported_total'])): ?>
                                     <li>
                                         <span style="color:#b45309; font-weight:bold;">Voucer Tidak Dilaporkan:</span>
                                         <?php 
