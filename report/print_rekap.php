@@ -737,13 +737,13 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             <td style="text-align:center;"><?= number_format((int)($ar['selisih_qty'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)($ar['selisih_setoran'] ?? 0),0,',','.') ?></td>
-                            <td><?= $p10_us ?></td>
-                            <td><?= $p10_up ?></td>
-                            <td><?= $p10_bt ?></td>
+                            <td style="text-align: center;"><?= $p10_us ?></td>
+                            <td style="text-align: right;"><?= $p10_up ?></td>
+                            <td style="text-align: right;"><?= $p10_bt ?></td>
                             <td><?= $p10_tt ?></td>
                             <td><?= $p30_us ?></td>
-                            <td><?= $p30_up ?></td>
-                            <td><?= $p30_bt ?></td>
+                            <td style="text-align: right;"><?= $p30_up ?></td>
+                            <td style="text-align: right;"><?= $p30_bt ?></td>
                             <td><?= $p30_tt ?></td>
                             <td><?= htmlspecialchars($ar['note'] ?? '') ?></td>
                         </tr>
