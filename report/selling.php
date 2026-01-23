@@ -599,8 +599,10 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
         $net_total += $net_add;
     }
 
+    $expected_qty = max(0, $qty_total - $rusak_qty - $invalid_qty);
     return [
-        'qty' => $qty_total,
+        'qty' => $expected_qty,
+        'raw_qty' => $qty_total,
         'rusak_qty' => $rusak_qty,
         'invalid_qty' => $invalid_qty,
         'net' => $net_total,

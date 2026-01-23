@@ -667,14 +667,18 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                     </tr>
                     <tr>
                         <th rowspan="2" style="width:90px;">Blok</th>
-                        <th rowspan="2" style="width:70px;">QTY</th>
-                        <th rowspan="2" style="width:70px;">Selisih</th>
-                        <th rowspan="2" style="width:90px;">Setoran</th>
-                        <th rowspan="2" style="width:80px;">Selisih</th>
+                        <th colspan="3">QTY</th>
+                        <th colspan="3">Setoran</th>
                         <th colspan="4">Profil 10 Menit</th>
                         <th colspan="4">Profil 30 Menit</th>
                     </tr>
                     <tr>
+                        <th style="width:70px;">DB</th>
+                        <th style="width:70px;">Lapangan</th>
+                        <th style="width:70px;">Selisih</th>
+                        <th style="width:90px;">DB</th>
+                        <th style="width:90px;">Lapangan</th>
+                        <th style="width:80px;">Selisih</th>
                         <th style="width:90px;">User</th>
                         <th style="width:70px;">Up</th>
                         <th style="width:70px;">Byte</th>
@@ -840,8 +844,10 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         ?>
                         <tr>
                             <td style="text-align: center;"><?= htmlspecialchars($ar['blok_name'] ?? '-') ?></td>
+                            <td style="text-align:center;"><?= number_format((int)($ar['expected_qty'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:center;"><?= number_format((int)($ar['reported_qty'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:center;"><?= number_format((int)($ar['selisih_qty'] ?? 0),0,',','.') ?></td>
+                            <td style="text-align:right;"><?= number_format((int)($ar['expected_setoran'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)($ar['selisih_setoran'] ?? 0),0,',','.') ?></td>
                             
@@ -858,8 +864,10 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                     <?php endforeach; ?>
                     <tr>
                         <td style="text-align:center;"><b>Total</b></td>
+                        <td style="text-align:center;"><b><?= number_format($audit_total_expected_qty,0,',','.') ?></b></td>
                         <td style="text-align:center;"><b><?= number_format($audit_total_reported_qty,0,',','.') ?></b></td>
                         <td style="text-align:center;"><b><?= number_format($audit_total_selisih_qty,0,',','.') ?></b></td>
+                        <td style="text-align:right;"><b><?= number_format($audit_total_expected_setoran,0,',','.') ?></b></td>
                         <td style="text-align:right;"><b><?= number_format($audit_total_actual_setoran,0,',','.') ?></b></td>
                         <td style="text-align:right;"><b><?= number_format($audit_total_selisih_setoran,0,',','.') ?></b></td>
                         <td colspan="3" style="background:#eee;"></td>
