@@ -691,7 +691,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $audit_total_profile_qty_30 += $p30_qty;
                         ?>
                         <tr>
-                            <td><?= htmlspecialchars($ar['blok_name'] ?? '-') ?></td>
+                            <td style="text-align: center;"><?= htmlspecialchars($ar['blok_name'] ?? '-') ?></td>
                             <td style="text-align:center;"><?= number_format((int)($ar['reported_qty'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:center;"><?= number_format((int)($ar['selisih_qty'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
