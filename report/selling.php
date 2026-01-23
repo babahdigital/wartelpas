@@ -832,6 +832,36 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             $retur_30 = 0;
             $invalid_10 = 0;
             $invalid_30 = 0;
+            $user_profile_label = [];
+            $user_profile_kind = [];
+            $user_price_value = [];
+            $user_status = [];
+            $auto_status_users = [];
+            if (table_exists($db, 'login_history')) {
+                $stmtAuto = $db->prepare("SELECT username, blok_name, raw_comment, last_status, last_bytes, last_uptime, first_login_real, last_login_real, login_time_real, logout_time_real, first_ip, first_mac, last_ip, last_mac
+                    FROM login_history
+                    WHERE username != '' AND (substr(login_time_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR login_date = :d)");
+                $stmtAuto->execute([':d' => $audit_date]);
+                foreach ($stmtAuto->fetchAll(PDO::FETCH_ASSOC) as $rowAuto) {
+                    $u = trim((string)($rowAuto['username'] ?? ''));
+                    if ($u === '') continue;
+                    $blok_u = normalize_block_name($rowAuto['blok_name'] ?? '', $rowAuto['raw_comment'] ?? '');
+                    if ($blok_u !== $audit_blok) continue;
+                    $st = strtolower((string)($rowAuto['last_status'] ?? ''));
+                    $cmt = strtolower((string)($rowAuto['raw_comment'] ?? ''));
+                    if ($st === '' || $st === 'normal') {
+                        if (strpos($cmt, 'invalid') !== false) $st = 'invalid';
+                        elseif (strpos($cmt, 'retur') !== false) $st = 'retur';
+                        elseif (strpos($cmt, 'rusak') !== false) $st = 'rusak';
+                    }
+                    if (in_array($st, ['rusak', 'retur'], true)) {
+                        $auto_status_users[$u] = $rowAuto;
+                    }
+                }
+            }
+            if (!empty($auto_status_users)) {
+                $audit_users = array_values(array_unique(array_merge($audit_users, array_keys($auto_status_users))));
+            }
             if (!empty($audit_users)) {
                 foreach ($audit_users as $u) {
                     $user_row = null;
@@ -842,6 +872,9 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             FROM login_history WHERE username = :u LIMIT 1");
                         $stmtU->execute([':u' => $u]);
                         $user_row = $stmtU->fetch(PDO::FETCH_ASSOC);
+                    }
+                    if (!$user_row && isset($auto_status_users[$u])) {
+                        $user_row = $auto_status_users[$u];
                     }
                     if (table_exists($db, 'sales_history')) {
                         $stmtPf = $db->prepare("SELECT profile_snapshot, profile, validity, price_snapshot, price, sprice_snapshot FROM sales_history WHERE username = :u AND sale_date = :d ORDER BY sale_time DESC LIMIT 1");
@@ -879,6 +912,10 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         elseif (strpos($u_cmt, 'retur') !== false) $u_status = 'retur';
                         elseif (strpos($u_cmt, 'rusak') !== false) $u_status = 'rusak';
                     }
+                    $user_profile_label[$u] = $profile_label;
+                    $user_profile_kind[$u] = $profile_kind;
+                    $user_price_value[$u] = $price_value;
+                    $user_status[$u] = $u_status;
                     if ($profile_kind === '30') {
                         if ($u_status === 'rusak') $rusak_30++;
                         elseif ($u_status === 'retur') $retur_30++;
@@ -927,14 +964,14 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         }
                         $evidence['users'][$u] = [
                             'blok' => $blok_u,
-                            'profile_label' => $profile_label,
-                            'profile_kind' => $profile_kind,
-                            'price' => $price_value,
+                            'profile_label' => $user_profile_label[$u] ?? '',
+                            'profile_kind' => $user_profile_kind[$u] ?? '',
+                            'price' => $user_price_value[$u] ?? 0,
                             'first_login_real' => $ur['first_login_real'] ?? '',
                             'last_login_real' => $ur['last_login_real'] ?? '',
                             'login_time_real' => $ur['login_time_real'] ?? '',
                             'logout_time_real' => $ur['logout_time_real'] ?? '',
-                            'last_status' => $ur['last_status'] ?? '',
+                            'last_status' => $user_status[$u] ?? ($ur['last_status'] ?? ''),
                             'last_bytes' => (int)($ur['last_bytes'] ?? 0),
                             'last_uptime' => $ur['last_uptime'] ?? '',
                             'first_ip' => $ur['first_ip'] ?? '',
