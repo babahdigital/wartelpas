@@ -1146,7 +1146,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             $profile_qty_sum = $audit_qty_10 + $audit_qty_30;
             $net_qty_10 = max(0, ($audit_qty_10 - $rusak_10 - $invalid_10 + $retur_10));
             $net_qty_30 = max(0, ($audit_qty_30 - $rusak_30 - $invalid_30 + $retur_30));
-            $audit_qty = $net_qty_10 + $net_qty_30;
+            $audit_qty = $profile_qty_sum;
             $audit_setoran = ($net_qty_10 * 5000) + ($net_qty_30 * 20000);
             if ($profile_qty_sum <= 0) {
                 $audit_error = 'Qty per profile wajib diisi.';
@@ -1156,23 +1156,14 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             if (!empty($rows)) {
                 $expected = calc_expected_for_block($rows, $audit_date, $audit_blok);
                 $expected_qty = (int)($expected['qty'] ?? 0);
-                $expected_qty -= (int)($expected['rusak_qty'] ?? 0);
-                $expected_qty -= (int)($expected['invalid_qty'] ?? 0);
-                if ($expected_qty < 0) $expected_qty = 0;
                 $expected_setoran = (int)($expected['net'] ?? 0);
             } elseif (isset($db) && $db instanceof PDO) {
                 $audit_rows_src = fetch_rows_for_audit($db, $audit_date);
                 $expected = calc_expected_for_block($audit_rows_src, $audit_date, $audit_blok);
                 $expected_qty = (int)($expected['qty'] ?? 0);
-                $expected_qty -= (int)($expected['rusak_qty'] ?? 0);
-                $expected_qty -= (int)($expected['invalid_qty'] ?? 0);
-                if ($expected_qty < 0) $expected_qty = 0;
                 $expected_setoran = (int)($expected['net'] ?? 0);
             } else {
                 $expected_qty = (int)($by_block[$audit_blok]['qty'] ?? 0);
-                $expected_qty -= (int)($by_block[$audit_blok]['rusak_qty'] ?? 0);
-                $expected_qty -= (int)($by_block[$audit_blok]['invalid_qty'] ?? 0);
-                if ($expected_qty < 0) $expected_qty = 0;
                 $expected_setoran = (int)($by_block[$audit_blok]['net'] ?? 0);
             }
             $selisih_qty = $audit_qty - $expected_qty;
@@ -2650,9 +2641,6 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                 if (!empty($rows_src)) {
                                     $expected = calc_expected_for_block($rows_src, $audit_date_row, $audit_block_row);
                                     $expected_qty = (int)($expected['qty'] ?? 0);
-                                    $expected_qty -= (int)($expected['rusak_qty'] ?? 0);
-                                    $expected_qty -= (int)($expected['invalid_qty'] ?? 0);
-                                    if ($expected_qty < 0) $expected_qty = 0;
                                     $expected_setoran = (int)($expected['net'] ?? 0);
                                     $sq = (int)($ar['reported_qty'] ?? 0) - $expected_qty;
                                     $ss = (int)($ar['actual_setoran'] ?? 0) - $expected_setoran;
