@@ -336,6 +336,45 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 ### 4.7.6 Whitelist & keamanan endpoint
 - **.htaccess** diperbarui untuk allowlist endpoint ingest dan IP MikroTik tambahan (termasuk 10.10.83.2).
 
+## 4.8 Update Terbaru (Audit Manual & Print Rekap 2026-01-23)
+### 4.8.1 Otomatisasi perhitungan audit manual (laku vs rusak/retur)
+- **Tujuan**: Admin cukup input **jumlah voucher laku per profil** (10m/30m). Sistem menghitung otomatis.
+- **Aturan bisnis**:
+  - **RUSAK** mengurangi pendapatan.
+  - **RETUR** mengembalikan pendapatan (menambah jumlah bersih).
+  - **INVALID** tidak dihitung (mengurangi pendapatan).
+- **Perhitungan otomatis** di `report/selling.php`:
+  - `net_qty_10 = qty_10 - rusak_10 - invalid_10 + retur_10`
+  - `net_qty_30 = qty_30 - rusak_30 - invalid_30 + retur_30`
+  - `audit_qty = net_qty_10 + net_qty_30`
+  - `audit_setoran = (net_qty_10 * 5000) + (net_qty_30 * 20000)`
+- **Expected Qty** diselaraskan dengan aturan pendapatan:
+  - Mengurangi **RUSAK** dan **INVALID**.
+  - **RETUR tidak mengurangi** (pendapatan tetap).
+
+### 4.8.2 Audit evidence & profile qty
+- Jika admin tidak mengisi qty 10/30, sistem mengambil **auto count** dari daftar user audit.
+- Evidence audit menyimpan:
+  - `profile_qty` (qty_10/qty_30)
+  - daftar user + `profile_kind`, `price`, `last_status`, `last_bytes`, `last_uptime`.
+
+### 4.8.3 Print Rekap Audit (warna & ringkasan)
+- **Highlight username** di tabel audit:
+  - **Merah** = Rusak
+  - **Hijau** = Retur
+  - **Kuning** = User tidak dilaporkan (status normal/selain rusak/retur)
+- **Legenda warna** ditambah di bawah tabel.
+- **Status Voucher Global** ditampilkan sejajar (inline) untuk Rusak/Retur/Invalid.
+- **Kesimpulan Audit Harian** per blok memuat:
+  - Profil 10/30 (qty dan nominal)
+  - **Voucher Rusak** per profil (10/30)
+  - **Voucher Retur** per profil (10/30)
+  - **User Tidak Dilaporkan** per profil (10/30)
+
+### 4.8.4 Dampak terhadap data lama
+- Data audit lama tetap tampil sesuai nilai tersimpan.
+- Untuk mengikuti logika otomatis terbaru, audit lama perlu **disimpan ulang**.
+
 ### 3.11 Konfirmasi masih pakai alert/confirm
 - **Gejala**: UX tidak konsisten dengan design.html.
 - **Akar masalah**: masih menggunakan `alert/confirm` bawaan browser.
