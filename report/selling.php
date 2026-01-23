@@ -811,6 +811,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         $audit_user_list = implode(', ', $audit_users);
         $audit_qty = (int)($_POST['audit_qty'] ?? 0);
         $audit_setoran = (int)($_POST['audit_setoran'] ?? 0);
+        $audit_qty_10 = (int)($_POST['audit_qty_10'] ?? 0);
+        $audit_qty_30 = (int)($_POST['audit_qty_30'] ?? 0);
         $audit_note = trim($_POST['audit_note'] ?? '');
         $audit_status = 'OPEN';
 
@@ -928,12 +930,19 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     }
                 }
             }
+            if (empty($audit_users) && $audit_qty_10 <= 0 && $audit_qty_30 <= 0) {
+                $audit_error = 'Isi qty per profile (10/30 menit) jika username kosong.';
+            }
             $expected_qty = (int)($by_block[$audit_blok]['qty'] ?? 0);
             $expected_setoran = (int)($by_block[$audit_blok]['net'] ?? 0);
             $selisih_qty = $audit_qty - $expected_qty;
             $selisih_setoran = $audit_setoran - $expected_setoran;
             if (empty($audit_error)) {
                 $evidence = [];
+                $evidence['profile_qty'] = [
+                    'qty_10' => $audit_qty_10,
+                    'qty_30' => $audit_qty_30
+                ];
                 if (!empty($audit_users)) {
                     $evidence['users'] = [];
                     foreach ($audit_users as $u) {
@@ -1284,6 +1293,21 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                         <div id="audit-user-chips" class="audit-user-chips"></div>
                         <input class="form-input" type="text" id="audit-user-input" placeholder="ketik untuk cari username">
                         <div id="audit-user-suggest" class="audit-user-suggest"></div>
+                    </div>
+                </div>
+                <div style="margin-top:10px;">
+                    <label>Qty per Profile (wajib jika username kosong)</label>
+                    <div class="form-grid-2" style="align-items:center;">
+                        <label style="display:flex; gap:8px; align-items:center;">
+                            <input type="checkbox" id="audit_prof10_chk">
+                            <span>Profil 10 Menit</span>
+                        </label>
+                        <input class="form-input" type="number" id="audit_prof10_qty" name="audit_qty_10" min="0" value="0" disabled>
+                        <label style="display:flex; gap:8px; align-items:center;">
+                            <input type="checkbox" id="audit_prof30_chk">
+                            <span>Profil 30 Menit</span>
+                        </label>
+                        <input class="form-input" type="number" id="audit_prof30_qty" name="audit_qty_30" min="0" value="0" disabled>
                     </div>
                 </div>
                 <div class="form-grid-2" style="margin-top:10px;">
@@ -1865,7 +1889,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (qtyInput) qtyInput.value = qty;
         var setInput = form.querySelector('input[name="audit_setoran"]');
         if (setInput) setInput.value = setoran;
-        var noteInput = form.querySelector('input[name="audit_note"]');
+        var noteInput = form.querySelector('textarea[name="audit_note"]');
         if (noteInput) noteInput.value = note;
         openAuditModal();
     };
@@ -1891,10 +1915,33 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         var form = document.getElementById('auditForm');
         var btn = document.getElementById('auditSubmitBtn');
         var err = document.getElementById('auditClientError');
+        var chk10 = document.getElementById('audit_prof10_chk');
+        var chk30 = document.getElementById('audit_prof30_chk');
+        var qty10 = document.getElementById('audit_prof10_qty');
+        var qty30 = document.getElementById('audit_prof30_qty');
+        if (chk10 && qty10) {
+            chk10.addEventListener('change', function(){ qty10.disabled = !chk10.checked; if (!chk10.checked) qty10.value = 0; });
+        }
+        if (chk30 && qty30) {
+            chk30.addEventListener('change', function(){ qty30.disabled = !chk30.checked; if (!chk30.checked) qty30.value = 0; });
+        }
         if (!form) return;
         form.addEventListener('submit', function(e){
             e.preventDefault();
             if (btn && btn.disabled) return;
+            if (err) err.style.display = 'none';
+            var hasUsers = auditSelectedUsers && auditSelectedUsers.length > 0;
+            if (!hasUsers) {
+                var v10 = qty10 ? parseInt(qty10.value || '0', 10) : 0;
+                var v30 = qty30 ? parseInt(qty30.value || '0', 10) : 0;
+                if (v10 <= 0 && v30 <= 0) {
+                    if (err) {
+                        err.textContent = 'Isi qty per profile (10/30 menit) jika username kosong.';
+                        err.style.display = 'block';
+                    }
+                    return;
+                }
+            }
             window.sellingPauseReload = true;
             var fd = new FormData(form);
             fd.append('ajax', '1');
