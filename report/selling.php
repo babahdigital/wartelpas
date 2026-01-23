@@ -1145,6 +1145,11 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
     .audit-user-suggest .item { padding:7px 10px; cursor:pointer; font-size:12px; color:#e6edf3; border-bottom:1px solid #2c3238; }
     .audit-user-suggest .item:last-child { border-bottom:none; }
     .audit-user-suggest .item:hover { background:#2b3137; }
+    .audit-modal-desc { margin:6px 0 0; }
+    .audit-profile-row { display:flex; gap:14px; align-items:center; flex-wrap:nowrap; }
+    .audit-profile-item { display:flex; align-items:center; gap:8px; }
+    .audit-profile-item label { display:flex; align-items:center; gap:6px; margin:0; }
+    .audit-profile-item input[type="number"] { width:90px; padding:6px 8px; }
     .audit-table th, .audit-table td { padding:6px 8px; font-size:11px; }
     .audit-line { border-bottom:1px dashed #3a4046; padding:2px 0; }
     .audit-line:last-child { border-bottom:none; }
@@ -1265,9 +1270,9 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             <input type="hidden" name="ajax" value="1">
             <input type="hidden" name="audit_submit" value="1">
             <div class="modal-body">
-                <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;">
+                <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:6px;">
                     <div style="font-size:22px;color:#4ea8ff;line-height:1;"><i class="fa fa-edit"></i></div>
-                    <div style="font-size:12px;color:#9aa0a6;line-height:1.4;">
+                    <div class="audit-modal-desc" style="font-size:12px;color:#9aa0a6;line-height:1.4;">
                         Isi laporan manual untuk membandingkan dengan rekap sistem (qty dan uang). Selisih akan dihitung otomatis.
                     </div>
                 </div>
@@ -1286,7 +1291,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                         <input class="form-input" type="date" name="audit_date" value="<?= htmlspecialchars($filter_date); ?>" required>
                     </div>
                 </div>
-                <div style="margin-top:10px;">
+                <div style="margin-top:8px;">
                     <label>Username (opsional)</label>
                     <input type="hidden" name="audit_username" id="auditUsernameHidden">
                     <div class="audit-user-picker">
@@ -1295,19 +1300,23 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                         <div id="audit-user-suggest" class="audit-user-suggest"></div>
                     </div>
                 </div>
-                <div style="margin-top:10px;">
+                <div style="margin-top:8px;">
                     <label>Qty per Profile (wajib jika username kosong)</label>
-                    <div class="form-grid-2" style="align-items:center;">
-                        <label style="display:flex; gap:8px; align-items:center;">
-                            <input type="checkbox" id="audit_prof10_chk">
-                            <span>Profil 10 Menit</span>
-                        </label>
-                        <input class="form-input" type="number" id="audit_prof10_qty" name="audit_qty_10" min="0" value="0" disabled style="display:none;">
-                        <label style="display:flex; gap:8px; align-items:center;">
-                            <input type="checkbox" id="audit_prof30_chk">
-                            <span>Profil 30 Menit</span>
-                        </label>
-                        <input class="form-input" type="number" id="audit_prof30_qty" name="audit_qty_30" min="0" value="0" disabled style="display:none;">
+                    <div class="audit-profile-row">
+                        <div class="audit-profile-item">
+                            <label>
+                                <input type="checkbox" id="audit_prof10_chk">
+                                <span>Profil 10 Menit</span>
+                            </label>
+                            <input class="form-input" type="number" id="audit_prof10_qty" name="audit_qty_10" min="0" value="0" disabled style="display:none;">
+                        </div>
+                        <div class="audit-profile-item">
+                            <label>
+                                <input type="checkbox" id="audit_prof30_chk">
+                                <span>Profil 30 Menit</span>
+                            </label>
+                            <input class="form-input" type="number" id="audit_prof30_qty" name="audit_qty_30" min="0" value="0" disabled style="display:none;">
+                        </div>
                     </div>
                 </div>
                 <div class="form-grid-2" style="margin-top:10px;">
