@@ -33,8 +33,14 @@
         }
     }
     :if ([:len $userId] > 0) do={
-        :set userUptime [/ip hotspot user get $userId uptime];
-        :set currentComment [/ip hotspot user get $userId comment];
+        :do {
+            :set userUptime [/ip hotspot user get $userId uptime];
+            :set currentComment [/ip hotspot user get $userId comment];
+        } on-error={
+            :set userUptime "";
+            :set currentComment "";
+            :set userId "";
+        }
     }
     # Bersihkan IP/MAC lama jika ada
     :local cleanComment $currentComment;
@@ -120,7 +126,7 @@
     
     # Update comment dengan data logout (tanpa menumpuk)
     :if ([:len $userId] > 0) do={
-        /ip hotspot user set comment=$newComment $userId;
+        :do { /ip hotspot user set comment=$newComment $userId; } on-error={}
     } else={
         :log warning "SYNC WARN: user not found for $username (comment not set)";
     }
