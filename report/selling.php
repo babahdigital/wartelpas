@@ -1302,12 +1302,12 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                             <input type="checkbox" id="audit_prof10_chk">
                             <span>Profil 10 Menit</span>
                         </label>
-                        <input class="form-input" type="number" id="audit_prof10_qty" name="audit_qty_10" min="0" value="0" disabled>
+                        <input class="form-input" type="number" id="audit_prof10_qty" name="audit_qty_10" min="0" value="0" disabled style="display:none;">
                         <label style="display:flex; gap:8px; align-items:center;">
                             <input type="checkbox" id="audit_prof30_chk">
                             <span>Profil 30 Menit</span>
                         </label>
-                        <input class="form-input" type="number" id="audit_prof30_qty" name="audit_qty_30" min="0" value="0" disabled>
+                        <input class="form-input" type="number" id="audit_prof30_qty" name="audit_qty_30" min="0" value="0" disabled style="display:none;">
                     </div>
                 </div>
                 <div class="form-grid-2" style="margin-top:10px;">
@@ -1920,10 +1920,18 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         var qty10 = document.getElementById('audit_prof10_qty');
         var qty30 = document.getElementById('audit_prof30_qty');
         if (chk10 && qty10) {
-            chk10.addEventListener('change', function(){ qty10.disabled = !chk10.checked; if (!chk10.checked) qty10.value = 0; });
+            chk10.addEventListener('change', function(){
+                qty10.disabled = !chk10.checked;
+                qty10.style.display = chk10.checked ? '' : 'none';
+                if (!chk10.checked) qty10.value = 0;
+            });
         }
         if (chk30 && qty30) {
-            chk30.addEventListener('change', function(){ qty30.disabled = !chk30.checked; if (!chk30.checked) qty30.value = 0; });
+            chk30.addEventListener('change', function(){
+                qty30.disabled = !chk30.checked;
+                qty30.style.display = chk30.checked ? '' : 'none';
+                if (!chk30.checked) qty30.value = 0;
+            });
         }
         if (!form) return;
         form.addEventListener('submit', function(e){
