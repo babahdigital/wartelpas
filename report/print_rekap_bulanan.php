@@ -323,7 +323,7 @@ $total_rusak_device = 0;
 $rows_out = [];
 foreach ($all_dates as $date) {
     $net = (int)($daily[$date]['net'] ?? 0);
-    $system_net = isset($audit_system[$date]) ? (int)$audit_system[$date] : $net;
+    $system_net = $net;
     $gross = $system_net;
     $audit = $audit_net[$date] ?? null;
     $net_audit = $audit !== null ? (int)$audit : $net;
@@ -421,17 +421,16 @@ $print_time = date('d-m-Y H:i:s');
             <div class="summary-value"><?= esc(format_bytes_short((int)$total_bandwidth)) ?></div>
         </div>
         <div class="summary-card">
-            <div class="summary-title">Total Selisih Audit</div>
+            <div class="summary-title">Selisih Audit</div>
             <div class="summary-value" style="color:#c0392b;">
                 <?= $total_selisih >= 0 ? '+' : '' ?><?= $cur ?> <?= number_format((int)$total_selisih,0,',','.') ?>
             </div>
         </div>
         <div class="summary-card">
-            <div class="summary-title">Kerugian</div>
+            <div class="summary-title">Kerugian Sistem</div>
             <div class="summary-value" style="color:#c0392b;">
-                <?= $cur ?> <?= number_format((int)$total_kerugian,0,',','.') ?>
+                <?= $cur ?> <?= number_format((int)$total_voucher_loss,0,',','.') ?>
             </div>
-            <div style="font-size:11px;color:#666;">Voucher: <?= $cur ?> <?= number_format((int)$total_voucher_loss,0,',','.') ?> | Setoran: <?= $cur ?> <?= number_format((int)$total_setoran_loss,0,',','.') ?></div>
         </div>
         <div class="summary-card">
             <div class="summary-title">Insiden (Rusak/Spam)</div>

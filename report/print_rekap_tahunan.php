@@ -322,7 +322,7 @@ foreach ($daily as $date => $val) {
     $mm = substr($date, 5, 2);
     if (!isset($months[$mm])) continue;
     $qty = count($val['laku_users'] ?? []);
-    $system_net = isset($audit_system[$date]) ? (int)$audit_system[$date] : (int)($val['net'] ?? 0);
+    $system_net = (int)($val['net'] ?? 0);
     $months[$mm]['net'] += $system_net;
     $months[$mm]['gross'] += $system_net;
     $months[$mm]['loss_voucher'] += (int)($val['loss_rusak'] ?? 0) + (int)($val['loss_invalid'] ?? 0);
@@ -350,10 +350,7 @@ foreach ($audit_net as $date => $val) {
     $day_selisih = (int)($audit_selisih[$date] ?? 0);
     $months[$mm]['selisih'] += $day_selisih;
     if ($day_selisih < 0) $months[$mm]['loss_setoran'] += abs($day_selisih);
-    if (isset($audit_system[$date])) {
-        $months[$mm]['net'] += (int)$audit_system[$date];
-        $months[$mm]['gross'] += (int)$audit_system[$date];
-    }
+    // Net System tetap murni transaksi; audit hanya untuk Net Audit.
 }
 
 foreach ($phone as $date => $val) {
