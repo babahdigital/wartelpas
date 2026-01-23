@@ -654,11 +654,11 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <th style="width:50px;">Username</th>
                         <th style="width:50px;">Up</th>
                         <th style="width:50px;">Byte</th>
-                        <th style="width:80px;">Total</th>
+                        <th style="width:80px;">QTY</th>
                         <th style="width:50px;">Username</th>
                         <th style="width:50px;">Up</th>
                         <th style="width:50px;">Byte</th>
-                        <th style="width:80px;">Total</th>
+                        <th style="width:80px;">QTY</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -721,13 +721,13 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $p10_us = !empty($profile10['user']) ? implode('<br>', array_map('htmlspecialchars', $profile10['user'])) : '-';
                             $p10_up = !empty($profile10['up']) ? implode('<br>', array_map('htmlspecialchars', $profile10['up'])) : '-';
                             $p10_bt = !empty($profile10['byte']) ? implode('<br>', array_map('htmlspecialchars', $profile10['byte'])) : '-';
-                            $p10_tt = $profile10_sum > 0 ? number_format($profile10_sum,0,',','.') : '-';
                             $p30_us = !empty($profile30['user']) ? implode('<br>', array_map('htmlspecialchars', $profile30['user'])) : '-';
                             $p30_up = !empty($profile30['up']) ? implode('<br>', array_map('htmlspecialchars', $profile30['up'])) : '-';
                             $p30_bt = !empty($profile30['byte']) ? implode('<br>', array_map('htmlspecialchars', $profile30['byte'])) : '-';
-                            $p30_tt = $profile30_sum > 0 ? number_format($profile30_sum,0,',','.') : '-';
                             $p10_qty = (int)($profile_qty['qty_10'] ?? 0);
                             $p30_qty = (int)($profile_qty['qty_30'] ?? 0);
+                            $p10_tt = $p10_qty > 0 ? number_format($p10_qty,0,',','.') : '-';
+                            $p30_tt = $p30_qty > 0 ? number_format($p30_qty,0,',','.') : '-';
                             $audit_total_profile_qty_10 += $p10_qty;
                             $audit_total_profile_qty_30 += $p30_qty;
                         ?>
