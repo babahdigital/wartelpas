@@ -1148,7 +1148,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             $profile_qty_sum = $audit_qty_10 + $audit_qty_30;
             $net_qty_10 = max(0, ($audit_qty_10 - $rusak_10 - $invalid_10 + $retur_10));
             $net_qty_30 = max(0, ($audit_qty_30 - $rusak_30 - $invalid_30 + $retur_30));
-            $audit_qty = $profile_qty_sum;
+            $audit_qty_raw = $profile_qty_sum;
+            $audit_qty = $net_qty_10 + $net_qty_30;
             $audit_setoran = ($net_qty_10 * 5000) + ($net_qty_30 * 20000);
             if ($profile_qty_sum <= 0) {
                 $audit_error = 'Qty per profile wajib diisi.';
