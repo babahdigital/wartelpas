@@ -72,6 +72,72 @@ function month_label_id($ym) {
     return ($months[$m] ?? $m) . ' ' . $y;
 }
 
+function calc_audit_adjusted_setoran(array $ar) {
+    $price10 = 5000;
+    $price30 = 20000;
+    $expected_setoran = (int)($ar['expected_setoran'] ?? 0);
+    $actual_setoran_raw = (int)($ar['actual_setoran'] ?? 0);
+
+    $p10_qty = 0;
+    $p30_qty = 0;
+    $cnt_rusak_10 = 0;
+    $cnt_rusak_30 = 0;
+    $cnt_retur_10 = 0;
+    $cnt_retur_30 = 0;
+    $cnt_invalid_10 = 0;
+    $cnt_invalid_30 = 0;
+    $profile10_users = 0;
+    $profile30_users = 0;
+    $has_manual_evidence = false;
+
+    if (!empty($ar['user_evidence'])) {
+        $evidence = json_decode((string)$ar['user_evidence'], true);
+        if (is_array($evidence)) {
+            $has_manual_evidence = true;
+            if (!empty($evidence['profile_qty']) && is_array($evidence['profile_qty'])) {
+                $p10_qty = (int)($evidence['profile_qty']['qty_10'] ?? 0);
+                $p30_qty = (int)($evidence['profile_qty']['qty_30'] ?? 0);
+            }
+            if (!empty($evidence['users']) && is_array($evidence['users'])) {
+                foreach ($evidence['users'] as $ud) {
+                    $kind = (string)($ud['profile_kind'] ?? '10');
+                    $status = strtolower((string)($ud['last_status'] ?? ''));
+                    if ($kind === '30') {
+                        $profile30_users++;
+                        if ($status === 'rusak') $cnt_rusak_30++;
+                        elseif ($status === 'retur') $cnt_retur_30++;
+                        elseif ($status === 'invalid') $cnt_invalid_30++;
+                    } else {
+                        $profile10_users++;
+                        if ($status === 'rusak') $cnt_rusak_10++;
+                        elseif ($status === 'retur') $cnt_retur_10++;
+                        elseif ($status === 'invalid') $cnt_invalid_10++;
+                    }
+                }
+            }
+        }
+    }
+
+    if ($p10_qty <= 0) $p10_qty = $profile10_users;
+    if ($p30_qty <= 0) $p30_qty = $profile30_users;
+
+    if ($has_manual_evidence) {
+        $manual_net_qty_10 = max(0, $p10_qty - $cnt_rusak_10 - $cnt_invalid_10 + $cnt_retur_10);
+        $manual_net_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30 + $cnt_retur_30);
+        $manual_display_setoran = ($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30);
+        $expected_adj_setoran = max(0, $expected_setoran
+            - (($cnt_rusak_10 + $cnt_invalid_10) * $price10)
+            - (($cnt_rusak_30 + $cnt_invalid_30) * $price30)
+            + ($cnt_retur_10 * $price10)
+            + ($cnt_retur_30 * $price30));
+    } else {
+        $manual_display_setoran = $actual_setoran_raw;
+        $expected_adj_setoran = $expected_setoran;
+    }
+
+    return [$manual_display_setoran, $expected_adj_setoran];
+}
+
 $rows = [];
 $daily = [];
 $phone = [];
@@ -135,16 +201,16 @@ try {
             $phone_units[$d][$ut] = (int)($row['total_units'] ?? 0);
         }
 
-        $stmtAudit = $db->prepare("SELECT report_date,
-                SUM(actual_setoran) AS actual_setoran,
-                SUM(selisih_setoran) AS selisih_setoran
+        $stmtAudit = $db->prepare("SELECT report_date, expected_setoran, actual_setoran, user_evidence
             FROM audit_rekap_manual
-            WHERE report_date LIKE :m
-            GROUP BY report_date");
+            WHERE report_date LIKE :m");
         $stmtAudit->execute([':m' => $filter_date . '%']);
         foreach ($stmtAudit->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $audit_net[$row['report_date']] = (int)($row['actual_setoran'] ?? 0);
-            $audit_selisih[$row['report_date']] = (int)($row['selisih_setoran'] ?? 0);
+            $d = $row['report_date'] ?? '';
+            if ($d === '') continue;
+            [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($row);
+            $audit_net[$d] = (int)($audit_net[$d] ?? 0) + (int)$manual_setoran;
+            $audit_selisih[$d] = (int)($audit_selisih[$d] ?? 0) + ((int)$manual_setoran - (int)$expected_adj_setoran);
         }
     }
 } catch (Exception $e) {
