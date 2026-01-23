@@ -15,6 +15,9 @@
     :local logoutTime [/system clock get time];
     :local logoutDate [/system clock get date];
     :local userId [/ip hotspot user find where name="$username"];
+    :if ([:len $userId] > 1) do={
+        :set userId [:pick $userId 0];
+    }
     :local userUptime "";
     :local currentComment "";
     :if ($username = "") do={
