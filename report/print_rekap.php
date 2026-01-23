@@ -1004,11 +1004,13 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
                                 <?php
                                     $ghost_parts = [];
-                                    if (($rep['ghost_10'] > 0) && empty($rep['unreported_10'])) {
-                                        $ghost_parts[] = number_format($rep['ghost_10'], 0, ',', '.') . ' Unit (10 Menit)';
+                                    $ghost_10_rem = max(0, (int)$rep['ghost_10'] - (int)($rep['unreported_10'] ?? 0));
+                                    $ghost_30_rem = max(0, (int)$rep['ghost_30'] - (int)($rep['unreported_30'] ?? 0));
+                                    if ($ghost_10_rem > 0) {
+                                        $ghost_parts[] = number_format($ghost_10_rem, 0, ',', '.') . ' Unit (10 Menit)';
                                     }
-                                    if (($rep['ghost_30'] > 0) && empty($rep['unreported_30'])) {
-                                        $ghost_parts[] = number_format($rep['ghost_30'], 0, ',', '.') . ' Unit (30 Menit)';
+                                    if ($ghost_30_rem > 0) {
+                                        $ghost_parts[] = number_format($ghost_30_rem, 0, ',', '.') . ' Unit (30 Menit)';
                                     }
                                 ?>
                                 <?php if (!empty($ghost_parts)): ?>
