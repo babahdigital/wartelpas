@@ -221,6 +221,7 @@ for ($m = 1; $m <= 12; $m++) {
         'audit_sum' => 0,
         'has_audit' => false,
         'qty' => 0,
+        'bandwidth' => 0,
         'days' => 0,
         'rs' => 0,
         'sp' => 0,
@@ -238,6 +239,7 @@ foreach ($daily as $date => $val) {
     $months[$mm]['gross'] += (int)($val['gross'] ?? 0);
     $months[$mm]['net'] += (int)($val['net'] ?? 0);
     $months[$mm]['qty'] += $qty;
+    $months[$mm]['bandwidth'] += isset($val['bytes_by_user']) ? array_sum($val['bytes_by_user']) : 0;
     if ($qty > 0 || (int)($val['gross'] ?? 0) > 0) $months[$mm]['days'] += 1;
 }
 
@@ -273,6 +275,7 @@ $total_sp = 0;
 $total_wr = 0;
 $total_km = 0;
 $total_avg_days = 0;
+$total_bandwidth = 0;
 $months_with_data = 0;
 
 $net_for_chart = [];
@@ -306,6 +309,7 @@ foreach ($months as $mm => &$mrow) {
     $total_wr += $wr_avg;
     $total_km += $km_avg;
     if ($mrow['days'] > 0) $total_avg_days += $avg;
+    $total_bandwidth += (int)($mrow['bandwidth'] ?? 0);
 
     $net_million = $net_audit > 0 ? ($net_audit / 1000000) : 0;
     $insiden = $mrow['rs'] + $mrow['sp'];
@@ -391,7 +395,7 @@ $print_time = date('d-m-Y H:i:s');
         </div>
         <div class="summary-card">
             <div class="summary-title">Total Bandwidth</div>
-            <div class="summary-value"><?= esc(format_bytes_short((int)(array_sum($net_for_chart) > 0 ? 0 : 0))) ?></div>
+            <div class="summary-value"><?= esc(format_bytes_short((int)$total_bandwidth)) ?></div>
         </div>
     </div>
 

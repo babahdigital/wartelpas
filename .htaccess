@@ -149,6 +149,9 @@ Require all denied
 <If "%{REQUEST_URI} =~ m#^/report/print_rekap_bulanan\.php$#">
     Require all granted
 </If>
+<If "%{REQUEST_URI} =~ m#^/report/print_rekap_tahunan\.php$#">
+    Require all granted
+</If>
 <If "%{REQUEST_URI} =~ m#^/report/print_audit\.php$#">
     Require all granted
 </If>
