@@ -473,7 +473,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         <div class="card">
             <div class="label">Total Voucher Laku</div>
             <div class="value"><?= number_format($total_qty_laku,0,',','.') ?></div>
-            <div class="small">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bytes: <?= htmlspecialchars(format_bytes_short($total_bandwidth)) ?></div>
+            <div class="small">Bandwith: <?= htmlspecialchars(format_bytes_short($total_bandwidth)) ?></div>
         </div>
         <div class="card">
             <div class="label">Voucher Rusak</div>
