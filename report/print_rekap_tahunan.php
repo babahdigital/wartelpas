@@ -570,6 +570,16 @@ function shareReport(){
         window.prompt('Salin link laporan:', window.location.href);
     }
 }
+
+function setUniquePrintTitle(){
+    var now = new Date();
+    var pad = function(n){ return String(n).padStart(2, '0'); };
+    var reportYear = <?= json_encode((string)$filter_year) ?> || String(now.getFullYear());
+    var timeLabel = pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
+    document.title = 'LaporanTahunan-' + reportYear + '-' + timeLabel;
+}
+
+window.addEventListener('beforeprint', setUniquePrintTitle);
 </script>
 </body>
 </html>

@@ -1124,8 +1124,16 @@ function shareReport(){
 function setUniquePrintTitle(){
     var now = new Date();
     var pad = function(n){ return String(n).padStart(2, '0'); };
-    var ts = now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate()) + '-' + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
-    document.title = 'laporan-harian-' + ts;
+    var dayNames = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+    var reportDateStr = <?= json_encode((string)$filter_date) ?>;
+    var dateParts = reportDateStr.split('-');
+    var reportDate = (dateParts.length === 3)
+        ? new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]))
+        : now;
+    var dayLabel = dayNames[reportDate.getDay()];
+    var dateLabel = pad(reportDate.getDate()) + '-' + pad(reportDate.getMonth() + 1) + '-' + reportDate.getFullYear();
+    var timeLabel = pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
+    document.title = 'LaporanHarian-' + dayLabel + '-' + dateLabel + '-' + timeLabel;
 }
 
 window.addEventListener('beforeprint', setUniquePrintTitle);

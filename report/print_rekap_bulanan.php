@@ -496,6 +496,19 @@ function shareReport(){
         window.prompt('Salin link laporan:', window.location.href);
     }
 }
+
+function setUniquePrintTitle(){
+    var now = new Date();
+    var pad = function(n){ return String(n).padStart(2, '0'); };
+    var reportYm = <?= json_encode((string)$filter_date) ?>;
+    var parts = reportYm.split('-');
+    var year = parts[0] || String(now.getFullYear());
+    var month = parts[1] || pad(now.getMonth() + 1);
+    var timeLabel = pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
+    document.title = 'LaporanBulanan-' + month + '-' + year + '-' + timeLabel;
+}
+
+window.addEventListener('beforeprint', setUniquePrintTitle);
 </script>
 </body>
 </html>
