@@ -412,7 +412,7 @@ $print_time = date('d-m-Y H:i:s');
 
     <table>
         <thead>
-            <tr style="background:#333;color:#fff;">
+            <tr style="background:#333;color:#000;">
                 <th rowspan="2" style="color:#000">Bulan</th>
                 <th colspan="3" style="color:#000">Keuangan</th>
                 <th colspan="2" style="color:#000">Produktivitas</th>
