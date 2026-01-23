@@ -665,16 +665,17 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $fallback_logout = $hist_check['logout_time_real'] ?? ($hist_check['last_login_real'] ?? '');
       $total_uptime_sec = get_cumulative_uptime_from_events($name, $first_login_real, $fallback_logout);
       $relogin_count = get_relogin_count_from_events($name, $first_login_real);
+      $first_login_ok = !empty($first_login_real);
     }
 
     if ($enforce_rusak_rules && ($act == 'invalid' || $act == 'retur' || $act == 'check_rusak')) {
       $total_uptime_ok = (!$is_active) && ($bytes <= $bytes_limit) && ($total_uptime_sec <= $uptime_limit);
-      $relogin_count_ok = (int)($relogin_count ?? 0) >= 1;
+      $relogin_count_ok = false;
       if (!($act == 'retur' && $is_rusak_target) && ($is_active || $bytes > $bytes_limit || $total_uptime_sec > $uptime_limit)) {
         $action_blocked = true;
         $action_error = 'Voucher masih valid, tidak bisa dianggap rusak (online / bytes > ' . $limits['bytes_label'] . ' / uptime > ' . $limits['uptime_label'] . ').';
       }
-      if ($action_blocked && $total_uptime_ok && $relogin_count_ok) {
+      if ($action_blocked && $total_uptime_ok && $first_login_ok) {
         $action_blocked = false;
         $action_error = '';
       }
@@ -686,7 +687,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         'offline' => !$is_active,
         'bytes_ok' => $bytes <= $bytes_limit,
         'total_uptime_ok' => $total_uptime_sec <= $uptime_limit,
-        'relogin_count_ok' => (int)($relogin_count ?? 0) >= 1
+        'first_login_ok' => !empty($first_login_real)
       ];
       if (ob_get_length()) {
         @ob_clean();
@@ -702,7 +703,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           'bytes' => $bytes_label,
           'uptime' => $uptime ?: '0s',
           'total_uptime' => seconds_to_uptime($total_uptime_sec),
-          'relogin_count' => (int)($relogin_count ?? 0)
+          'first_login' => $first_login_real ?: '-'
         ],
         'limits' => [
           'bytes' => $limits['bytes_label'] ?? '',
@@ -2577,7 +2578,7 @@ if ($debug_mode && !$is_ajax) {
         { label: `Offline (tidak sedang online)`, ok: !!criteria.offline, value: values.online || '-' },
         { label: `Bytes maksimal ${limits.bytes || '-'}`, ok: !!criteria.bytes_ok, value: values.bytes || '-' },
         { label: `Akumulasi uptime maksimal ${limits.uptime || '-'}`, ok: !!criteria.total_uptime_ok, value: values.total_uptime || '-' },
-        { label: `Relogin minimal 3x`, ok: !!criteria.relogin_count_ok, value: String(values.relogin_count ?? '-') }
+        { label: `Pernah login (first login ada)`, ok: !!criteria.first_login_ok, value: String(values.first_login ?? '-') }
       ];
       const rows = items.map(it => {
         const icon = it.ok ? 'fa-check-circle' : 'fa-times-circle';
@@ -2738,12 +2739,12 @@ if ($debug_mode && !$is_ajax) {
   function resolveRusakLimits(profile) {
     const p = (profile || '').toLowerCase();
     if (/(\b10\s*(menit|m)\b|10menit)/i.test(p)) {
-      return { uptime: 180, bytes: 1 * 1024 * 1024, uptimeLabel: '3 menit', bytesLabel: '1MB' };
+      return { uptime: 180, bytes: 5 * 1024 * 1024, uptimeLabel: '3 menit', bytesLabel: '5MB' };
     }
     if (/(\b30\s*(menit|m)\b|30menit)/i.test(p)) {
-      return { uptime: 300, bytes: 2 * 1024 * 1024, uptimeLabel: '5 menit', bytesLabel: '2MB' };
+      return { uptime: 300, bytes: 5 * 1024 * 1024, uptimeLabel: '5 menit', bytesLabel: '5MB' };
     }
-    return { uptime: 300, bytes: 2 * 1024 * 1024, uptimeLabel: '5 menit', bytesLabel: '2MB' };
+    return { uptime: 300, bytes: 5 * 1024 * 1024, uptimeLabel: '5 menit', bytesLabel: '5MB' };
   }
 
   function buildRusakDataFromElement(el) {
@@ -2763,14 +2764,13 @@ if ($debug_mode && !$is_ajax) {
     const dateBase = loginTime && loginTime !== '-' ? loginTime : (logoutTime && logoutTime !== '-' ? logoutTime : '');
     const headerDate = dateBase ? formatDateHeader(dateBase) : formatDateNow();
     const totalUptimeSec = uptimeSec;
-    const reloginCount = Number(el.getAttribute('data-relogin') || 0);
     const criteria = {
       offline,
       bytes_ok: bytes <= limits.bytes,
       total_uptime_ok: totalUptimeSec <= limits.uptime,
-      relogin_count_ok: reloginCount >= 3
+      first_login_ok: !!firstLogin
     };
-    const ok = criteria.offline && criteria.bytes_ok && criteria.total_uptime_ok && criteria.relogin_count_ok;
+    const ok = criteria.offline && criteria.bytes_ok && criteria.total_uptime_ok && criteria.first_login_ok;
     return {
       ok,
       message: ok ? 'Syarat rusak terpenuhi.' : 'Syarat rusak belum terpenuhi.',
@@ -2789,7 +2789,7 @@ if ($debug_mode && !$is_ajax) {
         bytes: formatBytesSimple(bytes),
         uptime,
         total_uptime: uptime,
-        relogin_count: reloginCount
+        first_login: firstLogin || '-'
       },
       limits: {
         bytes: limits.bytesLabel,
