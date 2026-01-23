@@ -1000,16 +1000,6 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             echo implode(' | ', $unrep_parts);
                                         ?>
                                     </li>
-                                    <li>
-                                        <span style="display:inline-block; min-width:16px; padding:0 4px; margin-right:4px; background:#fef3c7; border:1px solid #fcd34d; font-size:10px; text-align:center;">U</span>
-                                        <span style="color:#b45309; font-weight:bold;">Voucher Tidak Dilaporkan:</span>
-                                        <?php
-                                            $unrep_voucher_parts = [];
-                                            if (!empty($rep['unreported_10'])) $unrep_voucher_parts[] = number_format((int)$rep['unreported_10'],0,',','.') . ' Unit (10 Menit)';
-                                            if (!empty($rep['unreported_30'])) $unrep_voucher_parts[] = number_format((int)$rep['unreported_30'],0,',','.') . ' Unit (30 Menit)';
-                                            echo implode(' | ', $unrep_voucher_parts);
-                                        ?>
-                                    </li>
                                 <?php endif; ?>
 
                                 <?php
@@ -1024,7 +1014,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 <?php if (!empty($ghost_parts)): ?>
                                     <li>
                                         <span style="display:inline-block; min-width:16px; padding:0 4px; margin-right:4px; background:#fde68a; border:1px solid #f59e0b; font-size:10px; text-align:center;">V</span>
-                                        <span style="color:#b45309; font-weight:bold;">Voucher Tidak Dilaporkan:</span>
+                                        <span style="color:#b45309; font-weight:bold;">Voucher Tidak Dilaporkan (Auto):</span>
                                         <?= implode(' | ', $ghost_parts) ?>
                                     </li>
                                 <?php endif; ?>
