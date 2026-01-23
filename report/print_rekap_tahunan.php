@@ -495,17 +495,16 @@ $print_time = date('d-m-Y H:i:s');
             <div class="summary-value"><?= number_format((int)$avg_all,0,',','.') ?></div>
         </div>
         <div class="summary-card">
-            <div class="summary-title">Total Selisih Audit</div>
+            <div class="summary-title">Selisih Audit</div>
             <div class="summary-value" style="color:#c0392b;">
                 <?= $total_selisih >= 0 ? '+' : '' ?><?= $cur ?> <?= number_format((int)$total_selisih,0,',','.') ?>
             </div>
         </div>
         <div class="summary-card">
-            <div class="summary-title">Kerugian</div>
+            <div class="summary-title">Kerugian Sistem</div>
             <div class="summary-value" style="color:#c0392b;">
-                <?= $cur ?> <?= number_format((int)$total_kerugian,0,',','.') ?>
+                <?= $cur ?> <?= number_format((int)$total_voucher_loss,0,',','.') ?>
             </div>
-            <div style="font-size:11px;color:#666;">Voucher: <?= $cur ?> <?= number_format((int)$total_voucher_loss,0,',','.') ?> | Setoran: <?= $cur ?> <?= number_format((int)$total_setoran_loss,0,',','.') ?></div>
         </div>
         <div class="summary-card">
             <div class="summary-title">Total Insiden (RS+SP)</div>
