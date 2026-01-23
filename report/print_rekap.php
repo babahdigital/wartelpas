@@ -697,19 +697,25 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
                             $p10_qty = (int)($profile_qty['qty_10'] ?? 0);
                             $p30_qty = (int)($profile_qty['qty_30'] ?? 0);
+                            if ($p10_qty <= 0) $p10_qty = count($profile10['user'] ?? []);
+                            if ($p30_qty <= 0) $p30_qty = count($profile30['user'] ?? []);
                             $p10_tt = $p10_qty > 0 ? number_format($p10_qty,0,',','.') : '-';
                             $p30_tt = $p30_qty > 0 ? number_format($p30_qty,0,',','.') : '-';
                             $audit_total_profile_qty_10 += $p10_qty;
                             $audit_total_profile_qty_30 += $p30_qty;
+                            $price10 = 5000;
+                            $price30 = 20000;
+                            $p10_sum_calc = $profile10_sum > 0 ? $profile10_sum : ($p10_qty > 0 ? $p10_qty * $price10 : null);
+                            $p30_sum_calc = $profile30_sum > 0 ? $profile30_sum : ($p30_qty > 0 ? $p30_qty * $price30 : null);
                             
                             // Capture data for summary
                             $audit_summary_report[] = [
                                 'blok' => $ar['blok_name'] ?? '-',
                                 'selisih_setoran' => (int)($ar['selisih_setoran'] ?? 0),
                                 'p10_qty' => $p10_qty,
-                                'p10_sum' => $profile10_sum > 0 ? $profile10_sum : null,
+                                'p10_sum' => $p10_sum_calc,
                                 'p30_qty' => $p30_qty,
-                                'p30_sum' => $profile30_sum > 0 ? $profile30_sum : null
+                                'p30_sum' => $p30_sum_calc
                             ];
                         ?>
                         <tr>
