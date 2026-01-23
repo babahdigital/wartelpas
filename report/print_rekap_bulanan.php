@@ -339,7 +339,7 @@ $print_time = date('d-m-Y H:i:s');
 
     <table>
         <thead>
-            <tr style="background:#333;color:#fff;">
+            <tr style="background:#333;color:#000;">
                 <th rowspan="2" style="color: #000;">Tgl</th>
                 <th colspan="2" style="color: #000;">Keuangan</th>
                 <th colspan="2" style="color: #000;">Voucher</th>
