@@ -673,10 +673,10 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <th colspan="4">Profil 30 Menit</th>
                     </tr>
                     <tr>
-                        <th style="width:70px;">DB</th>
+                        <th style="width:70px;">QTY</th>
                         <th style="width:70px;">Lapangan</th>
                         <th style="width:70px;">Selisih</th>
-                        <th style="width:90px;">DB</th>
+                        <th style="width:90px;">QTY</th>
                         <th style="width:90px;">Lapangan</th>
                         <th style="width:80px;">Selisih</th>
                         <th style="width:90px;">User</th>
