@@ -70,6 +70,7 @@ function month_label_id($mm) {
 
 $rows = [];
 $daily = [];
+$audit_dates_in_daily = [];
 $phone = [];
 $phone_units = [];
 $audit_net = [];
@@ -218,7 +219,7 @@ for ($m = 1; $m <= 12; $m++) {
     $months[$mm] = [
         'gross' => 0,
         'net' => 0,
-        'audit_sum' => 0,
+        'net_audit' => 0,
         'has_audit' => false,
         'qty' => 0,
         'bandwidth' => 0,
@@ -238,15 +239,22 @@ foreach ($daily as $date => $val) {
     $qty = count($val['laku_users'] ?? []);
     $months[$mm]['gross'] += (int)($val['gross'] ?? 0);
     $months[$mm]['net'] += (int)($val['net'] ?? 0);
+    $day_audit = isset($audit_net[$date]) ? (int)$audit_net[$date] : (int)($val['net'] ?? 0);
+    $months[$mm]['net_audit'] += $day_audit;
+    if (isset($audit_net[$date])) {
+        $months[$mm]['has_audit'] = true;
+        $audit_dates_in_daily[$date] = true;
+    }
     $months[$mm]['qty'] += $qty;
     $months[$mm]['bandwidth'] += isset($val['bytes_by_user']) ? array_sum($val['bytes_by_user']) : 0;
     if ($qty > 0 || (int)($val['gross'] ?? 0) > 0) $months[$mm]['days'] += 1;
 }
 
 foreach ($audit_net as $date => $val) {
+    if (isset($audit_dates_in_daily[$date])) continue;
     $mm = substr($date, 5, 2);
     if (!isset($months[$mm])) continue;
-    $months[$mm]['audit_sum'] += (int)$val;
+    $months[$mm]['net_audit'] += (int)$val;
     $months[$mm]['has_audit'] = true;
 }
 
@@ -285,7 +293,7 @@ $max_net = 0;
 $max_insiden = 0;
 
 foreach ($months as $mm => &$mrow) {
-    $net_audit = $mrow['has_audit'] ? $mrow['audit_sum'] : $mrow['net'];
+    $net_audit = $mrow['has_audit'] ? $mrow['net_audit'] : $mrow['net'];
     $selisih = $net_audit - $mrow['net'];
     $avg = $mrow['days'] > 0 ? round($mrow['qty'] / $mrow['days']) : 0;
     $wr_avg = $mrow['phone_days'] > 0 ? round($mrow['wr_sum'] / $mrow['phone_days']) : 0;
