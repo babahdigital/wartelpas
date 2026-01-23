@@ -74,7 +74,7 @@ function detect_profile_minutes($profile) {
 
 function format_bytes_short($bytes) {
     $b = (float)$bytes;
-    if ($b <= 0) return '0 B';
+    if ($b <= 0) return '-';
     $units = ['B', 'KB', 'MB', 'GB', 'TB'];
     $i = 0;
     while ($b >= 1024 && $i < count($units) - 1) {
@@ -99,7 +99,7 @@ function generate_nested_table($items, $align = 'left') {
     foreach ($items as $i => $val) {
         // Berikan border bottom kecuali item terakhir
         $border = ($i < $count - 1) ? 'border-bottom:1px solid #999;' : ''; 
-        $html .= '<tr><td style="border:none; padding:4px 2px; '.$border.' text-align:'.$align.'; vertical-align:middle; line-height:1.2; word-wrap:break-word;">'.htmlspecialchars($val).'</td></tr>';
+        $html .= '<tr><td style="border:none; padding:4px 2px; '.$border.' text-align: center; vertical-align:middle; line-height:1.2; word-wrap:break-word;">'.htmlspecialchars($val).'</td></tr>';
     }
     $html .= '</table>';
     return $html;
