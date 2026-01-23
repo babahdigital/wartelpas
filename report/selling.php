@@ -1364,6 +1364,17 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         $audit_rows = [];
     }
 }
+if ($req_show !== 'harian' && isset($db) && $db instanceof PDO) {
+    try {
+        $stmtAudit = $db->prepare("SELECT expected_setoran, actual_setoran, user_evidence FROM audit_rekap_manual WHERE report_date LIKE :p");
+        $stmtAudit->execute([':p' => $filter_date . '%']);
+        foreach ($stmtAudit->fetchAll(PDO::FETCH_ASSOC) as $ar) {
+            [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($ar);
+            $audit_selisih_setoran_adj_total += (int)$manual_setoran - (int)$expected_adj_setoran;
+        }
+    } catch (Exception $e) {
+    }
+}
 
 if (empty($list) && $last_available_date !== '' && $filter_date !== $last_available_date) {
     $no_sales_message = 'Tidak ada data untuk tanggal ini. Data terakhir: ' . $last_available_date . '.';
