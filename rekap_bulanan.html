@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rekap Laporan Penjualan - Bulanan & Tahunan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Styling khusus untuk cetak agar sesuai dengan kertas A4 */
+        @media print {
+            @page { size: A4 landscape; margin: 10mm; }
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 10pt; }
+            .no-print { display: none !important; }
+            .page-break { page-break-before: always; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #000 !important; padding: 4px; }
+            /* Memastikan header tabel berulang di halaman baru jika tabel panjang */
+            thead { display: table-header-group; }
+        }
+        
+        /* Utility Custom */
+        .currency { text-align: right; white-space: nowrap; }
+        .center-text { text-align: center; }
+        .bg-header { background-color: #f3f4f6; font-weight: bold; text-transform: uppercase; font-size: 0.75rem; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 p-4 min-h-screen font-sans">
+
+    <!-- Kontrol Navigasi (Tidak tercetak) -->
+    <div class="max-w-7xl mx-auto mb-6 no-print flex justify-between items-center bg-white p-4 rounded-lg shadow">
+        <div>
+            <h1 class="text-xl font-bold text-gray-700">Sistem Rekapitulasi Laporan</h1>
+            <p class="text-sm text-gray-500">Pilih jenis laporan untuk ditampilkan</p>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="showTab('bulanan')" id="btn-bulanan" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium transition shadow">
+                <i class="fas fa-calendar-alt mr-2"></i>Rekap Bulanan
+            </button>
+            <button onclick="showTab('tahunan')" id="btn-tahunan" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-medium transition">
+                <i class="fas fa-calendar mr-2"></i>Rekap Tahunan
+            </button>
+            <button onclick="window.print()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-medium transition shadow ml-4">
+                <i class="fas fa-print mr-2"></i>Cetak PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- ========================================= -->
+    <!-- BAGIAN 1: REKAP BULANAN -->
+    <!-- Konsep: Baris adalah TANGGAL, Kolom adalah Agregasi Blok -->
+    <!-- ========================================= -->
+    <div id="view-bulanan" class="max-w-7xl mx-auto bg-white p-8 rounded shadow-lg print:shadow-none print:p-0">
+        
+        <!-- Header Laporan -->
+        <div class="border-b-2 border-gray-800 pb-4 mb-4">
+            <div class="flex justify-between items-end">
+                <div>
+                    <h2 class="text-2xl font-bold uppercase tracking-wide">Rekap Laporan Penjualan (Bulanan)</h2>
+                    <p class="text-sm mt-1">Periode: <span class="font-bold">Januari 2026</span> | Dicetak: <span id="print-date"></span></p>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs text-gray-500">Total Pendapatan Bersih</div>
+                    <div class="text-xl font-bold text-green-700">Rp 96.450.000</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ringkasan Atas (Sesuai gaya PDF Harian tapi akumulasi) -->
+        <div class="grid grid-cols-4 gap-4 mb-6 text-sm border p-4 bg-gray-50 rounded print:border-gray-300">
+            <div>
+                <span class="block text-gray-500 text-xs uppercase">Total Voucher Terjual</span>
+                <span class="font-bold text-lg">14.500</span>
+            </div>
+            <div>
+                <span class="block text-gray-500 text-xs uppercase">Total Bandwidth</span>
+                <span class="font-bold text-lg">1.4 TB</span>
+            </div>
+            <div>
+                <span class="block text-gray-500 text-xs uppercase">Insiden (Rusak/Spam)</span>
+                <span class="font-bold text-lg text-red-600">45 / 12</span>
+            </div>
+            <div>
+                <span class="block text-gray-500 text-xs uppercase">Total Device (WR/KM)</span>
+                <span class="font-bold text-lg">450 / 320</span>
+            </div>
+        </div>
+
+        <!-- Tabel Utama Bulanan -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm border border-gray-300">
+                <thead>
+                    <tr class="bg-gray-800 text-white text-center">
+                        <th rowspan="2" class="p-2 w-12 border border-gray-600">Tgl</th>
+                        <th colspan="2" class="p-2 border border-gray-600">Keuangan</th>
+                        <th colspan="2" class="p-2 border border-gray-600">Voucher</th>
+                        <th colspan="5" class="p-2 border border-gray-600">Rincian Device & Status</th>
+                        <th rowspan="2" class="p-2 border border-gray-600">Bandwidth</th>
+                    </tr>
+                    <tr class="bg-gray-100 text-gray-800 text-xs uppercase text-center font-bold">
+                        <th class="p-2 border">Gross System</th>
+                        <th class="p-2 border">Net Audit</th> <!-- Mengacu pada 'Net Audit' di PDF -->
+                        <th class="p-2 border">Qty</th>
+                        <th class="p-2 border">Rusak</th>
+                        <th class="p-2 border bg-yellow-50">RS</th> <!-- Rusak -->
+                        <th class="p-2 border bg-yellow-50">SP</th> <!-- Spam -->
+                        <th class="p-2 border bg-blue-50">WR</th> <!-- Wartel -->
+                        <th class="p-2 border bg-blue-50">KM</th> <!-- Kamtib -->
+                        <th class="p-2 border bg-green-50">HP Aktif</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Contoh Data Baris 1: Diambil dari PDF Harian Tanggal 20 -->
+                    <tr class="hover:bg-gray-50 text-center">
+                        <td class="p-2 border font-bold">20</td>
+                        <td class="p-2 border currency text-gray-600">2.925.000</td>
+                        <td class="p-2 border currency font-bold text-black">2.925.000</td>
+                        <td class="p-2 border">441</td>
+                        <td class="p-2 border text-red-500">0</td>
+                        <td class="p-2 border">1</td> <!-- RS -->
+                        <td class="p-2 border">2</td> <!-- SP -->
+                        <td class="p-2 border">8</td> <!-- WR -->
+                        <td class="p-2 border">0</td> <!-- KM -->
+                        <td class="p-2 border font-bold">5</td> <!-- HP Aktif -->
+                        <td class="p-2 border text-xs">42.5 GB</td>
+                    </tr>
+                    
+                    <!-- Contoh Data Baris 2: Diambil dari PDF Harian Tanggal 23 -->
+                    <tr class="hover:bg-gray-50 text-center">
+                        <td class="p-2 border font-bold">23</td>
+                        <td class="p-2 border currency text-gray-600">3.310.000</td>
+                        <td class="p-2 border currency font-bold text-black">3.205.000</td> <!-- Ada selisih audit di PDF -->
+                        <td class="p-2 border">470</td>
+                        <td class="p-2 border text-red-500">3</td>
+                        <td class="p-2 border">3</td> <!-- RS -->
+                        <td class="p-2 border">0</td> <!-- SP -->
+                        <td class="p-2 border">19</td> <!-- WR -->
+                        <td class="p-2 border">17</td> <!-- KM -->
+                        <td class="p-2 border font-bold">36</td>
+                        <td class="p-2 border text-xs">49.6 GB</td>
+                    </tr>
+
+                    <!-- Filler Rows untuk ilustrasi -->
+                    <tr class="hover:bg-gray-50 text-center text-gray-400 italic">
+                        <td class="p-2 border">...</td>
+                        <td class="p-2 border">...</td>
+                        <td class="p-2 border">...</td>
+                        <td class="p-2 border">...</td>
+                        <td class="p-2 border">...</td>
+                        <td class="p-2 border">...</td>
+                        <td class="p-2 border">...</td>
+                        <td class="p-2 border">...</td>
+                        <td class="p-2 border">...</td>
+                        <td class="p-2 border">...</td>
+                        <td class="p-2 border">...</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr class="bg-gray-800 text-white font-bold text-center text-sm">
+                        <td class="p-2 border">TOTAL</td>
+                        <td class="p-2 border currency">98.500.000</td>
+                        <td class="p-2 border currency">96.450.000</td>
+                        <td class="p-2 border">14.500</td>
+                        <td class="p-2 border text-red-300">45</td>
+                        <td class="p-2 border">45</td>
+                        <td class="p-2 border">12</td>
+                        <td class="p-2 border">450</td>
+                        <td class="p-2 border">320</td>
+                        <td class="p-2 border">850</td>
+                        <td class="p-2 border">1.4 TB</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        
+        <!-- Keterangan Kaki (Penting sesuai PDF) -->
+        <div class="mt-4 text-xs text-gray-500 italic">
+            <p><strong>Keterangan Kode:</strong> RS = Rusak, SP = Spam, WR = Wartel, KM = Kamtib.</p>
+            <p>Catatan: Data rekap bulanan ini adalah agregasi dari laporan harian. Selisih audit telah diperhitungkan dalam kolom Net Audit.</p>
+        </div>
+    </div>
+
+
+    <!-- ========================================= -->
+    <!-- BAGIAN 2: REKAP TAHUNAN -->
+    <!-- Konsep: Baris adalah BULAN, Kolom adalah Agregasi Bulanan -->
+    <!-- ========================================= -->
+    <div id="view-tahunan" class="hidden max-w-7xl mx-auto bg-white p-8 rounded shadow-lg print:shadow-none print:p-0 print:block print:break-before-page">
+        
+        <!-- Header Laporan -->
+        <div class="border-b-2 border-gray-800 pb-4 mb-4">
+            <div class="flex justify-between items-end">
+                <div>
+                    <h2 class="text-2xl font-bold uppercase tracking-wide">Rekap Laporan Penjualan (Tahunan)</h2>
+                    <p class="text-sm mt-1">Tahun: <span class="font-bold">2026</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabel Utama Tahunan -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm border border-gray-300">
+                <thead>
+                    <tr class="bg-gray-800 text-white text-center">
+                        <th class="p-3 border border-gray-600 w-32">Bulan</th>
+                        <th class="p-3 border border-gray-600">Total Transaksi (Qty)</th>
+                        <th class="p-3 border border-gray-600">Rata-rata/Hari</th>
+                        <th class="p-3 border border-gray-600">Pendapatan Kotor</th>
+                        <th class="p-3 border border-gray-600">Pendapatan Bersih</th>
+                        <th class="p-3 border border-gray-600 bg-red-900">Total Selisih Audit</th>
+                        <th class="p-3 border border-gray-600">Total Voucher Rusak</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Januari -->
+                    <tr class="hover:bg-gray-50 text-center">
+                        <td class="p-3 border font-bold text-left">Januari</td>
+                        <td class="p-3 border">14.500</td>
+                        <td class="p-3 border text-gray-500 text-xs">467/hari</td>
+                        <td class="p-3 border currency text-gray-600">98.500.000</td>
+                        <td class="p-3 border currency font-bold text-black">96.450.000</td>
+                        <td class="p-3 border text-red-600 font-bold">-2.050.000</td>
+                        <td class="p-3 border">45</td>
+                    </tr>
+                    <!-- Februari -->
+                    <tr class="hover:bg-gray-50 text-center">
+                        <td class="p-3 border font-bold text-left">Februari</td>
+                        <td class="p-3 border">-</td>
+                        <td class="p-3 border text-gray-500 text-xs">-</td>
+                        <td class="p-3 border currency text-gray-600">-</td>
+                        <td class="p-3 border currency font-bold text-black">-</td>
+                        <td class="p-3 border text-red-600 font-bold">-</td>
+                        <td class="p-3 border">-</td>
+                    </tr>
+                    <!-- ... -->
+                </tbody>
+                <tfoot>
+                    <tr class="bg-gray-800 text-white font-bold text-center">
+                        <td class="p-3 border text-left">GRAND TOTAL 2026</td>
+                        <td class="p-3 border">14.500</td>
+                        <td class="p-3 border">-</td>
+                        <td class="p-3 border currency">98.500.000</td>
+                        <td class="p-3 border currency">96.450.000</td>
+                        <td class="p-3 border text-red-300">-2.050.000</td>
+                        <td class="p-3 border">45</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        
+        <!-- Grafik Sederhana (Optional - menggunakan CSS bar) -->
+        <div class="mt-8 border p-4 rounded bg-gray-50 break-inside-avoid">
+            <h3 class="font-bold mb-4 text-sm uppercase border-b pb-2">Performa Bulanan</h3>
+            <div class="flex items-end h-40 gap-2">
+                <!-- Bar Januari -->
+                <div class="w-16 bg-blue-600 rounded-t text-center text-white text-xs relative group h-full">
+                    <span class="absolute bottom-1 w-full text-center">Jan</span>
+                    <div class="absolute -top-6 w-full text-black font-bold">96jt</div>
+                </div>
+                <!-- Bar Placeholder -->
+                <div class="w-16 bg-gray-200 rounded-t h-1"></div>
+                <div class="w-16 bg-gray-200 rounded-t h-1"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Script Sederhana untuk Tab Switching
+        function showTab(tabName) {
+            // Sembunyikan semua
+            document.getElementById('view-bulanan').classList.add('hidden');
+            document.getElementById('view-tahunan').classList.add('hidden');
+            
+            // Reset Button Styles
+            document.getElementById('btn-bulanan').classList.remove('bg-blue-600', 'text-white');
+            document.getElementById('btn-bulanan').classList.add('bg-gray-200', 'text-gray-700');
+            
+            document.getElementById('btn-tahunan').classList.remove('bg-blue-600', 'text-white');
+            document.getElementById('btn-tahunan').classList.add('bg-gray-200', 'text-gray-700');
+
+            // Tampilkan yang dipilih
+            if(tabName === 'bulanan') {
+                document.getElementById('view-bulanan').classList.remove('hidden');
+                document.getElementById('btn-bulanan').classList.add('bg-blue-600', 'text-white');
+                document.getElementById('btn-bulanan').classList.remove('bg-gray-200', 'text-gray-700');
+            } else {
+                document.getElementById('view-tahunan').classList.remove('hidden');
+                document.getElementById('btn-tahunan').classList.add('bg-blue-600', 'text-white');
+                document.getElementById('btn-tahunan').classList.remove('bg-gray-200', 'text-gray-700');
+            }
+        }
+
+        // Set tanggal cetak otomatis
+        const now = new Date();
+        document.getElementById('print-date').innerText = now.toLocaleString('id-ID');
+    </script>
+</body>
+</html>
