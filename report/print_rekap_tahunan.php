@@ -402,10 +402,10 @@ $print_time = date('d-m-Y H:i:s');
     <table>
         <thead>
             <tr style="background:#333;color:#fff;">
-                <th rowspan="2">Bulan</th>
-                <th colspan="3">Keuangan</th>
-                <th colspan="2">Produktivitas</th>
-                <th colspan="4">Kesehatan Operasional</th>
+                <th rowspan="2" style="color:#000">Bulan</th>
+                <th colspan="3" style="color:#000">Keuangan</th>
+                <th colspan="2" style="color:#000">Produktivitas</th>
+                <th colspan="4" style="color:#000">Kesehatan Operasional</th>
             </tr>
             <tr>
                 <th>Gross System</th>
@@ -459,38 +459,6 @@ $print_time = date('d-m-Y H:i:s');
         </tfoot>
     </table>
 
-    <div class="chart-grid">
-        <div class="chart-box">
-            <div class="chart-title">Tren Pendapatan Bersih (Juta Rp)</div>
-            <div class="bar-wrap">
-                <?php foreach ($net_for_chart as $mm => $val): ?>
-                    <?php
-                        $height = $max_net > 0 ? max(2, round(($val / $max_net) * 100)) : 2;
-                        $label = substr(month_label_id($mm), 0, 3);
-                    ?>
-                    <div class="bar" style="height:<?= (int)$height ?>%;">
-                        <div class="bar-value"><?= $val > 0 ? number_format($val,1,',','.') : '-' ?></div>
-                        <div class="bar-label"><?= esc($label) ?></div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-        <div class="chart-box">
-            <div class="chart-title">Tren Insiden (RS+SP)</div>
-            <div class="bar-wrap">
-                <?php foreach ($insiden_for_chart as $mm => $val): ?>
-                    <?php
-                        $height = $max_insiden > 0 ? max(2, round(($val / $max_insiden) * 100)) : 2;
-                        $label = substr(month_label_id($mm), 0, 3);
-                    ?>
-                    <div class="bar bar-red" style="height:<?= (int)$height ?>%;">
-                        <div class="bar-value"><?= $val > 0 ? number_format($val,0,',','.') : '-' ?></div>
-                        <div class="bar-label"><?= esc($label) ?></div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-    </div>
 
     <div class="footnote">
         <strong>Keterangan:</strong> RS = Rusak, SP = Spam, WR = Wartel, KM = Kamtib. Net Audit menggunakan data audit manual jika ada, jika tidak memakai net system.
