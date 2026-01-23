@@ -105,7 +105,6 @@ function generate_nested_table($items, $align = 'left') {
 }
 
 // Helper khusus untuk username audit (warna rusak/normal)
-// PERBAIKAN: Menangani warna kuning yang muncul pada data kosong (-)
 function generate_nested_table_user($items, $align = 'left') {
     if (empty($items)) return '-';
     $html = '<table style="width:100%; border-collapse:collapse; margin:0; padding:0; background:transparent;">';
@@ -116,14 +115,14 @@ function generate_nested_table_user($items, $align = 'left') {
         
         // Logika Warna:
         // Merah = Rusak
-        // Kuning = Tidak Terlapor (Default evidence)
+        // Kuning = Tidak Terlapor (Default evidence tapi tidak rusak)
         // Transparan = Jika labelnya "-" atau kosong
         if ($label === '-' || trim($label) === '') {
             $bg = 'transparent';
         } elseif ($status === 'rusak') {
             $bg = '#fecaca'; // Merah
         } else {
-            $bg = '#fef3c7'; // Kuning (Tidak Terlapor)
+            $bg = '#fef3c7'; // Kuning
         }
 
         $border = ($i < $count - 1) ? 'border-bottom:1px solid #999;' : '';
@@ -680,6 +679,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $profile30 = ['user' => [], 'up' => [], 'byte' => [], 'login' => [], 'total' => []];
                             $profile10_sum = 0;
                             $profile30_sum = 0;
+                            $cnt_rusak_10 = 0;
+                            $cnt_rusak_30 = 0;
+
                             if (!empty($ar['user_evidence'])) {
                                 $evidence = json_decode((string)$ar['user_evidence'], true);
                                 if (is_array($evidence)) {
@@ -706,9 +708,11 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             if ($kind === '30') {
                                                 $profile30_sum += $price_val;
                                                 $profile30 = $bucket;
+                                                if($u_status === 'rusak') $cnt_rusak_30++;
                                             } else {
                                                 $profile10_sum += $price_val;
                                                 $profile10 = $bucket;
+                                                if($u_status === 'rusak') $cnt_rusak_10++;
                                             }
                                         }
                                     } else {
@@ -756,7 +760,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 'p10_qty' => $p10_qty,
                                 'p10_sum' => $p10_sum_calc,
                                 'p30_qty' => $p30_qty,
-                                'p30_sum' => $p30_sum_calc
+                                'p30_sum' => $p30_sum_calc,
+                                'rusak_10' => $cnt_rusak_10,
+                                'rusak_30' => $cnt_rusak_30
                             ];
                         ?>
                         <tr>
@@ -791,19 +797,24 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                 </tbody>
             </table>
 
+            <div style="margin-top: 10px; font-size: 11px; display: flex; gap: 15px;">
+                <div style="display:flex; align-items:center;">
+                    <span style="display:inline-block; width:15px; height:15px; background:#fef3c7; border:1px solid #ccc; margin-right:5px;"></span> User yang Tidak Dilaporkan
+                </div>
+                <div style="display:flex; align-items:center;">
+                    <span style="display:inline-block; width:15px; height:15px; background:#fecaca; border:1px solid #ccc; margin-right:5px;"></span> Voucer Rusak
+                </div>
+            </div>
+
             <div class="audit-summary-box">
                 <div class="audit-summary-header">Kesimpulan Audit Harian</div>
                 <div style="font-size:11px; color:#444; margin-bottom:6px;">
-                    <strong>Status Voucher Global:</strong><br>
-                    <span style="display:inline-block; margin-left:10px;">- Voucher Rusak: <b><?= number_format((int)$total_qty_rusak,0,',','.') ?></b></span><br>
-                    <?php if($rusak_10m > 0): ?>
-                        <span style="display:inline-block; margin-left:25px; color:#d32f2f;">&bull; 10 Menit: <?= number_format($rusak_10m,0,',','.') ?> Pcs</span><br>
-                    <?php endif; ?>
-                    <?php if($rusak_30m > 0): ?>
-                        <span style="display:inline-block; margin-left:25px; color:#d32f2f;">&bull; 30 Menit: <?= number_format($rusak_30m,0,',','.') ?> Pcs</span><br>
-                    <?php endif; ?>
-                    <span style="display:inline-block; margin-left:10px;">- Retur: <?= number_format((int)$total_qty_retur,0,',','.') ?></span><br>
-                    <span style="display:inline-block; margin-left:10px;">- Invalid: <?= number_format((int)$total_qty_invalid,0,',','.') ?></span>
+                    Status Voucher Global:
+                    <ul style="margin:0; padding-left:15px;">
+                        <li>Voucher Rusak: <?= number_format((int)$total_qty_rusak,0,',','.') ?></li>
+                        <li>Retur: <?= number_format((int)$total_qty_retur,0,',','.') ?></li>
+                        <li>Invalid: <?= number_format((int)$total_qty_invalid,0,',','.') ?></li>
+                    </ul>
                 </div>
                 
                 <hr style="border:0; border-top:1px dashed #ccc; margin:8px 0;">
@@ -828,6 +839,18 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 
                                 <?php if ($rep['p30_qty'] > 0): ?>
                                     <li>Profile 30 Menit: <?= $rep['p30_qty'] ?> Voucher / Rp <?= $rep['p30_sum'] !== null ? number_format($rep['p30_sum'], 0, ',', '.') : '-' ?></li>
+                                <?php endif; ?>
+
+                                <?php if ($rep['rusak_10'] > 0 || $rep['rusak_30'] > 0): ?>
+                                    <li>
+                                        <span style="color:red; font-weight:bold;">Voucher Rusak:</span> 
+                                        <?php 
+                                            $rusak_parts = [];
+                                            if($rep['rusak_10'] > 0) $rusak_parts[] = $rep['rusak_10'] . ' (10 Menit)';
+                                            if($rep['rusak_30'] > 0) $rusak_parts[] = $rep['rusak_30'] . ' (30 Menit)';
+                                            echo implode(', ', $rusak_parts);
+                                        ?>
+                                    </li>
                                 <?php endif; ?>
 
                                 <?php if ($rep['p10_qty'] == 0 && $rep['p30_qty'] == 0): ?>
