@@ -237,8 +237,8 @@ $total_rusak_device = 0;
 
 $rows_out = [];
 foreach ($all_dates as $date) {
-    $gross = (int)($daily[$date]['gross'] ?? 0);
     $net = (int)($daily[$date]['net'] ?? 0);
+    $gross = $net;
     $audit = $audit_net[$date] ?? null;
     $net_audit = $audit !== null ? (int)$audit : $net;
 
@@ -347,7 +347,7 @@ $print_time = date('d-m-Y H:i:s');
                 <th rowspan="2" style="color: #000;">Bandwidth</th>
             </tr>
             <tr>
-                <th>Gross System</th>
+                <th>Net System</th>
                 <th>Net Audit</th>
                 <th>Qty</th>
                 <th>Rusak</th>

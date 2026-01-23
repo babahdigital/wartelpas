@@ -242,8 +242,8 @@ foreach ($daily as $date => $val) {
     $mm = substr($date, 5, 2);
     if (!isset($months[$mm])) continue;
     $qty = count($val['laku_users'] ?? []);
-    $months[$mm]['gross'] += (int)($val['gross'] ?? 0);
     $months[$mm]['net'] += (int)($val['net'] ?? 0);
+    $months[$mm]['gross'] += (int)($val['net'] ?? 0);
     $has_audit_day = isset($audit_net[$date]);
     $day_audit = $has_audit_day ? (int)$audit_net[$date] : (int)($val['net'] ?? 0);
     $months[$mm]['net_audit'] += $day_audit;
@@ -427,7 +427,7 @@ $print_time = date('d-m-Y H:i:s');
                 <th colspan="4" style="color:#000">Kesehatan Operasional</th>
             </tr>
             <tr>
-                <th>Gross System</th>
+                <th>Net System</th>
                 <th>Net Audit</th>
                 <th>Selisih</th>
                 <th>Total Qty</th>
