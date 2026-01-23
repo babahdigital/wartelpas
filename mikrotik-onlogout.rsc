@@ -15,8 +15,8 @@
     :local logoutTime [/system clock get time];
     :local logoutDate [/system clock get date];
     :local userId [/ip hotspot user find where name="$username"];
-    :if ([:len $userId] > 1) do={
-        :set userId [:pick $userId 0];
+    :if ([:len $userId] > 0) do={
+        :set userId ($userId->0);
     }
     :local userUptime "";
     :local currentComment "";
@@ -45,51 +45,55 @@
     
     # Extract Blok info dari comment (preserve)
     :local blokInfo "";
-    :local commentLen [:len $cleanComment];
-    
-    # Cari "Blok-" atau "| Blok-" dalam comment
-    :if ($commentLen > 4) do={
-        :for i from=0 to=($commentLen - 5) do={
-            :local substr [:pick $cleanComment $i ($i + 5)];
-            :if ($substr = "Blok-" or $substr = "blok-") do={
-                # Extract sampai spasi atau karakter khusus
-                :local endPos $i;
-                :for j from=$i to=($commentLen - 1) do={
-                    :local char [:pick $cleanComment $j ($j + 1)];
-                    :if ($char = " " or $char = ")" or $char = "-" or $char = "|") do={
-                        :local nextOk false;
-                        :if ($char = "-") do={
-                            :if ([:len $currentComment] > ($j + 1)) do={
-                                :if ([:pick $currentComment ($j + 1) ($j + 2)] != " ") do={
-                                    :set nextOk true;
+    :do {
+        :local commentLen [:len $cleanComment];
+        
+        # Cari "Blok-" atau "| Blok-" dalam comment
+        :if ($commentLen > 4) do={
+            :for i from=0 to=($commentLen - 5) do={
+                :local substr [:pick $cleanComment $i ($i + 5)];
+                :if ($substr = "Blok-" or $substr = "blok-") do={
+                    # Extract sampai spasi atau karakter khusus
+                    :local endPos $i;
+                    :for j from=$i to=($commentLen - 1) do={
+                        :local char [:pick $cleanComment $j ($j + 1)];
+                        :if ($char = " " or $char = ")" or $char = "-" or $char = "|") do={
+                            :local nextOk false;
+                            :if ($char = "-") do={
+                                :if ([:len $currentComment] > ($j + 1)) do={
+                                    :if ([:pick $currentComment ($j + 1) ($j + 2)] != " ") do={
+                                        :set nextOk true;
+                                    }
                                 }
                             }
-                        }
-                        :if ($nextOk = true) do={
-                            # Ini masih bagian dari Blok-A10, lanjut
-                        } else={
-                            :set endPos $j;
-                            :set j $commentLen;
+                            :if ($nextOk = true) do={
+                                # Ini masih bagian dari Blok-A10, lanjut
+                            } else={
+                                :set endPos $j;
+                                :set j $commentLen;
+                            }
                         }
                     }
+                    :set blokInfo [:pick $cleanComment $i $endPos];
+                    :set i $commentLen;
                 }
-                :set blokInfo [:pick $cleanComment $i $endPos];
-                :set i $commentLen;
             }
         }
-    }
-    
-    # Jika Blok tidak ditemukan, coba cari format "| Blok-"
-    :if ([:len $blokInfo] = 0) do={
-        :local pipePos [:find $cleanComment "| Blok-"];
-        :if ([:typeof $pipePos] != "nil") do={
-            :local startPos ($pipePos + 2);
-            :local endPos [:find $cleanComment " " $startPos];
-            :if ([:typeof $endPos] = "nil") do={
-                :set endPos $commentLen;
+        
+        # Jika Blok tidak ditemukan, coba cari format "| Blok-"
+        :if ([:len $blokInfo] = 0) do={
+            :local pipePos [:find $cleanComment "| Blok-"];
+            :if ([:typeof $pipePos] != "nil") do={
+                :local startPos ($pipePos + 2);
+                :local endPos [:find $cleanComment " " $startPos];
+                :if ([:typeof $endPos] = "nil") do={
+                    :set endPos $commentLen;
+                }
+                :set blokInfo [:pick $cleanComment $startPos $endPos];
             }
-            :set blokInfo [:pick $cleanComment $startPos $endPos];
         }
+    } on-error={
+        :set blokInfo "";
     }
     
     # Build new comment tanpa ubah tanggal (ambil tanggal lama jika ada)
