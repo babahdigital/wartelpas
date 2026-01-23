@@ -597,7 +597,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                 </tr>
             </tbody>
         </table>
-        
+
         <div style="margin-top:8px; font-size:11px; color:#444;">
             Keterangan: RS = Rusak, RT = Retur, SP = Spam, WR = Wartel, KM = Kamtib.
         </div>
@@ -748,7 +748,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         </tr>
                     <?php endforeach; ?>
                     <tr>
-                        <td style="text-align:right;"><b>Total</b></td>
+                        <td style="text-align:center;"><b>Total</b></td>
                         <td style="text-align:center;"><b><?= number_format($audit_total_reported_qty,0,',','.') ?></b></td>
                         <td style="text-align:center;"><b><?= number_format($audit_total_selisih_qty,0,',','.') ?></b></td>
                         <td style="text-align:right;"><b><?= number_format($audit_total_actual_setoran,0,',','.') ?></b></td>
