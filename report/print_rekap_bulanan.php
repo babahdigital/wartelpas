@@ -77,6 +77,7 @@ $daily = [];
 $phone = [];
 $phone_units = [];
 $audit_net = [];
+$audit_selisih = [];
 
 try {
     if (file_exists($dbFile)) {
@@ -134,13 +135,16 @@ try {
             $phone_units[$d][$ut] = (int)($row['total_units'] ?? 0);
         }
 
-        $stmtAudit = $db->prepare("SELECT report_date, SUM(actual_setoran) AS actual_setoran
+        $stmtAudit = $db->prepare("SELECT report_date,
+                SUM(actual_setoran) AS actual_setoran,
+                SUM(selisih_setoran) AS selisih_setoran
             FROM audit_rekap_manual
             WHERE report_date LIKE :m
             GROUP BY report_date");
         $stmtAudit->execute([':m' => $filter_date . '%']);
         foreach ($stmtAudit->fetchAll(PDO::FETCH_ASSOC) as $row) {
             $audit_net[$row['report_date']] = (int)($row['actual_setoran'] ?? 0);
+            $audit_selisih[$row['report_date']] = (int)($row['selisih_setoran'] ?? 0);
         }
     }
 } catch (Exception $e) {
@@ -226,6 +230,7 @@ for ($d = 1; $d <= $days_in_month; $d++) {
 
 $total_gross = 0;
 $total_net_audit = 0;
+$total_selisih = 0;
 $total_qty_laku = 0;
 $total_voucher_rusak = 0;
 $total_spam = 0;
@@ -241,6 +246,7 @@ foreach ($all_dates as $date) {
     $gross = $net;
     $audit = $audit_net[$date] ?? null;
     $net_audit = $audit !== null ? (int)$audit : $net;
+    $selisih = $audit !== null ? (int)($audit_selisih[$date] ?? 0) : 0;
 
     $qty_laku = isset($daily[$date]['laku_users']) ? count($daily[$date]['laku_users']) : 0;
     $rusak_qty = (int)($daily[$date]['rusak_qty'] ?? 0);
@@ -266,6 +272,7 @@ foreach ($all_dates as $date) {
 
     $total_gross += $gross;
     $total_net_audit += $net_audit;
+    $total_selisih += $selisih;
     $total_qty_laku += $qty_laku;
     $total_voucher_rusak += $rusak_qty;
     $total_spam += (int)($ph['spam'] ?? 0);
@@ -295,7 +302,7 @@ $print_time = date('d-m-Y H:i:s');
         th, td { border:1px solid #000; padding:6px; text-align:center; }
         th { background:#f5f5f5; }
         .currency { text-align:right; white-space:nowrap; }
-        .summary-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:12px 0 16px; }
+        .summary-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin:12px 0 16px; }
         .summary-card { border:1px solid #ccc; padding:8px 10px; background:#f9f9f9; }
         .summary-title { font-size:10px; text-transform:uppercase; color:#666; }
         .summary-value { font-weight:700; font-size:14px; margin-top:4px; }
@@ -326,6 +333,12 @@ $print_time = date('d-m-Y H:i:s');
         <div class="summary-card">
             <div class="summary-title">Total Bandwidth</div>
             <div class="summary-value"><?= esc(format_bytes_short((int)$total_bandwidth)) ?></div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-title">Total Selisih Audit</div>
+            <div class="summary-value" style="color:#c0392b;">
+                <?= $total_selisih >= 0 ? '+' : '' ?><?= $cur ?> <?= number_format((int)$total_selisih,0,',','.') ?>
+            </div>
         </div>
         <div class="summary-card">
             <div class="summary-title">Insiden (Rusak/Spam)</div>
