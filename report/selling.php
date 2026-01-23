@@ -896,10 +896,6 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     }
                 }
             }
-            if (!empty($audit_users) && $audit_qty_10 <= 0 && $audit_qty_30 <= 0) {
-                $audit_qty_10 = $auto_qty_10;
-                $audit_qty_30 = $auto_qty_30;
-            }
             $profile_qty_sum = $audit_qty_10 + $audit_qty_30;
             $net_qty_10 = max(0, ($audit_qty_10 - $rusak_10 - $invalid_10 + $retur_10));
             $net_qty_30 = max(0, ($audit_qty_30 - $rusak_30 - $invalid_30 + $retur_30));
