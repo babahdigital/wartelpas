@@ -505,7 +505,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         </div>
         <?php if ($req_show === 'harian'): ?>
         <div class="card">
-            <div class="label">Net Laku (Setelah Rusak/Invalid + Retur)</div>
+            <div class="label">Net Terjual</div>
             <div class="value"><?= $cur ?> <?= number_format($total_net_units,0,',','.') ?></div>
         </div>
         <?php endif; ?>
