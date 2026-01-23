@@ -155,12 +155,12 @@ function seconds_to_uptime($seconds) {
 function resolve_rusak_limits($profile) {
   $p = strtolower((string)$profile);
   if (preg_match('/\b10\s*(menit|m)\b|10menit/i', $p)) {
-    return ['uptime' => 180, 'bytes' => 1 * 1024 * 1024, 'uptime_label' => '3 menit', 'bytes_label' => '1MB'];
+    return ['uptime' => 180, 'bytes' => 5 * 1024 * 1024, 'uptime_label' => '3 menit', 'bytes_label' => '5MB'];
   }
   if (preg_match('/\b30\s*(menit|m)\b|30menit/i', $p)) {
-    return ['uptime' => 300, 'bytes' => 2 * 1024 * 1024, 'uptime_label' => '5 menit', 'bytes_label' => '2MB'];
+    return ['uptime' => 300, 'bytes' => 5 * 1024 * 1024, 'uptime_label' => '5 menit', 'bytes_label' => '5MB'];
   }
-  return ['uptime' => 300, 'bytes' => 2 * 1024 * 1024, 'uptime_label' => '5 menit', 'bytes_label' => '2MB'];
+  return ['uptime' => 300, 'bytes' => 5 * 1024 * 1024, 'uptime_label' => '5 menit', 'bytes_label' => '5MB'];
 }
 
 // Helper: Ekstrak datetime dari comment (format umum MikroTik)
@@ -669,7 +669,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
 
     if ($enforce_rusak_rules && ($act == 'invalid' || $act == 'retur' || $act == 'check_rusak')) {
       $total_uptime_ok = (!$is_active) && ($bytes <= $bytes_limit) && ($total_uptime_sec <= $uptime_limit);
-      $relogin_count_ok = (int)($relogin_count ?? 0) >= 3;
+      $relogin_count_ok = (int)($relogin_count ?? 0) >= 1;
       if (!($act == 'retur' && $is_rusak_target) && ($is_active || $bytes > $bytes_limit || $total_uptime_sec > $uptime_limit)) {
         $action_blocked = true;
         $action_error = 'Voucher masih valid, tidak bisa dianggap rusak (online / bytes > ' . $limits['bytes_label'] . ' / uptime > ' . $limits['uptime_label'] . ').';
@@ -686,7 +686,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         'offline' => !$is_active,
         'bytes_ok' => $bytes <= $bytes_limit,
         'total_uptime_ok' => $total_uptime_sec <= $uptime_limit,
-        'relogin_count_ok' => (int)($relogin_count ?? 0) >= 3
+        'relogin_count_ok' => (int)($relogin_count ?? 0) >= 1
       ];
       if (ob_get_length()) {
         @ob_clean();
