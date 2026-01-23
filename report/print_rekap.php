@@ -697,14 +697,14 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             <td style="text-align:right;"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)($ar['selisih_setoran'] ?? 0),0,',','.') ?></td>
                             
-                            <td style="padding:0; vertical-align:top;"><?= $p10_us ?></td>
-                            <td style="padding:0; vertical-align:top;"><?= $p10_up ?></td>
-                            <td style="padding:0; vertical-align:top;"><?= $p10_bt ?></td>
+                            <td style="padding:0; text-align: center;"><?= $p10_us ?></td>
+                            <td style="padding:0; text-align: center;"><?= $p10_up ?></td>
+                            <td style="padding:0; text-align: center;"><?= $p10_bt ?></td>
                             <td style="text-align: center; font-weight:bold;"><?= $p10_tt ?></td>
                             
-                            <td style="padding:0; vertical-align:top;"><?= $p30_us ?></td>
-                            <td style="padding:0; vertical-align:top;"><?= $p30_up ?></td>
-                            <td style="padding:0; vertical-align:top;"><?= $p30_bt ?></td>
+                            <td style="padding:0; text-align: center;"><?= $p30_us ?></td>
+                            <td style="padding:0; text-align: center;"><?= $p30_up ?></td>
+                            <td style="padding:0; text-align: center;"><?= $p30_bt ?></td>
                             <td style="text-align: center; font-weight:bold;"><?= $p30_tt ?></td>
 
                             <td><?= htmlspecialchars($ar['note'] ?? '') ?></td>
