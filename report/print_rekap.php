@@ -582,7 +582,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         <div class="card">
             <div class="label">Kerugian</div>
             <div class="value"><?= $cur ?> <?= number_format($kerugian_display,0,',','.') ?></div>
-            <div class="small">Voucher: <?= number_format($voucher_loss_display,0,',','.') ?> | Setoran: <?= number_format($setoran_loss_display,0,',','.') ?></div>
+            <div class="small">VC: <?= number_format($voucher_loss_display,0,',','.') ?> | ST: <?= number_format($setoran_loss_display,0,',','.') ?></div>
         </div>
         <div class="card">
             <div class="label">Net System</div>
