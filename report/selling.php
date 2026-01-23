@@ -2190,14 +2190,6 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 <div style="font-size:12px;color:var(--txt-muted);margin-top: 1px;">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bandwidth: <?= htmlspecialchars(format_bytes_short($total_bandwidth)) ?></div>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Audit Manual</div>
-                <div class="summary-value" style="font-size:1.1rem;">
-                    Qty Δ <span class="<?= $audit_qty_cls; ?>"><?= number_format($audit_total_selisih_qty,0,',','.') ?></span>
-                    | Rp Δ <span class="<?= $audit_setoran_cls; ?>"><?= number_format($audit_total_selisih_setoran,0,',','.') ?></span>
-                </div>
-                <div style="font-size:12px;color:var(--txt-muted);margin-top:6px;">Sistem: <?= number_format($audit_total_expected_qty,0,',','.') ?> / <?= $cur ?> <?= number_format($audit_total_expected_setoran,0,',','.') ?> | Manual: <?= number_format($audit_total_reported_qty,0,',','.') ?> / <?= $cur ?> <?= number_format($audit_total_actual_setoran,0,',','.') ?></div>
-            </div>
-            <div class="summary-card">
                 <div class="summary-title">Pendapatan Bersih</div>
                 <div class="summary-value" style="color:#2ecc71;"><?= $cur ?> <?= number_format($total_net,0,',','.') ?></div>
             </div>
