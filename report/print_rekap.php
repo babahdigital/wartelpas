@@ -605,16 +605,26 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             <table class="rekap-table" style="margin-top:12px;">
                 <thead>
                     <tr>
-                        <th colspan="7">Audit Manual Rekap Harian</th>
+                        <th colspan="13">Audit Manual Rekap Harian</th>
                     </tr>
                     <tr>
-                        <th style="width:90px;">Blok</th>
+                        <th rowspan="2" style="width:90px;">Blok</th>
+                        <th rowspan="2" style="width:70px;">QTY</th>
+                        <th rowspan="2" style="width:70px;">Selisih</th>
+                        <th rowspan="2" style="width:90px;">Setoran</th>
+                        <th rowspan="2" style="width:80px;">Selisih</th>
+                        <th colspan="4">Profil 10 Menit</th>
+                        <th colspan="4">Profil 30 Menit</th>
+                    </tr>
+                    <tr>
+                        <th style="width:90px;">User</th>
+                        <th style="width:70px;">Up</th>
+                        <th style="width:70px;">Byte</th>
                         <th style="width:70px;">QTY</th>
-                        <th style="width:70px;">Selisih</th>
-                        <th style="width:90px;">Setoran</th>
-                        <th style="width:80px;">Selisih</th>
-                        <th style="width:70px;">QTY 10</th>
-                        <th style="width:70px;">QTY 30</th>
+                        <th style="width:90px;">User</th>
+                        <th style="width:70px;">Up</th>
+                        <th style="width:70px;">Byte</th>
+                        <th style="width:70px;">QTY</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -714,8 +724,16 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             <td style="text-align:center;"><?= number_format((int)($ar['selisih_qty'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)($ar['selisih_setoran'] ?? 0),0,',','.') ?></td>
-                            <td style="text-align:center; font-weight:bold;"><?= $p10_tt ?></td>
-                            <td style="text-align:center; font-weight:bold;"><?= $p30_tt ?></td>
+                            
+                            <td style="padding:0; text-align: center;"><?= $p10_us ?></td>
+                            <td style="padding:0; text-align: center;"><?= $p10_up ?></td>
+                            <td style="padding:0; text-align: center;"><?= $p10_bt ?></td>
+                            <td style="text-align: center; font-weight:bold;"><?= $p10_tt ?></td>
+                            
+                            <td style="padding:0; text-align: center;"><?= $p30_us ?></td>
+                            <td style="padding:0; text-align: center;"><?= $p30_up ?></td>
+                            <td style="padding:0; text-align: center;"><?= $p30_bt ?></td>
+                            <td style="text-align: center; font-weight:bold;"><?= $p30_tt ?></td>
                         </tr>
                     <?php endforeach; ?>
                     <tr>
@@ -724,7 +742,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <td style="text-align:center;"><b><?= number_format($audit_total_selisih_qty,0,',','.') ?></b></td>
                         <td style="text-align:right;"><b><?= number_format($audit_total_actual_setoran,0,',','.') ?></b></td>
                         <td style="text-align:right;"><b><?= number_format($audit_total_selisih_setoran,0,',','.') ?></b></td>
+                        <td colspan="3" style="background:#eee;"></td>
                         <td style="text-align:center;"><b><?= number_format($audit_total_profile_qty_10,0,',','.') ?></b></td>
+                        <td colspan="3" style="background:#eee;"></td>
                         <td style="text-align:center;"><b><?= number_format($audit_total_profile_qty_30,0,',','.') ?></b></td>
                     </tr>
                 </tbody>

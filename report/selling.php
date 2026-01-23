@@ -2483,14 +2483,6 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 </tbody>
             </table>
         </div>
-        <div class="hp-total-bar">
-            <div>Sistem Qty: <b><?= number_format($audit_total_expected_qty,0,',','.') ?></b></div>
-            <div>Manual Qty: <b><?= number_format($audit_total_reported_qty,0,',','.') ?></b></div>
-            <div>Selisih Qty: <b><?= number_format($audit_total_selisih_qty,0,',','.') ?></b></div>
-            <div>Sistem Rp: <b><?= number_format($audit_total_expected_setoran,0,',','.') ?></b></div>
-            <div>Manual Rp: <b><?= number_format($audit_total_actual_setoran,0,',','.') ?></b></div>
-            <div>Selisih Rp: <b><?= number_format($audit_total_selisih_setoran,0,',','.') ?></b></div>
-        </div>
     </div>
 </div>
 
