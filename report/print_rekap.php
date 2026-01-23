@@ -595,18 +595,18 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         </div>
         <?php endif; ?>
         <div class="card">
-            <div class="label">Voucher Terjual</div>
+            <div class="label">Terjual</div>
             <div class="value"><?= number_format($total_qty_laku,0,',','.') ?></div>
             <div class="small">Bandwith: <?= htmlspecialchars(format_bytes_short($total_bandwidth)) ?></div>
         </div>
         <div class="card">
-            <div class="label">Voucher Rusak</div>
+            <div class="label">Rusak</div>
             <div class="value"><?= number_format($total_qty_rusak,0,',','.') ?></div>
             <div class="small">10 Menit: <?= number_format($rusak_10m,0,',','.') ?> | 30 Menit: <?= number_format($rusak_30m,0,',','.') ?></div>
         </div>
         <?php if ($req_show === 'harian'): ?>
         <div class="card">
-            <div class="label">Total Device</div>
+            <div class="label">Device</div>
             <div class="value"><?= number_format($hp_total_units,0,',','.') ?></div>
             <div class="small">WARTEL: <?= number_format($hp_wartel_units,0,',','.') ?> | KAMTIB: <?= number_format($hp_kamtib_units,0,',','.') ?></div>
         </div>
