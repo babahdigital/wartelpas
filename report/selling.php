@@ -714,7 +714,7 @@ foreach ($rows as $r) {
             $total_net += $net_add;
 
             if (!isset($by_block[$blok])) {
-                $by_block[$blok] = ['qty'=>0,'gross'=>0,'rusak'=>0,'invalid'=>0,'net'=>0,'retur'=>0];
+                $by_block[$blok] = ['qty'=>0,'gross'=>0,'rusak'=>0,'invalid'=>0,'net'=>0,'retur'=>0,'rusak_qty'=>0,'invalid_qty'=>0];
             }
             if (!isset($by_profile[$profile])) {
                 $by_profile[$profile] = ['qty'=>0,'gross'=>0,'rusak'=>0,'invalid'=>0,'net'=>0,'retur'=>0];
@@ -726,6 +726,8 @@ foreach ($rows as $r) {
             $by_block[$blok]['invalid'] += $loss_invalid;
             $by_block[$blok]['net'] += $net_add;
             if ($status === 'retur') $by_block[$blok]['retur'] += 1;
+            if ($status === 'rusak') $by_block[$blok]['rusak_qty'] += 1;
+            if ($status === 'invalid') $by_block[$blok]['invalid_qty'] += 1;
 
             $by_profile[$profile]['qty'] += 1;
             $by_profile[$profile]['gross'] += $gross_add;
@@ -879,6 +881,10 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 $audit_error = 'Qty per profile wajib diisi.';
             }
             $expected_qty = (int)($by_block[$audit_blok]['qty'] ?? 0);
+            $expected_qty -= (int)($by_block[$audit_blok]['rusak_qty'] ?? 0);
+            $expected_qty -= (int)($by_block[$audit_blok]['retur'] ?? 0);
+            $expected_qty -= (int)($by_block[$audit_blok]['invalid_qty'] ?? 0);
+            if ($expected_qty < 0) $expected_qty = 0;
             $expected_setoran = (int)($by_block[$audit_blok]['net'] ?? 0);
             $selisih_qty = $audit_qty - $expected_qty;
             $selisih_setoran = $audit_setoran - $expected_setoran;
@@ -2332,6 +2338,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         <th class="text-center">Selisih</th>
                         <th class="text-right">Setoran</th>
                         <th class="text-center">Selisih</th>
+                        <th class="text-center">Rusak</th>
+                        <th class="text-center">Retur</th>
                         <th class="text-center">QTY 10</th>
                         <th class="text-center">QTY 30</th>
                         <th class="text-right">Aksi</th>
@@ -2339,7 +2347,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 </thead>
                 <tbody>
                     <?php if (empty($audit_rows)): ?>
-                        <tr><td colspan="8" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
+                        <tr><td colspan="10" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
                     <?php else: foreach ($audit_rows as $ar): ?>
                         <?php
                             $sq = (int)($ar['selisih_qty'] ?? 0);
@@ -2406,6 +2414,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             <td class="text-center"><span class="<?= $cls_q; ?>"><?= number_format($sq,0,',','.') ?></span></td>
                             <td class="text-right"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
                             <td class="text-center"><span class="<?= $cls_s; ?>"><?= number_format($ss,0,',','.') ?></span></td>
+                            <td class="text-center"><small><?= number_format((int)($by_block[$ar['blok_name']]['rusak_qty'] ?? 0),0,',','.') ?></small></td>
+                            <td class="text-center"><small><?= number_format((int)($by_block[$ar['blok_name']]['retur'] ?? 0),0,',','.') ?></small></td>
                             <td class="text-center"><small><?= number_format($profile_qty_10,0,',','.') ?></small></td>
                             <td class="text-center"><small><?= number_format($profile_qty_30,0,',','.') ?></small></td>
                             <td class="text-right">
