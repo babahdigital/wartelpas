@@ -663,7 +663,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             <table class="rekap-table" style="margin-top:15px;">
                 <thead>
                     <tr>
-                        <th colspan="13">Audit Manual Rekap Harian</th>
+                        <th colspan="15">Audit Manual Rekap Harian</th>
                     </tr>
                     <tr>
                         <th rowspan="2" style="width:90px;">Blok</th>
