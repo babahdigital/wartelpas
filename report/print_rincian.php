@@ -731,20 +731,20 @@ function normalize_uptime_diff($diff, $snap = 2) {
           $total_bytes = array_sum($bytes_by_user);
       ?>
       <div class="summary-row">
-          <div class="summary-badge"><span class="label">Voucher Terjual</span> <span class="value"><?= number_format((int)$total_voucher_laku,0,',','.') ?></span></div>
+          <div class="summary-badge"><span class="label">Terjual</span> <span class="value"><?= number_format((int)$total_voucher_laku,0,',','.') ?></span></div>
           <?php if (!empty($total_qty_rusak)): ?>
-              <div class="summary-badge"><span class="label">Voucher Rusak</span> <span class="value"><?= number_format((int)$total_qty_rusak,0,',','.') ?></span></div>
+              <div class="summary-badge"><span class="label">Rusak</span> <span class="value"><?= number_format((int)$total_qty_rusak,0,',','.') ?></span></div>
           <?php endif; ?>
           <?php if (!empty($total_qty_retur)): ?>
-              <div class="summary-badge"><span class="label">Voucher Retur</span> <span class="value"><?= number_format((int)$total_qty_retur,0,',','.') ?></span></div>
+              <div class="summary-badge"><span class="label">Retur</span> <span class="value"><?= number_format((int)$total_qty_retur,0,',','.') ?></span></div>
           <?php endif; ?>
-          <div class="summary-badge"><span class="label">Net Income</span> <span class="value"><?= $cur ?> <?= number_format((int)$total_net,0,',','.') ?></span></div>
-          <div class="summary-badge"><span class="label">Byte</span> <span class="value"><?= esc(format_bytes_short((int)$total_bytes)) ?></span></div>
-      </div>
           <?php if (!is_null($audit_net)): ?>
               <div class="summary-badge"><span class="label">Net Audit</span> <span class="value"><?= $cur ?> <?= number_format((int)$audit_net,0,',','.') ?></span></div>
           <?php endif; ?>
-    <?php endif; ?>
+          <div class="summary-badge"><span class="label">Net Income</span> <span class="value"><?= $cur ?> <?= number_format((int)$total_net,0,',','.') ?></span></div>
+          <div class="summary-badge"><span class="label">Byte</span> <span class="value"><?= esc(format_bytes_short((int)$total_bytes)) ?></span></div>
+            </div>
+        <?php endif; ?>
 
 <script>
 function shareReport(){
