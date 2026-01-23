@@ -358,9 +358,7 @@ $total_qty_units = 0;
 $total_net_units = 0;
 $total_bandwidth = 0;
 
-$net_system_display = ($req_show === 'harian' && $has_audit_adjusted)
-    ? (int)$audit_expected_setoran_adj_total
-    : (int)$total_net;
+$net_system_display = (int)$total_net;
 
 $seen_sales = [];
 $seen_user_day = [];
