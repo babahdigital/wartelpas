@@ -715,8 +715,8 @@ function normalize_uptime_diff($diff, $snap = 2) {
           $total_bytes = array_sum($bytes_by_user);
       ?>
       <div class="summary-row">
-          <div class="summary-badge"><span class="label">Total Voucher Laku</span> <span class="value"><?= number_format((int)$total_voucher_laku,0,',','.') ?></span></div>
-          <div class="summary-badge"><span class="label">Pendapatan Bersih</span> <span class="value"><?= $cur ?> <?= number_format((int)$total_net,0,',','.') ?></span></div>
+          <div class="summary-badge"><span class="label">Voucher Terjual</span> <span class="value"><?= number_format((int)$total_voucher_laku,0,',','.') ?></span></div>
+          <div class="summary-badge"><span class="label">Net Income</span> <span class="value"><?= $cur ?> <?= number_format((int)$total_net,0,',','.') ?></span></div>
           <div class="summary-badge"><span class="label">Total Byte</span> <span class="value"><?= esc(format_bytes_short((int)$total_bytes)) ?></span></div>
       </div>
     <?php endif; ?>
