@@ -807,6 +807,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                 <div style="display:flex; align-items:center;">
                     <span style="display:inline-block; width:15px; height:15px; background:#fecaca; border:1px solid #ccc; margin-right:5px;"></span> Voucer Rusak
                 </div>
+                <div style="display:flex; align-items:center;">
+                    <span style="display:inline-block; width:15px; height:15px; background:#dcfce7; border:1px solid #ccc; margin-right:5px;"></span> Voucer Retur
+                </div>
             </div>
 
             <div class="audit-summary-box">
