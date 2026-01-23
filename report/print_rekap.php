@@ -104,6 +104,23 @@ function generate_nested_table($items, $align = 'left') {
     return $html;
 }
 
+// Helper khusus untuk username audit (warna rusak/normal)
+function generate_nested_table_user($items, $align = 'left') {
+    if (empty($items)) return '-';
+    $html = '<table style="width:100%; border-collapse:collapse; margin:0; padding:0; background:transparent;">';
+    $count = count($items);
+    foreach ($items as $i => $item) {
+        $label = is_array($item) ? ($item['label'] ?? '-') : (string)$item;
+        $status = is_array($item) ? strtolower((string)($item['status'] ?? '')) : '';
+        $is_rusak = ($status === 'rusak');
+        $bg = $is_rusak ? '#fecaca' : '#fef3c7';
+        $border = ($i < $count - 1) ? 'border-bottom:1px solid #999;' : '';
+        $html .= '<tr><td style="border:none; padding:4px 2px; '.$border.' text-align:'.$align.'; vertical-align:middle; line-height:1.2; word-wrap:break-word; background:'.$bg.';">'.htmlspecialchars($label).'</td></tr>';
+    }
+    $html .= '</table>';
+    return $html;
+}
+
 $rows = [];
 $hp_total_units = 0;
 $hp_active_units = 0;
@@ -667,7 +684,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             $kind = (string)($ud['profile_kind'] ?? '10');
                                             $bucket = ($kind === '30') ? $profile30 : $profile10;
                                             // Collecting data
-                                            $bucket['user'][] = (string)$uname;
+                                            $u_status = strtolower((string)($ud['last_status'] ?? ''));
+                                            $bucket['user'][] = ['label' => (string)$uname, 'status' => $u_status];
                                             $bucket['up'][] = $upt;
                                             $bucket['byte'][] = $lb;
                                             $bucket['login'][] = $cnt . 'x';
@@ -688,7 +706,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                         $lb = format_bytes_short((int)($evidence['last_bytes'] ?? 0));
                                         $price_val = (int)($evidence['price'] ?? 0);
                                         $upt = $upt !== '' ? $upt : '-';
-                                        $profile10['user'][] = '-';
+                                        $profile10['user'][] = ['label' => '-', 'status' => ''];
                                         $profile10['up'][] = $upt;
                                         $profile10['byte'][] = $lb;
                                         $profile10['login'][] = $cnt . 'x';
@@ -698,11 +716,11 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 }
                             }
                             // Generate HTML Tables using helper
-                            $p10_us = generate_nested_table($profile10['user'], 'center');
+                            $p10_us = generate_nested_table_user($profile10['user'], 'center');
                             $p10_up = generate_nested_table($profile10['up'], 'right');
                             $p10_bt = generate_nested_table($profile10['byte'], 'right');
                             
-                            $p30_us = generate_nested_table($profile30['user'], 'center');
+                            $p30_us = generate_nested_table_user($profile30['user'], 'center');
                             $p30_up = generate_nested_table($profile30['up'], 'right');
                             $p30_bt = generate_nested_table($profile30['byte'], 'right');
 
@@ -763,6 +781,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
             <div class="audit-summary-box">
                 <div class="audit-summary-header">Kesimpulan Audit Harian</div>
+                <div style="font-size:11px; color:#444; margin-bottom:6px;">
+                    Voucher Rusak: <?= number_format((int)$total_qty_rusak,0,',','.') ?> | Retur: <?= number_format((int)$total_qty_retur,0,',','.') ?> | Invalid: <?= number_format((int)$total_qty_invalid,0,',','.') ?>
+                </div>
                 <?php if (!empty($audit_summary_report)): ?>
                     <?php foreach ($audit_summary_report as $idx => $rep): ?>
                         <div class="audit-item">
