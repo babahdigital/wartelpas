@@ -48,23 +48,23 @@ $dry_run = ($_GET['dry_run'] ?? '1') !== '0';
 $confirm = strtoupper(trim((string)($_GET['confirm'] ?? ($_POST['confirm'] ?? ''))));
 $include_synced = ($_GET['include_synced'] ?? '0') === '1';
 
-$where = "WHERE live_sales.username != '' AND live_sales.sale_date != ''";
+$conditions = "live_sales.username != '' AND live_sales.sale_date != ''";
 $params = [];
 
 if ($mode === 'all' || $date === 'all') {
     // no date filter
 } elseif ($from !== '' && $to !== '') {
-    $where .= " AND live_sales.sale_date >= :from AND live_sales.sale_date <= :to";
+    $conditions .= " AND live_sales.sale_date >= :from AND live_sales.sale_date <= :to";
     $params[':from'] = $from;
     $params[':to'] = $to;
 } else {
     if ($date === '') $date = date('Y-m-d');
-    $where .= " AND live_sales.sale_date = :d";
+    $conditions .= " AND live_sales.sale_date = :d";
     $params[':d'] = $date;
 }
 
 if (!$include_synced) {
-    $where .= " AND (live_sales.sync_status = 'pending' OR live_sales.sync_status IS NULL OR live_sales.sync_status = '')";
+    $conditions .= " AND (live_sales.sync_status = 'pending' OR live_sales.sync_status IS NULL OR live_sales.sync_status = '')";
 }
 
 try {
@@ -78,7 +78,7 @@ try {
             WHERE sh.username = live_sales.username
               AND sh.sale_date = live_sales.sale_date
         )
-        " . substr($where, 5);
+        AND " . $conditions;
 
     $stmt = $db->prepare($sqlCount);
     $stmt->execute($params);
@@ -96,7 +96,7 @@ try {
             WHERE sh.username = live_sales.username
               AND sh.sale_date = live_sales.sale_date
         )
-        " . substr($where, 5);
+        AND " . $conditions;
 
     $stmt = $db->prepare($sqlDelete);
     $stmt->execute($params);
