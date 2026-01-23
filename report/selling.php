@@ -826,6 +826,12 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             $blok_from_user = '';
             $auto_qty_10 = 0;
             $auto_qty_30 = 0;
+            $rusak_10 = 0;
+            $rusak_30 = 0;
+            $retur_10 = 0;
+            $retur_30 = 0;
+            $invalid_10 = 0;
+            $invalid_30 = 0;
             if (!empty($audit_users)) {
                 foreach ($audit_users as $u) {
                     $user_row = null;
@@ -862,6 +868,26 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     else $profile_kind = '10';
                     if ($profile_kind === '30') $auto_qty_30++;
                     else $auto_qty_10++;
+                    $u_status = '';
+                    $u_cmt = '';
+                    if (is_array($user_row)) {
+                        $u_status = strtolower((string)($user_row['last_status'] ?? ''));
+                        $u_cmt = strtolower((string)($user_row['raw_comment'] ?? ''));
+                    }
+                    if ($u_status === '' || $u_status === 'normal') {
+                        if (strpos($u_cmt, 'invalid') !== false) $u_status = 'invalid';
+                        elseif (strpos($u_cmt, 'retur') !== false) $u_status = 'retur';
+                        elseif (strpos($u_cmt, 'rusak') !== false) $u_status = 'rusak';
+                    }
+                    if ($profile_kind === '30') {
+                        if ($u_status === 'rusak') $rusak_30++;
+                        elseif ($u_status === 'retur') $retur_30++;
+                        elseif ($u_status === 'invalid') $invalid_30++;
+                    } else {
+                        if ($u_status === 'rusak') $rusak_10++;
+                        elseif ($u_status === 'retur') $retur_10++;
+                        elseif ($u_status === 'invalid') $invalid_10++;
+                    }
                     if ($user_row) $user_rows[$u] = $user_row;
                     if (table_exists($db, 'login_events')) {
                         $stmtEv2 = $db->prepare("SELECT seq, login_time, logout_time FROM login_events WHERE username = :u AND date_key = :d ORDER BY seq ASC, id ASC");
@@ -875,14 +901,15 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 $audit_qty_30 = $auto_qty_30;
             }
             $profile_qty_sum = $audit_qty_10 + $audit_qty_30;
-            $audit_qty = $profile_qty_sum;
-            $audit_setoran = ($audit_qty_10 * 5000) + ($audit_qty_30 * 20000);
+            $net_qty_10 = max(0, ($audit_qty_10 - $rusak_10 - $invalid_10 + $retur_10));
+            $net_qty_30 = max(0, ($audit_qty_30 - $rusak_30 - $invalid_30 + $retur_30));
+            $audit_qty = $net_qty_10 + $net_qty_30;
+            $audit_setoran = ($net_qty_10 * 5000) + ($net_qty_30 * 20000);
             if ($profile_qty_sum <= 0) {
                 $audit_error = 'Qty per profile wajib diisi.';
             }
             $expected_qty = (int)($by_block[$audit_blok]['qty'] ?? 0);
             $expected_qty -= (int)($by_block[$audit_blok]['rusak_qty'] ?? 0);
-            $expected_qty -= (int)($by_block[$audit_blok]['retur'] ?? 0);
             $expected_qty -= (int)($by_block[$audit_blok]['invalid_qty'] ?? 0);
             if ($expected_qty < 0) $expected_qty = 0;
             $expected_setoran = (int)($by_block[$audit_blok]['net'] ?? 0);
