@@ -605,6 +605,78 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
     ];
 }
 
+function fetch_rows_for_audit(PDO $db, $audit_date) {
+    $rows = [];
+    $hasSales = table_exists($db, 'sales_history');
+    $hasLive = table_exists($db, 'live_sales');
+    $hasLogin = table_exists($db, 'login_history');
+
+    if ($hasSales) {
+        $sql = "SELECT
+            sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
+            sh.username, sh.profile, sh.profile_snapshot,
+            sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
+            sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
+            sh.full_raw_data,
+            " . ($hasLogin ? "lh.last_status" : "'' AS last_status") . "
+            FROM sales_history sh
+            " . ($hasLogin ? "LEFT JOIN login_history lh ON lh.username = sh.username" : "") . "
+            WHERE sh.sale_date = :d";
+        $stmt = $db->prepare($sql);
+        $stmt->execute([':d' => $audit_date]);
+        $rows = array_merge($rows, $stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    if ($hasLive) {
+        $sql = "SELECT
+            ls.raw_date, ls.raw_time, ls.sale_date, ls.sale_time, ls.sale_datetime,
+            ls.username, ls.profile, ls.profile_snapshot,
+            ls.price, ls.price_snapshot, ls.sprice_snapshot, ls.validity,
+            ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
+            ls.full_raw_data,
+            " . ($hasLogin ? "lh2.last_status" : "'' AS last_status") . "
+            FROM live_sales ls
+            " . ($hasLogin ? "LEFT JOIN login_history lh2 ON lh2.username = ls.username" : "") . "
+            WHERE ls.sale_date = :d AND ls.sync_status = 'pending'";
+        $stmt = $db->prepare($sql);
+        $stmt->execute([':d' => $audit_date]);
+        $rows = array_merge($rows, $stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    if (empty($rows) && $hasLogin) {
+        $stmtFallback = $db->prepare("SELECT
+            '' AS raw_date,
+            '' AS raw_time,
+            COALESCE(NULLIF(substr(login_time_real,1,10),''), login_date) AS sale_date,
+            COALESCE(NULLIF(substr(login_time_real,12,8),''), login_time) AS sale_time,
+            COALESCE(NULLIF(login_time_real,''), NULLIF(last_login_real,'')) AS sale_datetime,
+            username,
+            COALESCE(NULLIF(validity,''), '-') AS profile,
+            COALESCE(NULLIF(validity,''), '-') AS profile_snapshot,
+            CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price,
+            CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price_snapshot,
+            CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS sprice_snapshot,
+            validity,
+            raw_comment AS comment,
+            blok_name,
+            '' AS status,
+            0 AS is_rusak,
+            0 AS is_retur,
+            0 AS is_invalid,
+            1 AS qty,
+            '' AS full_raw_data,
+            last_status
+            FROM login_history
+            WHERE username != ''
+              AND (substr(login_time_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR login_date = :d)
+              AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'" );
+        $stmtFallback->execute([':d' => $audit_date]);
+        $rows = $stmtFallback->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    return $rows;
+}
+
 // Olah data
 $list = [];
 $total_gross = 0;
@@ -1078,8 +1150,9 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             }
             $expected_qty = 0;
             $expected_setoran = 0;
-            if (!empty($rows)) {
-                $expected = calc_expected_for_block($rows, $audit_date, $audit_blok);
+            if (isset($db) && $db instanceof PDO) {
+                $audit_rows_src = fetch_rows_for_audit($db, $audit_date);
+                $expected = calc_expected_for_block($audit_rows_src, $audit_date, $audit_blok);
                 $expected_qty = (int)($expected['qty'] ?? 0);
                 $expected_qty -= (int)($expected['rusak_qty'] ?? 0);
                 $expected_qty -= (int)($expected['invalid_qty'] ?? 0);
