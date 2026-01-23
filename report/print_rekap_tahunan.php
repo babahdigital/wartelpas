@@ -269,6 +269,7 @@ foreach ($phone_units as $date => $val) {
 $total_qty = 0;
 $total_gross = 0;
 $total_net = 0;
+$total_system_net = 0;
 $total_selisih = 0;
 $total_rs = 0;
 $total_sp = 0;
@@ -303,6 +304,7 @@ foreach ($months as $mm => &$mrow) {
     $total_qty += $mrow['qty'];
     $total_gross += $mrow['gross'];
     $total_net += $net_audit;
+    $total_system_net += $mrow['net'];
     $total_selisih += $selisih;
     $total_rs += $mrow['rs'];
     $total_sp += $mrow['sp'];
@@ -320,6 +322,7 @@ foreach ($months as $mm => &$mrow) {
 }
 unset($mrow);
 
+$total_selisih = $total_net - $total_system_net;
 $avg_all = $months_with_data > 0 ? round($total_qty / (int)(array_sum(array_column($months, 'days')) ?: 1)) : 0;
 $print_time = date('d-m-Y H:i:s');
 ?>
