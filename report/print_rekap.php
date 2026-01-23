@@ -861,12 +861,24 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
                                 <?php if ($rep['rusak_10'] > 0 || $rep['rusak_30'] > 0): ?>
                                     <li>
-                                        <span style="color:red; font-weight:bold;">Voucher Rusak:</span> 
+                                        <span style="color:red; font-weight:bold;">Voucher Rusak:</span>
                                         <?php 
                                             $rusak_parts = [];
-                                            if($rep['rusak_10'] > 0) $rusak_parts[] = $rep['rusak_10'] . ' (10 Menit)';
-                                            if($rep['rusak_30'] > 0) $rusak_parts[] = $rep['rusak_30'] . ' (30 Menit)';
-                                            echo implode(', ', $rusak_parts);
+                                            if($rep['rusak_10'] > 0) $rusak_parts[] = number_format((int)$rep['rusak_10'],0,',','.') . ' User (10 Menit)';
+                                            if($rep['rusak_30'] > 0) $rusak_parts[] = number_format((int)$rep['rusak_30'],0,',','.') . ' User (30 Menit)';
+                                            echo implode(' | ', $rusak_parts);
+                                        ?>
+                                    </li>
+                                <?php endif; ?>
+
+                                <?php if (!empty($rep['retur_10']) || !empty($rep['retur_30'])): ?>
+                                    <li>
+                                        <span style="color:green; font-weight:bold;">Voucher Retur:</span>
+                                        <?php 
+                                            $retur_parts = [];
+                                            if(!empty($rep['retur_10'])) $retur_parts[] = number_format((int)$rep['retur_10'],0,',','.') . ' User (10 Menit)';
+                                            if(!empty($rep['retur_30'])) $retur_parts[] = number_format((int)$rep['retur_30'],0,',','.') . ' User (30 Menit)';
+                                            echo implode(' | ', $retur_parts);
                                         ?>
                                     </li>
                                 <?php endif; ?>
@@ -874,12 +886,11 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 <?php if (!empty($rep['unreported_total'])): ?>
                                     <li>
                                         <span style="color:#b45309; font-weight:bold;">User Tidak Dilaporkan:</span>
-                                        <?= number_format((int)$rep['unreported_total'],0,',','.') ?>
                                         <?php 
                                             $unrep_parts = [];
-                                            if (!empty($rep['unreported_10'])) $unrep_parts[] = number_format((int)$rep['unreported_10'],0,',','.') . ' (10 Menit)';
-                                            if (!empty($rep['unreported_30'])) $unrep_parts[] = number_format((int)$rep['unreported_30'],0,',','.') . ' (30 Menit)';
-                                            if (!empty($unrep_parts)) echo ' - ' . implode(', ', $unrep_parts);
+                                            if (!empty($rep['unreported_10'])) $unrep_parts[] = number_format((int)$rep['unreported_10'],0,',','.') . ' User (10 Menit)';
+                                            if (!empty($rep['unreported_30'])) $unrep_parts[] = number_format((int)$rep['unreported_30'],0,',','.') . ' User (30 Menit)';
+                                            echo implode(' | ', $unrep_parts);
                                         ?>
                                     </li>
                                 <?php endif; ?>
