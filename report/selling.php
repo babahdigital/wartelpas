@@ -1550,7 +1550,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                     </div>
                 </div>
                 <div style="margin-top:8px;">
-                    <label>Username (Rusak, Retur Atau Tidak Dilaporkan)</label>
+                    <label>Username Yang Tidak Dilaporkan (Rusak & Retur Automatis By System)</label>
                     <input type="hidden" name="audit_username" id="auditUsernameHidden">
                     <div class="audit-user-picker">
                         <div id="audit-user-chips" class="audit-user-chips"></div>
