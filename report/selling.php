@@ -1153,7 +1153,14 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             }
             $expected_qty = 0;
             $expected_setoran = 0;
-            if (isset($db) && $db instanceof PDO) {
+            if (!empty($rows)) {
+                $expected = calc_expected_for_block($rows, $audit_date, $audit_blok);
+                $expected_qty = (int)($expected['qty'] ?? 0);
+                $expected_qty -= (int)($expected['rusak_qty'] ?? 0);
+                $expected_qty -= (int)($expected['invalid_qty'] ?? 0);
+                if ($expected_qty < 0) $expected_qty = 0;
+                $expected_setoran = (int)($expected['net'] ?? 0);
+            } elseif (isset($db) && $db instanceof PDO) {
                 $audit_rows_src = fetch_rows_for_audit($db, $audit_date);
                 $expected = calc_expected_for_block($audit_rows_src, $audit_date, $audit_blok);
                 $expected_qty = (int)($expected['qty'] ?? 0);
@@ -2638,8 +2645,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             $audit_block_row = normalize_block_name($ar['blok_name'] ?? '');
                             $sys_rusak = (int)($by_block[$ar['blok_name']]['rusak_qty'] ?? 0);
                             $sys_retur = (int)($by_block[$ar['blok_name']]['retur'] ?? 0);
-                            if (isset($db) && $db instanceof PDO && $audit_date_row !== '') {
-                                $rows_src = fetch_rows_for_audit($db, $audit_date_row);
+                            if ($audit_date_row !== '') {
+                                $rows_src = !empty($rows) ? $rows : (isset($db) && $db instanceof PDO ? fetch_rows_for_audit($db, $audit_date_row) : []);
                                 if (!empty($rows_src)) {
                                     $expected = calc_expected_for_block($rows_src, $audit_date_row, $audit_block_row);
                                     $expected_qty = (int)($expected['qty'] ?? 0);
