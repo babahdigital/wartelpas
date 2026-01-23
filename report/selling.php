@@ -2387,29 +2387,14 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         <th class="text-center">Selisih</th>
                         <th class="text-right">Setoran</th>
                         <th class="text-center">Selisih</th>
-                        <th class="text-center" colspan="4">Profil 10 Menit</th>
-                        <th class="text-center" colspan="4">Profil 30 Menit</th>
+                        <th class="text-center">QTY 10</th>
+                        <th class="text-center">QTY 30</th>
                         <th class="text-right">Aksi</th>
-                    </tr>
-                    <tr>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                        <th>Username</th>
-                        <th></th>
-                        <th>Total</th>
-                        <th>Username</th>
-                        <th>Up</th>
-                        <th>Byte</th>
-                        <tr><td colspan="14" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
-                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($audit_rows)): ?>
-                        <tr><td colspan="17" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
+                        <tr><td colspan="8" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
                     <?php else: foreach ($audit_rows as $ar): ?>
                         <?php
                             $sq = (int)($ar['selisih_qty'] ?? 0);
@@ -2467,14 +2452,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                     }
                                 }
                             }
-                            $p10_us = render_audit_lines($profile10['user'] ?? []);
-                            $p10_up = render_audit_lines($profile10['up'] ?? []);
-                            $p10_bt = render_audit_lines($profile10['byte'] ?? []);
-                            $p10_tt = $profile10_sum > 0 ? render_audit_lines([number_format($profile10_sum,0,',','.')]) : '-';
-                            $p30_us = render_audit_lines($profile30['user'] ?? []);
-                            $p30_up = render_audit_lines($profile30['up'] ?? []);
-                            $p30_bt = render_audit_lines($profile30['byte'] ?? []);
-                            $p30_tt = $profile30_sum > 0 ? render_audit_lines([number_format($profile30_sum,0,',','.')]) : '-';
+                            if ($profile_qty_10 <= 0) $profile_qty_10 = count($profile10['user'] ?? []);
+                            if ($profile_qty_30 <= 0) $profile_qty_30 = count($profile30['user'] ?? []);
                         ?>
                         <tr>
                             <td><?= htmlspecialchars($ar['blok_name'] ?? '-') ?></td>
@@ -2482,14 +2461,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             <td class="text-center"><span class="<?= $cls_q; ?>"><?= number_format($sq,0,',','.') ?></span></td>
                             <td class="text-right"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
                             <td class="text-center"><span class="<?= $cls_s; ?>"><?= number_format($ss,0,',','.') ?></span></td>
-                            <td><small><?= $p10_us ?></small></td>
-                            <td><small><?= $p10_up ?></small></td>
-                            <td><small><?= $p10_bt ?></small></td>
-                            <td><small><?= $p10_tt ?></small></td>
-                            <td><small><?= $p30_us ?></small></td>
-                            <td><small><?= $p30_up ?></small></td>
-                            <td><small><?= $p30_bt ?></small></td>
-                            <td><small><?= $p30_tt ?></small></td>
+                            <td class="text-center"><small><?= number_format($profile_qty_10,0,',','.') ?></small></td>
+                            <td class="text-center"><small><?= number_format($profile_qty_30,0,',','.') ?></small></td>
                             <td class="text-right">
                                 <button type="button" class="btn-act" onclick="openAuditEdit(this)"
                                     data-blok="<?= htmlspecialchars($ar['blok_name'] ?? ''); ?>"
