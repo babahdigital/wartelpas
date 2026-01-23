@@ -26,6 +26,7 @@ $audit_total_actual_setoran = 0;
 $audit_total_selisih_qty = 0;
 $audit_total_selisih_setoran = 0;
 $audit_expected_setoran_adj_total = 0;
+$audit_selisih_setoran_adj_total = 0;
 $has_audit_adjusted = false;
 
 // Filter periode
@@ -1356,6 +1357,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             $audit_total_selisih_setoran += (int)($ar['selisih_setoran'] ?? 0);
             [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($ar);
             $audit_expected_setoran_adj_total += (int)$expected_adj_setoran;
+            $audit_selisih_setoran_adj_total += (int)$manual_setoran - (int)$expected_adj_setoran;
             $has_audit_adjusted = true;
         }
     } catch (Exception $e) {
@@ -2491,7 +2493,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         <?php
             $net_system_display = (int)$total_net;
             $voucher_loss_display = (int)$total_rusak + (int)$total_invalid;
-            $setoran_loss_display = $audit_total_selisih_setoran < 0 ? abs((int)$audit_total_selisih_setoran) : 0;
+            $setoran_loss_display = $audit_selisih_setoran_adj_total < 0 ? abs((int)$audit_selisih_setoran_adj_total) : 0;
             $kerugian_display = $voucher_loss_display + $setoran_loss_display;
         ?>
         <div class="summary-grid">
