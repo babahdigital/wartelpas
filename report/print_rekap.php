@@ -684,6 +684,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $profile30_sum = 0;
                             $cnt_rusak_10 = 0;
                             $cnt_rusak_30 = 0;
+                            $cnt_unreported_10 = 0;
+                            $cnt_unreported_30 = 0;
 
                             if (!empty($ar['user_evidence'])) {
                                 $evidence = json_decode((string)$ar['user_evidence'], true);
@@ -702,6 +704,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             $bucket = ($kind === '30') ? $profile30 : $profile10;
                                             // Collecting data
                                             $u_status = strtolower((string)($ud['last_status'] ?? ''));
+                                            $is_unreported = ($uname !== '' && $uname !== '-') && ($u_status !== 'rusak') && ($u_status !== 'retur');
                                             $bucket['user'][] = ['label' => (string)$uname, 'status' => $u_status];
                                             $bucket['up'][] = $upt;
                                             $bucket['byte'][] = $lb;
@@ -712,10 +715,12 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                                 $profile30_sum += $price_val;
                                                 $profile30 = $bucket;
                                                 if($u_status === 'rusak') $cnt_rusak_30++;
+                                                if ($is_unreported) $cnt_unreported_30++;
                                             } else {
                                                 $profile10_sum += $price_val;
                                                 $profile10 = $bucket;
                                                 if($u_status === 'rusak') $cnt_rusak_10++;
+                                                if ($is_unreported) $cnt_unreported_10++;
                                             }
                                         }
                                     } else {
@@ -764,6 +769,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 'p10_sum' => $p10_sum_calc,
                                 'p30_qty' => $p30_qty,
                                 'p30_sum' => $p30_sum_calc,
+                                'unreported_total' => (int)($cnt_unreported_10 + $cnt_unreported_30),
                                 'rusak_10' => $cnt_rusak_10,
                                 'rusak_30' => $cnt_rusak_30
                             ];
@@ -854,6 +860,13 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             if($rep['rusak_30'] > 0) $rusak_parts[] = $rep['rusak_30'] . ' (30 Menit)';
                                             echo implode(', ', $rusak_parts);
                                         ?>
+                                    </li>
+                                <?php endif; ?>
+
+                                <?php if (!empty($rep['unreported_total'])): ?>
+                                    <li>
+                                        <span style="color:#b45309; font-weight:bold;">User Tidak Dilaporkan:</span>
+                                        <?= number_format((int)$rep['unreported_total'],0,',','.') ?>
                                     </li>
                                 <?php endif; ?>
 
