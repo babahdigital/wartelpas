@@ -46,6 +46,9 @@ if ($target_date === '') {
 }
 
 $blok_upper = strtoupper($blok);
+if (strpos($blok_upper, 'BLOK-') !== 0) {
+    $blok_upper = 'BLOK-' . $blok_upper;
+}
 $use_glob = !preg_match('/\d$/', $blok_upper);
 $glob_pattern = $use_glob ? ($blok_upper . '[0-9]*') : '';
 
