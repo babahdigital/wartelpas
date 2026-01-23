@@ -652,13 +652,13 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <th></th>
                         <th></th>
                         <th style="width:50px;">Username</th>
-                        <th>Up</th>
-                        <th>Byte</th>
-                        <th>Total</th>
-                        <th>Username</th>
-                        <th>Up</th>
-                        <th>Byte</th>
-                        <th>Total</th>
+                        <th style="width:50px;">Up</th>
+                        <th style="width:50px;">Byte</th>
+                        <th style="width:80px;">Total</th>
+                        <th style="width:50px;">Username</th>
+                        <th style="width:50px;">Up</th>
+                        <th style="width:50px;">Byte</th>
+                        <th style="width:80px;">Total</th>
                         <th></th>
                     </tr>
                 </thead>
