@@ -1276,7 +1276,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                             <input class="form-input" type="number" id="audit_prof30_qty" name="audit_qty_30" min="0" value="0" required>
                         </div>
                     </div>
-                    <div class="modal-note">Isi qty 10/30 sesuai total voucher laku.</div>
+                    <div class="modal-note">Isi sesuai data dari lapangan.</div>
                 </div>
                 <div class="form-grid-2" style="margin-top:10px;">
                     <div>
