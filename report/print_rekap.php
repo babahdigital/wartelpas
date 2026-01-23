@@ -217,6 +217,7 @@ $audit_total_actual_setoran = 0;
 $audit_total_selisih_qty = 0;
 $audit_total_selisih_setoran = 0;
 $audit_expected_setoran_adj_total = 0;
+$audit_selisih_setoran_adj_total = 0;
 $has_audit_adjusted = false;
 $hp_active_by_block = [];
 $hp_stats_by_block = [];
@@ -335,6 +336,7 @@ try {
                 $audit_total_selisih_setoran += (int)($ar['selisih_setoran'] ?? 0);
                 [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($ar);
                 $audit_expected_setoran_adj_total += (int)$expected_adj_setoran;
+                $audit_selisih_setoran_adj_total += (int)$manual_setoran - (int)$expected_adj_setoran;
                 $has_audit_adjusted = true;
             }
         }
@@ -514,6 +516,9 @@ foreach ($rows as $r) {
 
 $total_qty_laku = count($unique_laku_users);
 $net_system_display = (int)$total_net;
+$voucher_loss_display = (int)$total_rusak + (int)$total_invalid;
+$setoran_loss_display = ($audit_selisih_setoran_adj_total < 0) ? abs((int)$audit_selisih_setoran_adj_total) : 0;
+$kerugian_display = $voucher_loss_display + $setoran_loss_display;
 $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? 'Bulanan' : 'Tahunan');
 ?>
 <!DOCTYPE html>
@@ -575,8 +580,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
     <div class="grid">
         <div class="card">
-            <div class="label">Gross System</div>
-            <div class="value"><?= $cur ?> <?= number_format($total_gross,0,',','.') ?></div>
+            <div class="label">Kerugian</div>
+            <div class="value"><?= $cur ?> <?= number_format($kerugian_display,0,',','.') ?></div>
+            <div class="small">Voucher: <?= number_format($voucher_loss_display,0,',','.') ?> | Setoran: <?= number_format($setoran_loss_display,0,',','.') ?></div>
         </div>
         <div class="card">
             <div class="label">Net System</div>
