@@ -285,7 +285,7 @@ $max_insiden = 0;
 
 foreach ($months as $mm => &$mrow) {
     $net_audit = $mrow['has_audit'] ? $mrow['audit_sum'] : $mrow['net'];
-    $selisih = $net_audit - $mrow['gross'];
+    $selisih = $net_audit - $mrow['net'];
     $avg = $mrow['days'] > 0 ? round($mrow['qty'] / $mrow['days']) : 0;
     $wr_avg = $mrow['phone_days'] > 0 ? round($mrow['wr_sum'] / $mrow['phone_days']) : 0;
     $km_avg = $mrow['phone_days'] > 0 ? round($mrow['km_sum'] / $mrow['phone_days']) : 0;
