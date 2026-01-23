@@ -51,9 +51,9 @@
             :if ($substr = "Blok-" or $substr = "blok-") do={
                 # Extract sampai spasi atau karakter khusus
                 :local endPos $i;
-                :for j from=$i to=$commentLen do={
+                :for j from=$i to=($commentLen - 1) do={
                     :local char [:pick $cleanComment $j ($j + 1)];
-                    :if ($char = " " or $char = ")" or $char = "-" or $char = "|" or $j = $commentLen) do={
+                    :if ($char = " " or $char = ")" or $char = "-" or $char = "|") do={
                         :local nextOk false;
                         :if ($char = "-") do={
                             :if ([:len $currentComment] > ($j + 1)) do={
