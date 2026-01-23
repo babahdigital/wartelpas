@@ -770,22 +770,15 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             // Ambil selisih uang secara absolut untuk hitungan.
                             $db_selisih_rp = abs((int)($ar['selisih_setoran'] ?? 0)); 
 
-                            // Qty yang sudah teridentifikasi usernya
-                            $identified_unreported_qty = $cnt_unreported_10 + $cnt_unreported_30;
-
-                            // Sisa Qty yang tidak ada data usernya (Ghost)
-                            $ghost_qty = $db_selisih_qty - $identified_unreported_qty;
-                            if ($ghost_qty < 0) $ghost_qty = 0;
+                            // Qty yang hilang berdasarkan selisih database
+                            $ghost_qty = $db_selisih_qty;
                             
                             $ghost_10 = 0;
                             $ghost_30 = 0;
 
                             if ($ghost_qty > 0) {
-                                // Nilai uang dari user yang sudah teridentifikasi
-                                $identified_rp = ($cnt_unreported_10 * $price10) + ($cnt_unreported_30 * $price30);
-                                
-                                // Sisa uang yang harus dijelaskan oleh Ghost Unit
-                                $ghost_rp = $db_selisih_rp - $identified_rp;
+                                // Nilai uang yang harus dijelaskan oleh Ghost Unit
+                                $ghost_rp = $db_selisih_rp;
 
                                 // Matematika 2 Variabel:
                                 // x + y = ghost_qty
