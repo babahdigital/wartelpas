@@ -2379,8 +2379,6 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             <button class="btn-print" onclick="window.open('<?= $print_rekap_url ?>','_blank')">Print Rekap</button>
             <?php if ($req_show === 'harian'): ?>
                 <button class="btn-print" onclick="window.open('<?= $print_rincian_url ?>','_blank')">Print Rincian</button>
-            <?php else: ?>
-                <button class="btn-print" style="opacity:.6;cursor:not-allowed;" disabled>Print Rincian</button>
             <?php endif; ?>
             <button class="btn-print" type="button" onclick="openHpModal()">Input HP Blok</button>
             <?php if ($req_show === 'harian'): ?>
