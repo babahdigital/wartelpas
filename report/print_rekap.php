@@ -770,6 +770,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 'p30_qty' => $p30_qty,
                                 'p30_sum' => $p30_sum_calc,
                                 'unreported_total' => (int)($cnt_unreported_10 + $cnt_unreported_30),
+                                'unreported_10' => (int)$cnt_unreported_10,
+                                'unreported_30' => (int)$cnt_unreported_30,
                                 'rusak_10' => $cnt_rusak_10,
                                 'rusak_30' => $cnt_rusak_30
                             ];
@@ -867,6 +869,12 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     <li>
                                         <span style="color:#b45309; font-weight:bold;">User Tidak Dilaporkan:</span>
                                         <?= number_format((int)$rep['unreported_total'],0,',','.') ?>
+                                        <?php 
+                                            $unrep_parts = [];
+                                            if (!empty($rep['unreported_10'])) $unrep_parts[] = number_format((int)$rep['unreported_10'],0,',','.') . ' (10 Menit)';
+                                            if (!empty($rep['unreported_30'])) $unrep_parts[] = number_format((int)$rep['unreported_30'],0,',','.') . ' (30 Menit)';
+                                            if (!empty($unrep_parts)) echo ' - ' . implode(', ', $unrep_parts);
+                                        ?>
                                     </li>
                                 <?php endif; ?>
 
