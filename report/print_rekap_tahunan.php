@@ -74,6 +74,7 @@ $audit_dates_in_daily = [];
 $phone = [];
 $phone_units = [];
 $audit_net = [];
+$audit_selisih = [];
 
 try {
     if (file_exists($dbFile)) {
@@ -131,13 +132,16 @@ try {
             $phone_units[$d][$ut] = (int)($row['total_units'] ?? 0);
         }
 
-        $stmtAudit = $db->prepare("SELECT report_date, SUM(actual_setoran) AS actual_setoran
+        $stmtAudit = $db->prepare("SELECT report_date,
+                SUM(actual_setoran) AS actual_setoran,
+                SUM(selisih_setoran) AS selisih_setoran
             FROM audit_rekap_manual
             WHERE report_date LIKE :y
             GROUP BY report_date");
         $stmtAudit->execute([':y' => $filter_year . '%']);
         foreach ($stmtAudit->fetchAll(PDO::FETCH_ASSOC) as $row) {
             $audit_net[$row['report_date']] = (int)($row['actual_setoran'] ?? 0);
+            $audit_selisih[$row['report_date']] = (int)($row['selisih_setoran'] ?? 0);
         }
     }
 } catch (Exception $e) {
@@ -221,6 +225,7 @@ for ($m = 1; $m <= 12; $m++) {
         'net' => 0,
         'net_audit' => 0,
         'has_audit' => false,
+        'selisih' => 0,
         'qty' => 0,
         'bandwidth' => 0,
         'days' => 0,
@@ -239,11 +244,13 @@ foreach ($daily as $date => $val) {
     $qty = count($val['laku_users'] ?? []);
     $months[$mm]['gross'] += (int)($val['gross'] ?? 0);
     $months[$mm]['net'] += (int)($val['net'] ?? 0);
-    $day_audit = isset($audit_net[$date]) ? (int)$audit_net[$date] : (int)($val['net'] ?? 0);
+    $has_audit_day = isset($audit_net[$date]);
+    $day_audit = $has_audit_day ? (int)$audit_net[$date] : (int)($val['net'] ?? 0);
     $months[$mm]['net_audit'] += $day_audit;
-    if (isset($audit_net[$date])) {
+    if ($has_audit_day) {
         $months[$mm]['has_audit'] = true;
         $audit_dates_in_daily[$date] = true;
+        $months[$mm]['selisih'] += (int)($audit_selisih[$date] ?? 0);
     }
     $months[$mm]['qty'] += $qty;
     $months[$mm]['bandwidth'] += isset($val['bytes_by_user']) ? array_sum($val['bytes_by_user']) : 0;
@@ -256,6 +263,7 @@ foreach ($audit_net as $date => $val) {
     if (!isset($months[$mm])) continue;
     $months[$mm]['net_audit'] += (int)$val;
     $months[$mm]['has_audit'] = true;
+    $months[$mm]['selisih'] += (int)($audit_selisih[$date] ?? 0);
 }
 
 foreach ($phone as $date => $val) {
@@ -294,7 +302,7 @@ $max_insiden = 0;
 
 foreach ($months as $mm => &$mrow) {
     $net_audit = $mrow['has_audit'] ? $mrow['net_audit'] : $mrow['net'];
-    $selisih = $net_audit - $mrow['net'];
+    $selisih = (int)($mrow['selisih'] ?? 0);
     $avg = $mrow['days'] > 0 ? round($mrow['qty'] / $mrow['days']) : 0;
     $wr_avg = $mrow['phone_days'] > 0 ? round($mrow['wr_sum'] / $mrow['phone_days']) : 0;
     $km_avg = $mrow['phone_days'] > 0 ? round($mrow['km_sum'] / $mrow['phone_days']) : 0;
@@ -330,7 +338,7 @@ foreach ($months as $mm => &$mrow) {
 }
 unset($mrow);
 
-$total_selisih = $total_net - $total_system_net;
+$total_selisih = $total_selisih;
 $avg_all = $months_with_data > 0 ? round($total_qty / (int)(array_sum(array_column($months, 'days')) ?: 1)) : 0;
 $print_time = date('d-m-Y H:i:s');
 ?>
