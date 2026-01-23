@@ -1266,14 +1266,15 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                     </div>
                 </div>
                 <div style="margin-top:10px;">
-                    <label>Qty per Profile (wajib diisi)</label>
-                    <div>
-                        <label style="display:block;margin-top:6px;">Profil 10 Menit</label>
-                        <input class="form-input" type="number" id="audit_prof10_qty" name="audit_qty_10" min="0" value="0" required>
-                    </div>
-                    <div style="margin-top:8px;">
-                        <label style="display:block;">Profil 30 Menit</label>
-                        <input class="form-input" type="number" id="audit_prof30_qty" name="audit_qty_30" min="0" value="0" required>
+                    <div style="display:flex; gap:10px;">
+                        <div style="flex:1;">
+                            <label style="display:block;margin-top:6px;">Profil 10 Menit</label>
+                            <input class="form-input" type="number" id="audit_prof10_qty" name="audit_qty_10" min="0" value="0" required>
+                        </div>
+                        <div style="flex:1;">
+                            <label style="display:block;margin-top:6px;">Profil 30 Menit</label>
+                            <input class="form-input" type="number" id="audit_prof30_qty" name="audit_qty_30" min="0" value="0" required>
+                        </div>
                     </div>
                     <div class="modal-note">Isi qty 10/30 sesuai total voucher laku.</div>
                 </div>
