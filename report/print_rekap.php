@@ -449,6 +449,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         @media print { 
             .toolbar { display:none; } 
             .audit-summary-box { page-break-inside: avoid; }
+            .dul
         }
     </style>
 </head>
@@ -596,7 +597,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                 </tr>
             </tbody>
         </table>
-        <div style="margin-bottom: 10%;"></div>
+        <div class="dul-gap"></div>
         <?php if (!empty($audit_rows)): ?>
             <?php 
                 // Array untuk menampung data summary
