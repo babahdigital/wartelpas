@@ -586,13 +586,17 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         <div class="card">
             <div class="label">Net System</div>
             <div class="value"><?= $cur ?> <?= number_format($net_system_display,0,',','.') ?></div>
+            <?php if ($voucher_loss_display > 0): ?>
             <div class="small">Voucher: <?= number_format($voucher_loss_display,0,',','.') ?></div>
+            <?php endif; ?>
         </div>
         <?php if ($req_show === 'harian'): ?>
         <div class="card">
             <div class="label">Net Audit</div>
             <div class="value"><?= $cur ?> <?= number_format($audit_total_actual_setoran,0,',','.') ?></div>
+            <?php if ($setoran_loss_display > 0): ?>
             <div class="small">Setoran: <?= number_format($setoran_loss_display,0,',','.') ?></div>
+            <?php endif; ?>
         </div>
         <?php endif; ?>
         <div class="card">
