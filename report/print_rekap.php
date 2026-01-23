@@ -484,7 +484,6 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         <div class="card">
             <div class="label">Total Handphone</div>
             <div class="value"><?= number_format($hp_total_units,0,',','.') ?></div>
-            <div class="small">Aktif: <?= number_format($hp_active_units,0,',','.') ?> | Rusak: <?= number_format($hp_rusak_units,0,',','.') ?> | Spam: <?= number_format($hp_spam_units,0,',','.') ?></div>
             <div class="small">WARTEL: <?= number_format($hp_wartel_units,0,',','.') ?> | KAMTIB: <?= number_format($hp_kamtib_units,0,',','.') ?></div>
         </div>
         <?php endif; ?>
