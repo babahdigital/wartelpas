@@ -25,6 +25,8 @@ $audit_total_expected_setoran = 0;
 $audit_total_actual_setoran = 0;
 $audit_total_selisih_qty = 0;
 $audit_total_selisih_setoran = 0;
+$audit_expected_setoran_adj_total = 0;
+$has_audit_adjusted = false;
 
 // Filter periode
 $req_show = $_GET['show'] ?? 'harian';
@@ -620,6 +622,72 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
         'net' => $net_total,
         'retur_qty' => $retur_qty
     ];
+}
+
+function calc_audit_adjusted_setoran(array $ar) {
+    $price10 = 5000;
+    $price30 = 20000;
+    $expected_setoran = (int)($ar['expected_setoran'] ?? 0);
+    $actual_setoran_raw = (int)($ar['actual_setoran'] ?? 0);
+
+    $p10_qty = 0;
+    $p30_qty = 0;
+    $cnt_rusak_10 = 0;
+    $cnt_rusak_30 = 0;
+    $cnt_retur_10 = 0;
+    $cnt_retur_30 = 0;
+    $cnt_invalid_10 = 0;
+    $cnt_invalid_30 = 0;
+    $profile10_users = 0;
+    $profile30_users = 0;
+    $has_manual_evidence = false;
+
+    if (!empty($ar['user_evidence'])) {
+        $evidence = json_decode((string)$ar['user_evidence'], true);
+        if (is_array($evidence)) {
+            $has_manual_evidence = true;
+            if (!empty($evidence['profile_qty']) && is_array($evidence['profile_qty'])) {
+                $p10_qty = (int)($evidence['profile_qty']['qty_10'] ?? 0);
+                $p30_qty = (int)($evidence['profile_qty']['qty_30'] ?? 0);
+            }
+            if (!empty($evidence['users']) && is_array($evidence['users'])) {
+                foreach ($evidence['users'] as $ud) {
+                    $kind = (string)($ud['profile_kind'] ?? '10');
+                    $status = strtolower((string)($ud['last_status'] ?? ''));
+                    if ($kind === '30') {
+                        $profile30_users++;
+                        if ($status === 'rusak') $cnt_rusak_30++;
+                        elseif ($status === 'retur') $cnt_retur_30++;
+                        elseif ($status === 'invalid') $cnt_invalid_30++;
+                    } else {
+                        $profile10_users++;
+                        if ($status === 'rusak') $cnt_rusak_10++;
+                        elseif ($status === 'retur') $cnt_retur_10++;
+                        elseif ($status === 'invalid') $cnt_invalid_10++;
+                    }
+                }
+            }
+        }
+    }
+
+    if ($p10_qty <= 0) $p10_qty = $profile10_users;
+    if ($p30_qty <= 0) $p30_qty = $profile30_users;
+
+    if ($has_manual_evidence) {
+        $manual_net_qty_10 = max(0, $p10_qty - $cnt_rusak_10 - $cnt_invalid_10 + $cnt_retur_10);
+        $manual_net_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30 + $cnt_retur_30);
+        $manual_display_setoran = ($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30);
+        $expected_adj_setoran = max(0, $expected_setoran
+            - (($cnt_rusak_10 + $cnt_invalid_10) * $price10)
+            - (($cnt_rusak_30 + $cnt_invalid_30) * $price30)
+            + ($cnt_retur_10 * $price10)
+            + ($cnt_retur_30 * $price30));
+    } else {
+        $manual_display_setoran = $actual_setoran_raw;
+        $expected_adj_setoran = $expected_setoran;
+    }
+
+    return [$manual_display_setoran, $expected_adj_setoran];
 }
 
 function fetch_rows_for_audit(PDO $db, $audit_date) {
@@ -1286,6 +1354,9 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             $audit_total_actual_setoran += (int)($ar['actual_setoran'] ?? 0);
             $audit_total_selisih_qty += (int)($ar['selisih_qty'] ?? 0);
             $audit_total_selisih_setoran += (int)($ar['selisih_setoran'] ?? 0);
+            [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($ar);
+            $audit_expected_setoran_adj_total += (int)$expected_adj_setoran;
+            $has_audit_adjusted = true;
         }
     } catch (Exception $e) {
         $audit_rows = [];
@@ -2417,6 +2488,11 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 <i class="fa fa-info-circle"></i> Menampilkan data terakhir: <?= htmlspecialchars($filter_date); ?>
             </div>
         <?php endif; ?>
+        <?php
+            $net_system_display = ($req_show === 'harian' && $has_audit_adjusted)
+                ? (int)$audit_expected_setoran_adj_total
+                : (int)$total_net;
+        ?>
         <div class="summary-grid">
             <?php
                 $audit_qty_cls = $audit_total_selisih_qty > 0 ? 'audit-pos' : ($audit_total_selisih_qty < 0 ? 'audit-neg' : 'audit-zero');
@@ -2448,7 +2524,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             </div>
             <div class="summary-card">
                 <div class="summary-title">Net Income</div>
-                <div class="summary-value" style="color:#2ecc71;"><?= $cur ?> <?= number_format($total_net,0,',','.') ?></div>
+                <div class="summary-value" style="color:#2ecc71;"><?= $cur ?> <?= number_format($net_system_display,0,',','.') ?></div>
             </div>
         </div>
         <div id="settlement-time" style="margin-top:12px;font-size:12px;color:var(--txt-muted);">
