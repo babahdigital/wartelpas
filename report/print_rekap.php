@@ -766,7 +766,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $p30_sum_calc = $profile30_sum > 0 ? $profile30_sum : ($p30_qty > 0 ? $p30_qty * $price30 : null);
                             
                             // === LOGIKA DETEKSI GHOST UNIT 10 VS 30 MENIT ===
-                            $db_selisih_qty = (int)($ar['selisih_qty'] ?? 0);
+                            $db_selisih_qty = abs((int)($ar['selisih_qty'] ?? 0));
                             // Ambil selisih uang secara absolut untuk hitungan.
                             $db_selisih_rp = abs((int)($ar['selisih_setoran'] ?? 0)); 
 
@@ -775,6 +775,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
                             // Sisa Qty yang tidak ada data usernya (Ghost)
                             $ghost_qty = $db_selisih_qty - $identified_unreported_qty;
+                            if ($ghost_qty < 0) $ghost_qty = 0;
                             
                             $ghost_10 = 0;
                             $ghost_30 = 0;
