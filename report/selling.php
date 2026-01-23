@@ -2631,6 +2631,21 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         <?php
                             $sq = (int)($ar['selisih_qty'] ?? 0);
                             $ss = (int)($ar['selisih_setoran'] ?? 0);
+                            $audit_date_row = $ar['report_date'] ?? $filter_date;
+                            $audit_block_row = normalize_block_name($ar['blok_name'] ?? '');
+                            if (isset($db) && $db instanceof PDO && $audit_date_row !== '') {
+                                $rows_src = fetch_rows_for_audit($db, $audit_date_row);
+                                if (!empty($rows_src)) {
+                                    $expected = calc_expected_for_block($rows_src, $audit_date_row, $audit_block_row);
+                                    $expected_qty = (int)($expected['qty'] ?? 0);
+                                    $expected_qty -= (int)($expected['rusak_qty'] ?? 0);
+                                    $expected_qty -= (int)($expected['invalid_qty'] ?? 0);
+                                    if ($expected_qty < 0) $expected_qty = 0;
+                                    $expected_setoran = (int)($expected['net'] ?? 0);
+                                    $sq = (int)($ar['reported_qty'] ?? 0) - $expected_qty;
+                                    $ss = (int)($ar['actual_setoran'] ?? 0) - $expected_setoran;
+                                }
+                            }
                             $cls_q = $sq > 0 ? 'audit-pos' : ($sq < 0 ? 'audit-neg' : 'audit-zero');
                             $cls_s = $ss > 0 ? 'audit-pos' : ($ss < 0 ? 'audit-neg' : 'audit-zero');
                             $evidence = [];
