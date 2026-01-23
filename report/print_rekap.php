@@ -765,6 +765,16 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $p10_sum_calc = $profile10_sum > 0 ? $profile10_sum : ($p10_qty > 0 ? $p10_qty * $price10 : null);
                             $p30_sum_calc = $profile30_sum > 0 ? $profile30_sum : ($p30_qty > 0 ? $p30_qty * $price30 : null);
                             
+                            // Calculate Unreported Ghost Units (No User Info)
+                            $selisih_qty_total = (int)($ar['selisih_qty'] ?? 0);
+                            $identified_gap = $cnt_unreported_10 + $cnt_unreported_30;
+                            $unknown_missing = 0;
+                            // Jika ada selisih positif (kurang lapor) dan jumlah user yg teridentifikasi kurang dari total selisih
+                            if ($selisih_qty_total > 0) {
+                                $unknown_missing = $selisih_qty_total - $identified_gap;
+                                if ($unknown_missing < 0) $unknown_missing = 0;
+                            }
+
                             // Capture data for summary
                             $audit_summary_report[] = [
                                 'blok' => $ar['blok_name'] ?? '-',
@@ -776,6 +786,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 'unreported_total' => (int)($cnt_unreported_10 + $cnt_unreported_30),
                                 'unreported_10' => (int)$cnt_unreported_10,
                                 'unreported_30' => (int)$cnt_unreported_30,
+                                'unknown_missing' => $unknown_missing,
                                 'rusak_10' => $cnt_rusak_10,
                                 'rusak_30' => $cnt_rusak_30,
                                 'retur_10' => (int)$cnt_retur_10,
@@ -892,6 +903,13 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             if (!empty($rep['unreported_30'])) $unrep_parts[] = number_format((int)$rep['unreported_30'],0,',','.') . ' User (30 Menit)';
                                             echo implode(' | ', $unrep_parts);
                                         ?>
+                                    </li>
+                                <?php endif; ?>
+
+                                <?php if ($rep['unknown_missing'] > 0): ?>
+                                    <li>
+                                        <span style="color:#b45309; font-weight:bold;">Voucer tidak dilaporkan:</span>
+                                        <?= number_format($rep['unknown_missing'], 0, ',', '.') ?> Unit
                                     </li>
                                 <?php endif; ?>
 
