@@ -2475,13 +2475,21 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 </tbody>
             </table>
         </div>
+        <?php
+            $audit_system_qty_total = (int)$total_qty_laku;
+            $audit_system_setoran_total = (int)$total_net;
+            $audit_manual_qty_total = (int)$audit_total_reported_qty;
+            $audit_manual_setoran_total = (int)$audit_total_actual_setoran;
+            $audit_selisih_qty_total = $audit_manual_qty_total - $audit_system_qty_total;
+            $audit_selisih_setoran_total = $audit_manual_setoran_total - $audit_system_setoran_total;
+        ?>
         <div class="hp-total-bar">
-            <div>Sistem Qty: <b><?= number_format($audit_total_expected_qty,0,',','.') ?></b></div>
-            <div>Manual Qty: <b><?= number_format($audit_total_reported_qty,0,',','.') ?></b></div>
-            <div>Selisih Qty: <b><?= number_format($audit_total_selisih_qty,0,',','.') ?></b></div>
-            <div>Sistem Rp: <b><?= number_format($audit_total_expected_setoran,0,',','.') ?></b></div>
-            <div>Manual Rp: <b><?= number_format($audit_total_actual_setoran,0,',','.') ?></b></div>
-            <div>Selisih Rp: <b><?= number_format($audit_total_selisih_setoran,0,',','.') ?></b></div>
+            <div>Sistem Qty (Total): <b><?= number_format($audit_system_qty_total,0,',','.') ?></b></div>
+            <div>Manual Qty: <b><?= number_format($audit_manual_qty_total,0,',','.') ?></b></div>
+            <div>Selisih Qty: <b><?= number_format($audit_selisih_qty_total,0,',','.') ?></b></div>
+            <div>Sistem Rp (Total): <b><?= number_format($audit_system_setoran_total,0,',','.') ?></b></div>
+            <div>Manual Rp: <b><?= number_format($audit_manual_setoran_total,0,',','.') ?></b></div>
+            <div>Selisih Rp: <b><?= number_format($audit_selisih_setoran_total,0,',','.') ?></b></div>
         </div>
     </div>
 </div>
