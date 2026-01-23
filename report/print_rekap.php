@@ -324,6 +324,9 @@ foreach ($rows as $r) {
     }
 
     $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
+    if ($price <= 0) {
+        $price = (int)($r['sprice_snapshot'] ?? 0);
+    }
     $qty = (int)($r['qty'] ?? 0);
     if ($qty <= 0) $qty = 1;
     $line_price = $price * $qty;
@@ -345,7 +348,7 @@ foreach ($rows as $r) {
         elseif ((int)($r['is_retur'] ?? 0) === 1) $status = 'retur';
         elseif ((int)($r['is_rusak'] ?? 0) === 1) $status = 'rusak';
         elseif (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
-        elseif (strpos($cmt_low, 'retur') !== false || $lh_status === 'retur') $status = 'retur';
+        elseif (strpos($cmt_low, 'retur') !== false) $status = 'retur';
         elseif (strpos($cmt_low, 'rusak') !== false || $lh_status === 'rusak') $status = 'rusak';
         else $status = 'normal';
     }
@@ -355,7 +358,9 @@ foreach ($rows as $r) {
     $loss_invalid = ($status === 'invalid') ? $line_price : 0;
     $net_add = $gross_add - $loss_rusak - $loss_invalid;
 
-    $total_bandwidth += $bytes;
+    if (empty($valid_blocks) || isset($valid_blocks[$block])) {
+        $total_bandwidth += $bytes;
+    }
 
     $is_laku = !in_array($status, ['rusak', 'retur', 'invalid'], true);
     if ($is_laku && $username !== '') {
