@@ -596,7 +596,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                 </tr>
             </tbody>
         </table>
-        <div class="dul-gap"></div>
+        <div style="margin-bottom: 10%;"></div>
         <?php if (!empty($audit_rows)): ?>
             <?php 
                 // Array untuk menampung data summary
