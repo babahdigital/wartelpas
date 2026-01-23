@@ -202,6 +202,10 @@ $rows = [];
 $retur_ref_map = [];
 $list = [];
 $usage_list = [];
+$total_gross = 0;
+$total_net = 0;
+$unique_laku_users = [];
+$bytes_by_user = [];
 $only_wartel = true;
 if (isset($_GET['only_wartel']) && $_GET['only_wartel'] === '0') {
     $only_wartel = false;
@@ -216,7 +220,7 @@ try {
                 sh.username, sh.profile, sh.profile_snapshot,
                 sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
                 sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
-                sh.full_raw_data, lh.last_status
+                sh.full_raw_data, lh.last_status, lh.last_bytes
             FROM sales_history sh
             LEFT JOIN login_history lh ON lh.username = sh.username
             UNION ALL
@@ -225,7 +229,7 @@ try {
                 ls.username, ls.profile, ls.profile_snapshot,
                 ls.price, ls.price_snapshot, ls.sprice_snapshot, ls.validity,
                 ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
-                ls.full_raw_data, lh2.last_status
+                ls.full_raw_data, lh2.last_status, lh2.last_bytes
             FROM live_sales ls
             LEFT JOIN login_history lh2 ON lh2.username = ls.username
             WHERE ls.sync_status = 'pending'
@@ -532,6 +536,7 @@ foreach ($rows as $r) {
     $loss_rusak = ($status === 'rusak') ? $price : 0;
     $loss_invalid = ($status === 'invalid') ? $price : 0;
     $net_add = $gross_add - $loss_rusak - $loss_invalid;
+    $bytes = (int)($r['last_bytes'] ?? 0);
 
     $list[] = [
         'time' => $r['sale_time'] ?: ($r['raw_time'] ?? ''),
@@ -541,8 +546,19 @@ foreach ($rows as $r) {
         'status' => $status,
         'price' => $price,
         'gross' => $gross_add,
-        'net' => $net_add
+        'net' => $net_add,
+        'bytes' => $bytes
     ];
+
+    if (!in_array($status, ['rusak','retur','invalid'], true) && !empty($r['username'])) {
+        $unique_laku_users[$r['username']] = true;
+    }
+    $total_gross += $gross_add;
+    $total_net += $net_add;
+    if (!empty($r['username'])) {
+        $u = $r['username'];
+        $bytes_by_user[$u] = max((int)($bytes_by_user[$u] ?? 0), $bytes);
+    }
 }
 
 function esc($s){ return htmlspecialchars((string)$s); }
