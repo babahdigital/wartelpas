@@ -478,10 +478,12 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         .audit-details-list { margin: 4px 0 0 15px; padding: 0; list-style-type: none; color: #444; }
         .audit-details-list li::before { content: "- "; font-weight: bold; }
         
+        @page { margin: 10mm; }
         @media print { 
             .toolbar { display:none; } 
             .audit-summary-box { page-break-inside: avoid; }
             .dul-gap { margin-top: 20% !important; padding-top:2%; }
+            body { zoom: 0.9; }
         }
     </style>
 </head>
