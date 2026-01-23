@@ -686,6 +686,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $cnt_rusak_30 = 0;
                             $cnt_unreported_10 = 0;
                             $cnt_unreported_30 = 0;
+                            $reported_10 = 0;
+                            $reported_30 = 0;
+                            $has_user_evidence = false;
                             $cnt_retur_10 = 0;
                             $cnt_retur_30 = 0;
 
@@ -696,6 +699,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                         $profile_qty = $evidence['profile_qty'];
                                     }
                                     if (!empty($evidence['users']) && is_array($evidence['users'])) {
+                                        $has_user_evidence = true;
                                         foreach ($evidence['users'] as $uname => $ud) {
                                             $cnt = isset($ud['events']) && is_array($ud['events']) ? count($ud['events']) : 0;
                                             $upt = trim((string)($ud['last_uptime'] ?? ''));
@@ -719,12 +723,14 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                                 if($u_status === 'rusak') $cnt_rusak_30++;
                                                 if($u_status === 'retur') $cnt_retur_30++;
                                                 if ($is_unreported) $cnt_unreported_30++;
+                                                $reported_30++;
                                             } else {
                                                 $profile10_sum += $price_val;
                                                 $profile10 = $bucket;
                                                 if($u_status === 'rusak') $cnt_rusak_10++;
                                                 if($u_status === 'retur') $cnt_retur_10++;
                                                 if ($is_unreported) $cnt_unreported_10++;
+                                                $reported_10++;
                                             }
                                         }
                                     } else {
@@ -756,6 +762,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $p30_qty = (int)($profile_qty['qty_30'] ?? 0);
                             if ($p10_qty <= 0) $p10_qty = count($profile10['user'] ?? []);
                             if ($p30_qty <= 0) $p30_qty = count($profile30['user'] ?? []);
+                            if ($p10_qty > 0) $cnt_unreported_10 = max(0, $p10_qty - $reported_10);
+                            if ($p30_qty > 0) $cnt_unreported_30 = max(0, $p30_qty - $reported_30);
                             $p10_tt = $p10_qty > 0 ? number_format($p10_qty,0,',','.') : '-';
                             $p30_tt = $p30_qty > 0 ? number_format($p30_qty,0,',','.') : '-';
                             $audit_total_profile_qty_10 += $p10_qty;
@@ -776,6 +784,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 'unreported_total' => (int)($cnt_unreported_10 + $cnt_unreported_30),
                                 'unreported_10' => (int)$cnt_unreported_10,
                                 'unreported_30' => (int)$cnt_unreported_30,
+                                'has_user_evidence' => $has_user_evidence ? 1 : 0,
                                 'rusak_10' => $cnt_rusak_10,
                                 'rusak_30' => $cnt_rusak_30,
                                 'retur_10' => (int)$cnt_retur_10,
@@ -883,7 +892,12 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     </li>
                                 <?php endif; ?>
 
-                                <?php if (!empty($rep['unreported_total'])): ?>
+                                <?php if (empty($rep['has_user_evidence']) && (($rep['p10_qty'] ?? 0) > 0 || ($rep['p30_qty'] ?? 0) > 0)): ?>
+                                    <li>
+                                        <span style="color:#b45309; font-weight:bold;">User Tidak Dilaporkan:</span>
+                                        Data user belum tersedia.
+                                    </li>
+                                <?php elseif (!empty($rep['unreported_total'])): ?>
                                     <li>
                                         <span style="color:#b45309; font-weight:bold;">User Tidak Dilaporkan:</span>
                                         <?php 
