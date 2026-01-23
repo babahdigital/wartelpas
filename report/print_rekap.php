@@ -740,11 +740,11 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             <td style="text-align: center;"><?= $p10_us ?></td>
                             <td style="text-align: right;"><?= $p10_up ?></td>
                             <td style="text-align: right;"><?= $p10_bt ?></td>
-                            <td><?= $p10_tt ?></td>
-                            <td><?= $p30_us ?></td>
+                            <td style="text-align: center;"><?= $p10_tt ?></td>
+                            <td style="text-align: center;"><?= $p30_us ?></td>
                             <td style="text-align: right;"><?= $p30_up ?></td>
                             <td style="text-align: right;"><?= $p30_bt ?></td>
-                            <td><?= $p30_tt ?></td>
+                            <td style="text-align: center;"><?= $p30_tt ?></td>
                             <td><?= htmlspecialchars($ar['note'] ?? '') ?></td>
                         </tr>
                     <?php endforeach; ?>
