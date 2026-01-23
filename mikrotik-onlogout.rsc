@@ -54,7 +54,15 @@
                 :for j from=$i to=$commentLen do={
                     :local char [:pick $cleanComment $j ($j + 1)];
                     :if ($char = " " or $char = ")" or $char = "-" or $char = "|" or $j = $commentLen) do={
-                        :if ($char = "-" and [:pick $currentComment ($j + 1) ($j + 2)] != " ") do={
+                        :local nextOk false;
+                        :if ($char = "-") do={
+                            :if ([:len $currentComment] > ($j + 1)) do={
+                                :if ([:pick $currentComment ($j + 1) ($j + 2)] != " ") do={
+                                    :set nextOk true;
+                                }
+                            }
+                        }
+                        :if ($nextOk = true) do={
                             # Ini masih bagian dari Blok-A10, lanjut
                         } else={
                             :set endPos $j;
