@@ -813,7 +813,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         $audit_setoran = (int)($_POST['audit_setoran'] ?? 0);
         $audit_qty_10 = (int)($_POST['audit_qty_10'] ?? 0);
         $audit_qty_30 = (int)($_POST['audit_qty_30'] ?? 0);
-        $audit_note = trim($_POST['audit_note'] ?? '');
+        $audit_note = '';
         $audit_status = 'OPEN';
 
         if ($audit_blok_raw === '' || $audit_date === '') {
@@ -930,8 +930,13 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     }
                 }
             }
-            if (empty($audit_users) && $audit_qty_10 <= 0 && $audit_qty_30 <= 0) {
-                $audit_error = 'Isi qty per profile (10/30 menit) jika username kosong.';
+            $profile_qty_sum = $audit_qty_10 + $audit_qty_30;
+            if ($audit_qty <= 0) {
+                $audit_error = 'Qty manual wajib diisi.';
+            } elseif ($profile_qty_sum <= 0) {
+                $audit_error = 'Qty per profile wajib diisi.';
+            } elseif ($profile_qty_sum !== $audit_qty) {
+                $audit_error = 'Qty per profile harus sama dengan Qty Manual.';
             }
             $expected_qty = (int)($by_block[$audit_blok]['qty'] ?? 0);
             $expected_setoran = (int)($by_block[$audit_blok]['net'] ?? 0);
@@ -1291,34 +1296,6 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                         <input class="form-input" type="date" name="audit_date" value="<?= htmlspecialchars($filter_date); ?>" required>
                     </div>
                 </div>
-                <div style="margin-top:8px;">
-                    <label>Username (opsional)</label>
-                    <input type="hidden" name="audit_username" id="auditUsernameHidden">
-                    <div class="audit-user-picker">
-                        <div id="audit-user-chips" class="audit-user-chips"></div>
-                        <input class="form-input" type="text" id="audit-user-input" placeholder="ketik untuk cari username">
-                        <div id="audit-user-suggest" class="audit-user-suggest"></div>
-                    </div>
-                </div>
-                <div style="margin-top:8px;">
-                    <label>Qty per Profile (wajib jika username kosong)</label>
-                    <div class="audit-profile-row">
-                        <div class="audit-profile-item">
-                            <label>
-                                <input type="checkbox" id="audit_prof10_chk">
-                                <span>Profil 10 Menit</span>
-                            </label>
-                            <input class="form-input" type="number" id="audit_prof10_qty" name="audit_qty_10" min="0" value="0" disabled style="display:none;">
-                        </div>
-                        <div class="audit-profile-item">
-                            <label>
-                                <input type="checkbox" id="audit_prof30_chk">
-                                <span>Profil 30 Menit</span>
-                            </label>
-                            <input class="form-input" type="number" id="audit_prof30_qty" name="audit_qty_30" min="0" value="0" disabled style="display:none;">
-                        </div>
-                    </div>
-                </div>
                 <div class="form-grid-2" style="margin-top:10px;">
                     <div>
                         <label>Qty Manual</label>
@@ -1329,9 +1306,28 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                         <input class="form-input" type="number" name="audit_setoran" min="0" value="0" required>
                     </div>
                 </div>
-                <div style="margin-top:10px;">
-                    <label>Catatan</label>
-                    <textarea class="form-input" style="width:448px;" name="audit_note" rows="3" placeholder="contoh: Blok F kurang bayar 1 voucher"></textarea>
+                <div style="margin-top:8px;">
+                    <label>Username (opsional)</label>
+                    <input type="hidden" name="audit_username" id="auditUsernameHidden">
+                    <div class="audit-user-picker">
+                        <div id="audit-user-chips" class="audit-user-chips"></div>
+                        <input class="form-input" type="text" id="audit-user-input" placeholder="ketik untuk cari username">
+                        <div id="audit-user-suggest" class="audit-user-suggest"></div>
+                    </div>
+                </div>
+                <div style="margin-top:8px;">
+                    <label>Qty per Profile (wajib)</label>
+                    <div class="audit-profile-row">
+                        <div class="audit-profile-item">
+                            <label>Profil 10 Menit</label>
+                            <input class="form-input" type="number" id="audit_prof10_qty" name="audit_qty_10" min="0" value="0" required>
+                        </div>
+                        <div class="audit-profile-item">
+                            <label>Profil 30 Menit</label>
+                            <input class="form-input" type="number" id="audit_prof30_qty" name="audit_qty_30" min="0" value="0" required>
+                        </div>
+                    </div>
+                    <div class="modal-note">Jumlah profil harus sama dengan Qty Manual.</div>
                 </div>
                 <div id="auditClientError" style="display:none;margin-top:8px;color:#fca5a5;font-size:12px;"></div>
             </div>
@@ -1886,7 +1882,6 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         var user = btn.getAttribute('data-user') || '';
         var qty = btn.getAttribute('data-qty') || '0';
         var setoran = btn.getAttribute('data-setoran') || '0';
-        var note = btn.getAttribute('data-note') || '';
         var blokSelect = form.querySelector('select[name="audit_blok"]');
         if (blokSelect) blokSelect.value = blok;
         var dateInput = form.querySelector('input[name="audit_date"]');
@@ -1898,8 +1893,6 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (qtyInput) qtyInput.value = qty;
         var setInput = form.querySelector('input[name="audit_setoran"]');
         if (setInput) setInput.value = setoran;
-        var noteInput = form.querySelector('textarea[name="audit_note"]');
-        if (noteInput) noteInput.value = note;
         openAuditModal();
     };
 
@@ -1924,40 +1917,38 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         var form = document.getElementById('auditForm');
         var btn = document.getElementById('auditSubmitBtn');
         var err = document.getElementById('auditClientError');
-        var chk10 = document.getElementById('audit_prof10_chk');
-        var chk30 = document.getElementById('audit_prof30_chk');
         var qty10 = document.getElementById('audit_prof10_qty');
         var qty30 = document.getElementById('audit_prof30_qty');
-        if (chk10 && qty10) {
-            chk10.addEventListener('change', function(){
-                qty10.disabled = !chk10.checked;
-                qty10.style.display = chk10.checked ? '' : 'none';
-                if (!chk10.checked) qty10.value = 0;
-            });
-        }
-        if (chk30 && qty30) {
-            chk30.addEventListener('change', function(){
-                qty30.disabled = !chk30.checked;
-                qty30.style.display = chk30.checked ? '' : 'none';
-                if (!chk30.checked) qty30.value = 0;
-            });
-        }
         if (!form) return;
         form.addEventListener('submit', function(e){
             e.preventDefault();
             if (btn && btn.disabled) return;
             if (err) err.style.display = 'none';
-            var hasUsers = auditSelectedUsers && auditSelectedUsers.length > 0;
-            if (!hasUsers) {
-                var v10 = qty10 ? parseInt(qty10.value || '0', 10) : 0;
-                var v30 = qty30 ? parseInt(qty30.value || '0', 10) : 0;
-                if (v10 <= 0 && v30 <= 0) {
-                    if (err) {
-                        err.textContent = 'Isi qty per profile (10/30 menit) jika username kosong.';
-                        err.style.display = 'block';
-                    }
-                    return;
+            var qtyInput = form.querySelector('input[name="audit_qty"]');
+            var totalQty = qtyInput ? parseInt(qtyInput.value || '0', 10) : 0;
+            var v10 = qty10 ? parseInt(qty10.value || '0', 10) : 0;
+            var v30 = qty30 ? parseInt(qty30.value || '0', 10) : 0;
+            var sumQty = v10 + v30;
+            if (totalQty <= 0) {
+                if (err) {
+                    err.textContent = 'Qty manual wajib diisi.';
+                    err.style.display = 'block';
                 }
+                return;
+            }
+            if (sumQty <= 0) {
+                if (err) {
+                    err.textContent = 'Qty per profile wajib diisi.';
+                    err.style.display = 'block';
+                }
+                return;
+            }
+            if (sumQty !== totalQty) {
+                if (err) {
+                    err.textContent = 'Qty per profile harus sama dengan Qty Manual.';
+                    err.style.display = 'block';
+                }
+                return;
             }
             window.sellingPauseReload = true;
             var fd = new FormData(form);
@@ -2383,7 +2374,6 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         <th class="text-center">Selisih</th>
                         <th class="text-center" colspan="4">Profil 10 Menit</th>
                         <th class="text-center" colspan="4">Profil 30 Menit</th>
-                        <th>Catatan</th>
                         <th class="text-right">Aksi</th>
                     </tr>
                     <tr>
@@ -2392,15 +2382,13 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         <th></th>
                         <th></th>
                         <th></th>
+                        <th>Username</th>
                         <th></th>
-                        <th>Username</th>
-                        <th>Up</th>
-                        <th>Byte</th>
                         <th>Total</th>
                         <th>Username</th>
                         <th>Up</th>
                         <th>Byte</th>
-                        <th>Total</th>
+                        <tr><td colspan="14" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
                         <th></th>
                     </tr>
                 </thead>
@@ -2418,9 +2406,15 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             $profile30 = ['user' => [], 'up' => [], 'byte' => [], 'login' => [], 'total' => []];
                             $profile10_sum = 0;
                             $profile30_sum = 0;
+                            $profile_qty_10 = 0;
+                            $profile_qty_30 = 0;
                             if (!empty($ar['user_evidence'])) {
                                 $evidence = json_decode((string)$ar['user_evidence'], true);
                                 if (is_array($evidence)) {
+                                    if (!empty($evidence['profile_qty']) && is_array($evidence['profile_qty'])) {
+                                        $profile_qty_10 = (int)($evidence['profile_qty']['qty_10'] ?? 0);
+                                        $profile_qty_30 = (int)($evidence['profile_qty']['qty_30'] ?? 0);
+                                    }
                                     if (!empty($evidence['users']) && is_array($evidence['users'])) {
                                         foreach ($evidence['users'] as $uname => $ud) {
                                             $cnt = isset($ud['events']) && is_array($ud['events']) ? count($ud['events']) : 0;
@@ -2481,15 +2475,15 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             <td><small><?= $p30_up ?></small></td>
                             <td><small><?= $p30_bt ?></small></td>
                             <td><small><?= $p30_tt ?></small></td>
-                            <td><small><?= htmlspecialchars($ar['note'] ?? '') ?></small></td>
                             <td class="text-right">
                                 <button type="button" class="btn-act" onclick="openAuditEdit(this)"
                                     data-blok="<?= htmlspecialchars($ar['blok_name'] ?? ''); ?>"
                                     data-user="<?= htmlspecialchars($ar['audit_username'] ?? ''); ?>"
                                     data-date="<?= htmlspecialchars($ar['report_date'] ?? $filter_date); ?>"
                                     data-qty="<?= (int)($ar['reported_qty'] ?? 0); ?>"
-                                    data-setoran="<?= (int)($ar['actual_setoran'] ?? 0); ?>"
-                                    data-note="<?= htmlspecialchars($ar['note'] ?? ''); ?>">
+                                    data-setoran="<?= (int)($ar['actual_setoran'] ?? 0); ?>">
+                                    data-qty10="<?= (int)$profile_qty_10; ?>"
+                                    data-qty30="<?= (int)$profile_qty_30; ?>">
                                     <i class="fa fa-edit"></i>
                                 </button>
                                 <button type="button" class="btn-act btn-act-danger" onclick="openDeleteAuditModal('<?= './?report=selling' . $session_qs . '&show=' . $req_show . '&date=' . urlencode($filter_date) . '&audit_delete=1&audit_blok=' . urlencode($ar['blok_name'] ?? '') . '&audit_date=' . urlencode($filter_date); ?>','<?= htmlspecialchars($ar['blok_name'] ?? '-'); ?>','<?= htmlspecialchars($filter_date); ?>')">
