@@ -597,13 +597,12 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                 </tr>
             </tbody>
         </table>
-        <div class="dul-gap"></div>
         <?php if (!empty($audit_rows)): ?>
             <?php 
                 // Array untuk menampung data summary
                 $audit_summary_report = []; 
             ?>
-            <table class="rekap-table" style="margin-top:12px;">
+            <table class="rekap-table dul-gap" style="margin-top:12px;">
                 <thead>
                     <tr>
                         <th colspan="13">Audit Manual Rekap Harian</th>
