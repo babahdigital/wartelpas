@@ -808,13 +808,11 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
             <div class="audit-summary-box">
                 <div class="audit-summary-header">Kesimpulan Audit Harian</div>
-                <div style="font-size:11px; color:#444; margin-bottom:6px;">
-                    Status Voucher Global:
-                    <ul style="margin:0; padding-left:15px;">
-                        <li>Voucher Rusak: <?= number_format((int)$total_qty_rusak,0,',','.') ?></li>
-                        <li>Retur: <?= number_format((int)$total_qty_retur,0,',','.') ?></li>
-                        <li>Invalid: <?= number_format((int)$total_qty_invalid,0,',','.') ?></li>
-                    </ul>
+                <div style="font-size:11px; color:#444; margin-bottom:6px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+                    <span><strong>Status Voucher Global:</strong></span>
+                    <span>Voucher Rusak: <?= number_format((int)$total_qty_rusak,0,',','.') ?></span>
+                    <span>Retur: <?= number_format((int)$total_qty_retur,0,',','.') ?></span>
+                    <span>Invalid: <?= number_format((int)$total_qty_invalid,0,',','.') ?></span>
                 </div>
                 
                 <hr style="border:0; border-top:1px dashed #ccc; margin:8px 0;">
