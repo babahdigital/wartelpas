@@ -1265,6 +1265,18 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                         <input class="form-input" type="date" name="audit_date" value="<?= htmlspecialchars($filter_date); ?>" required>
                     </div>
                 </div>
+                <div style="margin-top:10px;">
+                    <label>Qty per Profile (wajib diisi)</label>
+                    <div>
+                        <label style="display:block;margin-top:6px;">Profil 10 Menit</label>
+                        <input class="form-input" type="number" id="audit_prof10_qty" name="audit_qty_10" min="0" value="0" required>
+                    </div>
+                    <div style="margin-top:8px;">
+                        <label style="display:block;">Profil 30 Menit</label>
+                        <input class="form-input" type="number" id="audit_prof30_qty" name="audit_qty_30" min="0" value="0" required>
+                    </div>
+                    <div class="modal-note">Isi qty 10/30 sesuai total voucher laku.</div>
+                </div>
                 <div class="form-grid-2" style="margin-top:10px;">
                     <div>
                         <label>Total Qty (otomatis)</label>
@@ -1283,20 +1295,6 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                         <input class="form-input" type="text" id="audit-user-input" placeholder="ketik untuk cari username">
                         <div id="audit-user-suggest" class="audit-user-suggest"></div>
                     </div>
-                </div>
-                <div style="margin-top:8px;">
-                    <label>Qty per Profile (otomatis dari username jika kosong)</label>
-                    <div class="audit-profile-row">
-                        <div class="audit-profile-item">
-                            <label>Profil 10 Menit</label>
-                            <input class="form-input" type="number" id="audit_prof10_qty" name="audit_qty_10" min="0" value="0" required>
-                        </div>
-                        <div class="audit-profile-item">
-                            <label>Profil 30 Menit</label>
-                            <input class="form-input" type="number" id="audit_prof30_qty" name="audit_qty_30" min="0" value="0" required>
-                        </div>
-                    </div>
-                    <div class="modal-note">Jumlah profil harus sama dengan Qty Manual.</div>
                 </div>
                 <div id="auditClientError" style="display:none;margin-top:8px;color:#fca5a5;font-size:12px;"></div>
             </div>
