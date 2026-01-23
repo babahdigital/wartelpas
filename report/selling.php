@@ -2408,7 +2408,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 $audit_setoran_cls = $audit_total_selisih_setoran > 0 ? 'audit-pos' : ($audit_total_selisih_setoran < 0 ? 'audit-neg' : 'audit-zero');
             ?>
             <div class="summary-card">
-                <div class="summary-title">Pendapatan Kotor</div>
+                <div class="summary-title">Gross Income</div>
                 <div class="summary-value"><?= $cur ?> <?= number_format($total_gross,0,',','.') ?></div>
             </div>
             <div class="summary-card">
@@ -2417,7 +2417,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 <div style="font-size:12px;color:var(--txt-muted)">10 Menit: <?= number_format($rusak_10m,0,',','.') ?> | 30 Menit: <?= number_format($rusak_30m,0,',','.') ?></div>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Total Handphone</div>
+                <div class="summary-title">Total Device</div>
                 <div style="margin-top:7px; margin-bottom:10px;">
                     <span class="summary-badge badge-wartel">WARTEL: <?= number_format($hp_wartel_units,0,',','.') ?></span>
                     <span class="summary-badge badge-kamtib">KAMTIB: <?= number_format($hp_kamtib_units,0,',','.') ?></span>
@@ -2427,12 +2427,12 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 </div>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Total Voucher Laku</div>
+                <div class="summary-title">Voucher Terjual</div>
                 <div class="summary-value"><?= number_format($total_qty_laku,0,',','.') ?></div>
                 <div style="font-size:12px;color:var(--txt-muted);margin-top: 1px;">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bandwidth: <?= htmlspecialchars(format_bytes_short($total_bandwidth)) ?></div>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Pendapatan Bersih</div>
+                <div class="summary-title">Net Income</div>
                 <div class="summary-value" style="color:#2ecc71;"><?= $cur ?> <?= number_format($total_net,0,',','.') ?></div>
             </div>
         </div>

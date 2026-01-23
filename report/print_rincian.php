@@ -600,6 +600,10 @@ function normalize_uptime_diff($diff, $snap = 2) {
         .status-online { color:#1976d2; font-weight:700; }
         .status-terpakai { color:#0a7f2e; font-weight:700; }
         .status-relogin { color:#fff; background:#6f42c1; font-weight:700; padding:2px 6px; border-radius:4px; display:inline-block; }
+        .summary-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+        .summary-badge { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:6px; border:1px solid #999; background:#f8f8f8; font-size:12px; }
+        .summary-badge .label { font-weight:700; color:#333; }
+        .summary-badge .value { font-weight:700; color:#111; }
         @media print {
             .toolbar { display:none; }
             .status-relogin { color:#fff !important; background:#6f42c1 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -706,6 +710,15 @@ function normalize_uptime_diff($diff, $snap = 2) {
               <?php endif; ?>
           </tbody>
       </table>
+      <?php
+          $total_voucher_laku = count($unique_laku_users);
+          $total_bytes = array_sum($bytes_by_user);
+      ?>
+      <div class="summary-row">
+          <div class="summary-badge"><span class="label">Total Voucher Laku</span> <span class="value"><?= number_format((int)$total_voucher_laku,0,',','.') ?></span></div>
+          <div class="summary-badge"><span class="label">Pendapatan Bersih</span> <span class="value"><?= $cur ?> <?= number_format((int)$total_net,0,',','.') ?></span></div>
+          <div class="summary-badge"><span class="label">Total Byte</span> <span class="value"><?= esc(format_bytes_short((int)$total_bytes)) ?></span></div>
+      </div>
     <?php endif; ?>
 
 <script>
