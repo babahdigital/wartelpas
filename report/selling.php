@@ -2507,9 +2507,8 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 <div style="font-size:12px;color:var(--txt-muted)">Voucher: <?= $cur ?> <?= number_format($voucher_loss_display,0,',','.') ?> | Setoran: <?= $cur ?> <?= number_format($setoran_loss_display,0,',','.') ?></div>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Voucher Rusak</div>
-                <div class="summary-value" ><span style="color: crimson;"><?= number_format($total_qty_rusak,0,',','.') ?></span></div>
-                <div style="font-size:12px;color:var(--txt-muted)">10 Menit: <?= number_format($rusak_10m,0,',','.') ?> | 30 Menit: <?= number_format($rusak_30m,0,',','.') ?></div>
+                <div class="summary-title">Gross Income</div>
+                <div class="summary-value"><?= $cur ?> <?= number_format($total_gross,0,',','.') ?></div>
             </div>
             <div class="summary-card">
                 <div class="summary-title">Total Device</div>
