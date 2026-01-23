@@ -115,12 +115,15 @@ function generate_nested_table_user($items, $align = 'left') {
         
         // Logika Warna:
         // Merah = Rusak
-        // Kuning = Tidak Terlapor (Default evidence tapi tidak rusak)
+        // Hijau = Retur
+        // Kuning = Tidak Terlapor (Default evidence tapi tidak rusak/retur)
         // Transparan = Jika labelnya "-" atau kosong
         if ($label === '-' || trim($label) === '') {
             $bg = 'transparent';
         } elseif ($status === 'rusak') {
             $bg = '#fecaca'; // Merah
+        } elseif ($status === 'retur') {
+            $bg = '#dcfce7'; // Hijau
         } else {
             $bg = '#fef3c7'; // Kuning
         }
