@@ -822,6 +822,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             $user_rows = [];
             $user_events = [];
             $blok_from_user = '';
+            $auto_qty_10 = 0;
+            $auto_qty_30 = 0;
             if (!empty($audit_users)) {
                 foreach ($audit_users as $u) {
                     $user_row = null;
@@ -910,6 +912,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     if (preg_match('/\b30\s*(menit|m)\b|30menit/', $profile_low)) $profile_kind = '30';
                     elseif (preg_match('/\b10\s*(menit|m)\b|10menit/', $profile_low)) $profile_kind = '10';
                     else $profile_kind = '10';
+                    if ($profile_kind === '30') $auto_qty_30++;
+                    else $auto_qty_10++;
                     if ($tx_count > 1) {
                         $audit_error = 'Username terdeteksi lebih dari 1 transaksi pada tanggal tersebut: ' . $u;
                         break;
@@ -929,6 +933,10 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         $user_events[$u] = $stmtEv2->fetchAll(PDO::FETCH_ASSOC);
                     }
                 }
+            }
+            if (!empty($audit_users) && $audit_qty_10 <= 0 && $audit_qty_30 <= 0) {
+                $audit_qty_10 = $auto_qty_10;
+                $audit_qty_30 = $auto_qty_30;
             }
             $profile_qty_sum = $audit_qty_10 + $audit_qty_30;
             if ($audit_qty <= 0) {
@@ -1316,7 +1324,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                     </div>
                 </div>
                 <div style="margin-top:8px;">
-                    <label>Qty per Profile (wajib)</label>
+                    <label>Qty per Profile (otomatis dari username jika kosong)</label>
                     <div class="audit-profile-row">
                         <div class="audit-profile-item">
                             <label>Profil 10 Menit</label>
@@ -1935,6 +1943,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             var v10 = qty10 ? parseInt(qty10.value || '0', 10) : 0;
             var v30 = qty30 ? parseInt(qty30.value || '0', 10) : 0;
             var sumQty = v10 + v30;
+            var hasUsers = auditSelectedUsers && auditSelectedUsers.length > 0;
             if (totalQty <= 0) {
                 if (err) {
                     err.textContent = 'Qty manual wajib diisi.';
@@ -1942,14 +1951,14 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 }
                 return;
             }
-            if (sumQty <= 0) {
+            if (!hasUsers && sumQty <= 0) {
                 if (err) {
                     err.textContent = 'Qty per profile wajib diisi.';
                     err.style.display = 'block';
                 }
                 return;
             }
-            if (sumQty !== totalQty) {
+            if (sumQty > 0 && sumQty !== totalQty) {
                 if (err) {
                     err.textContent = 'Qty per profile harus sama dengan Qty Manual.';
                     err.style.display = 'block';

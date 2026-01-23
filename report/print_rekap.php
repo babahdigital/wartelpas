@@ -98,7 +98,7 @@ function generate_nested_table($items, $align = 'left') {
     $count = count($items);
     foreach ($items as $i => $val) {
         $border = ($i < $count - 1) ? 'border-bottom:1px solid #999;' : ''; 
-        $html .= '<tr><td style="border:none; padding:4px 2px; '.$border.' text-align:'.$align.'; vertical-align:middle; line-height:1.2; word-wrap:break-word;">'.htmlspecialchars($val).'</td></tr>';
+        $html .= '<tr><td style="border:none; padding:4px 2px; '.$border.' text-align: center; vertical-align:middle; line-height:1.2; word-wrap:break-word;">'.htmlspecialchars($val).'</td></tr>';
     }
     $html .= '</table>';
     return $html;
