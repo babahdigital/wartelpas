@@ -358,8 +358,6 @@ $total_qty_units = 0;
 $total_net_units = 0;
 $total_bandwidth = 0;
 
-$net_system_display = (int)$total_net;
-
 $seen_sales = [];
 $seen_user_day = [];
 $unique_laku_users = [];
@@ -515,6 +513,7 @@ foreach ($rows as $r) {
 }
 
 $total_qty_laku = count($unique_laku_users);
+$net_system_display = (int)$total_net;
 $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? 'Bulanan' : 'Tahunan');
 ?>
 <!DOCTYPE html>
