@@ -688,10 +688,6 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $cnt_unreported_30 = 0;
                             $cnt_retur_10 = 0;
                             $cnt_retur_30 = 0;
-                            $missing_units_total = 0;
-                            $missing_units_10 = 0;
-                            $missing_units_30 = 0;
-                            $has_user_evidence = false;
 
                             if (!empty($ar['user_evidence'])) {
                                 $evidence = json_decode((string)$ar['user_evidence'], true);
@@ -700,7 +696,6 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                         $profile_qty = $evidence['profile_qty'];
                                     }
                                     if (!empty($evidence['users']) && is_array($evidence['users'])) {
-                                        $has_user_evidence = true;
                                         foreach ($evidence['users'] as $uname => $ud) {
                                             $cnt = isset($ud['events']) && is_array($ud['events']) ? count($ud['events']) : 0;
                                             $upt = trim((string)($ud['last_uptime'] ?? ''));
@@ -761,11 +756,6 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $p30_qty = (int)($profile_qty['qty_30'] ?? 0);
                             if ($p10_qty <= 0) $p10_qty = count($profile10['user'] ?? []);
                             if ($p30_qty <= 0) $p30_qty = count($profile30['user'] ?? []);
-                            if (!$has_user_evidence && ($p10_qty > 0 || $p30_qty > 0)) {
-                                $missing_units_10 = $p10_qty;
-                                $missing_units_30 = $p30_qty;
-                                $missing_units_total = $p10_qty + $p30_qty;
-                            }
                             $p10_tt = $p10_qty > 0 ? number_format($p10_qty,0,',','.') : '-';
                             $p30_tt = $p30_qty > 0 ? number_format($p30_qty,0,',','.') : '-';
                             $audit_total_profile_qty_10 += $p10_qty;
@@ -786,9 +776,6 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 'unreported_total' => (int)($cnt_unreported_10 + $cnt_unreported_30),
                                 'unreported_10' => (int)$cnt_unreported_10,
                                 'unreported_30' => (int)$cnt_unreported_30,
-                                'missing_units_total' => (int)$missing_units_total,
-                                'missing_units_10' => (int)$missing_units_10,
-                                'missing_units_30' => (int)$missing_units_30,
                                 'rusak_10' => $cnt_rusak_10,
                                 'rusak_30' => $cnt_rusak_30,
                                 'retur_10' => (int)$cnt_retur_10,
@@ -904,18 +891,6 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             if (!empty($rep['unreported_10'])) $unrep_parts[] = number_format((int)$rep['unreported_10'],0,',','.') . ' User (10 Menit)';
                                             if (!empty($rep['unreported_30'])) $unrep_parts[] = number_format((int)$rep['unreported_30'],0,',','.') . ' User (30 Menit)';
                                             echo implode(' | ', $unrep_parts);
-                                        ?>
-                                    </li>
-                                <?php endif; ?>
-
-                                <?php if (!empty($rep['missing_units_total'])): ?>
-                                    <li>
-                                        <span style="color:#b45309; font-weight:bold;">Voucher Tidak Dilaporkan:</span>
-                                        <?php 
-                                            $miss_parts = [];
-                                            if (!empty($rep['missing_units_10'])) $miss_parts[] = number_format((int)$rep['missing_units_10'],0,',','.') . ' Unit (10 Menit)';
-                                            if (!empty($rep['missing_units_30'])) $miss_parts[] = number_format((int)$rep['missing_units_30'],0,',','.') . ' Unit (30 Menit)';
-                                            echo implode(' | ', $miss_parts);
                                         ?>
                                     </li>
                                 <?php endif; ?>
