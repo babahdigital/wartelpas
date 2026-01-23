@@ -105,6 +105,7 @@ function generate_nested_table($items, $align = 'left') {
 }
 
 // Helper khusus untuk username audit (warna rusak/normal)
+// PERBAIKAN: Menangani warna kuning yang muncul pada data kosong (-)
 function generate_nested_table_user($items, $align = 'left') {
     if (empty($items)) return '-';
     $html = '<table style="width:100%; border-collapse:collapse; margin:0; padding:0; background:transparent;">';
@@ -112,8 +113,19 @@ function generate_nested_table_user($items, $align = 'left') {
     foreach ($items as $i => $item) {
         $label = is_array($item) ? ($item['label'] ?? '-') : (string)$item;
         $status = is_array($item) ? strtolower((string)($item['status'] ?? '')) : '';
-        $is_rusak = ($status === 'rusak');
-        $bg = $is_rusak ? '#fecaca' : '#fef3c7';
+        
+        // Logika Warna:
+        // Merah = Rusak
+        // Kuning = Tidak Terlapor (Default evidence)
+        // Transparan = Jika labelnya "-" atau kosong
+        if ($label === '-' || trim($label) === '') {
+            $bg = 'transparent';
+        } elseif ($status === 'rusak') {
+            $bg = '#fecaca'; // Merah
+        } else {
+            $bg = '#fef3c7'; // Kuning (Tidak Terlapor)
+        }
+
         $border = ($i < $count - 1) ? 'border-bottom:1px solid #999;' : '';
         $html .= '<tr><td style="border:none; padding:4px 2px; '.$border.' text-align:'.$align.'; vertical-align:middle; line-height:1.2; word-wrap:break-word; background:'.$bg.';">'.htmlspecialchars($label).'</td></tr>';
     }
@@ -782,8 +794,20 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             <div class="audit-summary-box">
                 <div class="audit-summary-header">Kesimpulan Audit Harian</div>
                 <div style="font-size:11px; color:#444; margin-bottom:6px;">
-                    Voucher Rusak: <?= number_format((int)$total_qty_rusak,0,',','.') ?> | Retur: <?= number_format((int)$total_qty_retur,0,',','.') ?> | Invalid: <?= number_format((int)$total_qty_invalid,0,',','.') ?>
+                    <strong>Status Voucher Global:</strong><br>
+                    <span style="display:inline-block; margin-left:10px;">- Voucher Rusak: <b><?= number_format((int)$total_qty_rusak,0,',','.') ?></b></span><br>
+                    <?php if($rusak_10m > 0): ?>
+                        <span style="display:inline-block; margin-left:25px; color:#d32f2f;">&bull; 10 Menit: <?= number_format($rusak_10m,0,',','.') ?> Pcs</span><br>
+                    <?php endif; ?>
+                    <?php if($rusak_30m > 0): ?>
+                        <span style="display:inline-block; margin-left:25px; color:#d32f2f;">&bull; 30 Menit: <?= number_format($rusak_30m,0,',','.') ?> Pcs</span><br>
+                    <?php endif; ?>
+                    <span style="display:inline-block; margin-left:10px;">- Retur: <?= number_format((int)$total_qty_retur,0,',','.') ?></span><br>
+                    <span style="display:inline-block; margin-left:10px;">- Invalid: <?= number_format((int)$total_qty_invalid,0,',','.') ?></span>
                 </div>
+                
+                <hr style="border:0; border-top:1px dashed #ccc; margin:8px 0;">
+
                 <?php if (!empty($audit_summary_report)): ?>
                     <?php foreach ($audit_summary_report as $idx => $rep): ?>
                         <div class="audit-item">
