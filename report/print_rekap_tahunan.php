@@ -574,9 +574,12 @@ function shareReport(){
 function setUniquePrintTitle(){
     var now = new Date();
     var pad = function(n){ return String(n).padStart(2, '0'); };
+    var dayNames = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
     var reportYear = <?= json_encode((string)$filter_year) ?> || String(now.getFullYear());
+    var dayLabel = dayNames[now.getDay()];
+    var dateLabel = pad(now.getDate()) + '-' + pad(now.getMonth() + 1) + '-' + reportYear;
     var timeLabel = pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
-    document.title = 'LaporanTahunan-' + reportYear + '-' + timeLabel;
+    document.title = 'LaporanTahunan-' + dayLabel + '-' + dateLabel + '-' + timeLabel;
 }
 
 window.addEventListener('beforeprint', setUniquePrintTitle);
