@@ -35,12 +35,24 @@ $last_available_date = '';
 $mode = 'final';
 $filter_date = $_GET['date'] ?? '';
 if ($req_show === 'harian') {
-        $filter_date = $filter_date ?: date('Y-m-d');
+    if (!$date_param_provided || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $filter_date)) {
+        $filter_date = date('Y-m-d');
+    } else {
+        $filter_date = substr($filter_date, 0, 10);
+    }
 } elseif ($req_show === 'bulanan') {
-        $filter_date = $filter_date ?: date('Y-m');
+    if (!$date_param_provided || !preg_match('/^\d{4}-\d{2}$/', $filter_date)) {
+        $filter_date = date('Y-m');
+    } else {
+        $filter_date = substr($filter_date, 0, 7);
+    }
 } else {
-        $req_show = 'tahunan';
-        $filter_date = $filter_date ?: date('Y');
+    $req_show = 'tahunan';
+    if (!$date_param_provided || !preg_match('/^\d{4}$/', $filter_date)) {
+        $filter_date = date('Y');
+    } else {
+        $filter_date = substr($filter_date, 0, 4);
+    }
 }
 
 function norm_date_from_raw_report($raw_date) {
