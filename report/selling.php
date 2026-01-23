@@ -2384,6 +2384,9 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             </form>
             <?php
                 $print_rekap_url = 'report/print_rekap.php?show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+                if ($req_show === 'bulanan') {
+                    $print_rekap_url = 'report/print_rekap_bulanan.php?date=' . urlencode($filter_date);
+                }
                 if ($session_id !== '') $print_rekap_url .= '&session=' . urlencode($session_id);
                 $print_rincian_url = 'report/print_rincian.php?date=' . urlencode($filter_date);
                 if ($session_id !== '') $print_rincian_url .= '&session=' . urlencode($session_id);
