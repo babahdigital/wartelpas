@@ -527,6 +527,84 @@ function table_exists(PDO $db, $table) {
     }
 }
 
+function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
+    $seen_sales = [];
+    $seen_user_day = [];
+    $qty_total = 0;
+    $rusak_qty = 0;
+    $invalid_qty = 0;
+    $net_total = 0;
+
+    foreach ($rows as $r) {
+        $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
+        if ($sale_date !== $audit_date) continue;
+
+        $username = $r['username'] ?? '';
+        if ($username !== '' && $sale_date !== '') {
+            $user_day_key = $username . '|' . $sale_date;
+            if (isset($seen_user_day[$user_day_key])) continue;
+            $seen_user_day[$user_day_key] = true;
+        }
+
+        $raw_key = trim((string)($r['full_raw_data'] ?? ''));
+        $unique_key = '';
+        if ($raw_key !== '') {
+            $unique_key = 'raw|' . $raw_key;
+        } elseif ($username !== '' && $sale_date !== '') {
+            $unique_key = $username . '|' . ($r['sale_datetime'] ?? ($sale_date . ' ' . ($r['sale_time'] ?? '')));
+            if ($unique_key === $username . '|') {
+                $unique_key = $username . '|' . $sale_date . '|' . ($r['sale_time'] ?? '');
+            }
+        } elseif ($sale_date !== '') {
+            $unique_key = 'date|' . $sale_date . '|' . ($r['sale_time'] ?? '');
+        }
+        if ($unique_key !== '') {
+            if (isset($seen_sales[$unique_key])) continue;
+            $seen_sales[$unique_key] = true;
+        }
+
+        $raw_comment = (string)($r['comment'] ?? '');
+        $blok = normalize_block_name($r['blok_name'] ?? '', $raw_comment);
+        if ($blok !== $audit_blok) continue;
+
+        $status = strtolower((string)($r['status'] ?? ''));
+        $lh_status = strtolower((string)($r['last_status'] ?? ''));
+        $cmt_low = strtolower($raw_comment);
+        if ($status === '' || $status === 'normal') {
+            if ((int)($r['is_invalid'] ?? 0) === 1) $status = 'invalid';
+            elseif ((int)($r['is_retur'] ?? 0) === 1) $status = 'retur';
+            elseif ((int)($r['is_rusak'] ?? 0) === 1) $status = 'rusak';
+            elseif (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
+            elseif (strpos($cmt_low, 'retur') !== false) $status = 'retur';
+            elseif (strpos($cmt_low, 'rusak') !== false || $lh_status === 'rusak') $status = 'rusak';
+            else $status = 'normal';
+        }
+
+        $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
+        if ($price <= 0) $price = (int)($r['sprice_snapshot'] ?? 0);
+        $qty = (int)($r['qty'] ?? 0);
+        if ($qty <= 0) $qty = 1;
+        $line_price = $price * $qty;
+
+        $gross_add = ($status === 'invalid') ? 0 : $line_price;
+        $loss_rusak = ($status === 'rusak') ? $line_price : 0;
+        $loss_invalid = ($status === 'invalid') ? $line_price : 0;
+        $net_add = $gross_add - $loss_rusak - $loss_invalid;
+
+        $qty_total += 1;
+        if ($status === 'rusak') $rusak_qty += 1;
+        if ($status === 'invalid') $invalid_qty += 1;
+        $net_total += $net_add;
+    }
+
+    return [
+        'qty' => $qty_total,
+        'rusak_qty' => $rusak_qty,
+        'invalid_qty' => $invalid_qty,
+        'net' => $net_total
+    ];
+}
+
 // Olah data
 $list = [];
 $total_gross = 0;
@@ -998,11 +1076,22 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             if ($profile_qty_sum <= 0) {
                 $audit_error = 'Qty per profile wajib diisi.';
             }
-            $expected_qty = (int)($by_block[$audit_blok]['qty'] ?? 0);
-            $expected_qty -= (int)($by_block[$audit_blok]['rusak_qty'] ?? 0);
-            $expected_qty -= (int)($by_block[$audit_blok]['invalid_qty'] ?? 0);
-            if ($expected_qty < 0) $expected_qty = 0;
-            $expected_setoran = (int)($by_block[$audit_blok]['net'] ?? 0);
+            $expected_qty = 0;
+            $expected_setoran = 0;
+            if (!empty($rows)) {
+                $expected = calc_expected_for_block($rows, $audit_date, $audit_blok);
+                $expected_qty = (int)($expected['qty'] ?? 0);
+                $expected_qty -= (int)($expected['rusak_qty'] ?? 0);
+                $expected_qty -= (int)($expected['invalid_qty'] ?? 0);
+                if ($expected_qty < 0) $expected_qty = 0;
+                $expected_setoran = (int)($expected['net'] ?? 0);
+            } else {
+                $expected_qty = (int)($by_block[$audit_blok]['qty'] ?? 0);
+                $expected_qty -= (int)($by_block[$audit_blok]['rusak_qty'] ?? 0);
+                $expected_qty -= (int)($by_block[$audit_blok]['invalid_qty'] ?? 0);
+                if ($expected_qty < 0) $expected_qty = 0;
+                $expected_setoran = (int)($by_block[$audit_blok]['net'] ?? 0);
+            }
             $selisih_qty = $audit_qty - $expected_qty;
             $selisih_setoran = $audit_setoran - $expected_setoran;
             if (empty($audit_error)) {
