@@ -141,6 +141,7 @@ $phone = [];
 $phone_units = [];
 $audit_net = [];
 $audit_selisih = [];
+$audit_system = [];
 
 try {
     if (file_exists($dbFile)) {
@@ -207,6 +208,7 @@ try {
                 if ($d === '') continue;
                 [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($row);
                 $audit_net[$d] = (int)($audit_net[$d] ?? 0) + (int)$manual_setoran;
+                $audit_system[$d] = (int)($audit_system[$d] ?? 0) + (int)$expected_adj_setoran;
                 $audit_selisih[$d] = (int)($audit_selisih[$d] ?? 0) + ((int)$manual_setoran - (int)$expected_adj_setoran);
         }
     }
@@ -314,8 +316,9 @@ foreach ($daily as $date => $val) {
     $mm = substr($date, 5, 2);
     if (!isset($months[$mm])) continue;
     $qty = count($val['laku_users'] ?? []);
-    $months[$mm]['net'] += (int)($val['net'] ?? 0);
-    $months[$mm]['gross'] += (int)($val['net'] ?? 0);
+    $system_net = isset($audit_system[$date]) ? (int)$audit_system[$date] : (int)($val['net'] ?? 0);
+    $months[$mm]['net'] += $system_net;
+    $months[$mm]['gross'] += $system_net;
     $has_audit_day = isset($audit_net[$date]);
     $day_audit = $has_audit_day ? (int)$audit_net[$date] : (int)($val['net'] ?? 0);
     $months[$mm]['net_audit'] += $day_audit;
@@ -336,6 +339,10 @@ foreach ($audit_net as $date => $val) {
     $months[$mm]['net_audit'] += (int)$val;
     $months[$mm]['has_audit'] = true;
     $months[$mm]['selisih'] += (int)($audit_selisih[$date] ?? 0);
+    if (isset($audit_system[$date])) {
+        $months[$mm]['net'] += (int)$audit_system[$date];
+        $months[$mm]['gross'] += (int)$audit_system[$date];
+    }
 }
 
 foreach ($phone as $date => $val) {

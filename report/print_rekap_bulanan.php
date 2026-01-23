@@ -144,6 +144,7 @@ $phone = [];
 $phone_units = [];
 $audit_net = [];
 $audit_selisih = [];
+$audit_system = [];
 
 try {
     if (file_exists($dbFile)) {
@@ -210,6 +211,7 @@ try {
             if ($d === '') continue;
             [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($row);
             $audit_net[$d] = (int)($audit_net[$d] ?? 0) + (int)$manual_setoran;
+            $audit_system[$d] = (int)($audit_system[$d] ?? 0) + (int)$expected_adj_setoran;
             $audit_selisih[$d] = (int)($audit_selisih[$d] ?? 0) + ((int)$manual_setoran - (int)$expected_adj_setoran);
         }
     }
@@ -315,7 +317,8 @@ $total_rusak_device = 0;
 $rows_out = [];
 foreach ($all_dates as $date) {
     $net = (int)($daily[$date]['net'] ?? 0);
-    $gross = $net;
+    $system_net = isset($audit_system[$date]) ? (int)$audit_system[$date] : $net;
+    $gross = $system_net;
     $audit = $audit_net[$date] ?? null;
     $net_audit = $audit !== null ? (int)$audit : $net;
     $selisih = $audit !== null ? (int)($audit_selisih[$date] ?? 0) : 0;
