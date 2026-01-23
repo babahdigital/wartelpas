@@ -909,6 +909,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
                                 <?php if ($rep['rusak_10'] > 0 || $rep['rusak_30'] > 0): ?>
                                     <li>
+                                        <span style="display:inline-block; min-width:16px; padding:0 4px; margin-right:4px; background:#fecaca; border:1px solid #fca5a5; font-size:10px; text-align:center;">V</span>
                                         <span style="color:red; font-weight:bold;">Voucher Rusak:</span>
                                         <?php 
                                             $rusak_parts = [];
@@ -921,6 +922,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
                                 <?php if (!empty($rep['retur_10']) || !empty($rep['retur_30'])): ?>
                                     <li>
+                                        <span style="display:inline-block; min-width:16px; padding:0 4px; margin-right:4px; background:#dcfce7; border:1px solid #86efac; font-size:10px; text-align:center;">V</span>
                                         <span style="color:green; font-weight:bold;">Voucher Retur:</span>
                                         <?php 
                                             $retur_parts = [];
@@ -933,6 +935,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
                                 <?php if (!empty($rep['unreported_total'])): ?>
                                     <li>
+                                        <span style="display:inline-block; min-width:16px; padding:0 4px; margin-right:4px; background:#fef3c7; border:1px solid #fcd34d; font-size:10px; text-align:center;">U</span>
                                         <span style="color:#b45309; font-weight:bold;">User Tidak Dilaporkan:</span>
                                         <?php 
                                             $unrep_parts = [];
@@ -954,7 +957,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 ?>
                                 <?php if (!empty($ghost_parts)): ?>
                                     <li>
-                                        <span style="color:#b45309; font-weight:bold;">Voucer Tidak Dilaporkan:</span>
+                                        <span style="display:inline-block; min-width:16px; padding:0 4px; margin-right:4px; background:#fde68a; border:1px solid #f59e0b; font-size:10px; text-align:center;">V</span>
+                                        <span style="color:#b45309; font-weight:bold;">Voucher Tidak Dilaporkan:</span>
                                         <?= implode(' | ', $ghost_parts) ?>
                                     </li>
                                 <?php endif; ?>
