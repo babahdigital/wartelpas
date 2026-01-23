@@ -1882,6 +1882,8 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         var user = btn.getAttribute('data-user') || '';
         var qty = btn.getAttribute('data-qty') || '0';
         var setoran = btn.getAttribute('data-setoran') || '0';
+        var qty10 = btn.getAttribute('data-qty10') || '0';
+        var qty30 = btn.getAttribute('data-qty30') || '0';
         var blokSelect = form.querySelector('select[name="audit_blok"]');
         if (blokSelect) blokSelect.value = blok;
         var dateInput = form.querySelector('input[name="audit_date"]');
@@ -1893,6 +1895,10 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (qtyInput) qtyInput.value = qty;
         var setInput = form.querySelector('input[name="audit_setoran"]');
         if (setInput) setInput.value = setoran;
+        var qty10Input = form.querySelector('input[name="audit_qty_10"]');
+        if (qty10Input) qty10Input.value = qty10;
+        var qty30Input = form.querySelector('input[name="audit_qty_30"]');
+        if (qty30Input) qty30Input.value = qty30;
         openAuditModal();
     };
 
@@ -2481,7 +2487,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                     data-user="<?= htmlspecialchars($ar['audit_username'] ?? ''); ?>"
                                     data-date="<?= htmlspecialchars($ar['report_date'] ?? $filter_date); ?>"
                                     data-qty="<?= (int)($ar['reported_qty'] ?? 0); ?>"
-                                    data-setoran="<?= (int)($ar['actual_setoran'] ?? 0); ?>">
+                                    data-setoran="<?= (int)($ar['actual_setoran'] ?? 0); ?>"
                                     data-qty10="<?= (int)$profile_qty_10; ?>"
                                     data-qty30="<?= (int)$profile_qty_30; ?>">
                                     <i class="fa fa-edit"></i>
