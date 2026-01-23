@@ -92,6 +92,72 @@ function format_date_ddmmyyyy($dateStr) {
     return date('d-m-Y', $ts);
 }
 
+function calc_audit_adjusted_setoran(array $ar) {
+    $price10 = 5000;
+    $price30 = 20000;
+    $expected_setoran = (int)($ar['expected_setoran'] ?? 0);
+    $actual_setoran_raw = (int)($ar['actual_setoran'] ?? 0);
+
+    $p10_qty = 0;
+    $p30_qty = 0;
+    $cnt_rusak_10 = 0;
+    $cnt_rusak_30 = 0;
+    $cnt_retur_10 = 0;
+    $cnt_retur_30 = 0;
+    $cnt_invalid_10 = 0;
+    $cnt_invalid_30 = 0;
+    $profile10_users = 0;
+    $profile30_users = 0;
+    $has_manual_evidence = false;
+
+    if (!empty($ar['user_evidence'])) {
+        $evidence = json_decode((string)$ar['user_evidence'], true);
+        if (is_array($evidence)) {
+            $has_manual_evidence = true;
+            if (!empty($evidence['profile_qty']) && is_array($evidence['profile_qty'])) {
+                $p10_qty = (int)($evidence['profile_qty']['qty_10'] ?? 0);
+                $p30_qty = (int)($evidence['profile_qty']['qty_30'] ?? 0);
+            }
+            if (!empty($evidence['users']) && is_array($evidence['users'])) {
+                foreach ($evidence['users'] as $ud) {
+                    $kind = (string)($ud['profile_kind'] ?? '10');
+                    $status = strtolower((string)($ud['last_status'] ?? ''));
+                    if ($kind === '30') {
+                        $profile30_users++;
+                        if ($status === 'rusak') $cnt_rusak_30++;
+                        elseif ($status === 'retur') $cnt_retur_30++;
+                        elseif ($status === 'invalid') $cnt_invalid_30++;
+                    } else {
+                        $profile10_users++;
+                        if ($status === 'rusak') $cnt_rusak_10++;
+                        elseif ($status === 'retur') $cnt_retur_10++;
+                        elseif ($status === 'invalid') $cnt_invalid_10++;
+                    }
+                }
+            }
+        }
+    }
+
+    if ($p10_qty <= 0) $p10_qty = $profile10_users;
+    if ($p30_qty <= 0) $p30_qty = $profile30_users;
+
+    if ($has_manual_evidence) {
+        $manual_net_qty_10 = max(0, $p10_qty - $cnt_rusak_10 - $cnt_invalid_10 + $cnt_retur_10);
+        $manual_net_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30 + $cnt_retur_30);
+        $manual_display_setoran = ($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30);
+        $expected_adj_setoran = max(0, $expected_setoran
+            - (($cnt_rusak_10 + $cnt_invalid_10) * $price10)
+            - (($cnt_rusak_30 + $cnt_invalid_30) * $price30)
+            + ($cnt_retur_10 * $price10)
+            + ($cnt_retur_30 * $price30));
+    } else {
+        $manual_display_setoran = $actual_setoran_raw;
+        $expected_adj_setoran = $expected_setoran;
+    }
+
+    return [$manual_display_setoran, $expected_adj_setoran];
+}
+
 // Helper untuk membuat tabel bersarang di kolom audit
 function generate_nested_table($items, $align = 'left') {
     if (empty($items)) return '-';
@@ -150,6 +216,8 @@ $audit_total_expected_setoran = 0;
 $audit_total_actual_setoran = 0;
 $audit_total_selisih_qty = 0;
 $audit_total_selisih_setoran = 0;
+$audit_expected_setoran_adj_total = 0;
+$has_audit_adjusted = false;
 $hp_active_by_block = [];
 $hp_stats_by_block = [];
 $hp_units_by_block = [];
@@ -265,6 +333,9 @@ try {
                 $audit_total_actual_setoran += (int)($ar['actual_setoran'] ?? 0);
                 $audit_total_selisih_qty += (int)($ar['selisih_qty'] ?? 0);
                 $audit_total_selisih_setoran += (int)($ar['selisih_setoran'] ?? 0);
+                [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($ar);
+                $audit_expected_setoran_adj_total += (int)$expected_adj_setoran;
+                $has_audit_adjusted = true;
             }
         }
     }
@@ -286,6 +357,10 @@ $rusak_30m = 0;
 $total_qty_units = 0;
 $total_net_units = 0;
 $total_bandwidth = 0;
+
+$net_system_display = ($req_show === 'harian' && $has_audit_adjusted)
+    ? (int)$audit_expected_setoran_adj_total
+    : (int)$total_net;
 
 $seen_sales = [];
 $seen_user_day = [];
@@ -508,7 +583,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         </div>
         <div class="card">
             <div class="label">Net System</div>
-            <div class="value"><?= $cur ?> <?= number_format($total_net,0,',','.') ?></div>
+            <div class="value"><?= $cur ?> <?= number_format($net_system_display,0,',','.') ?></div>
         </div>
         <?php if ($req_show === 'harian'): ?>
         <div class="card">
