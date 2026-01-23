@@ -500,17 +500,17 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             <div class="value"><?= $cur ?> <?= number_format($total_gross,0,',','.') ?></div>
         </div>
         <div class="card">
-            <div class="label">Pendapatan Bersih</div>
+            <div class="label">Net System</div>
             <div class="value"><?= $cur ?> <?= number_format($total_net,0,',','.') ?></div>
         </div>
         <?php if ($req_show === 'harian'): ?>
         <div class="card">
             <div class="label">Net Audit</div>
-            <div class="value"><?= $cur ?> <?= number_format($total_net_units,0,',','.') ?></div>
+            <div class="value"><?= $cur ?> <?= number_format($audit_total_actual_setoran,0,',','.') ?></div>
         </div>
         <?php endif; ?>
         <div class="card">
-            <div class="label">Total Voucher Laku</div>
+            <div class="label">Voucher Terjual</div>
             <div class="value"><?= number_format($total_qty_laku,0,',','.') ?></div>
             <div class="small">Bandwith: <?= htmlspecialchars(format_bytes_short($total_bandwidth)) ?></div>
         </div>
@@ -521,7 +521,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         </div>
         <?php if ($req_show === 'harian'): ?>
         <div class="card">
-            <div class="label">Total Handphone</div>
+            <div class="label">Total Device</div>
             <div class="value"><?= number_format($hp_total_units,0,',','.') ?></div>
             <div class="small">WARTEL: <?= number_format($hp_wartel_units,0,',','.') ?> | KAMTIB: <?= number_format($hp_kamtib_units,0,',','.') ?></div>
         </div>
