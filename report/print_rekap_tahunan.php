@@ -340,7 +340,7 @@ $print_time = date('d-m-Y H:i:s');
         th { background:#f5f5f5; }
         .currency { text-align:right; white-space:nowrap; }
         .summary-row { display:flex; gap:12px; flex-wrap:wrap; margin:8px 0 16px; }
-        .summary-card { border:1px solid #ccc; padding:8px 10px; background:#f9f9f9; min-width:160px; }
+        .summary-card { border:1px solid #ccc; padding:8px 10px; background:#f9f9f9; min-width:135px; }
         .summary-title { font-size:10px; text-transform:uppercase; color:#666; }
         .summary-value { font-weight:700; font-size:14px; margin-top:4px; }
         .chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px; }
