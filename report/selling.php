@@ -2631,7 +2631,14 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 <tbody>
                     <?php if (empty($audit_rows)): ?>
                         <tr><td colspan="10" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
-                    <?php else: foreach ($audit_rows as $ar): ?>
+                    <?php else: 
+                        $price10 = 5000;
+                        $price30 = 20000;
+                        $audit_manual_qty_display_total = 0;
+                        $audit_manual_setoran_display_total = 0;
+                        $audit_system_qty_display_total = 0;
+                        $audit_system_setoran_display_total = 0;
+                        foreach ($audit_rows as $ar): ?>
                         <?php
                             $sq = (int)($ar['selisih_qty'] ?? 0);
                             $ss = (int)($ar['selisih_setoran'] ?? 0);
@@ -2639,14 +2646,14 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             $audit_block_row = normalize_block_name($ar['blok_name'] ?? '');
                             $sys_rusak = (int)($by_block[$ar['blok_name']]['rusak_qty'] ?? 0);
                             $sys_retur = (int)($by_block[$ar['blok_name']]['retur'] ?? 0);
+                            $expected_qty = (int)($ar['expected_qty'] ?? 0);
+                            $expected_setoran = (int)($ar['expected_setoran'] ?? 0);
                             if ($audit_date_row !== '') {
                                 $rows_src = !empty($rows) ? $rows : (isset($db) && $db instanceof PDO ? fetch_rows_for_audit($db, $audit_date_row) : []);
                                 if (!empty($rows_src)) {
                                     $expected = calc_expected_for_block($rows_src, $audit_date_row, $audit_block_row);
                                     $expected_qty = (int)($expected['qty'] ?? 0);
                                     $expected_setoran = (int)($expected['net'] ?? 0);
-                                    $sq = (int)($ar['reported_qty'] ?? 0) - $expected_qty;
-                                    $ss = (int)($ar['actual_setoran'] ?? 0) - $expected_setoran;
                                     $sys_rusak = (int)($expected['rusak_qty'] ?? $sys_rusak);
                                     $sys_retur = (int)($expected['retur_qty'] ?? $sys_retur);
                                 }
@@ -2660,9 +2667,17 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             $profile30_sum = 0;
                             $profile_qty_10 = 0;
                             $profile_qty_30 = 0;
+                            $manual_rusak_10 = 0;
+                            $manual_rusak_30 = 0;
+                            $manual_retur_10 = 0;
+                            $manual_retur_30 = 0;
+                            $manual_invalid_10 = 0;
+                            $manual_invalid_30 = 0;
+                            $has_manual_evidence = false;
                             if (!empty($ar['user_evidence'])) {
                                 $evidence = json_decode((string)$ar['user_evidence'], true);
                                 if (is_array($evidence)) {
+                                    $has_manual_evidence = true;
                                     if (!empty($evidence['profile_qty']) && is_array($evidence['profile_qty'])) {
                                         $profile_qty_10 = (int)($evidence['profile_qty']['qty_10'] ?? 0);
                                         $profile_qty_30 = (int)($evidence['profile_qty']['qty_30'] ?? 0);
@@ -2675,6 +2690,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                             $price_val = (int)($ud['price'] ?? 0);
                                             $upt = $upt !== '' ? $upt : '-';
                                             $kind = (string)($ud['profile_kind'] ?? '10');
+                                            $u_status = strtolower((string)($ud['last_status'] ?? ''));
                                             $bucket = ($kind === '30') ? $profile30 : $profile10;
                                             $bucket['user'][] = (string)$uname;
                                             $bucket['up'][] = $upt;
@@ -2684,9 +2700,15 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                             if ($kind === '30') {
                                                 $profile30_sum += $price_val;
                                                 $profile30 = $bucket;
+                                                if ($u_status === 'rusak') $manual_rusak_30++;
+                                                elseif ($u_status === 'retur') $manual_retur_30++;
+                                                elseif ($u_status === 'invalid') $manual_invalid_30++;
                                             } else {
                                                 $profile10_sum += $price_val;
                                                 $profile10 = $bucket;
+                                                if ($u_status === 'rusak') $manual_rusak_10++;
+                                                elseif ($u_status === 'retur') $manual_retur_10++;
+                                                elseif ($u_status === 'invalid') $manual_invalid_10++;
                                             }
                                         }
                                     } else {
@@ -2706,12 +2728,24 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             }
                             if ($profile_qty_10 <= 0) $profile_qty_10 = count($profile10['user'] ?? []);
                             if ($profile_qty_30 <= 0) $profile_qty_30 = count($profile30['user'] ?? []);
+                            $manual_net_qty_10 = max(0, $profile_qty_10 - $manual_rusak_10 - $manual_invalid_10 + $manual_retur_10);
+                            $manual_net_qty_30 = max(0, $profile_qty_30 - $manual_rusak_30 - $manual_invalid_30 + $manual_retur_30);
+                            $manual_display_qty = $has_manual_evidence ? ($manual_net_qty_10 + $manual_net_qty_30) : (int)($ar['reported_qty'] ?? 0);
+                            $manual_display_setoran = $has_manual_evidence ? (($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30)) : (int)($ar['actual_setoran'] ?? 0);
+                            $sq = $manual_display_qty - $expected_qty;
+                            $ss = $manual_display_setoran - $expected_setoran;
+                            $cls_q = $sq > 0 ? 'audit-pos' : ($sq < 0 ? 'audit-neg' : 'audit-zero');
+                            $cls_s = $ss > 0 ? 'audit-pos' : ($ss < 0 ? 'audit-neg' : 'audit-zero');
+                            $audit_manual_qty_display_total += $manual_display_qty;
+                            $audit_manual_setoran_display_total += $manual_display_setoran;
+                            $audit_system_qty_display_total += $expected_qty;
+                            $audit_system_setoran_display_total += $expected_setoran;
                         ?>
                         <tr>
                             <td><?= htmlspecialchars($ar['blok_name'] ?? '-') ?></td>
-                            <td class="text-center"><?= number_format((int)($ar['reported_qty'] ?? 0),0,',','.') ?></td>
+                            <td class="text-center"><?= number_format($manual_display_qty,0,',','.') ?></td>
                             <td class="text-center"><span class="<?= $cls_q; ?>"><?= number_format($sq,0,',','.') ?></span></td>
-                            <td class="text-right"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
+                            <td class="text-right"><?= number_format($manual_display_setoran,0,',','.') ?></td>
                             <td class="text-center"><span class="<?= $cls_s; ?>"><?= number_format($ss,0,',','.') ?></span></td>
                             <td class="text-center"><small><?= number_format($sys_rusak,0,',','.') ?></small></td>
                             <td class="text-center"><small><?= number_format($sys_retur,0,',','.') ?></small></td>
@@ -2740,8 +2774,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         <?php
             $audit_system_qty_total = (int)$total_qty_laku;
             $audit_system_setoran_total = (int)$total_net;
-            $audit_manual_qty_total = (int)$audit_total_reported_qty;
-            $audit_manual_setoran_total = (int)$audit_total_actual_setoran;
+            $audit_manual_qty_total = (int)($audit_manual_qty_display_total ?? $audit_total_reported_qty);
+            $audit_manual_setoran_total = (int)($audit_manual_setoran_display_total ?? $audit_total_actual_setoran);
             $audit_selisih_qty_total = $audit_manual_qty_total - $audit_system_qty_total;
             $audit_selisih_setoran_total = $audit_manual_setoran_total - $audit_system_setoran_total;
         ?>
