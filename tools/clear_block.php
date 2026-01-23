@@ -45,11 +45,24 @@ $glob_pattern = $use_glob ? ($blok_upper . '[0-9]*') : '';
 
 $date = trim((string)($_GET['date'] ?? ''));
 $delete_hp = isset($_GET['delete_hp']) && $_GET['delete_hp'] === '1';
+$delete_login = isset($_GET['delete_login']) && $_GET['delete_login'] === '1';
 $dateClause = '';
 $dateParams = [];
 if ($date !== '') {
     $dateClause = ' AND sale_date = :d';
     $dateParams[':d'] = $date;
+}
+
+$dateClauseLogin = '';
+$dateParamsLogin = [];
+if ($date !== '') {
+    $dateClauseLogin = " AND (login_date = :d
+        OR substr(first_login_real,1,10) = :d
+        OR substr(last_login_real,1,10) = :d
+        OR substr(login_time_real,1,10) = :d
+        OR substr(logout_time_real,1,10) = :d
+        OR substr(updated_at,1,10) = :d)";
+    $dateParamsLogin[':d'] = $date;
 }
 
 $dbFile = $root_dir . '/db_data/mikhmon_stats.db';
@@ -63,9 +76,12 @@ try {
 
     $whereBlok = "UPPER(blok_name) = :b" . ($use_glob ? " OR UPPER(blok_name) GLOB :bg" : "");
 
-    $stmt = $db->prepare("DELETE FROM login_history WHERE " . $whereBlok);
-    $stmt->execute($use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern] : [':b' => $blok_upper]);
-    $deleted_login = $stmt->rowCount();
+    $deleted_login = 0;
+    if ($delete_login) {
+        $stmt = $db->prepare("DELETE FROM login_history WHERE (" . $whereBlok . ")" . $dateClauseLogin);
+        $stmt->execute(array_merge($use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern] : [':b' => $blok_upper], $dateParamsLogin));
+        $deleted_login = $stmt->rowCount();
+    }
 
     $stmt = $db->prepare("DELETE FROM sales_history WHERE (" . $whereBlok . ")" . $dateClause);
     $stmt->execute(array_merge($use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern] : [':b' => $blok_upper], $dateParams));
@@ -82,7 +98,7 @@ try {
         $deleted_hp = $stmt->rowCount();
     }
 
-    echo "OK login=" . $deleted_login . ", sales=" . $deleted_sales . ", live=" . $deleted_live . ", hp=" . ($delete_hp ? $deleted_hp : 'skipped');
+    echo "OK login=" . ($delete_login ? $deleted_login : 'skipped') . ", sales=" . $deleted_sales . ", live=" . $deleted_live . ", hp=" . ($delete_hp ? $deleted_hp : 'skipped');
 } catch (Exception $e) {
     http_response_code(500);
     echo "Error";
