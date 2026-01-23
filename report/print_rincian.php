@@ -720,6 +720,12 @@ function normalize_uptime_diff($diff, $snap = 2) {
       ?>
       <div class="summary-row">
           <div class="summary-badge"><span class="label">Voucher Terjual</span> <span class="value"><?= number_format((int)$total_voucher_laku,0,',','.') ?></span></div>
+          <?php if (!empty($total_qty_rusak)): ?>
+              <div class="summary-badge"><span class="label">Voucher Rusak</span> <span class="value"><?= number_format((int)$total_qty_rusak,0,',','.') ?></span></div>
+          <?php endif; ?>
+          <?php if (!empty($total_qty_retur)): ?>
+              <div class="summary-badge"><span class="label">Voucher Retur</span> <span class="value"><?= number_format((int)$total_qty_retur,0,',','.') ?></span></div>
+          <?php endif; ?>
           <div class="summary-badge"><span class="label">Net Income</span> <span class="value"><?= $cur ?> <?= number_format((int)$total_net,0,',','.') ?></span></div>
           <div class="summary-badge"><span class="label">Total Byte</span> <span class="value"><?= esc(format_bytes_short((int)$total_bytes)) ?></span></div>
       </div>
