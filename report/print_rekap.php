@@ -451,7 +451,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         .meta { font-size:12px; color:#555; margin-bottom:12px; }
         .toolbar { margin-bottom:14px; display:flex; gap:8px; flex-wrap:wrap; }
         .btn { padding:6px 10px; border:1px solid #999; background:#f2f2f2; cursor:pointer; border-radius:4px; font-size:12px; }
-        .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; }
+        .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:10px; }
         .card { border:1px solid #ddd; padding:10px; border-radius:6px; }
         .label { font-size:11px; color:#666; text-transform:uppercase; letter-spacing:.5px; }
         .value { font-size:18px; font-weight:700; margin-top:4px; }
@@ -505,7 +505,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         </div>
         <?php if ($req_show === 'harian'): ?>
         <div class="card">
-            <div class="label">Net Terjual</div>
+            <div class="label">Net Audit</div>
             <div class="value"><?= $cur ?> <?= number_format($total_net_units,0,',','.') ?></div>
         </div>
         <?php endif; ?>
