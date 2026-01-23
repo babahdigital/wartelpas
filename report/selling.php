@@ -532,6 +532,7 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
     $seen_user_day = [];
     $qty_total = 0;
     $rusak_qty = 0;
+    $retur_qty = 0;
     $invalid_qty = 0;
     $net_total = 0;
 
@@ -593,6 +594,7 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
 
         $qty_total += 1;
         if ($status === 'rusak') $rusak_qty += 1;
+        if ($status === 'retur') $retur_qty += 1;
         if ($status === 'invalid') $invalid_qty += 1;
         $net_total += $net_add;
     }
@@ -601,7 +603,8 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
         'qty' => $qty_total,
         'rusak_qty' => $rusak_qty,
         'invalid_qty' => $invalid_qty,
-        'net' => $net_total
+        'net' => $net_total,
+        'retur_qty' => $retur_qty
     ];
 }
 
@@ -2633,6 +2636,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             $ss = (int)($ar['selisih_setoran'] ?? 0);
                             $audit_date_row = $ar['report_date'] ?? $filter_date;
                             $audit_block_row = normalize_block_name($ar['blok_name'] ?? '');
+                            $sys_rusak = (int)($by_block[$ar['blok_name']]['rusak_qty'] ?? 0);
+                            $sys_retur = (int)($by_block[$ar['blok_name']]['retur'] ?? 0);
                             if (isset($db) && $db instanceof PDO && $audit_date_row !== '') {
                                 $rows_src = fetch_rows_for_audit($db, $audit_date_row);
                                 if (!empty($rows_src)) {
@@ -2644,6 +2649,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                     $expected_setoran = (int)($expected['net'] ?? 0);
                                     $sq = (int)($ar['reported_qty'] ?? 0) - $expected_qty;
                                     $ss = (int)($ar['actual_setoran'] ?? 0) - $expected_setoran;
+                                    $sys_rusak = (int)($expected['rusak_qty'] ?? $sys_rusak);
+                                    $sys_retur = (int)($expected['retur_qty'] ?? $sys_retur);
                                 }
                             }
                             $cls_q = $sq > 0 ? 'audit-pos' : ($sq < 0 ? 'audit-neg' : 'audit-zero');
@@ -2708,8 +2715,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             <td class="text-center"><span class="<?= $cls_q; ?>"><?= number_format($sq,0,',','.') ?></span></td>
                             <td class="text-right"><?= number_format((int)($ar['actual_setoran'] ?? 0),0,',','.') ?></td>
                             <td class="text-center"><span class="<?= $cls_s; ?>"><?= number_format($ss,0,',','.') ?></span></td>
-                            <td class="text-center"><small><?= number_format((int)($by_block[$ar['blok_name']]['rusak_qty'] ?? 0),0,',','.') ?></small></td>
-                            <td class="text-center"><small><?= number_format((int)($by_block[$ar['blok_name']]['retur'] ?? 0),0,',','.') ?></small></td>
+                            <td class="text-center"><small><?= number_format($sys_rusak,0,',','.') ?></small></td>
+                            <td class="text-center"><small><?= number_format($sys_retur,0,',','.') ?></small></td>
                             <td class="text-center"><small><?= number_format($profile_qty_10,0,',','.') ?></small></td>
                             <td class="text-center"><small><?= number_format($profile_qty_30,0,',','.') ?></small></td>
                             <td class="text-right">
