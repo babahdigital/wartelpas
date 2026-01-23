@@ -707,9 +707,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 'blok' => $ar['blok_name'] ?? '-',
                                 'selisih_setoran' => (int)($ar['selisih_setoran'] ?? 0),
                                 'p10_qty' => $p10_qty,
-                                'p10_sum' => $profile10_sum,
+                                'p10_sum' => $profile10_sum > 0 ? $profile10_sum : null,
                                 'p30_qty' => $p30_qty,
-                                'p30_sum' => $profile30_sum
+                                'p30_sum' => $profile30_sum > 0 ? $profile30_sum : null
                             ];
                         ?>
                         <tr>
@@ -761,11 +761,11 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             ?>
                             <ul class="audit-details-list">
                                 <?php if ($rep['p10_qty'] > 0): ?>
-                                    <li>Profile 10 Menit: <?= $rep['p10_qty'] ?> Voucher / Rp <?= number_format($rep['p10_sum'], 0, ',', '.') ?></li>
+                                    <li>Profile 10 Menit: <?= $rep['p10_qty'] ?> Voucher / Rp <?= $rep['p10_sum'] !== null ? number_format($rep['p10_sum'], 0, ',', '.') : '-' ?></li>
                                 <?php endif; ?>
                                 
                                 <?php if ($rep['p30_qty'] > 0): ?>
-                                    <li>Profile 30 Menit: <?= $rep['p30_qty'] ?> Voucher / Rp <?= number_format($rep['p30_sum'], 0, ',', '.') ?></li>
+                                    <li>Profile 30 Menit: <?= $rep['p30_qty'] ?> Voucher / Rp <?= $rep['p30_sum'] !== null ? number_format($rep['p30_sum'], 0, ',', '.') : '-' ?></li>
                                 <?php endif; ?>
 
                                 <?php if ($rep['p10_qty'] == 0 && $rep['p30_qty'] == 0): ?>
