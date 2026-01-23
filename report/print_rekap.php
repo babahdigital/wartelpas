@@ -597,6 +597,14 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                 </tr>
             </tbody>
         </table>
+        
+        <div style="margin-top:8px; font-size:11px; color:#444;">
+            Keterangan: RS = Rusak, RT = Retur, SP = Spam, WR = Wartel, KM = Kamtib.
+        </div>
+        <div style="margin-top:4px; font-size:11px; color:#444;">
+            Catatan: Data rekap adalah acuan resmi untuk keuangan karena berasal dari transaksi. Daftar user digunakan untuk memantau status user online/terpakai.
+        </div> 
+
         <?php if (!empty($audit_rows)): ?>
             <?php 
                 // Array untuk menampung data summary
@@ -788,12 +796,6 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                 <?php endif; ?>
             </div>
             <?php endif; ?>
-        <div style="margin-top:8px; font-size:11px; color:#444;">
-            Keterangan: RS = Rusak, RT = Retur, SP = Spam, WR = Wartel, KM = Kamtib.
-        </div>
-        <div style="margin-top:4px; font-size:11px; color:#444;">
-            Catatan: Data rekap adalah acuan resmi untuk keuangan karena berasal dari transaksi. Daftar user digunakan untuk memantau status user online/terpakai.
-        </div> 
     <?php endif; ?>
 
 <script>
