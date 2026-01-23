@@ -686,6 +686,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $cnt_rusak_30 = 0;
                             $cnt_unreported_10 = 0;
                             $cnt_unreported_30 = 0;
+                            $cnt_retur_10 = 0;
+                            $cnt_retur_30 = 0;
 
                             if (!empty($ar['user_evidence'])) {
                                 $evidence = json_decode((string)$ar['user_evidence'], true);
@@ -715,11 +717,13 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                                 $profile30_sum += $price_val;
                                                 $profile30 = $bucket;
                                                 if($u_status === 'rusak') $cnt_rusak_30++;
+                                                if($u_status === 'retur') $cnt_retur_30++;
                                                 if ($is_unreported) $cnt_unreported_30++;
                                             } else {
                                                 $profile10_sum += $price_val;
                                                 $profile10 = $bucket;
                                                 if($u_status === 'rusak') $cnt_rusak_10++;
+                                                if($u_status === 'retur') $cnt_retur_10++;
                                                 if ($is_unreported) $cnt_unreported_10++;
                                             }
                                         }
@@ -773,7 +777,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 'unreported_10' => (int)$cnt_unreported_10,
                                 'unreported_30' => (int)$cnt_unreported_30,
                                 'rusak_10' => $cnt_rusak_10,
-                                'rusak_30' => $cnt_rusak_30
+                                'rusak_30' => $cnt_rusak_30,
+                                'retur_10' => (int)$cnt_retur_10,
+                                'retur_30' => (int)$cnt_retur_30
                             ];
                         ?>
                         <tr>
