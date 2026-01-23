@@ -218,11 +218,17 @@ try {
 }
 
 $seen_sales = [];
+$seen_user_day = [];
 foreach ($rows as $r) {
     $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
     if ($sale_date === '' || strpos((string)$sale_date, $filter_date) !== 0) continue;
 
     $username = $r['username'] ?? '';
+    if ($username !== '' && $sale_date !== '') {
+        $user_day_key = $username . '|' . $sale_date;
+        if (isset($seen_user_day[$user_day_key])) continue;
+        $seen_user_day[$user_day_key] = true;
+    }
     $raw_key = trim((string)($r['full_raw_data'] ?? ''));
     $unique_key = '';
     if ($raw_key !== '') {
