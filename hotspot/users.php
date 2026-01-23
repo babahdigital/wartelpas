@@ -669,11 +669,11 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     }
 
     if ($enforce_rusak_rules && ($act == 'invalid' || $act == 'retur' || $act == 'check_rusak')) {
-      $total_uptime_ok = (!$is_active) && ($bytes <= $bytes_limit) && ($total_uptime_sec <= $uptime_limit);
+      $total_uptime_ok = (!$is_active) && ($bytes <= $bytes_limit);
       $relogin_count_ok = false;
-      if (!($act == 'retur' && $is_rusak_target) && ($is_active || $bytes > $bytes_limit || $total_uptime_sec > $uptime_limit)) {
+      if (!($act == 'retur' && $is_rusak_target) && ($is_active || $bytes > $bytes_limit)) {
         $action_blocked = true;
-        $action_error = 'Voucher masih valid, tidak bisa dianggap rusak (online / bytes > ' . $limits['bytes_label'] . ' / uptime > ' . $limits['uptime_label'] . ').';
+        $action_error = 'Voucher masih valid, tidak bisa dianggap rusak (online / bytes > ' . $limits['bytes_label'] . ').';
       }
       if ($action_blocked && $total_uptime_ok && $first_login_ok) {
         $action_blocked = false;
@@ -686,7 +686,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $criteria = [
         'offline' => !$is_active,
         'bytes_ok' => $bytes <= $bytes_limit,
-        'total_uptime_ok' => $total_uptime_sec <= $uptime_limit,
+        'total_uptime_ok' => true,
         'first_login_ok' => !empty($first_login_real)
       ];
       if (ob_get_length()) {
@@ -2577,7 +2577,7 @@ if ($debug_mode && !$is_ajax) {
       const items = [
         { label: `Offline (tidak sedang online)`, ok: !!criteria.offline, value: values.online || '-' },
         { label: `Bytes maksimal ${limits.bytes || '-'}`, ok: !!criteria.bytes_ok, value: values.bytes || '-' },
-        { label: `Akumulasi uptime maksimal ${limits.uptime || '-'}`, ok: !!criteria.total_uptime_ok, value: values.total_uptime || '-' },
+        { label: `Uptime (informasi)`, ok: true, value: values.total_uptime || '-' },
         { label: `Pernah login (first login ada)`, ok: !!criteria.first_login_ok, value: String(values.first_login ?? '-') }
       ];
       const rows = items.map(it => {
@@ -2767,10 +2767,10 @@ if ($debug_mode && !$is_ajax) {
     const criteria = {
       offline,
       bytes_ok: bytes <= limits.bytes,
-      total_uptime_ok: totalUptimeSec <= limits.uptime,
+      total_uptime_ok: true,
       first_login_ok: !!firstLogin
     };
-    const ok = criteria.offline && criteria.bytes_ok && criteria.total_uptime_ok && criteria.first_login_ok;
+    const ok = criteria.offline && criteria.bytes_ok && criteria.first_login_ok;
     return {
       ok,
       message: ok ? 'Syarat rusak terpenuhi.' : 'Syarat rusak belum terpenuhi.',
