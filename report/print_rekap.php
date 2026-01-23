@@ -97,9 +97,8 @@ function generate_nested_table($items, $align = 'left') {
     $html = '<table style="width:100%; border-collapse:collapse; margin:0; padding:0; background:transparent;">';
     $count = count($items);
     foreach ($items as $i => $val) {
-        // Berikan border bottom kecuali item terakhir
         $border = ($i < $count - 1) ? 'border-bottom:1px solid #999;' : ''; 
-        $html .= '<tr><td style="border:none; padding:4px 2px; '.$border.' text-align: center; vertical-align:middle; line-height:1.2; word-wrap:break-word;">'.htmlspecialchars($val).'</td></tr>';
+        $html .= '<tr><td style="border:none; padding:4px 2px; '.$border.' text-align:'.$align.'; vertical-align:middle; line-height:1.2; word-wrap:break-word;">'.htmlspecialchars($val).'</td></tr>';
     }
     $html .= '</table>';
     return $html;
@@ -129,8 +128,7 @@ try {
     if (file_exists($dbFile)) {
         $db = new PDO('sqlite:' . $dbFile);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        // Table creation omitted for brevity assuming tables exist or handled by main script logic previously provided
-        // Using existing query structure
+
         $res = $db->query("SELECT 
                 sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
                 sh.username, sh.profile, sh.profile_snapshot,
@@ -437,10 +435,21 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         .rekap-total { background:#d7dee8; font-weight:700; }
         .rekap-subtotal { background:#e8edf4; font-weight:700; }
         .rekap-hp { text-align:center; vertical-align:middle; font-weight:700; }
-        /* Style tambahan untuk nested table di Audit */
+        /* Style untuk nested table audit */
         .nested-cell-table td { border-bottom: 1px solid #ccc; }
         .nested-cell-table td:last-child { border-bottom: none; }
-        @media print { .toolbar { display:none; } }
+        /* Style untuk Summary Audit Box */
+        .audit-summary-box { margin-top: 25px; border: 1px solid #000; padding: 15px; border-radius: 4px; background-color: #fdfdfd; }
+        .audit-summary-header { font-weight: bold; font-size: 14px; margin-bottom: 10px; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
+        .audit-item { font-size: 12px; margin-bottom: 8px; line-height: 1.5; }
+        .audit-item strong { color: #000; }
+        .audit-details-list { margin: 4px 0 0 15px; padding: 0; list-style-type: none; color: #444; }
+        .audit-details-list li::before { content: "- "; font-weight: bold; }
+        
+        @media print { 
+            .toolbar { display:none; } 
+            .audit-summary-box { page-break-inside: avoid; }
+        }
     </style>
 </head>
 <body>
@@ -589,10 +598,14 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             </tbody>
         </table>
         <?php if (!empty($audit_rows)): ?>
+            <?php 
+                // Array untuk menampung data summary
+                $audit_summary_report = []; 
+            ?>
             <table class="rekap-table" style="margin-top:12px;">
                 <thead>
                     <tr>
-                        <th colspan="16">Audit Manual Rekap Harian</th>
+                        <th colspan="13">Audit Manual Rekap Harian</th>
                     </tr>
                     <tr>
                         <th rowspan="2" style="width:90px;">Blok</th>
@@ -602,7 +615,6 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <th rowspan="2" style="width:80px;">Selisih</th>
                         <th colspan="4">Profil 10 Menit</th>
                         <th colspan="4">Profil 30 Menit</th>
-                        <th rowspan="2">Catatan</th>
                     </tr>
                     <tr>
                         <th style="width:90px;">User</th>
@@ -620,7 +632,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         $audit_total_profile_qty_10 = 0;
                         $audit_total_profile_qty_30 = 0;
                     ?>
-                    <?php foreach ($audit_rows as $ar): ?>
+                    <?php foreach ($audit_rows as $idx => $ar): ?>
                         <?php
                             $evidence = [];
                             $profile_qty = [];
@@ -689,6 +701,16 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $p30_tt = $p30_qty > 0 ? number_format($p30_qty,0,',','.') : '-';
                             $audit_total_profile_qty_10 += $p10_qty;
                             $audit_total_profile_qty_30 += $p30_qty;
+                            
+                            // Capture data for summary
+                            $audit_summary_report[] = [
+                                'blok' => $ar['blok_name'] ?? '-',
+                                'selisih_setoran' => (int)($ar['selisih_setoran'] ?? 0),
+                                'p10_qty' => $p10_qty,
+                                'p10_sum' => $profile10_sum,
+                                'p30_qty' => $p30_qty,
+                                'p30_sum' => $profile30_sum
+                            ];
                         ?>
                         <tr>
                             <td style="text-align: center;"><?= htmlspecialchars($ar['blok_name'] ?? '-') ?></td>
@@ -706,8 +728,6 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             <td style="padding:0; text-align: center;"><?= $p30_up ?></td>
                             <td style="padding:0; text-align: center;"><?= $p30_bt ?></td>
                             <td style="text-align: center; font-weight:bold;"><?= $p30_tt ?></td>
-
-                            <td style="text-align: right;"><?= htmlspecialchars($ar['note'] ?? '') ?></td>
                         </tr>
                     <?php endforeach; ?>
                     <tr>
@@ -720,12 +740,45 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <td style="text-align:center;"><b><?= number_format($audit_total_profile_qty_10,0,',','.') ?></b></td>
                         <td colspan="3" style="background:#eee;"></td>
                         <td style="text-align:center;"><b><?= number_format($audit_total_profile_qty_30,0,',','.') ?></b></td>
-                        <td></td>
                     </tr>
                 </tbody>
             </table>
-            <div style="margin-top:6px; font-size:11px; color:#444;">Audit manual adalah catatan koreksi dari laporan lapangan, tidak mengubah rekap transaksi sistem.</div>
-        <?php endif; ?>
+
+            <div class="audit-summary-box">
+                <div class="audit-summary-header">Kesimpulan Audit Harian</div>
+                <?php if (!empty($audit_summary_report)): ?>
+                    <?php foreach ($audit_summary_report as $idx => $rep): ?>
+                        <div class="audit-item">
+                            <strong><?= ($idx + 1) ?>. Blok <?= htmlspecialchars($rep['blok']) ?></strong>
+                            <?php 
+                                if ($rep['selisih_setoran'] < 0) {
+                                    echo "- <span style='color:red;'>Kurang Setor Rp " . number_format(abs($rep['selisih_setoran']), 0, ',', '.') . "</span>";
+                                } elseif ($rep['selisih_setoran'] > 0) {
+                                    echo "- <span style='color:green;'>Lebih Setor Rp " . number_format($rep['selisih_setoran'], 0, ',', '.') . "</span>";
+                                } else {
+                                    echo "- <span style='color:blue;'>Setoran Sesuai</span>";
+                                }
+                            ?>
+                            <ul class="audit-details-list">
+                                <?php if ($rep['p10_qty'] > 0): ?>
+                                    <li>Profile 10 Menit: <?= $rep['p10_qty'] ?> Voucher / Rp <?= number_format($rep['p10_sum'], 0, ',', '.') ?></li>
+                                <?php endif; ?>
+                                
+                                <?php if ($rep['p30_qty'] > 0): ?>
+                                    <li>Profile 30 Menit: <?= $rep['p30_qty'] ?> Voucher / Rp <?= number_format($rep['p30_sum'], 0, ',', '.') ?></li>
+                                <?php endif; ?>
+
+                                <?php if ($rep['p10_qty'] == 0 && $rep['p30_qty'] == 0): ?>
+                                    <li>Tidak ada data detail profile audit.</li>
+                                <?php endif; ?>
+                            </ul>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="audit-item">Tidak ada data audit yang perlu dilaporkan.</div>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
         <div style="margin-top:8px; font-size:11px; color:#444;">
             Keterangan: RS = Rusak, RT = Retur, SP = Spam, WR = Wartel, KM = Kamtib.
         </div>
