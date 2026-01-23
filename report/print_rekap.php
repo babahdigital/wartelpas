@@ -449,7 +449,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         @media print { 
             .toolbar { display:none; } 
             .audit-summary-box { page-break-inside: avoid; }
-            .dul-gap { margin-top: 10% !important; }
+            .dul-gap { margin-top: 15% !important; }
         }
     </style>
 </head>
@@ -602,7 +602,10 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                 // Array untuk menampung data summary
                 $audit_summary_report = []; 
             ?>
-            <table class="rekap-table dul-gap" style="margin-top:30px;">
+            <h2 class="dul-gap" style="margin-top:35px;">Rekap Audit Penjualan Lapangan</h2>
+            <div class="meta">Periode: <?= htmlspecialchars($period_label) ?> | Tanggal: <?= htmlspecialchars(format_date_ddmmyyyy($filter_date)) ?></div>
+
+            <table class="rekap-table" style="margin-top:15px;">
                 <thead>
                     <tr>
                         <th colspan="13">Audit Manual Rekap Harian</th>
