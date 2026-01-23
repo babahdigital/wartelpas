@@ -855,7 +855,61 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         elseif (strpos($cmt, 'rusak') !== false) $st = 'rusak';
                     }
                     if (in_array($st, ['rusak', 'retur'], true)) {
+                        $rowAuto['_status'] = $st;
                         $auto_status_users[$u] = $rowAuto;
+                    }
+                }
+            }
+            if (table_exists($db, 'sales_history')) {
+                $stmtAutoSales = $db->prepare("SELECT username, blok_name, comment, status, is_rusak, is_retur, is_invalid, profile_snapshot, profile, validity, price_snapshot, price, sprice_snapshot
+                    FROM sales_history WHERE username != '' AND sale_date = :d");
+                $stmtAutoSales->execute([':d' => $audit_date]);
+                foreach ($stmtAutoSales->fetchAll(PDO::FETCH_ASSOC) as $rowSales) {
+                    $u = trim((string)($rowSales['username'] ?? ''));
+                    if ($u === '') continue;
+                    $blok_u = normalize_block_name($rowSales['blok_name'] ?? '', $rowSales['comment'] ?? '');
+                    if ($blok_u !== $audit_blok) continue;
+                    $st = strtolower((string)($rowSales['status'] ?? ''));
+                    $cmt = strtolower((string)($rowSales['comment'] ?? ''));
+                    if ($st === '' || $st === 'normal') {
+                        if ((int)($rowSales['is_invalid'] ?? 0) === 1) $st = 'invalid';
+                        elseif ((int)($rowSales['is_retur'] ?? 0) === 1) $st = 'retur';
+                        elseif ((int)($rowSales['is_rusak'] ?? 0) === 1) $st = 'rusak';
+                        elseif (strpos($cmt, 'invalid') !== false) $st = 'invalid';
+                        elseif (strpos($cmt, 'retur') !== false) $st = 'retur';
+                        elseif (strpos($cmt, 'rusak') !== false) $st = 'rusak';
+                    }
+                    if (in_array($st, ['rusak', 'retur'], true) && !isset($auto_status_users[$u])) {
+                        $rowSales['_status'] = $st;
+                        $rowSales['raw_comment'] = $rowSales['comment'] ?? '';
+                        $auto_status_users[$u] = $rowSales;
+                    }
+                }
+            }
+            if (table_exists($db, 'live_sales')) {
+                $stmtAutoLive = $db->prepare("SELECT username, blok_name, comment, status, is_rusak, is_retur, is_invalid, profile_snapshot, profile, validity, price_snapshot, price, sprice_snapshot
+                    FROM live_sales WHERE username != '' AND sale_date = :d");
+                $stmtAutoLive->execute([':d' => $audit_date]);
+                foreach ($stmtAutoLive->fetchAll(PDO::FETCH_ASSOC) as $rowLive) {
+                    $u = trim((string)($rowLive['username'] ?? ''));
+                    if ($u === '') continue;
+                    if (isset($auto_status_users[$u])) continue;
+                    $blok_u = normalize_block_name($rowLive['blok_name'] ?? '', $rowLive['comment'] ?? '');
+                    if ($blok_u !== $audit_blok) continue;
+                    $st = strtolower((string)($rowLive['status'] ?? ''));
+                    $cmt = strtolower((string)($rowLive['comment'] ?? ''));
+                    if ($st === '' || $st === 'normal') {
+                        if ((int)($rowLive['is_invalid'] ?? 0) === 1) $st = 'invalid';
+                        elseif ((int)($rowLive['is_retur'] ?? 0) === 1) $st = 'retur';
+                        elseif ((int)($rowLive['is_rusak'] ?? 0) === 1) $st = 'rusak';
+                        elseif (strpos($cmt, 'invalid') !== false) $st = 'invalid';
+                        elseif (strpos($cmt, 'retur') !== false) $st = 'retur';
+                        elseif (strpos($cmt, 'rusak') !== false) $st = 'rusak';
+                    }
+                    if (in_array($st, ['rusak', 'retur'], true)) {
+                        $rowLive['_status'] = $st;
+                        $rowLive['raw_comment'] = $rowLive['comment'] ?? '';
+                        $auto_status_users[$u] = $rowLive;
                     }
                 }
             }
@@ -906,6 +960,9 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     if (is_array($user_row)) {
                         $u_status = strtolower((string)($user_row['last_status'] ?? ''));
                         $u_cmt = strtolower((string)($user_row['raw_comment'] ?? ''));
+                    }
+                    if (($u_status === '' || $u_status === 'normal') && isset($auto_status_users[$u]['_status'])) {
+                        $u_status = (string)$auto_status_users[$u]['_status'];
                     }
                     if ($u_status === '' || $u_status === 'normal') {
                         if (strpos($u_cmt, 'invalid') !== false) $u_status = 'invalid';
