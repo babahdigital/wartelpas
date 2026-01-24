@@ -303,6 +303,7 @@ for ($d = 1; $d <= $days_in_month; $d++) {
 }
 
 $total_gross = 0;
+$total_omzet_gross = 0;
 $total_net_audit = 0;
 $total_selisih = 0;
 $total_qty_laku = 0;
@@ -321,6 +322,7 @@ foreach ($all_dates as $date) {
     $net = (int)($daily[$date]['net'] ?? 0);
     $system_net = $net;
     $gross = $system_net;
+    $gross_all = (int)($daily[$date]['gross'] ?? 0);
     $audit = $audit_net[$date] ?? null;
     $net_audit = $audit !== null ? (int)$audit : $net;
     $selisih = $audit !== null ? (int)($audit_selisih[$date] ?? 0) : 0;
@@ -338,6 +340,7 @@ foreach ($all_dates as $date) {
         'date' => $date,
         'gross' => $gross,
         'net_audit' => $net_audit,
+        'selisih' => $selisih,
         'qty' => $qty_laku,
         'rusak_qty' => $rusak_qty,
         'rs' => (int)($ph['rusak'] ?? 0),
@@ -349,6 +352,7 @@ foreach ($all_dates as $date) {
     ];
 
     $total_gross += $gross;
+    $total_omzet_gross += $gross_all;
     $total_net_audit += $net_audit;
     $total_selisih += $selisih;
     $total_qty_laku += $qty_laku;
@@ -398,118 +402,101 @@ $print_time = date('d-m-Y H:i:s');
 </head>
 <body>
     <div class="toolbar">
-        <button class="btn" onclick="window.print()">Print / Download PDF</button>
-        <button class="btn" onclick="shareReport()">Share</button>
+        <button class="btn" onclick="window.print()">Print / PDF</button>
     </div>
 
-    <div>
-        <h2>Rekap Laporan Penjualan (Bulanan)</h2>
+    <div style="border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:20px;">
+        <h2 style="margin:0;">Laporan Keuangan Bulanan</h2>
         <div class="meta">Periode: <?= esc($month_label) ?> | Dicetak: <?= esc($print_time) ?></div>
     </div>
 
-    <div class="summary-grid">
-        <div class="summary-card">
-            <div class="summary-title">Total Voucher Terjual</div>
-            <div class="summary-value"><?= number_format((int)$total_qty_laku,0,',','.') ?></div>
+    <div class="summary-grid" style="grid-template-columns: repeat(4, 1fr); gap:15px; margin-bottom:25px;">
+        <div class="summary-card" style="border:1px solid #ddd; padding:15px; border-radius:4px; background:#fff;">
+            <div class="summary-title" style="color:#666; font-size:11px; text-transform:uppercase;">Total Omzet (Gross)</div>
+            <div class="summary-value" style="font-size:20px; font-weight:bold;"><?= $cur ?> <?= number_format((int)$total_omzet_gross,0,',','.') ?></div>
         </div>
-        <div class="summary-card">
-            <div class="summary-title">Total Bandwidth</div>
-            <div class="summary-value"><?= esc(format_bytes_short((int)$total_bandwidth)) ?></div>
+        <div class="summary-card" style="border:1px solid #fca5a5; background:#fff1f2; padding:15px; border-radius:4px;">
+            <div class="summary-title" style="color:#991b1b; font-size:11px; text-transform:uppercase;">Total Kerugian (Voucher Loss)</div>
+            <div class="summary-value" style="font-size:20px; font-weight:bold; color:#991b1b;">- <?= $cur ?> <?= number_format((int)$total_voucher_loss,0,',','.') ?></div>
+            <div style="font-size:10px; color:#b91c1c;">(Rusak & Invalid)</div>
         </div>
-        <div class="summary-card">
-            <div class="summary-title">Selisih Audit</div>
-            <div class="summary-value" style="color:#c0392b;">
-                <?= $total_selisih >= 0 ? '+' : '' ?><?= $cur ?> <?= number_format((int)$total_selisih,0,',','.') ?>
+        <div class="summary-card" style="border:1px solid #ddd; padding:15px; border-radius:4px; background:#fff;">
+            <div class="summary-title" style="color:#666; font-size:11px; text-transform:uppercase;">Total Setoran Fisik (Audit)</div>
+            <div class="summary-value" style="font-size:20px; font-weight:bold; color:#1e3a8a;"><?= $cur ?> <?= number_format((int)$total_net_audit,0,',','.') ?></div>
+        </div>
+        <div class="summary-card" style="border:1px solid <?= $total_selisih < 0 ? '#fca5a5' : ($total_selisih > 0 ? '#86efac' : '#ddd') ?>; background: <?= $total_selisih < 0 ? '#fee2e2' : ($total_selisih > 0 ? '#dcfce7' : '#fff') ?>; padding:15px; border-radius:4px;">
+            <div class="summary-title" style="color:#444; font-size:11px; text-transform:uppercase;">Akumulasi Selisih</div>
+            <div class="summary-value" style="font-size:20px; font-weight:bold; color: <?= $total_selisih < 0 ? '#c0392b' : ($total_selisih > 0 ? '#166534' : '#333') ?>;">
+                <?= $cur ?> <?= number_format((int)$total_selisih,0,',','.') ?>
             </div>
-        </div>
-        <div class="summary-card">
-            <div class="summary-title">Kerugian Sistem</div>
-            <div class="summary-value" style="color:#c0392b;">
-                <?= $cur ?> <?= number_format((int)$total_voucher_loss,0,',','.') ?>
+            <div style="font-size:10px; color:#555;">
+                <?= $total_selisih < 0 ? 'Total Kurang Setor' : ($total_selisih > 0 ? 'Total Lebih Setor' : 'Balance / Sesuai') ?>
             </div>
-        </div>
-        <div class="summary-card">
-            <div class="summary-title">Insiden (Rusak/Spam)</div>
-            <div class="summary-value"><?= number_format((int)$total_rusak_device,0,',','.') ?> / <?= number_format((int)$total_spam,0,',','.') ?></div>
-        </div>
-        <div class="summary-card">
-            <div class="summary-title">Total Device (WR/KM)</div>
-            <div class="summary-value"><?= number_format((int)$max_wr,0,',','.') ?> / <?= number_format((int)$max_km,0,',','.') ?></div>
         </div>
     </div>
 
-    <table>
+    <div style="margin-bottom:10px; font-weight:bold; font-size:14px; border-bottom:1px solid #eee; padding-bottom:5px;">Rincian Kinerja Harian</div>
+    <table style="width:100%; border-collapse:collapse; font-size:11px;">
         <thead>
-            <tr style="background:#333;color:#000;">
-                <th rowspan="2" style="color: #000;">Tgl</th>
-                <th colspan="2" style="color: #000;">Keuangan</th>
-                <th colspan="2" style="color: #000;">Voucher</th>
-                <th colspan="5" style="color: #000;">Rincian Device & Status</th>
-                <th rowspan="2" style="color: #000;">Bandwidth</th>
-            </tr>
-            <tr>
-                <th>Net System</th>
-                <th>Net Audit</th>
-                <th>Qty</th>
-                <th>Rusak</th>
-                <th>RS</th>
-                <th>SP</th>
-                <th>WR</th>
-                <th>KM</th>
-                <th>HP Aktif</th>
+            <tr style="background:#f1f5f9; color:#333;">
+                <th style="border:1px solid #cbd5e1; padding:8px;">Tanggal</th>
+                <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Voucher Terjual</th>
+                <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Rusak / Error</th>
+                <th style="border:1px solid #cbd5e1; padding:8px; text-align:right;">Target Sistem (Net)</th>
+                <th style="border:1px solid #cbd5e1; padding:8px; text-align:right;">Setoran Fisik (Audit)</th>
+                <th style="border:1px solid #cbd5e1; padding:8px; text-align:right;">Selisih</th>
+                <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Status</th>
             </tr>
         </thead>
         <tbody>
             <?php if (empty($rows_out)): ?>
-                <tr><td colspan="11">Tidak ada data untuk periode ini.</td></tr>
-            <?php else: foreach ($rows_out as $row): ?>
-                <tr>
-                    <td><?= esc(substr($row['date'], 8, 2)) ?></td>
-                    <td class="currency"><?= number_format((int)$row['gross'],0,',','.') ?></td>
-                    <td class="currency"><b><?= number_format((int)$row['net_audit'],0,',','.') ?></b></td>
-                    <td><?= number_format((int)$row['qty'],0,',','.') ?></td>
-                    <td style="color:#c0392b;">
-                        <?= number_format((int)$row['rusak_qty'],0,',','.') ?>
+                <tr><td colspan="7" style="text-align:center; padding:20px;">Tidak ada data transaksi bulan ini.</td></tr>
+            <?php else: $idx = 0; foreach ($rows_out as $row): $idx++; ?>
+                <?php
+                    $daily_selisih = (int)($row['selisih'] ?? 0);
+                    $bg_row = $idx % 2 === 0 ? '#fff' : '#f8fafc';
+                    $status_label = 'AMAN';
+                    $status_color = '#2563eb';
+                    if ($daily_selisih < 0) {
+                        $status_label = 'KURANG';
+                        $status_color = '#dc2626';
+                        $bg_row = '#fef2f2';
+                    } elseif ($daily_selisih > 0) {
+                        $status_label = 'LEBIH';
+                        $status_color = '#16a34a';
+                    }
+                ?>
+                <tr style="background:<?= $bg_row ?>;">
+                    <td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:center;"><?= esc(substr($row['date'], 8, 2)) ?></td>
+                    <td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:center;"><?= number_format((int)$row['qty'],0,',','.') ?></td>
+                    <td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:center; color:#dc2626;">
+                        <?= ((int)$row['rusak_qty'] > 0) ? number_format((int)$row['rusak_qty'],0,',','.') : '-' ?>
                     </td>
-                    <td><?= number_format((int)$row['rs'],0,',','.') ?></td>
-                    <td><?= number_format((int)$row['sp'],0,',','.') ?></td>
-                    <td><?= number_format((int)$row['wr'],0,',','.') ?></td>
-                    <td><?= number_format((int)$row['km'],0,',','.') ?></td>
-                    <td><b><?= number_format((int)$row['active'],0,',','.') ?></b></td>
-                    <td style="font-size:11px;"><?= esc(format_bytes_short((int)$row['bandwidth'])) ?></td>
+                    <td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:right;"><?= number_format((int)$row['gross'],0,',','.') ?></td>
+                    <td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:right; font-weight:bold;"><?= number_format((int)$row['net_audit'],0,',','.') ?></td>
+                    <td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:right; font-weight:bold; color:<?= $status_color ?>;">
+                        <?= $daily_selisih == 0 ? '-' : number_format($daily_selisih,0,',','.') ?>
+                    </td>
+                    <td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:center; font-size:10px; font-weight:bold; color:<?= $status_color ?>;">
+                        <?= $status_label ?>
+                    </td>
                 </tr>
             <?php endforeach; endif; ?>
         </tbody>
-        <tfoot>
-            <tr style="background:#333;color:#fff;font-weight:bold;">
-                <td>TOTAL</td>
-                <td class="currency"><?= number_format((int)$total_gross,0,',','.') ?></td>
-                <td class="currency"><?= number_format((int)$total_net_audit,0,',','.') ?></td>
-                <td><?= number_format((int)$total_qty_laku,0,',','.') ?></td>
-                <td style="color:#ffb3b3;"><?= number_format((int)$total_voucher_rusak,0,',','.') ?></td>
-                <td><?= number_format((int)$total_rusak_device,0,',','.') ?></td>
-                <td><?= number_format((int)$total_spam,0,',','.') ?></td>
-                <td><?= number_format((int)$max_wr,0,',','.') ?></td>
-                <td><?= number_format((int)$max_km,0,',','.') ?></td>
-                <td><?= number_format((int)$max_active,0,',','.') ?></td>
-                <td><?= esc(format_bytes_short((int)$total_bandwidth)) ?></td>
+        <tfoot style="background:#e2e8f0; font-weight:bold;">
+            <tr>
+                <td style="border:1px solid #cbd5e1; padding:8px; text-align:right;" colspan="3">TOTAL BULAN INI</td>
+                <td style="border:1px solid #cbd5e1; padding:8px; text-align:right;"><?= number_format((int)$total_gross,0,',','.') ?></td>
+                <td style="border:1px solid #cbd5e1; padding:8px; text-align:right;"><?= number_format((int)$total_net_audit,0,',','.') ?></td>
+                <td style="border:1px solid #cbd5e1; padding:8px; text-align:right; color:<?= $total_selisih < 0 ? '#dc2626' : ($total_selisih > 0 ? '#16a34a' : '#333') ?>;">
+                    <?= number_format((int)$total_selisih,0,',','.') ?>
+                </td>
+                <td style="border:1px solid #cbd5e1;"></td>
             </tr>
         </tfoot>
     </table>
 
-    <div class="footnote">
-        <strong>Keterangan:</strong> RS = Rusak, SP = Spam, WR = Wartel, KM = Kamtib. Net Audit mengambil data audit manual jika ada, jika tidak memakai net system.
-    </div>
-
 <script>
-function shareReport(){
-    if (navigator.share) {
-        navigator.share({ title: 'Rekap Bulanan', url: window.location.href });
-    } else {
-        window.prompt('Salin link laporan:', window.location.href);
-    }
-}
-
 function setUniquePrintTitle(){
     var now = new Date();
     var pad = function(n){ return String(n).padStart(2, '0'); };

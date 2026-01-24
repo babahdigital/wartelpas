@@ -446,19 +446,9 @@ $print_time = date('d-m-Y H:i:s');
         th, td { border:1px solid #000; padding:6px; text-align:center; }
         th { background:#f5f5f5; }
         .currency { text-align:right; white-space:nowrap; }
-        .summary-row { display:flex; gap:12px; flex-wrap:wrap; margin:8px 0 16px; }
-        .summary-card { border:1px solid #ccc; padding:8px 10px; background:#f9f9f9; min-width:135px; }
-        .summary-title { font-size:10px; text-transform:uppercase; color:#666; }
-        .summary-value { font-weight:700; font-size:14px; margin-top:4px; }
-        .chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px; }
-        .chart-box { border:1px solid #ddd; padding:10px; background:#fafafa; }
-        .chart-title { font-size:11px; text-transform:uppercase; color:#555; border-bottom:1px solid #ddd; padding-bottom:6px; margin-bottom:8px; }
-        .bar-wrap { display:flex; align-items:flex-end; gap:6px; height:120px; border-left:1px solid #bbb; border-bottom:1px solid #bbb; padding:0 6px 6px; }
-        .bar { width:16px; background:#2563eb; position:relative; }
-        .bar-label { position:absolute; bottom:-18px; width:100%; text-align:center; font-size:10px; color:#555; }
-        .bar-value { position:absolute; top:-16px; width:100%; text-align:center; font-size:10px; font-weight:700; color:#111; }
-        .bar-red { background:#ef4444; }
-        .footnote { font-size:11px; color:#555; margin-top:8px; }
+        .bar-mini { background:#e2e8f0; height:6px; width:80px; border-radius:3px; overflow:hidden; margin:0 auto; }
+        .bar-mini > span { display:block; height:100%; background:#3b82f6; }
+        .bar-mini.red > span { background:#ef4444; }
         @media print {
             @page { size: A4 landscape; margin: 10mm; }
             .toolbar { display:none; }
@@ -468,120 +458,73 @@ $print_time = date('d-m-Y H:i:s');
 </head>
 <body>
     <div class="toolbar">
-        <button class="btn" onclick="window.print()">Print / Download PDF</button>
-        <button class="btn" onclick="shareReport()">Share</button>
+        <button class="btn" onclick="window.print()">Print / PDF</button>
     </div>
 
-    <div>
-        <h2>Rekap Laporan Penjualan (Tahunan)</h2>
+    <div style="border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:20px;">
+        <h2 style="margin:0;">Laporan Keuangan Tahunan</h2>
         <div class="meta">Tahun: <?= esc($filter_year) ?> | Dicetak: <?= esc($print_time) ?></div>
     </div>
 
-    <div class="summary-row">
-        <div class="summary-card">
-            <div class="summary-title">Total Transaksi</div>
-            <div class="summary-value"><?= number_format((int)$total_qty,0,',','.') ?> Qty</div>
-        </div>
-        <div class="summary-card">
-            <div class="summary-title">Total Pendapatan Bersih</div>
-            <div class="summary-value"><?= $cur ?> <?= number_format((int)$total_net,0,',','.') ?></div>
-        </div>
-        <div class="summary-card">
-            <div class="summary-title">Selisih Audit</div>
-            <div class="summary-value" style="color:#c0392b;">
-                <?= $total_selisih >= 0 ? '+' : '' ?><?= $cur ?> <?= number_format((int)$total_selisih,0,',','.') ?>
-            </div>
-        </div>
-        <div class="summary-card">
-            <div class="summary-title">Kerugian Sistem</div>
-            <div class="summary-value" style="color:#c0392b;">
-                <?= $cur ?> <?= number_format((int)$total_voucher_loss,0,',','.') ?>
-            </div>
-        </div>
-        <div class="summary-card">
-            <div class="summary-title">Total Insiden (RS+SP)</div>
-            <div class="summary-value"><?= number_format((int)($total_rs + $total_sp),0,',','.') ?></div>
-        </div>
-        <div class="summary-card">
-            <div class="summary-title">Total Bandwidth</div>
-            <div class="summary-value"><?= esc(format_bytes_short((int)$total_bandwidth)) ?></div>
-        </div>
-    </div>
-
-    <table>
+    <table style="width:100%; border-collapse:collapse; font-size:12px; margin-top:20px;">
         <thead>
-            <tr style="background:#333;color:#000;">
-                <th rowspan="2" style="color:#000">Bulan</th>
-                <th colspan="3" style="color:#000">Keuangan</th>
-                <th colspan="2" style="color:#000">Produktivitas</th>
-                <th colspan="4" style="color:#000">Kesehatan Operasional</th>
-            </tr>
-            <tr>
-                <th>Net System</th>
-                <th>Net Audit</th>
-                <th>Selisih</th>
-                <th>Total Qty</th>
-                <th>Avg/Hari</th>
-                <th>RS</th>
-                <th>SP</th>
-                <th>WR</th>
-                <th>KM</th>
+            <tr style="background:#334155; color:#fff;">
+                <th style="padding:10px;">Bulan</th>
+                <th style="padding:10px; text-align:center;">Total Transaksi</th>
+                <th style="padding:10px; text-align:right;">Target Sistem</th>
+                <th style="padding:10px; text-align:right;">Realisasi (Audit)</th>
+                <th style="padding:10px; text-align:right;">Selisih / Loss</th>
+                <th style="padding:10px; text-align:center;">Kinerja</th>
             </tr>
         </thead>
         <tbody>
             <?php foreach ($months as $mm => $row): ?>
                 <?php
-                    $label = month_label_id($mm);
-                    $has = ($row['gross'] > 0 || $row['net'] > 0 || $row['qty'] > 0);
+                    $has_data = ($row['gross'] > 0 || $row['qty'] > 0 || $row['net'] > 0);
+                    $selisih = (int)($row['selisih'] ?? 0);
+                    $row_color = $selisih < 0 ? '#fee2e2' : '#fff';
+                    $net_percent = 0;
+                    if ($max_net > 0) {
+                        $net_percent = (int)round(($net_for_chart[$mm] / $max_net) * 100);
+                        if ($net_percent < 5 && $net_for_chart[$mm] > 0) $net_percent = 5;
+                        if ($net_percent > 100) $net_percent = 100;
+                    }
                 ?>
-                <tr>
-                    <td style="text-align:left;"><b><?= esc($label) ?></b></td>
-                    <td class="currency"><?= $has ? number_format((int)$row['gross'],0,',','.') : '-' ?></td>
-                    <td class="currency"><b><?= $has ? number_format((int)$row['net_audit'],0,',','.') : '-' ?></b></td>
-                    <td class="currency" style="color:#c0392b;">
-                        <?= $has ? (($row['selisih'] >= 0 ? '+' : '') . number_format((int)$row['selisih'],0,',','.')) : '-' ?>
+                <tr style="background:<?= $row_color ?>; border-bottom:1px solid #e2e8f0;">
+                    <td style="padding:8px; font-weight:bold; text-align:left;"><?= esc(month_label_id($mm)) ?></td>
+                    <td style="padding:8px; text-align:center;"><?= $has_data ? number_format((int)$row['qty'],0,',','.') : '-' ?></td>
+                    <td style="padding:8px; text-align:right;"><?= $has_data ? number_format((int)$row['net'],0,',','.') : '-' ?></td>
+                    <td style="padding:8px; text-align:right; font-weight:bold;"><?= $has_data ? number_format((int)$row['net_audit'],0,',','.') : '-' ?></td>
+                    <td style="padding:8px; text-align:right; color:<?= $selisih < 0 ? '#dc2626' : '#16a34a' ?>;">
+                        <?= $has_data ? number_format($selisih,0,',','.') : '-' ?>
                     </td>
-                    <td><b><?= $has ? number_format((int)$row['qty'],0,',','.') : '-' ?></b></td>
-                    <td><?= $has ? number_format((int)$row['avg'],0,',','.') : '-' ?></td>
-                    <td><?= $has ? number_format((int)$row['rs'],0,',','.') : '-' ?></td>
-                    <td><?= $has ? number_format((int)$row['sp'],0,',','.') : '-' ?></td>
-                    <td><?= $has ? number_format((int)$row['wr_avg'],0,',','.') : '-' ?></td>
-                    <td><?= $has ? number_format((int)$row['km_avg'],0,',','.') : '-' ?></td>
+                    <td style="padding:8px; text-align:center;">
+                        <?php if ($has_data): ?>
+                            <div class="bar-mini <?= $selisih < 0 ? 'red' : '' ?>">
+                                <span style="width: <?= $net_percent ?>%"></span>
+                            </div>
+                        <?php else: ?>
+                            <span style="color:#ccc;">-</span>
+                        <?php endif; ?>
+                    </td>
                 </tr>
             <?php endforeach; ?>
         </tbody>
         <tfoot>
-            <tr style="background:#333;color:#fff;font-weight:bold;">
-                <td style="text-align:left;">TOTAL YTD</td>
-                <td class="currency"><?= number_format((int)$total_gross,0,',','.') ?></td>
-                <td class="currency"><?= number_format((int)$total_net,0,',','.') ?></td>
-                <td class="currency" style="color:#ffb3b3;">
-                    <?= ($total_selisih >= 0 ? '+' : '') . number_format((int)$total_selisih,0,',','.') ?>
+            <tr style="background:#e2e8f0; font-weight:bold;">
+                <td style="padding:8px; text-align:left;">TOTAL YTD</td>
+                <td style="padding:8px; text-align:center;"><?= number_format((int)$total_qty,0,',','.') ?></td>
+                <td style="padding:8px; text-align:right;"><?= number_format((int)$total_system_net,0,',','.') ?></td>
+                <td style="padding:8px; text-align:right;"><?= number_format((int)$total_net,0,',','.') ?></td>
+                <td style="padding:8px; text-align:right; color:<?= $total_selisih < 0 ? '#dc2626' : '#16a34a' ?>;">
+                    <?= number_format((int)$total_selisih,0,',','.') ?>
                 </td>
-                <td><?= number_format((int)$total_qty,0,',','.') ?></td>
-                <td><?= number_format((int)$avg_all,0,',','.') ?></td>
-                <td><?= number_format((int)$total_rs,0,',','.') ?></td>
-                <td><?= number_format((int)$total_sp,0,',','.') ?></td>
-                <td><?= number_format((int)$total_wr,0,',','.') ?></td>
-                <td><?= number_format((int)$total_km,0,',','.') ?></td>
+                <td></td>
             </tr>
         </tfoot>
     </table>
 
-
-    <div class="footnote">
-        <strong>Keterangan:</strong> RS = Rusak, SP = Spam, WR = Wartel, KM = Kamtib. Net Audit menggunakan data audit manual jika ada, jika tidak memakai net system.
-    </div>
-
 <script>
-function shareReport(){
-    if (navigator.share) {
-        navigator.share({ title: 'Rekap Tahunan', url: window.location.href });
-    } else {
-        window.prompt('Salin link laporan:', window.location.href);
-    }
-}
-
 function setUniquePrintTitle(){
     var now = new Date();
     var pad = function(n){ return String(n).padStart(2, '0'); };
