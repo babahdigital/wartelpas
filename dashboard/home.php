@@ -150,15 +150,6 @@ else {
         });
     }
 
-    function escapeHtml(text) {
-        return String(text)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    }
-
     $(document).ready(function() {
         $("#r_1_display").load("./dashboard/aload.php?session=<?= $session ?>&load=sysresource #r_1_content_raw");
         changeMonth(<?= (int)date('m') ?>);
@@ -170,29 +161,6 @@ else {
         $(".month-tab").on("click", function() {
             var m = $(this).data("month");
             if (m) changeMonth(m);
-        });
-        $("#ai-insight-toggle").on("click", function() {
-            $("#ai-insight-panel").slideToggle(150);
-        });
-        $("#ai-chat-open").on("click", function() {
-            $("#ai-chat-window").css("display", "flex");
-        });
-        $("#ai-chat-close").on("click", function() {
-            $("#ai-chat-window").hide();
-        });
-        $("#ai-chat-send").on("click", function() {
-            var val = $("#ai-chat-input").val();
-            if (!val) return;
-            $("#ai-chat-messages").append("<div class='ai-msg ai-msg-user'>" + escapeHtml(val) + "</div>");
-            $("#ai-chat-input").val("");
-            $("#ai-chat-messages").append("<div class='ai-msg ai-msg-ai'>Terima kasih, pesan diterima.</div>");
-            var box = document.getElementById("ai-chat-messages");
-            if (box) box.scrollTop = box.scrollHeight;
-        });
-        $("#ai-chat-input").on("keypress", function(e) {
-            if (e.which === 13) {
-                $("#ai-chat-send").click();
-            }
         });
         $(window).on('resize', function() {
             if (window.Highcharts && window.Highcharts.charts) {
@@ -251,19 +219,13 @@ for ($i = 5; $i >= 0; $i--) {
         <div class="card card-chart">
             <div class="card-header">
                 <h3><i class="fa fa-line-chart"></i> PERFORMA BISNIS</h3>
-                <div style="display:flex; gap:10px; align-items:center;">
-                    <button class="ai-insight-btn" id="ai-insight-toggle"><i class="fa fa-lightbulb-o ai-footer-icon"></i> Insight</button>
-                    <div class="month-tabs">
-                        <?php foreach ($monthTabs as $num => $name) : ?>
-                            <span class="month-tab<?= $num === $activeMonth ? ' active' : '' ?>" data-month="<?= $num ?>"><?= $name ?></span>
-                        <?php endforeach; ?>
-                    </div>
+                <div class="month-tabs">
+                    <?php foreach ($monthTabs as $num => $name) : ?>
+                        <span class="month-tab<?= $num === $activeMonth ? ' active' : '' ?>" data-month="<?= $num ?>"><?= $name ?></span>
+                    <?php endforeach; ?>
                 </div>
             </div>
             <div class="card-body" id="r_2_content"></div>
-            <div class="ai-insight-panel" id="ai-insight-panel">
-                <div id="ai-insight-text">Insight siap ditampilkan.</div>
-            </div>
         </div>
         <div class="card card-transaction">
             <div class="card-header">
@@ -302,22 +264,5 @@ for ($i = 5; $i >= 0; $i--) {
 
     <div class="resource-footer" id="r_1_display">
         <span><i class="fa fa-refresh fa-spin"></i> Memuat resource...</span>
-        <div class="ai-footer">
-            <button class="ai-footer-btn" id="ai-chat-open"><i class="fa fa-comment-o ai-footer-icon"></i> Chat AI</button>
-        </div>
-    </div>
-
-    <div class="ai-chat-window" id="ai-chat-window">
-        <div class="ai-chat-header">
-            <span><i class="fa fa-magic"></i> Asisten Wartelpas</span>
-            <i class="fa fa-times" id="ai-chat-close" style="cursor:pointer;"></i>
-        </div>
-        <div class="ai-chat-messages" id="ai-chat-messages">
-            <div class="ai-msg ai-msg-ai">Halo! Ada yang bisa saya bantu?</div>
-        </div>
-        <div class="ai-chat-input">
-            <input type="text" id="ai-chat-input" placeholder="Tanya sesuatu...">
-            <button class="ai-chat-send" id="ai-chat-send">Kirim</button>
-        </div>
     </div>
 </div>
