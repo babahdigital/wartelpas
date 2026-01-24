@@ -121,7 +121,7 @@ function format_date_dmy($dateStr) {
     if (empty($dateStr) || $dateStr === '-') return '-';
     $ts = strtotime($dateStr);
     if ($ts === false) return $dateStr;
-    return date('d-m-Y', $ts);
+    return date('d-m-Y H:i', $ts);
 }
 
 function render_audit_lines($lines) {
@@ -1131,7 +1131,7 @@ foreach ($rows as $r) {
         if (empty($valid_blocks) || isset($valid_blocks[$blok])) {
             $total_bandwidth += (int)($r['last_bytes'] ?? 0);
         }
-        $dt_display = $sale_date !== '' ? format_date_dmy($sale_date) : format_date_dmy($sale_dt);
+        $dt_display = $sale_dt !== '' ? format_date_dmy($sale_dt) : format_date_dmy($sale_date);
         $list[] = [
             'dt' => $dt_display,
                 'user' => $r['username'] ?? '-',
@@ -3235,12 +3235,11 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         <th class="text-right">Harga</th>
                         <th class="text-right">Efektif</th>
                         <th class="text-right">Bandwidth</th>
-                        <th class="text-right">Catatan</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($list_page)): ?>
-                        <tr><td colspan="9" style="text-align:center;color:var(--txt-muted);padding:30px;">Tidak ada data pada periode ini.</td></tr>
+                        <tr><td colspan="8" style="text-align:center;color:var(--txt-muted);padding:30px;">Tidak ada data pada periode ini.</td></tr>
                     <?php else: foreach ($list_page as $it): ?>
                         <tr>
                             <td><?= htmlspecialchars($it['dt']) ?></td>
@@ -3257,7 +3256,6 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             <td class="text-right"><?= number_format($it['price'],0,',','.') ?></td>
                             <td class="text-right"><?= number_format($it['net'],0,',','.') ?></td>
                             <td class="text-right"><?= htmlspecialchars(format_bytes_short((int)($it['bytes'] ?? 0))) ?></td>
-                            <td class="text-right"><small><?= htmlspecialchars($it['comment']) ?></small></td>
                         </tr>
                     <?php endforeach; endif; ?>
                 </tbody>
