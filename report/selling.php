@@ -2893,12 +2893,17 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             </table>
         </div>
         <?php
+            $has_audit_rows = !empty($audit_rows);
             $audit_system_qty_total = (int)($audit_system_qty_display_total ?? $total_qty_laku);
             $audit_system_setoran_total = (int)($audit_system_setoran_display_total ?? $total_net);
-            $audit_manual_qty_total = (int)($audit_manual_qty_display_total ?? $audit_total_reported_qty);
-            $audit_manual_setoran_total = (int)($audit_manual_setoran_display_total ?? $audit_total_actual_setoran);
-            $audit_selisih_qty_total = (int)($audit_selisih_qty_display_total ?? ($audit_manual_qty_total - $audit_system_qty_total));
-            $audit_selisih_setoran_total = (int)($audit_selisih_setoran_display_total ?? ($audit_manual_setoran_total - $audit_system_setoran_total));
+            $audit_manual_qty_total = $has_audit_rows ? (int)($audit_manual_qty_display_total ?? $audit_total_reported_qty) : 0;
+            $audit_manual_setoran_total = $has_audit_rows ? (int)($audit_manual_setoran_display_total ?? $audit_total_actual_setoran) : 0;
+            $audit_selisih_qty_total = $has_audit_rows
+                ? (int)($audit_selisih_qty_display_total ?? ($audit_manual_qty_total - $audit_system_qty_total))
+                : 0;
+            $audit_selisih_setoran_total = $has_audit_rows
+                ? (int)($audit_selisih_setoran_display_total ?? ($audit_manual_setoran_total - $audit_system_setoran_total))
+                : 0;
         ?>
         <div class="hp-total-bar">
             <div>Sistem Qty (Total): <b><?= number_format($audit_system_qty_total,0,',','.') ?></b></div>
