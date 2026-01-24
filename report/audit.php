@@ -72,6 +72,45 @@ function extract_profile_from_comment($comment) {
     return '';
 }
 
+function build_ghost_hint($selisih_qty, $selisih_rp) {
+    $ghost_qty = abs((int)$selisih_qty);
+    $ghost_rp = abs((int)$selisih_rp);
+    if ($ghost_qty <= 0 || $ghost_rp <= 0) return '';
+
+    $price10 = 5000;
+    $price30 = 20000;
+    $divisor = $price30 - $price10;
+    $ghost_10 = 0;
+    $ghost_30 = 0;
+
+    if ($ghost_rp >= ($ghost_qty * $price10) && $divisor > 0) {
+        $numerator = $ghost_rp - ($ghost_qty * $price10);
+        if ($numerator % $divisor === 0) {
+            $ghost_30 = (int)($numerator / $divisor);
+            $ghost_10 = $ghost_qty - $ghost_30;
+        }
+    }
+
+    if ($ghost_10 < 0 || $ghost_30 < 0) {
+        $ghost_10 = 0;
+        $ghost_30 = 0;
+    }
+
+    if ($ghost_10 === 0 && $ghost_30 === 0) {
+        if ($ghost_rp === ($price30 * $ghost_qty)) {
+            $ghost_30 = $ghost_qty;
+        } elseif ($ghost_rp === ($price10 * $ghost_qty)) {
+            $ghost_10 = $ghost_qty;
+        }
+    }
+
+    if ($ghost_10 <= 0 && $ghost_30 <= 0) return '';
+    $parts = [];
+    if ($ghost_10 > 0) $parts[] = number_format($ghost_10, 0, ',', '.') . ' unit 10 menit';
+    if ($ghost_30 > 0) $parts[] = number_format($ghost_30, 0, ',', '.') . ' unit 30 menit';
+    return 'Kemungkinan: ' . implode(' + ', $parts) . '.';
+}
+
 function calc_audit_adjusted_totals(array $ar) {
     $price10 = 5000;
     $price30 = 20000;
@@ -390,12 +429,19 @@ if (file_exists($dbFile)) {
                 <div class="summary-value" style="font-size:13px;">Belum ada audit manual pada periode ini.</div>
             </div>
         <?php else: ?>
+            <?php $ghost_hint = build_ghost_hint($audit_manual_summary['selisih_qty'], $audit_manual_summary['selisih_setoran']); ?>
             <div class="summary-grid">
                 <div class="summary-card"><div class="summary-title">Net Audit (Manual)</div><div class="summary-value">Rp <?= number_format($audit_manual_summary['manual_setoran'],0,',','.') ?></div></div>
                 <div class="summary-card"><div class="summary-title">Net System (Expected)</div><div class="summary-value">Rp <?= number_format($audit_manual_summary['expected_setoran'],0,',','.') ?></div></div>
                 <div class="summary-card"><div class="summary-title">Selisih Setoran</div><div class="summary-value" style="color:#c0392b;">Rp <?= number_format($audit_manual_summary['selisih_setoran'],0,',','.') ?></div></div>
                 <div class="summary-card"><div class="summary-title">Selisih Qty</div><div class="summary-value" style="color:#c0392b;"><?= number_format($audit_manual_summary['selisih_qty'],0,',','.') ?></div></div>
             </div>
+            <?php if (!empty($ghost_hint)): ?>
+                <div class="summary-card" style="border:1px solid #3a4046;background:#1f2327;">
+                    <div class="summary-title">Ghost Hunter</div>
+                    <div class="summary-value" style="font-size:13px;color:#fca5a5;"><?= htmlspecialchars($ghost_hint) ?></div>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
 
         <?php if ($sales_summary['pending'] > 0 && $sales_summary['total'] === 0): ?>

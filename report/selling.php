@@ -2353,6 +2353,23 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         if (modal) modal.style.display = 'flex';
     }
 
+    function closeAuditLockModal(){
+        var modal = document.getElementById('audit-lock-modal');
+        if (modal) modal.style.display = 'none';
+    }
+    function confirmAuditLockModal(){
+        if (!window.auditLockUrl) return closeAuditLockModal();
+        window.location.href = window.auditLockUrl;
+    }
+    function openAuditLockModal(){
+        window.auditLockUrl = <?= json_encode('./?report=selling' . $session_qs . '&show=' . $req_show . '&date=' . urlencode($filter_date) . '&audit_lock=1&audit_date=' . urlencode($filter_date)) ?>;
+        var modal = document.getElementById('audit-lock-modal');
+        var text = document.getElementById('audit-lock-text');
+        var dateText = formatDateDMY(<?= json_encode((string)$filter_date) ?>);
+        if (text) text.textContent = 'Kunci audit tanggal ' + (dateText || '-') + '? Setelah dikunci, data tidak bisa diedit.';
+        if (modal) modal.style.display = 'flex';
+    }
+
     (function(){
         var form = document.getElementById('auditForm');
         var btn = document.getElementById('auditSubmitBtn');
@@ -2587,7 +2604,12 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             <?php endif; ?>
             <button class="btn-print" type="button" onclick="openHpModal()">Input HP Blok</button>
             <?php if ($req_show === 'harian'): ?>
-                <button class="btn-print" type="button" onclick="openAuditModal()">Audit Manual</button>
+                <button class="btn-print" type="button" onclick="openAuditModal()" <?= $audit_locked_today ? 'disabled style="opacity:.6;cursor:not-allowed;"' : '' ?>>Audit Manual</button>
+                <?php if (!$audit_locked_today): ?>
+                    <button class="btn-print" type="button" onclick="openAuditLockModal()" style="background:#ff9800;color:#fff;">Kunci Audit</button>
+                <?php else: ?>
+                    <span style="font-size:12px;color:#f39c12;align-self:center;">Audit terkunci</span>
+                <?php endif; ?>
             <?php endif; ?>
             <button class="btn-print" type="button" id="btn-settlement" onclick="manualSettlement()" <?= (!empty($settled_today) ? 'disabled style="opacity:.6;cursor:not-allowed;"' : '') ?>>Settlement</button>
             <?php if (!empty($settled_today)): ?>
@@ -3199,6 +3221,25 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         <div class="modal-footer">
             <button type="button" onclick="closeDeleteAuditModal()" class="btn-print btn-default-dark">Batal</button>
             <button type="button" onclick="confirmDeleteAuditModal()" class="btn-print" style="background:#ff9800;color:#fff;">Ya, Hapus</button>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if (!$is_ajax): ?>
+<div id="audit-lock-modal" class="modal-backdrop" onclick="if(event.target===this){closeAuditLockModal();}">
+    <div class="modal-card" style="width:440px;">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fa fa-lock" style="color:#ff9800;margin-right:6px;"></i> Konfirmasi Kunci Audit</div>
+            <button type="button" onclick="closeAuditLockModal()" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="audit-lock-text" style="text-align:left;line-height:1.6;">Kunci audit ini?</div>
+            <div class="modal-note">Setelah dikunci, audit tidak bisa diedit kecuali oleh admin.</div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" onclick="closeAuditLockModal()" class="btn-print btn-default-dark">Batal</button>
+            <button type="button" onclick="confirmAuditLockModal()" class="btn-print" style="background:#ff9800;color:#fff;">Ya, Kunci</button>
         </div>
     </div>
 </div>

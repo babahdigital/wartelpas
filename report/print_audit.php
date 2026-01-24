@@ -72,6 +72,45 @@ function infer_profile_from_blok($blok) {
     return '';
 }
 
+function build_ghost_hint($selisih_qty, $selisih_rp) {
+  $ghost_qty = abs((int)$selisih_qty);
+  $ghost_rp = abs((int)$selisih_rp);
+  if ($ghost_qty <= 0 || $ghost_rp <= 0) return '';
+
+  $price10 = 5000;
+  $price30 = 20000;
+  $divisor = $price30 - $price10;
+  $ghost_10 = 0;
+  $ghost_30 = 0;
+
+  if ($ghost_rp >= ($ghost_qty * $price10) && $divisor > 0) {
+    $numerator = $ghost_rp - ($ghost_qty * $price10);
+    if ($numerator % $divisor === 0) {
+      $ghost_30 = (int)($numerator / $divisor);
+      $ghost_10 = $ghost_qty - $ghost_30;
+    }
+  }
+
+  if ($ghost_10 < 0 || $ghost_30 < 0) {
+    $ghost_10 = 0;
+    $ghost_30 = 0;
+  }
+
+  if ($ghost_10 === 0 && $ghost_30 === 0) {
+    if ($ghost_rp === ($price30 * $ghost_qty)) {
+      $ghost_30 = $ghost_qty;
+    } elseif ($ghost_rp === ($price10 * $ghost_qty)) {
+      $ghost_10 = $ghost_qty;
+    }
+  }
+
+  if ($ghost_10 <= 0 && $ghost_30 <= 0) return '';
+  $parts = [];
+  if ($ghost_10 > 0) $parts[] = number_format($ghost_10, 0, ',', '.') . ' unit 10 menit';
+  if ($ghost_30 > 0) $parts[] = number_format($ghost_30, 0, ',', '.') . ' unit 30 menit';
+  return 'Kemungkinan: ' . implode(' + ', $parts) . '.';
+}
+
 function calc_audit_adjusted_totals(array $ar) {
   $price10 = 5000;
   $price30 = 20000;
