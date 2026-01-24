@@ -770,9 +770,7 @@ function calc_audit_adjusted_setoran(array $ar) {
         $manual_net_qty_10 = max(0, $p10_qty - $cnt_rusak_10 - $cnt_invalid_10);
         $manual_net_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30);
         $manual_display_setoran = ($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30);
-        $expected_adj_setoran = max(0, $expected_setoran
-            - (($cnt_rusak_10 + $cnt_invalid_10) * $price10)
-            - (($cnt_rusak_30 + $cnt_invalid_30) * $price30));
+        $expected_adj_setoran = $expected_setoran;
     } else {
         $manual_display_setoran = $actual_setoran_raw;
         $expected_adj_setoran = $expected_setoran;
@@ -3006,12 +3004,6 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             $manual_display_setoran = $has_manual_evidence ? (($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30)) : (int)($ar['actual_setoran'] ?? 0);
                             $expected_adj_qty = $expected_qty;
                             $expected_adj_setoran = $expected_setoran;
-                            if ($has_manual_evidence) {
-                                $expected_adj_qty = max(0, $expected_qty - $manual_rusak_10 - $manual_rusak_30 - $manual_invalid_10 - $manual_invalid_30);
-                                $expected_adj_setoran = max(0, $expected_setoran
-                                    - (($manual_rusak_10 + $manual_invalid_10) * $price10)
-                                    - (($manual_rusak_30 + $manual_invalid_30) * $price30));
-                            }
                             $sq = $manual_display_qty - $expected_adj_qty;
                             $ss = $manual_display_setoran - $expected_adj_setoran;
                             $cls_q = $sq > 0 ? 'audit-pos' : ($sq < 0 ? 'audit-neg' : 'audit-zero');

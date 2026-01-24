@@ -167,10 +167,8 @@ function calc_audit_adjusted_totals(array $ar) {
         $manual_net_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30);
         $manual_display_qty = $manual_net_qty_10 + $manual_net_qty_30;
         $manual_display_setoran = ($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30);
-        $expected_adj_qty = max(0, $expected_qty - $cnt_rusak_10 - $cnt_rusak_30 - $cnt_invalid_10 - $cnt_invalid_30);
-        $expected_adj_setoran = max(0, $expected_setoran
-            - (($cnt_rusak_10 + $cnt_invalid_10) * $price10)
-            - (($cnt_rusak_30 + $cnt_invalid_30) * $price30));
+        $expected_adj_qty = $expected_qty;
+        $expected_adj_setoran = $expected_setoran;
     } else {
         $manual_display_qty = $reported_qty;
         $manual_display_setoran = $actual_setoran;
