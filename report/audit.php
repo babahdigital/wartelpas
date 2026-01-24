@@ -219,6 +219,7 @@ $audit_manual_summary = [
     'total_rusak_rp' => 0,
     'total_expenses' => 0,
 ];
+$daily_note_alert = '';
 
 if (file_exists($dbFile)) {
     try {
@@ -390,6 +391,14 @@ if (file_exists($dbFile)) {
             $audit_manual_summary['selisih_qty'] = (int)$audit_manual_summary['manual_qty'] - (int)$audit_manual_summary['expected_qty'];
             $audit_manual_summary['selisih_setoran'] = (int)$audit_manual_summary['manual_setoran'] - (int)$audit_manual_summary['expected_setoran'];
         }
+
+        if ($req_show === 'harian') {
+            try {
+                $stmtN = $db->prepare("SELECT note FROM daily_report_notes WHERE report_date = :d");
+                $stmtN->execute([':d' => $filter_date]);
+                $daily_note_alert = $stmtN->fetchColumn() ?: '';
+            } catch (Exception $e) {}
+        }
     } catch (Exception $e) {
         $db = null;
     }
@@ -452,6 +461,17 @@ if (file_exists($dbFile)) {
         </form>
 
         <div class="section-title" style="margin-top:0;">Ringkasan Keuangan (Audit Manual vs Sistem)</div>
+
+        <?php if (!empty($daily_note_alert)): ?>
+            <div style="background:#fff3cd; border:1px solid #ffeeba; border-left:5px solid #ffc107; padding:15px; border-radius:4px; margin-bottom:20px; color:#856404;">
+                <div style="font-weight:bold; font-size:12px; text-transform:uppercase; margin-bottom:5px;">
+                    <i class="fa fa-commenting-o"></i> Catatan Operasional / Insiden:
+                </div>
+                <div style="font-size:14px; line-height:1.5; font-style:italic;">
+                    "<?= nl2br(htmlspecialchars($daily_note_alert)) ?>"
+                </div>
+            </div>
+        <?php endif; ?>
 
         <?php if ($audit_manual_summary['rows'] === 0): ?>
             <?php

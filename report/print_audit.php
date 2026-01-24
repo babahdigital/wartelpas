@@ -212,6 +212,7 @@ $audit_manual_summary = [
   'total_rusak_rp' => 0,
   'total_expenses' => 0,
 ];
+$daily_note_audit = '';
 
 if (file_exists($dbFile)) {
     try {
@@ -384,6 +385,14 @@ if (file_exists($dbFile)) {
           $audit_manual_summary['selisih_qty'] = (int)$audit_manual_summary['manual_qty'] - (int)$audit_manual_summary['expected_qty'];
           $audit_manual_summary['selisih_setoran'] = (int)$audit_manual_summary['manual_setoran'] - (int)$audit_manual_summary['expected_setoran'];
         }
+
+        if ($req_show === 'harian') {
+          try {
+            $stmtN = $db->prepare("SELECT note FROM daily_report_notes WHERE report_date = :d");
+            $stmtN->execute([':d' => $filter_date]);
+            $daily_note_audit = $stmtN->fetchColumn() ?: '';
+          } catch (Exception $e) {}
+        }
     } catch (Exception $e) {
         $db = null;
     }
@@ -429,6 +438,15 @@ if (file_exists($dbFile)) {
           Mode: <?= strtoupper(htmlspecialchars($req_show)) ?>
       </div>
   </div>
+
+    <?php if (!empty($daily_note_audit)): ?>
+      <div style="border: 1px solid #e0e0e0; background-color: #fff9c4; padding: 12px; margin-bottom: 20px; border-radius: 4px; font-size: 12px; color: #5d4037;">
+        <strong><i class="fa fa-info-circle"></i> CATATAN / INSIDEN HARI INI:</strong><br>
+        <div style="margin-top:4px; font-style:italic;">
+          <?= nl2br(htmlspecialchars($daily_note_audit)) ?>
+        </div>
+      </div>
+    <?php endif; ?>
 
       <?php
         $selisih = $audit_manual_summary['selisih_setoran'];
