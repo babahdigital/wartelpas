@@ -1,0 +1,63 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Audit Penjualan & Voucher</title>
+<style>
+    body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 12mm; }
+    h1 { margin: 0 0 4mm 0; font-size: 16px; }
+    .sub { font-size: 11px; color: #666; margin-bottom: 6mm; }
+    .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 8mm; }
+    .summary-card { border: 1px solid #ddd; border-radius: 4px; padding: 6px; }
+    .summary-title { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: .4px; }
+    .summary-value { font-size: 13px; font-weight: bold; margin-top: 2px; }
+    .section { margin-bottom: 6mm; }
+    .section-title { font-weight: 700; font-size: 12px; margin: 4mm 0 2mm; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    th, td { border: 1px solid #ddd; padding: 5px 6px; text-align: left; }
+    th { background: #f0f0f0; }
+    .muted { color: #666; }
+    .toolbar { margin-bottom: 10px; display:flex; gap:8px; flex-wrap:wrap; }
+    .btn { padding:6px 10px; border:1px solid #999; background:#f2f2f2; cursor:pointer; border-radius:4px; font-size:12px; }
+    @page { margin: 8mm; }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+      <button class="btn" onclick="window.print()">Print / Download PDF</button>
+      <button class="btn" onclick="shareReport()">Share</button>
+  </div>
+
+  <div style="border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
+      <h1 style="margin:0;">Laporan Audit Keuangan</h1>
+      <div class="sub" style="margin-top:5px;">
+          Periode: 23-01-2026 |
+          Mode: HARIAN      </div>
+  </div>
+
+  
+        <div class="summary-card"><div class="summary-title">Audit Manual</div><div class="summary-value" style="font-size:11px;font-weight:normal;">Belum ada audit manual pada periode ini.</div></div>
+  
+  <div class="section-title">Data Sistem</div>
+  <div class="summary-grid" style="grid-template-columns: repeat(3, 1fr);">
+    <div class="summary-card"><div class="summary-title">Total Transaksi</div><div class="summary-value">473</div></div>
+    <div class="summary-card"><div class="summary-title">Pendapatan Kotor</div><div class="summary-value">Rp 3.310.000</div></div>
+    <div class="summary-card"><div class="summary-title">Potongan Rusak</div><div class="summary-value" style="color:#c0392b;">Rp 0</div></div>
+  </div>
+
+  
+  <div style="margin-top:30px; font-size:10px; color:#999; text-align:center;">
+      Dicetak oleh Sistem Wartelpas pada 24-01-2026 15:33:41  </div>
+
+  <script>
+    function shareReport(){
+        if (navigator.share) {
+            navigator.share({ title: 'Laporan Audit Keuangan', url: window.location.href });
+        } else {
+            window.prompt('Salin link laporan:', window.location.href);
+        }
+    }
+  </script>
+</body>
+</html>
