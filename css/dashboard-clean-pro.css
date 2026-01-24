@@ -12,10 +12,105 @@
     --border-soft: rgba(255, 255, 255, 0.05);
 }
 
+html, body {
+    height: 100vh;
+    overflow: hidden;
+    background-color: var(--bg-main) !important;
+}
+
+#main {
+    height: calc(100vh - 60px);
+    padding: 15px !important;
+    margin-top: 60px !important;
+    background-color: var(--bg-main) !important;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-container {
+    display: flex !important;
+    flex-direction: column;
+    height: 100%;
+    background: transparent !important;
+}
+
 #reloadHome {
     background-color: var(--bg-main);
-    padding: 15px;
+    padding: 0;
     font-family: 'Inter', 'Segoe UI', sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 15px;
+    position: relative;
+}
+
+#loading-halus {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(to right, var(--accent-blue), var(--accent-green));
+    animation: loading-bar 2s infinite linear;
+    display: none;
+    z-index: 5;
+}
+
+@keyframes loading-bar {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.row-main-content {
+    display: flex;
+    flex: 1;
+    gap: 15px;
+    min-height: 0;
+}
+
+.col-left {
+    flex: 8;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.col-right {
+    flex: 4;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.card-chart {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-body {
+    flex: 1;
+    min-height: 0;
+}
+
+.card-transaction {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-transaction .card-body {
+    flex: 1;
+    overflow: hidden;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-transaction .table-scroll {
+    flex: 1;
+    overflow-y: auto;
 }
 
 .kpi-box {
