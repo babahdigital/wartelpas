@@ -1040,56 +1040,78 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                 </tbody>
             </table>
 
-<div class="audit-summary-box">
-                <div class="audit-summary-header" style="display:flex; justify-content:space-between; align-items:center;">
-                    <span>KESIMPULAN AUDIT HARIAN</span>
-                    <span style="font-size:11px; font-weight:normal; color:#555;">
-                        (Ringkasan Keuangan & Insiden)
+<div class="audit-summary-box" style="margin-top: 25px; border: 1px solid #000; padding: 15px; border-radius: 4px; background-color: #fdfdfd;">
+                <div class="audit-summary-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #ddd; padding-bottom: 5px; margin-bottom: 10px;">
+                    <span style="font-weight: bold; font-size: 14px;">KESIMPULAN AUDIT HARIAN</span>
+                    <span style="font-size:11px; font-weight:normal; color:#555;">(Ringkasan Keuangan & Insiden)</span>
+                </div>
+
+                <div style="margin-bottom:12px; padding:8px 10px; background:#fff; border:1px solid #ddd; border-radius:4px; font-size:10px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+                    <strong style="margin-right:4px;">KETERANGAN STATUS:</strong>
+                    
+                    <span style="display:flex; align-items:center;">
+                        <span style="width:12px; height:12px; background:#dbeafe; border:1px solid #93c5fd; margin-right:4px; border-radius:3px;"></span> 
+                        <span style="color:#1e3a8a;">Aman / Sesuai</span>
+                    </span>
+
+                    <span style="display:flex; align-items:center;">
+                        <span style="width:12px; height:12px; background:#fee2e2; border:1px solid #fca5a5; margin-right:4px; border-radius:3px;"></span> 
+                        <span style="color:#991b1b;">Kurang Setor / Rugi (Loss)</span>
+                    </span>
+
+                    <span style="display:flex; align-items:center;">
+                        <span style="width:12px; height:12px; background:#fef3c7; border:1px solid #fcd34d; margin-right:4px; border-radius:3px;"></span> 
+                        <span style="color:#92400e;">Warning / Ada Insiden Tapi Uang Pas</span>
+                    </span>
+
+                    <span style="display:flex; align-items:center;">
+                        <span style="width:12px; height:12px; background:#dcfce7; border:1px solid #86efac; margin-right:4px; border-radius:3px;"></span> 
+                        <span style="color:#166534;">Lebih Setor / Retur (Aman)</span>
                     </span>
                 </div>
 
-                <div style="background:#f1f5f9; padding:8px; border-radius:4px; margin-bottom:12px; font-size:11px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="background:#f8fafc; padding:8px; border-radius:4px; margin-bottom:12px; font-size:11px; display:flex; justify-content:space-between; align-items:center; border:1px solid #e2e8f0;">
                     <div>
                         <strong>Total Insiden Hari Ini:</strong>
                         <span style="margin-left:8px; color:<?= $total_qty_rusak > 0 ? '#c0392b' : '#444' ?>;">Rusak: <b><?= number_format((int)$total_qty_rusak,0,',','.') ?></b></span>
-                        <span style="margin-left:8px; color:<?= $total_qty_retur > 0 ? '#27ae60' : '#444' ?>;">Retur: <b><?= number_format((int)$total_qty_retur,0,',','.') ?></b></span>
+                        <span style="margin-left:8px; color:<?= $total_qty_retur > 0 ? '#166534' : '#444' ?>;">Retur: <b><?= number_format((int)$total_qty_retur,0,',','.') ?></b></span>
                         <span style="margin-left:8px; color:<?= $total_qty_invalid > 0 ? '#c0392b' : '#444' ?>;">Invalid: <b><?= number_format((int)$total_qty_invalid,0,',','.') ?></b></span>
                     </div>
-                    <div style="font-style:italic; color:#666;">
+                    <div style="font-style:italic; color:#666; font-size:10px;">
                         *Data berdasarkan input manual lapangan
                     </div>
                 </div>
                 
-                <hr style="border:0; border-top:1px solid #eee; margin:10px 0;">
+                <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
 
                 <?php if (!empty($audit_summary_report)): ?>
                     <?php foreach ($audit_summary_report as $idx => $rep): ?>
-                        <div class="audit-item" style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px dashed #ddd;">
+                        <div class="audit-item" style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid #eee;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                                 <div style="font-size:13px;">
                                     <strong><?= ($idx + 1) ?>. Blok <?= htmlspecialchars($rep['blok']) ?></strong>
                                 </div>
-                                <div style="font-size:13px; font-weight:bold;">
+                                <div style="font-size:12px; font-weight:bold;">
                                     <?php 
                                         $rusak_total = (int)($rep['rusak_10'] ?? 0) + (int)($rep['rusak_30'] ?? 0);
                                         $rusak_rp = ((int)($rep['rusak_10'] ?? 0) * 5000) + ((int)($rep['rusak_30'] ?? 0) * 20000);
                                         $unreported_total = (int)($rep['unreported_total'] ?? 0);
                                         
-                                        // LOGIKA STATUS (KALIMAT YANG DIPERBAIKI)
+                                        // LOGIKA STATUS
                                         if ($rep['selisih_setoran'] < 0) {
-                                            echo "<span style='color:#c0392b; background:#fee2e2; padding:2px 6px; border-radius:4px;'>KURANG SETOR: Rp " . number_format(abs($rep['selisih_setoran']), 0, ',', '.') . "</span>";
+                                            echo "<span style='color:#991b1b; background:#fee2e2; padding:3px 8px; border-radius:4px; border:1px solid #fca5a5;'>KURANG SETOR: Rp " . number_format(abs($rep['selisih_setoran']), 0, ',', '.') . "</span>";
                                         } elseif ($rep['selisih_setoran'] > 0) {
-                                            echo "<span style='color:#166534; background:#dcfce7; padding:2px 6px; border-radius:4px;'>LEBIH SETOR: Rp " . number_format($rep['selisih_setoran'], 0, ',', '.') . "</span>";
+                                            echo "<span style='color:#166534; background:#dcfce7; padding:3px 8px; border-radius:4px; border:1px solid #86efac;'>LEBIH SETOR: Rp " . number_format($rep['selisih_setoran'], 0, ',', '.') . "</span>";
                                         } elseif ($rusak_total > 0) {
-                                            echo "<span style='color:#b45309; background:#fef3c7; padding:2px 6px; border-radius:4px;'>SETORAN SESUAI (ADA RUSAK)</span>";
+                                            echo "<span style='color:#92400e; background:#fef3c7; padding:3px 8px; border-radius:4px; border:1px solid #fcd34d;'>SETORAN SESUAI (ADA RUSAK)</span>";
                                         } else {
-                                            echo "<span style='color:#1d4ed8; background:#dbeafe; padding:2px 6px; border-radius:4px;'>STATUS: AMAN</span>";
+                                            echo "<span style='color:#1e3a8a; background:#dbeafe; padding:3px 8px; border-radius:4px; border:1px solid #93c5fd;'>STATUS: AMAN</span>";
                                         }
                                     ?>
                                 </div>
                             </div>
 
-                            <div style="margin-left:15px; font-size:11px; color:#444;">
+                            <div style="margin-left:15px; font-size:11px; color:#444; line-height:1.4;">
                                 <?php if ($rep['p10_qty'] > 0): ?>
                                     <div>• Penjualan 10 Menit: <b><?= $rep['p10_qty'] ?></b> Lembar (Rp <?= number_format($rep['p10_sum'], 0, ',', '.') ?>)</div>
                                 <?php endif; ?>
@@ -1099,37 +1121,35 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             </div>
 
                             <?php if ($rusak_total > 0 || !empty($rep['retur_10']) || !empty($rep['retur_30']) || !empty($rep['unreported_total']) || !empty($rep['ghost_10']) || !empty($rep['ghost_30'])): ?>
-                                <div style="margin-top:6px; margin-left:15px; background:#fff; border:1px solid #e5e7eb; border-radius:4px; padding:6px;">
-                                    <div style="font-size:10px; font-weight:bold; color:#666; margin-bottom:2px; text-transform:uppercase;">Catatan Lapangan:</div>
+                                <div style="margin-top:8px; margin-left:15px; background:#fff; border:1px solid #ddd; border-left: 3px solid #ccc; border-radius:2px; padding:6px 8px;">
+                                    <div style="font-size:10px; font-weight:bold; color:#555; margin-bottom:4px; text-transform:uppercase; border-bottom:1px solid #eee; padding-bottom:2px;">Rincian Masalah / Insiden:</div>
                                     
                                     <?php if ($rep['rusak_10'] > 0 || $rep['rusak_30'] > 0): ?>
-                                        <div style="color:#c0392b; font-size:11px;">
-                                            <i class="fa fa-times-circle"></i> <b>Voucher Rusak (Loss):</b>
+                                        <div style="color:#b91c1c; font-size:11px; margin-bottom:2px;">
+                                            <i class="fa fa-times-circle"></i> <b>Voucher Rusak (Kerugian):</b>
                                             <?php 
                                                 $rusak_parts = [];
                                                 if($rep['rusak_10'] > 0) $rusak_parts[] = $rep['rusak_10'] . ' unit (10m)';
                                                 if($rep['rusak_30'] > 0) $rusak_parts[] = $rep['rusak_30'] . ' unit (30m)';
                                                 echo implode(', ', $rusak_parts);
                                             ?>
-                                            <span style="font-size:10px; color:#999;">(Mengurangi Kewajiban Setor)</span>
                                         </div>
                                     <?php endif; ?>
 
                                     <?php if (!empty($rep['retur_10']) || !empty($rep['retur_30'])): ?>
-                                        <div style="color:#166534; font-size:11px;">
-                                            <i class="fa fa-refresh"></i> <b>Voucher Retur (Diganti):</b>
+                                        <div style="color:#15803d; font-size:11px; margin-bottom:2px;">
+                                            <i class="fa fa-refresh"></i> <b>Voucher Retur (Diganti Baru):</b>
                                             <?php 
                                                 $retur_parts = [];
                                                 if(!empty($rep['retur_10'])) $retur_parts[] = $rep['retur_10'] . ' unit (10m)';
                                                 if(!empty($rep['retur_30'])) $retur_parts[] = $rep['retur_30'] . ' unit (30m)';
                                                 echo implode(', ', $retur_parts);
                                             ?>
-                                            <span style="font-size:10px; color:#999;">(Pendapatan Tetap)</span>
                                         </div>
                                     <?php endif; ?>
 
                                     <?php if (!empty($rep['unreported_total'])): ?>
-                                        <div style="color:#b45309; font-size:11px;">
+                                        <div style="color:#b45309; font-size:11px; margin-bottom:2px;">
                                             <i class="fa fa-exclamation-triangle"></i> <b>User Aktif Tidak Terlapor:</b>
                                             <?php
                                                 $unrep_parts = [];
@@ -1148,10 +1168,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                         if ($ghost_30_rem > 0) $ghost_parts[] = $ghost_30_rem . ' unit (30m)';
                                     ?>
                                     <?php if (!empty($ghost_parts)): ?>
-                                        <div style="color:#b45309; font-size:11px; margin-top:2px;">
-                                            <i class="fa fa-eye"></i> <b>Indikasi Voucher Hilang (Auto-Detect):</b>
-                                            <?= implode(', ', $ghost_parts) ?>
-                                            <br><i style="font-size:10px;">*Sistem mendeteksi selisih uang ini setara dengan voucher diatas.</i>
+                                        <div style="color:#c2410c; font-size:11px; margin-top:2px; font-style:italic;">
+                                            <i class="fa fa-search"></i> <b>Indikasi Selisih Uang (Auto-Detect):</b>
+                                            <?= implode(', ', $ghost_parts) ?> hilang/belum input.
                                         </div>
                                     <?php endif; ?>
                                 </div>
