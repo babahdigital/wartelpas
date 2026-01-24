@@ -31,12 +31,22 @@ else {
         var logsDone = false;
         $(".month-tab").removeClass("active");
         $(".month-tab[data-month='" + m + "']").addClass("active");
+        function reflowCharts() {
+            if (window.Highcharts && window.Highcharts.charts) {
+                window.Highcharts.charts.forEach(function(chart) {
+                    if (chart && chart.reflow) {
+                        chart.reflow();
+                    }
+                });
+            }
+        }
         function finishLoading() {
             if (chartDone && logsDone && loadingBar.length) loadingBar.hide();
         }
-        chartWrap.css("opacity", "0.5");
+        chartWrap.css("opacity", "0.7");
         $("#r_2_content").html('<div style="text-align:center; padding:50px; color:#ccc;">Memproses grafik...</div>');
         $("#tabel_riwayat").html('<tr><td colspan="4" class="text-center" style="padding:20px;">Memuat...</td></tr>');
+        $("#row-count").text("Memuat...");
 
         $.get("./dashboard/aload.php?session=<?= $session ?>&load=hotspot&m=" + m)
             .done(function(data) {
@@ -45,8 +55,9 @@ else {
                 if (!chartWrap.length) chartWrap = $("#r_2_content");
                 chartWrap.css("opacity", "1");
                 setTimeout(function() {
-                    window.dispatchEvent(new Event('resize'));
-                }, 0);
+                    $(window).trigger('resize');
+                    reflowCharts();
+                }, 300);
             })
             .fail(function() {
                 $("#r_2_content").html('<div style="text-align:center; padding:50px; color:#c33;"><i class="fa fa-warning"></i> Gagal memuat grafik.</div>');
@@ -61,12 +72,16 @@ else {
                 .done(function(dataLogs) {
                     if(dataLogs.trim() == "") {
                         $("#tabel_riwayat").html('<tr><td colspan="4" class="text-center text-muted" style="padding:20px;">Belum ada transaksi.</td></tr>');
+                        $("#row-count").text("0 transaksi ditemukan");
                     } else {
                         $("#tabel_riwayat").html(dataLogs);
+                        var rowCount = $("#tabel_riwayat tr").length;
+                        $("#row-count").text("Menampilkan " + rowCount + " transaksi");
                     }
                 })
                 .fail(function() {
                     $("#tabel_riwayat").html('<tr><td colspan="4" class="text-center text-danger">Gagal koneksi server.</td></tr>');
+                    $("#row-count").text("Error loading data");
                 })
                 .always(function() {
                     logsDone = true;
@@ -117,6 +132,10 @@ else {
                 }
             }
             $('#audit-detail').text(detail.join(' • '));
+            var visibleRows = $("#tabel_riwayat tr:not(.text-center)").length;
+            if (visibleRows > 0) {
+                $("#row-count").text("Menampilkan " + visibleRows + " transaksi");
+            }
         });
     }
 
@@ -131,6 +150,17 @@ else {
         $(".month-tab").on("click", function() {
             var m = $(this).data("month");
             if (m) changeMonth(m);
+        });
+        $(window).on('resize', function() {
+            if (window.Highcharts && window.Highcharts.charts) {
+                setTimeout(function() {
+                    window.Highcharts.charts.forEach(function(chart) {
+                        if (chart && chart.reflow) {
+                            chart.reflow();
+                        }
+                    });
+                }, 150);
+            }
         });
     });
 </script>
@@ -185,21 +215,24 @@ $activeMonth = (int)date('n');
                 <h3><i class="fa fa-history"></i> TRANSAKSI TERAKHIR</h3>
                 <span class="blink" style="font-size:9px; font-weight:bold; color:var(--accent-green);">UPDATED</span>
             </div>
-            <div class="card-body" style="padding:0;">
-                <div class="table-container">
-                    <table>
+            <div class="card-body" style="padding:0; display:flex; flex-direction:column;">
+                <div class="table-container" style="flex:1; min-height:300px;">
+                    <table style="table-layout: fixed;">
                         <thead>
                             <tr>
-                                <th>JAM</th>
-                                <th>USER</th>
-                                <th style="text-align:center;">BLOK</th>
-                                <th style="text-align:right;">IDR</th>
+                                <th style="width:15%">JAM</th>
+                                <th style="width:40%">USER</th>
+                                <th style="width:15%; text-align:center;">BLOK</th>
+                                <th style="width:30%; text-align:right;">IDR</th>
                             </tr>
                         </thead>
                         <tbody id="tabel_riwayat">
                             <tr><td colspan="4" class="text-center" style="padding:20px; color:#555;">Menunggu...</td></tr>
                         </tbody>
                     </table>
+                </div>
+                <div style="padding:8px 15px; background:var(--bg-hover); font-size:11px; color:var(--text-dim); border-top:1px solid var(--border-soft);">
+                    <span id="row-count">Menampilkan 0 transaksi</span>
                 </div>
             </div>
         </div>
