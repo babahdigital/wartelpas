@@ -158,18 +158,104 @@ if ($load == "live_data") {
 
             $sumIncome = 0;
             $sumSold = 0;
-            $tables = [];
-            if (table_exists($db, 'sales_history')) $tables[] = 'sales_history';
-            if (table_exists($db, 'live_sales')) $tables[] = 'live_sales';
 
-            foreach ($tables as $tbl) {
-                $stmtIncome = $db->prepare("SELECT SUM(COALESCE(price_snapshot, price, 0) * COALESCE(qty,1))
-                    FROM $tbl
-                    WHERE (sale_date LIKE :m OR raw_date LIKE :r1 OR raw_date LIKE :r2 OR raw_date LIKE :r3)");
-                $stmtIncome->execute([':m' => $monthLike, ':r1' => $raw1, ':r2' => $raw2, ':r3' => $raw3]);
-                $sumIncome += (int)($stmtIncome->fetchColumn() ?: 0);
+            $hasSales = table_exists($db, 'sales_history');
+            $hasLive = table_exists($db, 'live_sales');
+            $hasLogin = table_exists($db, 'login_history');
 
+            $rows = [];
+            $loginSelect = $hasLogin
+                ? 'lh.last_status'
+                : "'' AS last_status";
+            $loginSelect2 = $hasLogin
+                ? 'lh2.last_status'
+                : "'' AS last_status";
+            $loginJoin = $hasLogin ? 'LEFT JOIN login_history lh ON lh.username = sh.username' : '';
+            $loginJoin2 = $hasLogin ? 'LEFT JOIN login_history lh2 ON lh2.username = ls.username' : '';
+
+            $selects = [];
+            if ($hasSales) {
+                $selects[] = "SELECT
+                    sh.raw_date, sh.sale_date,
+                    sh.username, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid,
+                    sh.comment, sh.blok_name,
+                    sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.qty,
+                    $loginSelect
+                    FROM sales_history sh
+                    $loginJoin";
             }
+            if ($hasLive) {
+                $selects[] = "SELECT
+                    ls.raw_date, ls.sale_date,
+                    ls.username, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid,
+                    ls.comment, ls.blok_name,
+                    ls.price, ls.price_snapshot, ls.sprice_snapshot, ls.qty,
+                    $loginSelect2
+                    FROM live_sales ls
+                    $loginJoin2
+                    WHERE ls.sync_status = 'pending'";
+            }
+
+            if (!empty($selects)) {
+                $sql = implode(" UNION ALL ", $selects);
+                $res = $db->query($sql);
+                if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
+            }
+
+            $monthKey = $year . '-' . $month;
+            $seen_user_day = [];
+            $total_net_month = 0;
+
+            foreach ($rows as $r) {
+                $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
+                if ($sale_date === '' || strpos($sale_date, $monthKey) !== 0) {
+                    continue;
+                }
+
+                $username = trim((string)($r['username'] ?? ''));
+                if ($username !== '') {
+                    $user_day_key = $username . '|' . $sale_date;
+                    if (isset($seen_user_day[$user_day_key])) {
+                        continue;
+                    }
+                    $seen_user_day[$user_day_key] = true;
+                }
+
+                $raw_comment = (string)($r['comment'] ?? '');
+                $blok_row = (string)($r['blok_name'] ?? '');
+                if ($blok_row === '' && !preg_match('/\bblok\s*[-_]?\s*[A-Za-z0-9]+/i', $raw_comment)) {
+                    continue;
+                }
+
+                $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
+                if ($price <= 0) {
+                    $price = (int)($r['sprice_snapshot'] ?? 0);
+                }
+                $qty = (int)($r['qty'] ?? 0);
+                if ($qty <= 0) $qty = 1;
+                $line_price = $price * $qty;
+
+                $status = strtolower((string)($r['status'] ?? ''));
+                $lh_status = strtolower((string)($r['last_status'] ?? ''));
+                $cmt_low = strtolower($raw_comment);
+
+                if ($status === '' || $status === 'normal') {
+                    if ((int)($r['is_invalid'] ?? 0) === 1) $status = 'invalid';
+                    elseif ((int)($r['is_retur'] ?? 0) === 1) $status = 'retur';
+                    elseif ((int)($r['is_rusak'] ?? 0) === 1) $status = 'rusak';
+                    elseif (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
+                    elseif (strpos($cmt_low, 'retur') !== false) $status = 'retur';
+                    elseif (strpos($cmt_low, 'rusak') !== false || $lh_status === 'rusak') $status = 'rusak';
+                    else $status = 'normal';
+                }
+
+                $loss_rusak = ($status === 'rusak') ? $line_price : 0;
+                $loss_invalid = ($status === 'invalid') ? $line_price : 0;
+                $net_add = $line_price - $loss_rusak - $loss_invalid;
+                $total_net_month += $net_add;
+            }
+
+            $sumIncome = $total_net_month;
 
             $sumSold = 0;
             if (table_exists($db, 'sales_history') || table_exists($db, 'live_sales') || table_exists($db, 'login_history')) {
