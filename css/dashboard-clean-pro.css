@@ -1,0 +1,93 @@
+/* Wartelpas Clean Pro Dashboard */
+:root {
+    --bg-main: #121417;
+    --bg-card: #1c1f26;
+    --bg-hover: #252a33;
+    --accent-blue: #00c0ef;
+    --accent-green: #2ecc71;
+    --accent-yellow: #f39c12;
+    --accent-red: #e74c3c;
+    --accent-purple: #605ca8;
+    --text-dim: #8898aa;
+    --border-soft: rgba(255, 255, 255, 0.05);
+}
+
+#reloadHome {
+    background-color: var(--bg-main);
+    padding: 15px;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+.kpi-box {
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 18px 18px 16px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border-soft);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.kpi-box:hover {
+    transform: translateY(-3px);
+    background: var(--bg-hover);
+}
+
+.kpi-box h1 {
+    font-size: 30px;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -1px;
+}
+
+.kpi-box .label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-top: 6px;
+}
+
+.border-blue { border-left: 4px solid var(--accent-blue); }
+.border-green { border-left: 4px solid var(--accent-green); }
+.border-yellow { border-left: 4px solid var(--accent-yellow); }
+.border-audit { border-left: 4px solid var(--accent-purple); }
+.border-loss { border-left: 4px solid var(--accent-red); }
+
+.ghost-alert {
+    background: var(--accent-red);
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+.blink { animation: blinker 2s linear infinite; }
+@keyframes blinker { 50% { opacity: 0.3; } }
+
+.card {
+    background: var(--bg-card) !important;
+    border: none !important;
+    border-radius: 15px !important;
+    border: 1px solid var(--border-soft) !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important;
+}
+
+.card-header {
+    border-bottom: 1px solid var(--border-soft) !important;
+}
+
+#tabel_riwayat tr { background: transparent !important; transition: background 0.2s; }
+#tabel_riwayat tr:hover td { background: var(--bg-hover) !important; color: #fff; }
+#tabel_riwayat td { border-top: 1px solid var(--border-soft) !important; }
+
+.card-body::-webkit-scrollbar { width: 5px; }
+.card-body::-webkit-scrollbar-track { background: #1a1d20; }
+.card-body::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+.card-body::-webkit-scrollbar-thumb:hover { background: #555; }
+
+.highcharts-container { filter: drop-shadow(0 0 5px rgba(0,0,0,0.2)); }
