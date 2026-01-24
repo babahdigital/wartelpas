@@ -25,27 +25,48 @@ else {
     function changeMonth(m) {
         var chartWrap = $("#chart_container");
         if (!chartWrap.length) chartWrap = $("#r_2_content");
+        var loadingBar = $("#loading-halus");
+        if (loadingBar.length) loadingBar.show();
+        var chartDone = false;
+        var logsDone = false;
+        function finishLoading() {
+            if (chartDone && logsDone && loadingBar.length) loadingBar.hide();
+        }
         chartWrap.css("opacity", "0.5");
         $("#r_2_content").html('<div style="text-align:center; padding:50px; color:#ccc;"><i class="fa fa-spinner fa-spin fa-3x"></i><br><br>Memproses Grafik...</div>');
         $("#tabel_riwayat").html('<tr><td colspan="4" class="text-center" style="padding:20px;"><i class="fa fa-circle-o-notch fa-spin"></i> Memuat...</td></tr>');
 
-        $.get("./dashboard/aload.php?session=<?= $session ?>&load=hotspot&m=" + m, function(data) {
-            $("#r_2_content").html(data);
-            chartWrap = $("#chart_container");
-            if (!chartWrap.length) chartWrap = $("#r_2_content");
-            chartWrap.css("opacity", "1");
-        });
+        $.get("./dashboard/aload.php?session=<?= $session ?>&load=hotspot&m=" + m)
+            .done(function(data) {
+                $("#r_2_content").html(data);
+                chartWrap = $("#chart_container");
+                if (!chartWrap.length) chartWrap = $("#r_2_content");
+                chartWrap.css("opacity", "1");
+            })
+            .fail(function() {
+                $("#r_2_content").html('<div style="text-align:center; padding:50px; color:#c33;"><i class="fa fa-warning"></i> Gagal memuat grafik.</div>');
+            })
+            .always(function() {
+                chartDone = true;
+                finishLoading();
+            });
 
         setTimeout(function() {
-            $.get("./dashboard/aload.php?session=<?= $session ?>&load=logs&m=" + m, function(dataLogs) {
-                if(dataLogs.trim() == "") {
-                    $("#tabel_riwayat").html('<tr><td colspan="4" class="text-center text-muted" style="padding:20px;">Belum ada transaksi.</td></tr>');
-                } else {
-                    $("#tabel_riwayat").html(dataLogs);
-                }
-            }).fail(function() {
-                $("#tabel_riwayat").html('<tr><td colspan="4" class="text-center text-danger">Gagal koneksi server.</td></tr>');
-            });
+            $.get("./dashboard/aload.php?session=<?= $session ?>&load=logs&m=" + m)
+                .done(function(dataLogs) {
+                    if(dataLogs.trim() == "") {
+                        $("#tabel_riwayat").html('<tr><td colspan="4" class="text-center text-muted" style="padding:20px;">Belum ada transaksi.</td></tr>');
+                    } else {
+                        $("#tabel_riwayat").html(dataLogs);
+                    }
+                })
+                .fail(function() {
+                    $("#tabel_riwayat").html('<tr><td colspan="4" class="text-center text-danger">Gagal koneksi server.</td></tr>');
+                })
+                .always(function() {
+                    logsDone = true;
+                    finishLoading();
+                });
         }, 500);
     }
 
@@ -103,6 +124,7 @@ else {
 </script>
 
 <div id="reloadHome">
+    <div id="loading-halus"></div>
     <div id="r_1" class="row" style="margin-bottom: 20px;">
         <div class="col-12 text-center" style="padding:20px; color:#666;">
             <i class="fa fa-refresh fa-spin"></i> Menghubungkan ke Router...
@@ -138,23 +160,23 @@ else {
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-8">
-            <div class="card">
+    <div class="row-main-content">
+        <div class="col-left">
+            <div class="card card-chart">
                 <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
                     <h3 style="margin:0;"><i class="fa fa-line-chart"></i> Performa Bisnis</h3>
                     <div style="font-size:10px; color:#aaa; display:flex; align-items:center;">
                         <i class="fa fa-circle text-green blink" style="font-size: 8px; margin-right: 5px;"></i> LIVE DATA
                     </div>
                 </div>
-                <div class="card-body" id="r_2_content"></div>
+                <div class="card-body chart-body" id="r_2_content"></div>
             </div>
         </div>
-        <div class="col-4">
-            <div class="card" style="height: 520px; display:flex; flex-direction:column;">
+        <div class="col-right">
+            <div class="card card-transaction">
                 <div class="card-header"><h3 style="margin:0;"><i class="fa fa-history"></i> Transaksi</h3></div>
-                <div class="card-body" style="padding:0; flex:1; display:flex; flex-direction:column;">
-                    <div style="overflow-y:auto; flex:1;">
+                <div class="card-body">
+                    <div class="table-scroll">
                         <table class="table" style="margin-bottom:0; width:100%;">
                             <thead style="background:#151719; position: sticky; top: 0; z-index: 5;">
                                 <tr>

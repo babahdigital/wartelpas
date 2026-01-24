@@ -343,13 +343,13 @@ if ($load == "sysresource") {
                 } ?>
             </div>
         </div>
-        <div id="chart_container" style="width:100%;">
-            <div id="chart_income_stat" style="width:100%; height:320px;"></div>
+        <div id="chart_container" style="width:100%; height:100%;">
+            <div id="chart_income_stat" style="width:100%; height:100%;"></div>
         </div>
         <script type="text/javascript">
             if(typeof Highcharts !== 'undefined') {
                 Highcharts.chart('chart_income_stat', {
-                    chart: { backgroundColor: 'transparent', height: 320, zoomType: 'xy' },
+                    chart: { backgroundColor: 'transparent', reflow: true, zoomType: 'xy' },
                     title: { text: '' },
                     xAxis: { categories: <?= $jsonCategories ?>, crosshair: true, lineColor: '#444', tickColor: '#444', labels: {style:{color:'#ccc'}}, gridLineWidth: 0 },
                     yAxis: [{
