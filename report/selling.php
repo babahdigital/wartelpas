@@ -209,6 +209,8 @@ if (file_exists($dbFile)) {
             expected_setoran INTEGER,
             reported_qty INTEGER,
             actual_setoran INTEGER,
+            expenses_amt INTEGER,
+            expenses_desc TEXT,
             selisih_qty INTEGER,
             selisih_setoran INTEGER,
             note TEXT,
@@ -223,6 +225,8 @@ if (file_exists($dbFile)) {
         )");
         try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN audit_username TEXT"); } catch (Exception $e) {}
         try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN user_evidence TEXT"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN expenses_amt INTEGER"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN expenses_desc TEXT"); } catch (Exception $e) {}
         try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN is_locked INTEGER DEFAULT 0"); } catch (Exception $e) {}
         try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN locked_at DATETIME"); } catch (Exception $e) {}
         try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN locked_by TEXT"); } catch (Exception $e) {}
@@ -722,6 +726,7 @@ function calc_audit_adjusted_setoran(array $ar) {
     $price30 = 20000;
     $expected_setoran = (int)($ar['expected_setoran'] ?? 0);
     $actual_setoran_raw = (int)($ar['actual_setoran'] ?? 0);
+    $expense_amt = (int)($ar['expenses_amt'] ?? 0);
 
     $p10_qty = 0;
     $p30_qty = 0;
@@ -770,9 +775,11 @@ function calc_audit_adjusted_setoran(array $ar) {
         $manual_net_qty_10 = max(0, $p10_qty - $cnt_rusak_10 - $cnt_invalid_10);
         $manual_net_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30);
         $manual_display_setoran = ($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30);
+        $manual_display_setoran += $expense_amt;
         $expected_adj_setoran = $expected_setoran;
     } else {
         $manual_display_setoran = $actual_setoran_raw;
+        $manual_display_setoran += $expense_amt;
         $expected_adj_setoran = $expected_setoran;
     }
 
@@ -1139,11 +1146,15 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         $audit_setoran = (int)($_POST['audit_setoran'] ?? 0);
         $audit_qty_10 = (int)($_POST['audit_qty_10'] ?? 0);
         $audit_qty_30 = (int)($_POST['audit_qty_30'] ?? 0);
+        $audit_exp_amt = (int)($_POST['audit_expense_amt'] ?? 0);
+        $audit_exp_desc = trim($_POST['audit_expense_desc'] ?? '');
         $audit_note = '';
         $audit_status = 'OPEN';
 
         if ($audit_blok_raw === '' || $audit_date === '') {
             $audit_error = 'Blok dan tanggal wajib diisi.';
+        } elseif ($audit_exp_amt > 0 && $audit_exp_desc === '') {
+            $audit_error = 'Keterangan pengeluaran wajib diisi jika nominal > 0.';
         } else {
             try {
                 $stmtLock = $db->prepare("SELECT COUNT(*) FROM audit_rekap_manual WHERE report_date = :d AND COALESCE(is_locked,0) = 1");
@@ -1387,14 +1398,16 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 $evidence_json = !empty($evidence) ? json_encode($evidence) : '';
                 try {
                     $stmt = $db->prepare("INSERT INTO audit_rekap_manual
-                        (report_date, blok_name, audit_username, expected_qty, expected_setoran, reported_qty, actual_setoran, selisih_qty, selisih_setoran, note, user_evidence, status, updated_at)
-                        VALUES (:d, :b, :u, :eq, :es, :rq, :as, :sq, :ss, :n, :ev, :st, CURRENT_TIMESTAMP)
+                        (report_date, blok_name, audit_username, expected_qty, expected_setoran, reported_qty, actual_setoran, expenses_amt, expenses_desc, selisih_qty, selisih_setoran, note, user_evidence, status, updated_at)
+                        VALUES (:d, :b, :u, :eq, :es, :rq, :as, :ea, :ed, :sq, :ss, :n, :ev, :st, CURRENT_TIMESTAMP)
                         ON CONFLICT(report_date, blok_name) DO UPDATE SET
                             audit_username=excluded.audit_username,
                             expected_qty=excluded.expected_qty,
                             expected_setoran=excluded.expected_setoran,
                             reported_qty=excluded.reported_qty,
                             actual_setoran=excluded.actual_setoran,
+                            expenses_amt=excluded.expenses_amt,
+                            expenses_desc=excluded.expenses_desc,
                             selisih_qty=excluded.selisih_qty,
                             selisih_setoran=excluded.selisih_setoran,
                             note=excluded.note,
@@ -1410,6 +1423,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         ':es' => $expected_setoran,
                         ':rq' => $audit_qty,
                         ':as' => $audit_setoran,
+                        ':ea' => $audit_exp_amt,
+                        ':ed' => $audit_exp_desc,
                         ':sq' => $selisih_qty,
                         ':ss' => $selisih_setoran,
                         ':n' => $audit_note,
@@ -1751,6 +1766,20 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                         <label>Total Setoran (otomatis)</label>
                         <input class="form-input" type="number" name="audit_setoran" min="0" value="0" readonly>
                     </div>
+                </div>
+                <div style="margin-top:10px; padding-top:10px; border-top:1px dashed #555;">
+                    <label style="color:#f39c12;"><i class="fa fa-shopping-cart"></i> Pengeluaran Operasional (Dari Laci)</label>
+                    <div class="form-grid-2">
+                        <div>
+                            <label>Nominal (Rp)</label>
+                            <input class="form-input" type="number" name="audit_expense_amt" min="0" value="0" placeholder="Contoh: 50000">
+                        </div>
+                        <div>
+                            <label>Keterangan (Wajib jika ada)</label>
+                            <input class="form-input" type="text" name="audit_expense_desc" placeholder="Contoh: Beli Kertas Thermal">
+                        </div>
+                    </div>
+                    <div class="modal-note" style="color:#aaa;">*Nominal ini akan ditambahkan ke perhitungan setoran fisik.</div>
                 </div>
                 <div style="margin-top:8px;">
                     <label>Username Yang Tidak Dilaporkan</label>
