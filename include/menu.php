@@ -177,8 +177,9 @@ if ($idleto != "disable") {
         display: flex;
         align-items: center;
         font-weight: 700;
-        font-size: 20px;
-        color: #fff !important;
+        font-size: 0;
+        line-height: 0;
+        color: transparent !important;
         text-decoration: none;
         margin-right: 40px;
     }
