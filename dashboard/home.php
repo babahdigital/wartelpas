@@ -118,10 +118,13 @@ else {
     }
 
     $(document).ready(function() {
-        $("#r_1").load("./dashboard/aload.php?session=<?= $session ?>&load=sysresource #r_1 > *");
+        $("#r_1_display").load("./dashboard/aload.php?session=<?= $session ?>&load=sysresource #r_1_content_raw");
         changeMonth(<?= (int)date('m') ?>);
         updateDashboard();
         setInterval(updateDashboard, 10000);
+        setInterval(function() {
+            $("#r_1_display").load("./dashboard/aload.php?session=<?= $session ?>&load=sysresource #r_1_content_raw");
+        }, 10000);
         $(".month-tab").on("click", function() {
             var m = $(this).data("month");
             if (m) changeMonth(m);
@@ -199,7 +202,7 @@ $activeMonth = (int)date('n');
         </div>
     </div>
 
-    <div id="r_1" class="resource-footer">
+    <div class="resource-footer" id="r_1_display">
         <span><i class="fa fa-refresh fa-spin"></i> Memuat resource...</span>
     </div>
 </div>

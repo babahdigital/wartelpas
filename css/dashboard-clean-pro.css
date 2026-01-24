@@ -54,11 +54,12 @@ body {
 
 .main-content {
     padding: 20px;
-    height: calc(100vh - 60px);
+    min-height: calc(100vh - 80px);
     display: flex;
     flex-direction: column;
     gap: 20px;
     overflow-y: auto;
+    box-sizing: border-box;
 }
 
 .row-kpi {
@@ -268,11 +269,15 @@ body {
 .resource-footer {
     display: flex;
     gap: 20px;
-    font-size: 10px;
+    font-size: 11px;
     color: var(--text-dim);
     background: var(--bg-card);
-    padding: 10px 20px;
+    padding: 12px 20px;
     border-radius: 8px;
+    border: 1px solid var(--border-soft);
+    margin-top: auto;
+    justify-content: flex-start;
+    align-items: center;
 }
 
 @media (max-width: 1024px) {

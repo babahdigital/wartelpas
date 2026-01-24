@@ -195,7 +195,6 @@ if ($load == "live_data") {
     $dataResponse['active'] = $counthotspotactive;
     echo json_encode($dataResponse);
     exit();
-}
 
 
 // =========================================================
@@ -229,13 +228,15 @@ if ($load == "sysresource") {
     if ($sys_mem_pct > 100) $sys_mem_pct = 100;
     $sys_hdd = isset($resource['free-hdd-space']) ? formatBytes($resource['free-hdd-space'], 2) : '0 B';
     ?>
-    <div id="r_1" class="resource-footer">
+    <div id="r_1_content_raw" style="display: contents;">
         <span><i class="fa fa-server"></i> CPU: <?= $sys_cpu ?>%</span>
         <span><i class="fa fa-microchip"></i> RAM: <?= $sys_mem ?></span>
         <span><i class="fa fa-hdd-o"></i> HDD: <?= $sys_hdd ?></span>
         <span><i class="fa fa-bolt"></i> Uptime: <?= $sys_uptime ?></span>
     </div>
     <?php
+    exit();
+}
 
 // =========================================================
 // BAGIAN 2: DASHBOARD UTAMA & ANALISA
