@@ -11,9 +11,11 @@ if ($req_show === 'harian') {
     $filter_date = $filter_date ?: date('Y-m-d');
 } elseif ($req_show === 'bulanan') {
     $filter_date = $filter_date ?: date('Y-m');
+    if (strlen($filter_date) > 7) $filter_date = substr($filter_date, 0, 7);
 } else {
     $req_show = 'tahunan';
     $filter_date = $filter_date ?: date('Y');
+    if (strlen($filter_date) > 4) $filter_date = substr($filter_date, 0, 4);
 }
 
 function table_exists($db, $name) {
