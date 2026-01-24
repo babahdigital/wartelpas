@@ -2224,12 +2224,72 @@ if ($debug_mode && !$is_ajax) {
       </div>
     </div>
   </div>
+  <?php if (!$is_ajax): ?>
+    <div id="summary-modal" class="summary-modal" aria-hidden="true">
+      <div class="summary-card">
+        <div class="summary-header">
+          <div class="summary-title"><i class="fa fa-list-alt"></i> Sisa Voucher (READY)</div>
+          <button type="button" class="summary-close" id="summary-close">&times;</button>
+        </div>
+        <div class="summary-body">
+          <div class="users-summary-grid">
+            <div>
+              <?php if (!empty($summary_ready_by_blok)): ?>
+                <div class="users-summary-scroll">
+                  <table class="users-summary-table">
+                    <thead>
+                      <tr>
+                        <th>Kode Blok</th>
+                        <th class="text-right">Jumlah</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <?php foreach ($summary_ready_by_blok as $blok => $count): ?>
+                        <tr>
+                          <td><?= htmlspecialchars($blok) ?></td>
+                          <td class="text-right" style="font-weight:600;color:#34d399;"><?= (int)$count ?></td>
+                        </tr>
+                      <?php endforeach; ?>
+                    </tbody>
+                  </table>
+                </div>
+              <?php else: ?>
+                <div style="text-align:center;color:#9aa0a6;padding:24px 0;">
+                  <i class="fa fa-inbox" style="opacity:0.3;font-size:24px;"></i><br>
+                  Belum ada stok Ready.
+                </div>
+              <?php endif; ?>
+            </div>
+            <div>
+              <div class="summary-stat">
+                <div class="stat-value"><?= (int)$summary_ready_total ?></div>
+                <div class="stat-label">Sisa Ready</div>
+              </div>
+              <div class="summary-stat">
+                <div class="stat-value text-warning"><?= (int)$summary_rusak_total ?></div>
+                <div class="stat-label">Rusak</div>
+              </div>
+              <div class="summary-stat">
+                <div class="stat-value text-purple"><?= (int)$summary_retur_total ?></div>
+                <div class="stat-label">Retur</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <?php endif; ?>
   <div class="col-12">
     <div class="card card-solid">
       <div class="card-header-solid">
         <h3 class="card-title m-0"><i class="fa fa-users mr-2"></i> Manajemen Voucher</h3>
         <span id="users-total" class="badge badge-secondary p-2" style="font-size:14px">Total: <?= $total_items ?> Items</span>
         <span id="users-active" class="badge badge-info p-2" style="font-size:14px;margin-left:6px;">Online: -</span>
+        <?php if (!$is_ajax): ?>
+          <button type="button" id="summary-open" class="btn btn-outline-light btn-sm" style="margin-left:8px;height:32px;">
+            <i class="fa fa-list-alt"></i> Sisa Voucher
+          </button>
+        <?php endif; ?>
       </div>
       <div class="toolbar-container">
         <form action="?" method="GET" class="toolbar-row m-0" id="users-toolbar-form">
@@ -2429,57 +2489,6 @@ if ($debug_mode && !$is_ajax) {
             </table>
           </div>
         <?php endif; ?>
-        <?php if (!$is_ajax): ?>
-          <div class="users-summary">
-            <div class="users-summary-header">
-              <div class="users-summary-title"><i class="fa fa-list-alt"></i> Sisa Voucher (READY)</div>
-              <div class="users-summary-sub">Ringkas & real-time</div>
-            </div>
-            <div class="users-summary-grid">
-              <div>
-                <?php if (!empty($summary_ready_by_blok)): ?>
-                  <div class="users-summary-scroll">
-                    <table class="users-summary-table">
-                      <thead>
-                        <tr>
-                          <th>Kode Blok</th>
-                          <th class="text-right">Jumlah</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <?php foreach ($summary_ready_by_blok as $blok => $count): ?>
-                          <tr>
-                            <td><?= htmlspecialchars($blok) ?></td>
-                            <td class="text-right" style="font-weight:600;color:#34d399;"><?= (int)$count ?></td>
-                          </tr>
-                        <?php endforeach; ?>
-                      </tbody>
-                    </table>
-                  </div>
-                <?php else: ?>
-                  <div style="text-align:center;color:#9aa0a6;padding:24px 0;">
-                    <i class="fa fa-inbox" style="opacity:0.3;font-size:24px;"></i><br>
-                    Belum ada stok Ready.
-                  </div>
-                <?php endif; ?>
-              </div>
-              <div>
-                <div class="summary-stat">
-                  <div class="stat-value"><?= (int)$summary_ready_total ?></div>
-                  <div class="stat-label">Sisa Ready</div>
-                </div>
-                <div class="summary-stat">
-                  <div class="stat-value text-warning"><?= (int)$summary_rusak_total ?></div>
-                  <div class="stat-label">Rusak</div>
-                </div>
-                <div class="summary-stat">
-                  <div class="stat-value text-purple"><?= (int)$summary_retur_total ?></div>
-                  <div class="stat-label">Retur</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        <?php endif; ?>
         <div class="table-responsive">
           <table class="table table-dark-solid table-hover text-nowrap">
             <thead>
@@ -2657,7 +2666,26 @@ if ($debug_mode && !$is_ajax) {
   const reloginSub = document.getElementById('relogin-sub');
   const reloginClose = document.getElementById('relogin-close');
   const reloginPrint = document.getElementById('relogin-print');
+  const summaryModal = document.getElementById('summary-modal');
+  const summaryOpen = document.getElementById('summary-open');
+  const summaryClose = document.getElementById('summary-close');
   if (!searchInput || !tbody || !totalBadge || !paginationWrap) return;
+
+  if (summaryOpen && summaryModal) {
+    summaryOpen.addEventListener('click', () => {
+      summaryModal.style.display = 'flex';
+    });
+  }
+  if (summaryClose && summaryModal) {
+    summaryClose.addEventListener('click', () => {
+      summaryModal.style.display = 'none';
+    });
+  }
+  if (summaryModal) {
+    summaryModal.addEventListener('click', (e) => {
+      if (e.target === summaryModal) summaryModal.style.display = 'none';
+    });
+  }
 
   if (clearBtn) {
     clearBtn.style.display = searchInput.value.trim() !== '' ? 'inline-block' : 'none';
