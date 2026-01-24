@@ -256,7 +256,7 @@ body {
     color: #eee;
 }
 
-.card-body { padding: 20px; flex: 1; position: relative; }
+.card-body { padding: 20px; flex: 1 !important; position: relative; }
 
 #tabel_riwayat tr { background: transparent !important; transition: background 0.2s; }
 #tabel_riwayat tr:hover td { background: var(--bg-hover) !important; color: #fff; }
