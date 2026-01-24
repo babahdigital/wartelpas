@@ -6,6 +6,17 @@ ini_set('display_errors', 0);
 error_reporting(0);
 header('Content-Type: text/plain');
 
+// [SECURITY ADDITION] - allowlist IP untuk live_ingest
+$allowlist_raw = getenv('WARTELPAS_SYNC_ALLOWLIST');
+if ($allowlist_raw !== false && trim((string)$allowlist_raw) !== '') {
+    $allowed = array_filter(array_map('trim', explode(',', $allowlist_raw)));
+    $remote_ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    if ($remote_ip !== '' && !in_array($remote_ip, $allowed, true) && $remote_ip !== '127.0.0.1' && $remote_ip !== '::1') {
+        http_response_code(403);
+        die("Error: IP tidak diizinkan.");
+    }
+}
+
 $logDir = dirname(__DIR__) . '/logs';
 if (!is_dir($logDir)) {
     @mkdir($logDir, 0755, true);
