@@ -224,15 +224,23 @@ if (file_exists($dbFile)) {
 
         $dateFilter = '';
         $dateParam = [];
+        $auditDateFilter = '';
+        $auditDateParam = [];
         if ($req_show === 'harian') {
             $dateFilter = 'sale_date = :d';
             $dateParam[':d'] = $filter_date;
+            $auditDateFilter = 'report_date = :d';
+            $auditDateParam[':d'] = $filter_date;
         } elseif ($req_show === 'bulanan') {
             $dateFilter = 'sale_date LIKE :d';
             $dateParam[':d'] = $filter_date . '%';
+            $auditDateFilter = 'report_date LIKE :d';
+            $auditDateParam[':d'] = $filter_date . '%';
         } else {
             $dateFilter = 'sale_date LIKE :d';
             $dateParam[':d'] = $filter_date . '%';
+            $auditDateFilter = 'report_date LIKE :d';
+            $auditDateParam[':d'] = $filter_date . '%';
         }
 
         if (table_exists($db, 'sales_history')) {
@@ -336,9 +344,9 @@ if (file_exists($dbFile)) {
 
         if (table_exists($db, 'audit_rekap_manual')) {
             $auditSql = "SELECT expected_qty, expected_setoran, reported_qty, actual_setoran, user_evidence
-                FROM audit_rekap_manual WHERE $dateFilter";
+                FROM audit_rekap_manual WHERE $auditDateFilter";
             $stmt = $db->prepare($auditSql);
-            foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
+            foreach ($auditDateParam as $k => $v) $stmt->bindValue($k, $v);
             $stmt->execute();
             $audit_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $audit_manual_summary['rows'] = count($audit_rows);
