@@ -209,7 +209,7 @@ try {
             if ($d === '') continue;
             [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($row);
             $expense = (int)($row['expenses_amt'] ?? 0);
-            $total_expenses_month = ($total_expenses_month ?? 0) + $expense;
+            $total_expenses_month += $expense;
             $net_cash_audit = (int)$manual_setoran - $expense;
             $audit_net[$d] = (int)($audit_net[$d] ?? 0) + $net_cash_audit;
             $audit_expense[$d] = (int)($audit_expense[$d] ?? 0) + $expense;
@@ -322,7 +322,6 @@ $max_wr = 0;
 $max_km = 0;
 $max_active = 0;
 $total_rusak_device = 0;
-$total_expenses_month = $total_expenses_month ?? 0;
 $total_expense_table = 0;
 $total_expenses_month = $total_expenses_month ?? 0;
 
