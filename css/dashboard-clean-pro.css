@@ -205,12 +205,16 @@ body {
     min-height: 350px;
     position: relative;
     padding: 15px 20px;
+    border: 0 !important;
+    box-shadow: none !important;
 }
 
 #chart_income_stat {
     width: 100% !important;
     height: 100% !important;
     min-height: 350px;
+    border: 0 !important;
+    box-shadow: none !important;
 }
 
 /* Fix 9: TABLE STYLES - ENHANCED */
@@ -455,6 +459,11 @@ body {
 
 .highcharts-plot-background {
     fill: transparent !important;
+}
+
+.highcharts-plot-border {
+    stroke: transparent !important;
+    stroke-width: 0 !important;
 }
 
 /* Highcharts Customization */
