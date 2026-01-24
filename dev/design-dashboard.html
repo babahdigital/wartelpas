@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wartelpas - Clean Pro Dashboard</title>
+    <title>Wartelpas - AI Powered Dashboard</title>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <!-- Google Fonts -->
@@ -14,7 +14,6 @@
     <script src="https://code.highcharts.com/highcharts.js"></script>
     
     <style>
-        /* Gabungan CSS dari dashboard-clean-pro.css dan mikhmon-ui logic */
         :root {
             --bg-main: #121417;
             --bg-card: #1c1f26;
@@ -159,6 +158,7 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            position: relative;
         }
 
         .card-header {
@@ -189,13 +189,112 @@
         td { padding: 10px; border-bottom: 1px solid var(--border-soft); font-size: 13px; }
         tr:hover td { background: var(--bg-hover); }
 
+        /* AI Features UI */
+        .ai-btn {
+            background: linear-gradient(135deg, #605ca8, #00c0ef);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: 0.3s;
+        }
+        .ai-btn:hover { opacity: 0.9; transform: scale(1.05); }
+
+        #ai-insight-panel {
+            display: none;
+            background: #151719;
+            border-top: 1px solid var(--border-soft);
+            padding: 15px;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #ccc;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        /* Floating AI Chat */
+        .ai-chat-trigger {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00c0ef, #2ecc71);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            cursor: pointer;
+            z-index: 2000;
+            transition: 0.3s;
+        }
+        .ai-chat-trigger:hover { transform: rotate(15deg) scale(1.1); }
+
+        .ai-chat-window {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 350px;
+            height: 450px;
+            background: var(--bg-card);
+            border-radius: 15px;
+            border: 1px solid var(--border-soft);
+            display: none;
+            flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 2000;
+            overflow: hidden;
+        }
+
+        .ai-chat-header {
+            background: #222d32;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-soft);
+        }
+        .ai-chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .msg { padding: 8px 12px; border-radius: 10px; font-size: 13px; max-width: 80%; }
+        .msg-ai { background: #333; color: #eee; align-self: flex-start; }
+        .msg-user { background: var(--accent); color: white; align-self: flex-end; }
+
+        .ai-chat-input {
+            padding: 15px;
+            border-top: 1px solid var(--border-soft);
+            display: flex;
+            gap: 10px;
+        }
+        .ai-chat-input input {
+            flex: 1;
+            background: #151719;
+            border: 1px solid #333;
+            color: white;
+            padding: 8px;
+            border-radius: 5px;
+            outline: none;
+        }
+
         /* Utility */
         .blink { animation: blinker 1.5s linear infinite; }
         @keyframes blinker { 50% { opacity: 0.3; } }
         .text-green { color: var(--accent-green); }
-        .text-red { color: var(--accent-red); }
-        .text-yellow { color: var(--accent-yellow); }
-
         .ghost-alert {
             background: var(--accent-red);
             color: #fff;
@@ -205,14 +304,13 @@
             font-weight: 800;
         }
 
-        /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
 
         @media (max-width: 1024px) {
             .row-kpi { grid-template-columns: repeat(2, 1fr); }
             .dashboard-grid { grid-template-columns: 1fr; }
+            .ai-chat-window { width: calc(100vw - 40px); }
         }
     </style>
 </head>
@@ -269,13 +367,17 @@
             <div class="card">
                 <div class="card-header">
                     <h3><i class="fa fa-line-chart"></i> PERFORMA BISNIS</h3>
-                    <div class="tab-container" style="display: flex; gap: 10px; font-size: 11px;">
-                        <span style="color: #fff; border-bottom: 2px solid #fff; cursor: pointer;">Januari</span>
-                        <span style="color: var(--text-dim); cursor: pointer;">Februari</span>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button class="ai-btn" id="btn-generate-insight">✨ Insight Analisis</button>
+                        <div class="tab-container" style="display: flex; gap: 10px; font-size: 11px;">
+                            <span style="color: #fff; border-bottom: 2px solid #fff; cursor: pointer;">Januari</span>
+                        </div>
                     </div>
                 </div>
-                <div class="card-body" id="chart-container">
-                    <!-- Highcharts Target -->
+                <div class="card-body" id="chart-container"></div>
+                <!-- AI Insight Display -->
+                <div id="ai-insight-panel">
+                    <div id="ai-insight-text">Klik tombol di atas untuk melihat analisis cerdas...</div>
                 </div>
             </div>
 
@@ -297,7 +399,6 @@
                                 </tr>
                             </thead>
                             <tbody id="tabel-riwayat">
-                                <!-- Data dummy untuk simulasi -->
                                 <tr>
                                     <td style="color: var(--text-dim); font-family: monospace;">21:40</td>
                                     <td style="font-weight: 600;">W-A12B</td>
@@ -310,12 +411,6 @@
                                     <td align="center"><span style="background:#333; padding:2px 6px; border-radius:3px; font-size:10px;">C</span></td>
                                     <td align="right" style="color: var(--accent-blue); font-weight: bold;">10.000</td>
                                 </tr>
-                                <tr>
-                                    <td style="color: var(--text-dim); font-family: monospace;">21:35</td>
-                                    <td style="font-weight: 600;">W-B55H</td>
-                                    <td align="center"><span style="background:#333; padding:2px 6px; border-radius:3px; font-size:10px;">B</span></td>
-                                    <td align="right" style="color: var(--accent-green); font-weight: bold;">5.000</td>
-                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -324,83 +419,146 @@
 
         </div>
 
-        <!-- Resource Footer (Mini) -->
+        <!-- Resource Footer -->
         <div style="display: flex; gap: 20px; font-size: 10px; color: var(--text-dim); background: var(--bg-card); padding: 10px 20px; border-radius: 8px;">
             <span><i class="fa fa-server"></i> CPU: 5%</span>
             <span><i class="fa fa-microchip"></i> RAM: 256MB / 512MB</span>
-            <span><i class="fa fa-hdd-o"></i> HDD: 1.2GB Free</span>
-            <span><i class="fa fa-bolt"></i> Uptime: 12d 04h 22m</span>
+            <span><i class="fa fa-bolt"></i> Uptime: 12d 04h</span>
         </div>
+    </div>
 
+    <!-- AI Chat Elements -->
+    <div class="ai-chat-trigger" id="ai-chat-open">✨</div>
+    
+    <div class="ai-chat-window" id="ai-chat-window">
+        <div class="ai-chat-header">
+            <span style="font-weight: bold; font-size: 14px;"><i class="fa fa-magic"></i> Asisten Wartelpas ✨</span>
+            <i class="fa fa-times" id="ai-chat-close" style="cursor: pointer;"></i>
+        </div>
+        <div class="ai-chat-messages" id="ai-messages">
+            <div class="msg msg-ai">Halo! Saya asisten cerdas Wartelpas. Ada yang bisa saya bantu terkait Mikrotik atau dashboard Anda?</div>
+        </div>
+        <div class="ai-chat-input">
+            <input type="text" id="ai-input-text" placeholder="Tanya sesuatu...">
+            <button class="ai-btn" id="btn-send-chat">Kirim ✨</button>
+        </div>
     </div>
 
     <script>
-        // Simulasi Jam Realtime
+        const apiKey = ""; // Disisipkan oleh environment
+        const modelName = "gemini-2.5-flash-preview-09-2025";
+
+        // Fungsi API Gemini dengan Exponential Backoff
+        async function callGemini(prompt, systemInstruction = "") {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined
+            };
+
+            let delay = 1000;
+            for (let i = 0; i < 5; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        return result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    }
+                } catch (err) {
+                    console.error("Retry", i + 1);
+                }
+                await new Promise(resolve => setTimeout(resolve, delay));
+                delay *= 2;
+            }
+            return "Maaf, sistem sedang sibuk. Coba lagi nanti.";
+        }
+
+        // --- Fitur 1: Insight Analisis Bisnis ---
+        $('#btn-generate-insight').on('click', async function() {
+            const $btn = $(this);
+            const $panel = $('#ai-insight-panel');
+            const $text = $('#ai-insight-text');
+
+            $panel.slideDown();
+            $text.html('<i class="fa fa-spinner fa-spin"></i> Sedang menganalisis data Anda...');
+            $btn.prop('disabled', true);
+
+            const dataStats = {
+                active: $('#kpi-active').text(),
+                sold: $('#kpi-sold').text(),
+                income: $('#kpi-income').text(),
+                proj: $('#kpi-est').text()
+            };
+
+            const prompt = `Analisis data dashboard voucher hotspot berikut:
+            User Aktif: ${dataStats.active}
+            Voucher Terjual Hari Ini: ${dataStats.sold}
+            Pendapatan Hari Ini: ${dataStats.income}
+            Proyeksi Bulanan: ${dataStats.proj}
+            
+            Berikan analisis singkat 3 poin saja: 
+            1. Performa hari ini.
+            2. Strategi untuk meningkatkan penjualan.
+            3. Rekomendasi teknis jika user aktif terlalu tinggi.`;
+
+            const insight = await callGemini(prompt, "Kamu adalah konsultan bisnis ISP hotspot profesional. Balas dengan singkat dan ramah dalam Bahasa Indonesia.");
+            $text.html(insight.replace(/\n/g, '<br>'));
+            $btn.prop('disabled', false);
+        });
+
+        // --- Fitur 2: Chat Asisten Pintar ---
+        $('#ai-chat-open').on('click', () => $('#ai-chat-window').css('display', 'flex'));
+        $('#ai-chat-close').on('click', () => $('#ai-chat-window').hide());
+
+        async function handleChat() {
+            const userMsg = $('#ai-input-text').val();
+            if (!userMsg) return;
+
+            $('#ai-messages').append(`<div class="msg msg-user">${userMsg}</div>`);
+            $('#ai-input-text').val('');
+            
+            const $aiMsgContainer = $('<div class="msg msg-ai"><i class="fa fa-circle-o-notch fa-spin"></i> Mengetik...</div>');
+            $('#ai-messages').append($aiMsgContainer);
+            $('#ai-messages').scrollTop($('#ai-messages')[0].scrollHeight);
+
+            const sysPrompt = "Kamu adalah asisten teknis untuk aplikasi Wartelpas (manajemen hotspot Mikrotik). Bantu user dengan masalah konfigurasi, voucher, atau error dashboard. Gunakan gaya bicara profesional dan santai.";
+            const response = await callGemini(userMsg, sysPrompt);
+            
+            $aiMsgContainer.html(response.replace(/\n/g, '<br>'));
+            $('#ai-messages').scrollTop($('#ai-messages')[0].scrollHeight);
+        }
+
+        $('#btn-send-chat').on('click', handleChat);
+        $('#ai-input-text').on('keypress', (e) => { if(e.which == 13) handleChat(); });
+
+        // --- Dashboard Dasar ---
         function updateClock() {
             const now = new Date();
-            const timeStr = now.getHours().toString().padStart(2, '0') + ":" + 
-                            now.getMinutes().toString().padStart(2, '0') + ":" + 
-                            now.getSeconds().toString().padStart(2, '0');
-            $('#real-time').text(timeStr);
+            $('#real-time').text(now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0') + ":" + now.getSeconds().toString().padStart(2, '0'));
         }
         setInterval(updateClock, 1000);
 
-        // Inisialisasi Grafik (Logic dari aload.php)
         function initChart() {
             Highcharts.chart('chart-container', {
-                chart: { backgroundColor: 'transparent', type: 'area', spacingBottom: 0 },
+                chart: { backgroundColor: 'transparent', type: 'area', spacingBottom: 0, height: 250 },
                 title: { text: null },
                 credits: { enabled: false },
-                xAxis: {
-                    categories: Array.from({length: 31}, (_, i) => (i + 1).toString()),
-                    lineColor: '#444',
-                    tickColor: '#444',
-                    labels: { style: { color: '#888', fontSize: '10px' } }
-                },
-                yAxis: [{
-                    title: { text: null },
-                    gridLineColor: '#222',
-                    labels: { style: { color: '#00c0ef' } }
-                }, {
-                    title: { text: null },
-                    opposite: true,
-                    gridLineWidth: 0,
-                    labels: { style: { color: '#f39c12' } }
-                }],
-                tooltip: { shared: true, backgroundColor: '#1c1f26', style: { color: '#fff' }, borderWidth: 0, borderRadius: 10 },
-                plotOptions: {
-                    area: {
-                        fillColor: {
-                            linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
-                            stops: [[0, 'rgba(0,192,239,0.3)'], [1, 'rgba(0,192,239,0)']]
-                        },
-                        marker: { enabled: false }
-                    }
-                },
+                xAxis: { categories: Array.from({length: 10}, (_, i) => (i + 1).toString()), lineColor: '#444' },
+                yAxis: { title: { text: null }, gridLineColor: '#222' },
                 series: [{
                     name: 'Pendapatan',
                     color: '#00c0ef',
-                    data: [150, 200, 180, 250, 300, 280, 400, 350, 500, 450, 600, 550, 700, 650, 800, 750, 900, 850, 950, 1000, 1100, 1050, 1200, 1150, 1300, 1250, 1400, 1350, 1500, 1450, 1600]
-                }, {
-                    name: 'Terjual',
-                    type: 'spline',
-                    yAxis: 1,
-                    color: '#f39c12',
-                    data: [30, 40, 35, 50, 60, 55, 80, 70, 100, 90, 120, 110, 140, 130, 160, 150, 180, 170, 190, 200, 220, 210, 240, 230, 260, 250, 280, 270, 300, 290, 320]
+                    data: [150, 200, 180, 250, 300, 280, 400, 350, 500, 450]
                 }]
             });
         }
 
-        // Simulasi Update Live Data
-        function simulateUpdate() {
-            // Animasi angka berubah sedikit
-            const active = 20 + Math.floor(Math.random() * 10);
-            $('#kpi-active').fadeOut(200, function() { $(this).text(active).fadeIn(200); });
-        }
-
-        $(document).ready(function() {
+        $(document).ready(() => {
             initChart();
-            setInterval(simulateUpdate, 10000);
             updateClock();
         });
     </script>
