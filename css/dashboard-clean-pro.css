@@ -71,6 +71,7 @@ body {
     grid-template-columns: 8fr 4fr;
     gap: 15px;
     flex: 1;
+    align-items: start; /* Pastikan card tidak dipaksa tinggi yang sama */
 }
 
 .table-container {
@@ -144,6 +145,12 @@ body {
     min-height: 0;
 }
 
+/* Penyesuaian area Chart */
+.card-chart .card-body {
+    padding: 10px;
+    height: 300px; /* Batasi tinggi chart agar tidak terlalu besar */
+}
+
 .card-transaction {
     display: flex;
     flex-direction: column;
@@ -187,7 +194,7 @@ body {
 }
 
 .kpi-box h1 {
-    font-size: 30px;
+    font-size: 24px;
     font-weight: 800;
     margin: 0;
     letter-spacing: -1px;
