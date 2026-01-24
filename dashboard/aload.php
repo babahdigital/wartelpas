@@ -229,35 +229,11 @@ if ($load == "sysresource") {
     if ($sys_mem_pct > 100) $sys_mem_pct = 100;
     $sys_hdd = isset($resource['free-hdd-space']) ? formatBytes($resource['free-hdd-space'], 2) : '0 B';
     ?>
-    <div id="r_1" class="row" style="margin-bottom:15px; gap:10px;">
-        <div class="col-4">
-            <div class="kpi-box" style="padding:10px 15px; border-left:3px solid #ccc;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div style="font-size:18px; font-weight:700;"><?= $sys_time ?></div>
-                    <div style="font-size:10px; color:#888;"><?= $sys_date ?></div>
-                </div>
-                <div style="font-size:11px; color:#aaa; margin-top:5px;">Up: <?= $sys_uptime ?></div>
-            </div>
-        </div>
-        <div class="col-8">
-            <div class="kpi-box" style="padding:10px 15px; display:flex; gap:20px; align-items:center;">
-                <div style="flex:1;">
-                    <div style="font-size:10px; color:#888; text-transform:uppercase;">CPU Load: <?= $sys_cpu ?>%</div>
-                    <div style="height:4px; background:#333; margin-top:5px;">
-                        <div style="width:<?= (int)$sys_cpu ?>%; height:100%; background:var(--accent-blue);"></div>
-                    </div>
-                </div>
-                <div style="flex:1;">
-                    <div style="font-size:10px; color:#888; text-transform:uppercase;">Free RAM: <?= $sys_mem ?></div>
-                    <div style="height:4px; background:#333; margin-top:5px;">
-                        <div style="width:<?= (int)$sys_mem_pct ?>%; height:100%; background:var(--accent-green);"></div>
-                    </div>
-                </div>
-                <div style="font-size:10px; color:#555; text-align:right;">
-                    <?= $sys_board ?> | <?= $sys_os ?>
-                </div>
-            </div>
-        </div>
+    <div id="r_1" class="resource-footer">
+        <span><i class="fa fa-server"></i> CPU: <?= $sys_cpu ?>%</span>
+        <span><i class="fa fa-microchip"></i> RAM: <?= $sys_mem ?></span>
+        <span><i class="fa fa-hdd-o"></i> HDD: <?= $sys_hdd ?></span>
+        <span><i class="fa fa-bolt"></i> Uptime: <?= $sys_uptime ?></span>
     </div>
     <?php
 

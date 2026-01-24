@@ -29,6 +29,8 @@ else {
         if (loadingBar.length) loadingBar.show();
         var chartDone = false;
         var logsDone = false;
+        $(".month-tab").removeClass("active");
+        $(".month-tab[data-month='" + m + "']").addClass("active");
         function finishLoading() {
             if (chartDone && logsDone && loadingBar.length) loadingBar.hide();
         }
@@ -120,79 +122,84 @@ else {
         changeMonth(<?= (int)date('m') ?>);
         updateDashboard();
         setInterval(updateDashboard, 10000);
+        $(".month-tab").on("click", function() {
+            var m = $(this).data("month");
+            if (m) changeMonth(m);
+        });
     });
 </script>
 
-<div id="reloadHome">
+<?php
+$monthFull = [1=>'Januari', 2=>'Februari', 3=>'Maret', 4=>'April', 5=>'Mei', 6=>'Juni', 7=>'Juli', 8=>'Agustus', 9=>'September', 10=>'Oktober', 11=>'November', 12=>'Desember'];
+$activeMonth = (int)date('n');
+?>
+
+<div id="reloadHome" class="main-content">
     <div id="loading-halus"></div>
-    <div id="r_1" class="row" style="margin-bottom: 20px;">
-        <div class="col-12 text-center" style="padding:20px; color:#666;">
-            <i class="fa fa-refresh fa-spin"></i> Menghubungkan ke Router...
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-3">
-            <div class="kpi-box border-green">
-                <h1 id="kpi-active">0</h1>
-                <div class="label">User Active <span class="blink" style="color:var(--accent-green)">● Live</span></div>
+    <div class="row-kpi">
+        <div class="kpi-box border-green">
+            <h1 id="kpi-active">0</h1>
+            <div class="label">
+                User Active
+                <span class="blink" style="color:var(--accent-green)">● LIVE</span>
             </div>
         </div>
-        <div class="col-3">
-            <div class="kpi-box border-blue">
-                <div id="ghost-tag" style="display:none;" class="ghost-alert blink"><i class="fa fa-ghost"></i> GHOST</div>
+        <div class="kpi-box border-blue">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                 <h1 id="kpi-sold">0</h1>
-                <div class="label">Voucher Terjual (Hari Ini)</div>
+                <span id="ghost-tag" style="display:none;" class="ghost-alert blink"><i class="fa fa-ghost"></i> GHOST</span>
             </div>
+            <div class="label">Voucher Terjual (Hari Ini)</div>
         </div>
-        <div class="col-3">
-            <div class="kpi-box border-yellow">
-                <h1 id="kpi-income">Rp 0</h1>
-                <div class="label" id="kpi-est">Proyeksi: Rp 0</div>
+        <div class="kpi-box border-yellow">
+            <h1 id="kpi-income">Rp 0</h1>
+            <div class="label" id="kpi-est">Proyeksi: Rp 0</div>
+        </div>
+        <div class="kpi-box border-audit" id="audit-box">
+            <h1 id="audit-status">CLEAR</h1>
+            <div class="label" id="audit-val">Selisih: Rp 0</div>
+            <div class="audit-detail" id="audit-detail"></div>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="card card-chart">
+            <div class="card-header">
+                <h3><i class="fa fa-line-chart"></i> PERFORMA BISNIS</h3>
+                <div class="month-tabs">
+                    <?php foreach ($monthFull as $num => $name) : ?>
+                        <span class="month-tab<?= $num === $activeMonth ? ' active' : '' ?>" data-month="<?= $num ?>"><?= $name ?></span>
+                    <?php endforeach; ?>
+                </div>
             </div>
+            <div class="card-body" id="r_2_content"></div>
         </div>
-        <div class="col-3" id="audit-card-wrap">
-            <div id="audit-box" class="kpi-box border-audit">
-                <h1 id="audit-status">CLEAR</h1>
-                <div class="label" id="audit-val">Selisih: Rp 0</div>
-                <div class="audit-detail" id="audit-detail"></div>
+        <div class="card card-transaction">
+            <div class="card-header">
+                <h3><i class="fa fa-history"></i> TRANSAKSI TERAKHIR</h3>
+                <span class="blink" style="font-size:9px; font-weight:bold; color:var(--accent-green);">UPDATED</span>
+            </div>
+            <div class="card-body" style="padding:0;">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>JAM</th>
+                                <th>USER</th>
+                                <th style="text-align:center;">BLOK</th>
+                                <th style="text-align:right;">IDR</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabel_riwayat">
+                            <tr><td colspan="4" class="text-center" style="padding:20px; color:#555;">Menunggu...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="row-main-content">
-        <div class="col-left">
-            <div class="card card-chart">
-                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
-                    <h3 style="margin:0;"><i class="fa fa-line-chart"></i> Performa Bisnis</h3>
-                    <div style="font-size:10px; color:#aaa; display:flex; align-items:center;">
-                        <i class="fa fa-circle text-green blink" style="font-size: 8px; margin-right: 5px;"></i> LIVE DATA
-                    </div>
-                </div>
-                <div class="card-body chart-body" id="r_2_content"></div>
-            </div>
-        </div>
-        <div class="col-right">
-            <div class="card card-transaction">
-                <div class="card-header"><h3 style="margin:0;"><i class="fa fa-history"></i> Transaksi</h3></div>
-                <div class="card-body">
-                    <div class="table-scroll">
-                        <table class="table" style="margin-bottom:0; width:100%;">
-                            <thead style="background:#151719; position: sticky; top: 0; z-index: 5;">
-                                <tr>
-                                    <th style="padding:8px 10px; border-bottom:1px solid #444; color:#888;">Jam</th>
-                                    <th style="padding:8px 10px; border-bottom:1px solid #444; color:#888;">User</th>
-                                    <th style="padding:8px 10px; border-bottom:1px solid #444; color:#888; text-align:center;">Blok</th>
-                                    <th class="text-right" style="padding:8px 10px; border-bottom:1px solid #444; color:#888;">IDR</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabel_riwayat">
-                                <tr><td colspan="4" class="text-center" style="padding:20px; color:#555;">Menunggu...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div id="r_1" class="resource-footer">
+        <span><i class="fa fa-refresh fa-spin"></i> Memuat resource...</span>
     </div>
 </div>
