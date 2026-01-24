@@ -19,16 +19,15 @@ if (!isset($_SESSION["mikhmon"])) {
 	// 2. Siapkan array penampung
 	$filtered_leases = array();
 	
-	// 3. Filter berdasarkan IP Kepala "172.16.2."
-	foreach ($getlease as $lease) {
-		$addr = isset($lease['address']) ? $lease['address'] : '';
-		
-		// Cek apakah IP diawali dengan "172.16.2."
-		// Jika iya, masukkan ke daftar
-		if (strpos($addr, "172.16.2.") === 0) {
-			$filtered_leases[] = $lease;
-		}
-	}
+    // 3. Filter berdasarkan server wartel + profile wartelpas (jika tersedia)
+    foreach ($getlease as $lease) {
+        $server = isset($lease['server']) ? strtolower((string)$lease['server']) : '';
+        $server_profile = isset($lease['server-profile']) ? strtolower((string)$lease['server-profile']) : '';
+
+        if ($server === 'wartel' && ($server_profile === '' || $server_profile === 'wartelpas')) {
+            $filtered_leases[] = $lease;
+        }
+    }
 	
 	$TotalReg = count($filtered_leases);
 	$countlease = $TotalReg;

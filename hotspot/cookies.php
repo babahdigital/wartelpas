@@ -10,10 +10,17 @@ if (!isset($_SESSION["mikhmon"])) {
     header("Location:../admin.php?id=login");
 } else {
     $getcookies = $API->comm("/ip/hotspot/cookie/print");
+    $filtered_cookies = array();
+    foreach ($getcookies as $cookie) {
+        $server = isset($cookie['server']) ? strtolower((string)$cookie['server']) : '';
+        $server_profile = isset($cookie['server-profile']) ? strtolower((string)$cookie['server-profile']) : '';
+        if ($server === 'wartel' && ($server_profile === '' || $server_profile === 'wartelpas')) {
+            $filtered_cookies[] = $cookie;
+        }
+    }
+    $getcookies = $filtered_cookies;
     $TotalReg = count($getcookies);
-    $countcookies = $API->comm("/ip/hotspot/cookie/print", array(
-        "count-only" => "",
-    ));
+    $countcookies = $TotalReg;
 }
 ?>
 
