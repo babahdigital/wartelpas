@@ -384,6 +384,8 @@ if (!isset($_SESSION["mikhmon"])) {
         border-bottom: 1px solid #323542;
         color: var(--text-pri);
     }
+    .low-stock { color: var(--danger) !important; font-weight: 700; }
+    .low-stock-row td { background: rgba(239, 68, 68, 0.08); }
     
     /* Scroll area untuk list blok jika terlalu panjang */
     .summary-scroll {
@@ -564,9 +566,12 @@ if (!isset($_SESSION["mikhmon"])) {
                                 </thead>
                                 <tbody>
                                     <?php foreach ($blockSummary as $blok => $count): ?>
-                                    <tr>
+                                    <?php $is_low = ((int)$count <= 100); ?>
+                                    <tr class="<?= $is_low ? 'low-stock-row' : '' ?>">
                                         <td><?= htmlspecialchars($blok) ?></td>
-                                        <td class="text-right" style="font-weight:bold; color: #10b981;"><?= (int)$count ?></td>
+                                        <td class="text-right <?= $is_low ? 'low-stock' : '' ?>" style="font-weight:bold; color: #10b981;">
+                                            <?= (int)$count ?>
+                                        </td>
                                     </tr>
                                     <?php endforeach; ?>
                                 </tbody>

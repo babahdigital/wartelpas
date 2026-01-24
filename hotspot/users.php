@@ -2219,6 +2219,8 @@ if ($debug_mode && !$is_ajax) {
     .users-summary-table { width: 100%; border-collapse: collapse; font-size: 12px; }
     .users-summary-table th { text-align: left; color: #9aa0a6; padding: 6px 0; border-bottom: 1px solid #2d3748; }
     .users-summary-table td { padding: 6px 0; border-bottom: 1px solid #2a313a; color: #e5e7eb; }
+    .users-summary-table tr.low-stock td { background: rgba(239, 68, 68, 0.08); }
+    .users-summary-table .low-stock { color: #ef4444; font-weight: 700; }
     .summary-stat { background: #222830; border: 1px solid #2d3748; border-radius: 8px; padding: 14px 12px; text-align: center; margin-bottom: 10px; }
     .summary-stat:last-child { margin-bottom: 0; }
     .summary-stat .stat-value { font-size: 20px; font-weight: 700; line-height: 1; color: #34d399; }
@@ -2290,9 +2292,12 @@ if ($debug_mode && !$is_ajax) {
                     </thead>
                     <tbody>
                       <?php foreach ($summary_ready_by_blok as $blok => $count): ?>
-                        <tr>
+                        <?php $is_low = ((int)$count <= 100); ?>
+                        <tr class="<?= $is_low ? 'low-stock' : '' ?>">
                           <td><?= htmlspecialchars($blok) ?></td>
-                          <td class="text-right" style="font-weight:600;color:#34d399;"><?= (int)$count ?></td>
+                          <td class="text-right <?= $is_low ? 'low-stock' : '' ?>" style="font-weight:600;color:#34d399;">
+                            <?= (int)$count ?>
+                          </td>
                         </tr>
                       <?php endforeach; ?>
                     </tbody>
