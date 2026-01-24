@@ -207,6 +207,7 @@ try {
             if ($d === '') continue;
             [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($row);
             $expense = (int)($row['expenses_amt'] ?? 0);
+            $total_expenses_month = ($total_expenses_month ?? 0) + $expense;
             $net_cash_audit = (int)$manual_setoran - $expense;
             $audit_net[$d] = (int)($audit_net[$d] ?? 0) + $net_cash_audit;
             $audit_system[$d] = (int)($audit_system[$d] ?? 0) + (int)$expected_adj_setoran;
@@ -318,6 +319,7 @@ $max_wr = 0;
 $max_km = 0;
 $max_active = 0;
 $total_rusak_device = 0;
+$total_expenses_month = $total_expenses_month ?? 0;
 
 $rows_out = [];
 foreach ($all_dates as $date) {
@@ -412,7 +414,7 @@ $print_time = date('d-m-Y H:i:s');
         <div class="meta">Periode: <?= esc($month_label) ?> | Dicetak: <?= esc($print_time) ?></div>
     </div>
 
-    <div class="summary-grid" style="grid-template-columns: repeat(4, 1fr); gap:15px; margin-bottom:25px;">
+    <div class="summary-grid" style="grid-template-columns: repeat(5, 1fr); gap:15px; margin-bottom:25px;">
         <div class="summary-card" style="border:1px solid #ddd; padding:15px; border-radius:4px; background:#fff;">
             <div class="summary-title" style="color:#666; font-size:11px; text-transform:uppercase;">Total Omzet (Gross)</div>
             <div class="summary-value" style="font-size:20px; font-weight:bold;"><?= $cur ?> <?= number_format((int)$total_omzet_gross,0,',','.') ?></div>
@@ -421,6 +423,11 @@ $print_time = date('d-m-Y H:i:s');
             <div class="summary-title" style="color:#991b1b; font-size:11px; text-transform:uppercase;">Total Kerugian (Voucher Loss)</div>
             <div class="summary-value" style="font-size:20px; font-weight:bold; color:#991b1b;">- <?= $cur ?> <?= number_format((int)$total_voucher_loss,0,',','.') ?></div>
             <div style="font-size:10px; color:#b91c1c;">(Rusak & Invalid)</div>
+        </div>
+        <div class="summary-card" style="border:1px solid #f39c12; background:#fffbf0; padding:15px; border-radius:4px;">
+            <div class="summary-title" style="color:#d35400; font-size:11px; text-transform:uppercase;">Pengeluaran Ops (Bon)</div>
+            <div class="summary-value" style="font-size:20px; font-weight:bold; color:#d35400;">- <?= $cur ?> <?= number_format((int)$total_expenses_month,0,',','.') ?></div>
+            <div style="font-size:10px; color:#e67e22;">(Belanja Toko)</div>
         </div>
         <div class="summary-card" style="border:1px solid #ddd; padding:15px; border-radius:4px; background:#fff;">
             <div class="summary-title" style="color:#666; font-size:11px; text-transform:uppercase;">Total Setoran Fisik (Audit)</div>
