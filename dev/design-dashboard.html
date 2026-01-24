@@ -218,26 +218,49 @@
             overflow-y: auto;
         }
 
-        /* Floating AI Chat */
-        .ai-chat-trigger {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #00c0ef, #2ecc71);
+        /* Footer Resource + AI */
+        .resource-footer {
             display: flex;
+            gap: 20px;
+            font-size: 10px;
+            color: var(--text-dim);
+            background: var(--bg-card);
+            padding: 10px 20px;
+            border-radius: 8px;
             align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 24px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-            cursor: pointer;
-            z-index: 2000;
-            transition: 0.3s;
+            justify-content: space-between;
+            flex-wrap: wrap;
         }
-        .ai-chat-trigger:hover { transform: rotate(15deg) scale(1.1); }
+        .resource-left {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .resource-ai {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .ai-footer-btn {
+            background: transparent;
+            border: 1px solid var(--border-soft);
+            color: var(--text-dim);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+        }
+        .ai-footer-btn:hover {
+            color: #fff;
+            border-color: rgba(255,255,255,0.2);
+        }
+        .ai-footer-icon { color: #7b8794; }
 
         .ai-chat-window {
             position: fixed;
@@ -419,17 +442,22 @@
 
         </div>
 
-        <!-- Resource Footer -->
-        <div style="display: flex; gap: 20px; font-size: 10px; color: var(--text-dim); background: var(--bg-card); padding: 10px 20px; border-radius: 8px;">
-            <span><i class="fa fa-server"></i> CPU: 5%</span>
-            <span><i class="fa fa-microchip"></i> RAM: 256MB / 512MB</span>
-            <span><i class="fa fa-bolt"></i> Uptime: 12d 04h</span>
+        <!-- Resource Footer + AI Chat -->
+        <div class="resource-footer">
+            <div class="resource-left">
+                <span><i class="fa fa-server"></i> CPU: 5%</span>
+                <span><i class="fa fa-microchip"></i> RAM: 256MB / 512MB</span>
+                <span><i class="fa fa-bolt"></i> Uptime: 12d 04h</span>
+            </div>
+            <div class="resource-ai">
+                <button class="ai-footer-btn" id="ai-chat-open">
+                    <i class="fa fa-comment-o ai-footer-icon"></i> Chat AI
+                </button>
+            </div>
         </div>
     </div>
 
     <!-- AI Chat Elements -->
-    <div class="ai-chat-trigger" id="ai-chat-open">✨</div>
-    
     <div class="ai-chat-window" id="ai-chat-window">
         <div class="ai-chat-header">
             <span style="font-weight: bold; font-size: 14px;"><i class="fa fa-magic"></i> Asisten Wartelpas ✨</span>
