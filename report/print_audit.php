@@ -394,12 +394,16 @@ if (file_exists($dbFile)) {
     <?php if ($audit_manual_summary['rows'] === 0): ?>
       <div class="summary-card"><div class="summary-title">Audit Manual</div><div class="summary-value" style="font-size:11px;font-weight:normal;">Belum ada audit manual pada periode ini.</div></div>
     <?php else: ?>
+      <?php $ghost_hint = build_ghost_hint($audit_manual_summary['selisih_qty'], $audit_manual_summary['selisih_setoran']); ?>
       <div class="summary-grid">
         <div class="summary-card"><div class="summary-title">Net Audit (Manual)</div><div class="summary-value">Rp <?= number_format($audit_manual_summary['manual_setoran'],0,',','.') ?></div></div>
         <div class="summary-card"><div class="summary-title">Net System (Expected)</div><div class="summary-value">Rp <?= number_format($audit_manual_summary['expected_setoran'],0,',','.') ?></div></div>
         <div class="summary-card"><div class="summary-title">Selisih Setoran</div><div class="summary-value">Rp <?= number_format($audit_manual_summary['selisih_setoran'],0,',','.') ?></div></div>
         <div class="summary-card"><div class="summary-title">Selisih Qty</div><div class="summary-value"><?= number_format($audit_manual_summary['selisih_qty'],0,',','.') ?></div></div>
       </div>
+      <?php if (!empty($ghost_hint)): ?>
+        <div class="summary-card"><div class="summary-title">Ghost Hunter</div><div class="summary-value" style="font-size:11px;font-weight:normal; color:#c0392b;"><?= htmlspecialchars($ghost_hint) ?></div></div>
+      <?php endif; ?>
     <?php endif; ?>
   </div>
 

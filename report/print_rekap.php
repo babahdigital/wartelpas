@@ -517,6 +517,10 @@ $net_system_display = (int)$total_net;
 $voucher_loss_display = (int)$total_rusak + (int)$total_invalid;
 $setoran_loss_display = ($audit_selisih_setoran_adj_total < 0) ? abs((int)$audit_selisih_setoran_adj_total) : 0;
 $kerugian_display = $voucher_loss_display + $setoran_loss_display;
+$waterfall_tech_loss = $voucher_loss_display;
+$waterfall_target = $net_system_display;
+$waterfall_actual = ($req_show === 'harian') ? (int)$audit_total_actual_setoran : 0;
+$waterfall_variance = $waterfall_actual - $waterfall_target;
 $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? 'Bulanan' : 'Tahunan');
 ?>
 <!DOCTYPE html>
@@ -615,6 +619,44 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         </div>
         <?php endif; ?>
     </div>
+
+    <?php if ($req_show === 'harian'): ?>
+    <div class="card" style="margin-top:12px;">
+        <div class="label" style="margin-bottom:6px;">Waterfall Pendapatan</div>
+        <div style="display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:10px;">
+            <div>
+                <div class="small">Gross Total</div>
+                <div class="value" style="font-size:16px;">
+                    <?= $cur ?> <?= number_format((int)$total_gross,0,',','.') ?>
+                </div>
+            </div>
+            <div>
+                <div class="small">Technical Loss</div>
+                <div class="value" style="font-size:16px;color:#c0392b;">
+                    <?= $cur ?> <?= number_format((int)$waterfall_tech_loss,0,',','.') ?>
+                </div>
+            </div>
+            <div>
+                <div class="small">Target Setoran</div>
+                <div class="value" style="font-size:16px;">
+                    <?= $cur ?> <?= number_format((int)$waterfall_target,0,',','.') ?>
+                </div>
+            </div>
+            <div>
+                <div class="small">Actual Setoran</div>
+                <div class="value" style="font-size:16px;">
+                    <?= $cur ?> <?= number_format((int)$waterfall_actual,0,',','.') ?>
+                </div>
+            </div>
+            <div>
+                <div class="small">Variance</div>
+                <div class="value" style="font-size:16px;color:<?= $waterfall_variance < 0 ? '#c0392b' : '#2ecc71'; ?>;">
+                    <?= $cur ?> <?= number_format((int)$waterfall_variance,0,',','.') ?>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <?php if ($req_show === 'harian'): ?>
         <?php
