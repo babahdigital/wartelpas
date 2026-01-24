@@ -682,9 +682,15 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     if ($enforce_rusak_rules && ($act == 'invalid' || $act == 'retur' || $act == 'check_rusak')) {
       $total_uptime_ok = (!$is_active) && ($bytes <= $bytes_limit);
       $relogin_count_ok = false;
-      if (!($act == 'retur' && $is_rusak_target) && ($is_active || $bytes > $bytes_limit)) {
-        $action_blocked = true;
-        $action_error = 'Voucher masih valid, tidak bisa dianggap rusak (online / bytes > ' . $limits['bytes_label'] . ').';
+      if (!($act == 'retur' && $is_rusak_target)) {
+        $fail_reasons = [];
+        if ($is_active) $fail_reasons[] = 'user masih online';
+        if ($bytes > $bytes_limit) $fail_reasons[] = 'bytes melebihi ' . $limits['bytes_label'];
+        if ($uptime_sec > $uptime_limit) $fail_reasons[] = 'uptime melebihi ' . $limits['uptime_label'];
+        if (!empty($fail_reasons)) {
+          $action_blocked = true;
+          $action_error = 'Voucher masih valid, tidak bisa dianggap rusak (' . implode(' / ', $fail_reasons) . ').';
+        }
       }
       if ($action_blocked && $total_uptime_ok && $first_login_ok) {
         $action_blocked = false;
