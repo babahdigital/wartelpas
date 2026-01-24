@@ -307,12 +307,14 @@
         if (loadingBar.length) loadingBar.show();
         var chartDone = false;
         var logsDone = false;
+        $(".month-tab").removeClass("active");
+        $(".month-tab[data-month='" + m + "']").addClass("active");
         function finishLoading() {
             if (chartDone && logsDone && loadingBar.length) loadingBar.hide();
         }
         chartWrap.css("opacity", "0.5");
-        $("#r_2_content").html('<div style="text-align:center; padding:50px; color:#ccc;"><i class="fa fa-spinner fa-spin fa-3x"></i><br><br>Memproses Grafik...</div>');
-        $("#tabel_riwayat").html('<tr><td colspan="4" class="text-center" style="padding:20px;"><i class="fa fa-circle-o-notch fa-spin"></i> Memuat...</td></tr>');
+        $("#r_2_content").html('<div style="text-align:center; padding:50px; color:#ccc;">Memproses grafik...</div>');
+        $("#tabel_riwayat").html('<tr><td colspan="4" class="text-center" style="padding:20px;">Memuat...</td></tr>');
 
         $.get("./dashboard/aload.php?session=S3c7x9_LB&load=hotspot&m=" + m)
             .done(function(data) {
@@ -398,80 +400,90 @@
         changeMonth(1);
         updateDashboard();
         setInterval(updateDashboard, 10000);
+        $(".month-tab").on("click", function() {
+            var m = $(this).data("month");
+            if (m) changeMonth(m);
+        });
     });
 </script>
 
-<div id="reloadHome">
+
+<div id="reloadHome" class="main-content">
     <div id="loading-halus"></div>
-    <div id="r_1" class="row" style="margin-bottom: 20px;">
-        <div class="col-12 text-center" style="padding:20px; color:#666;">
-            <i class="fa fa-refresh fa-spin"></i> Menghubungkan ke Router...
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-3">
-            <div class="kpi-box border-green">
-                <h1 id="kpi-active">0</h1>
-                <div class="label">User Active <span class="blink" style="color:var(--accent-green)">● Live</span></div>
+    <div class="row-kpi">
+        <div class="kpi-box border-green">
+            <h1 id="kpi-active">0</h1>
+            <div class="label">
+                User Active
+                <span class="blink" style="color:var(--accent-green)">● LIVE</span>
             </div>
         </div>
-        <div class="col-3">
-            <div class="kpi-box border-blue">
-                <div id="ghost-tag" style="display:none;" class="ghost-alert blink"><i class="fa fa-ghost"></i> GHOST</div>
+        <div class="kpi-box border-blue">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                 <h1 id="kpi-sold">0</h1>
-                <div class="label">Voucher Terjual (Hari Ini)</div>
+                <span id="ghost-tag" style="display:none;" class="ghost-alert blink"><i class="fa fa-ghost"></i> GHOST</span>
             </div>
+            <div class="label">Voucher Terjual (Hari Ini)</div>
         </div>
-        <div class="col-3">
-            <div class="kpi-box border-yellow">
-                <h1 id="kpi-income">Rp 0</h1>
-                <div class="label" id="kpi-est">Proyeksi: Rp 0</div>
+        <div class="kpi-box border-yellow">
+            <h1 id="kpi-income">Rp 0</h1>
+            <div class="label" id="kpi-est">Proyeksi: Rp 0</div>
+        </div>
+        <div class="kpi-box border-audit" id="audit-box">
+            <h1 id="audit-status">CLEAR</h1>
+            <div class="label" id="audit-val">Selisih: Rp 0</div>
+            <div class="audit-detail" id="audit-detail"></div>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="card card-chart">
+            <div class="card-header">
+                <h3><i class="fa fa-line-chart"></i> PERFORMA BISNIS</h3>
+                <div class="month-tabs">
+                                            <span class="month-tab active" data-month="1">Januari</span>
+                                            <span class="month-tab" data-month="2">Februari</span>
+                                            <span class="month-tab" data-month="3">Maret</span>
+                                            <span class="month-tab" data-month="4">April</span>
+                                            <span class="month-tab" data-month="5">Mei</span>
+                                            <span class="month-tab" data-month="6">Juni</span>
+                                            <span class="month-tab" data-month="7">Juli</span>
+                                            <span class="month-tab" data-month="8">Agustus</span>
+                                            <span class="month-tab" data-month="9">September</span>
+                                            <span class="month-tab" data-month="10">Oktober</span>
+                                            <span class="month-tab" data-month="11">November</span>
+                                            <span class="month-tab" data-month="12">Desember</span>
+                                    </div>
             </div>
+            <div class="card-body" id="r_2_content"></div>
         </div>
-        <div class="col-3" id="audit-card-wrap">
-            <div id="audit-box" class="kpi-box border-audit">
-                <h1 id="audit-status">CLEAR</h1>
-                <div class="label" id="audit-val">Selisih: Rp 0</div>
-                <div class="audit-detail" id="audit-detail"></div>
+        <div class="card card-transaction">
+            <div class="card-header">
+                <h3><i class="fa fa-history"></i> TRANSAKSI TERAKHIR</h3>
+                <span class="blink" style="font-size:9px; font-weight:bold; color:var(--accent-green);">UPDATED</span>
+            </div>
+            <div class="card-body" style="padding:0;">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>JAM</th>
+                                <th>USER</th>
+                                <th style="text-align:center;">BLOK</th>
+                                <th style="text-align:right;">IDR</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabel_riwayat">
+                            <tr><td colspan="4" class="text-center" style="padding:20px; color:#555;">Menunggu...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="row-main-content">
-        <div class="col-left">
-            <div class="card card-chart">
-                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
-                    <h3 style="margin:0;"><i class="fa fa-line-chart"></i> Performa Bisnis</h3>
-                    <div style="font-size:10px; color:#aaa; display:flex; align-items:center;">
-                        <i class="fa fa-circle text-green blink" style="font-size: 8px; margin-right: 5px;"></i> LIVE DATA
-                    </div>
-                </div>
-                <div class="card-body chart-body" id="r_2_content"></div>
-            </div>
-        </div>
-        <div class="col-right">
-            <div class="card card-transaction">
-                <div class="card-header"><h3 style="margin:0;"><i class="fa fa-history"></i> Transaksi</h3></div>
-                <div class="card-body">
-                    <div class="table-scroll">
-                        <table class="table" style="margin-bottom:0; width:100%;">
-                            <thead style="background:#151719; position: sticky; top: 0; z-index: 5;">
-                                <tr>
-                                    <th style="padding:8px 10px; border-bottom:1px solid #444; color:#888;">Jam</th>
-                                    <th style="padding:8px 10px; border-bottom:1px solid #444; color:#888;">User</th>
-                                    <th style="padding:8px 10px; border-bottom:1px solid #444; color:#888; text-align:center;">Blok</th>
-                                    <th class="text-right" style="padding:8px 10px; border-bottom:1px solid #444; color:#888;">IDR</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabel_riwayat">
-                                <tr><td colspan="4" class="text-center" style="padding:20px; color:#555;">Menunggu...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div id="r_1" class="resource-footer">
+        <span><i class="fa fa-refresh fa-spin"></i> Memuat resource...</span>
     </div>
 </div></div>
 </div>
@@ -479,7 +491,7 @@
 <script src="./js/highcharts/highcharts.js"></script>
 <script src="./js/highcharts/themes/hc.dark.js"></script>
 <script src="./js/mikhmon-ui.dark.min.js"></script>
-<script src="./js/mikhmon.js?t=2026-01-24_21:40:24"></script>
+<script src="./js/mikhmon.js?t=2026-01-24_21:57:19"></script>
 
 <script>
     if (window.history.replaceState) { window.history.replaceState(null, null, "./?session=S3c7x9_LB"); }
