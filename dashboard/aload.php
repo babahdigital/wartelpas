@@ -751,7 +751,7 @@ if ($load == "logs") {
 
         echo "<tr>";
         echo "<td style='color:#8898aa; font-family:monospace;'>" . substr($log['time_str'], 11, 5) . "</td>";
-        echo "<td style='font-weight:600; font-size:12px; overflow:hidden; text-overflow:ellipsis;' title='" . htmlspecialchars($log['username']) . "'>" . $log['username'] . "</td>";
+        echo "<td style='font-weight:600; font-size:12px; overflow:hidden; text-overflow:ellipsis; text-transform:uppercase;' title='" . htmlspecialchars($log['username']) . "'>" . strtoupper($log['username']) . "</td>";
         echo "<td style='text-align:center;'><span style='background:#333; padding:2px 6px; border-radius:3px; font-size:10px;'>" . $blokDisplay . "</span></td>";
         echo "<td style='text-align:right; font-family:monospace; font-size:12px; font-weight:bold; color:$colorClass;'$titleAttr>" . number_format($log['price'],0,',','.') . "</td>";
         echo "</tr>";
