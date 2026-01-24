@@ -28,6 +28,7 @@ $audit_total_selisih_setoran = 0;
 $audit_expected_setoran_adj_total = 0;
 $audit_selisih_setoran_adj_total = 0;
 $has_audit_adjusted = false;
+$audit_locked_today = false;
 
 // Filter periode
 $req_show = $_GET['show'] ?? 'harian';
@@ -353,6 +354,16 @@ if (file_exists($dbFile)) {
 
         if ($req_show === 'harian') {
             try {
+                $stmtLock = $db->prepare("SELECT COUNT(*) FROM audit_rekap_manual WHERE report_date = :d AND COALESCE(is_locked,0) = 1");
+                $stmtLock->execute([':d' => $filter_date]);
+                $audit_locked_today = (int)$stmtLock->fetchColumn() > 0;
+            } catch (Exception $e) {
+                $audit_locked_today = false;
+            }
+        }
+
+        if ($req_show === 'harian') {
+            try {
                 $stmtHp = $db->prepare("SELECT
                         SUM(total_units) AS total_units,
                         SUM(active_units) AS active_units,
@@ -546,6 +557,45 @@ function table_exists(PDO $db, $table) {
     } catch (Exception $e) {
         return false;
     }
+}
+
+function build_ghost_hint($selisih_qty, $selisih_rp) {
+    $ghost_qty = abs((int)$selisih_qty);
+    $ghost_rp = abs((int)$selisih_rp);
+    if ($ghost_qty <= 0 || $ghost_rp <= 0) return '';
+
+    $price10 = 5000;
+    $price30 = 20000;
+    $divisor = $price30 - $price10;
+    $ghost_10 = 0;
+    $ghost_30 = 0;
+
+    if ($ghost_rp >= ($ghost_qty * $price10) && $divisor > 0) {
+        $numerator = $ghost_rp - ($ghost_qty * $price10);
+        if ($numerator % $divisor === 0) {
+            $ghost_30 = (int)($numerator / $divisor);
+            $ghost_10 = $ghost_qty - $ghost_30;
+        }
+    }
+
+    if ($ghost_10 < 0 || $ghost_30 < 0) {
+        $ghost_10 = 0;
+        $ghost_30 = 0;
+    }
+
+    if ($ghost_10 === 0 && $ghost_30 === 0) {
+        if ($ghost_rp === ($price30 * $ghost_qty)) {
+            $ghost_30 = $ghost_qty;
+        } elseif ($ghost_rp === ($price10 * $ghost_qty)) {
+            $ghost_10 = $ghost_qty;
+        }
+    }
+
+    if ($ghost_10 <= 0 && $ghost_30 <= 0) return '';
+    $parts = [];
+    if ($ghost_10 > 0) $parts[] = number_format($ghost_10, 0, ',', '.') . ' unit 10 menit';
+    if ($ghost_30 > 0) $parts[] = number_format($ghost_30, 0, ',', '.') . ' unit 30 menit';
+    return 'Kemungkinan: ' . implode(' + ', $parts) . '.';
 }
 
 function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
