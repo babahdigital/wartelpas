@@ -18,13 +18,6 @@ if (!isset($_SESSION["mikhmon"])) { die(); }
 $session = isset($_GET['session']) ? $_GET['session'] : '';
 $load    = isset($_GET['load']) ? $_GET['load'] : '';
 $sess_m  = isset($_GET['m']) ? $_GET['m'] : '';
-$test_date = isset($_GET['test_date']) ? $_GET['test_date'] : '';
-$testDateObj = DateTime::createFromFormat('Y-m-d', $test_date);
-$hasTestDate = $testDateObj && $testDateObj->format('Y-m-d') === $test_date;
-$testYear = $hasTestDate ? (int)$testDateObj->format('Y') : null;
-$testMonth = $hasTestDate ? (int)$testDateObj->format('m') : null;
-$testDay = $hasTestDate ? (int)$testDateObj->format('d') : null;
-$testDateStr = $hasTestDate ? $testDateObj->format('Y-m-d') : '';
 
 // --- SET TIMEZONE ---
 if (isset($_SESSION['timezone']) && !empty($_SESSION['timezone'])) {
@@ -35,10 +28,6 @@ if (isset($_SESSION['timezone']) && !empty($_SESSION['timezone'])) {
 if (!empty($sess_m)) { $_SESSION['filter_month'] = (int)$sess_m; }
 if (!isset($_SESSION['filter_month'])) { $_SESSION['filter_month'] = (int)date("m"); }
 $_SESSION['filter_year'] = (int)date("Y");
-if ($hasTestDate) {
-    $_SESSION['filter_month'] = $testMonth;
-    $_SESSION['filter_year'] = $testYear;
-}
 
 // --- INCLUDE LIBRARY ---
 if (file_exists($root . '/include/config.php')) include($root . '/include/config.php');
@@ -135,9 +124,9 @@ if ($load == "live_data") {
     }
 
     $dbFile = $root . '/db_data/mikhmon_stats.db';
-    $today = $hasTestDate ? $testDateStr : date('Y-m-d');
-    $month = $hasTestDate ? str_pad((string)$testMonth, 2, '0', STR_PAD_LEFT) : date('m');
-    $year = $hasTestDate ? (string)$testYear : date('Y');
+    $today = date('Y-m-d');
+    $month = date('m');
+    $year = date('Y');
     $monthShort = date('M');
     $daysInMonth = (int)date('t');
     $currentDay = (int)date('d');
@@ -491,9 +480,9 @@ if ($load == "hotspot") {
     $filterMonth = $_SESSION['filter_month'];
     $filterYear = $_SESSION['filter_year'];
 
-    $currentMonth = $hasTestDate ? (int)$testMonth : (int)date('m');
-    $currentYear = $hasTestDate ? (int)$testYear : (int)date('Y');
-    $currentDay = $hasTestDate ? (int)$testDay : (int)date('d');
+    $currentMonth = (int)date('m');
+    $currentYear = (int)date('Y');
+    $currentDay = (int)date('d');
 
     $dbFile = $root . '/db_data/mikhmon_stats.db';
     $rawDataMerged = [];
@@ -680,10 +669,6 @@ if ($load == "logs") {
             $d_month = (int)date("m", $tstamp);
             $d_year  = (int)date("Y", $tstamp);
             if ($d_month != $filterMonth || $d_year != $filterYear) continue;
-            if ($hasTestDate) {
-                $d_full = date('Y-m-d', $tstamp);
-                if ($d_full !== $testDateStr) continue;
-            }
 
             $paket = (isset($parts[7]) && $parts[7] != "") ? trim($parts[7]) : '-';
             $comment = (isset($parts[8])) ? trim($parts[8]) : '';
