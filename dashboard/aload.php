@@ -150,9 +150,44 @@ if ($load == "live_data") {
             $ghostQty = (int)($auditRow['ghost_qty'] ?? 0);
             $selisih = (int)($auditRow['selisih'] ?? 0);
 
+            $miss10 = 0;
+            $miss30 = 0;
+            $sumExpected = 0;
+            $sumExpenses = 0;
+
+            $stmtDetail = $db->prepare("SELECT expected_setoran, expenses_amt, user_evidence
+                FROM audit_rekap_manual WHERE report_date = :d");
+            $stmtDetail->execute([':d' => $today]);
+            foreach ($stmtDetail->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $sumExpected += (int)($row['expected_setoran'] ?? 0);
+                $sumExpenses += (int)($row['expenses_amt'] ?? 0);
+                if (!empty($row['user_evidence'])) {
+                    $ev = json_decode((string)$row['user_evidence'], true);
+                    if (is_array($ev) && !empty($ev['users']) && is_array($ev['users'])) {
+                        foreach ($ev['users'] as $u) {
+                            $k = (string)($u['profile_kind'] ?? '10');
+                            $st = strtolower((string)($u['last_status'] ?? ''));
+                            if ($st === 'rusak' || $st === 'invalid') {
+                                if ($k === '30') $miss30++;
+                                else $miss10++;
+                            }
+                        }
+                    }
+                }
+            }
+            $cashExpected = $sumExpected - $sumExpenses;
+            if ($cashExpected < 0) $cashExpected = 0;
+
             $dataResponse['ghost'] = abs($ghostQty);
             $dataResponse['audit_val'] = number_format($selisih, 0, ",", ".");
             $dataResponse['audit_status'] = ($selisih < 0) ? 'LOSS' : 'CLEAR';
+            $dataResponse['audit_detail'] = [
+                'ghost' => abs($ghostQty),
+                'miss_10' => $miss10,
+                'miss_30' => $miss30,
+                'cash_expected' => number_format($cashExpected, 0, ",", "."),
+                'last_update' => date('H:i')
+            ];
         } catch (Exception $e) {
         }
     }
@@ -493,11 +528,14 @@ if ($load == "sysresource") {
         elseif ($log['price'] >= 10000) { $colorClass = "#00c0ef"; }
         elseif ($log['price'] >= 5000) { $colorClass = "#00a65a"; }
 
+        $paketTitle = trim((string)($log['paket'] ?? ''));
+        $titleAttr = $paketTitle !== '' && $paketTitle !== '-' ? " title=\"Paket: " . htmlspecialchars($paketTitle) . "\"" : '';
+
         echo "<tr>";
         echo "<td style='padding:8px 10px; vertical-align:middle; color:#888; font-family:monospace;'>" . substr($log['time_str'], 11, 5) . "</td>";
         echo "<td style='padding:8px 10px; vertical-align:middle; font-weight:600; color:#eee;'>" . $log['username'] . "</td>";
         echo "<td class='text-center' style='padding:8px 10px; vertical-align:middle;'><span style='background:#333; padding:2px 6px; border-radius:3px; font-size:10px; color:#aaa;'>" . $blokDisplay . "</span></td>";
-        echo "<td class='text-right' style='padding:8px 10px; vertical-align:middle; font-family:monospace; font-size:12px; font-weight:bold; color:$colorClass;'>" . number_format($log['price'],0,',','.') . "</td>";
+        echo "<td class='text-right' style='padding:8px 10px; vertical-align:middle; font-family:monospace; font-size:12px; font-weight:bold; color:$colorClass;'$titleAttr>" . number_format($log['price'],0,',','.') . "</td>";
         echo "</tr>";
         $count++;
     }
