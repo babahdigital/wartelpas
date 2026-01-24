@@ -21,7 +21,7 @@ html, body {
 #main {
     height: calc(100vh - 60px);
     padding: 15px !important;
-    margin-top: 0px !important;
+    margin-top: 60px !important;
     background-color: var(--bg-main) !important;
     display: flex;
     flex-direction: column;
@@ -32,6 +32,8 @@ html, body {
     flex-direction: column;
     height: 100%;
     background: transparent !important;
+    border-top: none !important;
+    padding-top: 0 !important;
 }
 
 #reloadHome {

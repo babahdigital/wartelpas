@@ -33,8 +33,8 @@ else {
             if (chartDone && logsDone && loadingBar.length) loadingBar.hide();
         }
         chartWrap.css("opacity", "0.5");
-        $("#r_2_content").html('<div style="text-align:center; padding:50px; color:#ccc;"><i class="fa fa-spinner fa-spin fa-3x"></i><br><br>Memproses Grafik...</div>');
-        $("#tabel_riwayat").html('<tr><td colspan="4" class="text-center" style="padding:20px;"><i class="fa fa-circle-o-notch fa-spin"></i> Memuat...</td></tr>');
+        $("#r_2_content").html('<div style="text-align:center; padding:50px; color:#ccc;">Memproses grafik...</div>');
+        $("#tabel_riwayat").html('<tr><td colspan="4" class="text-center" style="padding:20px;">Memuat...</td></tr>');
 
         $.get("./dashboard/aload.php?session=<?= $session ?>&load=hotspot&m=" + m)
             .done(function(data) {
