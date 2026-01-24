@@ -408,10 +408,10 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
 
             <li class="nav-item" onclick="toggleMobileSub(this)">
                 <a class="nav-link <?= $sactive . $shosts . $scookies; ?>" href="javascript:void(0)">
-                    <i class="fa fa-wifi"></i> Hotspot <i class="fa fa-caret-down" style="margin-left:auto;font-size:10px;"></i>
+                    <i class="fa fa-gear"></i> Perangkat <i class="fa fa-caret-down" style="margin-left:auto;font-size:10px;"></i>
                 </a>
                 <div class="dropdown-menu">
-                    <a class="dropdown-item" href="./?hotspot=active&session=<?= $session; ?>"><i class="fa fa-wifi"></i> <?= $_hotspot_active ?></a>
+                    <a class="dropdown-item" href="./?hotspot=active&session=<?= $session; ?>"><i class="fa fa-gear"></i> <?= $_hotspot_active ?></a>
                     <a class="dropdown-item" href="./?hotspot=hosts&session=<?= $session; ?>"><i class="fa fa-laptop"></i> <?= $_hosts ?></a>
                     <a class="dropdown-item" href="./?hotspot=cookies&session=<?= $session; ?>"><i class="fa fa-hourglass"></i> <?= $_hotspot_cookies ?></a>
                     <a class="dropdown-item" href="./?hotspot=dhcp-leases&session=<?= $session; ?>"><i class="fa fa-sitemap"></i> <?= $_dhcp_leases ?></a>
