@@ -415,14 +415,14 @@ if (!isset($_SESSION["mikhmon"])) {
                         <input type="hidden" name="session" value="<?= $session; ?>">
 
                         <div class="row g-3">
-                            <div class="col-12 col-md-6">
+                            <div class="col-12 col-md-4">
                                 <div class="form-group">
                                     <label>Jumlah (Pcs)</label>
                                     <input type="number" name="qty" id="qtyInput" class="form-control-mod" value="50" min="50" max="500" required>
                                     <div class="text-danger text-info-xxs">*Minimal 50 User</div>
                                 </div>
                             </div>
-                            <div class="col-12 col-md-6">
+                            <div class="col-12 col-md-4">
                                 <div class="form-group">
                                     <label>Panjang Karakter</label>
                                     <select name="userl" class="form-control-mod">
@@ -432,10 +432,7 @@ if (!isset($_SESSION["mikhmon"])) {
                                     </select>
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="row g-3">
-                            <div class="col-12 col-md-6">
+                            <div class="col-12 col-md-4">
                                 <div class="form-group">
                                     <label>Blok ID</label>
                                     <select name="adcomment" id="blokId" class="form-control-mod" onchange="applyBlockProfile();" required>
@@ -453,7 +450,7 @@ if (!isset($_SESSION["mikhmon"])) {
                             <div class="col-12 col-md-6">
                                 <div class="form-group">
                                     <label>Profil Paket</label>
-                                    <select name="profile_display" id="uprof" class="form-control-mod" disabled>
+                                    <select name="profile_display" id="uprof" class="form-control-mod locked-input" disabled>
                                         <option value="10Menit">10Menit</option>
                                         <option value="30Menit">30Menit</option>
                                     </select>
