@@ -1,32 +1,3 @@
-<style>
-    /* 1. Styling untuk Teks dan Container Link */
-    .wartelpas-brand {
-        display: flex;             /* Agar logo dan teks sejajar */
-        align-items: center;        /* Posisi vertikal tengah */
-        font-weight: bold;
-        font-size: 20px;
-        color: #ffffff !important;
-        text-decoration: none;
-    }
-
-    /* 2. INJEKSI GAMBAR (LOGIC UTAMA) */
-    .wartelpas-brand::before {
-        content: "";                /* WAJIB: Ini pemicu agar elemen muncul */
-        display: block;      /* Agar punya dimensi lebar/tinggi */
-        
-        /* ATUR UKURAN LOGO DISINI */              
-        height: 55px;
-        
-        /* MEMANGGIL GAMBAR DARI FOLDER */
-        background-image: url('img/logo.png'); 
-        
-        /* Agar gambar pas dan tidak berulang */
-        background-size: contain;   
-        background-repeat: no-repeat;
-        margin-top: -17px;    
-    }
-</style>
-
 <?php
 /*
  * Copyright (C) 2018 Laksamadi Guko.
@@ -37,286 +8,479 @@
  * (at your option) any later version.
  */
 session_start();
-// hide all error
 error_reporting(0);
 
 if (!isset($_SESSION["mikhmon"])) {
-  header("Location:../admin.php?id=login");
-} else {
+    header("Location:../admin.php?id=login");
+    exit;
+}
 
-  include ('./include/version.php');
+include('./include/version.php');
 
-  $btnmenuactive = "font-weight: bold;background-color: #f9f9f9; color: #000000";
-  if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?session") {
+$btnmenuactive = "font-weight: bold;background-color: #f9f9f9; color: #000000";
+if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?session") {
     $shome = "active";
     $mpage = $_dashboard;
-  } elseif ($hotspot == "quick-print" || $hotspot == "list-quick-print") {
+} elseif ($hotspot == "quick-print" || $hotspot == "list-quick-print") {
     $squick = "active";
-    $mpage = $_quick_print;   
-  } elseif ($hotspot == "users" || $userbyprofile != "" || $hotspot == "export-users" || $removehotspotuserbycomment != "" || $removehotspotuser != "" || $removehotspotusers != "" || $disablehotspotuser || $enablehotspotuser != "") {
+    $mpage = $_quick_print;
+} elseif ($hotspot == "users" || $userbyprofile != "" || $hotspot == "export-users" || $removehotspotuserbycomment != "" || $removehotspotuser != "" || $removehotspotusers != "" || $disablehotspotuser || $enablehotspotuser != "") {
     $susersl = "active";
     $susers = "active";
     $mpage = $_users;
     $umenu = "menu-open";
-  } elseif ($hotspotuser == "generate") {
+} elseif ($hotspotuser == "generate") {
     $sgenuser = "active";
     $mpage = $_users;
     $susers = "active";
     $umenu = "menu-open";
-  } elseif ($userbyname != ""  || $resethotspotuser != "") {
+} elseif ($userbyname != "" || $resethotspotuser != "") {
     $susers = "active";
     $mpage = $_users;
     $umenu = "menu-open";
-  } elseif ($hotspot == "user-profiles") {
+} elseif ($hotspot == "user-profiles") {
     $suserprofiles = "active";
     $suserprof = "active";
     $mpage = $_user_profile;
     $upmenu = "menu-open";
-  } elseif ($hotspot == "active" || $removeuseractive != "") {
+} elseif ($hotspot == "active" || $removeuseractive != "") {
     $sactive = "active";
     $mpage = $_hotspot_active;
     $hamenu = "menu-open";
-  } elseif ($hotspot == "hosts" || $hotspot == "hostp" || $hotspot == "hosta" || $removehost != "") {
+} elseif ($hotspot == "hosts" || $hotspot == "hostp" || $hotspot == "hosta" || $removehost != "") {
     $shosts = "active";
     $mpage = $_hosts;
     $hmenu = "menu-open";
-  } elseif ($hotspot == "dhcp-leases") {
+} elseif ($hotspot == "dhcp-leases") {
     $slease = "active";
     $mpage = $_dhcp_leases;
-  } elseif ($minterface == "traffic-monitor") {
+} elseif ($minterface == "traffic-monitor") {
     $strafficmonitor = "active";
-    $mpage = $_traffic_monitor;  
-  } elseif ($hotspot == "template-editor") {
+    $mpage = $_traffic_monitor;
+} elseif ($hotspot == "template-editor") {
     $ssett = "active";
     $teditor = "active";
     $mpage = $_template_editor;
     $settmenu = "menu-open";
-  } elseif ($hotspot == "uplogo") {
+} elseif ($hotspot == "uplogo") {
     $ssett = "active";
     $uplogo = "active";
     $mpage = $_upload_logo;
     $settmenu = "menu-open";
-  } elseif ($hotspot == "cookies" || $removecookie != "") {
+} elseif ($hotspot == "cookies" || $removecookie != "") {
     $scookies = "active";
     $mpage = $_hotspot_cookies;
     $cmenu = "menu-open";
-  } elseif ($ppp == "secrets" || $ppp == "addsecret" || $enablesecr != "" || $disablesecr != "" || $removesecr != "" || $secretbyname != "") {
+} elseif ($ppp == "secrets" || $ppp == "addsecret" || $enablesecr != "" || $disablesecr != "" || $removesecr != "" || $secretbyname != "") {
     $mppp = "active";
     $ssecrets = "active";
     $mpage = $_ppp_secrets;
     $pppmenu = "menu-open";
-  } elseif ($ppp == "profiles" || $removepprofile != "" || $ppp == "add-profile" || $ppp == "edit-profile"  ) {
+} elseif ($ppp == "profiles" || $removepprofile != "" || $ppp == "add-profile" || $ppp == "edit-profile") {
     $mppp = "active";
     $spprofile = "active";
     $mpage = $_ppp_profiles;
     $pppmenu = "menu-open";
-  } elseif ($ppp == "active" || $removepactive != "") {
+} elseif ($ppp == "active" || $removepactive != "") {
     $mppp = "active";
     $spactive = "active";
     $mpage = $_ppp_active;
     $pppmenu = "menu-open";
-  } elseif ($sys == "scheduler" || $enablesch != "" || $disablesch != "" || $removesch != "") {
+} elseif ($sys == "scheduler" || $enablesch != "" || $disablesch != "" || $removesch != "") {
     $sysmenu = "active";
     $ssch = "active";
     $mpage = $_system_scheduler;
     $schmenu = "menu-open";
-  } elseif ($report == "selling" || $report == "resume-report") {
+} elseif ($report == "selling" || $report == "resume-report") {
     $sselling = "active";
     $mpage = $_report;
-
-  // --- UPDATE: MENGGUNAKAN VARIABEL BAHASA UNTUK JUDUL ---
-  } elseif ($report == "audit_session") {
-      $saudit = "active";
-      $mpage = $_audit_log; // Mengambil dari id.php
-  // ----------------------------------------------------
-
-  } elseif ($userprofile == "add") {
+} elseif ($report == "audit_session") {
+    $saudit = "active";
+    $mpage = $_audit_log;
+} elseif ($userprofile == "add") {
     $suserprof = "active";
     $sadduserprof = "active";
     $mpage = $_user_profile;
     $upmenu = "menu-open";
-  } elseif ($userprofilebyname != "") {
+} elseif ($userprofilebyname != "") {
     $suserprof = "active";
     $mpage = $_user_profile;
     $upmenu = "menu-open";
-  } elseif ($hotspot == "users-by-profile") {
+} elseif ($hotspot == "users-by-profile") {
     $susersbp = "active";
     $mpage = $_vouchers;
-  } elseif ($userbyname != "") {
+} elseif ($userbyname != "") {
     $mpage = $_users;
     $susers = "active";
-  } elseif ($hotspot == "about") {
+} elseif ($hotspot == "about") {
     $mpage = $_about;
     $sabout = "active";
-  } elseif ($id == "sessions" || $id == "remove" || $router == "new") {
+} elseif ($id == "sessions" || $id == "remove" || $router == "new") {
     $ssesslist = "active";
     $mpage = $_admin_settings;
-  } elseif ($id == "settings" && $session == "new") {
+} elseif ($id == "settings" && $session == "new") {
     $snsettings = "active";
     $mpage = $_add_router;
-  } elseif ($id == "settings" || $id == "connect") {
+} elseif ($id == "settings" || $id == "connect") {
     $ssettings = "active";
     $mpage = $_session_settings;
-  } elseif ($id == "about") {
+} elseif ($id == "about") {
     $sabout = "active";
     $mpage = $_about;
-  } elseif ($id == "uplogo") {
+} elseif ($id == "uplogo") {
     $suplogo = "active";
     $mpage = $_upload_logo;
-  } elseif ($id == "editor") {
+} elseif ($id == "editor") {
     $seditor = "active";
     $mpage = $_template_editor;
-  }
 }
 
-if($idleto != "disable"){
-  $didleto = 'display:block;';
-}else{
-  $didleto = 'display:none;';
+if ($idleto != "disable") {
+    $didleto = 'display:inline-block;';
+} else {
+    $didleto = 'display:none;';
 }
 ?>
-<span style="display:none;" id="idto"><?= $idleto ;?></span>
 
+<span style="display:none;" id="idto"><?= $idleto; ?></span>
+
+<style>
+    :root {
+        --nav-bg: #222d32;
+        --nav-hover: #1b2428;
+        --nav-text: #b8c7ce;
+        --nav-active: #fff;
+        --accent: #3c8dbc;
+        --accent-audit: #d81b60;
+    }
+
+    body { margin-top: 60px; }
+
+    .top-navbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background-color: var(--nav-bg);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 20px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        z-index: 1030;
+        font-family: 'Source Sans Pro', sans-serif;
+    }
+
+    .wartelpas-brand {
+        display: flex;
+        align-items: center;
+        font-weight: 700;
+        font-size: 20px;
+        color: #fff !important;
+        text-decoration: none;
+        margin-right: 40px;
+    }
+
+    .wartelpas-brand::before {
+        content: "";
+        display: block;
+        height: 45px;
+        width: 45px;
+        background-image: url('img/logo.png');
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        margin-right: 10px;
+    }
+
+    .nav-links {
+        display: flex;
+        gap: 5px;
+        flex-grow: 1;
+        align-items: center;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .nav-item { position: relative; }
+
+    .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--nav-text);
+        text-decoration: none;
+        padding: 0 15px;
+        height: 60px;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border-top: 3px solid transparent;
+    }
+
+    .nav-link:hover {
+        background-color: var(--nav-hover);
+        color: #fff;
+    }
+
+    .nav-link.active {
+        color: #fff;
+        background-color: var(--nav-hover);
+        border-top-color: var(--accent);
+    }
+
+    .nav-link.audit-link.active { border-top-color: var(--accent-audit); }
+
+    .dropdown-menu {
+        display: none;
+        position: absolute;
+        top: 60px;
+        left: 0;
+        background-color: #2c3b41;
+        min-width: 200px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        border-radius: 0 0 4px 4px;
+        z-index: 1040;
+    }
+
+    .nav-item:hover .dropdown-menu { display: block; animation: fadeIn 0.2s; }
+
+    .dropdown-item {
+        display: block;
+        padding: 12px 20px;
+        color: var(--nav-text);
+        text-decoration: none;
+        border-bottom: 1px solid #344248;
+        font-size: 13px;
+    }
+
+    .dropdown-item:last-child { border-bottom: none; }
+
+    .dropdown-item:hover {
+        background-color: #222d32;
+        color: #fff;
+        padding-left: 25px;
+        transition: 0.2s;
+    }
+
+    .dropdown-item i { margin-right: 10px; width: 15px; text-align: center; }
+
+    .nav-right { display: flex; align-items: center; gap: 15px; }
+    .nav-right a { color: var(--nav-text); text-decoration: none; font-size: 14px; transition: 0.3s; }
+    .nav-right a:hover { color: #fff; }
+    .timer-badge { background: #374850; padding: 5px 10px; border-radius: 4px; font-size: 12px; }
+
+    .mobile-toggle { display: none; font-size: 24px; color: #fff; cursor: pointer; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    #main { margin-left: 0; padding: 20px; }
+    .main-container-fluid { width: 100%; }
+
+    @media (max-width: 992px) {
+        .mobile-toggle { display: block; }
+        .nav-links {
+            display: none;
+            flex-direction: column;
+            position: absolute;
+            top: 60px;
+            left: 0;
+            right: 0;
+            background-color: var(--nav-bg);
+            height: auto;
+            padding-bottom: 10px;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.5);
+        }
+        .nav-links.show { display: flex; }
+        .nav-link { height: 45px; border-top: none; border-left: 3px solid transparent; width: 100%; }
+        .nav-link.active { border-left-color: var(--accent); background: #1e282c; }
+        .dropdown-menu { position: static; background: #1a2226; box-shadow: none; }
+        .nav-item:hover .dropdown-menu { display: none; }
+        .nav-item.active-mobile .dropdown-menu { display: block; }
+        .wartelpas-brand { margin-right: auto; }
+    }
+</style>
 
 <?php if ($id != "") { ?>
+    <nav class="top-navbar">
+        <a class="wartelpas-brand" href="javascript:void(0)">MIKHMON</a>
 
-<div id="navbar" class="navbar">
-  <div class="navbar-left">
-    <a id="brand" class="text-center wartelpas-brand" href="javascript:void(0)">MIKHMON</a>
+        <div class="mobile-toggle" onclick="toggleMenu()"><i class="fa fa-bars"></i></div>
 
-<a id="openNav" class="navbar-hover" href="javascript:void(0)"><i class="fa fa-bars"></i></a>
-<a id="closeNav" class="navbar-hover" href="javascript:void(0)"><i class="fa fa-bars"></i></a>
-<a id="cpage" class="navbar-left" href="javascript:void(0)"><?= $mpage; ?></a>
-</div>
- <div class="navbar-right">
-  <a id="logout" href="./admin.php?id=logout" ><i class="fa fa-sign-out mr-1"></i> <?= $_logout ?></a>
-  
-  <select class="slang ses mr-t-10 pd-5">
-    <option> <?= $language ?></option>
-    <?php 
-      $fileList = glob('lang/*');
-      foreach($fileList as $filename){
-        if(is_file($filename)){
-          $filename = substr(explode("/",$filename)[1],0,-4);
-          if($filename == "isocodelang"){}else{
-            echo '<option value="'.$url.'&setlang=' . $filename . '">'. $isocodelang[$filename]. '</option>'; 
-         }   
+        <ul class="nav-links" id="mainNav">
+            <?php if (($id == "settings" && $session == "new") || $id == "settings" || $id == "editor" || $id == "uplogo" || $id == "connect"): ?>
+                <li class="nav-item">
+                    <a class="nav-link connect <?= $shome; ?>" id="<?= $session; ?>&c=settings" href="javascript:void(0)">
+                        <i class="fa fa-tachometer"></i> <?= $_dashboard ?> (<?= $session; ?>)
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?= $ssettings; ?>" href="./admin.php?id=settings&session=<?= $session; ?>">
+                        <i class="fa fa-gear"></i> <?= $_session_settings ?>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?= $seditor; ?>" href="./admin.php?id=editor&template=default&session=<?= $session; ?>">
+                        <i class="fa fa-edit"></i> <?= $_template_editor ?>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?= $suplogo; ?>" href="./admin.php?id=uplogo&session=<?= $session; ?>">
+                        <i class="fa fa-upload"></i> <?= $_upload_logo ?>
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <li class="nav-item">
+                <a class="nav-link <?= $ssesslist; ?>" href="./admin.php?id=sessions">
+                    <i class="fa fa-list"></i> <?= $_admin_settings ?>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= $snsettings; ?>" href="./admin.php?id=settings&router=new-<?= rand(1111,9999) ?>">
+                    <i class="fa fa-plus"></i> <?= $_add_router ?>
+                </a>
+            </li>
+        </ul>
+
+        <div class="nav-right">
+            <select class="slang" onchange="stheme(this.value)" style="background:#374850;color:#fff;border:none;padding:5px;border-radius:4px;">
+                <option><?= $language ?></option>
+                <?php
+                    $fileList = glob('lang/*');
+                    foreach ($fileList as $filename) {
+                        if (is_file($filename)) {
+                            $fname = substr(explode("/", $filename)[1], 0, -4);
+                            if ($fname != "isocodelang") {
+                                echo '<option value="'.$url.'&setlang=' . $fname . '">'. $isocodelang[$fname]. '</option>';
+                            }
+                        }
+                    }
+                ?>
+            </select>
+            <a href="./admin.php?id=logout" title="<?= $_logout ?>"><i class="fa fa-sign-out fa-lg"></i></a>
+        </div>
+    </nav>
+
+<?php } else { ?>
+    <nav class="top-navbar">
+        <a class="wartelpas-brand" href="./?session=<?= $session; ?>">MIKHMON</a>
+
+        <div class="mobile-toggle" onclick="toggleMenu()"><i class="fa fa-bars"></i></div>
+
+        <ul class="nav-links" id="mainNav">
+            <li class="nav-item">
+                <a class="nav-link <?= $shome; ?>" href="./?session=<?= $session; ?>">
+                    <i class="fa fa-dashboard"></i> <?= $_dashboard ?>
+                </a>
+            </li>
+
+            <li class="nav-item" onclick="toggleMobileSub(this)">
+                <a class="nav-link <?= $susers; ?>" href="javascript:void(0)">
+                    <i class="fa fa-users"></i> <?= $_users ?> <i class="fa fa-caret-down" style="margin-left:5px;font-size:10px;"></i>
+                </a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="./?hotspot=users&profile=all&session=<?= $session; ?>"><i class="fa fa-list"></i> <?= $_user_list ?></a>
+                    <a class="dropdown-item" href="./?hotspot-user=generate&session=<?= $session; ?>"><i class="fa fa-user-plus"></i> <?= $_generate ?></a>
+                </div>
+            </li>
+
+            <li class="nav-item" onclick="toggleMobileSub(this)">
+                <a class="nav-link <?= $suserprof; ?>" href="javascript:void(0)">
+                    <i class="fa fa-pie-chart"></i> <?= $_user_profile ?> <i class="fa fa-caret-down" style="margin-left:5px;font-size:10px;"></i>
+                </a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="./?hotspot=user-profiles&session=<?= $session; ?>"><i class="fa fa-list"></i> <?= $_user_profile_list ?></a>
+                    <a class="dropdown-item" href="./?user-profile=add&session=<?= $session; ?>"><i class="fa fa-plus-square"></i> <?= $_add_user_profile ?></a>
+                </div>
+            </li>
+
+            <li class="nav-item" onclick="toggleMobileSub(this)">
+                <a class="nav-link <?= $sactive . $shosts . $scookies; ?>" href="javascript:void(0)">
+                    <i class="fa fa-wifi"></i> Hotspot <i class="fa fa-caret-down" style="margin-left:5px;font-size:10px;"></i>
+                </a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="./?hotspot=active&session=<?= $session; ?>"><i class="fa fa-wifi"></i> <?= $_hotspot_active ?></a>
+                    <a class="dropdown-item" href="./?hotspot=hosts&session=<?= $session; ?>"><i class="fa fa-laptop"></i> <?= $_hosts ?></a>
+                    <a class="dropdown-item" href="./?hotspot=cookies&session=<?= $session; ?>"><i class="fa fa-hourglass"></i> <?= $_hotspot_cookies ?></a>
+                    <a class="dropdown-item" href="./?hotspot=dhcp-leases&session=<?= $session; ?>"><i class="fa fa-sitemap"></i> <?= $_dhcp_leases ?></a>
+                </div>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link <?= $sselling; ?>" href="./?report=selling&idbl=<?= strtolower(date("M")) . date("Y"); ?>&session=<?= $session; ?>">
+                    <i class="fa fa-money"></i> <?= $_report ?>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link audit-link <?= $saudit; ?>" href="./?report=audit_session&session=<?= $session; ?>" style="color:#ffb6c1;">
+                    <i class="fa fa-check-square-o"></i> <?= $_audit_log ?>
+                </a>
+            </li>
+        </ul>
+
+        <div class="nav-right">
+            <span class="timer-badge" style="<?= $didleto; ?>" title="Idle Timeout">
+                <i class="fa fa-clock-o"></i> <span id="timer"></span>
+            </span>
+            <a href="./?hotspot=logout&session=<?= $session; ?>" title="<?= $_logout ?>">
+                <i class="fa fa-sign-out fa-lg"></i>
+            </a>
+        </div>
+    </nav>
+
+    <?php include('./include/info.php'); ?>
+
+<?php } ?>
+
+<script>
+    function toggleMenu() {
+        var x = document.getElementById("mainNav");
+        if (x.className === "nav-links") {
+            x.className += " show";
+        } else {
+            x.className = "nav-links";
         }
-      }
-    ?>
-  </select>
-  <a title="Idle Timeout" style="<?= $didleto; ?>"><span style="width:70px;" class="pd-5 radius-3"><i class="fa fa-clock-o mr-1"></i>  <span class="mr-1" id="timer"></span></span></a>
-</div>
-</div>
+    }
 
-<div id="sidenav" class="sidenav">
-<?php if (($id == "settings" && $session == "new") || $id == "settings" && $router == "new") {
-}else if ($id == "settings" || $id == "editor"|| $id == "uplogo" || $id == "connect"){
-?>  
-  <div class="menu text-center align-middle card-header" style="border-radius:0;"><h3 id="MikhmonSession"><?= $session; ?></h3></div>
-  <a class="connect menu <?= $shome; ?>" id="<?= $session; ?>&c=settings"><i class='fa fa-tachometer'></i> <?= $_dashboard ?></a>
-  <a  href="./admin.php?id=settings&session=<?= $session; ?>" class="menu <?= $ssettings; ?>" title="Mikhmon Settings"><i class='fa fa-gear'></i> <?= $_session_settings ?></a>
-  <a href="./admin.php?id=uplogo&session=<?= $session; ?>" class="menu <?= $suplogo; ?>"><i class="fa fa-upload "></i> <?= $_upload_logo ?></a>
-  <a href="./admin.php?id=editor&template=default&session=<?= $session; ?>" class="menu <?= $seditor; ?>"><i class="fa fa-edit"></i> <?= $_template_editor ?></a>
-  <div class="menu spa"></div>
-<?php 
-} ?>  
-  <a href="./admin.php?id=sessions" class="menu <?= $ssesslist; ?>"><i class="fa fa-gear"></i> <?= $_admin_settings ?></a>
-  <a href="./admin.php?id=settings&router=new-<?= rand(1111,9999) ?>" class="menu <?= $snsettings ?>"><i class="fa fa-plus"></i> <?= $_add_router ?></a>
+    function toggleMobileSub(el) {
+        if (window.innerWidth <= 992) {
+            el.classList.toggle("active-mobile");
+        }
+    }
 
-</div>
-
-<script>
-$(document).ready(function(){
-  $(".connect").click(function(){
-    notify("<?= $_connecting ?>");
-    connect(this.id)
-  });
-  $(".slang").change(function(){
-    notify("<?= $_loading ?>");
-    stheme(this.value)
-  });
-});
+    $(document).ready(function(){
+        $(".connect").click(function(){
+            notify("<?= $_connecting ?>");
+            connect(this.id)
+        });
+        $(".slang").change(function(){
+            notify("<?= $_loading ?>");
+            stheme(this.value)
+        });
+    });
 </script>
+
 <div id="notify"><div class="message"></div></div>
 <div id="temp"></div>
-<?php 
-include('./info.php');
-} else { ?>
 
-<div id="navbar" class="navbar">
-  <div class="navbar-left">
-    <a id="brand" class="text-center wartelpas-brand" href="./?session=<?= $session; ?>">MIKHMON</a>
-
-<a id="openNav" class="navbar-hover" href="javascript:void(0)"><i class="fa fa-bars"></i></a>
-<a id="closeNav" class="navbar-hover" href="javascript:void(0)"><i class="fa fa-bars"></i></a>
-<a id="cpage" class="navbar-left" href="javascript:void(0)"><?= $mpage; ?></a>
-</div>
- <div class="navbar-right">
-  <a id="logout" href="./?hotspot=logout&session=<?= $session; ?>" ><i class="fa fa-sign-out mr-1"></i> <?= $_logout ?></a>
-  
-  <a title="Idle Timeout" style="<?= $didleto; ?>"><span style="width:70px;" class="pd-5 radius-3"><i class="fa fa-clock-o mr-1"></i>  <span class="mr-1" id="timer"></span></span></a>
-</div>
-</div>
-
-<div id="sidenav" class="sidenav">
-  
-  <a href="./?session=<?= $session; ?>" class="menu <?= $shome; ?>"><i class="fa fa-dashboard"></i> <?= $_dashboard ?></a>
-  
-   <div class="dropdown-btn <?= $susers; ?>"><i class="fa fa-users"></i> <?= $_users ?>
-    <i class="fa fa-caret-down"></i>
-  </div>
-  <div class="dropdown-container <?= $umenu; ?>">
-    <a href="./?hotspot=users&profile=all&session=<?= $session; ?>" class="<?= $susersl; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-list "></i> <?= $_user_list ?> </a>
-    <a href="./?hotspot-user=generate&session=<?= $session; ?>" class="<?= $sgenuser; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_generate ?> </a>        
-  </div>
-  
-  <div class="dropdown-btn <?= $suserprof; ?>"><i class=" fa fa-pie-chart"></i>  <?= $_user_profile ?>
-    <i class="fa fa-caret-down"></i>
-  </div>
-  <div class="dropdown-container <?= $upmenu; ?>">
-    <a href="./?hotspot=user-profiles&session=<?= $session; ?>" class=" <?= $suserprofiles; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-list "></i> <?= $_user_profile_list ?> </a>
-    <a href="./?user-profile=add&session=<?= $session; ?>" class=" <?= $sadduserprof; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-plus-square "></i> <?= $_add_user_profile ?> </a>
-  </div>
-
-  <div class="dropdown-btn <?= $sactive . $shosts . $scookies; ?>"><i class="fa fa-wifi"></i> Hotspot
-    <i class="fa fa-caret-down"></i>
-  </div>
-  <div class="dropdown-container <?= $hamenu . $hmenu . $cmenu; ?>">
-  <a href="./?hotspot=active&session=<?= $session; ?>" class="menu <?= $sactive; ?>"><i class=" fa fa-wifi"></i> <?= $_hotspot_active ?></a>
-  <a href="./?hotspot=hosts&session=<?= $session; ?>" class="menu <?= $shosts; ?>"><i class=" fa fa-laptop"></i> <?= $_hosts ?></a>
-  <a href="./?hotspot=cookies&session=<?= $session; ?>" class="menu <?= $scookies; ?>"><i class=" fa fa-hourglass"></i> <?= $_hotspot_cookies ?></a>
-  </div>
-
-  <a href="./?hotspot=dhcp-leases&session=<?= $session; ?>" class="menu <?= $slease; ?>"><i class=" fa fa-sitemap"></i> <?= $_dhcp_leases ?></a>
-
-  <a href="./?report=selling&idbl=<?= strtolower(date("M")) . date("Y"); ?>&session=<?= $session; ?>" class="menu <?= $sselling; ?>"><i class="nav-icon fa fa-money"></i> <?= $_report ?></a>
-  
-  <a href="./?report=audit_session&session=<?= $session; ?>" class="menu <?= $saudit; ?>" style="color: #ffcccc;"><i class="nav-icon fa fa-check-square-o"></i> <?= $_audit_log ?></a>
-  
-</div>
-<script>
-$(document).ready(function(){
-  $(".connect").change(function(){
-    notify("<?= $_connecting ?>");
-    connect(this.value)
-  });
-});
-</script>
-<div id="notify"><div class="message"></div></div>
-<div id="temp"></div>
-<?php 
-include('./include/info.php');
-} ?>
-
-<div id="main">  
 <?php
-  $force_show_main = ($hotspot == 'users');
-  $loading_style = $force_show_main ? 'style="display:none"' : '';
-  echo "<div id=\"loading\" class=\"lds-dual-ring\" $loading_style></div>";
-  if ($hotspot == 'template-editor' || $id == 'editor' || $force_show_main) {
-    echo '<div class="main-container">';
-  } else {
-    echo '<div class="main-container" style="display:none">';
-  }
+if ($id != "") {
+    include('./info.php');
+}
+?>
+
+<div id="main">
+<?php
+    $force_show_main = ($hotspot == 'users');
+    $loading_style = $force_show_main ? 'style="display:none"' : '';
+    echo "<div id=\"loading\" class=\"lds-dual-ring\" $loading_style></div>";
+    if ($hotspot == 'template-editor' || $id == 'editor' || $force_show_main) {
+        echo '<div class="main-container-fluid">';
+    } else {
+        echo '<div class="main-container-fluid" style="display:none">';
+    }
 ?>
