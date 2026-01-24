@@ -206,6 +206,7 @@ $pending_summary = [
     'invalid' => 0,
     'net' => 0,
 ];
+$pending_range_label = '';
 $audit_manual_summary = [
     'rows' => 0,
     'manual_qty' => 0,
@@ -320,6 +321,35 @@ if (file_exists($dbFile)) {
             $pending_summary['gross'] = (int)($p['gross_sum'] ?? 0);
             $pending_summary['total'] = (int)($p['total_cnt'] ?? 0);
             $pending_summary['net'] = $pending_summary['gross'] - $pending_summary['rusak'] - $pending_summary['invalid'];
+
+            if ($sales_summary['pending'] > 0) {
+                $rangeSql = "SELECT
+                    MIN(COALESCE(NULLIF(sale_date,''),'')) AS min_sale,
+                    MAX(COALESCE(NULLIF(sale_date,''),'')) AS max_sale,
+                    MIN(COALESCE(NULLIF(raw_date,''),'')) AS min_raw,
+                    MAX(COALESCE(NULLIF(raw_date,''),'')) AS max_raw
+                    FROM live_sales
+                    WHERE sync_status='pending' AND $dateFilter";
+                $stmt = $db->prepare($rangeSql);
+                foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
+                $stmt->execute();
+                $r = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+                $minDate = (string)($r['min_sale'] ?? '');
+                $maxDate = (string)($r['max_sale'] ?? '');
+                if ($minDate === '' || $maxDate === '') {
+                    $minDate = (string)($r['min_raw'] ?? $minDate);
+                    $maxDate = (string)($r['max_raw'] ?? $maxDate);
+                }
+                if ($minDate !== '' && $maxDate !== '') {
+                    $minLabel = format_date_dmy($minDate);
+                    $maxLabel = format_date_dmy($maxDate);
+                    if ($minLabel === $maxLabel) {
+                        $pending_range_label = 'Tanggal Pending: ' . $minLabel;
+                    } else {
+                        $pending_range_label = 'Rentang Pending: ' . $minLabel . ' - ' . $maxLabel;
+                    }
+                }
+            }
         }
 
         if (table_exists($db, 'audit_rekap_manual')) {
@@ -503,6 +533,9 @@ if (file_exists($dbFile)) {
                         <?= number_format($sales_summary['pending'],0,',','.') ?> Transaksi Belum Settlement
                     </div>
                     <div style="font-size:10px;color:#856404;">(Data Live Sales)</div>
+                    <?php if (!empty($pending_range_label)): ?>
+                        <div style="font-size:10px;color:#856404;margin-top:4px;"><?= htmlspecialchars($pending_range_label) ?></div>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
         </div>
@@ -517,6 +550,9 @@ if (file_exists($dbFile)) {
                             Terdapat <b><?= number_format($sales_summary['pending']) ?> transaksi baru</b> (Live) yang belum masuk database final.
                             Total angka di atas sudah mencakup data ini.
                         </div>
+                        <?php if (!empty($pending_range_label)): ?>
+                            <div style="font-size:11px;color:#856404;margin-top:4px;"><?= htmlspecialchars($pending_range_label) ?></div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
