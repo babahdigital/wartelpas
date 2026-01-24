@@ -64,6 +64,33 @@ if (!function_exists('normalizeDate')) {
     } 
 }
 
+if (!function_exists('norm_date_from_raw_report')) {
+    function norm_date_from_raw_report($raw_date) {
+        $raw = trim((string)$raw_date);
+        if ($raw === '') return '';
+        if (preg_match('/^\d{4}-\d{2}-\d{2}/', $raw)) {
+            return substr($raw, 0, 10);
+        }
+        if (preg_match('/^[a-zA-Z]{3}\/\d{2}\/\d{4}$/', $raw)) {
+            $mon = strtolower(substr($raw, 0, 3));
+            $map = [
+                'jan' => '01', 'feb' => '02', 'mar' => '03', 'apr' => '04', 'may' => '05', 'jun' => '06',
+                'jul' => '07', 'aug' => '08', 'sep' => '09', 'oct' => '10', 'nov' => '11', 'dec' => '12'
+            ];
+            $mm = $map[$mon] ?? '';
+            if ($mm !== '') {
+                $parts = explode('/', $raw);
+                return $parts[2] . '-' . $mm . '-' . $parts[1];
+            }
+        }
+        if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $raw)) {
+            $parts = explode('/', $raw);
+            return $parts[2] . '-' . $parts[0] . '-' . $parts[1];
+        }
+        return '';
+    }
+}
+
 if (!function_exists('table_exists')) {
     function table_exists($db, $name) {
         try {
@@ -142,11 +169,127 @@ if ($load == "live_data") {
                 $stmtIncome->execute([':m' => $monthLike, ':r1' => $raw1, ':r2' => $raw2, ':r3' => $raw3]);
                 $sumIncome += (int)($stmtIncome->fetchColumn() ?: 0);
 
-                $stmtSold = $db->prepare("SELECT COUNT(*)
-                    FROM $tbl
-                    WHERE (sale_date = :d OR raw_date LIKE :dr1 OR raw_date LIKE :dr2 OR raw_date LIKE :dr3)");
-                $stmtSold->execute([':d' => $today, ':dr1' => $dayRaw1, ':dr2' => $dayRaw2, ':dr3' => $dayRaw3]);
-                $sumSold += (int)($stmtSold->fetchColumn() ?: 0);
+            }
+
+            $sumSold = 0;
+            if (table_exists($db, 'sales_history') || table_exists($db, 'live_sales') || table_exists($db, 'login_history')) {
+                try {
+                    $hasSales = table_exists($db, 'sales_history');
+                    $hasLive = table_exists($db, 'live_sales');
+                    $hasLogin = table_exists($db, 'login_history');
+
+                    $rows = [];
+                    $loginSelect = $hasLogin
+                        ? 'lh.last_status'
+                        : "'' AS last_status";
+                    $loginSelect2 = $hasLogin
+                        ? 'lh2.last_status'
+                        : "'' AS last_status";
+                    $loginJoin = $hasLogin ? 'LEFT JOIN login_history lh ON lh.username = sh.username' : '';
+                    $loginJoin2 = $hasLogin ? 'LEFT JOIN login_history lh2 ON lh2.username = ls.username' : '';
+
+                    $selects = [];
+                    if ($hasSales) {
+                        $selects[] = "SELECT
+                            sh.raw_date, sh.sale_date,
+                            sh.username, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid,
+                            sh.comment, sh.blok_name,
+                            $loginSelect
+                            FROM sales_history sh
+                            $loginJoin";
+                    }
+                    if ($hasLive) {
+                        $selects[] = "SELECT
+                            ls.raw_date, ls.sale_date,
+                            ls.username, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid,
+                            ls.comment, ls.blok_name,
+                            $loginSelect2
+                            FROM live_sales ls
+                            $loginJoin2
+                            WHERE ls.sync_status = 'pending'";
+                    }
+
+                    if (!empty($selects)) {
+                        $sql = implode(" UNION ALL ", $selects);
+                        $res = $db->query($sql);
+                        if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
+                    }
+
+                    if ($hasLogin) {
+                        $salesCount = 0;
+                        if ($hasSales) {
+                            $stmtCnt = $db->prepare("SELECT COUNT(*) FROM sales_history WHERE sale_date = :d");
+                            $stmtCnt->execute([':d' => $today]);
+                            $salesCount += (int)$stmtCnt->fetchColumn();
+                        }
+                        if ($hasLive) {
+                            $stmtCnt2 = $db->prepare("SELECT COUNT(*) FROM live_sales WHERE sale_date = :d");
+                            $stmtCnt2->execute([':d' => $today]);
+                            $salesCount += (int)$stmtCnt2->fetchColumn();
+                        }
+                        if ($salesCount === 0) {
+                            $stmtFallback = $db->prepare("SELECT
+                                '' AS raw_date,
+                                COALESCE(NULLIF(substr(login_time_real,1,10),''), login_date) AS sale_date,
+                                username,
+                                '' AS status,
+                                0 AS is_rusak,
+                                0 AS is_retur,
+                                0 AS is_invalid,
+                                raw_comment AS comment,
+                                blok_name,
+                                last_status
+                            FROM login_history
+                            WHERE username != ''
+                              AND (substr(login_time_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR login_date = :d)
+                              AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'");
+                            $stmtFallback->execute([':d' => $today]);
+                            $rows = $stmtFallback->fetchAll(PDO::FETCH_ASSOC);
+                        }
+                    }
+
+                    $seen_user_day = [];
+                    $unique_laku_users = [];
+                    foreach ($rows as $r) {
+                        $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
+                        if ($sale_date !== $today) continue;
+
+                        $username = trim((string)($r['username'] ?? ''));
+                        if ($username === '') continue;
+                        $user_day_key = $username . '|' . $sale_date;
+                        if (isset($seen_user_day[$user_day_key])) continue;
+                        $seen_user_day[$user_day_key] = true;
+
+                        $raw_comment = (string)($r['comment'] ?? '');
+                        $blok_row = (string)($r['blok_name'] ?? '');
+                        if ($blok_row === '' && !preg_match('/\bblok\s*[-_]?\s*[A-Za-z0-9]+/i', $raw_comment)) {
+                            continue;
+                        }
+
+                        $status = strtolower((string)($r['status'] ?? ''));
+                        $lh_status = strtolower((string)($r['last_status'] ?? ''));
+                        $cmt_low = strtolower($raw_comment);
+
+                        if ($status === '' || $status === 'normal') {
+                            if ((int)($r['is_invalid'] ?? 0) === 1) $status = 'invalid';
+                            elseif ((int)($r['is_retur'] ?? 0) === 1) $status = 'retur';
+                            elseif ((int)($r['is_rusak'] ?? 0) === 1) $status = 'rusak';
+                            elseif (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
+                            elseif (strpos($cmt_low, 'retur') !== false) $status = 'retur';
+                            elseif (strpos($cmt_low, 'rusak') !== false || $lh_status === 'rusak') $status = 'rusak';
+                            else $status = 'normal';
+                        }
+
+                        $is_laku = !in_array($status, ['rusak', 'retur', 'invalid'], true);
+                        if ($is_laku) {
+                            $unique_laku_users[$username] = true;
+                        }
+                    }
+
+                    $sumSold = count($unique_laku_users);
+                } catch (Exception $e) {
+                    $sumSold = 0;
+                }
             }
 
             $avgDaily = $currentDay > 0 ? ($sumIncome / $currentDay) : 0;
