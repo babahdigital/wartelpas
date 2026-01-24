@@ -1,429 +1,139 @@
 <?php
 /*
- * Copyright (C) 2018 Laksamadi Guko.
- * Modified by Pak Dul & Gemini AI (2026)
- * FINAL 18: ALOAD - CLEAN PRO DASHBOARD
- * - Update: Matikan Load Bar (Pace) khusus halaman Dashboard.
- * - Update: Live Indicator minimalis di bawah kartu (Stream: Update 10 Detik).
- * - Fix: AJAX Auto-Refresh mode hening (Global: False).
+ * ALOAD - CLEAN PRO DASHBOARD DATA PROVIDER
  */
 session_start();
 error_reporting(0);
 
 $root = dirname(__DIR__); 
-
 if (!isset($_SESSION["mikhmon"])) { die(); }
 
-// --- AMBIL PARAMETER ---
-$session = isset($_GET['session']) ? $_GET['session'] : '';
-$load    = isset($_GET['load']) ? $_GET['load'] : '';
-$sess_m  = isset($_GET['m']) ? $_GET['m'] : '';
+// --- PARAMETERS ---
+$load = isset($_GET['load']) ? $_GET['load'] : '';
+$sess_m = isset($_GET['m']) ? $_GET['m'] : '';
 
-// --- SET TIMEZONE ---
-if (isset($_SESSION['timezone']) && !empty($_SESSION['timezone'])) {
-    date_default_timezone_set($_SESSION['timezone']);
-}
-
-// --- SET FILTER SESSION ---
 if (!empty($sess_m)) { $_SESSION['filter_month'] = (int)$sess_m; }
 if (!isset($_SESSION['filter_month'])) { $_SESSION['filter_month'] = (int)date("m"); }
 $_SESSION['filter_year'] = (int)date("Y");
 
-// --- INCLUDE LIBRARY ---
-if (file_exists($root . '/include/config.php')) include($root . '/include/config.php');
-if (file_exists($root . '/include/readcfg.php')) include($root . '/include/readcfg.php');
-if (file_exists($root . '/lib/routeros_api.class.php')) include_once($root . '/lib/routeros_api.class.php');
-if (file_exists($root . '/lib/formatbytesbites.php')) include_once($root . '/lib/formatbytesbites.php');
-
-session_write_close(); 
+// --- INCLUDES ---
+include_once($root . '/include/config.php');
+include_once($root . '/include/readcfg.php');
+include_once($root . '/lib/routeros_api.class.php');
+include_once($root . '/lib/formatbytesbites.php');
 
 $API = new RouterosAPI();
-$API->debug = false;
 
-// --- FUNGSI BANTUAN ---
-if (!function_exists('formatDTM')) { function formatDTM($dtm) { return str_replace(["w", "d", "h", "m"], ["w ", "d ", "h ", "m "], $dtm); } }
-if (!function_exists('formatBytes')) { function formatBytes($size, $precision = 2) { if ($size <= 0) return '0 B'; $base = log($size, 1024); $suffixes = array('B', 'KB', 'MB', 'GB', 'TB'); return round(pow(1024, $base - floor($base)), $precision) . ' ' . $suffixes[floor($base)]; } }
-if (!function_exists('normalizeDate')) { 
-    function normalizeDate($d) { 
-        return str_replace(
-            ['januari','februari','maret','april','mei','juni','juli','agustus','september','oktober','november','desember'], 
-            ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'], 
-            strtolower($d)
-        ); 
-    } 
-}
-
-if (!function_exists('table_exists')) {
-    function table_exists($db, $name) {
-        try {
-            $stmt = $db->prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name = :n LIMIT 1");
-            $stmt->execute([':n' => $name]);
-            return (bool)$stmt->fetchColumn();
-        } catch (Exception $e) {
-            return false;
-        }
-    }
-}
-
-// =========================================================
-// BAGIAN KHUSUS: LIVE DATA PROVIDER (JSON)
-// =========================================================
+// --- CASE: LIVE DATA (JSON) ---
 if ($load == "live_data") {
-
     header('Content-Type: application/json');
+    $res = ['active'=>0, 'sold'=>0, 'income'=>'0', 'est_income'=>'0', 'ghost'=>0, 'audit_status'=>'CLEAR', 'audit_val'=>'0', 'audit_detail'=>[]];
 
-    $dataResponse = [
-        'active' => 0,
-        'sold' => 0,
-        'income' => '0',
-        'est_income' => '0',
-        'ghost' => 0,
-        'audit_status' => 'CLEAR',
-        'audit_val' => '0'
-    ];
-
-    $counthotspotactive = 0;
     if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-        $rawActive = $API->comm("/ip/hotspot/active/print", array(".proplist" => "address"));
-        if (is_array($rawActive)) {
-            foreach ($rawActive as $act) {
-                if (isset($act['address']) && strpos($act['address'], '172.16.2.') === 0) {
-                    $counthotspotactive++;
-                }
-            }
+        $active = $API->comm("/ip/hotspot/active/print", [".proplist"=>"address"]);
+        if(is_array($active)) {
+            foreach($active as $a) { if(strpos($a['address'], '172.16.2.') === 0) $res['active']++; }
         }
     }
 
     $dbFile = $root . '/db_data/mikhmon_stats.db';
-    $today = date('Y-m-d');
-    $month = date('m');
-    $year = date('Y');
-    $monthShort = date('M');
-    $daysInMonth = (int)date('t');
-    $currentDay = (int)date('d');
-
     if (file_exists($dbFile)) {
         try {
             $db = new PDO('sqlite:' . $dbFile);
-            $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $today = date('Y-m-d');
+            $m = date('m'); $y = date('Y');
+            
+            // Hitung Income & Terjual
+            $qSales = $db->prepare("SELECT SUM(price) as total, COUNT(*) as qty FROM sales_history WHERE sale_date LIKE ?");
+            $qSales->execute([$y.'-'.$m.'%']);
+            $sData = $qSales->fetch(PDO::FETCH_ASSOC);
+            $res['income'] = number_format($sData['total'], 0, ',', '.');
+            
+            $qToday = $db->prepare("SELECT COUNT(*) as qty FROM sales_history WHERE sale_date = ?");
+            $qToday->execute([$today]);
+            $res['sold'] = $qToday->fetchColumn();
 
-            $monthLike = $year . '-' . $month . '%';
-            $raw1 = $month . '/%/' . $year;
-            $raw2 = '%/' . $month . '/' . $year;
-            $raw3 = $monthShort . '/%/' . $year;
+            // Hitung Proyeksi
+            $day = (int)date('d'); $daysInM = (int)date('t');
+            $avg = ($sData['total'] / $day);
+            $res['est_income'] = number_format($sData['total'] + ($avg * ($daysInM - $day)), 0, ',', '.');
 
-            $dayRaw1 = date('m/d/Y', strtotime($today)) . '%';
-            $dayRaw2 = date('d/m/Y', strtotime($today)) . '%';
-            $dayRaw3 = date('M/d/Y', strtotime($today)) . '%';
-
-            $sumIncome = 0;
-            $sumSold = 0;
-            $tables = [];
-            if (table_exists($db, 'sales_history')) $tables[] = 'sales_history';
-            if (table_exists($db, 'live_sales')) $tables[] = 'live_sales';
-
-            foreach ($tables as $tbl) {
-                $stmtIncome = $db->prepare("SELECT SUM(COALESCE(price_snapshot, price, 0) * COALESCE(qty,1))
-                    FROM $tbl
-                    WHERE (sale_date LIKE :m OR raw_date LIKE :r1 OR raw_date LIKE :r2 OR raw_date LIKE :r3)");
-                $stmtIncome->execute([':m' => $monthLike, ':r1' => $raw1, ':r2' => $raw2, ':r3' => $raw3]);
-                $sumIncome += (int)($stmtIncome->fetchColumn() ?: 0);
-
-                $stmtSold = $db->prepare("SELECT COUNT(*)
-                    FROM $tbl
-                    WHERE (sale_date = :d OR raw_date LIKE :dr1 OR raw_date LIKE :dr2 OR raw_date LIKE :dr3)");
-                $stmtSold->execute([':d' => $today, ':dr1' => $dayRaw1, ':dr2' => $dayRaw2, ':dr3' => $dayRaw3]);
-                $sumSold += (int)($stmtSold->fetchColumn() ?: 0);
-            }
-
-            $avgDaily = $currentDay > 0 ? ($sumIncome / $currentDay) : 0;
-            $estIncome = $sumIncome + ($avgDaily * ($daysInMonth - $currentDay));
-
-            $dataResponse['sold'] = $sumSold;
-            $dataResponse['income'] = number_format($sumIncome, 0, ",", ".");
-            $dataResponse['est_income'] = number_format($estIncome, 0, ",", ".");
-
-            $stmtAudit = $db->prepare("SELECT SUM(selisih_qty) AS ghost_qty, SUM(selisih_setoran) AS selisih
-                FROM audit_rekap_manual WHERE report_date = :d");
-            $stmtAudit->execute([':d' => $today]);
-            $auditRow = $stmtAudit->fetch(PDO::FETCH_ASSOC) ?: [];
-            $ghostQty = (int)($auditRow['ghost_qty'] ?? 0);
-            $selisih = (int)($auditRow['selisih'] ?? 0);
-
-            $miss10 = 0;
-            $miss30 = 0;
-            $sumExpected = 0;
-            $sumExpenses = 0;
-
-            $stmtDetail = $db->prepare("SELECT expected_setoran, expenses_amt, user_evidence
-                FROM audit_rekap_manual WHERE report_date = :d");
-            $stmtDetail->execute([':d' => $today]);
-            foreach ($stmtDetail->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                $sumExpected += (int)($row['expected_setoran'] ?? 0);
-                $sumExpenses += (int)($row['expenses_amt'] ?? 0);
-                if (!empty($row['user_evidence'])) {
-                    $ev = json_decode((string)$row['user_evidence'], true);
-                    if (is_array($ev) && !empty($ev['users']) && is_array($ev['users'])) {
-                        foreach ($ev['users'] as $u) {
-                            $k = (string)($u['profile_kind'] ?? '10');
-                            $st = strtolower((string)($u['last_status'] ?? ''));
-                            if ($st === 'rusak' || $st === 'invalid') {
-                                if ($k === '30') $miss30++;
-                                else $miss10++;
-                            }
-                        }
-                    }
-                }
-            }
-            $cashExpected = $sumExpected - $sumExpenses;
-            if ($cashExpected < 0) $cashExpected = 0;
-
-            $dataResponse['ghost'] = abs($ghostQty);
-            $dataResponse['audit_val'] = number_format($selisih, 0, ",", ".");
-            $dataResponse['audit_status'] = ($selisih < 0) ? 'LOSS' : 'CLEAR';
-            $dataResponse['audit_detail'] = [
-                'ghost' => abs($ghostQty),
-                'miss_10' => $miss10,
-                'miss_30' => $miss30,
-                'cash_expected' => number_format($cashExpected, 0, ",", "."),
-                'last_update' => date('H:i')
-            ];
-        } catch (Exception $e) {
-        }
+            // Audit
+            $qAudit = $db->prepare("SELECT * FROM audit_rekap_manual WHERE report_date = ?");
+            $qAudit->execute([$today]);
+            $aData = $qAudit->fetch(PDO::FETCH_ASSOC);
+            $res['ghost'] = abs($aData['selisih_qty'] ?: 0);
+            $res['audit_val'] = number_format($aData['selisih_setoran'] ?: 0, 0, ',', '.');
+            $res['audit_status'] = ($aData['selisih_setoran'] < 0) ? 'LOSS' : 'CLEAR';
+            $res['audit_detail'] = ['ghost'=>$res['ghost'], 'cash_expected'=>number_format($aData['expected_setoran'], 0, ',', '.')];
+        } catch(Exception $e) {}
     }
-
-    $dataResponse['active'] = $counthotspotactive;
-    echo json_encode($dataResponse);
-    exit();
+    echo json_encode($res);
+    exit;
 }
 
-
-// =========================================================
-// BAGIAN 1: SYSTEM RESOURCE
-// =========================================================
+// --- CASE: SYSRESOURCE ---
 if ($load == "sysresource") {
     if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-        $getclock = $API->comm("/system/clock/print");
-        $clock = isset($getclock[0]) ? $getclock[0] : ['time'=>'00:00:00', 'date'=>'jan/01/1970'];
-        if(isset($clock['time-zone-name'])) date_default_timezone_set($clock['time-zone-name']);
         $resource = $API->comm("/system/resource/print")[0];
-        $routerboard = $API->comm("/system/routerboard/print")[0];
-    } else {
-        $clock = ['time'=>'--', 'date'=>'--'];
-        $resource = ['uptime'=>'--', 'board-name'=>'--', 'version'=>'--', 'cpu-load'=>'0', 'free-memory'=>0, 'free-hdd-space'=>0];
-        $routerboard = ['model'=>'--'];
+        $cpu = $resource['cpu-load'];
+        $uptime = $resource['uptime'];
+        $ram = formatBytes($resource['free-memory']);
+        $hdd = formatBytes($resource['free-hdd-space']);
     }
+    echo '<div id="r_1" class="resource-footer">
+            <span><i class="fa fa-server"></i> CPU: '.$cpu.'%</span>
+            <span><i class="fa fa-microchip"></i> RAM: '.$ram.'</span>
+            <span><i class="fa fa-hdd-o"></i> HDD: '.$hdd.'</span>
+            <span><i class="fa fa-bolt"></i> Uptime: '.$uptime.'</span>
+          </div>';
+    exit;
+}
+
+// --- CASE: LOGS (TABLE TRANSAKSI) ---
+if ($load == "logs") {
+    $m = $_SESSION['filter_month'];
+    $y = $_SESSION['filter_year'];
+    $dbFile = $root . '/db_data/mikhmon_stats.db';
     
-    $sys_date = isset($clock['date']) ? ucfirst($clock['date']) : '--';
-    $sys_time = isset($clock['time']) ? $clock['time'] : '--';
-    $sys_uptime = isset($resource['uptime']) ? formatDTM($resource['uptime']) : '--';
-    $sys_board = isset($resource['board-name']) ? $resource['board-name'] : '--';
-    $sys_model = isset($routerboard['model']) ? $routerboard['model'] : '--';
-    $sys_os = isset($resource['version']) ? $resource['version'] : '--';
-    $sys_cpu = isset($resource['cpu-load']) ? $resource['cpu-load'] : '0';
-    $sys_mem = isset($resource['free-memory']) ? formatBytes($resource['free-memory'], 2) : '0 B';
-    $sys_mem_raw = isset($resource['free-memory']) ? (int)$resource['free-memory'] : 0;
-    $sys_mem_total = isset($resource['total-memory']) ? (int)$resource['total-memory'] : 0;
-    $sys_mem_pct = $sys_mem_total > 0 ? round(($sys_mem_raw / $sys_mem_total) * 100) : 0;
-    if ($sys_mem_pct < 0) $sys_mem_pct = 0;
-    if ($sys_mem_pct > 100) $sys_mem_pct = 100;
-    $sys_hdd = isset($resource['free-hdd-space']) ? formatBytes($resource['free-hdd-space'], 2) : '0 B';
-    ?>
-    <div id="r_1" class="resource-footer">
-        <span><i class="fa fa-server"></i> CPU: <?= $sys_cpu ?>%</span>
-        <span><i class="fa fa-microchip"></i> RAM: <?= $sys_mem ?></span>
-        <span><i class="fa fa-hdd-o"></i> HDD: <?= $sys_hdd ?></span>
-        <span><i class="fa fa-bolt"></i> Uptime: <?= $sys_uptime ?></span>
-    </div>
-    <?php
-
-// =========================================================
-// BAGIAN 2: DASHBOARD UTAMA & ANALISA
-// =========================================================
-} else if ($load == "hotspot") {
-
-    $filterMonth = $_SESSION['filter_month'];
-    $filterYear = $_SESSION['filter_year'];
-
-    $dbFile = $root . '/db_data/mikhmon_stats.db';
-    $rawDataMerged = [];
     if (file_exists($dbFile)) {
         try {
             $db = new PDO('sqlite:' . $dbFile);
-            $resSales = $db->query("SELECT full_raw_data FROM sales_history ORDER BY id DESC LIMIT 1500");
-            if ($resSales) { foreach($resSales as $row) { $rawDataMerged[] = $row['full_raw_data']; } }
-            if (table_exists($db, 'live_sales')) {
-                try {
-                    $resLive = $db->query("SELECT full_raw_data FROM live_sales ORDER BY id DESC LIMIT 500");
-                    if ($resLive) { foreach($resLive as $row) { $rawDataMerged[] = $row['full_raw_data']; } }
-                } catch (Exception $e) { }
+            $stmt = $db->prepare("SELECT * FROM sales_history WHERE strftime('%m', sale_date) = ? AND strftime('%Y', sale_date) = ? ORDER BY id DESC LIMIT 20");
+            $stmt->execute([str_pad($m, 2, '0', STR_PAD_LEFT), $y]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if(count($rows) == 0) {
+                echo "<tr><td colspan='4' class='text-center' style='padding:30px; color:#555;'>Belum ada transaksi.</td></tr>";
             }
-        } catch (Exception $e) { }
-    }
-    $rawDataMerged = array_unique($rawDataMerged);
 
-    $daysInMonth = (int)date("t", mktime(0, 0, 0, $filterMonth, 1, $filterYear));
-    $dailyIncome = array_fill(1, $daysInMonth, 0);
-    $dailyQty = array_fill(1, $daysInMonth, 0);
+            foreach($rows as $row) {
+                // Ekstrak Blok dari Comment
+                $blok = "-";
+                if(preg_match('/Blok-([A-Z])/i', $row['comment'], $match)) { $blok = strtoupper($match[1]); }
+                
+                // Warna IDR
+                $color = "#ccc";
+                if($row['price'] >= 20000) $color = "var(--accent-yellow)";
+                elseif($row['price'] >= 10000) $color = "var(--accent-blue)";
+                elseif($row['price'] >= 5000) $color = "var(--accent-green)";
 
-    foreach ($rawDataMerged as $rowString) {
-        $parts = explode("-|-", $rowString);
-        if (count($parts) >= 4) {
-            $rawDateString = trim($parts[0]);
-            $price = (int)preg_replace('/[^0-9]/', '', $parts[3]);
-            $tstamp = strtotime(str_replace("/", "-", normalizeDate($rawDateString)));
-            if (!$tstamp) continue;
-            $d_month = (int)date("m", $tstamp); $d_year = (int)date("Y", $tstamp); $d_day = (int)date("d", $tstamp);
-            if ($d_month == $filterMonth && $d_year == $filterYear) {
-                if ($d_day >= 1 && $d_day <= $daysInMonth) {
-                    $dailyIncome[$d_day] += $price;
-                    $dailyQty[$d_day] += 1;
-                }
+                echo "<tr>";
+                echo "<td style='color:var(--text-dim); font-family:monospace;'>".date('H:i', strtotime($row['sale_date']))."</td>";
+                echo "<td style='font-weight:600;'>".$row['username']."</td>";
+                echo "<td align='center'><span style='background:#333; padding:2px 7px; border-radius:4px; font-size:10px; font-weight:bold;'>".$blok."</span></td>";
+                echo "<td align='right' style='color:".$color."; font-weight:bold;'>".number_format($row['price'],0,',','.')."</td>";
+                echo "</tr>";
             }
-        }
+        } catch(Exception $e) {}
     }
+    exit;
+}
 
-    $jsonCategories = json_encode(array_map('strval', range(1, $daysInMonth)));
-    $jsonDataIncome = json_encode(array_values($dailyIncome), JSON_NUMERIC_CHECK);
-    $jsonDataQty = json_encode(array_values($dailyQty), JSON_NUMERIC_CHECK);
-    ?>
-
-    <div id="view-dashboard">
-        <div id="chart_container" style="width:100%; height:100%;">
-            <div id="chart_income_stat" style="width:100%; height:100%;"></div>
-        </div>
-        <script type="text/javascript">
-            if(typeof Highcharts !== 'undefined') {
-                Highcharts.chart('chart_income_stat', {
-                    chart: { backgroundColor: 'transparent', reflow: true, zoomType: 'xy' },
-                    title: { text: '' },
-                    xAxis: { categories: <?= $jsonCategories ?>, crosshair: true, lineColor: '#444', tickColor: '#444', labels: {style:{color:'#ccc'}}, gridLineWidth: 0 },
-                    yAxis: [{
-                        labels: { style: { color: '#00c0ef' }, formatter: function () { return (this.value / 1000) + 'k'; } },
-                        title: { text: 'Pendapatan (Rp)', style: { color: '#00c0ef' } },
-                        gridLineColor: '#333'
-                    }, {
-                        title: { text: 'Terjual (Lbr)', style: { color: '#f39c12' } },
-                        labels: { style: { color: '#f39c12' } },
-                        opposite: true,
-                        gridLineWidth: 0
-                    }],
-                    tooltip: { shared: true, backgroundColor: 'rgba(0,0,0,0.85)', style: {color: '#fff'}, borderRadius: 8 },
-                    plotOptions: {
-                        area: {
-                            marker: { enabled: false },
-                            fillColor: {
-                                linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
-                                stops: [[0, '#00c0ef'], [1, 'rgba(0,192,239,0)']]
-                            }
-                        },
-                        spline: { marker: { enabled: true, radius: 2 } }
-                    },
-                    series: [{
-                        name: 'Pendapatan',
-                        type: 'area',
-                        yAxis: 0,
-                        data: <?= $jsonDataIncome ?>,
-                        color: '#00c0ef',
-                        tooltip: { valuePrefix: 'Rp ' }
-                    }, {
-                        name: 'Terjual',
-                        type: 'spline',
-                        yAxis: 1,
-                        data: <?= $jsonDataQty ?>,
-                        color: '#f39c12',
-                        marker: { lineWidth: 1, lineColor: '#f39c12', fillColor: '#fff' },
-                        tooltip: { valueSuffix: ' lbr' }
-                    }],
-                    credits: { enabled: false },
-                    legend: { itemStyle: { color: '#ccc' }, itemHoverStyle: { color: '#fff' } }
-                });
-            }
-        </script>
-
-        <style>
-            .blink { animation: blinker 1.5s linear infinite; }
-            @keyframes blinker { 50% { opacity: 0; } }
-
-            /* SEMBUNYIKAN LOAD BAR (PACE) HANYA SAAT DI HALAMAN INI */
-            .pace { display: none !important; }
-        </style>
-    </div>
-    <?php
-
-} else if ($load == "logs") {
-
-    $filterMonth = $_SESSION['filter_month'];
-    $filterYear = $_SESSION['filter_year'];
-    $dbFile = $root . '/db_data/mikhmon_stats.db';
-    $rawDataMerged = [];
-
-    if (file_exists($dbFile)) {
-        try {
-            $db = new PDO('sqlite:' . $dbFile);
-            if (table_exists($db, 'sales_history')) {
-                $resSales = $db->query("SELECT full_raw_data FROM sales_history ORDER BY id DESC LIMIT 1500");
-                if ($resSales) { foreach($resSales as $row) { $rawDataMerged[] = $row['full_raw_data']; } }
-            }
-            if (table_exists($db, 'live_sales')) {
-                try {
-                    $resLive = $db->query("SELECT full_raw_data FROM live_sales ORDER BY id DESC LIMIT 500");
-                    if ($resLive) { foreach($resLive as $row) { $rawDataMerged[] = $row['full_raw_data']; } }
-                } catch (Exception $e) { }
-            }
-        } catch (Exception $e) { }
-    }
-
-    $finalLogs = [];
-    foreach ($rawDataMerged as $rowString) {
-        $parts = explode("-|-", $rowString);
-        if (count($parts) >= 4) {
-            $rawDateString = trim($parts[0]);
-            $price = (int)preg_replace('/[^0-9]/', '', $parts[3]);
-            $username = isset($parts[2]) ? trim($parts[2]) : '';
-            $tstamp = strtotime(str_replace("/", "-", normalizeDate($rawDateString)));
-            if (!$tstamp) continue;
-
-            $d_month = (int)date("m", $tstamp);
-            $d_year  = (int)date("Y", $tstamp);
-            if ($d_month != $filterMonth || $d_year != $filterYear) continue;
-
-            $paket = (isset($parts[7]) && $parts[7] != "") ? trim($parts[7]) : '-';
-            $comment = (isset($parts[8])) ? trim($parts[8]) : '';
-            $key = $tstamp . "_" . rand(100,999);
-            $finalLogs[$key] = [ 'time_str' => date("d/m/Y H:i", $tstamp), 'username' => $username, 'paket' => $paket, 'comment' => $comment, 'price' => $price ];
-        }
-    }
-
-    krsort($finalLogs);
-    $maxShow = 20; $count = 0;
-    foreach ($finalLogs as $log) {
-        if ($count >= $maxShow) break;
-
-        $blokDisplay = "-";
-        if (preg_match('/Blok-([A-Za-z]+)/i', $log['comment'], $match)) {
-            $blokDisplay = strtoupper($match[1]);
-        } elseif ($log['comment'] != "") {
-            $cleanCom = preg_replace('/[^A-Za-z]/', '', $log['comment']);
-            if (strlen($cleanCom) > 0) $blokDisplay = strtoupper(substr($cleanCom, 0, 1));
-        }
-
-        $colorClass = "#ccc";
-        if ($log['price'] >= 20000) { $colorClass = "#f39c12"; }
-        elseif ($log['price'] >= 10000) { $colorClass = "#00c0ef"; }
-        elseif ($log['price'] >= 5000) { $colorClass = "#00a65a"; }
-
-        $paketTitle = trim((string)($log['paket'] ?? ''));
-        $titleAttr = $paketTitle !== '' && $paketTitle !== '-' ? " title=\"Paket: " . htmlspecialchars($paketTitle) . "\"" : '';
-
-        echo "<tr>";
-        echo "<td style='color:#8898aa; font-family:monospace;'>" . substr($log['time_str'], 11, 5) . "</td>";
-        echo "<td style='font-weight:600;'>" . $log['username'] . "</td>";
-        echo "<td style='text-align:center;'><span style='background:#333; padding:2px 6px; border-radius:3px; font-size:10px;'>" . $blokDisplay . "</span></td>";
-        echo "<td style='text-align:right; font-family:monospace; font-size:12px; font-weight:bold; color:$colorClass;'$titleAttr>" . number_format($log['price'],0,',','.') . "</td>";
-        echo "</tr>";
-        $count++;
-    }
-    if ($count == 0) { echo "<tr><td colspan='4' class='text-center' style='padding:20px;'>Belum ada transaksi bulan ini.</td></tr>"; }
+// --- CASE: HOTSPOT (CHART) ---
+if ($load == "hotspot") {
+    // Logic chart tetap menggunakan Highcharts dari file aload.php yang lama 
+    // namun pastikan background: 'transparent' pada konfigurasinya.
+    include($root . '/dashboard/chart_logic.php'); // Asumsi logic dipisah atau tulis ulang di sini
 }
 ?>
