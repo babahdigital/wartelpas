@@ -10,6 +10,7 @@
     --accent-purple: #605ca8;
     --text-dim: #8898aa;
     --border-soft: rgba(255, 255, 255, 0.05);
+    --trx-row-height: 34px;
 }
 
 html, body {
@@ -88,7 +89,7 @@ body {
     position: sticky;
     top: 0;
 }
-.table-container td { padding: 10px; border-bottom: 1px solid var(--border-soft); font-size: 13px; }
+.table-container td { padding: 10px; border-bottom: 1px solid var(--border-soft); font-size: 13px; height: var(--trx-row-height); }
 .table-container tr:hover td { background: var(--bg-hover); }
 
 .month-tabs { display: flex; gap: 10px; font-size: 11px; }
@@ -159,6 +160,14 @@ body {
 .card-transaction .table-scroll {
     flex: 1;
     overflow-y: auto;
+}
+
+.card-transaction .table-container {
+    max-height: calc((var(--trx-row-height) * 10) + 42px);
+}
+
+.card-transaction .table-container th {
+    height: 42px;
 }
 
 .kpi-box {

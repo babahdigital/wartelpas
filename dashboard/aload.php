@@ -398,7 +398,7 @@ if ($load == "sysresource") {
     }
 
     krsort($finalLogs);
-    $maxShow = 20; $count = 0;
+    $maxShow = 50; $count = 0;
     foreach ($finalLogs as $log) {
         if ($count >= $maxShow) break;
 
