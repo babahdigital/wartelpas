@@ -14,12 +14,18 @@
 
 html, body {
     height: 100vh;
-    overflow: hidden;
+    overflow: auto;
     background-color: var(--bg-main) !important;
 }
 
+body {
+    margin: 0;
+    padding-top: 60px;
+}
+
 #main {
-    padding: 15px !important;
+    height: calc(100vh - 60px);
+    padding: 20px !important;
     margin-top: 60px !important;
     background-color: var(--bg-main) !important;
     display: flex;
@@ -52,7 +58,7 @@ html, body {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    overflow: hidden;
+    overflow-y: auto;
 }
 
 .row-kpi {
