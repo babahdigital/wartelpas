@@ -30,25 +30,26 @@ if (!isset($_SESSION["mikhmon"])) {
 	$API = new RouterosAPI();
 	$API->debug = false;
 	
-	if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
+    if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
 
-		// --- LOGIC: FILTER BY IP SEGMEN ---
-		// 1. Tarik SEMUA user active
-		$gethotspotactive = $API->comm("/ip/hotspot/active/print");
-		
-		// 2. Filter Array di PHP
-		$filtered_active = array();
-		foreach ($gethotspotactive as $user) {
-			$ip = isset($user['address']) ? $user['address'] : '';
-			// Cek apakah IP diawali 172.16.2.
-			if (strpos($ip, "172.16.2.") === 0) {
-				$filtered_active[] = $user;
-			}
-		}
-		
-		$TotalReg = count($filtered_active);
-		
-	} else {
+        // --- LOGIC: FILTER BY SERVER & PROFILE ---
+        // 1. Tarik SEMUA user active
+        $gethotspotactive = $API->comm("/ip/hotspot/active/print");
+
+        // 2. Filter Array di PHP
+        $filtered_active = array();
+        foreach ($gethotspotactive as $user) {
+            $server = isset($user['server']) ? strtolower((string)$user['server']) : '';
+            $server_profile = isset($user['server-profile']) ? strtolower((string)$user['server-profile']) : '';
+
+            if ($server === 'wartel' && $server_profile === 'wartelpas') {
+                $filtered_active[] = $user;
+            }
+        }
+
+        $TotalReg = count($filtered_active);
+
+    } else {
 		$TotalReg = 0;
 		$filtered_active = array();
 	}
