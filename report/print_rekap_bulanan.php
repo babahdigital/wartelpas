@@ -198,7 +198,7 @@ try {
             $phone_units[$d][$ut] = (int)($row['total_units'] ?? 0);
         }
 
-        $stmtAudit = $db->prepare("SELECT report_date, expected_setoran, actual_setoran, user_evidence
+        $stmtAudit = $db->prepare("SELECT report_date, expected_setoran, actual_setoran, user_evidence, expenses_amt
             FROM audit_rekap_manual
             WHERE report_date LIKE :m");
         $stmtAudit->execute([':m' => $filter_date . '%']);
@@ -206,7 +206,9 @@ try {
             $d = $row['report_date'] ?? '';
             if ($d === '') continue;
             [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($row);
-            $audit_net[$d] = (int)($audit_net[$d] ?? 0) + (int)$manual_setoran;
+            $expense = (int)($row['expenses_amt'] ?? 0);
+            $net_cash_audit = (int)$manual_setoran - $expense;
+            $audit_net[$d] = (int)($audit_net[$d] ?? 0) + $net_cash_audit;
             $audit_system[$d] = (int)($audit_system[$d] ?? 0) + (int)$expected_adj_setoran;
             $audit_selisih[$d] = (int)($audit_selisih[$d] ?? 0) + ((int)$manual_setoran - (int)$expected_adj_setoran);
         }
