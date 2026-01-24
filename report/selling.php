@@ -213,12 +213,18 @@ if (file_exists($dbFile)) {
             note TEXT,
             user_evidence TEXT,
             status TEXT DEFAULT 'OPEN',
+            is_locked INTEGER DEFAULT 0,
+            locked_at DATETIME,
+            locked_by TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (report_date, blok_name)
         )");
         try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN audit_username TEXT"); } catch (Exception $e) {}
         try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN user_evidence TEXT"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN is_locked INTEGER DEFAULT 0"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN locked_at DATETIME"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN locked_by TEXT"); } catch (Exception $e) {}
         try {
             $hasSales = table_exists($db, 'sales_history');
             $hasLive = table_exists($db, 'live_sales');
