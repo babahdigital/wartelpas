@@ -2150,6 +2150,14 @@ if ($debug_mode && !$is_ajax) {
     .relogin-actions { display: flex; gap: 6px; align-items: center; }
     .relogin-print { background: #2d8cff; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
 
+    .summary-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); z-index: 10003; }
+    .summary-card { background: #1f252c; color: #e5e7eb; border-radius: 10px; width: 720px; max-width: 94vw; border: 1px solid #2d3748; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; }
+    .summary-header { background: #1a2027; border-bottom: 1px solid #2d3748; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
+    .summary-title { font-weight: 600; font-size: 14px; color: #e5e7eb; }
+    .summary-close { background: transparent; border: none; color: #fff; opacity: 0.7; font-size: 20px; line-height: 1; cursor: pointer; }
+    .summary-close:hover { opacity: 1; }
+    .summary-body { padding: 14px 16px; }
+
     .users-summary {
       margin: 12px 12px 0;
       background: #1e242a;
