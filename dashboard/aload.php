@@ -402,7 +402,7 @@ if ($load == "logs") {
     }
 
     krsort($finalLogs);
-    $maxShow = 30; $count = 0;
+    $maxShow = 10; $count = 0;
     foreach ($finalLogs as $log) {
         if ($count >= $maxShow) break;
 
