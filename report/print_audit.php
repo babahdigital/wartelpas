@@ -195,13 +195,13 @@ if (file_exists($dbFile)) {
 
         if (table_exists($db, 'sales_history')) {
             $sumSql = "SELECT
-                SUM(CASE WHEN COALESCE(is_invalid,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS invalid_sum,
-                SUM(CASE WHEN COALESCE(is_rusak,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS rusak_sum,
-                SUM(CASE WHEN COALESCE(is_retur,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS retur_sum,
-                SUM(CASE WHEN COALESCE(is_invalid,0)=1 THEN 0 ELSE COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) END) AS gross_sum,
-                COUNT(1) AS total_cnt
-                FROM sales_history
-                WHERE $dateFilter";
+              SUM(CASE WHEN COALESCE(is_invalid,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS invalid_sum,
+              SUM(CASE WHEN COALESCE(is_rusak,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS rusak_sum,
+              SUM(CASE WHEN COALESCE(is_retur,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS retur_sum,
+              SUM(COALESCE(price_snapshot, price, 0) * COALESCE(qty,1)) AS gross_sum,
+              COUNT(1) AS total_cnt
+              FROM sales_history
+              WHERE $dateFilter";
             $stmt = $db->prepare($sumSql);
             foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
             $stmt->execute();
@@ -246,13 +246,13 @@ if (file_exists($dbFile)) {
             $sales_summary['pending'] = (int)($stmt->fetchColumn() ?: 0);
 
             $pendingSumSql = "SELECT
-                SUM(CASE WHEN COALESCE(is_invalid,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS invalid_sum,
-                SUM(CASE WHEN COALESCE(is_rusak,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS rusak_sum,
-                SUM(CASE WHEN COALESCE(is_retur,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS retur_sum,
-                SUM(CASE WHEN COALESCE(is_invalid,0)=1 THEN 0 ELSE COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) END) AS gross_sum,
-                COUNT(1) AS total_cnt
-                FROM live_sales
-                WHERE sync_status='pending' AND $dateFilter";
+              SUM(CASE WHEN COALESCE(is_invalid,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS invalid_sum,
+              SUM(CASE WHEN COALESCE(is_rusak,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS rusak_sum,
+              SUM(CASE WHEN COALESCE(is_retur,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS retur_sum,
+              SUM(COALESCE(price_snapshot, price, 0) * COALESCE(qty,1)) AS gross_sum,
+              COUNT(1) AS total_cnt
+              FROM live_sales
+              WHERE sync_status='pending' AND $dateFilter";
             $stmt = $db->prepare($pendingSumSql);
             foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
             $stmt->execute();

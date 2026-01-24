@@ -261,7 +261,7 @@ foreach ($rows as $r) {
     if ($qty <= 0) $qty = 1;
     $line_price = $price * $qty;
 
-    $gross_add = ($status === 'invalid') ? 0 : $line_price;
+    $gross_add = $line_price;
     $loss_rusak = ($status === 'rusak') ? $line_price : 0;
     $loss_invalid = ($status === 'invalid') ? $line_price : 0;
     $net_add = $gross_add - $loss_rusak - $loss_invalid;
