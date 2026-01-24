@@ -88,15 +88,17 @@ function norm_date_from_raw_report($raw_date) {
 function normalize_block_name($blok_name, $comment = '') {
     $raw = strtoupper(trim((string)$blok_name));
     if ($raw === '' && $comment !== '') {
-        if (preg_match('/\bblok\s*[-_]?\s*([A-Z0-9]+)\b/i', $comment, $m)) {
-            $raw = strtoupper($m[1]);
+        if (preg_match('/\bblok\s*[-_]*\s*([A-Z0-9]+)(?:\s*[-_]*\s*([0-9]+))?/i', $comment, $m)) {
+            $raw = strtoupper($m[1] . ($m[2] ?? ''));
         }
     }
     if ($raw === '') return 'BLOK-LAIN';
-    $raw = preg_replace('/^BLOK[-_\s]*/', '', $raw);
+    $raw = strtoupper(preg_replace('/[^A-Z0-9]/', '', $raw));
+    $raw = preg_replace('/^BLOK/', '', $raw);
     if (preg_match('/^([A-Z]+)/', $raw, $m)) {
         $raw = $m[1];
     }
+    if ($raw === '') return 'BLOK-LAIN';
     return 'BLOK-' . $raw;
 }
 
@@ -301,9 +303,9 @@ if (file_exists($dbFile)) {
                     $stmtFallback = $db->prepare("SELECT
                         '' AS raw_date,
                         '' AS raw_time,
-                        COALESCE(NULLIF(substr(login_time_real,1,10),''), login_date) AS sale_date,
-                        COALESCE(NULLIF(substr(login_time_real,12,8),''), login_time) AS sale_time,
-                        COALESCE(NULLIF(login_time_real,''), NULLIF(last_login_real,'')) AS sale_datetime,
+                        COALESCE(NULLIF(substr(login_time_real,1,10),''), NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(logout_time_real,1,10),''), NULLIF(substr(updated_at,1,10),''), login_date) AS sale_date,
+                        COALESCE(NULLIF(substr(login_time_real,12,8),''), NULLIF(substr(last_login_real,12,8),''), NULLIF(substr(logout_time_real,12,8),''), NULLIF(substr(updated_at,12,8),''), login_time) AS sale_time,
+                        COALESCE(NULLIF(login_time_real,''), NULLIF(last_login_real,''), NULLIF(logout_time_real,''), NULLIF(updated_at,'')) AS sale_datetime,
                         username,
                         COALESCE(NULLIF(validity,''), '-') AS profile,
                         COALESCE(NULLIF(validity,''), '-') AS profile_snapshot,
@@ -322,9 +324,15 @@ if (file_exists($dbFile)) {
                         last_status,
                         last_bytes,
                         first_login_real
-                    FROM login_history
-                    WHERE username != ''
-                      AND (substr(login_time_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR login_date = :d)
+                                        FROM login_history
+                                        WHERE username != ''
+                                            AND (
+                                                substr(login_time_real,1,10) = :d OR
+                                                substr(last_login_real,1,10) = :d OR
+                                                substr(logout_time_real,1,10) = :d OR
+                                                substr(updated_at,1,10) = :d OR
+                                                login_date = :d
+                                            )
                       AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'
                     ORDER BY sale_datetime DESC");
                     $stmtFallback->execute([':d' => $filter_date]);
@@ -867,9 +875,9 @@ function fetch_rows_for_audit(PDO $db, $audit_date) {
         $stmtFallback = $db->prepare("SELECT
             '' AS raw_date,
             '' AS raw_time,
-            COALESCE(NULLIF(substr(login_time_real,1,10),''), login_date) AS sale_date,
-            COALESCE(NULLIF(substr(login_time_real,12,8),''), login_time) AS sale_time,
-            COALESCE(NULLIF(login_time_real,''), NULLIF(last_login_real,'')) AS sale_datetime,
+            COALESCE(NULLIF(substr(login_time_real,1,10),''), NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(logout_time_real,1,10),''), NULLIF(substr(updated_at,1,10),''), login_date) AS sale_date,
+            COALESCE(NULLIF(substr(login_time_real,12,8),''), NULLIF(substr(last_login_real,12,8),''), NULLIF(substr(logout_time_real,12,8),''), NULLIF(substr(updated_at,12,8),''), login_time) AS sale_time,
+            COALESCE(NULLIF(login_time_real,''), NULLIF(last_login_real,''), NULLIF(logout_time_real,''), NULLIF(updated_at,'')) AS sale_datetime,
             username,
             COALESCE(NULLIF(validity,''), '-') AS profile,
             COALESCE(NULLIF(validity,''), '-') AS profile_snapshot,
@@ -886,9 +894,15 @@ function fetch_rows_for_audit(PDO $db, $audit_date) {
             1 AS qty,
             '' AS full_raw_data,
             last_status
-            FROM login_history
-            WHERE username != ''
-              AND (substr(login_time_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR login_date = :d)
+                        FROM login_history
+                        WHERE username != ''
+                            AND (
+                                substr(login_time_real,1,10) = :d OR
+                                substr(last_login_real,1,10) = :d OR
+                                substr(logout_time_real,1,10) = :d OR
+                                substr(updated_at,1,10) = :d OR
+                                login_date = :d
+                            )
               AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'" );
         $stmtFallback->execute([':d' => $audit_date]);
         $rows = $stmtFallback->fetchAll(PDO::FETCH_ASSOC);
@@ -1224,7 +1238,13 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             if (table_exists($db, 'login_history')) {
                 $stmtAuto = $db->prepare("SELECT username, blok_name, raw_comment, last_status, last_bytes, last_uptime, first_login_real, last_login_real, login_time_real, logout_time_real, first_ip, first_mac, last_ip, last_mac
                     FROM login_history
-                    WHERE username != '' AND (substr(login_time_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR login_date = :d)");
+                    WHERE username != '' AND (
+                        substr(login_time_real,1,10) = :d OR
+                        substr(last_login_real,1,10) = :d OR
+                        substr(logout_time_real,1,10) = :d OR
+                        substr(updated_at,1,10) = :d OR
+                        login_date = :d
+                    )");
                 $stmtAuto->execute([':d' => $audit_date]);
                 foreach ($stmtAuto->fetchAll(PDO::FETCH_ASSOC) as $rowAuto) {
                     $u = trim((string)($rowAuto['username'] ?? ''));

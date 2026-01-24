@@ -99,8 +99,14 @@ function format_comment_display($comment) {
 // Helper: Ekstrak nama blok dari comment
 function extract_blok_name($comment) {
   if (empty($comment)) return '';
-  if (preg_match('/\bblok\s*[-_]?\s*([A-Za-z0-9]+)/i', $comment, $m)) {
-    return 'BLOK-' . strtoupper($m[1]);
+  if (preg_match('/\bblok\s*[-_]*\s*([A-Za-z0-9]+)(?:\s*[-_]*\s*([0-9]+))?/i', $comment, $m)) {
+    $raw = strtoupper($m[1] . ($m[2] ?? ''));
+    $raw = strtoupper(preg_replace('/[^A-Z0-9]/', '', $raw));
+    $raw = preg_replace('/^BLOK/', '', $raw);
+    if (preg_match('/^([A-Z]+)/', $raw, $mx)) {
+      $raw = $mx[1];
+    }
+    if ($raw !== '') return 'BLOK-' . $raw;
   }
   return '';
 }
@@ -1000,7 +1006,11 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           $API->read();
           if ($db && $name != '') {
             try {
-              $stmt = $db->prepare("UPDATE login_history SET last_status='rusak', updated_at=CURRENT_TIMESTAMP WHERE username = :u");
+              $stmt = $db->prepare("UPDATE login_history SET last_status='rusak', updated_at=CURRENT_TIMESTAMP,
+                login_time_real=COALESCE(NULLIF(login_time_real,''), CURRENT_TIMESTAMP),
+                logout_time_real=COALESCE(NULLIF(logout_time_real,''), CURRENT_TIMESTAMP),
+                last_login_real=COALESCE(NULLIF(last_login_real,''), CURRENT_TIMESTAMP)
+                WHERE username = :u");
               $stmt->execute([':u' => $name]);
             } catch(Exception $e) {}
           }
@@ -1080,6 +1090,16 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           ];
           save_user_history($name, $save_data);
 
+          if ($db && $name != '') {
+            try {
+              $stmt = $db->prepare("UPDATE login_history SET updated_at=CURRENT_TIMESTAMP,
+                login_time_real=COALESCE(NULLIF(login_time_real,''), CURRENT_TIMESTAMP),
+                last_login_real=COALESCE(NULLIF(last_login_real,''), CURRENT_TIMESTAMP)
+                WHERE username = :u");
+              $stmt->execute([':u' => $name]);
+            } catch(Exception $e) {}
+          }
+
           // Update status transaksi agar laporan live berkurang
           if ($db && $name != '') {
             try {
@@ -1118,6 +1138,16 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             'status' => 'ready'
           ];
           save_user_history($name, $save_data);
+
+          if ($db && $name != '') {
+            try {
+              $stmt = $db->prepare("UPDATE login_history SET updated_at=CURRENT_TIMESTAMP,
+                login_time_real=COALESCE(NULLIF(login_time_real,''), CURRENT_TIMESTAMP),
+                last_login_real=COALESCE(NULLIF(last_login_real,''), CURRENT_TIMESTAMP)
+                WHERE username = :u");
+              $stmt->execute([':u' => $name]);
+            } catch(Exception $e) {}
+          }
         }
       } elseif ($act == 'retur') {
         // Simpan data voucher lama ke DB sebelum dihapus

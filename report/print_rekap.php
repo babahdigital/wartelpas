@@ -54,15 +54,17 @@ function norm_date_from_raw_report($raw_date) {
 function normalize_block_name($blok_name, $comment = '') {
     $raw = strtoupper(trim((string)$blok_name));
     if ($raw === '' && $comment !== '') {
-        if (preg_match('/\bblok\s*[-_]?\s*([A-Z0-9]+)\b/i', $comment, $m)) {
-            $raw = strtoupper($m[1]);
+        if (preg_match('/\bblok\s*[-_]*\s*([A-Z0-9]+)(?:\s*[-_]*\s*([0-9]+))?/i', $comment, $m)) {
+            $raw = strtoupper($m[1] . ($m[2] ?? ''));
         }
     }
     if ($raw === '') return 'BLOK-LAIN';
-    $raw = preg_replace('/^BLOK[-_\s]*/', '', $raw);
+    $raw = strtoupper(preg_replace('/[^A-Z0-9]/', '', $raw));
+    $raw = preg_replace('/^BLOK/', '', $raw);
     if (preg_match('/^([A-Z]+)/', $raw, $m)) {
         $raw = $m[1];
     }
+    if ($raw === '') return 'BLOK-LAIN';
     return 'BLOK-' . $raw;
 }
 
