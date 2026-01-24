@@ -53,6 +53,18 @@ if (!function_exists('normalizeDate')) {
     } 
 }
 
+if (!function_exists('table_exists')) {
+    function table_exists($db, $name) {
+        try {
+            $stmt = $db->prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name = :n LIMIT 1");
+            $stmt->execute([':n' => $name]);
+            return (bool)$stmt->fetchColumn();
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+}
+
 // =========================================================
 // BAGIAN KHUSUS: LIVE DATA PROVIDER (JSON)
 // =========================================================
