@@ -1067,10 +1067,14 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <div class="audit-item">
                             <strong><?= ($idx + 1) ?>. Blok <?= htmlspecialchars($rep['blok']) ?></strong>
                             <?php 
+                                $rusak_total = (int)($rep['rusak_10'] ?? 0) + (int)($rep['rusak_30'] ?? 0);
+                                $rusak_rp = ((int)($rep['rusak_10'] ?? 0) * 5000) + ((int)($rep['rusak_30'] ?? 0) * 20000);
                                 if ($rep['selisih_setoran'] < 0) {
                                     echo "- <span style='color:red;'>Kurang Setor Rp " . number_format(abs($rep['selisih_setoran']), 0, ',', '.') . "</span>";
                                 } elseif ($rep['selisih_setoran'] > 0) {
                                     echo "- <span style='color:green;'>Lebih Setor Rp " . number_format($rep['selisih_setoran'], 0, ',', '.') . "</span>";
+                                } elseif ($rusak_total > 0) {
+                                    echo "- <span style='color:red;'>Setoran Sesuai, ada Voucher Rusak Rp " . number_format($rusak_rp, 0, ',', '.') . "</span>";
                                 } else {
                                     echo "- <span style='color:blue;'>Setoran Sesuai</span>";
                                 }
