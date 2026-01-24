@@ -76,7 +76,7 @@ else {
                     } else {
                         $("#tabel_riwayat").html(dataLogs);
                         var rowCount = $("#tabel_riwayat tr").length;
-                        if (rowCount > 8) rowCount = 8;
+                        if (rowCount > 10) rowCount = 10;
                         $("#row-count").text("Menampilkan " + rowCount + " transaksi");
                     }
                 })
@@ -134,7 +134,7 @@ else {
             }
             $('#audit-detail').text(detail.join(' • '));
             var visibleRows = $("#tabel_riwayat tr:not(.text-center)").length;
-            if (visibleRows > 8) visibleRows = 8;
+            if (visibleRows > 10) visibleRows = 10;
             if (visibleRows > 0) {
                 $("#row-count").text("Menampilkan " + visibleRows + " transaksi");
             }
