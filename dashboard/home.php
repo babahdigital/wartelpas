@@ -189,6 +189,12 @@ else {
 <?php
 $monthFull = [1=>'Januari', 2=>'Februari', 3=>'Maret', 4=>'April', 5=>'Mei', 6=>'Juni', 7=>'Juli', 8=>'Agustus', 9=>'September', 10=>'Oktober', 11=>'November', 12=>'Desember'];
 $activeMonth = (int)date('n');
+$monthTabs = [];
+for ($i = 5; $i >= 0; $i--) {
+    $ts = strtotime('-' . $i . ' month');
+    $m = (int)date('n', $ts);
+    $monthTabs[$m] = $monthFull[$m];
+}
 ?>
 
 <div id="reloadHome" class="main-content">
@@ -224,7 +230,7 @@ $activeMonth = (int)date('n');
             <div class="card-header">
                 <h3><i class="fa fa-line-chart"></i> PERFORMA BISNIS</h3>
                 <div class="month-tabs">
-                    <?php foreach ($monthFull as $num => $name) : ?>
+                    <?php foreach ($monthTabs as $num => $name) : ?>
                         <span class="month-tab<?= $num === $activeMonth ? ' active' : '' ?>" data-month="<?= $num ?>"><?= $name ?></span>
                     <?php endforeach; ?>
                 </div>
