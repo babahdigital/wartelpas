@@ -461,7 +461,8 @@ body {
 .highcharts-axis-line,
 .highcharts-tick,
 .highcharts-grid-line {
-    stroke: rgba(255,255,255,0.1);
+    stroke: transparent !important;
+    stroke-width: 0 !important;
 }
 
 .highcharts-axis-labels text {

@@ -344,21 +344,28 @@ if ($load == "hotspot") {
                         crosshair: false,
                         lineWidth: 0,
                         tickLength: 0,
+                        tickWidth: 0,
+                        gridLineWidth: 0,
+                        minorGridLineWidth: 0,
                         labels: { style: { color: '#888', fontSize: '10px' } },
-                        gridLineWidth: 0
+                        lineColor: 'transparent'
                     },
                     yAxis: [{
                         title: { text: null },
                         gridLineWidth: 0,
+                        minorGridLineWidth: 0,
                         lineWidth: 0,
                         tickLength: 0,
+                        tickWidth: 0,
                         labels: { style: { color: '#00c0ef' }, formatter: function () { return (this.value / 1000) + 'k'; } }
                     }, {
                         title: { text: null },
                         opposite: true,
                         gridLineWidth: 0,
+                        minorGridLineWidth: 0,
                         lineWidth: 0,
                         tickLength: 0,
+                        tickWidth: 0,
                         labels: { style: { color: '#f39c12' } }
                     }],
                     tooltip: { shared: true, backgroundColor: '#1c1f26', style: {color: '#fff'}, borderWidth: 0, borderRadius: 10 },
