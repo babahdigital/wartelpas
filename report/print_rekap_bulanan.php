@@ -461,13 +461,14 @@ $print_time = date('d-m-Y H:i:s');
                 <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Rusak / Error</th>
                 <th style="border:1px solid #cbd5e1; padding:8px; text-align:right;">Target Sistem (Net)</th>
                 <th style="border:1px solid #cbd5e1; padding:8px; text-align:right;">Setoran Fisik (Audit)</th>
+                <th style="border:1px solid #cbd5e1; padding:8px; text-align:right;">Pengeluaran</th>
                 <th style="border:1px solid #cbd5e1; padding:8px; text-align:right;">Selisih</th>
                 <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Status</th>
             </tr>
         </thead>
         <tbody>
             <?php if (empty($rows_out)): ?>
-                <tr><td colspan="7" style="text-align:center; padding:20px;">Tidak ada data transaksi bulan ini.</td></tr>
+                <tr><td colspan="8" style="text-align:center; padding:20px;">Tidak ada data transaksi bulan ini.</td></tr>
             <?php else: $idx = 0; foreach ($rows_out as $row): $idx++; ?>
                 <?php
                     $daily_selisih = (int)($row['selisih'] ?? 0);
@@ -491,6 +492,9 @@ $print_time = date('d-m-Y H:i:s');
                     </td>
                     <td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:right;"><?= number_format((int)$row['gross'],0,',','.') ?></td>
                     <td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:right; font-weight:bold;"><?= number_format((int)$row['net_audit'],0,',','.') ?></td>
+                    <td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:right; color:#d35400;">
+                        <?= (int)$row['expense'] > 0 ? number_format((int)$row['expense'],0,',','.') : '-' ?>
+                    </td>
                     <td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:right; font-weight:bold; color:<?= $status_color ?>;">
                         <?= $daily_selisih == 0 ? '-' : number_format($daily_selisih,0,',','.') ?>
                     </td>
@@ -505,6 +509,7 @@ $print_time = date('d-m-Y H:i:s');
                 <td style="border:1px solid #cbd5e1; padding:8px; text-align:right;" colspan="3">TOTAL BULAN INI</td>
                 <td style="border:1px solid #cbd5e1; padding:8px; text-align:right;"><?= number_format((int)$total_gross,0,',','.') ?></td>
                 <td style="border:1px solid #cbd5e1; padding:8px; text-align:right;"><?= number_format((int)$total_net_audit,0,',','.') ?></td>
+                <td style="border:1px solid #cbd5e1; padding:8px; text-align:right; color:#d35400;"><?= $total_expense_table > 0 ? number_format((int)$total_expense_table,0,',','.') : '-' ?></td>
                 <td style="border:1px solid #cbd5e1; padding:8px; text-align:right; color:<?= $total_selisih < 0 ? '#dc2626' : ($total_selisih > 0 ? '#16a34a' : '#333') ?>;">
                     <?= number_format((int)$total_selisih,0,',','.') ?>
                 </td>
