@@ -244,7 +244,7 @@ if ($load == "sysresource") {
 // =========================================================
 // BAGIAN 2: DASHBOARD UTAMA & ANALISA
 // =========================================================
-else if ($load == "hotspot") {
+if ($load == "hotspot") {
 
     $filterMonth = $_SESSION['filter_month'];
     $filterYear = $_SESSION['filter_year'];
@@ -355,7 +355,9 @@ else if ($load == "hotspot") {
     </div>
     <?php
 
-} else if ($load == "logs") {
+}
+
+if ($load == "logs") {
 
     $filterMonth = $_SESSION['filter_month'];
     $filterYear = $_SESSION['filter_year'];
