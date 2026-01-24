@@ -229,20 +229,22 @@ if ($load == "sysresource") {
     if ($sys_mem_pct < 0) $sys_mem_pct = 0;
     if ($sys_mem_pct > 100) $sys_mem_pct = 100;
     $sys_hdd = isset($resource['free-hdd-space']) ? formatBytes($resource['free-hdd-space'], 2) : '0 B';
+    $cpu_class = ((int)$sys_cpu >= 90) ? 'text-danger' : '';
     ?>
     <div id="r_1_content_raw" style="display: contents;">
-        <span><i class="fa fa-server"></i> CPU: <?= $sys_cpu ?>%</span>
+        <span class="<?= $cpu_class ?>"><i class="fa fa-server"></i> CPU: <?= $sys_cpu ?>%</span>
         <span><i class="fa fa-microchip"></i> RAM: <?= $sys_mem ?></span>
         <span><i class="fa fa-hdd-o"></i> HDD: <?= $sys_hdd ?></span>
         <span><i class="fa fa-bolt"></i> Uptime: <?= $sys_uptime ?></span>
     </div>
     <?php
     exit();
+}
 
 // =========================================================
 // BAGIAN 2: DASHBOARD UTAMA & ANALISA
 // =========================================================
-} else if ($load == "hotspot") {
+else if ($load == "hotspot") {
 
     $filterMonth = $_SESSION['filter_month'];
     $filterYear = $_SESSION['filter_year'];
@@ -297,7 +299,7 @@ if ($load == "sysresource") {
         <script type="text/javascript">
             if(typeof Highcharts !== 'undefined') {
                 Highcharts.chart('chart_income_stat', {
-                    chart: { backgroundColor: 'transparent', type: 'area', spacingBottom: 0, reflow: true, zoomType: 'xy' },
+                    chart: { backgroundColor: 'transparent', type: 'area', spacingBottom: 0, reflow: true, zoomType: 'xy', height: '100%' },
                     title: { text: null },
                     xAxis: { categories: <?= $jsonCategories ?>, crosshair: true, lineColor: '#444', tickColor: '#444', labels: {style:{color:'#888', fontSize:'10px'}}, gridLineWidth: 0 },
                     yAxis: [{
