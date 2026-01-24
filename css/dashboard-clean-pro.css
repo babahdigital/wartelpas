@@ -26,7 +26,6 @@ body {
 #main {
     height: calc(100vh - 60px);
     padding: 20px !important;
-    margin-top: 60px !important;
     background-color: var(--bg-main) !important;
     display: flex;
     flex-direction: column;
@@ -35,7 +34,6 @@ body {
 .main-container {
     display: flex !important;
     flex-direction: column;
-    height: 100%;
     background: transparent !important;
     border-top: none !important;
     padding-top: 0 !important;
