@@ -1311,6 +1311,14 @@ $summary_ready_total = 0;
 $summary_rusak_total = 0;
 $summary_retur_total = 0;
 $summary_seen_users = [];
+if (!function_exists('detect_profile_kind_summary')) {
+  function detect_profile_kind_summary($profile) {
+    $p = strtolower((string)$profile);
+    if (preg_match('/\b10\s*(menit|m)\b|10menit/i', $p)) return '10';
+    if (preg_match('/\b30\s*(menit|m)\b|30menit/i', $p)) return '30';
+    return 'other';
+  }
+}
 if (!empty($router_users)) {
   foreach ($router_users as $u) {
     $name = $u['name'] ?? '';
@@ -1358,8 +1366,14 @@ if (!empty($router_users)) {
     if ($status === 'READY') {
       $summary_ready_total++;
       if ($blok !== '') {
-        if (!isset($summary_ready_by_blok[$blok])) $summary_ready_by_blok[$blok] = 0;
-        $summary_ready_by_blok[$blok]++;
+        if (!isset($summary_ready_by_blok[$blok])) {
+          $summary_ready_by_blok[$blok] = ['total' => 0, 'p10' => 0, 'p30' => 0, 'other' => 0];
+        }
+        $summary_ready_by_blok[$blok]['total']++;
+        $kind = detect_profile_kind_summary($u['profile'] ?? '');
+        if ($kind === '10') $summary_ready_by_blok[$blok]['p10']++;
+        elseif ($kind === '30') $summary_ready_by_blok[$blok]['p30']++;
+        else $summary_ready_by_blok[$blok]['other']++;
       }
     } elseif ($status === 'RUSAK') {
       $summary_rusak_total++;
@@ -2327,11 +2341,17 @@ if ($debug_mode && !$is_ajax) {
                     </thead>
                     <tbody>
                       <?php foreach ($summary_ready_by_blok as $blok => $count): ?>
-                        <?php $is_low = ((int)$count <= 100); ?>
+                        <?php $total = (int)($count['total'] ?? 0); ?>
+                        <?php $p10 = (int)($count['p10'] ?? 0); ?>
+                        <?php $p30 = (int)($count['p30'] ?? 0); ?>
+                        <?php $is_low = ($total <= 100); ?>
                         <tr class="<?= $is_low ? 'low-stock' : '' ?>">
                           <td><?= htmlspecialchars($blok) ?></td>
                           <td class="text-right <?= $is_low ? 'low-stock' : '' ?>" style="font-weight:600;color:#34d399;">
-                            <?= (int)$count ?>
+                            <?= $total ?>
+                            <div style="font-size:10px;color:#9aa0a6;margin-top:4px;">
+                              10m: <?= $p10 ?> · 30m: <?= $p30 ?>
+                            </div>
                           </td>
                         </tr>
                       <?php endforeach; ?>
