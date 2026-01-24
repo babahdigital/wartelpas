@@ -118,7 +118,7 @@ if (!isset($_SESSION["mikhmon"])) {
 					</div>
 				</div>
 				<div class="card-body-mod">
-					<div class="table-responsive" style="height: 100%;">
+					<div class="table-responsive" style="height: 100%; padding-bottom: 20px;">
 						<table id="tFilter" class="table-dark-mod text-nowrap">
   <thead>
   <tr> 
@@ -165,7 +165,7 @@ for ($i = 0; $i < $TotalReg; $i++) {
 	<?php
 	echo "<td><a title='Open User Profile " . $pname . "' href='./?user-profile=" . $pid . "&session=" . $session . "' style='color:inherit; text-decoration:none;'><i class='fa fa-edit'></i> <i class='fa fa-ci fa-circle ".$moncolor."'></i> $pname</a></td>";
 //$profiledetalis = $ARRAY[$i];echo "<td>" . $profiledetalis['name'];echo "</td>";
-	echo "<td style='margin-left:12px;'>" . $psharedu;
+	echo "<td>" . $psharedu;
 	echo "</td>";
 	echo "<td>" . $pratelimit;
 	echo "</td>";
