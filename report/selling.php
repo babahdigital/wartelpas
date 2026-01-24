@@ -3227,14 +3227,14 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             <table class="table-dark-solid text-nowrap">
                 <thead>
                     <tr>
-                        <th>Tanggal</th>
-                        <th style="text-align:center">User</th>
-                        <th style="text-align:center">Profile</th>
-                        <th style="text-align:center">Blok</th>
-                        <th style="text-align:center">Status</th>
-                        <th style="text-align:center">Harga</th>
-                        <th style="text-align:center">Efektif</th>
-                        <th style="text-align:center">Bandwidth</th>
+                        <th style="padding-left:12px;">Tanggal</th>
+                        <th style="text-align:center;">User</th>
+                        <th style="text-align:center;">Profile</th>
+                        <th style="text-align:center;">Blok</th>
+                        <th style="text-align:center;">Status</th>
+                        <th style="text-align:right; padding-right:12px;">Harga</th>
+                        <th style="text-align:right; padding-right:12px;">Efektif</th>
+                        <th style="text-align:right; padding-right:12px;">Bandwidth</th>
                     </tr>
                 </thead>
                 <tbody>
