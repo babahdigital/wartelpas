@@ -1,0 +1,472 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Wartelpas </title>
+		<meta charset="utf-8">
+		<meta http-equiv="cache-control" content="private" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<!-- Tell the browser to be responsive to screen width -->
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<!-- Theme color -->
+		<meta name="theme-color" content="#3a4149" />
+		<!-- Font Awesome -->
+		<link rel="stylesheet" type="text/css" href="css/font-awesome/css/font-awesome.min.css" />
+		<!-- Mikhmon UI -->
+		<link rel="stylesheet" href="css/mikhmon-ui.dark.min.css">
+		<!-- favicon -->
+		<link rel="icon" href="./img/favicon.png" />
+		<!-- jQuery -->
+		<script src="js/jquery.min.js"></script>
+		<!-- pace -->
+		<link href="css/pace.dark.css" rel="stylesheet" />
+		<link href="css/login.css" rel="stylesheet" />
+		<script src="js/pace.min.js"></script>
+
+		
+	</head>
+	<body>
+		<div class="wrapper">
+
+			
+
+<span style="display:none;" id="idto">10</span>
+<span style="display:none;" id="timer"></span>
+
+<style>
+    :root {
+        --nav-bg: #222d32;
+        --nav-hover: #1b2428;
+        --nav-text: #b8c7ce;
+        --nav-active: #fff;
+        --accent: #3c8dbc;
+        --accent-audit: #d81b60;
+    }
+
+    body { margin-top: 60px; }
+
+    .top-navbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background-color: var(--nav-bg);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 20px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        z-index: 1030;
+        font-family: 'Source Sans Pro', sans-serif;
+    }
+
+    .wartelpas-brand {
+        display: flex;
+        align-items: center;
+        font-weight: 700;
+        font-size: 0;
+        line-height: 0;
+        color: transparent !important;
+        text-decoration: none;
+        margin-right: 40px;
+    }
+
+    .wartelpas-brand::before {
+        content: "";
+        display: block;
+        height: 90px;
+        width: 150px;
+        background-image: url('img/logo.png');
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        margin-right: 10px;
+    }
+
+    .nav-item { position: relative; }
+
+    .mobile-toggle { display: none; font-size: 24px; color: #fff; cursor: pointer; padding: 10px; }
+
+    .dropdown-item {
+        display: block;
+        padding: 12px 20px;
+        color: var(--nav-text);
+        text-decoration: none;
+        border-bottom: 1px solid #344248;
+        font-size: 13px;
+    }
+
+    .dropdown-item:last-child { border-bottom: none; }
+
+    .dropdown-item:hover {
+        background-color: #222d32;
+        color: #fff;
+        padding-left: 25px;
+        transition: 0.2s;
+    }
+
+    .dropdown-item i { margin-right: 10px; width: 15px; text-align: center; }
+
+    .nav-right { display: flex; align-items: center; gap: 15px; }
+    .nav-right a { color: var(--nav-text); text-decoration: none; font-size: 14px; transition: 0.3s; }
+    .nav-right a:hover { color: #fff; }
+    .timer-badge { background: #374850; padding: 5px 10px; border-radius: 4px; font-size: 12px; color: #fff; display: inline-flex; align-items: center; gap: 5px; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    #main { margin-left: 0; padding: 20px; }
+    .main-container-fluid { width: 100%; }
+
+    /* Override legacy sidebar layout */
+    #main { margin-left: 0 !important; margin-top: 60px !important; }
+    .sidenav { width: 0 !important; border-right: 0 !important; }
+    #openNav, #closeNav, #cpage { display: none !important; }
+
+    @media (max-width: 750px) {
+        #brand { display: flex !important; }
+    }
+
+    @media (min-width: 993px) {
+        .nav-links {
+            display: flex; gap: 5px; flex-grow: 1; align-items: center;
+            list-style: none; margin: 0; padding: 0;
+        }
+        .nav-link {
+            display: flex; align-items: center; gap: 8px;
+            color: var(--nav-text); text-decoration: none;
+            padding: 0 15px; height: 60px;
+            font-size: 14px; font-weight: 600;
+            transition: all 0.3s ease;
+            border-top: 3px solid transparent;
+        }
+        .nav-link:hover { background-color: var(--nav-hover); color: #fff; }
+        .nav-link.active { color: #fff; background-color: var(--nav-hover); border-top-color: var(--accent); }
+        .nav-link.audit-link.active { border-top-color: var(--accent-audit); }
+
+        .dropdown-menu {
+            display: none; position: absolute; top: 60px; left: 0;
+            background-color: #2c3b41; min-width: 200px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            border-radius: 0 0 4px 4px; z-index: 1040;
+        }
+        .nav-item:hover .dropdown-menu { display: block; animation: fadeIn 0.2s; }
+    }
+
+    @media (max-width: 992px) {
+        .mobile-toggle { display: block; }
+        .wartelpas-brand { margin-right: auto; }
+        .nav-links {
+            display: none;
+            flex-direction: column;
+            position: absolute; top: 60px; left: 0; right: 0;
+            background-color: var(--nav-bg);
+            height: auto; padding-bottom: 10px;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.5);
+            list-style: none; margin: 0; padding: 0;
+        }
+        .nav-links.show { display: flex !important; }
+        .nav-link {
+            display: flex; align-items: center; gap: 8px;
+            color: var(--nav-text); text-decoration: none;
+            padding: 0 20px; height: 45px;
+            font-size: 14px; font-weight: 600;
+            border-left: 3px solid transparent;
+            width: 100%; box-sizing: border-box;
+        }
+        .nav-link.active { border-left-color: var(--accent); background: #1e282c; color: #fff; }
+        .nav-link.audit-link.active { border-left-color: var(--accent-audit); }
+
+        .dropdown-menu { display: none; position: static; background: #1a2226; box-shadow: none; width: 100%; }
+        .nav-item.active-mobile .dropdown-menu { display: block; }
+    }
+</style>
+
+    <nav class="top-navbar">
+        <a id="brand" class="wartelpas-brand" href="./?session=S3c7x9_LB">MIKHMON</a>
+
+        <div class="mobile-toggle" onclick="toggleMenu()"><i class="fa fa-bars"></i></div>
+
+        <ul class="nav-links" id="mainNav">
+            <li class="nav-item">
+                <a class="nav-link active" href="./?session=S3c7x9_LB">
+                    <i class="fa fa-dashboard"></i> Dashboard                </a>
+            </li>
+
+            <li class="nav-item" onclick="toggleMobileSub(this)">
+                <a class="nav-link " href="javascript:void(0)">
+                    <i class="fa fa-users"></i> Pengguna <i class="fa fa-caret-down" style="margin-left:5px;font-size:10px;"></i>
+                </a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="./?hotspot=users&profile=all&session=S3c7x9_LB"><i class="fa fa-list"></i> Daftar User</a>
+                    <a class="dropdown-item" href="./?hotspot-user=generate&session=S3c7x9_LB"><i class="fa fa-user-plus"></i> Generate</a>
+                </div>
+            </li>
+
+            <li class="nav-item" onclick="toggleMobileSub(this)">
+                <a class="nav-link " href="javascript:void(0)">
+                    <i class="fa fa-pie-chart"></i> Profil User <i class="fa fa-caret-down" style="margin-left:5px;font-size:10px;"></i>
+                </a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="./?hotspot=user-profiles&session=S3c7x9_LB"><i class="fa fa-list"></i> Daftar Profil</a>
+                    <a class="dropdown-item" href="./?user-profile=add&session=S3c7x9_LB"><i class="fa fa-plus-square"></i> Buat Profil Baru</a>
+                </div>
+            </li>
+
+            <li class="nav-item" onclick="toggleMobileSub(this)">
+                <a class="nav-link " href="javascript:void(0)">
+                    <i class="fa fa-wifi"></i> Hotspot <i class="fa fa-caret-down" style="margin-left:5px;font-size:10px;"></i>
+                </a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="./?hotspot=active&session=S3c7x9_LB"><i class="fa fa-wifi"></i> User Aktif</a>
+                    <a class="dropdown-item" href="./?hotspot=hosts&session=S3c7x9_LB"><i class="fa fa-laptop"></i> Host Terhubung</a>
+                    <a class="dropdown-item" href="./?hotspot=cookies&session=S3c7x9_LB"><i class="fa fa-hourglass"></i> Cookies</a>
+                    <a class="dropdown-item" href="./?hotspot=dhcp-leases&session=S3c7x9_LB"><i class="fa fa-sitemap"></i> DHCP Leases</a>
+                </div>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link " href="./?report=selling&idbl=jan2026&session=S3c7x9_LB">
+                    <i class="fa fa-money"></i> Laporan Penjualan                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link audit-link " href="./?report=audit_session&session=S3c7x9_LB" style="color:#ffb6c1;">
+                    <i class="fa fa-check-square-o"></i> Audit Keuangan                </a>
+            </li>
+        </ul>
+
+        <div class="nav-right">
+            <span class="timer-badge" style="display:inline-block;" title="Idle Timeout">
+                <i class="fa fa-clock-o"></i> <span id="timer"></span>
+            </span>
+            <a id="logout" href="./?hotspot=logout&session=S3c7x9_LB" title="Keluar">
+                <i class="fa fa-sign-out fa-lg"></i>
+            </a>
+        </div>
+    </nav>
+
+    
+
+<div id="sidenav" style="display:none"></div>
+<a id="openNav" href="javascript:void(0)" style="display:none"></a>
+<a id="closeNav" href="javascript:void(0)" style="display:none"></a>
+<div id="overL" style="display:none"></div>
+
+<script>
+    function toggleMenu() {
+        var x = document.getElementById("mainNav");
+        if (x.className === "nav-links") {
+            x.className += " show";
+        } else {
+            x.className = "nav-links";
+        }
+    }
+
+    function toggleMobileSub(el) {
+        if (window.innerWidth <= 992) {
+            el.classList.toggle("active-mobile");
+        }
+    }
+
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 992) {
+            var x = document.getElementById("mainNav");
+            if (x) x.classList.remove("show");
+            var items = document.querySelectorAll('.nav-item.active-mobile');
+            items.forEach(function(item) {
+                item.classList.remove('active-mobile');
+            });
+        }
+    });
+
+    $(document).ready(function(){
+        $(".connect").click(function(){
+            notify("Menghubungkan...");
+            connect(this.id)
+        });
+        $(".slang").change(function(){
+            notify("Memuat...");
+            stheme(this.value)
+        });
+    });
+</script>
+
+<div id="notify"><div class="message"></div></div>
+<div id="temp"></div>
+
+
+<div id="main">
+<div id="loading" class="lds-dual-ring" ></div><div class="main-container main-container-fluid" style="display:none"><link rel="stylesheet" href="css/dashboard-clean-pro.css">
+
+<script type="text/javascript">
+    function changeMonth(m) {
+        var chartWrap = $("#chart_container");
+        if (!chartWrap.length) chartWrap = $("#r_2_content");
+        chartWrap.css("opacity", "0.5");
+        $("#r_2_content").html('<div style="text-align:center; padding:50px; color:#ccc;"><i class="fa fa-spinner fa-spin fa-3x"></i><br><br>Memproses Grafik...</div>');
+        $("#tabel_riwayat").html('<tr><td colspan="4" class="text-center" style="padding:20px;"><i class="fa fa-circle-o-notch fa-spin"></i> Memuat...</td></tr>');
+
+        $.get("./dashboard/aload.php?session=S3c7x9_LB&load=hotspot&m=" + m, function(data) {
+            $("#r_2_content").html(data);
+            chartWrap = $("#chart_container");
+            if (!chartWrap.length) chartWrap = $("#r_2_content");
+            chartWrap.css("opacity", "1");
+        });
+
+        setTimeout(function() {
+            $.get("./dashboard/aload.php?session=S3c7x9_LB&load=logs&m=" + m, function(dataLogs) {
+                if(dataLogs.trim() == "") {
+                    $("#tabel_riwayat").html('<tr><td colspan="4" class="text-center text-muted" style="padding:20px;">Belum ada transaksi.</td></tr>');
+                } else {
+                    $("#tabel_riwayat").html(dataLogs);
+                }
+            }).fail(function() {
+                $("#tabel_riwayat").html('<tr><td colspan="4" class="text-center text-danger">Gagal koneksi server.</td></tr>');
+            });
+        }, 500);
+    }
+
+    function updateDashboard() {
+        $.getJSON("./dashboard/aload.php?load=live_data&session=S3c7x9_LB", function(data) {
+            $('#kpi-active').text(data.active);
+            $('#kpi-sold').text(data.sold);
+            $('#kpi-income').text('Rp ' + data.income);
+            $('#kpi-est').text('Proyeksi: Rp ' + data.est_income);
+
+            if (parseInt(data.ghost || 0, 10) > 0) {
+                $('#ghost-tag').show();
+            } else {
+                $('#ghost-tag').hide();
+            }
+
+            if (data.audit_status === 'LOSS') {
+                $('#audit-box').removeClass('border-audit border-warning').addClass('border-loss');
+                $('#audit-status').text('LOSS').css('color', 'var(--accent-red)');
+            } else if (parseInt(data.ghost || 0, 10) > 0) {
+                $('#audit-box').removeClass('border-audit border-loss').addClass('border-warning');
+                $('#audit-status').text('GHOST').css('color', 'var(--accent-yellow)');
+            } else {
+                $('#audit-box').removeClass('border-loss border-warning').addClass('border-audit');
+                $('#audit-status').text('CLEAR').css('color', '#fff');
+            }
+
+            $('#audit-val').text('Selisih: Rp ' + data.audit_val);
+
+            var detail = [];
+            if (data.audit_detail) {
+                if (parseInt(data.audit_detail.ghost || 0, 10) > 0) {
+                    detail.push('Missing: ' + data.audit_detail.ghost + ' Lbr');
+                }
+                if (parseInt(data.audit_detail.miss_10 || 0, 10) > 0 || parseInt(data.audit_detail.miss_30 || 0, 10) > 0) {
+                    detail.push('10m: ' + (data.audit_detail.miss_10 || 0) + ' | 30m: ' + (data.audit_detail.miss_30 || 0));
+                }
+                if (data.audit_detail.cash_expected) {
+                    detail.push('Cash: Rp ' + data.audit_detail.cash_expected);
+                }
+                if (data.audit_detail.last_update) {
+                    detail.push('Upd: ' + data.audit_detail.last_update);
+                }
+            }
+            $('#audit-detail').text(detail.join(' • '));
+        });
+    }
+
+    $(document).ready(function() {
+        $("#r_1").load("./dashboard/aload.php?session=S3c7x9_LB&load=sysresource #r_1 > *");
+        changeMonth(1);
+        updateDashboard();
+        setInterval(updateDashboard, 10000);
+    });
+</script>
+
+<div id="reloadHome">
+    <div id="r_1" class="row" style="margin-bottom: 20px;">
+        <div class="col-12 text-center" style="padding:20px; color:#666;">
+            <i class="fa fa-refresh fa-spin"></i> Menghubungkan ke Router...
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-3">
+            <div class="kpi-box border-green">
+                <h1 id="kpi-active">0</h1>
+                <div class="label">User Active <span class="blink" style="color:var(--accent-green)">● Live</span></div>
+            </div>
+        </div>
+        <div class="col-3">
+            <div class="kpi-box border-blue">
+                <div id="ghost-tag" style="display:none;" class="ghost-alert blink"><i class="fa fa-ghost"></i> GHOST</div>
+                <h1 id="kpi-sold">0</h1>
+                <div class="label">Voucher Terjual (Hari Ini)</div>
+            </div>
+        </div>
+        <div class="col-3">
+            <div class="kpi-box border-yellow">
+                <h1 id="kpi-income">Rp 0</h1>
+                <div class="label" id="kpi-est">Proyeksi: Rp 0</div>
+            </div>
+        </div>
+        <div class="col-3" id="audit-card-wrap">
+            <div id="audit-box" class="kpi-box border-audit">
+                <h1 id="audit-status">CLEAR</h1>
+                <div class="label" id="audit-val">Selisih: Rp 0</div>
+                <div class="audit-detail" id="audit-detail"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-8">
+            <div class="card">
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3 style="margin:0;"><i class="fa fa-line-chart"></i> Performa Bisnis</h3>
+                    <div style="font-size:10px; color:#aaa; display:flex; align-items:center;">
+                        <i class="fa fa-circle text-green blink" style="font-size: 8px; margin-right: 5px;"></i> LIVE DATA
+                    </div>
+                </div>
+                <div class="card-body" id="r_2_content"></div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="card" style="height: 520px; display:flex; flex-direction:column;">
+                <div class="card-header"><h3 style="margin:0;"><i class="fa fa-history"></i> Transaksi</h3></div>
+                <div class="card-body" style="padding:0; flex:1; display:flex; flex-direction:column;">
+                    <div style="overflow-y:auto; flex:1;">
+                        <table class="table" style="margin-bottom:0; width:100%;">
+                            <thead style="background:#151719; position: sticky; top: 0; z-index: 5;">
+                                <tr>
+                                    <th style="padding:8px 10px; border-bottom:1px solid #444; color:#888;">Jam</th>
+                                    <th style="padding:8px 10px; border-bottom:1px solid #444; color:#888;">User</th>
+                                    <th style="padding:8px 10px; border-bottom:1px solid #444; color:#888; text-align:center;">Blok</th>
+                                    <th class="text-right" style="padding:8px 10px; border-bottom:1px solid #444; color:#888;">IDR</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabel_riwayat">
+                                <tr><td colspan="4" class="text-center" style="padding:20px; color:#555;">Menunggu...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div></div>
+</div>
+</div>
+<script src="./js/highcharts/highcharts.js"></script>
+<script src="./js/highcharts/themes/hc.dark.js"></script>
+<script src="./js/mikhmon-ui.dark.min.js"></script>
+<script src="./js/mikhmon.js?t=2026-01-24_21:20:10"></script>
+
+<script>
+    if (window.history.replaceState) { window.history.replaceState(null, null, "./?session=S3c7x9_LB"); }
+    $("#r_3").load("./dashboard/aload.php?session=S3c7x9_LB&load=logs #r_3");  
+    var interval1 = "10000";
+    var dashboard = setInterval(function() {
+    $("#r_1").load("./dashboard/aload.php?session=S3c7x9_LB&load=sysresource #r_1"); 
+    $("#r_2").load("./dashboard/aload.php?session=S3c7x9_LB&load=hotspot #r_2"); 
+    $("#r_3").load("./dashboard/aload.php?session=S3c7x9_LB&load=logs #r_3"); 
+  }, interval1);
+function cancelPage(){ window.stop(); clearInterval(dashboard);} </script></body>
+</html>
