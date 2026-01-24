@@ -110,7 +110,8 @@ function build_ghost_hint($selisih_qty, $selisih_rp) {
   $parts = [];
   if ($ghost_10 > 0) $parts[] = number_format($ghost_10, 0, ',', '.') . ' unit 10 menit';
   if ($ghost_30 > 0) $parts[] = number_format($ghost_30, 0, ',', '.') . ' unit 30 menit';
-  return 'Kemungkinan: ' . implode(' + ', $parts) . '.';
+  $total_ghost = $ghost_10 + $ghost_30;
+  return 'Analisa dari selisih ' . number_format($total_ghost, 0, ',', '.') . ' lembar: ' . implode(' + ', $parts);
 }
 
 function calc_audit_adjusted_totals(array $ar) {
