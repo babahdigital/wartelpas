@@ -387,6 +387,24 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                 </a>
             </li>
 
+            <li class="nav-item">
+                <a class="nav-link <?= $susersl; ?>" href="./?hotspot=users&profile=all&session=<?= $session; ?>">
+                    <i class="fa fa-list"></i> <?= $_user_list ?>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link <?= $sgenuser; ?>" href="./?hotspot-user=generate&session=<?= $session; ?>">
+                    <i class="fa fa-user-plus"></i> <?= $_generate ?>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link <?= $suserprofiles; ?>" href="./?hotspot=user-profiles&session=<?= $session; ?>">
+                    <i class="fa fa-pie-chart"></i> <?= $_user_profile_list ?>
+                </a>
+            </li>
+
 
             <li class="nav-item" onclick="toggleMobileSub(this)">
                 <a class="nav-link <?= $sactive . $shosts . $scookies; ?>" href="javascript:void(0)">
