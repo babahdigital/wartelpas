@@ -72,6 +72,78 @@ function infer_profile_from_blok($blok) {
     return '';
 }
 
+function calc_audit_adjusted_totals(array $ar) {
+  $price10 = 5000;
+  $price30 = 20000;
+  $expected_qty = (int)($ar['expected_qty'] ?? 0);
+  $expected_setoran = (int)($ar['expected_setoran'] ?? 0);
+  $reported_qty = (int)($ar['reported_qty'] ?? 0);
+  $actual_setoran = (int)($ar['actual_setoran'] ?? 0);
+
+  $p10_qty = 0;
+  $p30_qty = 0;
+  $cnt_rusak_10 = 0;
+  $cnt_rusak_30 = 0;
+  $cnt_retur_10 = 0;
+  $cnt_retur_30 = 0;
+  $cnt_invalid_10 = 0;
+  $cnt_invalid_30 = 0;
+  $profile10_users = 0;
+  $profile30_users = 0;
+  $has_manual_evidence = false;
+
+  if (!empty($ar['user_evidence'])) {
+    $evidence = json_decode((string)$ar['user_evidence'], true);
+    if (is_array($evidence)) {
+      $has_manual_evidence = true;
+      if (!empty($evidence['profile_qty']) && is_array($evidence['profile_qty'])) {
+        $p10_qty = (int)($evidence['profile_qty']['qty_10'] ?? 0);
+        $p30_qty = (int)($evidence['profile_qty']['qty_30'] ?? 0);
+      }
+      if (!empty($evidence['users']) && is_array($evidence['users'])) {
+        foreach ($evidence['users'] as $ud) {
+          $kind = (string)($ud['profile_kind'] ?? '10');
+          $status = strtolower((string)($ud['last_status'] ?? ''));
+          if ($kind === '30') {
+            $profile30_users++;
+            if ($status === 'rusak') $cnt_rusak_30++;
+            elseif ($status === 'retur') $cnt_retur_30++;
+            elseif ($status === 'invalid') $cnt_invalid_30++;
+          } else {
+            $profile10_users++;
+            if ($status === 'rusak') $cnt_rusak_10++;
+            elseif ($status === 'retur') $cnt_retur_10++;
+            elseif ($status === 'invalid') $cnt_invalid_10++;
+          }
+        }
+      }
+    }
+  }
+
+  if ($p10_qty <= 0) $p10_qty = $profile10_users;
+  if ($p30_qty <= 0) $p30_qty = $profile30_users;
+
+  if ($has_manual_evidence) {
+    $manual_net_qty_10 = max(0, $p10_qty - $cnt_rusak_10 - $cnt_invalid_10 + $cnt_retur_10);
+    $manual_net_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30 + $cnt_retur_30);
+    $manual_display_qty = $manual_net_qty_10 + $manual_net_qty_30;
+    $manual_display_setoran = ($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30);
+    $expected_adj_qty = max(0, $expected_qty - $cnt_rusak_10 - $cnt_rusak_30 - $cnt_invalid_10 - $cnt_invalid_30 + $cnt_retur_10 + $cnt_retur_30);
+    $expected_adj_setoran = max(0, $expected_setoran
+      - (($cnt_rusak_10 + $cnt_invalid_10) * $price10)
+      - (($cnt_rusak_30 + $cnt_invalid_30) * $price30)
+      + ($cnt_retur_10 * $price10)
+      + ($cnt_retur_30 * $price30));
+  } else {
+    $manual_display_qty = $reported_qty;
+    $manual_display_setoran = $actual_setoran;
+    $expected_adj_qty = $expected_qty;
+    $expected_adj_setoran = $expected_setoran;
+  }
+
+  return [$manual_display_qty, $expected_adj_qty, $manual_display_setoran, $expected_adj_setoran];
+}
+
 $sales_summary = [
     'total' => 0,
     'gross' => 0,
@@ -88,6 +160,15 @@ $pending_summary = [
     'retur' => 0,
     'invalid' => 0,
     'net' => 0,
+];
+$audit_manual_summary = [
+  'rows' => 0,
+  'manual_qty' => 0,
+  'expected_qty' => 0,
+  'manual_setoran' => 0,
+  'expected_setoran' => 0,
+  'selisih_qty' => 0,
+  'selisih_setoran' => 0,
 ];
 $relogin_limit = 25;
 $bandwidth_limit = 25;
@@ -212,6 +293,25 @@ if (file_exists($dbFile)) {
             $stmt->execute();
             $bandwidth_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
+
+        if (table_exists($db, 'audit_rekap_manual')) {
+          $auditSql = "SELECT expected_qty, expected_setoran, reported_qty, actual_setoran, user_evidence
+            FROM audit_rekap_manual WHERE $dateFilter";
+          $stmt = $db->prepare($auditSql);
+          foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
+          $stmt->execute();
+          $audit_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+          $audit_manual_summary['rows'] = count($audit_rows);
+          foreach ($audit_rows as $ar) {
+            [$manual_qty, $expected_qty, $manual_setoran, $expected_setoran] = calc_audit_adjusted_totals($ar);
+            $audit_manual_summary['manual_qty'] += (int)$manual_qty;
+            $audit_manual_summary['expected_qty'] += (int)$expected_qty;
+            $audit_manual_summary['manual_setoran'] += (int)$manual_setoran;
+            $audit_manual_summary['expected_setoran'] += (int)$expected_setoran;
+          }
+          $audit_manual_summary['selisih_qty'] = (int)$audit_manual_summary['manual_qty'] - (int)$audit_manual_summary['expected_qty'];
+          $audit_manual_summary['selisih_setoran'] = (int)$audit_manual_summary['manual_setoran'] - (int)$audit_manual_summary['expected_setoran'];
+        }
     } catch (Exception $e) {
         $db = null;
     }
@@ -250,6 +350,20 @@ if (file_exists($dbFile)) {
     <div class="summary-card"><div class="summary-title">Pendapatan Bersih</div><div class="summary-value">Rp <?= number_format($sales_summary['net'],0,',','.') ?></div></div>
     <div class="summary-card"><div class="summary-title">Pending Live Sales</div><div class="summary-value"><?= number_format($sales_summary['pending'],0,',','.') ?></div></div>
     <div class="summary-card"><div class="summary-title">Pending Gross (Live)</div><div class="summary-value">Rp <?= number_format($pending_summary['gross'],0,',','.') ?></div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Ringkasan Audit Manual</div>
+    <?php if ($audit_manual_summary['rows'] === 0): ?>
+      <div class="summary-card"><div class="summary-title">Audit Manual</div><div class="summary-value" style="font-size:11px;font-weight:normal;">Belum ada audit manual pada periode ini.</div></div>
+    <?php else: ?>
+      <div class="summary-grid">
+        <div class="summary-card"><div class="summary-title">Net Audit (Manual)</div><div class="summary-value">Rp <?= number_format($audit_manual_summary['manual_setoran'],0,',','.') ?></div></div>
+        <div class="summary-card"><div class="summary-title">Net System (Expected)</div><div class="summary-value">Rp <?= number_format($audit_manual_summary['expected_setoran'],0,',','.') ?></div></div>
+        <div class="summary-card"><div class="summary-title">Selisih Setoran</div><div class="summary-value">Rp <?= number_format($audit_manual_summary['selisih_setoran'],0,',','.') ?></div></div>
+        <div class="summary-card"><div class="summary-title">Selisih Qty</div><div class="summary-value"><?= number_format($audit_manual_summary['selisih_qty'],0,',','.') ?></div></div>
+      </div>
+    <?php endif; ?>
   </div>
 
   <?php if ($sales_summary['pending'] > 0 && $sales_summary['total'] === 0): ?>
