@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wartelpas - Clean Pro Dashboard</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Highcharts -->
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    
+    <style>
+        /* Gabungan CSS dari dashboard-clean-pro.css dan mikhmon-ui logic */
+        :root {
+            --bg-main: #121417;
+            --bg-card: #1c1f26;
+            --bg-hover: #252a33;
+            --accent-blue: #00c0ef;
+            --accent-green: #2ecc71;
+            --accent-yellow: #f39c12;
+            --accent-red: #e74c3c;
+            --accent-purple: #605ca8;
+            --text-dim: #8898aa;
+            --border-soft: rgba(255, 255, 255, 0.05);
+            --nav-bg: #222d32;
+            --nav-hover: #1b2428;
+            --nav-text: #b8c7ce;
+            --accent: #3c8dbc;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding-top: 60px;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Top Navbar */
+        .top-navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background-color: var(--nav-bg);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            z-index: 1030;
+        }
+
+        .brand {
+            font-weight: 800;
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+
+        .nav-item {
+            height: 60px;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--nav-text);
+            text-decoration: none;
+            padding: 0 15px;
+            font-size: 13px;
+            font-weight: 600;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-top: 3px solid transparent;
+            transition: 0.2s;
+        }
+
+        .nav-link:hover { background: var(--nav-hover); color: #fff; }
+        .nav-link.active { background: var(--nav-hover); color: #fff; border-top-color: var(--accent-blue); }
+
+        /* Main Wrapper */
+        .main-content {
+            padding: 20px;
+            height: calc(100vh - 60px);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        /* KPI Grid */
+        .row-kpi {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        .kpi-box {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border-soft);
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+
+        .kpi-box:hover { transform: translateY(-5px); background: var(--bg-hover); }
+
+        .kpi-box h1 { margin: 0; font-size: 28px; font-weight: 800; }
+        .kpi-box .label {
+            font-size: 10px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-top: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .border-blue { border-left: 4px solid var(--accent-blue); }
+        .border-green { border-left: 4px solid var(--accent-green); }
+        .border-yellow { border-left: 4px solid var(--accent-yellow); }
+        .border-purple { border-left: 4px solid var(--accent-purple); }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 8fr 4fr;
+            gap: 20px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 15px;
+            border: 1px solid var(--border-soft);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-soft);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header h3 { margin: 0; font-size: 14px; font-weight: 700; color: #eee; }
+
+        .card-body { padding: 20px; flex: 1; position: relative; }
+
+        /* Table Style */
+        .table-container { height: 100%; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { 
+            text-align: left; 
+            font-size: 11px; 
+            color: var(--text-dim); 
+            padding: 10px; 
+            border-bottom: 1px solid var(--border-soft);
+            background: #151719;
+            position: sticky;
+            top: 0;
+        }
+        td { padding: 10px; border-bottom: 1px solid var(--border-soft); font-size: 13px; }
+        tr:hover td { background: var(--bg-hover); }
+
+        /* Utility */
+        .blink { animation: blinker 1.5s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0.3; } }
+        .text-green { color: var(--accent-green); }
+        .text-red { color: var(--accent-red); }
+        .text-yellow { color: var(--accent-yellow); }
+
+        .ghost-alert {
+            background: var(--accent-red);
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 800;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+
+        @media (max-width: 1024px) {
+            .row-kpi { grid-template-columns: repeat(2, 1fr); }
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="top-navbar">
+        <a href="#" class="brand"><i class="fa fa-wifi" style="margin-right: 10px;"></i> WARTELPAS</a>
+        <ul class="nav-links">
+            <li class="nav-item"><a href="#" class="nav-link active"><i class="fa fa-dashboard"></i> Dashboard</a></li>
+            <li class="nav-item"><a href="#" class="nav-link"><i class="fa fa-users"></i> Pengguna</a></li>
+            <li class="nav-item"><a href="#" class="nav-link"><i class="fa fa-money"></i> Laporan</a></li>
+            <li class="nav-item"><a href="#" class="nav-link" style="color: #ffb6c1;"><i class="fa fa-check-square-o"></i> Audit</a></li>
+        </ul>
+        <div style="font-size: 12px; color: var(--text-dim);">
+            <i class="fa fa-clock-o"></i> <span id="real-time">00:00:00</span>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        
+        <!-- KPI Row -->
+        <div class="row-kpi">
+            <div class="kpi-box border-green">
+                <h1 id="kpi-active">24</h1>
+                <div class="label">
+                    User Active 
+                    <span class="text-green blink">● LIVE</span>
+                </div>
+            </div>
+            <div class="kpi-box border-blue">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <h1 id="kpi-sold">142</h1>
+                    <span id="ghost-tag" class="ghost-alert blink"><i class="fa fa-ghost"></i> GHOST</span>
+                </div>
+                <div class="label">Voucher Terjual (Hari Ini)</div>
+            </div>
+            <div class="kpi-box border-yellow">
+                <h1 id="kpi-income">Rp 450.000</h1>
+                <div class="label" id="kpi-est">Proyeksi: Rp 12.500.000</div>
+            </div>
+            <div class="kpi-box border-purple" id="audit-box">
+                <h1 id="audit-status" style="color: #fff;">CLEAR</h1>
+                <div class="label" id="audit-val">Selisih: Rp 0</div>
+                <div style="font-size: 9px; color: var(--text-dim); margin-top: 5px;" id="audit-detail">
+                    Missing: 0 Lbr • Cash: Rp 450.000
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            
+            <!-- Grafik Performa -->
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fa fa-line-chart"></i> PERFORMA BISNIS</h3>
+                    <div class="tab-container" style="display: flex; gap: 10px; font-size: 11px;">
+                        <span style="color: #fff; border-bottom: 2px solid #fff; cursor: pointer;">Januari</span>
+                        <span style="color: var(--text-dim); cursor: pointer;">Februari</span>
+                    </div>
+                </div>
+                <div class="card-body" id="chart-container">
+                    <!-- Highcharts Target -->
+                </div>
+            </div>
+
+            <!-- Transaksi Terakhir -->
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fa fa-history"></i> TRANSAKSI TERAKHIR</h3>
+                    <span class="text-green blink" style="font-size: 9px; font-weight: bold;">UPDATED</span>
+                </div>
+                <div class="card-body" style="padding: 0;">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>JAM</th>
+                                    <th>USER</th>
+                                    <th style="text-align:center;">BLOK</th>
+                                    <th style="text-align:right;">IDR</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabel-riwayat">
+                                <!-- Data dummy untuk simulasi -->
+                                <tr>
+                                    <td style="color: var(--text-dim); font-family: monospace;">21:40</td>
+                                    <td style="font-weight: 600;">W-A12B</td>
+                                    <td align="center"><span style="background:#333; padding:2px 6px; border-radius:3px; font-size:10px;">A</span></td>
+                                    <td align="right" style="color: var(--accent-yellow); font-weight: bold;">20.000</td>
+                                </tr>
+                                <tr>
+                                    <td style="color: var(--text-dim); font-family: monospace;">21:38</td>
+                                    <td style="font-weight: 600;">W-C99X</td>
+                                    <td align="center"><span style="background:#333; padding:2px 6px; border-radius:3px; font-size:10px;">C</span></td>
+                                    <td align="right" style="color: var(--accent-blue); font-weight: bold;">10.000</td>
+                                </tr>
+                                <tr>
+                                    <td style="color: var(--text-dim); font-family: monospace;">21:35</td>
+                                    <td style="font-weight: 600;">W-B55H</td>
+                                    <td align="center"><span style="background:#333; padding:2px 6px; border-radius:3px; font-size:10px;">B</span></td>
+                                    <td align="right" style="color: var(--accent-green); font-weight: bold;">5.000</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Resource Footer (Mini) -->
+        <div style="display: flex; gap: 20px; font-size: 10px; color: var(--text-dim); background: var(--bg-card); padding: 10px 20px; border-radius: 8px;">
+            <span><i class="fa fa-server"></i> CPU: 5%</span>
+            <span><i class="fa fa-microchip"></i> RAM: 256MB / 512MB</span>
+            <span><i class="fa fa-hdd-o"></i> HDD: 1.2GB Free</span>
+            <span><i class="fa fa-bolt"></i> Uptime: 12d 04h 22m</span>
+        </div>
+
+    </div>
+
+    <script>
+        // Simulasi Jam Realtime
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.getHours().toString().padStart(2, '0') + ":" + 
+                            now.getMinutes().toString().padStart(2, '0') + ":" + 
+                            now.getSeconds().toString().padStart(2, '0');
+            $('#real-time').text(timeStr);
+        }
+        setInterval(updateClock, 1000);
+
+        // Inisialisasi Grafik (Logic dari aload.php)
+        function initChart() {
+            Highcharts.chart('chart-container', {
+                chart: { backgroundColor: 'transparent', type: 'area', spacingBottom: 0 },
+                title: { text: null },
+                credits: { enabled: false },
+                xAxis: {
+                    categories: Array.from({length: 31}, (_, i) => (i + 1).toString()),
+                    lineColor: '#444',
+                    tickColor: '#444',
+                    labels: { style: { color: '#888', fontSize: '10px' } }
+                },
+                yAxis: [{
+                    title: { text: null },
+                    gridLineColor: '#222',
+                    labels: { style: { color: '#00c0ef' } }
+                }, {
+                    title: { text: null },
+                    opposite: true,
+                    gridLineWidth: 0,
+                    labels: { style: { color: '#f39c12' } }
+                }],
+                tooltip: { shared: true, backgroundColor: '#1c1f26', style: { color: '#fff' }, borderWidth: 0, borderRadius: 10 },
+                plotOptions: {
+                    area: {
+                        fillColor: {
+                            linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+                            stops: [[0, 'rgba(0,192,239,0.3)'], [1, 'rgba(0,192,239,0)']]
+                        },
+                        marker: { enabled: false }
+                    }
+                },
+                series: [{
+                    name: 'Pendapatan',
+                    color: '#00c0ef',
+                    data: [150, 200, 180, 250, 300, 280, 400, 350, 500, 450, 600, 550, 700, 650, 800, 750, 900, 850, 950, 1000, 1100, 1050, 1200, 1150, 1300, 1250, 1400, 1350, 1500, 1450, 1600]
+                }, {
+                    name: 'Terjual',
+                    type: 'spline',
+                    yAxis: 1,
+                    color: '#f39c12',
+                    data: [30, 40, 35, 50, 60, 55, 80, 70, 100, 90, 120, 110, 140, 130, 160, 150, 180, 170, 190, 200, 220, 210, 240, 230, 260, 250, 280, 270, 300, 290, 320]
+                }]
+            });
+        }
+
+        // Simulasi Update Live Data
+        function simulateUpdate() {
+            // Animasi angka berubah sedikit
+            const active = 20 + Math.floor(Math.random() * 10);
+            $('#kpi-active').fadeOut(200, function() { $(this).text(active).fadeIn(200); });
+        }
+
+        $(document).ready(function() {
+            initChart();
+            setInterval(simulateUpdate, 10000);
+            updateClock();
+        });
+    </script>
+</body>
+</html>
