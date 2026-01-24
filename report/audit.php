@@ -421,7 +421,7 @@ if (file_exists($dbFile)) {
     .pill-ok { background:#1f7a3f;color:#fff; }
     .pill-warn { background:#f39c12;color:#fff; }
     .pill-bad { background:#c0392b;color:#fff; }
-    .section-title { font-weight:700; margin:14px 0 8px; font-size:14px; }
+    .section-title { font-weight:700; margin:14px 0 8px; font-size:14px; margin-left: 1px;}
     .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-bottom: 10px; }
     .toolbar-left { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
     .toolbar-right { display:flex; gap:8px; align-items:center; }
