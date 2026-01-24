@@ -467,8 +467,8 @@ $print_time = date('d-m-Y H:i:s');
         <thead>
             <tr style="background:#f1f5f9; color:#333;">
                 <th style="border:1px solid #cbd5e1; padding:8px;">Tanggal</th>
-                <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Voucher Terjual</th>
-                <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Rusak / Error</th>
+                <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Terjual</th>
+                <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Rusak</th>
                 <th style="border:1px solid #cbd5e1; padding:8px; text-align:right;">Target Sistem (Net)</th>
                 <th style="border:1px solid #cbd5e1; padding:8px; text-align:right;">Setoran Fisik (Audit)</th>
                 <th style="border:1px solid #cbd5e1; padding:8px; text-align:right;">Pengeluaran</th>
