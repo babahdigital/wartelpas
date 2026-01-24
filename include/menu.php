@@ -196,58 +196,9 @@ if ($idleto != "disable") {
         margin-right: 10px;
     }
 
-    .nav-links {
-        display: flex;
-        gap: 5px;
-        flex-grow: 1;
-        align-items: center;
-        list-style: none;
-        margin: 0;
-        padding: 0;
-    }
-
     .nav-item { position: relative; }
 
-    .nav-link {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: var(--nav-text);
-        text-decoration: none;
-        padding: 0 15px;
-        height: 60px;
-        font-size: 14px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        border-top: 3px solid transparent;
-    }
-
-    .nav-link:hover {
-        background-color: var(--nav-hover);
-        color: #fff;
-    }
-
-    .nav-link.active {
-        color: #fff;
-        background-color: var(--nav-hover);
-        border-top-color: var(--accent);
-    }
-
-    .nav-link.audit-link.active { border-top-color: var(--accent-audit); }
-
-    .dropdown-menu {
-        display: none;
-        position: absolute;
-        top: 60px;
-        left: 0;
-        background-color: #2c3b41;
-        min-width: 200px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-        border-radius: 0 0 4px 4px;
-        z-index: 1040;
-    }
-
-    .nav-item:hover .dropdown-menu { display: block; animation: fadeIn 0.2s; }
+    .mobile-toggle { display: none; font-size: 24px; color: #fff; cursor: pointer; padding: 10px; }
 
     .dropdown-item {
         display: block;
@@ -272,36 +223,65 @@ if ($idleto != "disable") {
     .nav-right { display: flex; align-items: center; gap: 15px; }
     .nav-right a { color: var(--nav-text); text-decoration: none; font-size: 14px; transition: 0.3s; }
     .nav-right a:hover { color: #fff; }
-    .timer-badge { background: #374850; padding: 5px 10px; border-radius: 4px; font-size: 12px; }
-
-    .mobile-toggle { display: none; font-size: 24px; color: #fff; cursor: pointer; }
+    .timer-badge { background: #374850; padding: 5px 10px; border-radius: 4px; font-size: 12px; color: #fff; display: inline-flex; align-items: center; gap: 5px; }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
     #main { margin-left: 0; padding: 20px; }
     .main-container-fluid { width: 100%; }
 
+    @media (min-width: 993px) {
+        .nav-links {
+            display: flex; gap: 5px; flex-grow: 1; align-items: center;
+            list-style: none; margin: 0; padding: 0;
+        }
+        .nav-link {
+            display: flex; align-items: center; gap: 8px;
+            color: var(--nav-text); text-decoration: none;
+            padding: 0 15px; height: 60px;
+            font-size: 14px; font-weight: 600;
+            transition: all 0.3s ease;
+            border-top: 3px solid transparent;
+        }
+        .nav-link:hover { background-color: var(--nav-hover); color: #fff; }
+        .nav-link.active { color: #fff; background-color: var(--nav-hover); border-top-color: var(--accent); }
+        .nav-link.audit-link.active { border-top-color: var(--accent-audit); }
+
+        .dropdown-menu {
+            display: none; position: absolute; top: 60px; left: 0;
+            background-color: #2c3b41; min-width: 200px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            border-radius: 0 0 4px 4px; z-index: 1040;
+        }
+        .nav-item:hover .dropdown-menu { display: block; animation: fadeIn 0.2s; }
+    }
+
     @media (max-width: 992px) {
         .mobile-toggle { display: block; }
+        .wartelpas-brand { margin-right: auto; }
         .nav-links {
             display: none;
             flex-direction: column;
-            position: absolute;
-            top: 60px;
-            left: 0;
-            right: 0;
+            position: absolute; top: 60px; left: 0; right: 0;
             background-color: var(--nav-bg);
-            height: auto;
-            padding-bottom: 10px;
+            height: auto; padding-bottom: 10px;
             box-shadow: 0 5px 10px rgba(0,0,0,0.5);
+            list-style: none; margin: 0; padding: 0;
         }
-        .nav-links.show { display: flex; }
-        .nav-link { height: 45px; border-top: none; border-left: 3px solid transparent; width: 100%; }
-        .nav-link.active { border-left-color: var(--accent); background: #1e282c; }
-        .dropdown-menu { position: static; background: #1a2226; box-shadow: none; }
-        .nav-item:hover .dropdown-menu { display: none; }
+        .nav-links.show { display: flex !important; }
+        .nav-link {
+            display: flex; align-items: center; gap: 8px;
+            color: var(--nav-text); text-decoration: none;
+            padding: 0 20px; height: 45px;
+            font-size: 14px; font-weight: 600;
+            border-left: 3px solid transparent;
+            width: 100%; box-sizing: border-box;
+        }
+        .nav-link.active { border-left-color: var(--accent); background: #1e282c; color: #fff; }
+        .nav-link.audit-link.active { border-left-color: var(--accent-audit); }
+
+        .dropdown-menu { display: none; position: static; background: #1a2226; box-shadow: none; width: 100%; }
         .nav-item.active-mobile .dropdown-menu { display: block; }
-        .wartelpas-brand { margin-right: auto; }
     }
 </style>
 
@@ -458,6 +438,17 @@ if ($idleto != "disable") {
             el.classList.toggle("active-mobile");
         }
     }
+
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 992) {
+            var x = document.getElementById("mainNav");
+            if (x) x.classList.remove("show");
+            var items = document.querySelectorAll('.nav-item.active-mobile');
+            items.forEach(function(item) {
+                item.classList.remove('active-mobile');
+            });
+        }
+    });
 
     $(document).ready(function(){
         $(".connect").click(function(){
