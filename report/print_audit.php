@@ -236,9 +236,18 @@ if (file_exists($dbFile)) {
 
         if (table_exists($db, 'sales_history')) {
             $sumSql = "SELECT
-              SUM(CASE WHEN COALESCE(is_invalid,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS invalid_sum,
-              SUM(CASE WHEN COALESCE(is_rusak,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS rusak_sum,
-              SUM(CASE WHEN COALESCE(is_retur,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS retur_sum,
+              SUM(CASE WHEN COALESCE(is_invalid,0)=1
+                OR LOWER(COALESCE(status,''))='invalid'
+                OR (COALESCE(status,'')='' AND LOWER(COALESCE(comment,'')) LIKE '%invalid%')
+              THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS invalid_sum,
+              SUM(CASE WHEN COALESCE(is_rusak,0)=1
+                OR LOWER(COALESCE(status,''))='rusak'
+                OR (COALESCE(status,'')='' AND LOWER(COALESCE(comment,'')) LIKE '%rusak%')
+              THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS rusak_sum,
+              SUM(CASE WHEN COALESCE(is_retur,0)=1
+                OR LOWER(COALESCE(status,''))='retur'
+                OR (COALESCE(status,'')='' AND LOWER(COALESCE(comment,'')) LIKE '%retur%')
+              THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS retur_sum,
               SUM(COALESCE(price_snapshot, price, 0) * COALESCE(qty,1)) AS gross_sum,
               COUNT(1) AS total_cnt
               FROM sales_history
@@ -264,9 +273,18 @@ if (file_exists($dbFile)) {
             $sales_summary['pending'] = (int)($stmt->fetchColumn() ?: 0);
 
             $pendingSumSql = "SELECT
-              SUM(CASE WHEN COALESCE(is_invalid,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS invalid_sum,
-              SUM(CASE WHEN COALESCE(is_rusak,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS rusak_sum,
-              SUM(CASE WHEN COALESCE(is_retur,0)=1 THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS retur_sum,
+              SUM(CASE WHEN COALESCE(is_invalid,0)=1
+                OR LOWER(COALESCE(status,''))='invalid'
+                OR (COALESCE(status,'')='' AND LOWER(COALESCE(comment,'')) LIKE '%invalid%')
+              THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS invalid_sum,
+              SUM(CASE WHEN COALESCE(is_rusak,0)=1
+                OR LOWER(COALESCE(status,''))='rusak'
+                OR (COALESCE(status,'')='' AND LOWER(COALESCE(comment,'')) LIKE '%rusak%')
+              THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS rusak_sum,
+              SUM(CASE WHEN COALESCE(is_retur,0)=1
+                OR LOWER(COALESCE(status,''))='retur'
+                OR (COALESCE(status,'')='' AND LOWER(COALESCE(comment,'')) LIKE '%retur%')
+              THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS retur_sum,
               SUM(COALESCE(price_snapshot, price, 0) * COALESCE(qty,1)) AS gross_sum,
               COUNT(1) AS total_cnt
               FROM live_sales
