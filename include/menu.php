@@ -135,23 +135,20 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
     $mpage = $_template_editor;
 }
 
-if ($idleto != "disable") {
-    $didleto = 'display:inline-block;';
-} else {
-    $didleto = 'display:none;';
-}
 ?>
 
-<span style="display:none;" id="idto"><?= $idleto; ?></span>
+<span style="display:none;" id="idto">disable</span>
+<span style="display:none;" id="timer"></span>
 
 <style>
     :root {
-        --nav-bg: #222d32;
-        --nav-hover: #1b2428;
-        --nav-text: #b8c7ce;
-        --nav-active: #fff;
+        --nav-bg: #1a2226;
+        --nav-hover: #222d32;
+        --nav-text: #9db2ba;
+        --nav-active: #ffffff;
         --accent: #3c8dbc;
         --accent-audit: #d81b60;
+        --header-shadow: 0 2px 10px rgba(0,0,0,0.4);
     }
 
     body { margin-top: 60px; }
@@ -167,32 +164,24 @@ if ($idleto != "disable") {
         align-items: center;
         justify-content: space-between;
         padding: 0 20px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        box-shadow: var(--header-shadow);
         z-index: 1030;
-        font-family: 'Source Sans Pro', sans-serif;
+        font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
     }
 
     .wartelpas-brand {
         display: flex;
         align-items: center;
-        font-weight: 700;
-        font-size: 0;
-        line-height: 0;
-        color: transparent !important;
         text-decoration: none;
-        margin-right: 40px;
+        margin-right: 30px;
+        height: 100%;
     }
 
-    .wartelpas-brand::before {
-        content: "";
-        display: block;
-        height: 90px;
-        width: 150px;
-        background-image: url('img/logo.png');
-        background-size: contain;
-        background-repeat: no-repeat;
-        background-position: center;
-        margin-right: 10px;
+    .brand-logo {
+        height: 45px;
+        width: auto;
+        object-fit: contain;
     }
 
     .nav-item { position: relative; }
@@ -219,10 +208,35 @@ if ($idleto != "disable") {
 
     .dropdown-item i { margin-right: 10px; width: 15px; text-align: center; }
 
-    .nav-right { display: flex; align-items: center; gap: 15px; }
-    .nav-right a { color: var(--nav-text); text-decoration: none; font-size: 14px; transition: 0.3s; }
-    .nav-right a:hover { color: #fff; }
-    .timer-badge { background: #374850; padding: 5px 10px; border-radius: 4px; font-size: 12px; color: #fff; display: inline-flex; align-items: center; gap: 5px; }
+    .nav-right { display: flex; align-items: center; gap: 12px; padding-left: 20px; }
+    .timer-badge {
+        background: rgba(255,255,255,0.05);
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        color: var(--nav-text);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid rgba(255,255,255,0.1);
+        white-space: nowrap;
+    }
+    .logout-btn {
+        height: 36px;
+        width: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        color: var(--nav-text);
+        transition: 0.3s;
+        background: transparent;
+    }
+    .logout-btn:hover {
+        background: rgba(216, 27, 96, 0.15);
+        color: #ff4d4d;
+        transform: scale(1.05);
+    }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -240,20 +254,23 @@ if ($idleto != "disable") {
 
     @media (min-width: 993px) {
         .nav-links {
-            display: flex; gap: 5px; flex-grow: 1; align-items: center;
-            list-style: none; margin: 0; padding: 0;
+            display: flex; gap: 0; flex-grow: 1; align-items: center;
+            list-style: none; margin: 0; padding: 0; height: 100%;
         }
+        .nav-item { position: relative; height: 100%; }
         .nav-link {
             display: flex; align-items: center; gap: 8px;
             color: var(--nav-text); text-decoration: none;
-            padding: 0 15px; height: 60px;
-            font-size: 14px; font-weight: 600;
-            transition: all 0.3s ease;
-            border-top: 3px solid transparent;
+            padding: 0 15px; height: 100%;
+            font-size: 13.5px; font-weight: 600;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
         }
-        .nav-link:hover { background-color: var(--nav-hover); color: #fff; }
-        .nav-link.active { color: #fff; background-color: var(--nav-hover); border-top-color: var(--accent); }
-        .nav-link.audit-link.active { border-top-color: var(--accent-audit); }
+        .nav-link:hover { background-color: var(--nav-hover); color: var(--nav-active); }
+        .nav-link.active { color: var(--nav-active); background-color: var(--nav-hover); border-bottom-color: var(--accent); }
+        .nav-link.audit-link { color: #ffb6c1 !important; }
+        .nav-link.audit-link.active { border-bottom-color: var(--accent-audit); }
 
         .dropdown-menu {
             display: none; position: absolute; top: 60px; left: 0;
@@ -356,9 +373,12 @@ if ($idleto != "disable") {
 
 <?php } else { ?>
     <nav class="top-navbar">
-        <a id="brand" class="wartelpas-brand" href="./?session=<?= $session; ?>">MIKHMON</a>
-
         <div class="mobile-toggle" onclick="toggleMenu()"><i class="fa fa-bars"></i></div>
+
+        <a id="brand" class="wartelpas-brand" href="./?session=<?= $session; ?>">
+            <img src="img/logo.png" alt="MIKHMON" class="brand-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <span style="display:none; color:#fff; font-weight:bold; font-size:18px;">WARTELPAS</span>
+        </a>
 
         <ul class="nav-links" id="mainNav">
             <li class="nav-item">
@@ -367,36 +387,13 @@ if ($idleto != "disable") {
                 </a>
             </li>
 
-            <li class="nav-item" onclick="toggleMobileSub(this)">
-                <a class="nav-link <?= $susers; ?>" href="javascript:void(0)">
-                    <i class="fa fa-users"></i> <?= $_users ?> <i class="fa fa-caret-down" style="margin-left:5px;font-size:10px;"></i>
-                </a>
-                <div class="dropdown-menu">
-                    <a class="dropdown-item" href="./?hotspot=users&profile=all&session=<?= $session; ?>"><i class="fa fa-list"></i> <?= $_user_list ?></a>
-                </div>
-            </li>
-
-            <li class="nav-item">
-                <a class="nav-link <?= $sgenuser; ?>" href="./?hotspot-user=generate&session=<?= $session; ?>">
-                    <i class="fa fa-user-plus"></i> <?= $_generate ?>
-                </a>
-            </li>
-
-            <li class="nav-item" onclick="toggleMobileSub(this)">
-                <a class="nav-link <?= $suserprof; ?>" href="javascript:void(0)">
-                    <i class="fa fa-pie-chart"></i> <?= $_user_profile ?> <i class="fa fa-caret-down" style="margin-left:5px;font-size:10px;"></i>
-                </a>
-                <div class="dropdown-menu">
-                    <a class="dropdown-item" href="./?hotspot=user-profiles&session=<?= $session; ?>"><i class="fa fa-list"></i> <?= $_user_profile_list ?></a>
-                </div>
-            </li>
 
             <li class="nav-item" onclick="toggleMobileSub(this)">
                 <a class="nav-link <?= $sactive . $shosts . $scookies; ?>" href="javascript:void(0)">
-                    <i class="fa fa-gear"></i> Perangkat <i class="fa fa-caret-down" style="margin-left:5px;font-size:10px;"></i>
+                    <i class="fa fa-wifi"></i> Hotspot <i class="fa fa-caret-down" style="margin-left:auto;font-size:10px;"></i>
                 </a>
                 <div class="dropdown-menu">
-                    <a class="dropdown-item" href="./?hotspot=active&session=<?= $session; ?>"><i class="fa fa-gear"></i> <?= $_hotspot_active ?></a>
+                    <a class="dropdown-item" href="./?hotspot=active&session=<?= $session; ?>"><i class="fa fa-wifi"></i> <?= $_hotspot_active ?></a>
                     <a class="dropdown-item" href="./?hotspot=hosts&session=<?= $session; ?>"><i class="fa fa-laptop"></i> <?= $_hosts ?></a>
                     <a class="dropdown-item" href="./?hotspot=cookies&session=<?= $session; ?>"><i class="fa fa-hourglass"></i> <?= $_hotspot_cookies ?></a>
                     <a class="dropdown-item" href="./?hotspot=dhcp-leases&session=<?= $session; ?>"><i class="fa fa-sitemap"></i> <?= $_dhcp_leases ?></a>
@@ -418,9 +415,9 @@ if ($idleto != "disable") {
 
         <div class="nav-right">
             <span class="timer-badge" title="Waktu Saat Ini">
-                <i class="fa fa-clock-o"></i> <span id="timer"></span>
+                <i class="fa fa-clock-o"></i> <span id="timer_val">--:--</span>
             </span>
-            <a id="logout" href="./?hotspot=logout&session=<?= $session; ?>" title="<?= $_logout ?>">
+            <a id="logout" class="logout-btn" href="./?hotspot=logout&session=<?= $session; ?>" title="<?= $_logout ?>">
                 <i class="fa fa-sign-out fa-lg"></i>
             </a>
         </div>
@@ -463,8 +460,9 @@ if ($idleto != "disable") {
     });
 
     function updateRealTimeBadge() {
-        var el = document.getElementById('timer');
-        if (!el) return;
+        var el = document.getElementById('timer_val');
+        var fallback = document.getElementById('timer');
+        if (!el && !fallback) return;
         var now = new Date();
         var dateStr = now.toLocaleDateString('id-ID', {
             day: '2-digit',
@@ -472,7 +470,9 @@ if ($idleto != "disable") {
             year: 'numeric'
         });
         var timeStr = now.toLocaleTimeString('id-ID', { hour12: false });
-        el.textContent = dateStr + ' ' + timeStr;
+        var full = dateStr + ' ' + timeStr;
+        if (el) el.textContent = full;
+        if (fallback) fallback.textContent = full;
     }
 
     $(document).ready(function(){
