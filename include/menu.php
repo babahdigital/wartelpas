@@ -143,6 +143,7 @@ if ($idleto != "disable") {
 ?>
 
 <span style="display:none;" id="idto"><?= $idleto; ?></span>
+<span style="display:none;" id="timer"></span>
 
 <style>
     :root {
@@ -305,7 +306,7 @@ if ($idleto != "disable") {
 
 <?php if ($id != "") { ?>
     <nav class="top-navbar">
-        <a class="wartelpas-brand" href="javascript:void(0)">MIKHMON</a>
+        <a id="brand" class="wartelpas-brand" href="javascript:void(0)">MIKHMON</a>
 
         <div class="mobile-toggle" onclick="toggleMenu()"><i class="fa fa-bars"></i></div>
 
@@ -360,13 +361,13 @@ if ($idleto != "disable") {
                     }
                 ?>
             </select>
-            <a href="./admin.php?id=logout" title="<?= $_logout ?>"><i class="fa fa-sign-out fa-lg"></i></a>
+            <a id="logout" href="./admin.php?id=logout" title="<?= $_logout ?>"><i class="fa fa-sign-out fa-lg"></i></a>
         </div>
     </nav>
 
 <?php } else { ?>
     <nav class="top-navbar">
-        <a class="wartelpas-brand" href="./?session=<?= $session; ?>">MIKHMON</a>
+        <a id="brand" class="wartelpas-brand" href="./?session=<?= $session; ?>">MIKHMON</a>
 
         <div class="mobile-toggle" onclick="toggleMenu()"><i class="fa fa-bars"></i></div>
 
@@ -426,7 +427,7 @@ if ($idleto != "disable") {
             <span class="timer-badge" style="<?= $didleto; ?>" title="Idle Timeout">
                 <i class="fa fa-clock-o"></i> <span id="timer"></span>
             </span>
-            <a href="./?hotspot=logout&session=<?= $session; ?>" title="<?= $_logout ?>">
+            <a id="logout" href="./?hotspot=logout&session=<?= $session; ?>" title="<?= $_logout ?>">
                 <i class="fa fa-sign-out fa-lg"></i>
             </a>
         </div>
