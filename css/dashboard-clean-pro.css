@@ -72,7 +72,6 @@ body {
     grid-template-columns: 8fr 4fr;
     gap: 15px;
     flex: 1;
-    min-height: 400px;
 }
 
 .table-container {
