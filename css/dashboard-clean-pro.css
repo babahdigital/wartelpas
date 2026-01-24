@@ -19,6 +19,8 @@ html, body {
 }
 
 #main {
+    padding: 15px !important;
+    margin-top: 60px !important;
     background-color: var(--bg-main) !important;
     display: flex;
     flex-direction: column;
