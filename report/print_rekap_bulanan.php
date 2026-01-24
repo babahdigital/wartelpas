@@ -141,6 +141,7 @@ $phone_units = [];
 $audit_net = [];
 $audit_selisih = [];
 $audit_system = [];
+$audit_expense = [];
 $total_expenses_month = 0;
 
 try {
@@ -211,6 +212,7 @@ try {
             $total_expenses_month = ($total_expenses_month ?? 0) + $expense;
             $net_cash_audit = (int)$manual_setoran - $expense;
             $audit_net[$d] = (int)($audit_net[$d] ?? 0) + $net_cash_audit;
+            $audit_expense[$d] = (int)($audit_expense[$d] ?? 0) + $expense;
             $audit_system[$d] = (int)($audit_system[$d] ?? 0) + (int)$expected_adj_setoran;
             $audit_selisih[$d] = (int)($audit_selisih[$d] ?? 0) + ((int)$manual_setoran - (int)$expected_adj_setoran);
         }
@@ -321,6 +323,7 @@ $max_km = 0;
 $max_active = 0;
 $total_rusak_device = 0;
 $total_expenses_month = $total_expenses_month ?? 0;
+$total_expense_table = 0;
 $total_expenses_month = $total_expenses_month ?? 0;
 
 $rows_out = [];
@@ -332,6 +335,7 @@ foreach ($all_dates as $date) {
     $audit = $audit_net[$date] ?? null;
     $net_audit = $audit !== null ? (int)$audit : $net;
     $selisih = $audit !== null ? (int)($audit_selisih[$date] ?? 0) : 0;
+    $expense_day = (int)($audit_expense[$date] ?? 0);
     $day_voucher_loss = (int)($daily[$date]['loss_rusak'] ?? 0) + (int)($daily[$date]['loss_invalid'] ?? 0);
 
     $qty_laku = isset($daily[$date]['laku_users']) ? count($daily[$date]['laku_users']) : 0;
@@ -346,6 +350,7 @@ foreach ($all_dates as $date) {
         'date' => $date,
         'gross' => $gross,
         'net_audit' => $net_audit,
+        'expense' => $expense_day,
         'selisih' => $selisih,
         'qty' => $qty_laku,
         'rusak_qty' => $rusak_qty,
@@ -360,6 +365,7 @@ foreach ($all_dates as $date) {
     $total_gross += $gross;
     $total_omzet_gross += $gross_all;
     $total_net_audit += $net_audit;
+    $total_expense_table += $expense_day;
     $total_selisih += $selisih;
     $total_qty_laku += $qty_laku;
     $total_voucher_rusak += $rusak_qty;
