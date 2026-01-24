@@ -704,20 +704,25 @@ if ($load == "logs") {
         if (!empty($usernames)) {
             $placeholders = implode(',', array_fill(0, count($usernames), '?'));
             try {
-                $stmtLogin = $db->prepare("SELECT username, first_login_real FROM login_history WHERE username IN ($placeholders)");
+                $stmtLogin = $db->prepare("SELECT username, COALESCE(NULLIF(last_login_real,''), first_login_real) AS last_login_real FROM login_history WHERE username IN ($placeholders)");
                 $stmtLogin->execute(array_keys($usernames));
                 $loginMap = [];
                 foreach ($stmtLogin->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                    $loginMap[$row['username']] = $row['first_login_real'] ?? '';
+                    $loginMap[$row['username']] = $row['last_login_real'] ?? '';
                 }
+                $rekeyed = [];
                 foreach ($finalLogs as $k => $log) {
                     $uname = $log['username'] ?? '';
-                    $firstLogin = $loginMap[$uname] ?? '';
-                    $ts = $firstLogin ? strtotime($firstLogin) : false;
+                    $lastLogin = $loginMap[$uname] ?? '';
+                    $ts = $lastLogin ? strtotime($lastLogin) : false;
                     if ($ts !== false) {
-                        $finalLogs[$k]['time_str'] = date('d/m/Y H:i', $ts);
+                        $log['time_str'] = date('d/m/Y H:i', $ts);
+                        $rekeyed[$ts . '_' . str_pad((string)count($rekeyed), 4, '0', STR_PAD_LEFT)] = $log;
+                    } else {
+                        $rekeyed[$k] = $log;
                     }
                 }
+                $finalLogs = $rekeyed;
             } catch (Exception $e) {
             }
         }
