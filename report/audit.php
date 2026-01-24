@@ -387,8 +387,8 @@ if (file_exists($dbFile)) {
 
 <div class="card card-solid">
     <div class="card-header-solid">
-        <h3 class="card-title m-0"><i class="fa fa-shield"></i> Audit Penjualan & Voucher</h3>
-        <a class="btn btn-primary" target="_blank" href="report/print_audit.php?session=<?= urlencode($session_id) ?>&show=<?= urlencode($req_show) ?>&date=<?= urlencode($filter_date) ?>">Print</a>
+        <h3 class="card-title m-0"><i class="fa fa-shield"></i> Audit Keuangan & Voucher</h3>
+        <a class="btn-solid" style="text-decoration:none;" target="_blank" href="report/print_audit.php?session=<?= urlencode($session_id) ?>&show=<?= urlencode($req_show) ?>&date=<?= urlencode($filter_date) ?>"><i class="fa fa-print"></i> Print Laporan Keuangan</a>
     </div>
     <div class="card-body">
         <form method="GET" class="toolbar" action="?">
@@ -413,36 +413,61 @@ if (file_exists($dbFile)) {
             </div>
         </form>
 
-        <div class="summary-grid">
-            <div class="summary-card"><div class="summary-title">Total Transaksi</div><div class="summary-value"><?= number_format($sales_summary['total'],0,',','.') ?></div></div>
-            <div class="summary-card"><div class="summary-title">Pendapatan Kotor</div><div class="summary-value">Rp <?= number_format($sales_summary['gross'],0,',','.') ?></div></div>
-            <div class="summary-card"><div class="summary-title">Potongan Rusak</div><div class="summary-value">Rp <?= number_format($sales_summary['rusak'],0,',','.') ?></div></div>
-            <div class="summary-card"><div class="summary-title">Pendapatan Bersih</div><div class="summary-value">Rp <?= number_format($sales_summary['net'],0,',','.') ?></div></div>
-            <div class="summary-card"><div class="summary-title">Pending Live Sales</div><div class="summary-value"><?= number_format($sales_summary['pending'],0,',','.') ?></div></div>
-            <div class="summary-card"><div class="summary-title">Pending Gross (Live)</div><div class="summary-value">Rp <?= number_format($pending_summary['gross'],0,',','.') ?></div></div>
-        </div>
+        <div class="section-title" style="margin-top:0;">Ringkasan Keuangan (Audit Manual vs Sistem)</div>
 
-        <div class="section-title">Ringkasan Audit Manual</div>
         <?php if ($audit_manual_summary['rows'] === 0): ?>
-            <div class="summary-card" style="border:1px solid #3a4046;background:#1f2327;">
-                <div class="summary-title">Audit Manual</div>
-                <div class="summary-value" style="font-size:13px;">Belum ada audit manual pada periode ini.</div>
+            <div class="summary-card" style="border:1px solid #3a4046;background:#1f2327;text-align:center;padding:20px;">
+                <span style="color:#f39c12;"><i class="fa fa-exclamation-triangle"></i> Belum ada data Audit Manual yang diinput pada periode ini.</span>
             </div>
         <?php else: ?>
-            <?php $ghost_hint = build_ghost_hint($audit_manual_summary['selisih_qty'], $audit_manual_summary['selisih_setoran']); ?>
-            <div class="summary-grid">
-                <div class="summary-card"><div class="summary-title">Net Audit (Manual)</div><div class="summary-value">Rp <?= number_format($audit_manual_summary['manual_setoran'],0,',','.') ?></div></div>
-                <div class="summary-card"><div class="summary-title">Net System (Expected)</div><div class="summary-value">Rp <?= number_format($audit_manual_summary['expected_setoran'],0,',','.') ?></div></div>
-                <div class="summary-card"><div class="summary-title">Selisih Setoran</div><div class="summary-value" style="color:#c0392b;">Rp <?= number_format($audit_manual_summary['selisih_setoran'],0,',','.') ?></div></div>
-                <div class="summary-card"><div class="summary-title">Selisih Qty</div><div class="summary-value" style="color:#c0392b;"><?= number_format($audit_manual_summary['selisih_qty'],0,',','.') ?></div></div>
-            </div>
-            <?php if (!empty($ghost_hint)): ?>
-                <div class="summary-card" style="border:1px solid #3a4046;background:#1f2327;">
-                    <div class="summary-title">Ghost Hunter</div>
-                    <div class="summary-value" style="font-size:13px;color:#fca5a5;"><?= htmlspecialchars($ghost_hint) ?></div>
+            <?php
+                $selisih = $audit_manual_summary['selisih_setoran'];
+                $ghost_hint = build_ghost_hint($audit_manual_summary['selisih_qty'], $selisih);
+                $color_status = $selisih < 0 ? '#c0392b' : ($selisih > 0 ? '#2ecc71' : '#3498db');
+                $text_status = $selisih < 0 ? 'KURANG SETOR (LOSS)' : ($selisih > 0 ? 'LEBIH SETOR' : 'AMAN / SESUAI');
+                $bg_status = $selisih < 0 ? '#381818' : ($selisih > 0 ? '#1b3a24' : '#1e2a36');
+            ?>
+            <div style="background:<?= $bg_status ?>;border:1px solid <?= $color_status ?>;padding:15px;border-radius:6px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;">
+                <div>
+                    <div style="font-size:12px;color:#aaa;text-transform:uppercase;">Status Keuangan</div>
+                    <div style="font-size:22px;font-weight:bold;color:<?= $color_status ?>;"><?= $text_status ?></div>
+                    <?php if ($selisih != 0): ?>
+                        <div style="font-size:16px;color:#fff;">Selisih: Rp <?= number_format($selisih,0,',','.') ?></div>
+                    <?php endif; ?>
                 </div>
-            <?php endif; ?>
+                <?php if (!empty($ghost_hint)): ?>
+                    <div style="text-align:right;max-width:50%;">
+                        <div style="font-size:11px;color:#fca5a5;font-weight:bold;text-transform:uppercase;">Ghost Hunter (Deteksi Otomatis)</div>
+                        <div style="font-size:13px;color:#fff;"><?= htmlspecialchars($ghost_hint) ?></div>
+                        <div style="font-size:10px;color:#aaa;">*Kemungkinan voucher lupa diinput atau hilang.</div>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="summary-title">Uang Fisik (Manual)</div>
+                    <div class="summary-value">Rp <?= number_format($audit_manual_summary['manual_setoran'],0,',','.') ?></div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-title">Target Sistem (Net)</div>
+                    <div class="summary-value">Rp <?= number_format($audit_manual_summary['expected_setoran'],0,',','.') ?></div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-title">Selisih Qty</div>
+                    <div class="summary-value" style="color:<?= $audit_manual_summary['selisih_qty'] != 0 ? '#f39c12' : '#2ecc71' ?>;">
+                        <?= number_format($audit_manual_summary['selisih_qty'],0,',','.') ?> Lembar
+                    </div>
+                </div>
+            </div>
         <?php endif; ?>
+
+        <div class="section-title">Statistik Sistem</div>
+        <div class="summary-grid">
+            <div class="summary-card"><div class="summary-title">Total Transaksi</div><div class="summary-value"><?= number_format($sales_summary['total'],0,',','.') ?></div></div>
+            <div class="summary-card"><div class="summary-title">Voucher Rusak</div><div class="summary-value" style="color:#e74c3c;">Rp <?= number_format($sales_summary['rusak'],0,',','.') ?></div></div>
+            <div class="summary-card"><div class="summary-title">Pending (Live)</div><div class="summary-value"><?= number_format($sales_summary['pending'],0,',','.') ?></div></div>
+        </div>
 
         <?php if ($sales_summary['pending'] > 0 && $sales_summary['total'] === 0): ?>
             <div class="summary-card" style="border:1px solid #3a4046;background:#1f2327;">
@@ -451,93 +476,80 @@ if (file_exists($dbFile)) {
             </div>
         <?php endif; ?>
 
-        <div class="section-title">Voucher Double (full_raw_data)</div>
-        <table class="table-dark-solid">
-            <thead><tr><th>Sale Date</th><th>Username</th><th>Count</th><th>Raw</th></tr></thead>
-            <tbody>
-                <?php if (empty($dup_raw)): ?>
-                    <tr><td colspan="4" class="text-center muted">Tidak ada duplikasi</td></tr>
-                <?php else: ?>
-                    <?php foreach ($dup_raw as $r): ?>
-                        <tr>
-                            <td><?= htmlspecialchars($r['sale_date'] ?? '-') ?></td>
-                            <td><?= htmlspecialchars($r['username'] ?? '-') ?></td>
-                            <td><span class="pill pill-warn"><?= (int)($r['cnt'] ?? 0) ?></span></td>
-                            <td style="max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?= htmlspecialchars($r['full_raw_data'] ?? '-') ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
+        <details style="margin-top:18px;background:#23272b;padding:10px;border-radius:6px;">
+            <summary style="cursor:pointer;color:#3498db;font-weight:bold;">Klik untuk melihat Data Teknis (Relogin & Bandwidth)</summary>
+            <div style="margin-top:12px;">
+                <div class="section-title">Voucher Double (full_raw_data)</div>
+                <table class="table-dark-solid">
+                    <thead><tr><th>Sale Date</th><th>Username</th><th>Count</th><th>Raw</th></tr></thead>
+                    <tbody>
+                        <?php if (empty($dup_raw)): ?>
+                            <tr><td colspan="4" class="text-center muted">Tidak ada duplikasi</td></tr>
+                        <?php else: ?>
+                            <?php foreach ($dup_raw as $r): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($r['sale_date'] ?? '-') ?></td>
+                                    <td><?= htmlspecialchars($r['username'] ?? '-') ?></td>
+                                    <td><span class="pill pill-warn"><?= (int)($r['cnt'] ?? 0) ?></span></td>
+                                    <td style="max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?= htmlspecialchars($r['full_raw_data'] ?? '-') ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
 
-        <div class="section-title">Voucher Double (Username + Tanggal)</div>
-        <table class="table-dark-solid">
-            <thead><tr><th>Sale Date</th><th>Username</th><th>Count</th></tr></thead>
-            <tbody>
-                <?php if (empty($dup_user_date)): ?>
-                    <tr><td colspan="3" class="text-center muted">Tidak ada duplikasi</td></tr>
-                <?php else: ?>
-                    <?php foreach ($dup_user_date as $r): ?>
-                        <tr>
-                            <td><?= htmlspecialchars($r['sale_date'] ?? '-') ?></td>
-                            <td><?= htmlspecialchars($r['username'] ?? '-') ?></td>
-                            <td><span class="pill pill-warn"><?= (int)($r['cnt'] ?? 0) ?></span></td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
+                <div class="section-title">Voucher Double (Username + Tanggal)</div>
+                <table class="table-dark-solid">
+                    <thead><tr><th>Sale Date</th><th>Username</th><th>Count</th></tr></thead>
+                    <tbody>
+                        <?php if (empty($dup_user_date)): ?>
+                            <tr><td colspan="3" class="text-center muted">Tidak ada duplikasi</td></tr>
+                        <?php else: ?>
+                            <?php foreach ($dup_user_date as $r): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($r['sale_date'] ?? '-') ?></td>
+                                    <td><?= htmlspecialchars($r['username'] ?? '-') ?></td>
+                                    <td><span class="pill pill-warn"><?= (int)($r['cnt'] ?? 0) ?></span></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
 
-        <div class="section-title">Relogin (login_events) - Top <?= (int)$relogin_limit ?></div>
-        <table class="table-dark-solid">
-            <thead><tr><th>Tanggal</th><th>Username</th><th>Blok</th><th>Profile</th><th>Jumlah Relogin</th></tr></thead>
-            <tbody>
-                <?php if (empty($relogin_rows)): ?>
-                    <tr><td colspan="5" class="text-center muted">Tidak ada relogin</td></tr>
-                <?php else: ?>
-                    <?php foreach ($relogin_rows as $r): ?>
-                        <?php
-                            $p = extract_profile_from_comment($r['raw_comment'] ?? '');
-                            if ($p === '') $p = infer_profile_from_blok($r['blok_name'] ?? '');
-                            $blokLabel = format_blok_label($r['blok_name'] ?? '');
-                        ?>
-                        <tr>
-                            <td><?= htmlspecialchars(format_date_dmy($r['date_key'] ?? '-')) ?></td>
-                            <td><?= htmlspecialchars($r['username'] ?? '-') ?></td>
-                            <td><?= htmlspecialchars($blokLabel ?: '-') ?></td>
-                            <td><?= htmlspecialchars($p ?: '-') ?></td>
-                            <td><span class="pill pill-ok"><?= (int)($r['cnt'] ?? 0) ?></span></td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
+                <div class="section-title">Top Relogin (Indikasi Sharing Account)</div>
+                <table class="table-dark-solid">
+                    <thead><tr><th>Username</th><th>Jumlah Relogin</th></tr></thead>
+                    <tbody>
+                        <?php if (empty($relogin_rows)): ?>
+                            <tr><td colspan="2" class="text-center muted">Tidak ada relogin</td></tr>
+                        <?php else: ?>
+                            <?php foreach ($relogin_rows as $r): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($r['username'] ?? '-') ?></td>
+                                    <td><?= (int)($r['cnt'] ?? 0) ?>x Login</td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
 
-        <div class="section-title">Top Bandwidth (login_history) - Top <?= (int)$bandwidth_limit ?></div>
-        <table class="table-dark-solid">
-            <thead><tr><th>Username</th><th>Blok</th><th>Profile</th><th>Last Bytes</th><th>Uptime</th><th>Status</th><th>Last Login</th></tr></thead>
-            <tbody>
-                <?php if (empty($bandwidth_rows)): ?>
-                    <tr><td colspan="7" class="text-center muted">Tidak ada data</td></tr>
-                <?php else: ?>
-                    <?php foreach ($bandwidth_rows as $r): ?>
-                        <?php
-                            $p = extract_profile_from_comment($r['raw_comment'] ?? '');
-                            if ($p === '') $p = infer_profile_from_blok($r['blok_name'] ?? '');
-                            $blokLabel = format_blok_label($r['blok_name'] ?? '');
-                        ?>
-                        <tr>
-                            <td><?= htmlspecialchars($r['username'] ?? '-') ?></td>
-                            <td><?= htmlspecialchars($blokLabel ?: '-') ?></td>
-                            <td><?= htmlspecialchars($p ?: '-') ?></td>
-                            <td><?= htmlspecialchars(format_bytes_short($r['last_bytes'] ?? 0)) ?></td>
-                            <td><?= htmlspecialchars($r['last_uptime'] ?? '-') ?></td>
-                            <td><?= strtoupper(htmlspecialchars($r['last_status'] ?? '-')) ?></td>
-                            <td><?= htmlspecialchars(format_date_dmy(substr((string)($r['last_login_real'] ?? ''), 0, 10))) ?> <?= htmlspecialchars(substr((string)($r['last_login_real'] ?? ''), 11, 8)) ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
+                <div class="section-title">Top Penggunaan Bandwidth</div>
+                <table class="table-dark-solid">
+                    <thead><tr><th>Username</th><th>Bandwidth</th></tr></thead>
+                    <tbody>
+                        <?php if (empty($bandwidth_rows)): ?>
+                            <tr><td colspan="2" class="text-center muted">Tidak ada data</td></tr>
+                        <?php else: ?>
+                            <?php foreach ($bandwidth_rows as $r): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($r['username'] ?? '-') ?></td>
+                                    <td><?= htmlspecialchars(format_bytes_short($r['last_bytes'] ?? 0)) ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </details>
     </div>
 </div>
