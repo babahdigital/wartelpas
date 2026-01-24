@@ -62,15 +62,35 @@ else {
                 $('#ghost-tag').hide();
             }
 
-            $('#audit-status').text(data.audit_status);
-            $('#audit-val').text('Selisih: Rp ' + data.audit_val);
             if (data.audit_status === 'LOSS') {
-                $('#audit-box').removeClass('border-audit').addClass('border-loss');
-                $('#audit-status').css('color', 'var(--accent-red)');
+                $('#audit-box').removeClass('border-audit border-warning').addClass('border-loss');
+                $('#audit-status').text('LOSS').css('color', 'var(--accent-red)');
+            } else if (parseInt(data.ghost || 0, 10) > 0) {
+                $('#audit-box').removeClass('border-audit border-loss').addClass('border-warning');
+                $('#audit-status').text('GHOST').css('color', 'var(--accent-yellow)');
             } else {
-                $('#audit-box').removeClass('border-loss').addClass('border-audit');
-                $('#audit-status').css('color', '#fff');
+                $('#audit-box').removeClass('border-loss border-warning').addClass('border-audit');
+                $('#audit-status').text('CLEAR').css('color', '#fff');
             }
+
+            $('#audit-val').text('Selisih: Rp ' + data.audit_val);
+
+            var detail = [];
+            if (data.audit_detail) {
+                if (parseInt(data.audit_detail.ghost || 0, 10) > 0) {
+                    detail.push('Missing: ' + data.audit_detail.ghost + ' Lbr');
+                }
+                if (parseInt(data.audit_detail.miss_10 || 0, 10) > 0 || parseInt(data.audit_detail.miss_30 || 0, 10) > 0) {
+                    detail.push('10m: ' + (data.audit_detail.miss_10 || 0) + ' | 30m: ' + (data.audit_detail.miss_30 || 0));
+                }
+                if (data.audit_detail.cash_expected) {
+                    detail.push('Cash: Rp ' + data.audit_detail.cash_expected);
+                }
+                if (data.audit_detail.last_update) {
+                    detail.push('Upd: ' + data.audit_detail.last_update);
+                }
+            }
+            $('#audit-detail').text(detail.join(' • '));
         });
     }
 
@@ -113,6 +133,7 @@ else {
             <div id="audit-box" class="kpi-box border-audit">
                 <h1 id="audit-status">CLEAR</h1>
                 <div class="label" id="audit-val">Selisih: Rp 0</div>
+                <div class="audit-detail" id="audit-detail"></div>
             </div>
         </div>
     </div>
@@ -130,22 +151,24 @@ else {
             </div>
         </div>
         <div class="col-4">
-            <div class="card" style="height: 520px;">
+            <div class="card" style="height: 520px; display:flex; flex-direction:column;">
                 <div class="card-header"><h3 style="margin:0;"><i class="fa fa-history"></i> Transaksi</h3></div>
-                <div class="card-body" style="padding:0; overflow-y:auto;">
-                    <table class="table" style="margin-bottom:0; width:100%;">
-                        <thead style="background:#151719; position: sticky; top: 0; z-index: 5;">
-                            <tr>
-                                <th style="padding:8px 10px; border-bottom:1px solid #444; color:#888;">Jam</th>
-                                <th style="padding:8px 10px; border-bottom:1px solid #444; color:#888;">User</th>
-                                <th style="padding:8px 10px; border-bottom:1px solid #444; color:#888; text-align:center;">Blok</th>
-                                <th class="text-right" style="padding:8px 10px; border-bottom:1px solid #444; color:#888;">IDR</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabel_riwayat">
-                            <tr><td colspan="4" class="text-center" style="padding:20px; color:#555;">Menunggu...</td></tr>
-                        </tbody>
-                    </table>
+                <div class="card-body" style="padding:0; flex:1; display:flex; flex-direction:column;">
+                    <div style="overflow-y:auto; flex:1;">
+                        <table class="table" style="margin-bottom:0; width:100%;">
+                            <thead style="background:#151719; position: sticky; top: 0; z-index: 5;">
+                                <tr>
+                                    <th style="padding:8px 10px; border-bottom:1px solid #444; color:#888;">Jam</th>
+                                    <th style="padding:8px 10px; border-bottom:1px solid #444; color:#888;">User</th>
+                                    <th style="padding:8px 10px; border-bottom:1px solid #444; color:#888; text-align:center;">Blok</th>
+                                    <th class="text-right" style="padding:8px 10px; border-bottom:1px solid #444; color:#888;">IDR</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabel_riwayat">
+                                <tr><td colspan="4" class="text-center" style="padding:20px; color:#555;">Menunggu...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
