@@ -473,26 +473,52 @@ if (file_exists($dbFile)) {
             </div>
         <?php endif; ?>
 
-        <div class="section-title">Statistik Keuangan & Insiden</div>
+        <div class="section-title">Statistik Keuangan & Insiden (Real-Time)</div>
         <?php
-            $use_pending_stats = ($sales_summary['total'] === 0 && $sales_summary['pending'] > 0);
-            $stat_total = $use_pending_stats ? $pending_summary['total'] : $sales_summary['total'];
-            $stat_rusak = $use_pending_stats ? $pending_summary['rusak'] : $sales_summary['rusak'];
-            $total_loss_real = (int)$stat_rusak + (int)($audit_manual_summary['total_rusak_rp'] ?? 0);
+            $stat_total = (int)$sales_summary['total'] + (int)$sales_summary['pending'];
+            $stat_gross = (int)$sales_summary['gross'] + (int)$pending_summary['gross'];
+            $stat_rusak_system = (int)$sales_summary['rusak'] + (int)$pending_summary['rusak'];
+            $stat_rusak_manual = (int)($audit_manual_summary['total_rusak_rp'] ?? 0);
+            $total_loss_real = $stat_rusak_system + $stat_rusak_manual;
         ?>
         <div class="summary-grid">
-            <div class="summary-card"><div class="summary-title">Total Transaksi</div><div class="summary-value"><?= number_format($stat_total,0,',','.') ?></div></div>
-            <div class="summary-card"><div class="summary-title">Pendapatan Kotor (Gross)</div><div class="summary-value">Rp <?= number_format(($use_pending_stats ? $pending_summary['gross'] : $sales_summary['gross']),0,',','.') ?></div></div>
-            <div class="summary-card"><div class="summary-title" style="color:#c0392b;">Total Voucher Rusak</div><div class="summary-value" style="color:#c0392b;">Rp <?= number_format($total_loss_real,0,',','.') ?></div><div style="font-size:10px;color:#b91c1c;">(Mengurangi Setoran)</div></div>
+            <div class="summary-card">
+                <div class="summary-title">Total Transaksi</div>
+                <div class="summary-value"><?= number_format($stat_total,0,',','.') ?></div>
+                <div style="font-size:10px;color:#888;">(Final + Live)</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Pendapatan Kotor (Gross)</div>
+                <div class="summary-value">Rp <?= number_format($stat_gross,0,',','.') ?></div>
+            </div>
+            <div class="summary-card" style="border-color:#fca5a5;">
+                <div class="summary-title" style="color:#c0392b;">Total Voucher Rusak</div>
+                <div class="summary-value" style="color:#c0392b;">Rp <?= number_format($total_loss_real,0,',','.') ?></div>
+                <div style="font-size:10px;color:#b91c1c;">(Mengurangi Setoran)</div>
+            </div>
             <?php if ($sales_summary['pending'] > 0): ?>
-                <div class="summary-card"><div class="summary-title">Pending (Live)</div><div class="summary-value"><?= number_format($sales_summary['pending'],0,',','.') ?></div></div>
+                <div class="summary-card" style="border-color:#ffeeba;">
+                    <div class="summary-title" style="color:#856404;">Status Data</div>
+                    <div class="summary-value" style="font-size:14px;color:#856404;">
+                        <?= number_format($sales_summary['pending'],0,',','.') ?> Transaksi Belum Settlement
+                    </div>
+                    <div style="font-size:10px;color:#856404;">(Data Live Sales)</div>
+                </div>
             <?php endif; ?>
         </div>
 
-        <?php if ($sales_summary['pending'] > 0 && $sales_summary['total'] === 0): ?>
-            <div class="summary-card" style="border:1px solid #3a4046;background:#1f2327;">
-                <div class="summary-title">Catatan</div>
-                <div class="summary-value" style="font-size:13px;">Transaksi final kosong. Data sementara ada di live_sales (pending).</div>
+        <?php if ($sales_summary['pending'] > 0): ?>
+            <div class="summary-card" style="border:1px solid #ffeeba;background:#fff3cd;margin-top:10px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <i class="fa fa-info-circle" style="color:#856404;font-size:18px;"></i>
+                    <div>
+                        <div style="font-size:13px;font-weight:bold;color:#856404;">Info Sinkronisasi</div>
+                        <div style="font-size:12px;color:#856404;">
+                            Terdapat <b><?= number_format($sales_summary['pending']) ?> transaksi baru</b> (Live) yang belum masuk database final.
+                            Total angka di atas sudah mencakup data ini.
+                        </div>
+                    </div>
+                </div>
             </div>
         <?php endif; ?>
 

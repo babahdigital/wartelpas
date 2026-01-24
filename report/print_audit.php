@@ -463,25 +463,25 @@ if (file_exists($dbFile)) {
   </div>
   <?php endif; ?>
 
-  <div class="section-title">Statistik Keuangan & Insiden</div>
-  <?php
-      $use_pending_stats = ($sales_summary['total'] === 0 && $sales_summary['pending'] > 0);
-      $stat_total = $use_pending_stats ? $pending_summary['total'] : $sales_summary['total'];
-      $gross_val = $use_pending_stats ? $pending_summary['gross'] : $sales_summary['gross'];
-      $stat_rusak = $use_pending_stats ? $pending_summary['rusak'] : $sales_summary['rusak'];
-      $total_loss_real = (int)$stat_rusak + (int)($audit_manual_summary['total_rusak_rp'] ?? 0);
-  ?>
-  <div class="summary-grid" style="grid-template-columns: repeat(3, 1fr);">
-    <div class="summary-card"><div class="summary-title">Total Transaksi</div><div class="summary-value"><?= number_format($stat_total,0,',','.') ?></div></div>
-    <div class="summary-card"><div class="summary-title">Pendapatan Kotor (Gross)</div><div class="summary-value">Rp <?= number_format($gross_val,0,',','.') ?></div></div>
+    <div class="section-title">Statistik Keuangan & Insiden</div>
+    <?php
+      $stat_total = (int)$sales_summary['total'] + (int)$sales_summary['pending'];
+      $stat_gross = (int)$sales_summary['gross'] + (int)$pending_summary['gross'];
+      $stat_rusak_system = (int)$sales_summary['rusak'] + (int)$pending_summary['rusak'];
+      $stat_rusak_manual = (int)($audit_manual_summary['total_rusak_rp'] ?? 0);
+      $total_loss_real = $stat_rusak_system + $stat_rusak_manual;
+    ?>
+    <div class="summary-grid" style="grid-template-columns: repeat(3, 1fr);">
+    <div class="summary-card"><div class="summary-title">Total Transaksi</div><div class="summary-value"><?= number_format($stat_total,0,',','.') ?></div><div style="font-size:10px;color:#888;">(Final + Live)</div></div>
+    <div class="summary-card"><div class="summary-title">Pendapatan Kotor (Gross)</div><div class="summary-value">Rp <?= number_format($stat_gross,0,',','.') ?></div></div>
     <div class="summary-card"><div class="summary-title" style="color:#c0392b;">Total Voucher Rusak</div><div class="summary-value" style="color:#c0392b;">Rp <?= number_format($total_loss_real,0,',','.') ?></div><div style="font-size:10px;color:#b91c1c;">(Mengurangi Setoran)</div></div>
-  </div>
+    </div>
 
-  <?php if ($sales_summary['pending'] > 0): ?>
-      <div style="margin-top:15px; padding:10px; border:1px solid #ffcc00; background:#fffbe6; font-size:11px;">
-          <strong>Catatan Teknis:</strong> Terdapat <?= number_format($sales_summary['pending']) ?> transaksi status "Pending" (Live Sales) yang belum masuk rekap final.
+    <?php if ($sales_summary['pending'] > 0): ?>
+      <div style="margin-top:10px; padding:8px; border:1px solid #e2e8f0; background:#f8fafc; font-size:11px; color:#64748b;">
+        <strong>Catatan Sistem:</strong> Angka di atas mencakup <?= number_format($sales_summary['pending']) ?> transaksi Live (Pending) yang belum dilakukan settlement.
       </div>
-  <?php endif; ?>
+    <?php endif; ?>
 
   <div style="margin-top:30px; font-size:10px; color:#999; text-align:center;">
       Dicetak oleh Sistem Wartelpas pada <?= date('d-m-Y H:i:s') ?>
