@@ -526,14 +526,50 @@ if (isset($db) && $db instanceof PDO && isset($_GET['hp_delete'])) {
     }
 }
 
+// Kunci audit manual (harian)
+if (isset($db) && $db instanceof PDO && isset($_GET['audit_lock'])) {
+    $lock_date = trim($_GET['audit_date'] ?? $filter_date);
+    if ($req_show !== 'harian' || $lock_date === '') {
+        $audit_error = 'Penguncian hanya tersedia untuk rekap harian.';
+    } else {
+        try {
+            $stmtCnt = $db->prepare("SELECT COUNT(*) FROM audit_rekap_manual WHERE report_date = :d");
+            $stmtCnt->execute([':d' => $lock_date]);
+            $rowCount = (int)$stmtCnt->fetchColumn();
+            if ($rowCount <= 0) {
+                $audit_error = 'Belum ada audit manual yang bisa dikunci.';
+            } else {
+                $lock_by = isset($_SESSION['mikhmon']) ? (string)$_SESSION['mikhmon'] : 'system';
+                $stmtLock = $db->prepare("UPDATE audit_rekap_manual SET is_locked = 1, locked_at = CURRENT_TIMESTAMP, locked_by = :u WHERE report_date = :d");
+                $stmtLock->execute([':u' => $lock_by, ':d' => $lock_date]);
+                $audit_locked_today = true;
+            }
+        } catch (Exception $e) {
+            $audit_error = 'Gagal mengunci audit.';
+        }
+    }
+    $audit_redirect = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($lock_date);
+    if (!headers_sent()) {
+        header('Location: ' . $audit_redirect);
+        exit;
+    }
+}
+
 // Hapus audit manual rekap (harian)
 if (isset($db) && $db instanceof PDO && isset($_GET['audit_delete'])) {
     $del_date = trim($_GET['audit_date'] ?? '');
     $del_blok = strtoupper(trim($_GET['audit_blok'] ?? ''));
     if ($del_date !== '' && $del_blok !== '') {
         try {
-            $stmt = $db->prepare("DELETE FROM audit_rekap_manual WHERE report_date = :d AND UPPER(blok_name) = :b");
-            $stmt->execute([':d' => $del_date, ':b' => $del_blok]);
+            $stmtLock = $db->prepare("SELECT COALESCE(is_locked,0) FROM audit_rekap_manual WHERE report_date = :d AND UPPER(blok_name) = :b LIMIT 1");
+            $stmtLock->execute([':d' => $del_date, ':b' => $del_blok]);
+            $is_locked = (int)$stmtLock->fetchColumn() === 1;
+            if ($is_locked) {
+                $audit_error = 'Audit sudah dikunci dan tidak bisa dihapus.';
+            } else {
+                $stmt = $db->prepare("DELETE FROM audit_rekap_manual WHERE report_date = :d AND UPPER(blok_name) = :b");
+                $stmt->execute([':d' => $del_date, ':b' => $del_blok]);
+            }
         } catch (Exception $e) {}
         $audit_redirect = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
         if (!headers_sent()) {
@@ -1111,6 +1147,16 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         if ($audit_blok_raw === '' || $audit_date === '') {
             $audit_error = 'Blok dan tanggal wajib diisi.';
         } else {
+            try {
+                $stmtLock = $db->prepare("SELECT COALESCE(is_locked,0) FROM audit_rekap_manual WHERE report_date = :d AND UPPER(blok_name) = :b LIMIT 1");
+                $stmtLock->execute([':d' => $audit_date, ':b' => strtoupper($audit_blok)]);
+                $is_locked = (int)$stmtLock->fetchColumn() === 1;
+                if ($is_locked) {
+                    $audit_error = 'Audit sudah dikunci dan tidak bisa diubah.';
+                }
+            } catch (Exception $e) {}
+        }
+        if (empty($audit_error)) {
             $user_rows = [];
             $user_events = [];
             $blok_from_user = '';
@@ -1475,6 +1521,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
     .card-header-solid { background: #23272b; padding: 12px 20px; border-bottom: 2px solid var(--border-col); display: flex; justify-content: space-between; align-items: center; border-radius: 8px 8px 0 0; }
     .card-footer-solid { background: #23272b; padding: 10px 16px; border-top: 1px solid var(--border-col); border-radius: 0 0 8px 8px; width: 100%; box-sizing: border-box; }
     .table-dark-solid { width: 100%; border-collapse: separate; border-spacing: 0; }
+            $audit_ghost_hint = $has_audit_rows ? build_ghost_hint($audit_selisih_qty_total, $audit_selisih_setoran_total) : '';
     .table-dark-solid th { background: #1b1e21; padding: 12px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--txt-muted); border-bottom: 2px solid var(--border-col); }
     .table-dark-solid td { padding: 12px; border-bottom: 1px solid #3a4046; vertical-align: middle; font-size: 0.9rem; }
     .table-dark-solid tr:hover td { background: #32383e; }
@@ -1483,6 +1530,9 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
     .unit-kamtib { color: #4ea8ff; }
     .hp-notes { max-width: 150px; white-space: normal !important; word-break: break-word; line-height: 1.3; text-align: right; }
     .summary-badge { display:inline-block; font-size:11px; padding:2px 8px; border:1px solid #495057; margin-right:6px; background:#2b3137; color:#e9ecef; }
+            <?php if (!empty($audit_ghost_hint)): ?>
+                <div style="color:#fca5a5;">Ghost Hunter: <b><?= htmlspecialchars($audit_ghost_hint) ?></b></div>
+            <?php endif; ?>
     .badge-wartel { background:#1f3b2b; border-color:#2f6b4a; color:#7ee2a8; }
     .badge-kamtib { background:#223049; border-color:#355a8f; color:#9cc7ff; }
     .text-green { color:#2ecc71; }
