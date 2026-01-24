@@ -375,6 +375,48 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - Data audit lama tetap tampil sesuai nilai tersimpan.
 - Untuk mengikuti logika otomatis terbaru, audit lama perlu **disimpan ulang**.
 
+## 4.9 Update Terbaru (Audit, Pengeluaran, Catatan Harian, Keamanan) – 2026-01-24
+### 4.9.1 Audit menjadi fokus keuangan (Finance-only)
+- **report/audit.php** dan **report/print_audit.php** disederhanakan menjadi tampilan keuangan saja.
+- Tabel teknis non-keuangan dihapus, diganti ringkasan eksekutif + status box.
+- **Ghost Hunter** diperbarui agar lebih mudah dipahami (analisa selisih voucher 10/30 menit).
+
+### 4.9.2 Perbaikan filter tanggal & pending real-time
+- Filter audit manual menggunakan `report_date` (bukan kolom lain).
+- Data harian mengenali `raw_date` format `YYYY-MM-DD` + jam.
+- Pending stats ditampilkan **real-time final + pending** dengan label rentang tanggal (disembunyikan jika hari ini).
+
+### 4.9.3 Logika rusak/invalid lebih akurat
+- Status rusak kini dihitung dari kombinasi `status`, `is_*`, dan `comment`.
+- Mengurangi kasus **rusak Rp 0** karena data status tidak konsisten.
+
+### 4.9.4 Integrasi Pengeluaran Operasional (Bon/Belanja)
+- Tabel **audit_rekap_manual** menambahkan kolom `expenses_amt`, `expenses_desc`.
+- **report/selling.php**: modal audit menambahkan input pengeluaran + validasi.
+- **report/audit.php** dan **report/print_audit.php**: menampilkan **Setoran Bersih (Cash) = Setoran Fisik - Pengeluaran**.
+- **report/print_rekap.php**: menambahkan mini cashflow di bawah tabel audit.
+- **report/print_rekap_bulanan.php**:
+  - Kartu summary pengeluaran bulanan.
+  - Kolom pengeluaran per hari.
+  - Lampiran **Rincian Pengeluaran Operasional** (tanggal, blok, keterangan, nominal).
+- **report/print_rekap_tahunan.php**:
+  - Kolom pengeluaran per bulan dan catatan YTD.
+
+### 4.9.5 Catatan Harian / Insiden (Supervisor → Owner)
+- Tabel baru: **daily_report_notes** (1 catatan per tanggal).
+- **report/selling.php**: tombol **Catatan/Insiden** di toolbar harian dan input via popup (edit/hapus tetap dari popup, tidak tampil di dashboard).
+- **report/print_rekap.php**: catatan harian tampil sebagai blok merah di footer rekap harian.
+- **report/print_rekap_bulanan.php**: kolom **Keterangan/Insiden** (teks dipotong agar tabel rapi).
+- **report/audit.php**: catatan ditampilkan di atas ringkasan keuangan.
+- **report/print_audit.php**: catatan ditampilkan di bawah header cetak.
+
+### 4.9.6 Keamanan endpoint ingest
+- **report/live_ingest.php** menambahkan **IP allowlist** (env `WARTELPAS_SYNC_ALLOWLIST`, localhost tetap diizinkan).
+
+### 4.9.7 Penyesuaian tombol audit di selling
+- Tombol **Kunci Audit** disembunyikan dari toolbar harian agar fokus ke audit + catatan harian.
+- Status “Audit terkunci” tetap ditampilkan jika sudah terkunci.
+
 ### 3.11 Konfirmasi masih pakai alert/confirm
 - **Gejala**: UX tidak konsisten dengan design.html.
 - **Akar masalah**: masih menggunakan `alert/confirm` bawaan browser.
