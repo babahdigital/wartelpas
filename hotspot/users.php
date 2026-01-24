@@ -2174,7 +2174,7 @@ if ($debug_mode && !$is_ajax) {
     .users-summary-table { width: 100%; border-collapse: collapse; font-size: 12px; }
     .users-summary-table th { text-align: left; color: #9aa0a6; padding: 6px 0; border-bottom: 1px solid #2d3748; }
     .users-summary-table td { padding: 6px 0; border-bottom: 1px solid #2a313a; color: #e5e7eb; }
-    .summary-stat { background: #222830; border: 1px solid #2d3748; border-radius: 8px; padding: 10px 12px; text-align: center; margin-bottom: 10px; }
+    .summary-stat { background: #222830; border: 1px solid #2d3748; border-radius: 8px; padding: 14px 12px; text-align: center; margin-bottom: 10px; }
     .summary-stat:last-child { margin-bottom: 0; }
     .summary-stat .stat-value { font-size: 20px; font-weight: 700; line-height: 1; color: #34d399; }
     .summary-stat .stat-label { font-size: 11px; color: #9aa0a6; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px; }
