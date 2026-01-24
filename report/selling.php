@@ -117,6 +117,13 @@ function format_first_login($dateStr) {
     return date('d-m-Y H:i:s', $ts);
 }
 
+function format_date_dmy($dateStr) {
+    if (empty($dateStr) || $dateStr === '-') return '-';
+    $ts = strtotime($dateStr);
+    if ($ts === false) return $dateStr;
+    return date('d-m-Y', $ts);
+}
+
 function render_audit_lines($lines) {
     if (empty($lines)) return '-';
     return implode('', array_map(function($line) {
@@ -1124,8 +1131,9 @@ foreach ($rows as $r) {
         if (empty($valid_blocks) || isset($valid_blocks[$blok])) {
             $total_bandwidth += (int)($r['last_bytes'] ?? 0);
         }
+        $dt_display = $sale_date !== '' ? format_date_dmy($sale_date) : format_date_dmy($sale_dt);
         $list[] = [
-                'dt' => $sale_dt,
+            'dt' => $dt_display,
                 'user' => $r['username'] ?? '-',
                 'profile' => $profile,
                 'blok' => $blok,
