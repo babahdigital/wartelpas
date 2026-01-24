@@ -22,7 +22,7 @@ else {
 <link rel="stylesheet" href="css/dashboard-clean-pro.css">
 
 <script type="text/javascript">
-    var testDate = "2026-01-24";
+    var testDate = "";
     function withTestDate(url) {
         if (testDate && testDate.length === 10) {
             return url + "&test_date=" + encodeURIComponent(testDate);
