@@ -491,10 +491,6 @@ $print_time = date('d-m-Y H:i:s');
             <div class="summary-value"><?= $cur ?> <?= number_format((int)$total_net,0,',','.') ?></div>
         </div>
         <div class="summary-card">
-            <div class="summary-title">Avg Sales/Hari</div>
-            <div class="summary-value"><?= number_format((int)$avg_all,0,',','.') ?></div>
-        </div>
-        <div class="summary-card">
             <div class="summary-title">Selisih Audit</div>
             <div class="summary-value" style="color:#c0392b;">
                 <?= $total_selisih >= 0 ? '+' : '' ?><?= $cur ?> <?= number_format((int)$total_selisih,0,',','.') ?>
