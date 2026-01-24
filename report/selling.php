@@ -3228,13 +3228,13 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 <thead>
                     <tr>
                         <th>Tanggal</th>
-                        <th>User</th>
-                        <th>Profile</th>
-                        <th>Blok</th>
-                        <th>Status</th>
-                        <th class="text-right">Harga</th>
-                        <th class="text-right">Efektif</th>
-                        <th class="text-right">Bandwidth</th>
+                        <th style="text-align:center">User</th>
+                        <th style="text-align:center">Profile</th>
+                        <th style="text-align:center">Blok</th>
+                        <th style="text-align:center">Status</th>
+                        <th style="text-align:center">Harga</th>
+                        <th style="text-align:center">Efektif</th>
+                        <th style="text-align:center">Bandwidth</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -3243,10 +3243,10 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     <?php else: foreach ($list_page as $it): ?>
                         <tr>
                             <td><?= htmlspecialchars($it['dt']) ?></td>
-                            <td><?= htmlspecialchars($it['user']) ?></td>
-                            <td><?= htmlspecialchars($it['profile']) ?></td>
-                            <td><?= htmlspecialchars($it['blok']) ?></td>
-                            <td>
+                            <td style="text-align:center"><?= htmlspecialchars($it['user']) ?></td>
+                            <td style="text-align:center"><?= htmlspecialchars($it['profile']) ?></td>
+                            <td style="text-align:center"><?= htmlspecialchars($it['blok']) ?></td>
+                            <td style="text-align:center">
                                 <?php
                                     $st = strtolower($it['status']);
                                     $cls = $st === 'rusak' ? 'st-rusak' : ($st === 'retur' ? 'st-retur' : ($st === 'invalid' ? 'st-invalid' : 'st-normal'));
