@@ -221,20 +221,33 @@ if (file_exists($dbFile)) {
         $auditDateFilter = '';
         $auditDateParam = [];
         if ($req_show === 'harian') {
-            $dateFilter = 'sale_date = :d';
+            $dateFilter = '(sale_date = :d OR raw_date LIKE :raw1 OR raw_date LIKE :raw2 OR raw_date LIKE :raw3 OR raw_date LIKE :raw4)';
             $dateParam[':d'] = $filter_date;
+            $dateParam[':raw1'] = $filter_date . '%';
+            $dateParam[':raw2'] = date('m/d/Y', strtotime($filter_date)) . '%';
+            $dateParam[':raw3'] = date('d/m/Y', strtotime($filter_date)) . '%';
+            $dateParam[':raw4'] = date('M/d/Y', strtotime($filter_date)) . '%';
             $auditDateFilter = 'report_date = :d';
             $auditDateParam[':d'] = $filter_date;
         } elseif ($req_show === 'bulanan') {
-            $dateFilter = 'sale_date LIKE :d';
-            $dateParam[':d'] = $filter_date . '%';
+            $ym = $filter_date;
+            $year = substr($ym, 0, 4);
+            $month = substr($ym, 5, 2);
+            $monthShort = date('M', strtotime($ym . '-01'));
+            $dateFilter = '(sale_date LIKE :d OR raw_date LIKE :raw1 OR raw_date LIKE :raw2 OR raw_date LIKE :raw3)';
+            $dateParam[':d'] = $ym . '%';
+            $dateParam[':raw1'] = $month . '/%/' . $year;
+            $dateParam[':raw2'] = '%/' . $month . '/' . $year;
+            $dateParam[':raw3'] = $monthShort . '/%/' . $year;
             $auditDateFilter = 'report_date LIKE :d';
-            $auditDateParam[':d'] = $filter_date . '%';
+            $auditDateParam[':d'] = $ym . '%';
         } else {
-            $dateFilter = 'sale_date LIKE :d';
-            $dateParam[':d'] = $filter_date . '%';
+            $year = $filter_date;
+            $dateFilter = '(sale_date LIKE :d OR raw_date LIKE :raw1)';
+            $dateParam[':d'] = $year . '%';
+            $dateParam[':raw1'] = '%/' . $year;
             $auditDateFilter = 'report_date LIKE :d';
-            $auditDateParam[':d'] = $filter_date . '%';
+            $auditDateParam[':d'] = $year . '%';
         }
 
         if (table_exists($db, 'sales_history')) {
