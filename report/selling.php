@@ -2665,6 +2665,13 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             $waterfall_target = $net_system_display;
             $waterfall_actual = ($req_show === 'harian') ? (int)$audit_total_actual_setoran : 0;
             $waterfall_variance = $waterfall_actual - $waterfall_target;
+            $total_expenses_today = 0;
+            if (!empty($audit_rows)) {
+                foreach ($audit_rows as $ar) {
+                    $total_expenses_today += (int)($ar['expenses_amt'] ?? 0);
+                }
+            }
+            $real_cash = $audit_total_actual_setoran - $total_expenses_today;
         ?>
         <div class="summary-grid">
             <?php
@@ -2682,6 +2689,19 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 </div>
                 <div style="font-size:12px;color:var(--txt-muted)">Voucher: <?= $cur ?> <?= number_format($voucher_loss_display,0,',','.') ?> | Setoran: <?= $cur ?> <?= number_format($setoran_loss_display,0,',','.') ?></div>
             </div>
+            <div class="summary-card" style="border:1px solid <?= $total_expenses_today > 0 ? '#f39c12' : 'var(--border-col)' ?>;">
+                <div class="summary-title">Setoran Fisik (Cash)</div>
+                <div class="summary-value" style="color:#fff;">
+                    <?= $cur ?> <?= number_format((int)$real_cash,0,',','.') ?>
+                </div>
+                <?php if ($total_expenses_today > 0): ?>
+                    <div style="font-size:11px;color:#f39c12; margin-top:2px;">
+                        <i class="fa fa-minus-circle"></i> Ops: <?= $cur ?> <?= number_format((int)$total_expenses_today,0,',','.') ?> (Bon)
+                    </div>
+                <?php else: ?>
+                    <div style="font-size:11px;color:#555;">Murni Tunai</div>
+                <?php endif; ?>
+            </div>
             <div class="summary-card">
                 <div class="summary-title">Total Device</div>
                 <div style="margin-top:7px; margin-bottom:10px;">
@@ -2696,10 +2716,6 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 <div class="summary-title">Voucher Terjual</div>
                 <div class="summary-value"><?= number_format($total_qty_laku,0,',','.') ?></div>
                 <div style="font-size:12px;color:var(--txt-muted);margin-top: 1px;">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bandwidth: <?= htmlspecialchars(format_bytes_short($total_bandwidth)) ?></div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-title">Net Income</div>
-                <div class="summary-value" style="color:#2ecc71;"><?= $cur ?> <?= number_format($net_system_display,0,',','.') ?></div>
             </div>
         </div>
         <?php if ($req_show === 'harian'): ?>

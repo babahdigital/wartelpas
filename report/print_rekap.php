@@ -215,6 +215,7 @@ $audit_total_selisih_setoran = 0;
 $audit_expected_setoran_adj_total = 0;
 $audit_selisih_setoran_adj_total = 0;
 $has_audit_adjusted = false;
+$total_audit_expense = 0;
 $hp_active_by_block = [];
 $hp_stats_by_block = [];
 $hp_units_by_block = [];
@@ -328,6 +329,7 @@ try {
                 $audit_total_reported_qty += (int)($ar['reported_qty'] ?? 0);
                 $audit_total_expected_setoran += (int)($ar['expected_setoran'] ?? 0);
                 $audit_total_actual_setoran += (int)($ar['actual_setoran'] ?? 0);
+                $total_audit_expense += (int)($ar['expenses_amt'] ?? 0);
                 $audit_total_selisih_qty += (int)($ar['selisih_qty'] ?? 0);
                 $audit_total_selisih_setoran += (int)($ar['selisih_setoran'] ?? 0);
                 [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($ar);
@@ -1033,6 +1035,34 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                     </tr>
                 </tbody>
             </table>
+
+            <?php
+                if ($total_audit_expense > 0) {
+                    $total_cash_on_hand = $audit_total_actual_setoran_adj - $total_audit_expense;
+            ?>
+            <div style="margin-top:10px; display:flex; justify-content:flex-end;">
+                <table style="width:300px; border-collapse:collapse; font-size:11px;">
+                    <tr>
+                        <td style="padding:4px; text-align:right; color:#666;">Total Nilai Audit:</td>
+                        <td style="padding:4px; text-align:right; font-weight:bold; border-bottom:1px solid #ddd;">
+                            Rp <?= number_format((int)$audit_total_actual_setoran_adj,0,',','.') ?>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:4px; text-align:right; color:#d35400;">(-) Pengeluaran Ops:</td>
+                        <td style="padding:4px; text-align:right; color:#d35400; border-bottom:1px solid #000;">
+                            Rp <?= number_format((int)$total_audit_expense,0,',','.') ?>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:6px 4px; text-align:right; font-weight:bold;">SETORAN TUNAI:</td>
+                        <td style="padding:6px 4px; text-align:right; font-weight:bold; font-size:13px;">
+                            Rp <?= number_format((int)$total_cash_on_hand,0,',','.') ?>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <?php } ?>
 
 <div class="audit-summary-box" style="margin-top: 25px; border: 1px solid #000; padding: 15px; border-radius: 4px; background-color: #fdfdfd;">
                 <div class="audit-summary-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #ddd; padding-bottom: 5px; margin-bottom: 10px;">
