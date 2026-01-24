@@ -241,114 +241,54 @@ if ($load == "sysresource") {
 // BAGIAN 2: DASHBOARD UTAMA & ANALISA
 // =========================================================
 } else if ($load == "hotspot") {
-    
-    // --- Initial Load HTML ---
-    $countFreshUsers = 0; $counthotspotactive = 0; $liveUserBytes = []; $mikrotikScripts = [];
-    if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-        $getclock = $API->comm("/system/clock/print");
-        if(isset($getclock[0]['time-zone-name'])) date_default_timezone_set($getclock[0]['time-zone-name']);
-        
-        $allWartelUsers = $API->comm("/ip/hotspot/user/print", array("?server" => "wartel"));
-        foreach ($allWartelUsers as $u) {
-            if (isset($u['uptime']) && ($u['uptime'] == '0s' || $u['uptime'] == '')) { $countFreshUsers++; }
-            $b_in = isset($u['bytes-in']) ? $u['bytes-in'] : 0;
-            $b_out = isset($u['bytes-out']) ? $u['bytes-out'] : 0;
-            $liveUserBytes[$u['name']] = $b_in + $b_out;
-        }
-        $rawActive = $API->comm("/ip/hotspot/active/print", array(".proplist" => "address"));
-        if(is_array($rawActive)) { foreach($rawActive as $act) { if(isset($act['address']) && strpos($act['address'], '172.16.2.') === 0) { $counthotspotactive++; } } }
-        $mikrotikScripts = $API->comm("/system/script/print", array("?comment" => "mikhmon"));
-    }
 
-    $filterMonth = $_SESSION['filter_month']; $filterYear = $_SESSION['filter_year'];
-    $monthShort = [1=>'Jan', 2=>'Feb', 3=>'Mar', 4=>'Apr', 5=>'Mei', 6=>'Jun', 7=>'Jul', 8=>'Agu', 9=>'Sep', 10=>'Okt', 11=>'Nov', 12=>'Des'];
-    $monthFull = [1=>'Januari', 2=>'Februari', 3=>'Maret', 4=>'April', 5=>'Mei', 6=>'Juni', 7=>'Juli', 8=>'Agustus', 9=>'September', 10=>'Oktober', 11=>'November', 12=>'Desember'];
+    $filterMonth = $_SESSION['filter_month'];
+    $filterYear = $_SESSION['filter_year'];
 
-    $dbFile = $root . '/db_data/mikhmon_stats.db'; $rawDataMerged = []; $userStatsMap = [];
+    $dbFile = $root . '/db_data/mikhmon_stats.db';
+    $rawDataMerged = [];
     if (file_exists($dbFile)) {
         try {
             $db = new PDO('sqlite:' . $dbFile);
-            $resStats = $db->query("SELECT username, bytes_total FROM user_stats");
-            if ($resStats) { foreach($resStats as $row) { $userStatsMap[$row['username']] = $row['bytes_total']; } }
             $resSales = $db->query("SELECT full_raw_data FROM sales_history ORDER BY id DESC LIMIT 1500");
             if ($resSales) { foreach($resSales as $row) { $rawDataMerged[] = $row['full_raw_data']; } }
+            if (table_exists($db, 'live_sales')) {
+                try {
+                    $resLive = $db->query("SELECT full_raw_data FROM live_sales ORDER BY id DESC LIMIT 500");
+                    if ($resLive) { foreach($resLive as $row) { $rawDataMerged[] = $row['full_raw_data']; } }
+                } catch (Exception $e) { }
+            }
         } catch (Exception $e) { }
     }
-    if (is_array($mikrotikScripts)) { foreach ($mikrotikScripts as $script) { if(isset($script['name'])) $rawDataMerged[] = $script['name']; } }
     $rawDataMerged = array_unique($rawDataMerged);
 
     $daysInMonth = (int)date("t", mktime(0, 0, 0, $filterMonth, 1, $filterYear));
     $dailyIncome = array_fill(1, $daysInMonth, 0);
     $dailyQty = array_fill(1, $daysInMonth, 0);
-    $totalVoucher = 0; $totalData = 0; $totalIncome = 0;
-    $blokStats = []; $totalTrxAnalisa = 0; $totalOmsetAnalisa = 0;
 
     foreach ($rawDataMerged as $rowString) {
         $parts = explode("-|-", $rowString);
         if (count($parts) >= 4) {
-            $rawDateString = trim($parts[0]); 
+            $rawDateString = trim($parts[0]);
             $price = (int)preg_replace('/[^0-9]/', '', $parts[3]);
-            $username = isset($parts[2]) ? trim($parts[2]) : '';
-            $profile = isset($parts[7]) ? trim($parts[7]) : '';
-            $comment = isset($parts[8]) ? trim($parts[8]) : '';
             $tstamp = strtotime(str_replace("/", "-", normalizeDate($rawDateString)));
             if (!$tstamp) continue;
-            $d_month = (int)date("m", $tstamp); $d_year  = (int)date("Y", $tstamp); $d_day   = (int)date("d", $tstamp);
-
+            $d_month = (int)date("m", $tstamp); $d_year = (int)date("Y", $tstamp); $d_day = (int)date("d", $tstamp);
             if ($d_month == $filterMonth && $d_year == $filterYear) {
-                $totalVoucher++; $totalIncome += $price;
                 if ($d_day >= 1 && $d_day <= $daysInMonth) {
                     $dailyIncome[$d_day] += $price;
                     $dailyQty[$d_day] += 1;
                 }
-                if (isset($liveUserBytes[$username])) { $totalData += $liveUserBytes[$username]; } elseif (isset($userStatsMap[$username])) { $totalData += $userStatsMap[$username]; }
-
-                // Analisa
-                $blokName = "Unknown";
-                if (preg_match('/Blok-([A-Za-z0-9]+)/i', $comment, $match)) { $blokName = strtoupper($match[1]); } 
-                elseif (preg_match('/Kamar-([A-Za-z0-9]+)/i', $comment, $match)) { $blokName = "KMR-".strtoupper($match[1]); }
-                else { $blokName = "Lainnya"; } 
-                if (!isset($blokStats[$blokName])) { $blokStats[$blokName] = ['omset'=>0, 'qty'=>0, 'paket_10'=>0, 'paket_30'=>0]; }
-                $blokStats[$blokName]['omset'] += $price; $blokStats[$blokName]['qty']++;
-                if (stripos($profile, '10') !== false) { $blokStats[$blokName]['paket_10']++; } 
-                elseif (stripos($profile, '30') !== false) { $blokStats[$blokName]['paket_30']++; }
-                $totalOmsetAnalisa += $price; $totalTrxAnalisa++;
             }
         }
     }
-    $currentDay = (int)date("d");
-    if ($filterMonth != (int)date("m") || $filterYear != (int)date("Y")) {
-        $currentDay = $daysInMonth;
-    }
-    $avgDailyIncome = $currentDay > 0 ? ($totalIncome / $currentDay) : 0;
-    $estIncome = $totalIncome + ($avgDailyIncome * ($daysInMonth - $currentDay));
 
     $jsonCategories = json_encode(array_map('strval', range(1, $daysInMonth)));
     $jsonDataIncome = json_encode(array_values($dailyIncome), JSON_NUMERIC_CHECK);
     $jsonDataQty = json_encode(array_values($dailyQty), JSON_NUMERIC_CHECK);
-    $avgOmset = ($totalTrxAnalisa > 0 && count($blokStats) > 0) ? ($totalOmsetAnalisa / count($blokStats)) : 0;
-    uasort($blokStats, function($a, $b) { return $b['omset'] - $a['omset']; });
     ?>
 
     <div id="view-dashboard">
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 15px;">
-            <div>
-                <div style="font-size:12px; color:#aaa;">Total Pendapatan</div>
-                <h2 style="margin:0; font-weight:bold; color:#fff;">Rp <span id="chart-income"><?= number_format($totalIncome, 0, ",", ".") ?></span></h2>
-                <?php if ($filterMonth == (int)date("m") && $filterYear == (int)date("Y")) : ?>
-                    <div style="font-size:11px; color:#00c0ef; margin-top:2px;">
-                        <i class="fa fa-crosshairs"></i> Proyeksi Akhir Bulan: <b>Rp <?= number_format($estIncome, 0, ",", ".") ?></b>
-                    </div>
-                <?php endif; ?>
-            </div>
-            <div class="tab-container" style="display: flex; gap: 5px; flex-wrap:wrap; align-items: center;">
-                <button class="btn btn-sm bg-purple" onclick="$('#view-dashboard').hide(); $('#view-analytics').fadeIn();" style="margin-right:15px; box-shadow: 2px 2px 5px rgba(0,0,0,0.3);"><i class="fa fa-line-chart"></i> <b>ANALISA BISNIS</b></button>
-                <?php foreach($monthShort as $mNum => $mName) {
-                    $active = ($mNum == $filterMonth) ? 'font-weight:bold; color:#fff; border-bottom:2px solid #fff;' : 'color:#8898aa;';
-                    echo "<a style='cursor:pointer; padding:5px; $active' onclick='changeMonth($mNum)'>$mName</a>";
-                } ?>
-            </div>
-        </div>
         <div id="chart_container" style="width:100%; height:100%;">
             <div id="chart_income_stat" style="width:100%; height:100%;"></div>
         </div>
@@ -399,123 +339,62 @@ if ($load == "sysresource") {
                     legend: { itemStyle: { color: '#ccc' }, itemHoverStyle: { color: '#fff' } }
                 });
             }
-
-            // Live update ditangani oleh home.php
         </script>
-        
+
         <style>
             .blink { animation: blinker 1.5s linear infinite; }
             @keyframes blinker { 50% { opacity: 0; } }
-            
+
             /* SEMBUNYIKAN LOAD BAR (PACE) HANYA SAAT DI HALAMAN INI */
             .pace { display: none !important; }
         </style>
     </div>
-
-    <div id="view-analytics" style="display: none;">
-        <div class="row">
-            <div class="col-12">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #605ca8; padding-bottom: 10px; margin-bottom: 15px;">
-                    <h3 style="margin:0; color:#fff;"><i class="fa fa-line-chart"></i> Evaluasi Bisnis (<?= $monthFull[$filterMonth] . " " . $filterYear; ?>)</h3>
-                    <div>
-                        <button class="btn btn-primary btn-sm" onclick="printAnalytics()" style="margin-right:5px;"><i class="fa fa-print"></i> Cetak Laporan</button>
-                        <button class="btn btn-warning btn-sm" onclick="$('#view-analytics').hide(); $('#view-dashboard').fadeIn();"><i class="fa fa-arrow-left"></i> KEMBALI</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div id="print-area">
-            <div class="row">
-                <div class="col-4">
-                    <div class="box bg-green box-solid">
-                        <div class="box-header with-border"><h3 class="box-title">BLOK SULTAN (Terlaris)</h3></div>
-                        <div class="box-body text-center">
-                            <?php 
-                            $bestBlok = array_key_first($blokStats);
-                            if ($bestBlok) { echo "<h1 style='font-size:36px; margin:0;'>$bestBlok</h1><span>Rp " . number_format($blokStats[$bestBlok]['omset'],0,',','.') . "</span>"; } 
-                            else { echo "<h3>-</h3>"; }
-                            ?>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-4">
-                    <div class="box bg-blue box-solid">
-                        <div class="box-header with-border"><h3 class="box-title">TOTAL PENDAPATAN</h3></div>
-                        <div class="box-body text-center"><h1 style='font-size:36px; margin:0;'>Rp <?= number_format($totalOmsetAnalisa,0,',','.'); ?></h1><span>Dari <?= $totalTrxAnalisa; ?> Transaksi</span></div>
-                    </div>
-                </div>
-                <div class="col-4">
-                    <div class="box bg-red box-solid">
-                        <div class="box-header with-border"><h3 class="box-title">PERLU PERHATIAN (Sepi)</h3></div>
-                        <div class="box-body text-center">
-                            <?php 
-                            $lowBlok = array_key_last($blokStats);
-                            if ($lowBlok) { echo "<h1 style='font-size:36px; margin:0;'>$lowBlok</h1><span>Rp " . number_format($blokStats[$lowBlok]['omset'],0,',','.') . "</span>"; } 
-                            else { echo "<h3>-</h3>"; }
-                            ?>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-12">
-                    <div class="box">
-                        <div class="box-header"><h3 class="box-title">Detail Performa per Blok (<?= $monthFull[$filterMonth]; ?>)</h3></div>
-                        <div class="box-body table-responsive no-padding">
-                            <table class="table table-hover table-bordered table-striped" style="width:100%; border-collapse: collapse;">
-                                <thead class="bg-gray">
-                                    <tr><th style="border:1px solid #ddd;">No</th><th style="border:1px solid #ddd;">Nama Blok</th><th style="border:1px solid #ddd;" class="text-center">Voucher</th><th style="border:1px solid #ddd;" class="text-center">10 Menit</th><th style="border:1px solid #ddd;" class="text-center">30 Menit</th><th style="border:1px solid #ddd;" class="text-right">Omset</th><th style="border:1px solid #ddd;" class="text-center">Status</th></tr>
-                                </thead>
-                                <tbody>
-                                    <?php $rank = 1; foreach ($blokStats as $blok => $data) { if($blok == "Lainnya") continue; $statusText = "BURUK"; $statusColor = "red"; if ($data['omset'] >= $avgOmset * 1.2) { $statusText = "SANGAT BAIK"; $statusColor="green"; } elseif ($data['omset'] >= $avgOmset) { $statusText = "BAIK"; $statusColor="blue"; } elseif ($data['omset'] >= $avgOmset * 0.5) { $statusText = "CUKUP"; $statusColor="#f39c12"; } else { $statusText = "BURUK"; $statusColor="red"; } ?>
-                                    <tr><td style="border:1px solid #ddd;">#<?= $rank++; ?></td><td style="border:1px solid #ddd; font-weight:bold; font-size:14px;"><?= $blok; ?></td><td style="border:1px solid #ddd;" class="text-center"><?= $data['qty']; ?></td><td style="border:1px solid #ddd;" class="text-center text-muted"><?= $data['paket_10']; ?></td><td style="border:1px solid #ddd;" class="text-center text-muted"><?= $data['paket_30']; ?></td><td style="border:1px solid #ddd;" class="text-right" style="font-weight:bold;">Rp <?= number_format($data['omset'],0,',','.'); ?></td><td style="border:1px solid #ddd; color:<?= $statusColor; ?>; font-weight:bold;" class="text-center"><?= $statusText; ?></td></tr>
-                                    <?php } ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <script>
-    function printAnalytics() {
-        var printContent = document.getElementById('print-area').innerHTML;
-        var win = window.open('', '', 'height=700,width=800');
-        win.document.write('<html><head><title>Laporan Analisa Bisnis - Wartel Pas</title><style>body { font-family: sans-serif; font-size: 12px; } table { width: 100%; border-collapse: collapse; margin-top:10px; } th, td { border: 1px solid #000; padding: 5px; text-align: left; } .text-center { text-align: center; } .text-right { text-align: right; } .row { display: flex; flex-wrap: wrap; margin-bottom: 20px; } .col-4 { width: 33.33%; padding: 0 5px; box-sizing: border-box; } .box { border: 1px solid #000; padding: 10px; margin-bottom: 5px; } .box-header { border-bottom: 1px solid #ccc; font-weight:bold; margin-bottom:5px; } h1 { font-size: 24px; margin: 5px 0; } h3 { font-size: 14px; margin: 0; }</style></head><body><h2 style="text-align:center;">Laporan Evaluasi Bisnis - Wartel Pas</h2><p style="text-align:center;">Periode: <?= $monthFull[$filterMonth] . " " . $filterYear; ?></p>' + printContent + '</body></html>');
-        win.document.close(); win.print();
-    }
-    </script>
     <?php
 
-// =========================================================
-// BAGIAN 3: RIWAYAT LOGS (TETAP SAMA)
-// =========================================================
 } else if ($load == "logs") {
-    // (Kode Logs Tetap Sama seperti FINAL 12)
-    $filterMonth = $_SESSION['filter_month']; $filterYear  = $_SESSION['filter_year'];
-    if($API->connect($iphost, $userhost, decrypt($passwdhost))){ $mikrotikScripts = $API->comm("/system/script/print", array("?comment" => "mikhmon")); } else { $mikrotikScripts = []; }
-    $dbFile = $root . '/db_data/mikhmon_stats.db'; $rawDataMerged = []; 
-    if (file_exists($dbFile)) { try { $db = new PDO('sqlite:' . $dbFile); $resSales = $db->query("SELECT full_raw_data FROM sales_history ORDER BY id DESC LIMIT 500"); if ($resSales) { foreach($resSales as $row) { $rawDataMerged[] = $row['full_raw_data']; } } } catch (Exception $e) {} }
-    if (is_array($mikrotikScripts)) { foreach ($mikrotikScripts as $script) { if(isset($script['name'])) $rawDataMerged[] = $script['name']; } }
-    $rawDataMerged = array_unique($rawDataMerged);
+
+    $filterMonth = $_SESSION['filter_month'];
+    $filterYear = $_SESSION['filter_year'];
+    $dbFile = $root . '/db_data/mikhmon_stats.db';
+    $rawDataMerged = [];
+
+    if (file_exists($dbFile)) {
+        try {
+            $db = new PDO('sqlite:' . $dbFile);
+            if (table_exists($db, 'sales_history')) {
+                $resSales = $db->query("SELECT full_raw_data FROM sales_history ORDER BY id DESC LIMIT 1500");
+                if ($resSales) { foreach($resSales as $row) { $rawDataMerged[] = $row['full_raw_data']; } }
+            }
+            if (table_exists($db, 'live_sales')) {
+                try {
+                    $resLive = $db->query("SELECT full_raw_data FROM live_sales ORDER BY id DESC LIMIT 500");
+                    if ($resLive) { foreach($resLive as $row) { $rawDataMerged[] = $row['full_raw_data']; } }
+                } catch (Exception $e) { }
+            }
+        } catch (Exception $e) { }
+    }
+
     $finalLogs = [];
     foreach ($rawDataMerged as $rowString) {
         $parts = explode("-|-", $rowString);
-        if (count($parts) >= 2) {
-            $rawDate = isset($parts[0]) ? trim($parts[0]) : '-'; $rawTime = isset($parts[1]) ? trim($parts[1]) : '00:00:00'; 
-            $dateTimeStr = normalizeDate($rawDate) . " " . $rawTime; $tstamp = strtotime(str_replace("/", "-", $dateTimeStr));
-            if ($tstamp) {
-                $d_month = (int)date("m", $tstamp); $d_year  = (int)date("Y", $tstamp);
-                if ($d_month == $filterMonth && $d_year == $filterYear) {
-                    $username = isset($parts[2]) ? trim($parts[2]) : '-'; $price = isset($parts[3]) ? (int)preg_replace('/[^0-9]/', '', $parts[3]) : 0;
-                    $paket = (isset($parts[7]) && $parts[7] != "") ? trim($parts[7]) : '-'; $comment = (isset($parts[8])) ? trim($parts[8]) : '';
-                    $key = $tstamp . "_" . rand(100,999);
-                    $finalLogs[$key] = [ 'time_str' => date("d/m/Y H:i", $tstamp), 'username' => $username, 'paket' => $paket, 'comment' => $comment, 'price' => $price ];
-                }
-            }
+        if (count($parts) >= 4) {
+            $rawDateString = trim($parts[0]);
+            $price = (int)preg_replace('/[^0-9]/', '', $parts[3]);
+            $username = isset($parts[2]) ? trim($parts[2]) : '';
+            $tstamp = strtotime(str_replace("/", "-", normalizeDate($rawDateString)));
+            if (!$tstamp) continue;
+
+            $d_month = (int)date("m", $tstamp);
+            $d_year  = (int)date("Y", $tstamp);
+            if ($d_month != $filterMonth || $d_year != $filterYear) continue;
+
+            $paket = (isset($parts[7]) && $parts[7] != "") ? trim($parts[7]) : '-';
+            $comment = (isset($parts[8])) ? trim($parts[8]) : '';
+            $key = $tstamp . "_" . rand(100,999);
+            $finalLogs[$key] = [ 'time_str' => date("d/m/Y H:i", $tstamp), 'username' => $username, 'paket' => $paket, 'comment' => $comment, 'price' => $price ];
         }
     }
+
     krsort($finalLogs);
     $maxShow = 20; $count = 0;
     foreach ($finalLogs as $log) {
@@ -538,13 +417,13 @@ if ($load == "sysresource") {
         $titleAttr = $paketTitle !== '' && $paketTitle !== '-' ? " title=\"Paket: " . htmlspecialchars($paketTitle) . "\"" : '';
 
         echo "<tr>";
-        echo "<td style='padding:8px 10px; vertical-align:middle; color:#888; font-family:monospace;'>" . substr($log['time_str'], 11, 5) . "</td>";
-        echo "<td style='padding:8px 10px; vertical-align:middle; font-weight:600; color:#eee;'>" . $log['username'] . "</td>";
-        echo "<td class='text-center' style='padding:8px 10px; vertical-align:middle;'><span style='background:#333; padding:2px 6px; border-radius:3px; font-size:10px; color:#aaa;'>" . $blokDisplay . "</span></td>";
-        echo "<td class='text-right' style='padding:8px 10px; vertical-align:middle; font-family:monospace; font-size:12px; font-weight:bold; color:$colorClass;'$titleAttr>" . number_format($log['price'],0,',','.') . "</td>";
+        echo "<td style='color:#8898aa; font-family:monospace;'>" . substr($log['time_str'], 11, 5) . "</td>";
+        echo "<td style='font-weight:600;'>" . $log['username'] . "</td>";
+        echo "<td style='text-align:center;'><span style='background:#333; padding:2px 6px; border-radius:3px; font-size:10px;'>" . $blokDisplay . "</span></td>";
+        echo "<td style='text-align:right; font-family:monospace; font-size:12px; font-weight:bold; color:$colorClass;'$titleAttr>" . number_format($log['price'],0,',','.') . "</td>";
         echo "</tr>";
         $count++;
     }
-    if ($count == 0) { echo "<tr><td colspan='5' class='text-center' style='padding:20px;'>Belum ada transaksi bulan ini.</td></tr>"; }
+    if ($count == 0) { echo "<tr><td colspan='4' class='text-center' style='padding:20px;'>Belum ada transaksi bulan ini.</td></tr>"; }
 }
 ?>
