@@ -1040,125 +1040,128 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                 </tbody>
             </table>
 
-            <div class="audit-summary-box">
-                <div class="audit-summary-header">Kesimpulan Audit Harian</div>
-                <div style="font-size:11px; display:flex; flex-wrap:wrap; gap:15px; margin-bottom:6px;">
-                    <div style="display:flex; align-items:center;">
-                        <span style="display:inline-block; width:15px; height:15px; background:#fef3c7; border:1px solid #ccc; margin-right:5px;"></span> User Tidak Dilaporkan
-                    </div>
-                    <div style="display:flex; align-items:center;">
-                        <span style="display:inline-block; width:15px; height:15px; background:#fecaca; border:1px solid #ccc; margin-right:5px;"></span> Voucher Rusak
-                    </div>
-                    <div style="display:flex; align-items:center;">
-                        <span style="display:inline-block; width:15px; height:15px; background:#dcfce7; border:1px solid #ccc; margin-right:5px;"></span> Voucher Retur
-                    </div>
+<div class="audit-summary-box">
+                <div class="audit-summary-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>KESIMPULAN AUDIT HARIAN</span>
+                    <span style="font-size:11px; font-weight:normal; color:#555;">
+                        (Ringkasan Keuangan & Insiden)
+                    </span>
                 </div>
-                <div style="font-size:11px; color:#444; margin-bottom:6px; display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
-                    <span><strong>Status Voucher Global:</strong></span>
-                    <span>Voucher Rusak: <?= number_format((int)$total_qty_rusak,0,',','.') ?></span>
-                    <span>Retur: <?= number_format((int)$total_qty_retur,0,',','.') ?></span>
-                    <span>Invalid: <?= number_format((int)$total_qty_invalid,0,',','.') ?></span>
+
+                <div style="background:#f1f5f9; padding:8px; border-radius:4px; margin-bottom:12px; font-size:11px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong>Total Insiden Hari Ini:</strong>
+                        <span style="margin-left:8px; color:<?= $total_qty_rusak > 0 ? '#c0392b' : '#444' ?>;">Rusak: <b><?= number_format((int)$total_qty_rusak,0,',','.') ?></b></span>
+                        <span style="margin-left:8px; color:<?= $total_qty_retur > 0 ? '#27ae60' : '#444' ?>;">Retur: <b><?= number_format((int)$total_qty_retur,0,',','.') ?></b></span>
+                        <span style="margin-left:8px; color:<?= $total_qty_invalid > 0 ? '#c0392b' : '#444' ?>;">Invalid: <b><?= number_format((int)$total_qty_invalid,0,',','.') ?></b></span>
+                    </div>
+                    <div style="font-style:italic; color:#666;">
+                        *Data berdasarkan input manual lapangan
+                    </div>
                 </div>
                 
-                <hr style="border:0; border-top:1px dashed #ccc; margin:8px 0;">
+                <hr style="border:0; border-top:1px solid #eee; margin:10px 0;">
 
                 <?php if (!empty($audit_summary_report)): ?>
                     <?php foreach ($audit_summary_report as $idx => $rep): ?>
-                        <div class="audit-item">
-                            <strong><?= ($idx + 1) ?>. Blok <?= htmlspecialchars($rep['blok']) ?></strong>
-                            <?php 
-                                $rusak_total = (int)($rep['rusak_10'] ?? 0) + (int)($rep['rusak_30'] ?? 0);
-                                $rusak_rp = ((int)($rep['rusak_10'] ?? 0) * 5000) + ((int)($rep['rusak_30'] ?? 0) * 20000);
-                                $unreported_total = (int)($rep['unreported_total'] ?? 0);
-                                if ($rep['selisih_setoran'] < 0) {
-                                    $extra_parts = [];
-                                    if ($rusak_rp > 0) $extra_parts[] = "Rusak Rp " . number_format($rusak_rp, 0, ',', '.');
-                                    if ($unreported_total > 0) $extra_parts[] = "User Tidak Dilaporkan: " . number_format($unreported_total, 0, ',', '.');
-                                    $extra_text = !empty($extra_parts) ? " <span style='color:#b45309;'>[" . implode(' | ', $extra_parts) . "]</span>" : '';
-                                    echo "- <span style='color:red;'>Kurang Setor Rp " . number_format(abs($rep['selisih_setoran']), 0, ',', '.') . "</span>" . $extra_text;
-                                } elseif ($rep['selisih_setoran'] > 0) {
-                                    echo "- <span style='color:green;'>Lebih Setor Rp " . number_format($rep['selisih_setoran'], 0, ',', '.') . "</span>";
-                                } elseif ($rusak_total > 0) {
-                                    echo "- <span style='color:red;'>Setoran Sesuai, ada Voucher Rusak Rp " . number_format($rusak_rp, 0, ',', '.') . "</span>";
-                                } else {
-                                    echo "- <span style='color:blue;'>Setoran Sesuai</span>";
-                                }
-                            ?>
-                            <ul class="audit-details-list">
+                        <div class="audit-item" style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px dashed #ddd;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                <div style="font-size:13px;">
+                                    <strong><?= ($idx + 1) ?>. Blok <?= htmlspecialchars($rep['blok']) ?></strong>
+                                </div>
+                                <div style="font-size:13px; font-weight:bold;">
+                                    <?php 
+                                        $rusak_total = (int)($rep['rusak_10'] ?? 0) + (int)($rep['rusak_30'] ?? 0);
+                                        $rusak_rp = ((int)($rep['rusak_10'] ?? 0) * 5000) + ((int)($rep['rusak_30'] ?? 0) * 20000);
+                                        $unreported_total = (int)($rep['unreported_total'] ?? 0);
+                                        
+                                        // LOGIKA STATUS (KALIMAT YANG DIPERBAIKI)
+                                        if ($rep['selisih_setoran'] < 0) {
+                                            echo "<span style='color:#c0392b; background:#fee2e2; padding:2px 6px; border-radius:4px;'>KURANG SETOR: Rp " . number_format(abs($rep['selisih_setoran']), 0, ',', '.') . "</span>";
+                                        } elseif ($rep['selisih_setoran'] > 0) {
+                                            echo "<span style='color:#166534; background:#dcfce7; padding:2px 6px; border-radius:4px;'>LEBIH SETOR: Rp " . number_format($rep['selisih_setoran'], 0, ',', '.') . "</span>";
+                                        } elseif ($rusak_total > 0) {
+                                            echo "<span style='color:#b45309; background:#fef3c7; padding:2px 6px; border-radius:4px;'>SETORAN SESUAI (ADA RUSAK)</span>";
+                                        } else {
+                                            echo "<span style='color:#1d4ed8; background:#dbeafe; padding:2px 6px; border-radius:4px;'>STATUS: AMAN</span>";
+                                        }
+                                    ?>
+                                </div>
+                            </div>
+
+                            <div style="margin-left:15px; font-size:11px; color:#444;">
                                 <?php if ($rep['p10_qty'] > 0): ?>
-                                    <li>Profile 10 Menit: <?= $rep['p10_qty'] ?> Voucher / Rp <?= $rep['p10_sum'] !== null ? number_format($rep['p10_sum'], 0, ',', '.') : '-' ?></li>
+                                    <div>• Penjualan 10 Menit: <b><?= $rep['p10_qty'] ?></b> Lembar (Rp <?= number_format($rep['p10_sum'], 0, ',', '.') ?>)</div>
                                 <?php endif; ?>
-                                
                                 <?php if ($rep['p30_qty'] > 0): ?>
-                                    <li>Profile 30 Menit: <?= $rep['p30_qty'] ?> Voucher / Rp <?= $rep['p30_sum'] !== null ? number_format($rep['p30_sum'], 0, ',', '.') : '-' ?></li>
+                                    <div>• Penjualan 30 Menit: <b><?= $rep['p30_qty'] ?></b> Lembar (Rp <?= number_format($rep['p30_sum'], 0, ',', '.') ?>)</div>
                                 <?php endif; ?>
+                            </div>
 
-                                <?php if ($rep['rusak_10'] > 0 || $rep['rusak_30'] > 0): ?>
-                                    <li>
-                                        <span style="display:inline-block; min-width:16px; padding:0 4px; margin-right:4px; background:#fecaca; border:1px solid #fca5a5; font-size:10px; text-align:center;">V</span>
-                                        <span style="color:red; font-weight:bold;">Voucher Rusak:</span>
-                                        <?php 
-                                            $rusak_parts = [];
-                                            if($rep['rusak_10'] > 0) $rusak_parts[] = number_format((int)$rep['rusak_10'],0,',','.') . ' User (10 Menit)';
-                                            if($rep['rusak_30'] > 0) $rusak_parts[] = number_format((int)$rep['rusak_30'],0,',','.') . ' User (30 Menit)';
-                                            echo implode(' | ', $rusak_parts);
-                                        ?>
-                                    </li>
-                                <?php endif; ?>
+                            <?php if ($rusak_total > 0 || !empty($rep['retur_10']) || !empty($rep['retur_30']) || !empty($rep['unreported_total']) || !empty($rep['ghost_10']) || !empty($rep['ghost_30'])): ?>
+                                <div style="margin-top:6px; margin-left:15px; background:#fff; border:1px solid #e5e7eb; border-radius:4px; padding:6px;">
+                                    <div style="font-size:10px; font-weight:bold; color:#666; margin-bottom:2px; text-transform:uppercase;">Catatan Lapangan:</div>
+                                    
+                                    <?php if ($rep['rusak_10'] > 0 || $rep['rusak_30'] > 0): ?>
+                                        <div style="color:#c0392b; font-size:11px;">
+                                            <i class="fa fa-times-circle"></i> <b>Voucher Rusak (Loss):</b>
+                                            <?php 
+                                                $rusak_parts = [];
+                                                if($rep['rusak_10'] > 0) $rusak_parts[] = $rep['rusak_10'] . ' unit (10m)';
+                                                if($rep['rusak_30'] > 0) $rusak_parts[] = $rep['rusak_30'] . ' unit (30m)';
+                                                echo implode(', ', $rusak_parts);
+                                            ?>
+                                            <span style="font-size:10px; color:#999;">(Mengurangi Kewajiban Setor)</span>
+                                        </div>
+                                    <?php endif; ?>
 
-                                <?php if (!empty($rep['retur_10']) || !empty($rep['retur_30'])): ?>
-                                    <li>
-                                        <span style="display:inline-block; min-width:16px; padding:0 4px; margin-right:4px; background:#dcfce7; border:1px solid #86efac; font-size:10px; text-align:center;">V</span>
-                                        <span style="color:green; font-weight:bold;">Voucher Retur:</span>
-                                        <?php 
-                                            $retur_parts = [];
-                                            if(!empty($rep['retur_10'])) $retur_parts[] = number_format((int)$rep['retur_10'],0,',','.') . ' User (10 Menit)';
-                                            if(!empty($rep['retur_30'])) $retur_parts[] = number_format((int)$rep['retur_30'],0,',','.') . ' User (30 Menit)';
-                                            echo implode(' | ', $retur_parts);
-                                        ?>
-                                    </li>
-                                <?php endif; ?>
+                                    <?php if (!empty($rep['retur_10']) || !empty($rep['retur_30'])): ?>
+                                        <div style="color:#166534; font-size:11px;">
+                                            <i class="fa fa-refresh"></i> <b>Voucher Retur (Diganti):</b>
+                                            <?php 
+                                                $retur_parts = [];
+                                                if(!empty($rep['retur_10'])) $retur_parts[] = $rep['retur_10'] . ' unit (10m)';
+                                                if(!empty($rep['retur_30'])) $retur_parts[] = $rep['retur_30'] . ' unit (30m)';
+                                                echo implode(', ', $retur_parts);
+                                            ?>
+                                            <span style="font-size:10px; color:#999;">(Pendapatan Tetap)</span>
+                                        </div>
+                                    <?php endif; ?>
 
-                                <?php if (!empty($rep['unreported_total'])): ?>
-                                    <li>
-                                        <span style="display:inline-block; min-width:16px; padding:0 4px; margin-right:4px; background:#fef3c7; border:1px solid #fcd34d; font-size:10px; text-align:center;">U</span>
-                                        <span style="color:#b45309; font-weight:bold;">User Tidak Dilaporkan:</span>
-                                        <?php
-                                            $unrep_parts = [];
-                                            if (!empty($rep['unreported_10'])) $unrep_parts[] = number_format((int)$rep['unreported_10'],0,',','.') . ' User (10 Menit)';
-                                            if (!empty($rep['unreported_30'])) $unrep_parts[] = number_format((int)$rep['unreported_30'],0,',','.') . ' User (30 Menit)';
-                                            echo implode(' | ', $unrep_parts);
-                                        ?>
-                                    </li>
-                                <?php endif; ?>
+                                    <?php if (!empty($rep['unreported_total'])): ?>
+                                        <div style="color:#b45309; font-size:11px;">
+                                            <i class="fa fa-exclamation-triangle"></i> <b>User Aktif Tidak Terlapor:</b>
+                                            <?php
+                                                $unrep_parts = [];
+                                                if (!empty($rep['unreported_10'])) $unrep_parts[] = $rep['unreported_10'] . ' unit (10m)';
+                                                if (!empty($rep['unreported_30'])) $unrep_parts[] = $rep['unreported_30'] . ' unit (30m)';
+                                                echo implode(', ', $unrep_parts);
+                                            ?>
+                                        </div>
+                                    <?php endif; ?>
 
-                                <?php
-                                    $ghost_parts = [];
-                                    $ghost_10_rem = max(0, (int)$rep['ghost_10'] - (int)($rep['unreported_10'] ?? 0));
-                                    $ghost_30_rem = max(0, (int)$rep['ghost_30'] - (int)($rep['unreported_30'] ?? 0));
-                                    if ($ghost_10_rem > 0) {
-                                        $ghost_parts[] = number_format($ghost_10_rem, 0, ',', '.') . ' Unit (10 Menit)';
-                                    }
-                                    if ($ghost_30_rem > 0) {
-                                        $ghost_parts[] = number_format($ghost_30_rem, 0, ',', '.') . ' Unit (30 Menit)';
-                                    }
-                                ?>
-                                <?php if (!empty($ghost_parts)): ?>
-                                    <li>
-                                        <span style="display:inline-block; min-width:16px; padding:0 4px; margin-right:4px; background:#fde68a; border:1px solid #f59e0b; font-size:10px; text-align:center;">V</span>
-                                        <span style="color:#b45309; font-weight:bold;">Voucher Tidak Dilaporkan (Auto):</span>
-                                        <?= implode(' | ', $ghost_parts) ?>
-                                    </li>
-                                <?php endif; ?>
-
-                                <?php if ($rep['p10_qty'] == 0 && $rep['p30_qty'] == 0): ?>
-                                    <li>Tidak ada data detail profile audit.</li>
-                                <?php endif; ?>
-                            </ul>
+                                    <?php
+                                        $ghost_10_rem = max(0, (int)$rep['ghost_10'] - (int)($rep['unreported_10'] ?? 0));
+                                        $ghost_30_rem = max(0, (int)$rep['ghost_30'] - (int)($rep['unreported_30'] ?? 0));
+                                        $ghost_parts = [];
+                                        if ($ghost_10_rem > 0) $ghost_parts[] = $ghost_10_rem . ' unit (10m)';
+                                        if ($ghost_30_rem > 0) $ghost_parts[] = $ghost_30_rem . ' unit (30m)';
+                                    ?>
+                                    <?php if (!empty($ghost_parts)): ?>
+                                        <div style="color:#b45309; font-size:11px; margin-top:2px;">
+                                            <i class="fa fa-eye"></i> <b>Indikasi Voucher Hilang (Auto-Detect):</b>
+                                            <?= implode(', ', $ghost_parts) ?>
+                                            <br><i style="font-size:10px;">*Sistem mendeteksi selisih uang ini setara dengan voucher diatas.</i>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 <?php else: ?>
-                    <div class="audit-item">Tidak ada data audit yang perlu dilaporkan.</div>
+                    <div class="audit-item" style="text-align:center; padding:20px; color:#666;">
+                        Belum ada data audit manual yang diinput untuk tanggal ini.
+                    </div>
                 <?php endif; ?>
             </div>
             <?php endif; ?>
