@@ -506,17 +506,16 @@ if ($load == "sysresource") {
             if (strlen($cleanCom) > 0) $blokDisplay = strtoupper(substr($cleanCom, 0, 1));
         }
 
-        $badgeClass = "badge bg-gray";
-        if ($log['price'] >= 20000) { $badgeClass = "badge bg-yellow"; }
-        elseif ($log['price'] >= 10000) { $badgeClass = "badge bg-blue"; }
-        elseif ($log['price'] >= 5000) { $badgeClass = "badge bg-green"; }
+        $colorClass = "#ccc";
+        if ($log['price'] >= 20000) { $colorClass = "#f39c12"; }
+        elseif ($log['price'] >= 10000) { $colorClass = "#00c0ef"; }
+        elseif ($log['price'] >= 5000) { $colorClass = "#00a65a"; }
 
         echo "<tr>";
-        echo "<td style='padding-left:10px; vertical-align:middle; color:#ccc; font-size:10px;'>" . substr($log['time_str'], 0, 5) . " <span style='color:#666'>" . substr($log['time_str'], 11) . "</span></td>";
-        echo "<td style='vertical-align:middle; font-weight:bold; color:#fff;'>" . $log['username'] . "</td>";
-        echo "<td style='vertical-align:middle; color:#aaa; font-size:10px;'>" . $log['paket'] . "</td>";
-        echo "<td class='text-center' style='vertical-align:middle;'><span class='badge bg-gray' style='font-size:9px;'>" . $blokDisplay . "</span></td>";
-        echo "<td class='text-right' style='padding-right:10px; vertical-align:middle;'><span class='$badgeClass' style='font-size:10px;'>Rp " . number_format($log['price'],0,',','.') . "</span></td>";
+        echo "<td style='padding:8px 10px; vertical-align:middle; color:#888; font-family:monospace;'>" . substr($log['time_str'], 11, 5) . "</td>";
+        echo "<td style='padding:8px 10px; vertical-align:middle; font-weight:600; color:#eee;'>" . $log['username'] . "</td>";
+        echo "<td class='text-center' style='padding:8px 10px; vertical-align:middle;'><span style='background:#333; padding:2px 6px; border-radius:3px; font-size:10px; color:#aaa;'>" . $blokDisplay . "</span></td>";
+        echo "<td class='text-right' style='padding:8px 10px; vertical-align:middle; font-family:monospace; font-size:12px; font-weight:bold; color:$colorClass;'>" . number_format($log['price'],0,',','.') . "</td>";
         echo "</tr>";
         $count++;
     }
