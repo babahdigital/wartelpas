@@ -156,12 +156,13 @@ body {
     flex-direction: column;
 }
 
-.card-transaction .card-body {
+.card-transaction {
     flex: 1;
     overflow: hidden;
     padding: 0;
     display: flex;
     flex-direction: column;
+    height: 510px !important; /* Batasi tinggi chart agar tidak terlalu besar */
 }
 
 .card-transaction .table-scroll {
