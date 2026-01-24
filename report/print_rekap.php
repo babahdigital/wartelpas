@@ -1069,8 +1069,13 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             <?php 
                                 $rusak_total = (int)($rep['rusak_10'] ?? 0) + (int)($rep['rusak_30'] ?? 0);
                                 $rusak_rp = ((int)($rep['rusak_10'] ?? 0) * 5000) + ((int)($rep['rusak_30'] ?? 0) * 20000);
+                                $unreported_total = (int)($rep['unreported_total'] ?? 0);
                                 if ($rep['selisih_setoran'] < 0) {
-                                    echo "- <span style='color:red;'>Kurang Setor Rp " . number_format(abs($rep['selisih_setoran']), 0, ',', '.') . "</span>";
+                                    $extra_parts = [];
+                                    if ($rusak_rp > 0) $extra_parts[] = "Rusak Rp " . number_format($rusak_rp, 0, ',', '.');
+                                    if ($unreported_total > 0) $extra_parts[] = "User Tidak Dilaporkan: " . number_format($unreported_total, 0, ',', '.');
+                                    $extra_text = !empty($extra_parts) ? " <span style='color:#b45309;'>[" . implode(' | ', $extra_parts) . "]</span>" : '';
+                                    echo "- <span style='color:red;'>Kurang Setor Rp " . number_format(abs($rep['selisih_setoran']), 0, ',', '.') . "</span>" . $extra_text;
                                 } elseif ($rep['selisih_setoran'] > 0) {
                                     echo "- <span style='color:green;'>Lebih Setor Rp " . number_format($rep['selisih_setoran'], 0, ',', '.') . "</span>";
                                 } elseif ($rusak_total > 0) {
