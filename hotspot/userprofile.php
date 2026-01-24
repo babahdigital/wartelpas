@@ -118,7 +118,7 @@ if (!isset($_SESSION["mikhmon"])) {
 					</div>
 				</div>
 				<div class="card-body-mod">
-					<div class="table-responsive" style="max-height: 0">
+					<div class="table-responsive" style="height: 100%;">
 						<table id="tFilter" class="table-dark-mod text-nowrap">
   <thead>
   <tr> 
