@@ -196,6 +196,8 @@ if ($load == "live_data") {
     echo json_encode($dataResponse);
     exit();
 
+}
+
 
 // =========================================================
 // BAGIAN 1: SYSTEM RESOURCE
@@ -236,7 +238,6 @@ if ($load == "sysresource") {
     </div>
     <?php
     exit();
-}
 
 // =========================================================
 // BAGIAN 2: DASHBOARD UTAMA & ANALISA
