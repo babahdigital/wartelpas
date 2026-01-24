@@ -1753,9 +1753,14 @@ foreach($all_users as $u) {
       $last_used_filter = $hist['login_time_real'];
     }
 
-    // Filter tanggal (harian/bulanan/tahunan) memakai last_used
-    if ($req_status !== 'used' && $req_show !== 'semua' && !empty($filter_date)) {
-      if ($status !== 'READY') {
+    // Filter tanggal (harian/bulanan/tahunan) memakai last_used (selalu aktif)
+    if ($req_show !== 'semua' && !empty($filter_date)) {
+      if ($status === 'READY') {
+        $is_today = ($filter_date === date('Y-m-d') && $req_show === 'harian');
+        if (!$is_today && $req_status === 'all') {
+          continue;
+        }
+      } else {
         $date_key = normalize_date_key($last_used_filter, $req_show);
         if ($date_key === '' || $date_key !== $filter_date) {
           continue;
