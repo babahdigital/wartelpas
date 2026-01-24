@@ -143,7 +143,6 @@ if ($idleto != "disable") {
 ?>
 
 <span style="display:none;" id="idto"><?= $idleto; ?></span>
-<span style="display:none;" id="timer"></span>
 
 <style>
     :root {
@@ -374,8 +373,13 @@ if ($idleto != "disable") {
                 </a>
                 <div class="dropdown-menu">
                     <a class="dropdown-item" href="./?hotspot=users&profile=all&session=<?= $session; ?>"><i class="fa fa-list"></i> <?= $_user_list ?></a>
-                    <a class="dropdown-item" href="./?hotspot-user=generate&session=<?= $session; ?>"><i class="fa fa-user-plus"></i> <?= $_generate ?></a>
                 </div>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link <?= $sgenuser; ?>" href="./?hotspot-user=generate&session=<?= $session; ?>">
+                    <i class="fa fa-user-plus"></i> <?= $_generate ?>
+                </a>
             </li>
 
             <li class="nav-item" onclick="toggleMobileSub(this)">
@@ -384,16 +388,15 @@ if ($idleto != "disable") {
                 </a>
                 <div class="dropdown-menu">
                     <a class="dropdown-item" href="./?hotspot=user-profiles&session=<?= $session; ?>"><i class="fa fa-list"></i> <?= $_user_profile_list ?></a>
-                    <a class="dropdown-item" href="./?user-profile=add&session=<?= $session; ?>"><i class="fa fa-plus-square"></i> <?= $_add_user_profile ?></a>
                 </div>
             </li>
 
             <li class="nav-item" onclick="toggleMobileSub(this)">
                 <a class="nav-link <?= $sactive . $shosts . $scookies; ?>" href="javascript:void(0)">
-                    <i class="fa fa-wifi"></i> Hotspot <i class="fa fa-caret-down" style="margin-left:5px;font-size:10px;"></i>
+                    <i class="fa fa-gear"></i> Perangkat <i class="fa fa-caret-down" style="margin-left:5px;font-size:10px;"></i>
                 </a>
                 <div class="dropdown-menu">
-                    <a class="dropdown-item" href="./?hotspot=active&session=<?= $session; ?>"><i class="fa fa-wifi"></i> <?= $_hotspot_active ?></a>
+                    <a class="dropdown-item" href="./?hotspot=active&session=<?= $session; ?>"><i class="fa fa-gear"></i> <?= $_hotspot_active ?></a>
                     <a class="dropdown-item" href="./?hotspot=hosts&session=<?= $session; ?>"><i class="fa fa-laptop"></i> <?= $_hosts ?></a>
                     <a class="dropdown-item" href="./?hotspot=cookies&session=<?= $session; ?>"><i class="fa fa-hourglass"></i> <?= $_hotspot_cookies ?></a>
                     <a class="dropdown-item" href="./?hotspot=dhcp-leases&session=<?= $session; ?>"><i class="fa fa-sitemap"></i> <?= $_dhcp_leases ?></a>
@@ -414,7 +417,7 @@ if ($idleto != "disable") {
         </ul>
 
         <div class="nav-right">
-            <span class="timer-badge" style="<?= $didleto; ?>" title="Idle Timeout">
+            <span class="timer-badge" title="Waktu Saat Ini">
                 <i class="fa fa-clock-o"></i> <span id="timer"></span>
             </span>
             <a id="logout" href="./?hotspot=logout&session=<?= $session; ?>" title="<?= $_logout ?>">
@@ -459,6 +462,19 @@ if ($idleto != "disable") {
         }
     });
 
+    function updateRealTimeBadge() {
+        var el = document.getElementById('timer');
+        if (!el) return;
+        var now = new Date();
+        var dateStr = now.toLocaleDateString('id-ID', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+        var timeStr = now.toLocaleTimeString('id-ID', { hour12: false });
+        el.textContent = dateStr + ' ' + timeStr;
+    }
+
     $(document).ready(function(){
         $(".connect").click(function(){
             notify("<?= $_connecting ?>");
@@ -468,6 +484,8 @@ if ($idleto != "disable") {
             notify("<?= $_loading ?>");
             stheme(this.value)
         });
+        updateRealTimeBadge();
+        setInterval(updateRealTimeBadge, 1000);
     });
 </script>
 
