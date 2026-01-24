@@ -75,7 +75,7 @@ else {
                         $("#row-count").text("0 transaksi ditemukan");
                     } else {
                         $("#tabel_riwayat").html(dataLogs);
-                        var rowCount = $("#tabel_riwayat tr").length;
+                        var rowCount = $("#tabel_riwayat tr:not(.text-center)").length;
                         if (rowCount > 10) rowCount = 10;
                         $("#row-count").text("Menampilkan " + rowCount + " transaksi");
                     }
@@ -135,9 +135,7 @@ else {
             $('#audit-detail').text(detail.join(' • '));
             var visibleRows = $("#tabel_riwayat tr:not(.text-center)").length;
             if (visibleRows > 10) visibleRows = 10;
-            if (visibleRows > 0) {
-                $("#row-count").text("Menampilkan " + visibleRows + " transaksi");
-            }
+            $("#row-count").text("Menampilkan " + visibleRows + " transaksi");
         });
     }
 
