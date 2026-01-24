@@ -165,7 +165,7 @@ for ($i = 0; $i < $TotalReg; $i++) {
 	<?php
 	echo "<td><a title='Open User Profile " . $pname . "' href='./?user-profile=" . $pid . "&session=" . $session . "' style='color:inherit; text-decoration:none;'><i class='fa fa-edit'></i> <i class='fa fa-ci fa-circle ".$moncolor."'></i> $pname</a></td>";
 //$profiledetalis = $ARRAY[$i];echo "<td>" . $profiledetalis['name'];echo "</td>";
-	echo "<td>" . $psharedu;
+	echo "<td style='margin-left:12px;'>" . $psharedu;
 	echo "</td>";
 	echo "<td>" . $pratelimit;
 	echo "</td>";
