@@ -133,22 +133,12 @@ else {
 
                 if (parseInt(data.audit_detail.ghost || 0, 10) > 0) {
                     detail += '<span style="background:rgba(231,76,60,0.15); color:#e74c3c; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:600;">';
-                    detail += '<i class="fa fa-ghost"></i> Missing: ' + data.audit_detail.ghost + ' Lbr</span>';
-                }
-
-                if (parseInt(data.audit_detail.miss_10 || 0, 10) > 0 || parseInt(data.audit_detail.miss_30 || 0, 10) > 0) {
-                    detail += '<span style="background:rgba(243,156,18,0.15); color:#f39c12; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:600;">';
-                    detail += '<i class="fa fa-times-circle"></i> 10m: ' + (data.audit_detail.miss_10 || 0) + ' | 30m: ' + (data.audit_detail.miss_30 || 0) + '</span>';
+                    detail += '<i class="fa fa-times-circle"></i> Kerugian: ' + data.audit_detail.ghost + ' Lbr</span>';
                 }
 
                 if (data.audit_detail.cash_expected) {
                     detail += '<span style="background:rgba(46,204,113,0.15); color:#2ecc71; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:600;">';
-                    detail += '<i class="fa fa-money"></i> Cash: Rp ' + data.audit_detail.cash_expected + '</span>';
-                }
-
-                if (data.audit_detail.last_update) {
-                    detail += '<span style="background:rgba(0,192,239,0.15); color:#00c0ef; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:600;">';
-                    detail += '<i class="fa fa-clock-o"></i> ' + data.audit_detail.last_update + '</span>';
+                    detail += '<i class="fa fa-money"></i> Pendapatan: Rp ' + data.audit_detail.cash_expected + '</span>';
                 }
 
                 detail += '</div>';
