@@ -22,18 +22,15 @@ else {
     
 <script type="text/javascript">
     function changeMonth(m) {
-        // 1. Loading Visual untuk Grafik
+        $("#r_2_content").css("opacity", "0.5");
         $("#r_2_content").html('<div style="text-align:center; padding:50px; color:#ccc;"><i class="fa fa-spinner fa-spin fa-3x"></i><br><br>Memproses Grafik...</div>');
-        
-        // 2. Loading Visual untuk Tabel (Hanya isi tbody)
         $("#tabel_riwayat").html('<tr><td colspan="5" class="text-center" style="padding:20px;"><i class="fa fa-circle-o-notch fa-spin"></i> Mengambil data...</td></tr>');
 
-        // 3. Request Grafik
         $.get("./dashboard/aload.php?session=<?= $session ?>&load=hotspot&m=" + m, function(data) {
             $("#r_2_content").html(data);
+            $("#r_2_content").css("opacity", "1");
         });
 
-        // 4. Request Data Riwayat (Hanya Baris) - Delay 1 detik agar aman
         setTimeout(function() {
             $.get("./dashboard/aload.php?session=<?= $session ?>&load=logs&m=" + m, function(dataLogs) {
                 if(dataLogs.trim() == "") {
@@ -61,27 +58,30 @@ else {
     <div class="row">
         <div class="col-8">
             <div class="card">
-                <div class="card-header">
-                    <h3><i class="fa fa-wifi"></i> Hotspot & Pendapatan</h3>
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3 style="margin:0;"><i class="fa fa-bar-chart"></i> Performa Bisnis</h3>
+                    <small style="font-size:10px; color:#bbb; font-weight:bold; letter-spacing:0.5px; background: rgba(255,255,255,0.05); padding:4px 8px; border-radius:4px;">
+                        <i class="fa fa-circle text-green blink" style="font-size:8px; margin-right:4px;"></i> LIVE STREAM
+                    </small>
                 </div>
                 <div class="card-body" id="r_2_content" style="min-height: 400px; padding: 5px 10px;"></div>
             </div>
         </div>
         
         <div class="col-4">
-             <div class="card" style="height: 600px; max-height: 600px; overflow: hidden;">
-                <div class="card-header">
-                    <h3><i class="fa fa-history"></i> Riwayat Transaksi</h3>
+             <div class="card" style="height: 600px; max-height: 600px; overflow: hidden; display:flex; flex-direction:column;">
+                <div class="card-header" style="border-bottom: 1px solid #444;">
+                    <h3 style="margin:0;"><i class="fa fa-history"></i> Transaksi Terakhir</h3>
                 </div>
-                <div class="card-body" style="padding:0; overflow-x:auto; height: 550px;">
-                    <table class="table table-striped table-hover table-sm" style="font-size:11px; margin-bottom:0;">
-                        <thead>
+                <div class="card-body" style="padding:0; overflow-y:auto; flex:1;">
+                    <table class="table table-striped table-hover" style="font-size:11px; margin-bottom:0; width:100%;">
+                        <thead style="background: #2b3035; position: sticky; top: 0; z-index: 5;">
                             <tr>
-                                <th style="padding-left:10px;">Tanggal</th>
-                                <th>User</th>
-                                <th>Paket</th>
-                                <th class="text-center">Blok</th>
-                                <th class="text-right" style="padding-right:10px;">Harga</th>
+                                <th style="padding:10px;">Waktu</th>
+                                <th style="padding:10px;">User</th>
+                                <th style="padding:10px;">Paket</th>
+                                <th class="text-center" style="padding:10px;">Blok</th>
+                                <th class="text-right" style="padding:10px;">Nominal</th>
                             </tr>
                         </thead>
                         <tbody id="tabel_riwayat">
@@ -93,3 +93,13 @@ else {
         </div>
     </div>
 </div>
+
+<style>
+    .blink { animation: blinker 1.5s linear infinite; }
+    @keyframes blinker { 50% { opacity: 0; } }
+
+    .card-body::-webkit-scrollbar { width: 6px; }
+    .card-body::-webkit-scrollbar-track { background: #222; }
+    .card-body::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    .card-body::-webkit-scrollbar-thumb:hover { background: #555; }
+</style>
