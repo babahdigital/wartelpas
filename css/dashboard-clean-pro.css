@@ -27,6 +27,7 @@ body {
 #main {
     height: calc(100vh - 60px);
     padding: 20px !important;
+    margin-top: 0px !important;
     background-color: var(--bg-main) !important;
     display: flex;
     flex-direction: column;
