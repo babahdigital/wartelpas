@@ -138,6 +138,7 @@ $phone_units = [];
 $audit_net = [];
 $audit_selisih = [];
 $audit_system = [];
+$total_expenses_year = 0;
 
 try {
     if (file_exists($dbFile)) {
@@ -386,7 +387,6 @@ $total_avg_days = 0;
 $total_bandwidth = 0;
 $total_voucher_loss = 0;
 $total_setoran_loss = 0;
-$total_expenses_year = 0;
 $months_with_data = 0;
 
 $net_for_chart = [];
@@ -481,7 +481,8 @@ $print_time = date('d-m-Y H:i:s');
                 <th style="padding:10px;">Bulan</th>
                 <th style="padding:10px; text-align:center;">Total Transaksi</th>
                 <th style="padding:10px; text-align:center;">Target Sistem</th>
-                <th style="padding:10px; text-align:center;">Realisasi (Audit)</th>
+                <th style="padding:10px; text-align:center;">Pengeluaran (Ops)</th>
+                <th style="padding:10px; text-align:center;">Setoran Bersih</th>
                 <th style="padding:10px; text-align:center;">Selisih / Loss</th>
                 <th style="padding:10px; text-align:center;">Kinerja</th>
             </tr>
@@ -503,7 +504,8 @@ $print_time = date('d-m-Y H:i:s');
                     <td style="padding:8px; font-weight:bold; text-align:left;"><?= esc(month_label_id($mm)) ?></td>
                     <td style="padding:8px; text-align:center;"><?= $has_data ? number_format((int)$row['qty'],0,',','.') : '-' ?></td>
                     <td style="padding:8px; text-align:right;"><?= $has_data ? number_format((int)$row['net'],0,',','.') : '-' ?></td>
-                    <td style="padding:8px; text-align:right; font-weight:bold;"><?= $has_data ? number_format((int)$row['net_audit'],0,',','.') : '-' ?></td>
+                    <td style="padding:8px; text-align:right;">Rp <?= $has_data ? number_format((int)($row['expenses'] ?? 0),0,',','.') : '-' ?></td>
+                    <td style="padding:8px; text-align:right; font-weight:bold;">Rp <?= $has_data ? number_format((int)$row['net_audit'],0,',','.') : '-' ?></td>
                     <td style="padding:8px; text-align:right; color:<?= $selisih < 0 ? '#dc2626' : '#16a34a' ?>;">
                         <?= $has_data ? number_format($selisih,0,',','.') : '-' ?>
                     </td>
@@ -524,11 +526,18 @@ $print_time = date('d-m-Y H:i:s');
                 <td style="padding:8px; text-align:left;">TOTAL YTD</td>
                 <td style="padding:8px; text-align:center;"><?= number_format((int)$total_qty,0,',','.') ?></td>
                 <td style="padding:8px; text-align:right;"><?= number_format((int)$total_system_net,0,',','.') ?></td>
-                <td style="padding:8px; text-align:right;"><?= number_format((int)$total_net,0,',','.') ?></td>
+                <td style="padding:8px; text-align:right;">Rp <?= number_format((int)$total_expenses_year,0,',','.') ?></td>
+                <td style="padding:8px; text-align:right;">Rp <?= number_format((int)$total_net,0,',','.') ?></td>
                 <td style="padding:8px; text-align:right; color:<?= $total_selisih < 0 ? '#dc2626' : '#16a34a' ?>;">
                     <?= number_format((int)$total_selisih,0,',','.') ?>
                 </td>
                 <td></td>
+            </tr>
+            <tr style="background:#fff; font-size:11px; color:#666;">
+                <td colspan="7" style="padding:8px; text-align:right;">
+                    * Angka Setoran Bersih sudah dikurangi Total Pengeluaran Operasional tahun ini sebesar:
+                    <b>Rp <?= number_format((int)$total_expenses_year, 0, ',', '.') ?></b>
+                </td>
             </tr>
         </tfoot>
     </table>

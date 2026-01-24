@@ -141,6 +141,7 @@ $phone_units = [];
 $audit_net = [];
 $audit_selisih = [];
 $audit_system = [];
+$total_expenses_month = 0;
 
 try {
     if (file_exists($dbFile)) {
