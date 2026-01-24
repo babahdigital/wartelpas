@@ -204,6 +204,11 @@ try {
                 if ($d === '') continue;
                 [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($row);
                 $expense = (int)($row['expenses_amt'] ?? 0);
+                $mm = substr($d, 5, 2);
+                if (isset($months[$mm])) {
+                    $months[$mm]['expenses'] += $expense;
+                }
+                $total_expenses_year += $expense;
                 $net_cash_audit = (int)$manual_setoran - $expense;
                 $audit_net[$d] = (int)($audit_net[$d] ?? 0) + $net_cash_audit;
                 $audit_system[$d] = (int)($audit_system[$d] ?? 0) + (int)$expected_adj_setoran;
@@ -312,7 +317,8 @@ for ($m = 1; $m <= 12; $m++) {
         'active_sum' => 0,
         'phone_days' => 0,
         'loss_voucher' => 0,
-        'loss_setoran' => 0
+        'loss_setoran' => 0,
+        'expenses' => 0
     ];
 }
 
@@ -380,6 +386,7 @@ $total_avg_days = 0;
 $total_bandwidth = 0;
 $total_voucher_loss = 0;
 $total_setoran_loss = 0;
+$total_expenses_year = 0;
 $months_with_data = 0;
 
 $net_for_chart = [];

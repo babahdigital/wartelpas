@@ -320,6 +320,7 @@ $max_km = 0;
 $max_active = 0;
 $total_rusak_device = 0;
 $total_expenses_month = $total_expenses_month ?? 0;
+$total_expenses_month = $total_expenses_month ?? 0;
 
 $rows_out = [];
 foreach ($all_dates as $date) {
