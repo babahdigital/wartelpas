@@ -275,18 +275,10 @@ if ($load == "sysresource") {
     ?>
 
     <div id="view-dashboard">
-        
-        <div class="row">
-            <div class="col-3 col-box-6"><div class="box bg-blue bmh-75"><a href="./?hotspot=active&session=<?= $session; ?>"><div class="box-group"><div class="box-group-icon"><i class="fa fa-wifi"></i></div><div class="box-group-area"><h1 id="live-active"><?= $counthotspotactive; ?></h1><div>User Active</div></div></div></a></div></div>
-            <div class="col-3 col-box-6"><div class="box bg-green bmh-75"><a href="./?hotspot=users&profile=all&session=<?= $session; ?>"><div class="box-group"><div class="box-group-icon"><i class="fa fa-users"></i></div><div class="box-group-area"><h1 id="live-fresh"><?= $countFreshUsers; ?></h1><div>User Tersedia</div></div></div></a></div></div>
-            <div class="col-3 col-box-6"><div class="box bg-yellow bmh-75"><a href="./?report=selling&session=<?= $session; ?>"><div class="box-group"><div class="box-group-icon"><i class="fa fa-ticket"></i></div><div class="box-group-area"><h1 id="live-sold"><?= $totalVoucher; ?></h1><div>Terjual (<?= $monthShort[$filterMonth]; ?>)</div></div></div></a></div></div>
-            <div class="col-3 col-box-6"><div class="box bg-red bmh-75"><a href="./?report=selling&session=<?= $session; ?>"><div class="box-group"><div class="box-group-icon"><i class="fa fa-database"></i></div><div class="box-group-area"><h1 id="live-traffic"><?= formatBytes($totalData); ?></h1><div>Bandwidth (<?= $monthShort[$filterMonth]; ?>)</div></div></div></a></div></div>
-        </div>
-        
         <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 15px;">
             <div>
                 <div style="font-size:12px; color:#aaa;">Total Pendapatan</div>
-                <h2 style="margin:0; font-weight:bold; color:#fff;">Rp <span id="live-income"><?= number_format($totalIncome, 0, ",", ".") ?></span></h2>
+                <h2 style="margin:0; font-weight:bold; color:#fff;">Rp <span id="chart-income"><?= number_format($totalIncome, 0, ",", ".") ?></span></h2>
                 <?php if ($filterMonth == (int)date("m") && $filterYear == (int)date("Y")) : ?>
                     <div style="font-size:11px; color:#00c0ef; margin-top:2px;">
                         <i class="fa fa-crosshairs"></i> Proyeksi Akhir Bulan: <b>Rp <?= number_format($estIncome, 0, ",", ".") ?></b>
@@ -352,28 +344,7 @@ if ($load == "sysresource") {
                 });
             }
 
-            // AUTO UPDATE SCRIPT
-            var autoRefreshInterval;
-            function startLiveUpdate() {
-                if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-                autoRefreshInterval = setInterval(function() {
-                    if ($('#view-dashboard').is(':visible')) {
-                        $.ajax({
-                            url: './dashboard/aload.php?load=live_data&session=<?= $session; ?>',
-                            dataType: 'json',
-                            global: false, // KUNCI: Mencegah Load Bar muncul saat update
-                            success: function(data) {
-                                $('#live-active').text(data.active);
-                                $('#live-fresh').text(data.fresh);
-                                $('#live-sold').text(data.sold);
-                                $('#live-traffic').text(data.traffic);
-                                $('#live-income').text(data.income);
-                            }
-                        });
-                    }
-                }, 10000);
-            }
-            $(document).ready(function() { startLiveUpdate(); });
+            // Live update ditangani oleh home.php
         </script>
         
         <style>
