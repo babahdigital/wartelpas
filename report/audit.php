@@ -125,6 +125,7 @@ function calc_audit_adjusted_totals(array $ar) {
     $expected_setoran = (int)($ar['expected_setoran'] ?? 0);
     $reported_qty = (int)($ar['reported_qty'] ?? 0);
     $actual_setoran = (int)($ar['actual_setoran'] ?? 0);
+    $expense_amt = (int)($ar['expenses_amt'] ?? 0);
 
     $p10_qty = 0;
     $p30_qty = 0;
@@ -173,17 +174,17 @@ function calc_audit_adjusted_totals(array $ar) {
         $manual_net_qty_10 = max(0, $p10_qty - $cnt_rusak_10 - $cnt_invalid_10);
         $manual_net_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30);
         $manual_display_qty = $manual_net_qty_10 + $manual_net_qty_30;
-        $manual_display_setoran = ($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30);
+        $manual_display_setoran = ($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30) + $expense_amt;
         $expected_adj_qty = $expected_qty;
         $expected_adj_setoran = $expected_setoran;
     } else {
         $manual_display_qty = $reported_qty;
-        $manual_display_setoran = $actual_setoran;
+        $manual_display_setoran = $actual_setoran + $expense_amt;
         $expected_adj_qty = $expected_qty;
         $expected_adj_setoran = $expected_setoran;
     }
 
-    return [$manual_display_qty, $expected_adj_qty, $manual_display_setoran, $expected_adj_setoran];
+    return [$manual_display_qty, $expected_adj_qty, $manual_display_setoran, $expected_adj_setoran, $expense_amt];
 }
 
 $db = null;
@@ -216,6 +217,7 @@ $audit_manual_summary = [
     'selisih_qty' => 0,
     'selisih_setoran' => 0,
     'total_rusak_rp' => 0,
+    'total_expenses' => 0,
 ];
 
 if (file_exists($dbFile)) {
@@ -353,7 +355,7 @@ if (file_exists($dbFile)) {
         }
 
         if (table_exists($db, 'audit_rekap_manual')) {
-            $auditSql = "SELECT expected_qty, expected_setoran, reported_qty, actual_setoran, user_evidence
+            $auditSql = "SELECT expected_qty, expected_setoran, reported_qty, actual_setoran, expenses_amt, expenses_desc, user_evidence
                 FROM audit_rekap_manual WHERE $auditDateFilter";
             $stmt = $db->prepare($auditSql);
             foreach ($auditDateParam as $k => $v) $stmt->bindValue($k, $v);
@@ -362,11 +364,12 @@ if (file_exists($dbFile)) {
             $audit_manual_summary['rows'] = count($audit_rows);
             $audit_manual_summary['total_rusak_rp'] = 0;
             foreach ($audit_rows as $ar) {
-                [$manual_qty, $expected_qty, $manual_setoran, $expected_setoran] = calc_audit_adjusted_totals($ar);
+                [$manual_qty, $expected_qty, $manual_setoran, $expected_setoran, $expense_amt] = calc_audit_adjusted_totals($ar);
                 $audit_manual_summary['manual_qty'] += (int)$manual_qty;
                 $audit_manual_summary['expected_qty'] += (int)$expected_qty;
                 $audit_manual_summary['manual_setoran'] += (int)$manual_setoran;
                 $audit_manual_summary['expected_setoran'] += (int)$expected_setoran;
+                $audit_manual_summary['total_expenses'] += (int)$expense_amt;
 
                 $curr_rusak_rp = 0;
                 if (!empty($ar['user_evidence'])) {
@@ -487,9 +490,16 @@ if (file_exists($dbFile)) {
 
             <div class="summary-grid">
                 <div class="summary-card">
-                    <div class="summary-title">Uang Fisik (Manual)</div>
-                    <div class="summary-value">Rp <?= number_format($audit_manual_summary['manual_setoran'],0,',','.') ?></div>
+                    <div class="summary-title">Setoran Bersih (Cash)</div>
+                    <div class="summary-value">Rp <?= number_format(max(0, $audit_manual_summary['manual_setoran'] - $audit_manual_summary['total_expenses']),0,',','.') ?></div>
                 </div>
+                <?php if ($audit_manual_summary['total_expenses'] > 0): ?>
+                    <div class="summary-card" style="border-color:#f39c12;">
+                        <div class="summary-title" style="color:#f39c12;">Pengeluaran Ops.</div>
+                        <div class="summary-value" style="color:#f39c12;">Rp <?= number_format($audit_manual_summary['total_expenses'],0,',','.') ?></div>
+                        <div style="font-size:10px;color:#d35400;">(Bon/Belanja)</div>
+                    </div>
+                <?php endif; ?>
                 <div class="summary-card">
                     <div class="summary-title">Target Sistem (Net)</div>
                     <div class="summary-value">Rp <?= number_format($audit_manual_summary['expected_setoran'],0,',','.') ?></div>
