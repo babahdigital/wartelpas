@@ -471,10 +471,17 @@ if (file_exists($dbFile)) {
         <?php endif; ?>
 
         <div class="section-title">Statistik Sistem</div>
+        <?php
+            $use_pending_stats = ($sales_summary['total'] === 0 && $sales_summary['pending'] > 0);
+            $stat_total = $use_pending_stats ? $pending_summary['total'] : $sales_summary['total'];
+            $stat_rusak = $use_pending_stats ? $pending_summary['rusak'] : $sales_summary['rusak'];
+        ?>
         <div class="summary-grid">
-            <div class="summary-card"><div class="summary-title">Total Transaksi</div><div class="summary-value"><?= number_format($sales_summary['total'],0,',','.') ?></div></div>
-            <div class="summary-card"><div class="summary-title">Voucher Rusak</div><div class="summary-value" style="color:#e74c3c;">Rp <?= number_format($sales_summary['rusak'],0,',','.') ?></div></div>
-            <div class="summary-card"><div class="summary-title">Pending (Live)</div><div class="summary-value"><?= number_format($sales_summary['pending'],0,',','.') ?></div></div>
+            <div class="summary-card"><div class="summary-title">Total Transaksi</div><div class="summary-value"><?= number_format($stat_total,0,',','.') ?></div></div>
+            <div class="summary-card"><div class="summary-title">Voucher Rusak</div><div class="summary-value" style="color:#e74c3c;">Rp <?= number_format($stat_rusak,0,',','.') ?></div></div>
+            <?php if ($sales_summary['pending'] > 0): ?>
+                <div class="summary-card"><div class="summary-title">Pending (Live)</div><div class="summary-value"><?= number_format($sales_summary['pending'],0,',','.') ?></div></div>
+            <?php endif; ?>
         </div>
 
         <?php if ($sales_summary['pending'] > 0 && $sales_summary['total'] === 0): ?>
