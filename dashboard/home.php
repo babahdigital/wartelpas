@@ -44,6 +44,9 @@ else {
                 chartWrap = $("#chart_container");
                 if (!chartWrap.length) chartWrap = $("#r_2_content");
                 chartWrap.css("opacity", "1");
+                setTimeout(function() {
+                    window.dispatchEvent(new Event('resize'));
+                }, 0);
             })
             .fail(function() {
                 $("#r_2_content").html('<div style="text-align:center; padding:50px; color:#c33;"><i class="fa fa-warning"></i> Gagal memuat grafik.</div>');

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+
 /* Wartelpas Clean Pro Dashboard */
 :root {
     --bg-main: #121417;
@@ -10,12 +12,13 @@
     --accent-purple: #605ca8;
     --text-dim: #8898aa;
     --border-soft: rgba(255, 255, 255, 0.05);
-    --trx-row-height: 32px; /* Dikit dipersempit */
+    --trx-row-height: 32px;
 }
 
 html, body {
     margin: 0;
-    overflow-y: auto !important;
+    height: 100%;
+    overflow: hidden;
     background-color: var(--bg-main) !important;
 }
 
@@ -52,10 +55,10 @@ body {
 
 .main-content {
     padding: 20px;
-    height: auto;
+    height: calc(100vh - 60px);
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 20px;
     overflow-y: auto;
     box-sizing: border-box;
 }
@@ -69,13 +72,13 @@ body {
 .dashboard-grid {
     display: grid;
     grid-template-columns: 8fr 4fr;
-    gap: 15px;
+    gap: 20px;
     flex: 1;
-    align-items: start; /* Pastikan card tidak dipaksa tinggi yang sama */
+    min-height: 0;
 }
 
 .table-container {
-    max-height: 400px; /* Batasi tinggi maksimal tabel */
+    height: 100%;
     overflow-y: auto;
 }
 
@@ -90,7 +93,7 @@ body {
     position: sticky;
     top: 0;
 }
-.table-container td { padding: 6px 12px; border-bottom: 1px solid var(--border-soft); font-size: 12px; height: var(--trx-row-height); }
+.table-container td { padding: 10px; border-bottom: 1px solid var(--border-soft); font-size: 13px; height: var(--trx-row-height); }
 .table-container tr:hover td { background: var(--bg-hover); }
 
 .month-tabs { display: flex; gap: 10px; font-size: 11px; }
@@ -145,24 +148,9 @@ body {
     min-height: 0;
 }
 
-/* Penyesuaian area Chart */
-.card-chart {
-    padding: 10px;
-    height: 510px !important; /* Batasi tinggi chart agar tidak terlalu besar */
-}
-
 .card-transaction {
     display: flex;
     flex-direction: column;
-}
-
-.card-transaction {
-    flex: 1;
-    overflow: hidden;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    height: 510px !important; /* Batasi tinggi chart agar tidak terlalu besar */
 }
 
 .card-transaction .table-scroll {
@@ -171,17 +159,13 @@ body {
 }
 
 .card-transaction .table-container {
-    max-height: calc((var(--trx-row-height) * 10) + 42px);
-}
-
-.card-transaction .table-container th {
-    height: 42px;
+    height: 100%;
 }
 
 .kpi-box {
     background: var(--bg-card);
     border-radius: 12px;
-    padding: 12px 15px; /* Padding dikurangi */
+    padding: 20px;
     margin-bottom: 15px;
     border: 1px solid var(--border-soft);
     transition: all 0.3s ease;
@@ -195,18 +179,18 @@ body {
 }
 
 .kpi-box h1 {
-    font-size: 24px;
+    font-size: 28px;
     font-weight: 800;
     margin: 0;
     letter-spacing: -1px;
 }
 
 .kpi-box .label {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--text-dim);
     text-transform: uppercase;
     font-weight: 700;
-    margin-top: 6px;
+    margin-top: 8px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -249,6 +233,7 @@ body {
     box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important;
     display: flex;
     flex-direction: column;
+    min-height: 0;
 }
 
 .card-header {
@@ -266,7 +251,7 @@ body {
     color: #eee;
 }
 
-.card-body { padding: 20px; flex: 1 !important; position: relative; overflow: hidden; }
+.card-body { padding: 20px; flex: 1 !important; position: relative; }
 
 #tabel_riwayat tr { background: transparent !important; transition: background 0.2s; }
 #tabel_riwayat tr:hover td { background: var(--bg-hover) !important; color: #fff; }
