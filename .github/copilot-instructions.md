@@ -37,5 +37,35 @@ Mikhmon is a PHP-based web application for managing MikroTik router hotspots. It
 - **Connect API**: `if(isset($API) && !$API->connected) { $API->connect($iphost, $userhost, decrypt($passwdhost)); }`
 - **Add User**: POST to `process/adduser.php` with profile data, creates router user + scheduler.
 - **DB Query**: `$stmt = $db->prepare("SELECT * FROM login_history WHERE username = ?"); $stmt->execute([$username]);`
-- **AJAX Load**: `$.get("aload.php?session=" + session + "&load=users", function(data) { $("#content").html(data); });`</content>
-<parameter name="filePath">d:/Data/Projek/wartelpas/.github/copilot-instructions.md
+- **AJAX Load**: `$.get("aload.php?session=" + session + "&load=users", function(data) { $("#content").html(data); });`
+
+## Coding Standards & Style
+- **PHP Version**: Ensure compatibility with PHP 7.4+. Use strict typing where possible but maintain compatibility with legacy Mikhmon logic.
+- **Indentation**: Use 4 spaces for indentation.
+- **Naming Conventions**:
+  - Variables: `snake_case` (e.g., `$user_profile`, `$session_data`).
+  - Functions: `camelCase` (e.g., `getSystemStatus`, `formatBytes`).
+  - Constants: `UPPER_CASE` (e.g., `DB_PATH`, `API_TIMEOUT`).
+- **Code Completeness**:
+  - **NEVER** use placeholders like `// ... rest of the code`, `/* code remains the same */`, or `// existing code`.
+  - **ALWAYS** generate the full, complete, and updated file content when suggesting changes.
+  - Do not use comments like `/*........*/` to skip sections.
+- **Comments**: Keep comments minimal and strictly necessary. Avoid obvious comments.
+- **Efficiency**: Avoid redundant logic. Verify variables before use (e.g., `isset()` or `!empty()`) to prevent PHP notices.
+
+## Security Guidelines
+- **Input Sanitization**: Always sanitize `$_GET` and `$_POST` inputs before using them in logic or API commands.
+  - Use `htmlspecialchars()` for outputting to HTML.
+  - Validate data types (e.g., ensure numeric values for limits).
+- **Session Security**: Do not expose session IDs in the UI. Ensure `session_start()` is handled safely in `index.php` or `include/config.php`.
+- **RouterOS API**:
+  - Always check `$API->connected` before attempting commands.
+  - Handle connection timeouts gracefully with try-catch blocks or connection checks.
+  - Encrypt/Decrypt passwords properly using Mikhmon's internal logic when storing/retrieving from config.
+
+## Development Constraints (Strict)
+1. **No Assumptions**: Do not assume the existence of functions or variables not present in the provided context. If information is missing, ask the user for the relevant file content before generating code.
+2. **Analysis First**: Before suggesting a fix, analyze the entire snippet for potential side effects. If an error is repetitive, suggest a holistic fix rather than a partial patch.
+3. **Language**: Provide all explanations and conversations in **Indonesian (Bahasa Indonesia)**. Code comments should follow the existing file style (usually English or Indonesian).
+4. **Output Quality**: Solutions must be production-ready (Siap Pakai). Test logic mentally for edge cases (e.g., what if the router is offline?).
+5. **Formatting**: When presenting code, ensure it is in a single, copy-pasteable block.
