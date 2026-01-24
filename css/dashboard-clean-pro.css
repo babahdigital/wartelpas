@@ -148,7 +148,7 @@ body {
 /* Penyesuaian area Chart */
 .card-chart {
     padding: 10px;
-    height: 300px !important; /* Batasi tinggi chart agar tidak terlalu besar */
+    height: 510px !important; /* Batasi tinggi chart agar tidak terlalu besar */
 }
 
 .card-transaction {
