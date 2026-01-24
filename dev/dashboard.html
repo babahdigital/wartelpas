@@ -396,10 +396,13 @@
     }
 
     $(document).ready(function() {
-        $("#r_1").load("./dashboard/aload.php?session=S3c7x9_LB&load=sysresource #r_1 > *");
+        $("#r_1_display").load("./dashboard/aload.php?session=S3c7x9_LB&load=sysresource #r_1_content_raw");
         changeMonth(1);
         updateDashboard();
         setInterval(updateDashboard, 10000);
+        setInterval(function() {
+            $("#r_1_display").load("./dashboard/aload.php?session=S3c7x9_LB&load=sysresource #r_1_content_raw");
+        }, 10000);
         $(".month-tab").on("click", function() {
             var m = $(this).data("month");
             if (m) changeMonth(m);
@@ -482,7 +485,7 @@
         </div>
     </div>
 
-    <div id="r_1" class="resource-footer">
+    <div class="resource-footer" id="r_1_display">
         <span><i class="fa fa-refresh fa-spin"></i> Memuat resource...</span>
     </div>
 </div></div>
@@ -491,7 +494,7 @@
 <script src="./js/highcharts/highcharts.js"></script>
 <script src="./js/highcharts/themes/hc.dark.js"></script>
 <script src="./js/mikhmon-ui.dark.min.js"></script>
-<script src="./js/mikhmon.js?t=2026-01-24_21:57:19"></script>
+<script src="./js/mikhmon.js?t=2026-01-24_22:54:54"></script>
 
 <script>
     if (window.history.replaceState) { window.history.replaceState(null, null, "./?session=S3c7x9_LB"); }
