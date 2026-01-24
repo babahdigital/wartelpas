@@ -227,6 +227,7 @@ if ($load == "sysresource") {
 
     $daysInMonth = (int)date("t", mktime(0, 0, 0, $filterMonth, 1, $filterYear));
     $dailyIncome = array_fill(1, $daysInMonth, 0);
+    $dailyQty = array_fill(1, $daysInMonth, 0);
     $totalVoucher = 0; $totalData = 0; $totalIncome = 0;
     $blokStats = []; $totalTrxAnalisa = 0; $totalOmsetAnalisa = 0;
 
@@ -244,7 +245,10 @@ if ($load == "sysresource") {
 
             if ($d_month == $filterMonth && $d_year == $filterYear) {
                 $totalVoucher++; $totalIncome += $price;
-                if ($d_day >= 1 && $d_day <= $daysInMonth) { $dailyIncome[$d_day] += $price; }
+                if ($d_day >= 1 && $d_day <= $daysInMonth) {
+                    $dailyIncome[$d_day] += $price;
+                    $dailyQty[$d_day] += 1;
+                }
                 if (isset($liveUserBytes[$username])) { $totalData += $liveUserBytes[$username]; } elseif (isset($userStatsMap[$username])) { $totalData += $userStatsMap[$username]; }
 
                 // Analisa
@@ -260,8 +264,16 @@ if ($load == "sysresource") {
             }
         }
     }
+    $currentDay = (int)date("d");
+    if ($filterMonth != (int)date("m") || $filterYear != (int)date("Y")) {
+        $currentDay = $daysInMonth;
+    }
+    $avgDailyIncome = $currentDay > 0 ? ($totalIncome / $currentDay) : 0;
+    $estIncome = $totalIncome + ($avgDailyIncome * ($daysInMonth - $currentDay));
+
     $jsonCategories = json_encode(array_map('strval', range(1, $daysInMonth)));
-    $jsonData = json_encode(array_values($dailyIncome), JSON_NUMERIC_CHECK);
+    $jsonDataIncome = json_encode(array_values($dailyIncome), JSON_NUMERIC_CHECK);
+    $jsonDataQty = json_encode(array_values($dailyQty), JSON_NUMERIC_CHECK);
     $avgOmset = ($totalTrxAnalisa > 0 && count($blokStats) > 0) ? ($totalOmsetAnalisa / count($blokStats)) : 0;
     uasort($blokStats, function($a, $b) { return $b['omset'] - $a['omset']; });
     ?>
@@ -275,16 +287,16 @@ if ($load == "sysresource") {
             <div class="col-3 col-box-6"><div class="box bg-red bmh-75"><a href="./?report=selling&session=<?= $session; ?>"><div class="box-group"><div class="box-group-icon"><i class="fa fa-database"></i></div><div class="box-group-area"><h1 id="live-traffic"><?= formatBytes($totalData); ?></h1><div>Bandwidth (<?= $monthShort[$filterMonth]; ?>)</div></div></div></a></div></div>
         </div>
         
-        <div class="row">
-            <div class="col-12 text-right">
-                <small style="font-size:10px; color:#777; font-weight:bold; letter-spacing: 0.5px; opacity: 0.8; margin-right: 7px;">
-                    <i class="fa fa-circle text-green blink" style="font-size: 8px; margin-right: 3px;"></i> Stream Data
-                </small>
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 15px;">
+            <div>
+                <div style="font-size:12px; color:#aaa;">Total Pendapatan</div>
+                <h2 style="margin:0; font-weight:bold; color:#fff;">Rp <span id="live-income"><?= number_format($totalIncome, 0, ",", ".") ?></span></h2>
+                <?php if ($filterMonth == (int)date("m") && $filterYear == (int)date("Y")) : ?>
+                    <div style="font-size:11px; color:#00c0ef; margin-top:2px;">
+                        <i class="fa fa-crosshairs"></i> Proyeksi Akhir Bulan: <b>Rp <?= number_format($estIncome, 0, ",", ".") ?></b>
+                    </div>
+                <?php endif; ?>
             </div>
-        </div>
-
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 15px;">
-            <h4 style="margin:0;"><i class="fa fa-bar-chart"></i> Pendapatan (Total: Rp <span id="live-income"><?= number_format($totalIncome, 0, ",", ".") ?></span>)</h4>
             <div class="tab-container" style="display: flex; gap: 5px; flex-wrap:wrap; align-items: center;">
                 <button class="btn btn-sm bg-purple" onclick="$('#view-dashboard').hide(); $('#view-analytics').fadeIn();" style="margin-right:15px; box-shadow: 2px 2px 5px rgba(0,0,0,0.3);"><i class="fa fa-line-chart"></i> <b>ANALISA BISNIS</b></button>
                 <?php foreach($monthShort as $mNum => $mName) {
@@ -297,13 +309,39 @@ if ($load == "sysresource") {
         <script type="text/javascript">
             if(typeof Highcharts !== 'undefined') {
                 Highcharts.chart('chart_income_stat', {
-                    chart: { type: 'column', backgroundColor: 'transparent', height: 350 },
+                    chart: { backgroundColor: 'transparent', height: 350, zoomType: 'xy' },
                     title: { text: '' },
                     xAxis: { categories: <?= $jsonCategories ?>, crosshair: true, lineColor: '#444', tickColor: '#444', labels: {style:{color:'#ccc'}} },
-                    yAxis: { min: 0, title: { text: '' }, gridLineColor: '#333', labels: { style:{color:'#ccc'}, formatter: function () { return this.value.toLocaleString('id-ID'); } } },
-                    tooltip: { headerFormat: '<span style="font-size:10px">Tgl {point.key}</span><table>', pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td><td style="padding:0"><b>Rp {point.y:,.0f}</b></td></tr>', footerFormat: '</table>', shared: true, useHTML: true, backgroundColor: 'rgba(0,0,0,0.9)', style: {color: '#fff'} },
-                    plotOptions: { column: { pointPadding: 0.2, borderWidth: 0, dataLabels: { enabled: false } } },
-                    series: [{ name: 'Income', data: <?= $jsonData ?>, color: '#00c0ef', showInLegend: false }], credits: { enabled: false }
+                    yAxis: [{
+                        labels: { style: { color: '#00c0ef' }, formatter: function () { return (this.value / 1000) + 'k'; } },
+                        title: { text: 'Pendapatan (Rp)', style: { color: '#00c0ef' } },
+                        gridLineColor: '#333'
+                    }, {
+                        title: { text: 'Terjual (Lbr)', style: { color: '#f39c12' } },
+                        labels: { style: { color: '#f39c12' } },
+                        opposite: true,
+                        gridLineWidth: 0
+                    }],
+                    tooltip: { shared: true, backgroundColor: 'rgba(0,0,0,0.85)', style: {color: '#fff'}, borderRadius: 8 },
+                    plotOptions: { column: { borderRadius: 2 } },
+                    series: [{
+                        name: 'Pendapatan',
+                        type: 'column',
+                        yAxis: 0,
+                        data: <?= $jsonDataIncome ?>,
+                        color: { linearGradient: { x1: 0, x2: 0, y1: 0, y2: 1 }, stops: [[0, '#00c0ef'], [1, '#007aa3']] },
+                        tooltip: { valuePrefix: 'Rp ' }
+                    }, {
+                        name: 'Terjual',
+                        type: 'spline',
+                        yAxis: 1,
+                        data: <?= $jsonDataQty ?>,
+                        color: '#f39c12',
+                        marker: { lineWidth: 2, lineColor: '#f39c12', fillColor: '#fff' },
+                        tooltip: { valueSuffix: ' lbr' }
+                    }],
+                    credits: { enabled: false },
+                    legend: { itemStyle: { color: '#ccc' }, itemHoverStyle: { color: '#fff' } }
                 });
             }
 
@@ -448,10 +486,27 @@ if ($load == "sysresource") {
     $maxShow = 20; $count = 0;
     foreach ($finalLogs as $log) {
         if ($count >= $maxShow) break;
+
         $blokDisplay = "-";
-        if (preg_match('/Blok-([A-Za-z]+)/i', $log['comment'], $match)) { $blokDisplay = strtoupper($match[1]); } 
-        elseif ($log['comment'] != "") { $cleanCom = preg_replace('/[^A-Za-z]/', '', $log['comment']); if(strlen($cleanCom) > 0) $blokDisplay = strtoupper(substr($cleanCom, 0, 1)); }
-        echo "<tr><td style='padding-left:10px;'>" . $log['time_str'] . "</td><td>" . $log['username'] . "</td><td>" . $log['paket'] . "</td><td class='text-center'>" . $blokDisplay . "</td><td class='text-right' style='padding-right:10px; font-weight:bold;'>" . number_format($log['price'],0,',','.') . "</td></tr>";
+        if (preg_match('/Blok-([A-Za-z]+)/i', $log['comment'], $match)) {
+            $blokDisplay = strtoupper($match[1]);
+        } elseif ($log['comment'] != "") {
+            $cleanCom = preg_replace('/[^A-Za-z]/', '', $log['comment']);
+            if (strlen($cleanCom) > 0) $blokDisplay = strtoupper(substr($cleanCom, 0, 1));
+        }
+
+        $badgeClass = "badge bg-gray";
+        if ($log['price'] >= 20000) { $badgeClass = "badge bg-yellow"; }
+        elseif ($log['price'] >= 10000) { $badgeClass = "badge bg-blue"; }
+        elseif ($log['price'] >= 5000) { $badgeClass = "badge bg-green"; }
+
+        echo "<tr>";
+        echo "<td style='padding-left:10px; vertical-align:middle; color:#ccc; font-size:10px;'>" . substr($log['time_str'], 0, 5) . " <span style='color:#666'>" . substr($log['time_str'], 11) . "</span></td>";
+        echo "<td style='vertical-align:middle; font-weight:bold; color:#fff;'>" . $log['username'] . "</td>";
+        echo "<td style='vertical-align:middle; color:#aaa; font-size:10px;'>" . $log['paket'] . "</td>";
+        echo "<td class='text-center' style='vertical-align:middle;'><span class='badge bg-gray' style='font-size:9px;'>" . $blokDisplay . "</span></td>";
+        echo "<td class='text-right' style='padding-right:10px; vertical-align:middle;'><span class='$badgeClass' style='font-size:10px;'>Rp " . number_format($log['price'],0,',','.') . "</span></td>";
+        echo "</tr>";
         $count++;
     }
     if ($count == 0) { echo "<tr><td colspan='5' class='text-center' style='padding:20px;'>Belum ada transaksi bulan ini.</td></tr>"; }
