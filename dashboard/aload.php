@@ -118,8 +118,11 @@ if ($load == "live_data") {
 
             $sumIncome = 0;
             $sumSold = 0;
+            $tables = [];
+            if (table_exists($db, 'sales_history')) $tables[] = 'sales_history';
+            if (table_exists($db, 'live_sales')) $tables[] = 'live_sales';
 
-            foreach (['sales_history', 'live_sales'] as $tbl) {
+            foreach ($tables as $tbl) {
                 $stmtIncome = $db->prepare("SELECT SUM(COALESCE(price_snapshot, price, 0) * COALESCE(qty,1))
                     FROM $tbl
                     WHERE (sale_date LIKE :m OR raw_date LIKE :r1 OR raw_date LIKE :r2 OR raw_date LIKE :r3)");
