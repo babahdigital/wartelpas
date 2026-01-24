@@ -580,8 +580,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
     <div class="grid">
         <div class="card">
-            <div class="label">Kerugian</div>
-            <div class="value"><?= $cur ?> <?= number_format($kerugian_display,0,',','.') ?></div>
+            <div class="label">Gross Total</div>
+            <div class="value"><?= $cur ?> <?= number_format((int)$total_gross,0,',','.') ?></div>
         </div>
         <div class="card">
             <div class="label">Net System</div>
