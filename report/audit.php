@@ -367,8 +367,14 @@ if (file_exists($dbFile)) {
         <div class="section-title" style="margin-top:0;">Ringkasan Keuangan (Audit Manual vs Sistem)</div>
 
         <?php if ($audit_manual_summary['rows'] === 0): ?>
+            <?php
+                $use_pending_stats = ($sales_summary['total'] === 0 && $sales_summary['pending'] > 0);
+                $target_est = $use_pending_stats ? $pending_summary['net'] : $sales_summary['net'];
+            ?>
             <div class="summary-card" style="border:1px solid #3a4046;background:#1f2327;text-align:center;padding:20px;">
-                <span style="color:#f39c12;"><i class="fa fa-exclamation-triangle"></i> Belum ada data Audit Manual yang diinput pada periode ini.</span>
+                <div style="color:#f39c12;font-weight:bold;"><i class="fa fa-exclamation-triangle"></i> Belum ada data Audit Manual yang diinput pada periode ini.</div>
+                <div style="margin-top:10px;font-size:13px;color:#bbb;">Silakan input fisik uang/voucher di Laporan Penjualan untuk melihat selisih.</div>
+                <div style="margin-top:12px;font-size:14px;color:#fff;">Target Sistem (Estimasi): <b>Rp <?= number_format($target_est,0,',','.') ?></b></div>
             </div>
         <?php else: ?>
             <?php
@@ -434,80 +440,5 @@ if (file_exists($dbFile)) {
             </div>
         <?php endif; ?>
 
-        <details style="margin-top:18px;background:#23272b;padding:10px;border-radius:6px;">
-            <summary style="cursor:pointer;color:#3498db;font-weight:bold;">Klik untuk melihat Data Teknis (Relogin & Bandwidth)</summary>
-            <div style="margin-top:12px;">
-                <div class="section-title">Voucher Double (full_raw_data)</div>
-                <table class="table-dark-solid">
-                    <thead><tr><th>Sale Date</th><th>Username</th><th>Count</th><th>Raw</th></tr></thead>
-                    <tbody>
-                        <?php if (empty($dup_raw)): ?>
-                            <tr><td colspan="4" class="text-center muted">Tidak ada duplikasi</td></tr>
-                        <?php else: ?>
-                            <?php foreach ($dup_raw as $r): ?>
-                                <tr>
-                                    <td><?= htmlspecialchars($r['sale_date'] ?? '-') ?></td>
-                                    <td><?= htmlspecialchars($r['username'] ?? '-') ?></td>
-                                    <td><span class="pill pill-warn"><?= (int)($r['cnt'] ?? 0) ?></span></td>
-                                    <td style="max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?= htmlspecialchars($r['full_raw_data'] ?? '-') ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-
-                <div class="section-title">Voucher Double (Username + Tanggal)</div>
-                <table class="table-dark-solid">
-                    <thead><tr><th>Sale Date</th><th>Username</th><th>Count</th></tr></thead>
-                    <tbody>
-                        <?php if (empty($dup_user_date)): ?>
-                            <tr><td colspan="3" class="text-center muted">Tidak ada duplikasi</td></tr>
-                        <?php else: ?>
-                            <?php foreach ($dup_user_date as $r): ?>
-                                <tr>
-                                    <td><?= htmlspecialchars($r['sale_date'] ?? '-') ?></td>
-                                    <td><?= htmlspecialchars($r['username'] ?? '-') ?></td>
-                                    <td><span class="pill pill-warn"><?= (int)($r['cnt'] ?? 0) ?></span></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-
-                <div class="section-title">Top Relogin (Indikasi Sharing Account)</div>
-                <table class="table-dark-solid">
-                    <thead><tr><th>Username</th><th>Jumlah Relogin</th></tr></thead>
-                    <tbody>
-                        <?php if (empty($relogin_rows)): ?>
-                            <tr><td colspan="2" class="text-center muted">Tidak ada relogin</td></tr>
-                        <?php else: ?>
-                            <?php foreach ($relogin_rows as $r): ?>
-                                <tr>
-                                    <td><?= htmlspecialchars($r['username'] ?? '-') ?></td>
-                                    <td><?= (int)($r['cnt'] ?? 0) ?>x Login</td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-
-                <div class="section-title">Top Penggunaan Bandwidth</div>
-                <table class="table-dark-solid">
-                    <thead><tr><th>Username</th><th>Bandwidth</th></tr></thead>
-                    <tbody>
-                        <?php if (empty($bandwidth_rows)): ?>
-                            <tr><td colspan="2" class="text-center muted">Tidak ada data</td></tr>
-                        <?php else: ?>
-                            <?php foreach ($bandwidth_rows as $r): ?>
-                                <tr>
-                                    <td><?= htmlspecialchars($r['username'] ?? '-') ?></td>
-                                    <td><?= htmlspecialchars(format_bytes_short($r['last_bytes'] ?? 0)) ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-        </details>
     </div>
 </div>

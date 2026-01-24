@@ -207,12 +207,6 @@ $audit_manual_summary = [
   'selisih_qty' => 0,
   'selisih_setoran' => 0,
 ];
-$relogin_limit = 25;
-$bandwidth_limit = 25;
-$dup_raw = [];
-$dup_user_date = [];
-$relogin_rows = [];
-$bandwidth_rows = [];
 
 if (file_exists($dbFile)) {
     try {
@@ -221,15 +215,23 @@ if (file_exists($dbFile)) {
 
         $dateFilter = '';
         $dateParam = [];
+        $auditDateFilter = '';
+        $auditDateParam = [];
         if ($req_show === 'harian') {
             $dateFilter = 'sale_date = :d';
             $dateParam[':d'] = $filter_date;
+          $auditDateFilter = 'report_date = :d';
+          $auditDateParam[':d'] = $filter_date;
         } elseif ($req_show === 'bulanan') {
             $dateFilter = 'sale_date LIKE :d';
             $dateParam[':d'] = $filter_date . '%';
+          $auditDateFilter = 'report_date LIKE :d';
+          $auditDateParam[':d'] = $filter_date . '%';
         } else {
             $dateFilter = 'sale_date LIKE :d';
             $dateParam[':d'] = $filter_date . '%';
+          $auditDateFilter = 'report_date LIKE :d';
+          $auditDateParam[':d'] = $filter_date . '%';
         }
 
         if (table_exists($db, 'sales_history')) {
@@ -252,29 +254,6 @@ if (file_exists($dbFile)) {
             $sales_summary['total'] = (int)($sumRow['total_cnt'] ?? 0);
             $sales_summary['net'] = $sales_summary['gross'] - $sales_summary['rusak'] - $sales_summary['invalid'];
 
-            $dupRawSql = "SELECT full_raw_data, sale_date, username, COUNT(*) AS cnt
-                FROM sales_history
-                WHERE full_raw_data IS NOT NULL AND full_raw_data != '' AND $dateFilter
-                GROUP BY full_raw_data
-                HAVING cnt > 1
-                ORDER BY cnt DESC, sale_date DESC
-                LIMIT 200";
-            $stmt = $db->prepare($dupRawSql);
-            foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
-            $stmt->execute();
-            $dup_raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            $dupUserDateSql = "SELECT username, sale_date, COUNT(*) AS cnt
-                FROM sales_history
-                WHERE $dateFilter
-                GROUP BY username, sale_date
-                HAVING cnt > 1
-                ORDER BY cnt DESC, sale_date DESC
-                LIMIT 200";
-            $stmt = $db->prepare($dupUserDateSql);
-            foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
-            $stmt->execute();
-            $dup_user_date = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
         if (table_exists($db, 'live_sales')) {
@@ -304,38 +283,11 @@ if (file_exists($dbFile)) {
             $pending_summary['net'] = $pending_summary['gross'] - $pending_summary['rusak'] - $pending_summary['invalid'];
         }
 
-        if (table_exists($db, 'login_events')) {
-            $reloginSql = "SELECT le.username, le.date_key, COUNT(*) AS cnt, lh.blok_name, lh.raw_comment
-                FROM login_events le
-                LEFT JOIN login_history lh ON lh.username = le.username
-                WHERE le.date_key LIKE :d
-                GROUP BY le.username, le.date_key
-                HAVING cnt > 1
-                ORDER BY cnt DESC, le.date_key DESC
-              LIMIT $relogin_limit";
-            $dateKey = $req_show === 'harian' ? $filter_date : $filter_date . '%';
-            $stmt = $db->prepare($reloginSql);
-            $stmt->bindValue(':d', $dateKey);
-            $stmt->execute();
-            $relogin_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        }
-
-        if (table_exists($db, 'login_history')) {
-            $bwSql = "SELECT username, last_bytes, last_uptime, last_status, last_login_real, blok_name, raw_comment
-                FROM login_history
-                WHERE last_bytes IS NOT NULL
-                ORDER BY last_bytes DESC
-              LIMIT $bandwidth_limit";
-            $stmt = $db->prepare($bwSql);
-            $stmt->execute();
-            $bandwidth_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        }
-
         if (table_exists($db, 'audit_rekap_manual')) {
           $auditSql = "SELECT expected_qty, expected_setoran, reported_qty, actual_setoran, user_evidence
-            FROM audit_rekap_manual WHERE $dateFilter";
+          FROM audit_rekap_manual WHERE $auditDateFilter";
           $stmt = $db->prepare($auditSql);
-          foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
+          foreach ($auditDateParam as $k => $v) $stmt->bindValue($k, $v);
           $stmt->execute();
           $audit_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
           $audit_manual_summary['rows'] = count($audit_rows);
@@ -401,9 +353,20 @@ if (file_exists($dbFile)) {
       $label_status = $selisih < 0 ? 'KURANG SETOR (LOSS)' : ($selisih > 0 ? 'LEBIH SETOR' : 'SETORAN SESUAI / AMAN');
   ?>
 
-  <?php if ($audit_manual_summary['rows'] === 0): ?>
-      <div class="summary-card"><div class="summary-title">Audit Manual</div><div class="summary-value" style="font-size:11px;font-weight:normal;">Belum ada audit manual pada periode ini.</div></div>
-  <?php else: ?>
+    <?php if ($audit_manual_summary['rows'] === 0): ?>
+      <?php
+        $use_pending_stats = ($sales_summary['total'] === 0 && $sales_summary['pending'] > 0);
+        $target_est = $use_pending_stats ? $pending_summary['net'] : $sales_summary['net'];
+      ?>
+      <div style="border: 2px dashed #ccc; background-color: #fafafa; padding: 20px; border-radius: 4px; margin-bottom: 20px; text-align:center;">
+        <h3 style="margin:0 0 10px 0; color:#555;">BELUM ADA AUDIT MANUAL</h3>
+        <p style="margin:0; font-size:12px; color:#666;">Operator belum melakukan input fisik uang dan voucher.</p>
+        <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px;">
+          <div style="font-size:11px; text-transform:uppercase; color:#888;">Target Setoran Sistem (Estimasi)</div>
+          <div style="font-size:24px; font-weight:bold; color:#333;">Rp <?= number_format($target_est, 0, ',', '.') ?></div>
+        </div>
+      </div>
+    <?php else: ?>
   <div style="border: 2px solid <?= $border_status ?>; background-color: <?= $bg_status ?>; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
       <table style="width:100%; border:none;">
           <tr>
