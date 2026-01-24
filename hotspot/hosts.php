@@ -44,14 +44,15 @@ if (!isset($_SESSION["mikhmon"])) {
 			$titlename = "Host List";
 		}
 		
-		// 2. Filter Array di PHP (Hanya 172.16.2.x)
-		$filtered_hosts = array();
-		foreach ($raw_hosts as $h) {
-			$ip = isset($h['address']) ? $h['address'] : '';
-			if (strpos($ip, "172.16.2.") === 0) {
-				$filtered_hosts[] = $h;
-			}
-		}
+        // 2. Filter Array di PHP (server wartel + profile wartelpas)
+        $filtered_hosts = array();
+        foreach ($raw_hosts as $h) {
+            $server = isset($h['server']) ? strtolower((string)$h['server']) : '';
+            $server_profile = isset($h['server-profile']) ? strtolower((string)$h['server-profile']) : '';
+            if ($server === 'wartel' && $server_profile === 'wartelpas') {
+                $filtered_hosts[] = $h;
+            }
+        }
 		
 		$TotalReg = count($filtered_hosts);
 		$counthosts = $TotalReg;
