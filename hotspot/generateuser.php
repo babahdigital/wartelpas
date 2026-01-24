@@ -159,12 +159,29 @@ if (!isset($_SESSION["mikhmon"])) {
     $totalRusak = 0;
     $totalRetur = 0;
     $summary_seen_users = [];
+    $history_status_map = [];
 
     $active_list = $API->comm('/ip/hotspot/active/print', ['?server' => ($hotspot_server ?? 'wartel'), '.proplist' => 'user']);
     $activeMap = [];
     foreach ($active_list as $a) { if (isset($a['user'])) $activeMap[$a['user']] = true; }
 
     $all_users = $API->comm('/ip/hotspot/user/print', ['?server' => ($hotspot_server ?? 'wartel'), '.proplist' => 'name,comment,disabled,bytes-in,bytes-out,uptime']);
+
+    $dbFile = dirname(__DIR__) . '/db_data/mikhmon_stats.db';
+    if (file_exists($dbFile)) {
+        try {
+            $db = new PDO('sqlite:' . $dbFile);
+            $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $stmt = $db->query("SELECT username, last_status FROM login_history WHERE username IS NOT NULL AND username != ''");
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $uname = strtolower($row['username'] ?? '');
+                if ($uname === '') continue;
+                $history_status_map[$uname] = strtolower((string)($row['last_status'] ?? ''));
+            }
+        } catch (Exception $e) {
+            $history_status_map = [];
+        }
+    }
 
     foreach ($all_users as $u) {
         $name = $u['name'] ?? '';
@@ -181,6 +198,14 @@ if (!isset($_SESSION["mikhmon"])) {
         $comment_rusak = preg_match('/\bAudit:\s*RUSAK\b/i', $comment) || preg_match('/^\s*RUSAK\b/i', $comment);
         $is_rusak = $comment_rusak || (stripos($comment, 'RUSAK') !== false) || ($disabled === 'true');
         $is_retur = (stripos($comment, '(Retur)') !== false) || (stripos($comment, 'Retur Ref:') !== false) || preg_match('/\bRETUR\b/i', $comment);
+        $hist_status = $name !== '' ? ($history_status_map[strtolower($name)] ?? '') : '';
+        if ($hist_status === 'retur') {
+            $is_retur = true;
+            $is_rusak = false;
+        } elseif ($hist_status === 'rusak') {
+            $is_rusak = true;
+            $is_retur = false;
+        }
         if ($is_rusak) $is_retur = false;
 
         $is_used = (!$is_retur && !$is_rusak && $disabled !== 'true') &&
@@ -205,11 +230,8 @@ if (!isset($_SESSION["mikhmon"])) {
     if (!empty($blockSummary)) ksort($blockSummary, SORT_NATURAL | SORT_FLAG_CASE);
 
     // Tambahkan hitungan RUSAK/RETUR dari history DB untuk user yang sudah tidak ada di router
-    $dbFile = dirname(__DIR__) . '/db_data/mikhmon_stats.db';
     if (file_exists($dbFile)) {
         try {
-            $db = new PDO('sqlite:' . $dbFile);
-            $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $stmt = $db->query("SELECT username, last_status, raw_comment FROM login_history WHERE username IS NOT NULL AND username != ''");
             foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
                 $uname = strtolower($row['username'] ?? '');
@@ -527,7 +549,7 @@ if (!isset($_SESSION["mikhmon"])) {
         <div class="col-4" style="margin-left: 30px;">
             <div class="card-modern">
                 <div class="card-header-mod">
-                    <h3><i class="fa fa-list-alt"></i> Ringkasan (READY)</h3>
+                    <h3><i class="fa fa-list-alt"></i> Ringkasan</h3>
                 </div>
                 <div class="card-body-mod">
                     
