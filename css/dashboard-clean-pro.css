@@ -453,6 +453,34 @@ body {
     fill: transparent !important;
 }
 
+/* Highcharts Customization */
+.highcharts-axis-line,
+.highcharts-tick,
+.highcharts-grid-line {
+    stroke: rgba(255,255,255,0.1);
+}
+
+.highcharts-axis-labels text {
+    fill: var(--text-dim) !important;
+    font-size: 11px !important;
+}
+
+.highcharts-legend-item text {
+    fill: var(--text-bright) !important;
+    font-size: 12px !important;
+}
+
+.highcharts-tooltip {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-medium) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3) !important;
+}
+
+.highcharts-tooltip text {
+    fill: var(--text-bright) !important;
+}
+
 /* Fix 15: BEAUTIFUL SCROLLBAR */
 .table-container::-webkit-scrollbar {
     width: 8px;

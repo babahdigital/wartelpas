@@ -260,6 +260,10 @@ if ($load == "hotspot") {
     $filterMonth = $_SESSION['filter_month'];
     $filterYear = $_SESSION['filter_year'];
 
+    $currentMonth = $hasTestDate ? (int)$testMonth : (int)date('m');
+    $currentYear = $hasTestDate ? (int)$testYear : (int)date('Y');
+    $currentDay = $hasTestDate ? (int)$testDay : (int)date('d');
+
     $dbFile = $root . '/db_data/mikhmon_stats.db';
     $rawDataMerged = [];
     if (file_exists($dbFile)) {
@@ -278,8 +282,22 @@ if ($load == "hotspot") {
     $rawDataMerged = array_unique($rawDataMerged);
 
     $daysInMonth = (int)date("t", mktime(0, 0, 0, $filterMonth, 1, $filterYear));
-    $dailyIncome = array_fill(1, $daysInMonth, 0);
-    $dailyQty = array_fill(1, $daysInMonth, 0);
+    $startDay = 1;
+    if ($filterMonth === $currentMonth && $filterYear === $currentYear) {
+        $startDay = ($currentDay >= 21) ? 21 : 1;
+        $endDay = $currentDay;
+    } else {
+        $endDay = $daysInMonth;
+    }
+
+    if ($endDay < $startDay) {
+        $startDay = 1;
+        $endDay = $daysInMonth;
+    }
+
+    $daysInRange = $endDay - $startDay + 1;
+    $dailyIncome = array_fill($startDay, $daysInRange, 0);
+    $dailyQty = array_fill($startDay, $daysInRange, 0);
 
     foreach ($rawDataMerged as $rowString) {
         $parts = explode("-|-", $rowString);
@@ -290,7 +308,7 @@ if ($load == "hotspot") {
             if (!$tstamp) continue;
             $d_month = (int)date("m", $tstamp); $d_year = (int)date("Y", $tstamp); $d_day = (int)date("d", $tstamp);
             if ($d_month == $filterMonth && $d_year == $filterYear) {
-                if ($d_day >= 1 && $d_day <= $daysInMonth) {
+                if ($d_day >= $startDay && $d_day <= $endDay) {
                     $dailyIncome[$d_day] += $price;
                     $dailyQty[$d_day] += 1;
                 }
@@ -298,9 +316,18 @@ if ($load == "hotspot") {
         }
     }
 
-    $jsonCategories = json_encode(array_map('strval', range(1, $daysInMonth)));
-    $jsonDataIncome = json_encode(array_values($dailyIncome), JSON_NUMERIC_CHECK);
-    $jsonDataQty = json_encode(array_values($dailyQty), JSON_NUMERIC_CHECK);
+    $categories = [];
+    $dataIncome = [];
+    $dataQty = [];
+    for ($d = $startDay; $d <= $endDay; $d++) {
+        $categories[] = (string)$d;
+        $dataIncome[] = $dailyIncome[$d] ?? 0;
+        $dataQty[] = $dailyQty[$d] ?? 0;
+    }
+
+    $jsonCategories = json_encode($categories);
+    $jsonDataIncome = json_encode($dataIncome, JSON_NUMERIC_CHECK);
+    $jsonDataQty = json_encode($dataQty, JSON_NUMERIC_CHECK);
     ?>
 
     <div id="view-dashboard">
@@ -310,7 +337,7 @@ if ($load == "hotspot") {
         <script type="text/javascript">
             if(typeof Highcharts !== 'undefined') {
                 Highcharts.chart('chart_income_stat', {
-                    chart: { backgroundColor: 'transparent', type: 'area', spacingBottom: 0, reflow: true, zoomType: 'xy', height: null },
+                    chart: { backgroundColor: 'transparent', type: 'area', spacingBottom: 0, reflow: true, zoomType: 'xy', height: null, borderWidth: 0, spacing: [10, 0, 10, 0] },
                     title: { text: null },
                     xAxis: { categories: <?= $jsonCategories ?>, crosshair: true, lineColor: '#444', tickColor: '#444', labels: {style:{color:'#888', fontSize:'10px'}}, gridLineWidth: 0 },
                     yAxis: [{

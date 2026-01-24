@@ -391,33 +391,47 @@
 
             if (data.audit_status === 'LOSS') {
                 $('#audit-box').removeClass('border-audit border-warning').addClass('border-loss');
-                $('#audit-status').text('LOSS').css('color', 'var(--accent-red)');
+                $('#audit-status').html('<i class="fa fa-exclamation-triangle"></i> LOSS')
+                    .css('color', 'var(--accent-red)');
             } else if (parseInt(data.ghost || 0, 10) > 0) {
                 $('#audit-box').removeClass('border-audit border-loss').addClass('border-warning');
-                $('#audit-status').text('GHOST').css('color', 'var(--accent-yellow)');
+                $('#audit-status').html('<i class="fa fa-ghost"></i> GHOST')
+                    .css('color', 'var(--accent-yellow)');
             } else {
                 $('#audit-box').removeClass('border-loss border-warning').addClass('border-audit');
-                $('#audit-status').text('CLEAR').css('color', '#fff');
+                $('#audit-status').html('<i class="fa fa-check-circle"></i> CLEAR')
+                    .css('color', 'var(--accent-green)');
             }
 
-            $('#audit-val').text('Selisih: Rp ' + data.audit_val);
+            $('#audit-val').html('<strong>Selisih:</strong> Rp ' + data.audit_val);
 
-            var detail = [];
+            var detail = '';
             if (data.audit_detail) {
+                detail += '<div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:6px;">';
+
                 if (parseInt(data.audit_detail.ghost || 0, 10) > 0) {
-                    detail.push('Missing: ' + data.audit_detail.ghost + ' Lbr');
+                    detail += '<span style="background:rgba(231,76,60,0.15); color:#e74c3c; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:600;">';
+                    detail += '<i class="fa fa-ghost"></i> Missing: ' + data.audit_detail.ghost + ' Lbr</span>';
                 }
+
                 if (parseInt(data.audit_detail.miss_10 || 0, 10) > 0 || parseInt(data.audit_detail.miss_30 || 0, 10) > 0) {
-                    detail.push('10m: ' + (data.audit_detail.miss_10 || 0) + ' | 30m: ' + (data.audit_detail.miss_30 || 0));
+                    detail += '<span style="background:rgba(243,156,18,0.15); color:#f39c12; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:600;">';
+                    detail += '<i class="fa fa-times-circle"></i> 10m: ' + (data.audit_detail.miss_10 || 0) + ' | 30m: ' + (data.audit_detail.miss_30 || 0) + '</span>';
                 }
+
                 if (data.audit_detail.cash_expected) {
-                    detail.push('Cash: Rp ' + data.audit_detail.cash_expected);
+                    detail += '<span style="background:rgba(46,204,113,0.15); color:#2ecc71; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:600;">';
+                    detail += '<i class="fa fa-money"></i> Cash: Rp ' + data.audit_detail.cash_expected + '</span>';
                 }
+
                 if (data.audit_detail.last_update) {
-                    detail.push('Upd: ' + data.audit_detail.last_update);
+                    detail += '<span style="background:rgba(0,192,239,0.15); color:#00c0ef; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:600;">';
+                    detail += '<i class="fa fa-clock-o"></i> ' + data.audit_detail.last_update + '</span>';
                 }
+
+                detail += '</div>';
             }
-            $('#audit-detail').text(detail.join(' • '));
+            $('#audit-detail').html(detail);
             var visibleRows = $("#tabel_riwayat tr:not(.text-center)").length;
             if (visibleRows > 10) visibleRows = 10;
             $("#row-count").text("Menampilkan " + visibleRows + " transaksi");
@@ -503,27 +517,34 @@
         <div class="card card-transaction">
             <div class="card-header">
                 <h3><i class="fa fa-history"></i> TRANSAKSI TERAKHIR</h3>
-                <span class="blink" style="font-size:9px; font-weight:bold; color:var(--accent-green);">UPDATED</span>
+                <span class="blink" style="font-size:10px; font-weight:bold; color:var(--accent-green); letter-spacing:0.5px;">
+                    <i class="fa fa-circle"></i> LIVE
+                </span>
             </div>
-            <div class="card-body" style="padding:0; display:flex; flex-direction:column;">
-                <div class="table-container" style="flex:1; min-height:300px;">
-                    <table style="table-layout: fixed;">
+            <div class="card-body" style="display:flex; flex-direction:column;">
+                <div class="table-container">
+                    <table>
                         <thead>
                             <tr>
-                                <th style="width:15%">JAM</th>
-                                <th style="width:40%">USER</th>
-                                <th style="width:15%; text-align:center;">BLOK</th>
-                                <th style="width:30%; text-align:right;">IDR</th>
+                                <th>JAM</th>
+                                <th>USER</th>
+                                <th style="text-align:center;">BLOK</th>
+                                <th style="text-align:right;">IDR</th>
                             </tr>
                         </thead>
                         <tbody id="tabel_riwayat">
-                            <tr><td colspan="4" class="text-center" style="padding:20px; color:#555;">Menunggu...</td></tr>
+                            <tr><td colspan="4" class="text-center" style="padding:30px; color:#8898aa; font-style:italic;">
+                                <i class="fa fa-clock-o" style="margin-right:8px;"></i>Memuat transaksi...
+                            </td></tr>
                         </tbody>
                     </table>
                 </div>
-                <div style="padding:8px 15px; background:var(--bg-hover); font-size:11px; color:var(--text-dim); border-top:1px solid var(--border-soft);">
-                    <span id="row-count">Menampilkan 0 transaksi</span>
-                </div>
+            </div>
+            <div class="card-footer">
+                <span id="row-count">Menampilkan 0 transaksi</span>
+                <span style="color:var(--accent-green); font-size:10px;">
+                    <i class="fa fa-refresh"></i> Auto-refresh
+                </span>
             </div>
         </div>
     </div>
