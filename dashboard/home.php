@@ -22,6 +22,13 @@ else {
 <link rel="stylesheet" href="css/dashboard-clean-pro.css">
 
 <script type="text/javascript">
+    var testDate = "2026-01-24";
+    function withTestDate(url) {
+        if (testDate && testDate.length === 10) {
+            return url + "&test_date=" + encodeURIComponent(testDate);
+        }
+        return url;
+    }
     function changeMonth(m) {
         var chartWrap = $("#chart_container");
         if (!chartWrap.length) chartWrap = $("#r_2_content");
@@ -68,7 +75,7 @@ else {
             });
 
         setTimeout(function() {
-            $.get("./dashboard/aload.php?session=<?= $session ?>&load=logs&m=" + m)
+            $.get(withTestDate("./dashboard/aload.php?session=<?= $session ?>&load=logs&m=" + m))
                 .done(function(dataLogs) {
                     if(dataLogs.trim() == "") {
                         $("#tabel_riwayat").html('<tr><td colspan="4" class="text-center text-muted" style="padding:20px;">Belum ada transaksi.</td></tr>');
@@ -92,7 +99,7 @@ else {
     }
 
     function updateDashboard() {
-        $.getJSON("./dashboard/aload.php?load=live_data&session=<?= $session ?>", function(data) {
+        $.getJSON(withTestDate("./dashboard/aload.php?load=live_data&session=<?= $session ?>"), function(data) {
             $('#kpi-active').text(data.active);
             $('#kpi-sold').text(data.sold);
             $('#kpi-income').text('Rp ' + data.income);
