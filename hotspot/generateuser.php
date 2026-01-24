@@ -463,19 +463,18 @@ if (!isset($_SESSION["mikhmon"])) {
                             </div>
                         </div>
 
-                        <div class="form-grid-2" style="margin-top: 16px;">
-                            <div class="form-group">
-                                <label>Batas Waktu</label>
-                                <input type="text" id="timelimit" name="timelimit_display" class="form-control-mod locked-input" readonly value="-">
+                        <div class="form-group" style="margin-top: 16px;">
+                            <label>Batas Waktu</label>
+                            <input type="text" id="timelimit" name="timelimit_display" class="form-control-mod locked-input" readonly value="-">
+                        </div>
+
+                        <div class="form-group" style="margin-top: 16px;">
+                            <label>Info Server</label>
+                            <div class="info-server">
+                                <input type="text" class="form-control-mod locked-input" value="Server: <?= htmlspecialchars($hotspot_server ?? 'wartel') ?>" readonly>
+                                <input type="text" class="form-control-mod locked-input" value="Mode: User=Pass" readonly>
                             </div>
-                            <div class="form-group">
-                                <label>Info Server</label>
-                                <div class="info-server">
-                                    <input type="text" class="form-control-mod locked-input" value="Server: <?= htmlspecialchars($hotspot_server ?? 'wartel') ?>" readonly>
-                                    <input type="text" class="form-control-mod locked-input" value="Mode: User=Pass" readonly>
-                                </div>
-                                <input type="hidden" name="user" value="vc">
-                            </div>
+                            <input type="hidden" name="user" value="vc">
                         </div>
 
                         <div id="GetValidPrice" style="margin-bottom: 20px;">
