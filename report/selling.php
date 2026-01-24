@@ -2857,6 +2857,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             $ss = (int)($ar['selisih_setoran'] ?? 0);
                             $audit_date_row = $ar['report_date'] ?? $filter_date;
                             $audit_block_row = normalize_block_name($ar['blok_name'] ?? '');
+                            $is_locked_row = (int)($ar['is_locked'] ?? 0) === 1;
                             $sys_rusak = (int)($by_block[$ar['blok_name']]['rusak_qty'] ?? 0);
                             $sys_retur = (int)($by_block[$ar['blok_name']]['retur'] ?? 0);
                             $expected_qty = (int)($ar['expected_qty'] ?? 0);
@@ -2975,7 +2976,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             <td class="text-center"><small><?= number_format($profile_qty_10,0,',','.') ?></small></td>
                             <td class="text-center"><small><?= number_format($profile_qty_30,0,',','.') ?></small></td>
                             <td class="text-right">
-                                <button type="button" class="btn-act" onclick="openAuditEdit(this)"
+                                <button type="button" class="btn-act" onclick="openAuditEdit(this)" <?= $is_locked_row ? 'disabled style="opacity:.5;cursor:not-allowed;"' : '' ?>
                                     data-blok="<?= htmlspecialchars($ar['blok_name'] ?? ''); ?>"
                                     data-user="<?= htmlspecialchars($ar['audit_username'] ?? ''); ?>"
                                     data-date="<?= htmlspecialchars($ar['report_date'] ?? $filter_date); ?>"
@@ -2985,7 +2986,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                     data-qty30="<?= (int)$profile_qty_30; ?>">
                                     <i class="fa fa-edit"></i>
                                 </button>
-                                <button type="button" class="btn-act btn-act-danger" onclick="openDeleteAuditModal('<?= './?report=selling' . $session_qs . '&show=' . $req_show . '&date=' . urlencode($filter_date) . '&audit_delete=1&audit_blok=' . urlencode($ar['blok_name'] ?? '') . '&audit_date=' . urlencode($filter_date); ?>','<?= htmlspecialchars($ar['blok_name'] ?? '-'); ?>','<?= htmlspecialchars($filter_date); ?>')">
+                                <button type="button" class="btn-act btn-act-danger" onclick="openDeleteAuditModal('<?= './?report=selling' . $session_qs . '&show=' . $req_show . '&date=' . urlencode($filter_date) . '&audit_delete=1&audit_blok=' . urlencode($ar['blok_name'] ?? '') . '&audit_date=' . urlencode($filter_date); ?>','<?= htmlspecialchars($ar['blok_name'] ?? '-'); ?>','<?= htmlspecialchars($filter_date); ?>')" <?= $is_locked_row ? 'disabled style="opacity:.5;cursor:not-allowed;"' : '' ?> >
                                     <i class="fa fa-trash"></i>
                                 </button>
                             </td>
