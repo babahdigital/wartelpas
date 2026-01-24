@@ -392,7 +392,7 @@ if (file_exists($dbFile)) {
     </div>
     <div class="card-body">
         <form method="GET" class="toolbar" action="?">
-            <input type="hidden" name="report" value="audit">
+            <input type="hidden" name="report" value="audit_session">
             <input type="hidden" name="session" value="<?= htmlspecialchars($session_id) ?>">
             <div class="toolbar-left">
                 <select name="show" onchange="this.form.submit()">

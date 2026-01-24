@@ -468,7 +468,7 @@ $print_time = date('d-m-Y H:i:s');
 
     <table style="width:100%; border-collapse:collapse; font-size:12px; margin-top:20px;">
         <thead>
-            <tr style="background:#334155; color:#fff;">
+            <tr style="background:#334155; color:#000;">
                 <th style="padding:10px;">Bulan</th>
                 <th style="padding:10px; text-align:center;">Total Transaksi</th>
                 <th style="padding:10px; text-align:right;">Target Sistem</th>
