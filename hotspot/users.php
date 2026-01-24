@@ -26,12 +26,18 @@ $req_show = in_array($req_show, ['harian', 'bulanan', 'tahunan', 'semua']) ? $re
 if ($req_show === 'semua') {
   $filter_date = '';
 } elseif ($req_show === 'harian') {
-  $filter_date = $filter_date ?: date('Y-m-d');
+  if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $filter_date)) {
+    $filter_date = date('Y-m-d');
+  }
 } elseif ($req_show === 'bulanan') {
-  $filter_date = $filter_date ?: date('Y-m');
+  if (!preg_match('/^\d{4}-\d{2}$/', $filter_date)) {
+    $filter_date = date('Y-m');
+  }
 } else {
   $req_show = 'tahunan';
-  $filter_date = $filter_date ?: date('Y');
+  if (!preg_match('/^\d{4}$/', $filter_date)) {
+    $filter_date = date('Y');
+  }
 }
 $debug_mode = isset($_GET['debug']) && $_GET['debug'] == '1';
 $enforce_rusak_rules = !(isset($_GET['rusak_free']) && $_GET['rusak_free'] == '1');
@@ -1284,8 +1290,20 @@ if (!empty($router_users)) {
       continue;
     }
 
-    $is_rusak = (stripos($comment, 'RUSAK') !== false) || ($disabled === 'true');
-    $is_retur = (stripos($comment, '(Retur)') !== false);
+    $comment_rusak = preg_match('/\bAudit:\s*RUSAK\b/i', $comment) || preg_match('/^\s*RUSAK\b/i', $comment);
+    $is_rusak = $comment_rusak || (stripos($comment, 'RUSAK') !== false) || ($disabled === 'true');
+    $is_retur = (stripos($comment, '(Retur)') !== false) || (stripos($comment, 'Retur Ref:') !== false);
+    if ($db && $name !== '') {
+      $hist_sum = get_user_history($name);
+      $hist_status = strtolower($hist_sum['last_status'] ?? '');
+      if ($hist_status === 'retur') {
+        $is_retur = true;
+        $is_rusak = false;
+      } elseif ($hist_status === 'rusak') {
+        $is_rusak = true;
+        $is_retur = false;
+      }
+    }
     if ($is_rusak) $is_retur = false;
 
     $is_used = (!$is_retur && !$is_rusak && $disabled !== 'true') &&
@@ -2228,7 +2246,7 @@ if ($debug_mode && !$is_ajax) {
     <div id="summary-modal" class="summary-modal" aria-hidden="true">
       <div class="summary-card">
         <div class="summary-header">
-          <div class="summary-title"><i class="fa fa-list-alt"></i> Sisa Voucher (READY)</div>
+          <div class="summary-title"><i class="fa fa-list-alt"></i> Sisa Voucher</div>
           <button type="button" class="summary-close" id="summary-close">&times;</button>
         </div>
         <div class="summary-body">

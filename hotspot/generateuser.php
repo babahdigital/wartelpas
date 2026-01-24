@@ -174,8 +174,9 @@ if (!isset($_SESSION["mikhmon"])) {
         $uptime = $u['uptime'] ?? '';
         $cm = extract_ip_mac_from_comment($comment);
 
-        $is_rusak = (stripos($comment, 'RUSAK') !== false) || ($disabled === 'true');
-        $is_retur = (stripos($comment, '(Retur)') !== false);
+        $comment_rusak = preg_match('/\bAudit:\s*RUSAK\b/i', $comment) || preg_match('/^\s*RUSAK\b/i', $comment);
+        $is_rusak = $comment_rusak || (stripos($comment, 'RUSAK') !== false) || ($disabled === 'true');
+        $is_retur = (stripos($comment, '(Retur)') !== false) || (stripos($comment, 'Retur Ref:') !== false);
         if ($is_rusak) $is_retur = false;
 
         $is_used = (!$is_retur && !$is_rusak && $disabled !== 'true') &&
