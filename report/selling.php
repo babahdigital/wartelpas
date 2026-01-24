@@ -2637,6 +2637,10 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             $voucher_loss_display = (int)$total_rusak + (int)$total_invalid;
             $setoran_loss_display = $audit_selisih_setoran_adj_total < 0 ? abs((int)$audit_selisih_setoran_adj_total) : 0;
             $kerugian_display = $voucher_loss_display + $setoran_loss_display;
+            $waterfall_tech_loss = $voucher_loss_display;
+            $waterfall_target = $net_system_display;
+            $waterfall_actual = ($req_show === 'harian') ? (int)$audit_total_actual_setoran : 0;
+            $waterfall_variance = $waterfall_actual - $waterfall_target;
         ?>
         <div class="summary-grid">
             <?php
@@ -2674,6 +2678,33 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 <div class="summary-value" style="color:#2ecc71;"><?= $cur ?> <?= number_format($net_system_display,0,',','.') ?></div>
             </div>
         </div>
+        <?php if ($req_show === 'harian'): ?>
+            <div style="margin-top:12px;border:1px solid #3a4046;border-radius:8px;padding:10px;background:#1f2327;">
+                <div style="font-size:11px;color:var(--txt-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Waterfall Pendapatan</div>
+                <div style="display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:10px;">
+                    <div>
+                        <div style="font-size:11px;color:var(--txt-muted);">Gross Total</div>
+                        <div style="font-weight:700;"><?= $cur ?> <?= number_format((int)$total_gross,0,',','.') ?></div>
+                    </div>
+                    <div>
+                        <div style="font-size:11px;color:var(--txt-muted);">Technical Loss</div>
+                        <div style="font-weight:700;color:#c0392b;"><?= $cur ?> <?= number_format((int)$waterfall_tech_loss,0,',','.') ?></div>
+                    </div>
+                    <div>
+                        <div style="font-size:11px;color:var(--txt-muted);">Target Setoran</div>
+                        <div style="font-weight:700;"><?= $cur ?> <?= number_format((int)$waterfall_target,0,',','.') ?></div>
+                    </div>
+                    <div>
+                        <div style="font-size:11px;color:var(--txt-muted);">Actual Setoran</div>
+                        <div style="font-weight:700;"><?= $cur ?> <?= number_format((int)$waterfall_actual,0,',','.') ?></div>
+                    </div>
+                    <div>
+                        <div style="font-size:11px;color:var(--txt-muted);">Variance</div>
+                        <div style="font-weight:700;color:<?= $waterfall_variance < 0 ? '#c0392b' : '#2ecc71'; ?>;"><?= $cur ?> <?= number_format((int)$waterfall_variance,0,',','.') ?></div>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
         <div id="settlement-time" style="margin-top:12px;font-size:12px;color:var(--txt-muted);">
             Settlement terakhir: <?= $settlement_time ? date('d-m-Y H:i:s', strtotime($settlement_time)) : '-' ?>
         </div>
