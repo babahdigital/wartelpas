@@ -69,31 +69,10 @@ if (!isset($_SESSION["mikhmon"])) {
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         padding: 1.5rem;
     }
-    .table-modern {
-        width: 100%;
-        margin-bottom: 0;
-        color: #e0e0e0;
-    }
-    .table-modern thead th {
-        border-top: none;
-        border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.85rem;
-        letter-spacing: 0.5px;
-        background-color: rgba(255, 255, 255, 0.05);
-    }
-    .table-modern tbody tr {
-        transition: background-color 0.2s ease;
-    }
-    .table-modern tbody tr:hover {
-        background-color: rgba(255, 255, 255, 0.1);
-    }
-    .table-modern td {
-        border-top: 1px solid rgba(255, 255, 255, 0.05);
-        vertical-align: middle;
-        padding: 12px 15px;
-    }
+    .table-dark-solid { width: 100%; border-collapse: separate; border-spacing: 0; color: #e0e0e0; }
+    .table-dark-solid th { background: #1b1e21; padding: 12px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: #adb5bd; border-bottom: 2px solid #495057; border-top: none; }
+    .table-dark-solid td { padding: 12px; border-bottom: 1px solid #3a4046; vertical-align: middle; font-size: 0.9rem; }
+    .table-dark-solid tr:hover td { background: #32383e; }
     .badge-modern {
         border-radius: 6px;
         padding: 5px 10px;
@@ -118,7 +97,7 @@ if (!isset($_SESSION["mikhmon"])) {
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table id="dataTable" class="table table-modern table-hover text-nowrap">
+                    <table id="dataTable" class="table-dark-solid text-nowrap">
                         <thead>
                             <tr>
                                 <th style="text-align:center; width: 50px;"><i class="fa fa-ban"></i></th>
