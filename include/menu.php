@@ -179,7 +179,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
     }
 
     .brand-logo {
-        height: 60px;
+        height: 50px;
         width: auto;
         object-fit: contain;
     }

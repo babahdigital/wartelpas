@@ -687,7 +687,7 @@ if ($load == "logs") {
 
             $paket = (isset($parts[7]) && $parts[7] != "") ? trim($parts[7]) : '-';
             $comment = (isset($parts[8])) ? trim($parts[8]) : '';
-            $key = $tstamp . "_" . rand(100,999);
+            $key = $tstamp . '_' . str_pad((string)count($finalLogs), 4, '0', STR_PAD_LEFT);
             $finalLogs[$key] = [ 'time_str' => date("d/m/Y H:i", $tstamp), 'username' => $username, 'paket' => $paket, 'comment' => $comment, 'price' => $price ];
         }
     }
@@ -723,7 +723,7 @@ if ($load == "logs") {
         }
     }
 
-    krsort($finalLogs);
+    krsort($finalLogs, SORT_STRING);
     $maxShow = 9; $count = 0;
     foreach ($finalLogs as $log) {
         if ($count >= $maxShow) break;
