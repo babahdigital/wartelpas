@@ -158,6 +158,7 @@ if (!isset($_SESSION["mikhmon"])) {
     $blockSummary = [];
     $totalRusak = 0;
     $totalRetur = 0;
+    $summary_seen_users = [];
 
     $active_list = $API->comm('/ip/hotspot/active/print', ['?server' => ($hotspot_server ?? 'wartel'), '.proplist' => 'user']);
     $activeMap = [];
@@ -167,6 +168,9 @@ if (!isset($_SESSION["mikhmon"])) {
 
     foreach ($all_users as $u) {
         $name = $u['name'] ?? '';
+        if ($name !== '') {
+            $summary_seen_users[strtolower($name)] = true;
+        }
         $comment = $u['comment'] ?? '';
         $disabled = $u['disabled'] ?? 'false';
         $is_active = isset($activeMap[$name]);
@@ -199,6 +203,30 @@ if (!isset($_SESSION["mikhmon"])) {
         }
     }
     if (!empty($blockSummary)) ksort($blockSummary, SORT_NATURAL | SORT_FLAG_CASE);
+
+    // Tambahkan hitungan RUSAK/RETUR dari history DB untuk user yang sudah tidak ada di router
+    $dbFile = dirname(__DIR__) . '/db_data/mikhmon_stats.db';
+    if (file_exists($dbFile)) {
+        try {
+            $db = new PDO('sqlite:' . $dbFile);
+            $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $stmt = $db->query("SELECT username, last_status, raw_comment FROM login_history WHERE username IS NOT NULL AND username != ''");
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $uname = strtolower($row['username'] ?? '');
+                if ($uname === '' || isset($summary_seen_users[$uname])) continue;
+                $raw_comment = (string)($row['raw_comment'] ?? '');
+                $hist_status = strtolower((string)($row['last_status'] ?? ''));
+                $is_hist_rusak = ($hist_status === 'rusak') || preg_match('/\bAudit:\s*RUSAK\b/i', $raw_comment) || preg_match('/^\s*RUSAK\b/i', $raw_comment) || (stripos($raw_comment, 'RUSAK') !== false);
+                $is_hist_retur = ($hist_status === 'retur') || (stripos($raw_comment, '(Retur)') !== false) || (stripos($raw_comment, 'Retur Ref:') !== false) || preg_match('/\bRETUR\b/i', $raw_comment);
+                if ($is_hist_rusak) {
+                    $totalRusak++;
+                } elseif ($is_hist_retur) {
+                    $totalRetur++;
+                }
+            }
+        } catch (Exception $e) {
+        }
+    }
 }
 ?>
 
