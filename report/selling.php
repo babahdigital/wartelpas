@@ -813,8 +813,8 @@ function calc_audit_adjusted_setoran(array $ar) {
     if ($p30_qty <= 0) $p30_qty = $profile30_users;
 
     if ($has_manual_evidence) {
-        $manual_net_qty_10 = max(0, $p10_qty - $cnt_rusak_10 - $cnt_invalid_10);
-        $manual_net_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30);
+        $manual_net_qty_10 = max(0, $p10_qty - $cnt_rusak_10 - $cnt_invalid_10 + $cnt_retur_10);
+        $manual_net_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30 + $cnt_retur_30);
         $manual_display_setoran = ($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30);
         $expected_adj_setoran = $expected_setoran;
     } else {
@@ -3117,8 +3117,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             }
                             if ($profile_qty_10 <= 0) $profile_qty_10 = count($profile10['user'] ?? []);
                             if ($profile_qty_30 <= 0) $profile_qty_30 = count($profile30['user'] ?? []);
-                            $manual_net_qty_10 = max(0, $profile_qty_10 - $manual_rusak_10 - $manual_invalid_10);
-                            $manual_net_qty_30 = max(0, $profile_qty_30 - $manual_rusak_30 - $manual_invalid_30);
+                            $manual_net_qty_10 = max(0, $profile_qty_10 - $manual_rusak_10 - $manual_invalid_10 + $manual_retur_10);
+                            $manual_net_qty_30 = max(0, $profile_qty_30 - $manual_rusak_30 - $manual_invalid_30 + $manual_retur_30);
                             $manual_display_qty = $has_manual_evidence ? ($manual_net_qty_10 + $manual_net_qty_30) : (int)($ar['reported_qty'] ?? 0);
                             $manual_display_setoran = $has_manual_evidence ? (($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30)) : (int)($ar['actual_setoran'] ?? 0);
                             $expected_adj_qty = $expected_qty;
