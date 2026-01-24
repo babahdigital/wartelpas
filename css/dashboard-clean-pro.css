@@ -194,19 +194,3 @@ html, body {
 .card-body::-webkit-scrollbar-thumb:hover { background: #555; }
 
 .highcharts-container { filter: drop-shadow(0 0 5px rgba(0,0,0,0.2)); }
-
-.sys-mini .box {
-    padding: 8px 10px !important;
-    min-height: 54px !important;
-}
-
-.sys-mini .box-group-icon {
-    width: 34px !important;
-    height: 34px !important;
-    font-size: 18px !important;
-}
-
-.sys-mini .box-group-area span {
-    font-size: 11px !important;
-    line-height: 1.25 !important;
-}

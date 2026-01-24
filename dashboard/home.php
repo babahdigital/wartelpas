@@ -125,7 +125,7 @@ else {
 
 <div id="reloadHome">
     <div id="loading-halus"></div>
-    <div id="r_1" class="row" style="margin-bottom: 10px;">
+    <div id="r_1" class="row" style="margin-bottom: 20px;">
         <div class="col-12 text-center" style="padding:20px; color:#666;">
             <i class="fa fa-refresh fa-spin"></i> Menghubungkan ke Router...
         </div>
