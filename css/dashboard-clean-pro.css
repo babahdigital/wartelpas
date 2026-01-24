@@ -10,12 +10,12 @@
     --accent-purple: #605ca8;
     --text-dim: #8898aa;
     --border-soft: rgba(255, 255, 255, 0.05);
-    --trx-row-height: 34px;
+    --trx-row-height: 32px; /* Dikit dipersempit */
 }
 
 html, body {
     margin: 0;
-    overflow: hidden;
+    overflow-y: auto !important;
     background-color: var(--bg-main) !important;
 }
 
@@ -52,7 +52,7 @@ body {
 
 .main-content {
     padding: 20px;
-    height: calc(100vh - 60px);
+    height: auto;
     display: flex;
     flex-direction: column;
     gap: 15px;
@@ -180,7 +180,7 @@ body {
 .kpi-box {
     background: var(--bg-card);
     border-radius: 12px;
-    padding: 18px 18px 16px;
+    padding: 12px 15px; /* Padding dikurangi */
     margin-bottom: 15px;
     border: 1px solid var(--border-soft);
     transition: all 0.3s ease;
