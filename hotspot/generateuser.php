@@ -351,6 +351,18 @@ if (!isset($_SESSION["mikhmon"])) {
         flex: 1 1 220px;
     }
 
+    .form-grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+    }
+
+    @media (max-width: 767px) {
+        .form-grid-2 {
+            grid-template-columns: 1fr;
+        }
+    }
+
     /* FOOTER STATS (Rusak/Retur) */
     .footer-stats-container {
         margin-top: auto; /* Tempel di bawah card ringkasan */
@@ -414,67 +426,55 @@ if (!isset($_SESSION["mikhmon"])) {
                         <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
                         <input type="hidden" name="session" value="<?= $session; ?>">
 
-                        <div class="row g-3">
-                            <div class="col-12 col-md-4">
-                                <div class="form-group">
-                                    <label>Jumlah (Pcs)</label>
-                                    <input type="number" name="qty" id="qtyInput" class="form-control-mod" value="50" min="50" max="500" required>
-                                    <div class="text-danger text-info-xxs">*Minimal 50 User</div>
-                                </div>
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label>Jumlah (Pcs)</label>
+                                <input type="number" name="qty" id="qtyInput" class="form-control-mod" value="50" min="50" max="500" required>
+                                <div class="text-danger text-info-xxs">*Minimal 50 User</div>
                             </div>
-                            <div class="col-12 col-md-4">
-                                <div class="form-group">
-                                    <label>Panjang Karakter</label>
-                                    <select name="userl" class="form-control-mod">
-                                        <option value="6">6 Digit</option>
-                                        <option value="7">7 Digit</option>
-                                        <option value="8">8 Digit</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <div class="form-group">
-                                    <label>Blok ID</label>
-                                    <select name="adcomment" id="blokId" class="form-control-mod" onchange="applyBlockProfile();" required>
-                                        <?php
-                                        foreach(range('A', 'F') as $blk) {
-                                            foreach(['10', '30'] as $suf) echo "<option value='{$blk}{$suf}'>${blk}${suf}</option>";
-                                        }
-                                        ?>
-                                    </select>
-                                </div>
+                            <div class="form-group">
+                                <label>Panjang Karakter</label>
+                                <select name="userl" class="form-control-mod">
+                                    <option value="6">6 Digit</option>
+                                    <option value="7">7 Digit</option>
+                                    <option value="8">8 Digit</option>
+                                </select>
                             </div>
                         </div>
 
-                        <div class="row g-3">
-                            <div class="col-12 col-md-6">
-                                <div class="form-group">
-                                    <label>Profil Paket</label>
-                                    <select name="profile_display" id="uprof" class="form-control-mod locked-input" disabled>
-                                        <option value="10Menit">10Menit</option>
-                                        <option value="30Menit">30Menit</option>
-                                    </select>
-                                    <input type="hidden" name="profile" id="profileHidden" value="10Menit">
-                                </div>
+                        <div class="form-grid-2" style="margin-top: 16px;">
+                            <div class="form-group">
+                                <label>Blok ID</label>
+                                <select name="adcomment" id="blokId" class="form-control-mod" onchange="applyBlockProfile();" required>
+                                    <?php
+                                    foreach(range('A', 'F') as $blk) {
+                                        foreach(['10', '30'] as $suf) echo "<option value='{$blk}{$suf}'>${blk}${suf}</option>";
+                                    }
+                                    ?>
+                                </select>
                             </div>
-                            <div class="col-12 col-md-6">
-                                <div class="form-group">
-                                    <label>Batas Waktu</label>
-                                    <input type="text" id="timelimit" name="timelimit_display" class="form-control-mod locked-input" readonly value="-">
-                                </div>
+                            <div class="form-group">
+                                <label>Profil Paket</label>
+                                <select name="profile_display" id="uprof" class="form-control-mod locked-input" disabled>
+                                    <option value="10Menit">10Menit</option>
+                                    <option value="30Menit">30Menit</option>
+                                </select>
+                                <input type="hidden" name="profile" id="profileHidden" value="10Menit">
                             </div>
                         </div>
 
-                            <div class="row g-3">
-                                <div class="col-12">
-                                <div class="form-group">
-                                    <label>Info Server</label>
-                                    <div class="info-server">
-                                        <input type="text" class="form-control-mod locked-input" value="Server: <?= htmlspecialchars($hotspot_server ?? 'wartel') ?>" readonly>
-                                        <input type="text" class="form-control-mod locked-input" value="Mode: User=Pass" readonly>
-                                    </div>
-                                    <input type="hidden" name="user" value="vc">
+                        <div class="form-grid-2" style="margin-top: 16px;">
+                            <div class="form-group">
+                                <label>Batas Waktu</label>
+                                <input type="text" id="timelimit" name="timelimit_display" class="form-control-mod locked-input" readonly value="-">
+                            </div>
+                            <div class="form-group">
+                                <label>Info Server</label>
+                                <div class="info-server">
+                                    <input type="text" class="form-control-mod locked-input" value="Server: <?= htmlspecialchars($hotspot_server ?? 'wartel') ?>" readonly>
+                                    <input type="text" class="form-control-mod locked-input" value="Mode: User=Pass" readonly>
                                 </div>
+                                <input type="hidden" name="user" value="vc">
                             </div>
                         </div>
 
