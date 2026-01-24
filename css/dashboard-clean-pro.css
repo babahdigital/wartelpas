@@ -42,7 +42,7 @@ body {
 
 /* Fix 4: MAIN CONTAINER STABILITY */
 #main {
-    padding: 20px !important;
+    padding: 20px 20px 5px 20px !important;
     margin-top: 0px !important;
     background-color: var(--bg-main) !important;
     display: flex;
