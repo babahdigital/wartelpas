@@ -561,9 +561,9 @@ if (isset($db) && $db instanceof PDO && isset($_GET['audit_delete'])) {
     $del_blok = strtoupper(trim($_GET['audit_blok'] ?? ''));
     if ($del_date !== '' && $del_blok !== '') {
         try {
-            $stmtLock = $db->prepare("SELECT COALESCE(is_locked,0) FROM audit_rekap_manual WHERE report_date = :d AND UPPER(blok_name) = :b LIMIT 1");
-            $stmtLock->execute([':d' => $del_date, ':b' => $del_blok]);
-            $is_locked = (int)$stmtLock->fetchColumn() === 1;
+            $stmtLock = $db->prepare("SELECT COUNT(*) FROM audit_rekap_manual WHERE report_date = :d AND COALESCE(is_locked,0) = 1");
+            $stmtLock->execute([':d' => $del_date]);
+            $is_locked = (int)$stmtLock->fetchColumn() > 0;
             if ($is_locked) {
                 $audit_error = 'Audit sudah dikunci dan tidak bisa dihapus.';
             } else {
@@ -1148,9 +1148,9 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             $audit_error = 'Blok dan tanggal wajib diisi.';
         } else {
             try {
-                $stmtLock = $db->prepare("SELECT COALESCE(is_locked,0) FROM audit_rekap_manual WHERE report_date = :d AND UPPER(blok_name) = :b LIMIT 1");
-                $stmtLock->execute([':d' => $audit_date, ':b' => strtoupper($audit_blok)]);
-                $is_locked = (int)$stmtLock->fetchColumn() === 1;
+                $stmtLock = $db->prepare("SELECT COUNT(*) FROM audit_rekap_manual WHERE report_date = :d AND COALESCE(is_locked,0) = 1");
+                $stmtLock->execute([':d' => $audit_date]);
+                $is_locked = (int)$stmtLock->fetchColumn() > 0;
                 if ($is_locked) {
                     $audit_error = 'Audit sudah dikunci dan tidak bisa diubah.';
                 }
