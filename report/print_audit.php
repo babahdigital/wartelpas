@@ -493,7 +493,7 @@ if (file_exists($dbFile)) {
   </div>
   <?php endif; ?>
 
-    <div class="section-title">Statistik Keuangan & Insiden</div>
+    <div class="section-title">Statistik Keuangan & Insiden (Real-Time)</div>
     <?php
       $stat_total = (int)$sales_summary['total'] + (int)$sales_summary['pending'];
       $stat_gross = (int)$sales_summary['gross'] + (int)$pending_summary['gross'];
@@ -502,10 +502,25 @@ if (file_exists($dbFile)) {
       $total_loss_real = $stat_rusak_system + $stat_rusak_manual;
     ?>
     <div class="summary-grid" style="grid-template-columns: repeat(3, 1fr);">
-    <div class="summary-card"><div class="summary-title">Total Transaksi</div><div class="summary-value"><?= number_format($stat_total,0,',','.') ?></div><div style="font-size:10px;color:#888;">(Final + Live)</div></div>
-    <div class="summary-card"><div class="summary-title">Pendapatan Kotor (Gross)</div><div class="summary-value">Rp <?= number_format($stat_gross,0,',','.') ?></div></div>
-    <div class="summary-card"><div class="summary-title" style="color:#c0392b;">Total Voucher Rusak</div><div class="summary-value" style="color:#c0392b;">Rp <?= number_format($total_loss_real,0,',','.') ?></div><div style="font-size:10px;color:#b91c1c;">(Mengurangi Setoran)</div></div>
+      <div class="summary-card"><div class="summary-title">Total Transaksi</div><div class="summary-value"><?= number_format($stat_total,0,',','.') ?></div><div style="font-size:10px;color:#888;">(Final + Live)</div></div>
+      <div class="summary-card"><div class="summary-title">Pendapatan Kotor (Gross)</div><div class="summary-value">Rp <?= number_format($stat_gross,0,',','.') ?></div></div>
+      <div class="summary-card"><div class="summary-title" style="color:#c0392b;">Total Voucher Rusak</div><div class="summary-value" style="color:#c0392b;">Rp <?= number_format($total_loss_real,0,',','.') ?></div><div style="font-size:10px;color:#b91c1c;">(Mengurangi Setoran)</div></div>
     </div>
+    <?php if ($sales_summary['pending'] > 0): ?>
+        <?php $show_pending_date = ($req_show === 'harian' && $filter_date !== date('Y-m-d')); ?>
+        <div class="summary-grid" style="grid-template-columns: repeat(1, 1fr); margin-top:6px;">
+            <div class="summary-card" style="border-color:#ffeeba;">
+                <div class="summary-title" style="color:#856404;">Status Data</div>
+                <div class="summary-value" style="font-size:14px;color:#856404;">
+                    <?= number_format($sales_summary['pending'],0,',','.') ?> Transaksi Belum Settlement
+                </div>
+                <div style="font-size:10px;color:#856404;">(Data Live Sales)</div>
+                <?php if ($show_pending_date && !empty($pending_range_label)): ?>
+                    <div style="font-size:10px;color:#856404;margin-top:4px;"><?= htmlspecialchars($pending_range_label) ?></div>
+                <?php endif; ?>
+            </div>
+        </div>
+    <?php endif; ?>
 
     <?php if ($sales_summary['pending'] > 0): ?>
       <div style="margin-top:10px; padding:8px; border:1px solid #e2e8f0; background:#f8fafc; font-size:11px; color:#64748b;">
