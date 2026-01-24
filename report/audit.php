@@ -8,14 +8,18 @@ $session_id = $_GET['session'] ?? '';
 $req_show = $_GET['show'] ?? 'harian';
 $filter_date = $_GET['date'] ?? '';
 if ($req_show === 'harian') {
-    $filter_date = $filter_date ?: date('Y-m-d');
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $filter_date)) {
+        $filter_date = date('Y-m-d');
+    }
 } elseif ($req_show === 'bulanan') {
-    $filter_date = $filter_date ?: date('Y-m');
-    if (strlen($filter_date) > 7) $filter_date = substr($filter_date, 0, 7);
+    if (!preg_match('/^\d{4}-\d{2}$/', $filter_date)) {
+        $filter_date = date('Y-m');
+    }
 } else {
     $req_show = 'tahunan';
-    $filter_date = $filter_date ?: date('Y');
-    if (strlen($filter_date) > 4) $filter_date = substr($filter_date, 0, 4);
+    if (!preg_match('/^\d{4}$/', $filter_date)) {
+        $filter_date = date('Y');
+    }
 }
 
 function table_exists($db, $name) {
