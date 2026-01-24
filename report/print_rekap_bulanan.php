@@ -143,6 +143,7 @@ $audit_selisih = [];
 $audit_system = [];
 $audit_expense = [];
 $total_expenses_month = 0;
+$daily_expense_logs = [];
 
 try {
     if (file_exists($dbFile)) {
@@ -200,7 +201,7 @@ try {
             $phone_units[$d][$ut] = (int)($row['total_units'] ?? 0);
         }
 
-        $stmtAudit = $db->prepare("SELECT report_date, expected_setoran, actual_setoran, user_evidence, expenses_amt
+        $stmtAudit = $db->prepare("SELECT report_date, blok_name, expected_setoran, actual_setoran, user_evidence, expenses_amt, expenses_desc
             FROM audit_rekap_manual
             WHERE report_date LIKE :m");
         $stmtAudit->execute([':m' => $filter_date . '%']);
@@ -209,12 +210,22 @@ try {
             if ($d === '') continue;
             [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($row);
             $expense = (int)($row['expenses_amt'] ?? 0);
+            $desc = trim((string)($row['expenses_desc'] ?? ''));
+            $blok = (string)($row['blok_name'] ?? '');
             $total_expenses_month += $expense;
             $net_cash_audit = (int)$manual_setoran - $expense;
             $audit_net[$d] = (int)($audit_net[$d] ?? 0) + $net_cash_audit;
             $audit_expense[$d] = (int)($audit_expense[$d] ?? 0) + $expense;
             $audit_system[$d] = (int)($audit_system[$d] ?? 0) + (int)$expected_adj_setoran;
             $audit_selisih[$d] = (int)($audit_selisih[$d] ?? 0) + ((int)$manual_setoran - (int)$expected_adj_setoran);
+            if ($expense > 0) {
+                $desc_text = $desc !== '' ? $desc : 'Tanpa Keterangan';
+                $daily_expense_logs[$d][] = [
+                    'blok' => $blok,
+                    'desc' => $desc_text,
+                    'amt' => $expense
+                ];
+            }
         }
     }
 } catch (Exception $e) {
@@ -516,6 +527,54 @@ $print_time = date('d-m-Y H:i:s');
             </tr>
         </tfoot>
     </table>
+
+    <?php if (!empty($daily_expense_logs)): ?>
+        <div style="margin-top:25px; page-break-inside:avoid;">
+            <div style="margin-bottom:8px; font-weight:bold; font-size:13px; border-bottom:1px solid #ddd; padding-bottom:5px; color:#d35400;">
+                <i class="fa fa-shopping-cart"></i> Rincian Pengeluaran Operasional
+            </div>
+            <table style="width:100%; border-collapse:collapse; font-size:11px;">
+                <thead>
+                    <tr style="background:#fffbf0; color:#d35400;">
+                        <th style="border:1px solid #f39c12; padding:6px; width:15%;">Tanggal</th>
+                        <th style="border:1px solid #f39c12; padding:6px; width:15%;">Blok</th>
+                        <th style="border:1px solid #f39c12; padding:6px; text-align:left;">Keterangan Belanja</th>
+                        <th style="border:1px solid #f39c12; padding:6px; text-align:right; width:20%;">Nominal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                        ksort($daily_expense_logs);
+                        foreach ($daily_expense_logs as $d => $items):
+                            foreach ($items as $item):
+                    ?>
+                    <tr>
+                        <td style="border:1px solid #e67e22; padding:5px; text-align:center;">
+                            <?= esc(substr($d, 8, 2)) . ' ' . esc(month_label_id(substr($d, 5, 2))) ?>
+                        </td>
+                        <td style="border:1px solid #e67e22; padding:5px; text-align:center;">
+                            <?= esc($item['blok']) ?>
+                        </td>
+                        <td style="border:1px solid #e67e22; padding:5px; text-align:left;">
+                            <?= esc($item['desc']) ?>
+                        </td>
+                        <td style="border:1px solid #e67e22; padding:5px; text-align:right; font-weight:bold; color:#d35400;">
+                            <?= $cur ?> <?= number_format((int)$item['amt'], 0, ',', '.') ?>
+                        </td>
+                    </tr>
+                    <?php endforeach; endforeach; ?>
+                </tbody>
+                <tfoot>
+                    <tr style="background:#fffbf0; font-weight:bold; color:#d35400;">
+                        <td colspan="3" style="border:1px solid #f39c12; padding:6px; text-align:right;">TOTAL PENGELUARAN BULAN INI</td>
+                        <td style="border:1px solid #f39c12; padding:6px; text-align:right;">
+                            <?= $cur ?> <?= number_format((int)$total_expenses_month, 0, ',', '.') ?>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    <?php endif; ?>
 
 <script>
 function setUniquePrintTitle(){
