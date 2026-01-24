@@ -209,6 +209,7 @@ $audit_manual_summary = [
     'expected_setoran' => 0,
     'selisih_qty' => 0,
     'selisih_setoran' => 0,
+    'total_rusak_rp' => 0,
 ];
 
 if (file_exists($dbFile)) {
@@ -324,12 +325,29 @@ if (file_exists($dbFile)) {
             $stmt->execute();
             $audit_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $audit_manual_summary['rows'] = count($audit_rows);
+            $audit_manual_summary['total_rusak_rp'] = 0;
             foreach ($audit_rows as $ar) {
                 [$manual_qty, $expected_qty, $manual_setoran, $expected_setoran] = calc_audit_adjusted_totals($ar);
                 $audit_manual_summary['manual_qty'] += (int)$manual_qty;
                 $audit_manual_summary['expected_qty'] += (int)$expected_qty;
                 $audit_manual_summary['manual_setoran'] += (int)$manual_setoran;
                 $audit_manual_summary['expected_setoran'] += (int)$expected_setoran;
+
+                $curr_rusak_rp = 0;
+                if (!empty($ar['user_evidence'])) {
+                    $ev = json_decode((string)$ar['user_evidence'], true);
+                    if (is_array($ev) && !empty($ev['users'])) {
+                        foreach ($ev['users'] as $u) {
+                            $st = strtolower((string)($u['last_status'] ?? ''));
+                            $k = (string)($u['profile_kind'] ?? '10');
+                            if ($st === 'rusak' || $st === 'invalid') {
+                                $price = ($k === '30') ? 20000 : 5000;
+                                $curr_rusak_rp += $price;
+                            }
+                        }
+                    }
+                }
+                $audit_manual_summary['total_rusak_rp'] += $curr_rusak_rp;
             }
             $audit_manual_summary['selisih_qty'] = (int)$audit_manual_summary['manual_qty'] - (int)$audit_manual_summary['expected_qty'];
             $audit_manual_summary['selisih_setoran'] = (int)$audit_manual_summary['manual_setoran'] - (int)$audit_manual_summary['expected_setoran'];
@@ -450,15 +468,17 @@ if (file_exists($dbFile)) {
             </div>
         <?php endif; ?>
 
-        <div class="section-title">Statistik Sistem</div>
+        <div class="section-title">Statistik Keuangan & Insiden</div>
         <?php
             $use_pending_stats = ($sales_summary['total'] === 0 && $sales_summary['pending'] > 0);
             $stat_total = $use_pending_stats ? $pending_summary['total'] : $sales_summary['total'];
             $stat_rusak = $use_pending_stats ? $pending_summary['rusak'] : $sales_summary['rusak'];
+            $total_loss_real = (int)$stat_rusak + (int)($audit_manual_summary['total_rusak_rp'] ?? 0);
         ?>
         <div class="summary-grid">
             <div class="summary-card"><div class="summary-title">Total Transaksi</div><div class="summary-value"><?= number_format($stat_total,0,',','.') ?></div></div>
-            <div class="summary-card"><div class="summary-title">Voucher Rusak</div><div class="summary-value" style="color:#e74c3c;">Rp <?= number_format($stat_rusak,0,',','.') ?></div></div>
+            <div class="summary-card"><div class="summary-title">Pendapatan Kotor (Gross)</div><div class="summary-value">Rp <?= number_format(($use_pending_stats ? $pending_summary['gross'] : $sales_summary['gross']),0,',','.') ?></div></div>
+            <div class="summary-card"><div class="summary-title" style="color:#c0392b;">Total Voucher Rusak</div><div class="summary-value" style="color:#c0392b;">Rp <?= number_format($total_loss_real,0,',','.') ?></div><div style="font-size:10px;color:#b91c1c;">(Mengurangi Setoran)</div></div>
             <?php if ($sales_summary['pending'] > 0): ?>
                 <div class="summary-card"><div class="summary-title">Pending (Live)</div><div class="summary-value"><?= number_format($sales_summary['pending'],0,',','.') ?></div></div>
             <?php endif; ?>
