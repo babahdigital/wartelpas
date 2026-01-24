@@ -122,10 +122,10 @@ if (!isset($_SESSION["mikhmon"])) {
 						<table id="tFilter" class="table-dark-mod text-nowrap">
   <thead>
   <tr> 
-		<th style="min-width:80px;" class="text-center" >Aksi</th>
+		<th style="min-width:80px; text-align:center;" class="text-center" >Aksi</th>
 		<th class="align-middle"><?= $_name ?></th>
-		<th class="align-middle">Shared<br>Users</th>
-		<th class="align-middle">Rate<br>Limit</th>
+		<th class="align-middle">Shared</th>
+		<th class="align-middle">Rate</th>
 		<th class="align-middle"><?= $_expired_mode ?></th>
 		<th class="align-middle"><?= $_validity ?></th>
 		<th class="text-right align-middle" > <?= $_price." ".$currency; ?></th>
