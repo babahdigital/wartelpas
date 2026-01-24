@@ -398,6 +398,49 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **report/print_rekap_bulanan.php**:
   - Kartu summary pengeluaran bulanan.
   - Kolom pengeluaran per hari.
+
+## 4.10 Update Terbaru (Dashboard Clean Pro & Layout Presisi) – 2026-01-25
+### 4.10.1 Refactor total tampilan dashboard
+- **dashboard/home.php** disusun ulang mengikuti **design-dashboard.html**:
+  - KPI grid, layout card chart dan transaksi, serta footer resource mini.
+  - Struktur tabel transaksi dibuat fixed layout agar stabil saat zoom.
+  - Ditambah indikator jumlah transaksi (row count) di bawah tabel.
+
+### 4.10.2 Layout & CSS stabil untuk zoom/resolusi
+- **css/dashboard-clean-pro.css** diperbarui penuh:
+  - Reset box-sizing global, konsistensi font **Inter**.
+  - Struktur flex + grid yang tidak bentrok, menjaga tinggi card saat zoom in/out.
+  - Kontainer chart dan tabel dibuat responsif (min-height, overflow terkendali).
+  - Breakpoint tablet & mobile agar layout tetap presisi.
+  - Table fixed layout + column width agar header/row tidak bergeser.
+  - Month tabs bisa scroll horizontal pada layar kecil.
+
+### 4.10.3 Perbaikan chart agar tidak terpotong
+- **dashboard/aload.php** (highcharts):
+  - `height: null` + `reflow: true` untuk menyesuaikan ukuran container.
+- **dashboard/home.php**:
+  - `reflow()` dipicu setelah AJAX selesai dan saat resize agar grafik selalu pas.
+
+### 4.10.4 Riwayat transaksi dibatasi dan scroll terkontrol
+- **dashboard/aload.php**:
+  - Limit riwayat transaksi menjadi **10** baris (sebelumnya 30/50).
+- **dashboard/home.php**:
+  - Perhitungan row count hanya menghitung baris transaksi (bukan placeholder), sehingga saat kosong tampil **0 transaksi**.
+
+### 4.10.5 Resource footer dan warning CPU
+- **dashboard/aload.php**:
+  - Output sysresource diringkas dan di-load ke footer tanpa wrapper ganda.
+  - CPU > 90% diberi class **text-danger** untuk peringatan.
+
+### 4.10.6 Mode uji tampilan menggunakan tanggal tertentu
+- **dashboard/home.php**:
+  - Menambahkan parameter **test_date** untuk mengambil data KPI & riwayat pada tanggal tertentu.
+- **dashboard/aload.php**:
+  - Menambahkan dukungan **test_date** untuk filter `live_data` dan `logs`.
+
+### 4.10.7 Perapihan error & stabilitas parse
+- Menangani error kurung/else-if yang menyebabkan `Unmatched '}'` atau `unexpected token` di `dashboard/aload.php`.
+- Struktur `if` dipastikan rapi dan tidak menimpa output lain.
   - Lampiran **Rincian Pengeluaran Operasional** (tanggal, blok, keterangan, nominal).
 - **report/print_rekap_tahunan.php**:
   - Kolom pengeluaran per bulan dan catatan YTD.
