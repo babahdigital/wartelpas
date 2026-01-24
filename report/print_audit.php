@@ -373,144 +373,108 @@ if (file_exists($dbFile)) {
     th, td { border: 1px solid #ddd; padding: 5px 6px; text-align: left; }
     th { background: #f0f0f0; }
     .muted { color: #666; }
+    .toolbar { margin-bottom: 10px; display:flex; gap:8px; flex-wrap:wrap; }
+    .btn { padding:6px 10px; border:1px solid #999; background:#f2f2f2; cursor:pointer; border-radius:4px; font-size:12px; }
     @page { margin: 8mm; }
 </style>
 </head>
 <body>
-  <h1>Audit Penjualan & Voucher</h1>
-  <div class="sub">Filter: <?= htmlspecialchars(format_date_dmy($filter_date)) ?> · Mode: <?= htmlspecialchars($req_show) ?></div>
-
-  <div class="summary-grid">
-    <div class="summary-card"><div class="summary-title">Total Transaksi</div><div class="summary-value"><?= number_format($sales_summary['total'],0,',','.') ?></div></div>
-    <div class="summary-card"><div class="summary-title">Pendapatan Kotor</div><div class="summary-value">Rp <?= number_format($sales_summary['gross'],0,',','.') ?></div></div>
-    <div class="summary-card"><div class="summary-title">Potongan Rusak</div><div class="summary-value">Rp <?= number_format($sales_summary['rusak'],0,',','.') ?></div></div>
-    <div class="summary-card"><div class="summary-title">Pendapatan Bersih</div><div class="summary-value">Rp <?= number_format($sales_summary['net'],0,',','.') ?></div></div>
-    <div class="summary-card"><div class="summary-title">Pending Live Sales</div><div class="summary-value"><?= number_format($sales_summary['pending'],0,',','.') ?></div></div>
-    <div class="summary-card"><div class="summary-title">Pending Gross (Live)</div><div class="summary-value">Rp <?= number_format($pending_summary['gross'],0,',','.') ?></div></div>
+  <div class="toolbar">
+      <button class="btn" onclick="window.print()">Print / Download PDF</button>
+      <button class="btn" onclick="shareReport()">Share</button>
   </div>
 
-  <div class="section">
-    <div class="section-title">Ringkasan Audit Manual</div>
-    <?php if ($audit_manual_summary['rows'] === 0): ?>
-      <div class="summary-card"><div class="summary-title">Audit Manual</div><div class="summary-value" style="font-size:11px;font-weight:normal;">Belum ada audit manual pada periode ini.</div></div>
-    <?php else: ?>
-      <?php $ghost_hint = build_ghost_hint($audit_manual_summary['selisih_qty'], $audit_manual_summary['selisih_setoran']); ?>
-      <div class="summary-grid">
-        <div class="summary-card"><div class="summary-title">Net Audit (Manual)</div><div class="summary-value">Rp <?= number_format($audit_manual_summary['manual_setoran'],0,',','.') ?></div></div>
-        <div class="summary-card"><div class="summary-title">Net System (Expected)</div><div class="summary-value">Rp <?= number_format($audit_manual_summary['expected_setoran'],0,',','.') ?></div></div>
-        <div class="summary-card"><div class="summary-title">Selisih Setoran</div><div class="summary-value">Rp <?= number_format($audit_manual_summary['selisih_setoran'],0,',','.') ?></div></div>
-        <div class="summary-card"><div class="summary-title">Selisih Qty</div><div class="summary-value"><?= number_format($audit_manual_summary['selisih_qty'],0,',','.') ?></div></div>
+  <div style="border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
+      <h1 style="margin:0;">Laporan Audit Keuangan</h1>
+      <div class="sub" style="margin-top:5px;">
+          Periode: <?= htmlspecialchars(format_date_dmy($filter_date)) ?> |
+          Mode: <?= strtoupper(htmlspecialchars($req_show)) ?>
       </div>
-      <?php if (!empty($ghost_hint)): ?>
-        <div class="summary-card"><div class="summary-title">Ghost Hunter</div><div class="summary-value" style="font-size:11px;font-weight:normal; color:#c0392b;"><?= htmlspecialchars($ghost_hint) ?></div></div>
-      <?php endif; ?>
-    <?php endif; ?>
   </div>
 
-  <?php if ($sales_summary['pending'] > 0 && $sales_summary['total'] === 0): ?>
-  <div class="section">
-    <div class="summary-card"><div class="summary-title">Catatan</div><div class="summary-value" style="font-size:11px;font-weight:normal;">Transaksi final kosong. Data sementara ada di live_sales (pending).</div></div>
+  <?php
+      $selisih = $audit_manual_summary['selisih_setoran'];
+      $ghost_hint = build_ghost_hint($audit_manual_summary['selisih_qty'], $selisih);
+      $bg_status = $selisih < 0 ? '#fee2e2' : ($selisih > 0 ? '#dcfce7' : '#f3f4f6');
+      $border_status = $selisih < 0 ? '#b91c1c' : ($selisih > 0 ? '#15803d' : '#ccc');
+      $text_color = $selisih < 0 ? '#b91c1c' : ($selisih > 0 ? '#15803d' : '#333');
+      $label_status = $selisih < 0 ? 'KURANG SETOR (LOSS)' : ($selisih > 0 ? 'LEBIH SETOR' : 'SETORAN SESUAI / AMAN');
+  ?>
+
+  <?php if ($audit_manual_summary['rows'] === 0): ?>
+      <div class="summary-card"><div class="summary-title">Audit Manual</div><div class="summary-value" style="font-size:11px;font-weight:normal;">Belum ada audit manual pada periode ini.</div></div>
+  <?php else: ?>
+  <div style="border: 2px solid <?= $border_status ?>; background-color: <?= $bg_status ?>; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+      <table style="width:100%; border:none;">
+          <tr>
+              <td style="border:none; padding:0;">
+                  <div style="font-size:10px; color:#555; text-transform:uppercase;">Status Audit</div>
+                  <div style="font-size:18px; font-weight:bold; color:<?= $text_color ?>; margin-top:4px;">
+                      <?= $label_status ?>
+                  </div>
+              </td>
+              <td style="border:none; padding:0; text-align:right;">
+                  <div style="font-size:10px; color:#555; text-transform:uppercase;">Total Selisih</div>
+                  <div style="font-size:18px; font-weight:bold; color:<?= $text_color ?>; margin-top:4px;">
+                      Rp <?= number_format($selisih, 0, ',', '.') ?>
+                  </div>
+              </td>
+          </tr>
+      </table>
+
+      <?php if (!empty($ghost_hint)): ?>
+          <div style="margin-top:10px; padding-top:10px; border-top:1px dashed <?= $border_status ?>; font-size:12px; color:<?= $text_color ?>;">
+              <strong>Indikasi (Ghost Hunter):</strong> <?= htmlspecialchars($ghost_hint) ?>
+          </div>
+      <?php endif; ?>
+  </div>
+
+  <div class="section-title">Rincian Perhitungan</div>
+  <div class="summary-grid">
+    <div class="summary-card">
+        <div class="summary-title">Uang Fisik (Manual)</div>
+        <div class="summary-value">Rp <?= number_format($audit_manual_summary['manual_setoran'],0,',','.') ?></div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-title">Target Sistem (Net)</div>
+        <div class="summary-value">Rp <?= number_format($audit_manual_summary['expected_setoran'],0,',','.') ?></div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-title">Selisih Uang</div>
+        <div class="summary-value" style="color:<?= $text_color ?>;">Rp <?= number_format($selisih,0,',','.') ?></div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-title">Selisih Qty</div>
+        <div class="summary-value" style="color:<?= $text_color ?>;"><?= number_format($audit_manual_summary['selisih_qty'],0,',','.') ?></div>
+    </div>
   </div>
   <?php endif; ?>
 
-  <div class="section">
-    <div class="section-title">Voucher Double (full_raw_data)</div>
-    <table>
-      <thead><tr><th>Sale Date</th><th>Username</th><th>Count</th><th>Raw</th></tr></thead>
-      <tbody>
-      <?php if (empty($dup_raw)): ?>
-        <tr><td colspan="4" class="muted" style="text-align:center;">Tidak ada duplikasi</td></tr>
-      <?php else: ?>
-        <?php foreach ($dup_raw as $r): ?>
-          <tr>
-            <td><?= htmlspecialchars($r['sale_date'] ?? '-') ?></td>
-            <td><?= htmlspecialchars($r['username'] ?? '-') ?></td>
-            <td><?= (int)($r['cnt'] ?? 0) ?></td>
-            <td><?= htmlspecialchars($r['full_raw_data'] ?? '-') ?></td>
-          </tr>
-        <?php endforeach; ?>
-      <?php endif; ?>
-      </tbody>
-    </table>
+  <div class="section-title">Data Sistem</div>
+  <div class="summary-grid" style="grid-template-columns: repeat(3, 1fr);">
+    <div class="summary-card"><div class="summary-title">Total Transaksi</div><div class="summary-value"><?= number_format($sales_summary['total'],0,',','.') ?></div></div>
+    <div class="summary-card"><div class="summary-title">Pendapatan Kotor</div><div class="summary-value">Rp <?= number_format($sales_summary['gross'],0,',','.') ?></div></div>
+    <div class="summary-card"><div class="summary-title">Potongan Rusak</div><div class="summary-value" style="color:#c0392b;">Rp <?= number_format($sales_summary['rusak'],0,',','.') ?></div></div>
   </div>
 
-  <div class="section">
-    <div class="section-title">Voucher Double (Username + Tanggal)</div>
-    <table>
-      <thead><tr><th>Sale Date</th><th>Username</th><th>Count</th></tr></thead>
-      <tbody>
-      <?php if (empty($dup_user_date)): ?>
-        <tr><td colspan="3" class="muted" style="text-align:center;">Tidak ada duplikasi</td></tr>
-      <?php else: ?>
-        <?php foreach ($dup_user_date as $r): ?>
-          <tr>
-            <td><?= htmlspecialchars($r['sale_date'] ?? '-') ?></td>
-            <td><?= htmlspecialchars($r['username'] ?? '-') ?></td>
-            <td><?= (int)($r['cnt'] ?? 0) ?></td>
-          </tr>
-        <?php endforeach; ?>
-      <?php endif; ?>
-      </tbody>
-    </table>
+  <?php if ($sales_summary['pending'] > 0): ?>
+      <div style="margin-top:15px; padding:10px; border:1px solid #ffcc00; background:#fffbe6; font-size:11px;">
+          <strong>Catatan Teknis:</strong> Terdapat <?= number_format($sales_summary['pending']) ?> transaksi status "Pending" (Live Sales) yang belum masuk rekap final.
+      </div>
+  <?php endif; ?>
+
+  <div style="margin-top:30px; font-size:10px; color:#999; text-align:center;">
+      Dicetak oleh Sistem Wartelpas pada <?= date('d-m-Y H:i:s') ?>
   </div>
 
-  <div class="section">
-    <div class="section-title">Relogin (login_events) - Top <?= (int)$relogin_limit ?></div>
-    <table>
-      <thead><tr><th>Tanggal</th><th>Username</th><th>Blok</th><th>Profile</th><th>Jumlah Relogin</th></tr></thead>
-      <tbody>
-      <?php if (empty($relogin_rows)): ?>
-        <tr><td colspan="5" class="muted" style="text-align:center;">Tidak ada relogin</td></tr>
-      <?php else: ?>
-        <?php foreach ($relogin_rows as $r): ?>
-          <?php
-            $p = extract_profile_from_comment($r['raw_comment'] ?? '');
-            if ($p === '') $p = infer_profile_from_blok($r['blok_name'] ?? '');
-            $blokLabel = format_blok_label($r['blok_name'] ?? '');
-          ?>
-          <tr>
-            <td><?= htmlspecialchars(format_date_dmy($r['date_key'] ?? '-')) ?></td>
-            <td><?= htmlspecialchars($r['username'] ?? '-') ?></td>
-            <td><?= htmlspecialchars($blokLabel ?: '-') ?></td>
-            <td><?= htmlspecialchars($p ?: '-') ?></td>
-            <td><?= (int)($r['cnt'] ?? 0) ?></td>
-          </tr>
-        <?php endforeach; ?>
-      <?php endif; ?>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Top Bandwidth (login_history) - Top <?= (int)$bandwidth_limit ?></div>
-    <table>
-      <thead><tr><th>Username</th><th>Blok</th><th>Profile</th><th>Last Bytes</th><th>Uptime</th><th>Status</th><th>Last Login</th></tr></thead>
-      <tbody>
-      <?php if (empty($bandwidth_rows)): ?>
-        <tr><td colspan="7" class="muted" style="text-align:center;">Tidak ada data</td></tr>
-      <?php else: ?>
-        <?php foreach ($bandwidth_rows as $r): ?>
-          <?php
-            $p = extract_profile_from_comment($r['raw_comment'] ?? '');
-            if ($p === '') $p = infer_profile_from_blok($r['blok_name'] ?? '');
-            $blokLabel = format_blok_label($r['blok_name'] ?? '');
-            $lastLogin = (string)($r['last_login_real'] ?? '');
-            $lastDate = substr($lastLogin, 0, 10);
-            $lastTime = substr($lastLogin, 11, 8);
-          ?>
-          <tr>
-            <td><?= htmlspecialchars($r['username'] ?? '-') ?></td>
-            <td><?= htmlspecialchars($blokLabel ?: '-') ?></td>
-            <td><?= htmlspecialchars($p ?: '-') ?></td>
-            <td><?= htmlspecialchars(format_bytes_short($r['last_bytes'] ?? 0)) ?></td>
-            <td><?= htmlspecialchars($r['last_uptime'] ?? '-') ?></td>
-            <td><?= strtoupper(htmlspecialchars($r['last_status'] ?? '-')) ?></td>
-            <td><?= htmlspecialchars(format_date_dmy($lastDate)) ?> <?= htmlspecialchars($lastTime) ?></td>
-          </tr>
-        <?php endforeach; ?>
-      <?php endif; ?>
-      </tbody>
-    </table>
-  </div>
+  <script>
+    function shareReport(){
+        if (navigator.share) {
+            navigator.share({ title: 'Laporan Audit Keuangan', url: window.location.href });
+        } else {
+            window.prompt('Salin link laporan:', window.location.href);
+        }
+    }
+  </script>
 </body>
 </html>
