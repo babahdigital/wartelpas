@@ -166,13 +166,12 @@ function seconds_to_uptime($seconds) {
 // Helper: Ambil batas rusak/retur per profil
 function resolve_rusak_limits($profile) {
   $p = strtolower((string)$profile);
+  $limits = ['uptime' => 300, 'bytes' => 5 * 1024 * 1024, 'uptime_label' => '5 menit', 'bytes_label' => '5MB'];
   if (preg_match('/\b10\s*(menit|m)\b|10menit/i', $p)) {
-    return ['uptime' => 180, 'bytes' => 5 * 1024 * 1024, 'uptime_label' => '3 menit', 'bytes_label' => '5MB'];
+    $limits['uptime'] = 180;
+    $limits['uptime_label'] = '3 menit';
   }
-  if (preg_match('/\b30\s*(menit|m)\b|30menit/i', $p)) {
-    return ['uptime' => 300, 'bytes' => 5 * 1024 * 1024, 'uptime_label' => '5 menit', 'bytes_label' => '5MB'];
-  }
-  return ['uptime' => 300, 'bytes' => 5 * 1024 * 1024, 'uptime_label' => '5 menit', 'bytes_label' => '5MB'];
+  return $limits;
 }
 
 // Helper: Ekstrak datetime dari comment (format umum MikroTik)
