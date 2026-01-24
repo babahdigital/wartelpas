@@ -170,12 +170,12 @@ function calc_audit_adjusted_totals(array $ar) {
     $manual_net_qty_10 = max(0, $p10_qty - $cnt_rusak_10 - $cnt_invalid_10);
     $manual_net_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30);
     $manual_display_qty = $manual_net_qty_10 + $manual_net_qty_30;
-    $manual_display_setoran = ($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30) + $expense_amt;
+    $manual_display_setoran = ($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30);
     $expected_adj_qty = $expected_qty;
     $expected_adj_setoran = $expected_setoran;
   } else {
     $manual_display_qty = $reported_qty;
-    $manual_display_setoran = $actual_setoran + $expense_amt;
+    $manual_display_setoran = $actual_setoran;
     $expected_adj_qty = $expected_qty;
     $expected_adj_setoran = $expected_setoran;
   }
@@ -430,11 +430,8 @@ if (file_exists($dbFile)) {
       </div>
   </div>
 
-    <?php
-      $selisih = $audit_manual_summary['selisih_setoran'];
-      if (!empty($audit_manual_summary['total_expenses'])) {
-        $selisih += (int)$audit_manual_summary['total_expenses'];
-      }
+      <?php
+        $selisih = $audit_manual_summary['selisih_setoran'];
       $ghost_hint = build_ghost_hint($audit_manual_summary['selisih_qty'], $selisih);
       $bg_status = $selisih < 0 ? '#fee2e2' : ($selisih > 0 ? '#dcfce7' : '#f3f4f6');
       $border_status = $selisih < 0 ? '#b91c1c' : ($selisih > 0 ? '#15803d' : '#ccc');

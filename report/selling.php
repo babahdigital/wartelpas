@@ -726,7 +726,6 @@ function calc_audit_adjusted_setoran(array $ar) {
     $price30 = 20000;
     $expected_setoran = (int)($ar['expected_setoran'] ?? 0);
     $actual_setoran_raw = (int)($ar['actual_setoran'] ?? 0);
-    $expense_amt = (int)($ar['expenses_amt'] ?? 0);
 
     $p10_qty = 0;
     $p30_qty = 0;
@@ -775,11 +774,9 @@ function calc_audit_adjusted_setoran(array $ar) {
         $manual_net_qty_10 = max(0, $p10_qty - $cnt_rusak_10 - $cnt_invalid_10);
         $manual_net_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30);
         $manual_display_setoran = ($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30);
-        $manual_display_setoran += $expense_amt;
         $expected_adj_setoran = $expected_setoran;
     } else {
         $manual_display_setoran = $actual_setoran_raw;
-        $manual_display_setoran += $expense_amt;
         $expected_adj_setoran = $expected_setoran;
     }
 
