@@ -466,6 +466,9 @@ if (file_exists($dbFile)) {
         <?php else: ?>
             <?php
                 $selisih = $audit_manual_summary['selisih_setoran'];
+                if (!empty($audit_manual_summary['total_expenses'])) {
+                    $selisih += (int)$audit_manual_summary['total_expenses'];
+                }
                 $ghost_hint = build_ghost_hint($audit_manual_summary['selisih_qty'], $selisih);
                 $color_status = $selisih < 0 ? '#c0392b' : ($selisih > 0 ? '#2ecc71' : '#3498db');
                 $text_status = $selisih < 0 ? 'KURANG SETOR (LOSS)' : ($selisih > 0 ? 'LEBIH SETOR' : 'AMAN / SESUAI');
