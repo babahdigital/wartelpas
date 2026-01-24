@@ -216,6 +216,7 @@ $audit_expected_setoran_adj_total = 0;
 $audit_selisih_setoran_adj_total = 0;
 $has_audit_adjusted = false;
 $total_audit_expense = 0;
+$daily_note_alert = '';
 $hp_active_by_block = [];
 $hp_stats_by_block = [];
 $hp_units_by_block = [];
@@ -249,6 +250,14 @@ try {
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
 
         if ($req_show === 'harian') {
+            try {
+                $stmtN = $db->prepare("SELECT note FROM daily_report_notes WHERE report_date = :d");
+                $stmtN->execute([':d' => $filter_date]);
+                $daily_note_alert = $stmtN->fetchColumn() ?: '';
+            } catch (Exception $e) {
+                $daily_note_alert = '';
+            }
+
             $stmtHp = $db->prepare("SELECT
                     SUM(total_units) AS total_units,
                     SUM(active_units) AS active_units,
@@ -766,6 +775,13 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         <div style="margin-top:4px; font-size:11px; color:#444;">
             Catatan: Data rekap adalah acuan resmi untuk keuangan karena berasal dari transaksi. Daftar user digunakan untuk memantau status user online/terpakai.
         </div> 
+
+        <?php if ($req_show === 'harian' && !empty($daily_note_alert)): ?>
+            <div style="margin-top:10px; padding:10px; border:1px solid #ffcdd2; background:#ffebee; border-radius:4px; color:#b71c1c;">
+                <strong><i class="fa fa-exclamation-circle"></i> CATATAN PENTING HARI INI (Laporan Management):</strong><br>
+                <?= nl2br(htmlspecialchars($daily_note_alert)) ?>
+            </div>
+        <?php endif; ?>
 
         <?php if (!empty($audit_rows)): ?>
             <?php 

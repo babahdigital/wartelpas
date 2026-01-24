@@ -482,12 +482,13 @@ $print_time = date('d-m-Y H:i:s');
                 <th style="border:1px solid #cbd5e1; padding:8px; text-align:right;">Setoran Fisik (Audit)</th>
                 <th style="border:1px solid #cbd5e1; padding:8px; text-align:right;">Pengeluaran</th>
                 <th style="border:1px solid #cbd5e1; padding:8px; text-align:right;">Selisih</th>
+                   <th style="border:1px solid #cbd5e1; padding:8px; text-align:left;">Keterangan / Insiden</th>
                 <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Status</th>
             </tr>
         </thead>
         <tbody>
             <?php if (empty($rows_out)): ?>
-                <tr><td colspan="8" style="text-align:center; padding:20px;">Tidak ada data transaksi bulan ini.</td></tr>
+                   <tr><td colspan="9" style="text-align:center; padding:20px;">Tidak ada data transaksi bulan ini.</td></tr>
             <?php else: $idx = 0; foreach ($rows_out as $row): $idx++; ?>
                 <?php
                     $daily_selisih = (int)($row['selisih'] ?? 0);
@@ -502,6 +503,8 @@ $print_time = date('d-m-Y H:i:s');
                         $status_label = 'LEBIH';
                         $status_color = '#16a34a';
                     }
+                       $day_note = $notes_map[$row['date']] ?? '';
+                       $day_note_short = $day_note !== '' ? mb_strimwidth($day_note, 0, 40, '...') : '';
                 ?>
                 <tr style="background:<?= $bg_row ?>;">
                     <td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:center;"><?= esc(substr($row['date'], 8, 2)) ?></td>
@@ -517,6 +520,9 @@ $print_time = date('d-m-Y H:i:s');
                     <td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:right; font-weight:bold; color:<?= $status_color ?>;">
                         <?= $daily_selisih == 0 ? '-' : number_format($daily_selisih,0,',','.') ?>
                     </td>
+                       <td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:left; font-size:10px; color:#555;">
+                           <?= $day_note_short !== '' ? esc($day_note_short) : '-' ?>
+                       </td>
                     <td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:center; font-size:10px; font-weight:bold; color:<?= $status_color ?>;">
                         <?= $status_label ?>
                     </td>
@@ -532,7 +538,8 @@ $print_time = date('d-m-Y H:i:s');
                 <td style="border:1px solid #cbd5e1; padding:8px; text-align:right; color:<?= $total_selisih < 0 ? '#dc2626' : ($total_selisih > 0 ? '#16a34a' : '#333') ?>;">
                     <?= number_format((int)$total_selisih,0,',','.') ?>
                 </td>
-                <td style="border:1px solid #cbd5e1;"></td>
+                   <td style="border:1px solid #cbd5e1;"></td>
+                   <td style="border:1px solid #cbd5e1;"></td>
             </tr>
         </tfoot>
     </table>
