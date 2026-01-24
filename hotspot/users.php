@@ -1319,6 +1319,14 @@ if (!function_exists('detect_profile_kind_summary')) {
     return 'other';
   }
 }
+if (!function_exists('detect_profile_kind_from_comment')) {
+  function detect_profile_kind_from_comment($comment) {
+    $c = strtolower((string)$comment);
+    if (preg_match('/profile\s*:\s*10\s*(menit|m)/i', $c)) return '10';
+    if (preg_match('/profile\s*:\s*30\s*(menit|m)/i', $c)) return '30';
+    return 'other';
+  }
+}
 if (!empty($router_users)) {
   foreach ($router_users as $u) {
     $name = $u['name'] ?? '';
@@ -1827,6 +1835,16 @@ foreach($all_users as $u) {
     // Filter blok
     if ($req_comm != '') {
       if (strcasecmp($f_blok, $req_comm) != 0) continue;
+    }
+
+    // Filter profil (10/30)
+    if ($req_prof !== 'all') {
+      $kind = detect_profile_kind_summary($u['profile'] ?? '');
+      if ($kind === 'other') {
+        $kind = detect_profile_kind_from_comment($comment);
+      }
+      if ($req_prof === '10' && $kind !== '10') continue;
+      if ($req_prof === '30' && $kind !== '30') continue;
     }
 
     // Search
@@ -2412,6 +2430,12 @@ if ($debug_mode && !$is_ajax) {
                 <option value="retur" <?=($req_status=='retur'?'selected':'')?>>🟣 Hasil Retur</option>
               </select>
 
+              <select name="profile" class="custom-select-solid mid-el" onchange="this.form.submit()" style="flex: 0 0 160px;">
+                <option value="all" <?=($req_prof=='all'?'selected':'')?>>Profil: Semua</option>
+                <option value="10" <?=($req_prof=='10'?'selected':'')?>>10 Menit</option>
+                <option value="30" <?=($req_prof=='30'?'selected':'')?>>30 Menit</option>
+              </select>
+
               <select name="comment" class="custom-select-solid last-el" onchange="this.form.submit()" style="flex: 0 0 220px;">
                 <option value="">Semua Blok</option>
                   <?php foreach($list_blok as $b) {
@@ -2473,11 +2497,11 @@ if ($debug_mode && !$is_ajax) {
               <button type="button" class="btn btn-outline-light" style="height:40px;" onclick="location.href='<?= $today_url ?>'">
                 <i class="fa fa-calendar"></i> Reset Tanggal
               </button>
-              <?php if (!$is_ajax): ?>
-                <button type="button" id="summary-open" class="btn btn-outline-light" style="height:40px;">
-                  <i class="fa fa-list-alt"></i> Sisa Voucher
-                </button>
-              <?php endif; ?>
+            <?php endif; ?>
+            <?php if (!$is_ajax): ?>
+              <button type="button" id="summary-open" class="btn btn-outline-light" style="height:40px;">
+                <i class="fa fa-list-alt"></i> Sisa Voucher
+              </button>
             <?php endif; ?>
             <?php if ($can_print_used): ?>
               <?php
