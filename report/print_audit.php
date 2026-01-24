@@ -408,6 +408,9 @@ if (file_exists($dbFile)) {
     .toolbar { margin-bottom: 10px; display:flex; gap:8px; flex-wrap:wrap; }
     .btn { padding:6px 10px; border:1px solid #999; background:#f2f2f2; cursor:pointer; border-radius:4px; font-size:12px; }
     @page { margin: 8mm; }
+    @media print {
+      .toolbar { display: none; }
+    }
 </style>
 </head>
 <body>
