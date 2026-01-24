@@ -191,10 +191,6 @@ $sales_summary = [
     'net' => 0,
     'pending' => 0,
 ];
-$dup_raw = [];
-$dup_user_date = [];
-$relogin_rows = [];
-$bandwidth_rows = [];
 $security_logs = [];
 $sales_status_rows = [];
 $pending_summary = [
@@ -214,8 +210,6 @@ $audit_manual_summary = [
     'selisih_qty' => 0,
     'selisih_setoran' => 0,
 ];
-$relogin_limit = 25;
-$bandwidth_limit = 25;
 
 if (file_exists($dbFile)) {
     try {
@@ -262,30 +256,6 @@ if (file_exists($dbFile)) {
             $sales_summary['gross'] = (int)($sumRow['gross_sum'] ?? 0);
             $sales_summary['total'] = (int)($sumRow['total_cnt'] ?? 0);
             $sales_summary['net'] = $sales_summary['gross'] - $sales_summary['rusak'] - $sales_summary['invalid'];
-
-            $dupRawSql = "SELECT full_raw_data, sale_date, username, COUNT(*) AS cnt
-                FROM sales_history
-                WHERE full_raw_data IS NOT NULL AND full_raw_data != '' AND $dateFilter
-                GROUP BY full_raw_data
-                HAVING cnt > 1
-                ORDER BY cnt DESC, sale_date DESC
-                LIMIT 200";
-            $stmt = $db->prepare($dupRawSql);
-            foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
-            $stmt->execute();
-            $dup_raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            $dupUserDateSql = "SELECT username, sale_date, COUNT(*) AS cnt
-                FROM sales_history
-                WHERE $dateFilter
-                GROUP BY username, sale_date
-                HAVING cnt > 1
-                ORDER BY cnt DESC, sale_date DESC
-                LIMIT 200";
-            $stmt = $db->prepare($dupUserDateSql);
-            foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
-            $stmt->execute();
-            $dup_user_date = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
         if (table_exists($db, 'live_sales')) {
@@ -313,33 +283,6 @@ if (file_exists($dbFile)) {
             $pending_summary['gross'] = (int)($p['gross_sum'] ?? 0);
             $pending_summary['total'] = (int)($p['total_cnt'] ?? 0);
             $pending_summary['net'] = $pending_summary['gross'] - $pending_summary['rusak'] - $pending_summary['invalid'];
-        }
-
-        if (table_exists($db, 'login_events')) {
-            $reloginSql = "SELECT le.username, le.date_key, COUNT(*) AS cnt, lh.blok_name, lh.raw_comment
-                FROM login_events le
-                LEFT JOIN login_history lh ON lh.username = le.username
-                WHERE le.date_key LIKE :d
-                GROUP BY le.username, le.date_key
-                HAVING cnt > 1
-                ORDER BY cnt DESC, le.date_key DESC
-                LIMIT $relogin_limit";
-            $dateKey = $req_show === 'harian' ? $filter_date : $filter_date . '%';
-            $stmt = $db->prepare($reloginSql);
-            $stmt->bindValue(':d', $dateKey);
-            $stmt->execute();
-            $relogin_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        }
-
-        if (table_exists($db, 'login_history')) {
-            $bwSql = "SELECT username, last_bytes, last_uptime, last_status, last_login_real, blok_name, raw_comment
-                FROM login_history
-                WHERE last_bytes IS NOT NULL
-                ORDER BY last_bytes DESC
-                LIMIT $bandwidth_limit";
-            $stmt = $db->prepare($bwSql);
-            $stmt->execute();
-            $bandwidth_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
         if (table_exists($db, 'audit_rekap_manual')) {
