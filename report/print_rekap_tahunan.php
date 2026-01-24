@@ -471,9 +471,9 @@ $print_time = date('d-m-Y H:i:s');
             <tr style="background:#334155; color:#000;">
                 <th style="padding:10px;">Bulan</th>
                 <th style="padding:10px; text-align:center;">Total Transaksi</th>
-                <th style="padding:10px; text-align:right;">Target Sistem</th>
-                <th style="padding:10px; text-align:right;">Realisasi (Audit)</th>
-                <th style="padding:10px; text-align:right;">Selisih / Loss</th>
+                <th style="padding:10px; text-align:center;">Target Sistem</th>
+                <th style="padding:10px; text-align:center;">Realisasi (Audit)</th>
+                <th style="padding:10px; text-align:center;">Selisih / Loss</th>
                 <th style="padding:10px; text-align:center;">Kinerja</th>
             </tr>
         </thead>
@@ -504,7 +504,7 @@ $print_time = date('d-m-Y H:i:s');
                                 <span style="width: <?= $net_percent ?>%"></span>
                             </div>
                         <?php else: ?>
-                            <span style="color:#ccc;">-</span>
+                            <span style="color:#ccc; text-align:center;">-</span>
                         <?php endif; ?>
                     </td>
                 </tr>
