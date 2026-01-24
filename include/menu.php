@@ -187,8 +187,8 @@ if ($idleto != "disable") {
     .wartelpas-brand::before {
         content: "";
         display: block;
-        height: 45px;
-        width: 45px;
+        height: 60px;
+        width: 120px;
         background-image: url('img/logo.png');
         background-size: contain;
         background-repeat: no-repeat;
