@@ -222,12 +222,42 @@ if ($load == "sysresource") {
     $sys_os = isset($resource['version']) ? $resource['version'] : '--';
     $sys_cpu = isset($resource['cpu-load']) ? $resource['cpu-load'] : '0';
     $sys_mem = isset($resource['free-memory']) ? formatBytes($resource['free-memory'], 2) : '0 B';
+    $sys_mem_raw = isset($resource['free-memory']) ? (int)$resource['free-memory'] : 0;
+    $sys_mem_total = isset($resource['total-memory']) ? (int)$resource['total-memory'] : 0;
+    $sys_mem_pct = $sys_mem_total > 0 ? round(($sys_mem_raw / $sys_mem_total) * 100) : 0;
+    if ($sys_mem_pct < 0) $sys_mem_pct = 0;
+    if ($sys_mem_pct > 100) $sys_mem_pct = 100;
     $sys_hdd = isset($resource['free-hdd-space']) ? formatBytes($resource['free-hdd-space'], 2) : '0 B';
     ?>
-    <div id="r_1" class="row">
-      <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-calendar"></i></div><div class="box-group-area"><span>Date & Time<br><?= $sys_date . " " . $sys_time ?><br>Uptime : <?= $sys_uptime ?></span></div></div></div></div>
-      <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-info-circle"></i></div><div class="box-group-area"><span>Board : <?= $sys_board ?><br/>Model : <?= $sys_model ?><br/>Router OS : <?= $sys_os ?></span></div></div></div></div>
-      <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-server"></i></div><div class="box-group-area"><span>CPU : <?= $sys_cpu ?>%<br/>Free Mem : <?= $sys_mem ?><br/>Free HDD : <?= $sys_hdd ?></span></div></div></div></div> 
+    <div id="r_1" class="row" style="margin-bottom:15px; gap:10px;">
+        <div class="col-4">
+            <div class="kpi-box" style="padding:10px 15px; border-left:3px solid #ccc;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="font-size:18px; font-weight:700;"><?= $sys_time ?></div>
+                    <div style="font-size:10px; color:#888;"><?= $sys_date ?></div>
+                </div>
+                <div style="font-size:11px; color:#aaa; margin-top:5px;">Up: <?= $sys_uptime ?></div>
+            </div>
+        </div>
+        <div class="col-8">
+            <div class="kpi-box" style="padding:10px 15px; display:flex; gap:20px; align-items:center;">
+                <div style="flex:1;">
+                    <div style="font-size:10px; color:#888; text-transform:uppercase;">CPU Load: <?= $sys_cpu ?>%</div>
+                    <div style="height:4px; background:#333; margin-top:5px;">
+                        <div style="width:<?= (int)$sys_cpu ?>%; height:100%; background:var(--accent-blue);"></div>
+                    </div>
+                </div>
+                <div style="flex:1;">
+                    <div style="font-size:10px; color:#888; text-transform:uppercase;">Free RAM: <?= $sys_mem ?></div>
+                    <div style="height:4px; background:#333; margin-top:5px;">
+                        <div style="width:<?= (int)$sys_mem_pct ?>%; height:100%; background:var(--accent-green);"></div>
+                    </div>
+                </div>
+                <div style="font-size:10px; color:#555; text-align:right;">
+                    <?= $sys_board ?> | <?= $sys_os ?>
+                </div>
+            </div>
+        </div>
     </div>
     <?php
 
