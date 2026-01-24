@@ -35,14 +35,6 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 session_start();
 // hide all error
@@ -132,10 +124,10 @@ if (!isset($_SESSION["mikhmon"])) {
     $sselling = "active";
     $mpage = $_report;
 
-  // --- TAMBAHAN BARU: AGAR MENU MENYALA SAAT DIKLIK ---
+  // --- UPDATE: MENGGUNAKAN VARIABEL BAHASA UNTUK JUDUL ---
   } elseif ($report == "audit_session") {
       $saudit = "active";
-      $mpage = "Audit Log";
+      $mpage = $_audit_log; // Mengambil dari id.php
   // ----------------------------------------------------
 
   } elseif ($userprofile == "add") {
@@ -299,7 +291,9 @@ include('./info.php');
   <a href="./?hotspot=dhcp-leases&session=<?= $session; ?>" class="menu <?= $slease; ?>"><i class=" fa fa-sitemap"></i> <?= $_dhcp_leases ?></a>
 
   <a href="./?report=selling&idbl=<?= strtolower(date("M")) . date("Y"); ?>&session=<?= $session; ?>" class="menu <?= $sselling; ?>"><i class="nav-icon fa fa-money"></i> <?= $_report ?></a>
-  <a href="./?report=audit_session&session=<?= $session; ?>" class="menu <?= $saudit; ?>" style="color: #ffcccc;"><i class="nav-icon fa fa-exclamation-triangle"></i> Audit Log</a>
+  
+  <a href="./?report=audit_session&session=<?= $session; ?>" class="menu <?= $saudit; ?>" style="color: #ffcccc;"><i class="nav-icon fa fa-check-square-o"></i> <?= $_audit_log ?></a>
+  
 </div>
 <script>
 $(document).ready(function(){
