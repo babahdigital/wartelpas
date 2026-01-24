@@ -1265,6 +1265,55 @@ foreach($active as $a) {
     if(isset($a['user'])) $activeMap[$a['user']] = $a;
 }
 
+$summary_ready_by_blok = [];
+$summary_ready_total = 0;
+$summary_rusak_total = 0;
+$summary_retur_total = 0;
+if (!empty($router_users)) {
+  foreach ($router_users as $u) {
+    $name = $u['name'] ?? '';
+    $comment = $u['comment'] ?? '';
+    $disabled = $u['disabled'] ?? 'false';
+    $is_active = isset($activeMap[$name]);
+    $bytes = (int)($u['bytes-in'] ?? 0) + (int)($u['bytes-out'] ?? 0);
+    $uptime = $u['uptime'] ?? '';
+    $cm = extract_ip_mac_from_comment($comment);
+    $blok = extract_blok_name($comment);
+
+    if ($only_wartel && !is_wartel_client($comment, $blok)) {
+      continue;
+    }
+
+    $is_rusak = (stripos($comment, 'RUSAK') !== false) || ($disabled === 'true');
+    $is_retur = (stripos($comment, '(Retur)') !== false);
+    if ($is_rusak) $is_retur = false;
+
+    $is_used = (!$is_retur && !$is_rusak && $disabled !== 'true') &&
+      ($is_active || $bytes > 50 || ($uptime !== '' && $uptime !== '0s') || (($cm['ip'] ?? '') !== ''));
+
+    $status = 'READY';
+    if ($is_active) $status = 'ONLINE';
+    elseif ($is_rusak) $status = 'RUSAK';
+    elseif ($is_retur) $status = 'RETUR';
+    elseif ($is_used) $status = 'TERPAKAI';
+
+    if ($status === 'READY') {
+      $summary_ready_total++;
+      if ($blok !== '') {
+        if (!isset($summary_ready_by_blok[$blok])) $summary_ready_by_blok[$blok] = 0;
+        $summary_ready_by_blok[$blok]++;
+      }
+    } elseif ($status === 'RUSAK') {
+      $summary_rusak_total++;
+    } elseif ($status === 'RETUR') {
+      $summary_retur_total++;
+    }
+  }
+  if (!empty($summary_ready_by_blok)) {
+    ksort($summary_ready_by_blok, SORT_NATURAL | SORT_FLAG_CASE);
+  }
+}
+
 $is_ajax = isset($_GET['ajax']) && $_GET['ajax'] == '1';
 
 $retur_ref_map = [];
@@ -2100,6 +2149,32 @@ if ($debug_mode && !$is_ajax) {
     .relogin-more { text-align: center; color: #9aa0a6; font-style: italic; padding-top: 8px; }
     .relogin-actions { display: flex; gap: 6px; align-items: center; }
     .relogin-print { background: #2d8cff; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+
+    .users-summary {
+      margin: 12px 12px 0;
+      background: #1e242a;
+      border: 1px solid #2d3748;
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .users-summary-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .users-summary-title { font-weight: 600; color: #e5e7eb; font-size: 14px; }
+    .users-summary-title i { margin-right: 6px; color: #9aa0a6; }
+    .users-summary-sub { font-size: 11px; color: #9aa0a6; }
+    .users-summary-grid { display: grid; grid-template-columns: 1.4fr 0.6fr; gap: 12px; }
+    .users-summary-scroll { max-height: 240px; overflow: auto; padding-right: 4px; }
+    .users-summary-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .users-summary-table th { text-align: left; color: #9aa0a6; padding: 6px 0; border-bottom: 1px solid #2d3748; }
+    .users-summary-table td { padding: 6px 0; border-bottom: 1px solid #2a313a; color: #e5e7eb; }
+    .summary-stat { background: #222830; border: 1px solid #2d3748; border-radius: 8px; padding: 10px 12px; text-align: center; margin-bottom: 10px; }
+    .summary-stat:last-child { margin-bottom: 0; }
+    .summary-stat .stat-value { font-size: 20px; font-weight: 700; line-height: 1; color: #34d399; }
+    .summary-stat .stat-label { font-size: 11px; color: #9aa0a6; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px; }
+    .summary-stat .stat-value.text-warning { color: #f59e0b; }
+    .summary-stat .stat-value.text-purple { color: #a78bfa; }
+    @media (max-width: 992px) {
+      .users-summary-grid { grid-template-columns: 1fr; }
+    }
   </style>
 
 <div class="row">
@@ -2344,6 +2419,57 @@ if ($debug_mode && !$is_ajax) {
                 <?php endforeach; ?>
               </tbody>
             </table>
+          </div>
+        <?php endif; ?>
+        <?php if (!$is_ajax): ?>
+          <div class="users-summary">
+            <div class="users-summary-header">
+              <div class="users-summary-title"><i class="fa fa-list-alt"></i> Sisa Voucher (READY)</div>
+              <div class="users-summary-sub">Ringkas & real-time</div>
+            </div>
+            <div class="users-summary-grid">
+              <div>
+                <?php if (!empty($summary_ready_by_blok)): ?>
+                  <div class="users-summary-scroll">
+                    <table class="users-summary-table">
+                      <thead>
+                        <tr>
+                          <th>Kode Blok</th>
+                          <th class="text-right">Jumlah</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <?php foreach ($summary_ready_by_blok as $blok => $count): ?>
+                          <tr>
+                            <td><?= htmlspecialchars($blok) ?></td>
+                            <td class="text-right" style="font-weight:600;color:#34d399;"><?= (int)$count ?></td>
+                          </tr>
+                        <?php endforeach; ?>
+                      </tbody>
+                    </table>
+                  </div>
+                <?php else: ?>
+                  <div style="text-align:center;color:#9aa0a6;padding:24px 0;">
+                    <i class="fa fa-inbox" style="opacity:0.3;font-size:24px;"></i><br>
+                    Belum ada stok Ready.
+                  </div>
+                <?php endif; ?>
+              </div>
+              <div>
+                <div class="summary-stat">
+                  <div class="stat-value"><?= (int)$summary_ready_total ?></div>
+                  <div class="stat-label">Sisa Ready</div>
+                </div>
+                <div class="summary-stat">
+                  <div class="stat-value text-warning"><?= (int)$summary_rusak_total ?></div>
+                  <div class="stat-label">Rusak</div>
+                </div>
+                <div class="summary-stat">
+                  <div class="stat-value text-purple"><?= (int)$summary_retur_total ?></div>
+                  <div class="stat-label">Retur</div>
+                </div>
+              </div>
+            </div>
           </div>
         <?php endif; ?>
         <div class="table-responsive">
