@@ -1711,6 +1711,11 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                         Isi laporan manual untuk membandingkan dengan rekap sistem (qty dan uang). Selisih akan dihitung otomatis.
                     </div>
                 </div>
+                <?php if ($audit_locked_today): ?>
+                    <div style="margin:6px 0 10px;padding:8px 10px;border:1px solid #555;background:#2b2b2b;color:#f39c12;font-size:12px;border-radius:6px;">
+                        Audit hari ini sudah dikunci. Input tidak bisa disimpan.
+                    </div>
+                <?php endif; ?>
                 <div class="form-grid-2">
                     <div>
                         <label>Blok</label>
@@ -1762,7 +1767,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn-print" onclick="closeAuditModal()">Batal</button>
-                <button type="submit" id="auditSubmitBtn" name="audit_submit" class="btn-print">Simpan</button>
+                <button type="submit" id="auditSubmitBtn" name="audit_submit" class="btn-print" <?= $audit_locked_today ? 'disabled style="opacity:.6;cursor:not-allowed;"' : '' ?>>Simpan</button>
             </div>
         </form>
     </div>
