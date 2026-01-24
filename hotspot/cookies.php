@@ -120,25 +120,26 @@ if (!isset($_SESSION["mikhmon"])) {
         flex: 1;
         overflow: auto;
     }
-    .table-modern {
-        width: 100%;
-        color: #e0e0e0;
-    }
-    .table-modern thead th {
-        background: rgba(0, 0, 0, 0.4); /* Header tabel gelap */
+    .table-dark-solid { width: 100%; border-collapse: separate; border-spacing: 0; color: #e0e0e0; }
+    .table-dark-solid thead th {
+        background: #1b1e21;
         position: sticky;
         top: 0;
         z-index: 5;
-        border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-        padding: 10px;
+        border-bottom: 2px solid #495057;
+        padding: 12px;
         text-transform: uppercase;
-        font-size: 0.8rem;
+        font-size: 0.85rem;
+        letter-spacing: 1px;
+        color: #adb5bd;
     }
-    .table-modern td {
-        padding: 8px 10px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    .table-dark-solid td {
+        padding: 12px;
+        border-bottom: 1px solid #3a4046;
         vertical-align: middle;
+        font-size: 0.9rem;
     }
+    .table-dark-solid tr:hover td { background: #32383e; }
     
     /* Font styles */
     .text-mono { font-family: monospace; letter-spacing: 0.5px; }
@@ -178,7 +179,7 @@ if (!isset($_SESSION["mikhmon"])) {
             </div>
 
             <div class="table-container">
-                <table id="dataTable" class="table-modern">
+                <table id="dataTable" class="table-dark-solid">
                     <thead>
                         <tr>
                             <th width="5%" style="text-align: center;">#</th>
