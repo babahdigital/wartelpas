@@ -2733,6 +2733,26 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                 <i class="fa fa-info-circle"></i> Menampilkan data terakhir: <?= htmlspecialchars($filter_date); ?>
             </div>
         <?php endif; ?>
+        <?php if ($req_show === 'harian' && $current_daily_note !== ''): ?>
+            <div style="background:#2b2b2b;border:1px solid #6d28d9;border-radius:6px;padding:12px 14px;margin-bottom:12px;color:#e9d5ff;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                    <div style="font-weight:600;color:#c4b5fd;"><i class="fa fa-sticky-note-o"></i> Catatan Harian Tersimpan</div>
+                    <div style="display:flex;gap:8px;">
+                        <button type="button" class="btn-print" onclick="openNoteModal()" style="background:#8e44ad; color:#fff;">Edit</button>
+                        <form method="post" action="" onsubmit="return confirm('Hapus catatan harian ini?');" style="display:inline;">
+                            <input type="hidden" name="save_daily_note" value="1">
+                            <input type="hidden" name="note_date" value="<?= htmlspecialchars($filter_date); ?>">
+                            <input type="hidden" name="note_text" value="">
+                            <button type="submit" class="btn-print" style="background:#b91c1c;color:#fff;">Hapus</button>
+                        </form>
+                    </div>
+                </div>
+                <div style="margin-top:8px; font-size:13px; color:#f5f3ff; white-space:pre-wrap;">
+                    <?= nl2br(htmlspecialchars($current_daily_note)); ?>
+                </div>
+                <div style="margin-top:6px; font-size:11px; color:#c4b5fd;">Catatan per tanggal (hanya 1 catatan).</div>
+            </div>
+        <?php endif; ?>
         <?php
             $net_system_display = (int)$total_net;
             $voucher_loss_display = (int)$total_rusak + (int)$total_invalid;
