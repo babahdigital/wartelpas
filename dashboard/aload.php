@@ -57,98 +57,94 @@ if (!function_exists('normalizeDate')) {
 // BAGIAN KHUSUS: LIVE DATA PROVIDER (JSON)
 // =========================================================
 if ($load == "live_data") {
-    
+
     header('Content-Type: application/json');
-    
+
     $dataResponse = [
         'active' => 0,
-        'fresh' => 0,
         'sold' => 0,
-        'traffic' => '0 B',
-        'income' => '0'
+        'income' => '0',
+        'est_income' => '0',
+        'ghost' => 0,
+        'audit_status' => 'CLEAR',
+        'audit_val' => '0'
     ];
 
-    $countFreshUsers = 0;
     $counthotspotactive = 0;
-    $liveUserBytes = [];
-    $mikrotikScripts = [];
-
     if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-        $allWartelUsers = $API->comm("/ip/hotspot/user/print", array("?server" => "wartel"));
-        foreach ($allWartelUsers as $u) {
-            if (isset($u['uptime']) && ($u['uptime'] == '0s' || $u['uptime'] == '')) { $countFreshUsers++; }
-            $b_in = isset($u['bytes-in']) ? $u['bytes-in'] : 0;
-            $b_out = isset($u['bytes-out']) ? $u['bytes-out'] : 0;
-            $liveUserBytes[$u['name']] = $b_in + $b_out;
-        }
         $rawActive = $API->comm("/ip/hotspot/active/print", array(".proplist" => "address"));
-        if(is_array($rawActive)) {
-            foreach($rawActive as $act) {
-                if(isset($act['address']) && strpos($act['address'], '172.16.2.') === 0) { $counthotspotactive++; }
-            }
-        }
-        $mikrotikScripts = $API->comm("/system/script/print", array("?comment" => "mikhmon"));
-    }
-
-    $filterMonth = $_SESSION['filter_month'];
-    $filterYear = $_SESSION['filter_year'];
-    
-    $dbFile = $root . '/db_data/mikhmon_stats.db'; 
-    $rawDataMerged = []; 
-    $userStatsMap = [];
-
-    if (file_exists($dbFile)) {
-        try {
-            $db = new PDO('sqlite:' . $dbFile);
-            $resStats = $db->query("SELECT username, bytes_total FROM user_stats");
-            if ($resStats) { foreach($resStats as $row) { $userStatsMap[$row['username']] = $row['bytes_total']; } }
-            $resSales = $db->query("SELECT full_raw_data FROM sales_history ORDER BY id DESC LIMIT 2000"); 
-            if ($resSales) { foreach($resSales as $row) { $rawDataMerged[] = $row['full_raw_data']; } }
-        } catch (Exception $e) { }
-    }
-    if (is_array($mikrotikScripts)) {
-        foreach ($mikrotikScripts as $script) { if(isset($script['name'])) $rawDataMerged[] = $script['name']; }
-    }
-    $rawDataMerged = array_unique($rawDataMerged);
-
-    $totalVoucher = 0;
-    $totalData = 0;
-    $totalIncome = 0;
-
-    foreach ($rawDataMerged as $rowString) {
-        $parts = explode("-|-", $rowString);
-        if (count($parts) >= 4) {
-            $rawDateString = trim($parts[0]); 
-            $price = (int)preg_replace('/[^0-9]/', '', $parts[3]);
-            $username = isset($parts[2]) ? trim($parts[2]) : '';
-
-            $tstamp = strtotime(str_replace("/", "-", normalizeDate($rawDateString)));
-            if (!$tstamp) continue;
-
-            $d_month = (int)date("m", $tstamp);
-            $d_year  = (int)date("Y", $tstamp);
-
-            if ($d_month == $filterMonth && $d_year == $filterYear) {
-                $totalVoucher++;
-                $totalIncome += $price;
-                
-                if (isset($liveUserBytes[$username])) {
-                    $totalData += $liveUserBytes[$username];
-                } elseif (isset($userStatsMap[$username])) {
-                    $totalData += $userStatsMap[$username];
+        if (is_array($rawActive)) {
+            foreach ($rawActive as $act) {
+                if (isset($act['address']) && strpos($act['address'], '172.16.2.') === 0) {
+                    $counthotspotactive++;
                 }
             }
         }
     }
 
-    $dataResponse['active'] = $counthotspotactive;
-    $dataResponse['fresh'] = $countFreshUsers;
-    $dataResponse['sold'] = $totalVoucher;
-    $dataResponse['traffic'] = formatBytes($totalData);
-    $dataResponse['income'] = number_format($totalIncome, 0, ",", ".");
+    $dbFile = $root . '/db_data/mikhmon_stats.db';
+    $today = date('Y-m-d');
+    $month = date('m');
+    $year = date('Y');
+    $monthShort = date('M');
+    $daysInMonth = (int)date('t');
+    $currentDay = (int)date('d');
 
+    if (file_exists($dbFile)) {
+        try {
+            $db = new PDO('sqlite:' . $dbFile);
+            $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+            $monthLike = $year . '-' . $month . '%';
+            $raw1 = $month . '/%/' . $year;
+            $raw2 = '%/' . $month . '/' . $year;
+            $raw3 = $monthShort . '/%/' . $year;
+
+            $dayRaw1 = date('m/d/Y', strtotime($today)) . '%';
+            $dayRaw2 = date('d/m/Y', strtotime($today)) . '%';
+            $dayRaw3 = date('M/d/Y', strtotime($today)) . '%';
+
+            $sumIncome = 0;
+            $sumSold = 0;
+
+            foreach (['sales_history', 'live_sales'] as $tbl) {
+                $stmtIncome = $db->prepare("SELECT SUM(COALESCE(price_snapshot, price, 0) * COALESCE(qty,1))
+                    FROM $tbl
+                    WHERE (sale_date LIKE :m OR raw_date LIKE :r1 OR raw_date LIKE :r2 OR raw_date LIKE :r3)");
+                $stmtIncome->execute([':m' => $monthLike, ':r1' => $raw1, ':r2' => $raw2, ':r3' => $raw3]);
+                $sumIncome += (int)($stmtIncome->fetchColumn() ?: 0);
+
+                $stmtSold = $db->prepare("SELECT COUNT(*)
+                    FROM $tbl
+                    WHERE (sale_date = :d OR raw_date LIKE :dr1 OR raw_date LIKE :dr2 OR raw_date LIKE :dr3)");
+                $stmtSold->execute([':d' => $today, ':dr1' => $dayRaw1, ':dr2' => $dayRaw2, ':dr3' => $dayRaw3]);
+                $sumSold += (int)($stmtSold->fetchColumn() ?: 0);
+            }
+
+            $avgDaily = $currentDay > 0 ? ($sumIncome / $currentDay) : 0;
+            $estIncome = $sumIncome + ($avgDaily * ($daysInMonth - $currentDay));
+
+            $dataResponse['sold'] = $sumSold;
+            $dataResponse['income'] = number_format($sumIncome, 0, ",", ".");
+            $dataResponse['est_income'] = number_format($estIncome, 0, ",", ".");
+
+            $stmtAudit = $db->prepare("SELECT SUM(selisih_qty) AS ghost_qty, SUM(selisih_setoran) AS selisih
+                FROM audit_rekap_manual WHERE report_date = :d");
+            $stmtAudit->execute([':d' => $today]);
+            $auditRow = $stmtAudit->fetch(PDO::FETCH_ASSOC) ?: [];
+            $ghostQty = (int)($auditRow['ghost_qty'] ?? 0);
+            $selisih = (int)($auditRow['selisih'] ?? 0);
+
+            $dataResponse['ghost'] = abs($ghostQty);
+            $dataResponse['audit_val'] = number_format($selisih, 0, ",", ".");
+            $dataResponse['audit_status'] = ($selisih < 0) ? 'LOSS' : 'CLEAR';
+        } catch (Exception $e) {
+        }
+    }
+
+    $dataResponse['active'] = $counthotspotactive;
     echo json_encode($dataResponse);
-    exit(); 
+    exit();
 }
 
 
