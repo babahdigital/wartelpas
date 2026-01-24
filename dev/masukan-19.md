@@ -258,4 +258,92 @@ plotOptions: {
 
 ```
 
-**Next Step:** Apakah Anda ingin saya bantu menggabungkan logika *Ghost Hunter* ini ke dalam tampilan `home.php` agar otomatis muncul saat ada selisih audit?
+Tentu, Abdullah (Dul). Berdasarkan kode `home.php` dan `aload.php` yang kamu kirimkan, saya sudah menyusun **Konsep Integrasi "Ghost Hunter" & Audit** ke dalam tampilan dashboard utama.
+
+Tujuannya agar kamu tidak perlu membuka menu Laporan/Audit secara manual untuk mengetahui kondisi hari ini.
+
+### 1. Update pada `home.php` (Bagian PHP/Logic)
+
+Di bagian atas `home.php`, panggil data dari database SQLite audit untuk mendeteksi apakah ada "Ghost" (selisih cetak) atau selisih uang hari ini:
+
+```php
+// Tambahkan di bagian atas home.php setelah koneksi DB
+$db = new PDO("sqlite:$dbFile");
+$tgl_ini = date('Y-m-d');
+
+// Cek Audit Manual & Ghost (Selisih Qty)
+$checkAudit = $db->prepare("SELECT SUM(selisih_qty) as total_ghost, SUM(selisih_setoran) as total_selisih FROM audit_manual WHERE tanggal = :tgl");
+$checkAudit->execute([':tgl' => $tgl_ini]);
+$auditData = $checkAudit->fetch(PDO::FETCH_ASSOC);
+
+$ghostCount = $auditData['total_ghost'] ?? 0;
+$moneyDiff = $auditData['total_selisih'] ?? 0;
+
+```
+
+### 2. Update Layout Kartu KPI
+
+Kita ganti layout kartu di `home.php` agar lebih informatif. Masukkan ke dalam baris kartu (Row 2):
+
+```html
+<div class="row">
+    <div class="col-md-3 col-sm-6">
+        <div class="box bmh-75 bg-green">
+            <h1 id="u_active">0</h1>
+            <div>User Active <span class="blink" style="color:#2ecc71">● Live</span></div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+        <div class="box bmh-75 bg-blue">
+            <h1 id="v_terjual">0</h1>
+            <div>Terjual 
+                <?php if($ghostCount != 0): ?>
+                    <span class="badge bg-red" title="Ada selisih cetak (Ghost) hari ini!">
+                        <i class="fa fa-ghost"></i> Ghost: <?= abs($ghostCount) ?>
+                    </span>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+        <div class="box bmh-75 bg-yellow">
+            <h1 id="income">0</h1>
+            <div id="est_income" style="font-size:10px; color:#f39c12 !important;">Estimasi: Rp 0</div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+        <div class="box bmh-75 <?php echo ($moneyDiff < 0) ? 'bg-red' : 'bg-purple'; ?>">
+            <h1><?php echo ($moneyDiff < 0) ? 'LOSS' : 'CLEAR'; ?></h1>
+            <div>Audit: 
+                <span style="color:<?php echo ($moneyDiff < 0) ? '#ff4d4d' : '#8898aa'; ?>">
+                    Rp <?= number_format($moneyDiff) ?>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+```
+
+### 3. Penyesuaian `aload.php` (Bagian AJAX)
+
+Agar angka "Estimasi Akhir Bulan" muncul secara otomatis di dashboard tanpa reload, tambahkan baris ini di dalam fungsi `success` pada AJAX di `aload.php`:
+
+```javascript
+// Di dalam success: function(data)
+$('#income').html(data.total_income);
+$('#v_terjual').html(data.total_vouchers);
+$('#est_income').html('Est. Akhir Bulan: ' + data.est_income); // Pastikan aload.php mengirim key 'est_income'
+
+```
+
+### Analisa Tambahan untuk Mas Dul:
+
+1. **Ghost Hunter:** Saya meletakkan indikator Ghost (hantu/selisih qty) tepat di samping jumlah voucher terjual. Ini sangat krusial agar operator langsung merasa "diawasi" jika jumlah fisik tidak sesuai sistem.
+2. **Visual "Clear":** Jika selisih audit hari ini adalah Rp 0, dashboard akan berwarna **Purple** (Warna tenang). Jika ada selisih minus, kartu ke-4 otomatis berubah jadi **Red** (Warna peringatan).
+3. **Clean Code:** Jangan lupa menghapus elemen `<h4>` yang terlalu besar di `home.php` aslinya, ganti dengan CSS yang saya berikan sebelumnya agar tampilannya *flat* dan elegan.
+
+Bagaimana Dul, mau langsung saya buatkan satu file utuh yang sudah tergabung semua logic ini atau ada bagian spesifik yang mau diubah dulu?
