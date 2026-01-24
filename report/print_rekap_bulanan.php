@@ -144,6 +144,7 @@ $audit_system = [];
 $audit_expense = [];
 $total_expenses_month = 0;
 $daily_expense_logs = [];
+$notes_map = [];
 
 try {
     if (file_exists($dbFile)) {
@@ -227,6 +228,14 @@ try {
                 ];
             }
         }
+
+        try {
+            $stmtN = $db->prepare("SELECT report_date, note FROM daily_report_notes WHERE report_date LIKE :m");
+            $stmtN->execute([':m' => $filter_date . '%']);
+            foreach ($stmtN->fetchAll(PDO::FETCH_ASSOC) as $rn) {
+                $notes_map[$rn['report_date']] = $rn['note'];
+            }
+        } catch (Exception $e) {}
     }
 } catch (Exception $e) {
     $rows = [];

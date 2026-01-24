@@ -29,6 +29,7 @@ $audit_expected_setoran_adj_total = 0;
 $audit_selisih_setoran_adj_total = 0;
 $has_audit_adjusted = false;
 $audit_locked_today = false;
+$current_daily_note = '';
 
 // Filter periode
 $req_show = $_GET['show'] ?? 'harian';
@@ -223,6 +224,11 @@ if (file_exists($dbFile)) {
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (report_date, blok_name)
         )");
+        $db->exec("CREATE TABLE IF NOT EXISTS daily_report_notes (
+            report_date TEXT PRIMARY KEY,
+            note TEXT,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )");
         try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN audit_username TEXT"); } catch (Exception $e) {}
         try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN user_evidence TEXT"); } catch (Exception $e) {}
         try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN expenses_amt INTEGER"); } catch (Exception $e) {}
@@ -368,6 +374,16 @@ if (file_exists($dbFile)) {
 
         if ($req_show === 'harian') {
             try {
+                $stmtNote = $db->prepare("SELECT note FROM daily_report_notes WHERE report_date = :d");
+                $stmtNote->execute([':d' => $filter_date]);
+                $current_daily_note = $stmtNote->fetchColumn() ?: '';
+            } catch (Exception $e) {
+                $current_daily_note = '';
+            }
+        }
+
+        if ($req_show === 'harian') {
+            try {
                 $stmtHp = $db->prepare("SELECT
                         SUM(total_units) AS total_units,
                         SUM(active_units) AS active_units,
@@ -404,6 +420,32 @@ if (file_exists($dbFile)) {
         }
     } catch (Exception $e) {
         $rows = [];
+    }
+}
+
+// Simpan catatan harian
+if (isset($db) && $db instanceof PDO && isset($_POST['save_daily_note'])) {
+    $note_date = trim($_POST['note_date'] ?? '');
+    $note_text = trim($_POST['note_text'] ?? '');
+    if ($note_text !== '') {
+        $note_text = mb_substr($note_text, 0, 500);
+    }
+    if ($note_date !== '') {
+        try {
+            if ($note_text !== '') {
+                $stmtNote = $db->prepare("INSERT INTO daily_report_notes (report_date, note, updated_at)
+                    VALUES (:d, :n, CURRENT_TIMESTAMP)
+                    ON CONFLICT(report_date) DO UPDATE SET note=excluded.note, updated_at=CURRENT_TIMESTAMP");
+                $stmtNote->execute([':d' => $note_date, ':n' => $note_text]);
+            } else {
+                $db->prepare("DELETE FROM daily_report_notes WHERE report_date = :d")->execute([':d' => $note_date]);
+            }
+        } catch (Exception $e) {}
+    }
+    $note_redirect = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+    if (!headers_sent()) {
+        header('Location: ' . $note_redirect);
+        exit;
     }
 }
 
@@ -1797,6 +1839,32 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
     </div>
 </div>
 
+<div id="noteModal" class="modal-backdrop" onclick="if(event.target===this){closeNoteModal();}">
+    <div class="modal-card" style="width:500px;">
+        <div class="modal-header" style="background:#8e44ad;">
+            <div class="modal-title" style="color:#fff;"><i class="fa fa-pencil-square-o"></i> Catatan Harian (Laporan ke Owner)</div>
+            <button type="button" class="modal-close" onclick="closeNoteModal()">&times;</button>
+        </div>
+        <form method="post" action="">
+            <input type="hidden" name="save_daily_note" value="1">
+            <input type="hidden" name="note_date" value="<?= htmlspecialchars($filter_date) ?>">
+            <div class="modal-body">
+                <div style="background:#f3e5f5; color:#4a148c; padding:10px; border-radius:4px; font-size:12px; margin-bottom:15px;">
+                    <strong>Tips:</strong> Jelaskan alasan omzet hari ini naik/turun secara singkat.
+                    Contoh: <em>"Hujan deras seharian, sepi"</em> atau <em>"Listrik padam 4 jam"</em>.
+                </div>
+                <label style="color:#ccc;">Isi Catatan / Keterangan:</label>
+                <textarea name="note_text" rows="5" class="form-input" style="width:100%; margin-top:5px; line-height:1.5;" placeholder="Tulis keterangan di sini..." maxlength="500"><?= htmlspecialchars($current_daily_note) ?></textarea>
+                <div class="modal-note">Maksimal 500 karakter. Kosongkan untuk menghapus catatan hari ini.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-print" onclick="closeNoteModal()">Batal</button>
+                <button type="submit" class="btn-print" style="background:#8e44ad;">Simpan Catatan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
     var settlementTimer = null;
     var hpDeleteUrl = '';
@@ -1809,6 +1877,14 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
         var m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
         if (!m) return dateStr;
         return m[3] + '-' + m[2] + '-' + m[1];
+    }
+    function openNoteModal(){
+        var modal = document.getElementById('noteModal');
+        if (modal) modal.style.display = 'flex';
+    }
+    function closeNoteModal(){
+        var modal = document.getElementById('noteModal');
+        if (modal) modal.style.display = 'none';
     }
     function closeDeleteHpModal(){
         var modal = document.getElementById('hp-delete-modal');
@@ -2634,9 +2710,10 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
             <button class="btn-print" type="button" onclick="openHpModal()">Input HP Blok</button>
             <?php if ($req_show === 'harian'): ?>
                 <button class="btn-print" type="button" onclick="openAuditModal()" <?= $audit_locked_today ? 'disabled style="opacity:.6;cursor:not-allowed;"' : '' ?>>Audit Manual</button>
-                <?php if (!$audit_locked_today): ?>
-                    <button class="btn-print" type="button" onclick="openAuditLockModal()" style="background:#ff9800;color:#fff;">Kunci Audit</button>
-                <?php else: ?>
+                <button class="btn-print" type="button" onclick="openNoteModal()" style="background:#8e44ad; color:#fff;">
+                    <i class="fa fa-sticky-note-o"></i> Catatan / Insiden
+                </button>
+                <?php if ($audit_locked_today): ?>
                     <span style="font-size:12px;color:#f39c12;align-self:center;">Audit terkunci</span>
                 <?php endif; ?>
             <?php endif; ?>
