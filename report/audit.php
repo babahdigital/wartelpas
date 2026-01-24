@@ -533,7 +533,8 @@ if (file_exists($dbFile)) {
                         <?= number_format($sales_summary['pending'],0,',','.') ?> Transaksi Belum Settlement
                     </div>
                     <div style="font-size:10px;color:#856404;">(Data Live Sales)</div>
-                    <?php if (!empty($pending_range_label)): ?>
+                    <?php $show_pending_date = ($req_show === 'harian' && $filter_date !== date('Y-m-d')); ?>
+                    <?php if ($show_pending_date && !empty($pending_range_label)): ?>
                         <div style="font-size:10px;color:#856404;margin-top:4px;"><?= htmlspecialchars($pending_range_label) ?></div>
                     <?php endif; ?>
                 </div>
@@ -550,7 +551,7 @@ if (file_exists($dbFile)) {
                             Terdapat <b><?= number_format($sales_summary['pending']) ?> transaksi baru</b> (Live) yang belum masuk database final.
                             Total angka di atas sudah mencakup data ini.
                         </div>
-                        <?php if (!empty($pending_range_label)): ?>
+                        <?php if ($show_pending_date && !empty($pending_range_label)): ?>
                             <div style="font-size:11px;color:#856404;margin-top:4px;"><?= htmlspecialchars($pending_range_label) ?></div>
                         <?php endif; ?>
                     </div>

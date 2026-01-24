@@ -510,7 +510,8 @@ if (file_exists($dbFile)) {
     <?php if ($sales_summary['pending'] > 0): ?>
       <div style="margin-top:10px; padding:8px; border:1px solid #e2e8f0; background:#f8fafc; font-size:11px; color:#64748b;">
           <strong>Catatan Sistem:</strong> Angka di atas mencakup <?= number_format($sales_summary['pending']) ?> transaksi Live (Pending) yang belum dilakukan settlement.
-          <?php if (!empty($pending_range_label)): ?>
+          <?php $show_pending_date = ($req_show === 'harian' && $filter_date !== date('Y-m-d')); ?>
+          <?php if ($show_pending_date && !empty($pending_range_label)): ?>
             <div style="margin-top:4px;"><?= htmlspecialchars($pending_range_label) ?></div>
           <?php endif; ?>
       </div>
