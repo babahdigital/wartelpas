@@ -657,14 +657,14 @@ function calc_audit_adjusted_setoran(array $ar) {
                     $status = strtolower((string)($ud['last_status'] ?? ''));
                     if ($kind === '30') {
                         $profile30_users++;
-                        if ($status === 'rusak') $cnt_rusak_30++;
+                        if ($status === 'invalid') $cnt_invalid_30++;
                         elseif ($status === 'retur') $cnt_retur_30++;
-                        elseif ($status === 'invalid') $cnt_invalid_30++;
+                        elseif ($status === 'rusak') $cnt_rusak_30++;
                     } else {
                         $profile10_users++;
-                        if ($status === 'rusak') $cnt_rusak_10++;
+                        if ($status === 'invalid') $cnt_invalid_10++;
                         elseif ($status === 'retur') $cnt_retur_10++;
-                        elseif ($status === 'invalid') $cnt_invalid_10++;
+                        elseif ($status === 'rusak') $cnt_rusak_10++;
                     }
                 }
             }
@@ -675,14 +675,12 @@ function calc_audit_adjusted_setoran(array $ar) {
     if ($p30_qty <= 0) $p30_qty = $profile30_users;
 
     if ($has_manual_evidence) {
-        $manual_net_qty_10 = max(0, $p10_qty - $cnt_rusak_10 - $cnt_invalid_10 + $cnt_retur_10);
-        $manual_net_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30 + $cnt_retur_30);
+        $manual_net_qty_10 = max(0, $p10_qty - $cnt_rusak_10 - $cnt_invalid_10);
+        $manual_net_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30);
         $manual_display_setoran = ($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30);
         $expected_adj_setoran = max(0, $expected_setoran
             - (($cnt_rusak_10 + $cnt_invalid_10) * $price10)
-            - (($cnt_rusak_30 + $cnt_invalid_30) * $price30)
-            + ($cnt_retur_10 * $price10)
-            + ($cnt_retur_30 * $price30));
+            - (($cnt_rusak_30 + $cnt_invalid_30) * $price30));
     } else {
         $manual_display_setoran = $actual_setoran_raw;
         $expected_adj_setoran = $expected_setoran;
@@ -2809,15 +2807,15 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                             if ($kind === '30') {
                                                 $profile30_sum += $price_val;
                                                 $profile30 = $bucket;
-                                                if ($u_status === 'rusak') $manual_rusak_30++;
+                                                if ($u_status === 'invalid') $manual_invalid_30++;
                                                 elseif ($u_status === 'retur') $manual_retur_30++;
-                                                elseif ($u_status === 'invalid') $manual_invalid_30++;
+                                                elseif ($u_status === 'rusak') $manual_rusak_30++;
                                             } else {
                                                 $profile10_sum += $price_val;
                                                 $profile10 = $bucket;
-                                                if ($u_status === 'rusak') $manual_rusak_10++;
+                                                if ($u_status === 'invalid') $manual_invalid_10++;
                                                 elseif ($u_status === 'retur') $manual_retur_10++;
-                                                elseif ($u_status === 'invalid') $manual_invalid_10++;
+                                                elseif ($u_status === 'rusak') $manual_rusak_10++;
                                             }
                                         }
                                     } else {
@@ -2837,19 +2835,17 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             }
                             if ($profile_qty_10 <= 0) $profile_qty_10 = count($profile10['user'] ?? []);
                             if ($profile_qty_30 <= 0) $profile_qty_30 = count($profile30['user'] ?? []);
-                            $manual_net_qty_10 = max(0, $profile_qty_10 - $manual_rusak_10 - $manual_invalid_10 + $manual_retur_10);
-                            $manual_net_qty_30 = max(0, $profile_qty_30 - $manual_rusak_30 - $manual_invalid_30 + $manual_retur_30);
+                            $manual_net_qty_10 = max(0, $profile_qty_10 - $manual_rusak_10 - $manual_invalid_10);
+                            $manual_net_qty_30 = max(0, $profile_qty_30 - $manual_rusak_30 - $manual_invalid_30);
                             $manual_display_qty = $has_manual_evidence ? ($manual_net_qty_10 + $manual_net_qty_30) : (int)($ar['reported_qty'] ?? 0);
                             $manual_display_setoran = $has_manual_evidence ? (($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30)) : (int)($ar['actual_setoran'] ?? 0);
                             $expected_adj_qty = $expected_qty;
                             $expected_adj_setoran = $expected_setoran;
                             if ($has_manual_evidence) {
-                                $expected_adj_qty = max(0, $expected_qty - $manual_rusak_10 - $manual_rusak_30 - $manual_invalid_10 - $manual_invalid_30 + $manual_retur_10 + $manual_retur_30);
+                                $expected_adj_qty = max(0, $expected_qty - $manual_rusak_10 - $manual_rusak_30 - $manual_invalid_10 - $manual_invalid_30);
                                 $expected_adj_setoran = max(0, $expected_setoran
                                     - (($manual_rusak_10 + $manual_invalid_10) * $price10)
-                                    - (($manual_rusak_30 + $manual_invalid_30) * $price30)
-                                    + ($manual_retur_10 * $price10)
-                                    + ($manual_retur_30 * $price30));
+                                    - (($manual_rusak_30 + $manual_invalid_30) * $price30));
                             }
                             $sq = $manual_display_qty - $expected_adj_qty;
                             $ss = $manual_display_setoran - $expected_adj_setoran;
