@@ -436,6 +436,11 @@ if ($idleto != "disable") {
 
 <?php } ?>
 
+<div id="sidenav" style="display:none"></div>
+<a id="openNav" href="javascript:void(0)" style="display:none"></a>
+<a id="closeNav" href="javascript:void(0)" style="display:none"></a>
+<div id="overL" style="display:none"></div>
+
 <script>
     function toggleMenu() {
         var x = document.getElementById("mainNav");
@@ -479,8 +484,8 @@ if ($id != "") {
     $loading_style = $force_show_main ? 'style="display:none"' : '';
     echo "<div id=\"loading\" class=\"lds-dual-ring\" $loading_style></div>";
     if ($hotspot == 'template-editor' || $id == 'editor' || $force_show_main) {
-        echo '<div class="main-container-fluid">';
+        echo '<div class="main-container main-container-fluid">';
     } else {
-        echo '<div class="main-container-fluid" style="display:none">';
+        echo '<div class="main-container main-container-fluid" style="display:none">';
     }
 ?>
