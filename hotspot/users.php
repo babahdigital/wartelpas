@@ -2285,11 +2285,6 @@ if ($debug_mode && !$is_ajax) {
         <h3 class="card-title m-0"><i class="fa fa-users mr-2"></i> Manajemen Voucher</h3>
         <span id="users-total" class="badge badge-secondary p-2" style="font-size:14px">Total: <?= $total_items ?> Items</span>
         <span id="users-active" class="badge badge-info p-2" style="font-size:14px;margin-left:6px;">Online: -</span>
-        <?php if (!$is_ajax): ?>
-          <button type="button" id="summary-open" class="btn btn-outline-light btn-sm" style="margin-left:8px;height:32px;">
-            <i class="fa fa-list-alt"></i> Sisa Voucher
-          </button>
-        <?php endif; ?>
       </div>
       <div class="toolbar-container">
         <form action="?" method="GET" class="toolbar-row m-0" id="users-toolbar-form">
@@ -2373,6 +2368,11 @@ if ($debug_mode && !$is_ajax) {
               <button type="button" class="btn btn-outline-light" style="height:40px;" onclick="location.href='<?= $today_url ?>'">
                 <i class="fa fa-calendar"></i> Reset Tanggal
               </button>
+              <?php if (!$is_ajax): ?>
+                <button type="button" id="summary-open" class="btn btn-outline-light" style="height:40px;">
+                  <i class="fa fa-list-alt"></i> Sisa Voucher
+                </button>
+              <?php endif; ?>
             <?php endif; ?>
             <?php if ($can_print_used): ?>
               <?php
