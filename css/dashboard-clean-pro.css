@@ -47,6 +47,52 @@ html, body {
     position: relative;
 }
 
+.main-content {
+    padding: 20px;
+    height: calc(100vh - 60px);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow: hidden;
+}
+
+.row-kpi {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 8fr 4fr;
+    gap: 20px;
+    flex: 1;
+    min-height: 0;
+}
+
+.table-container {
+    height: 100%;
+    overflow-y: auto;
+}
+
+.table-container table { width: 100%; border-collapse: collapse; }
+.table-container th {
+    text-align: left;
+    font-size: 11px;
+    color: var(--text-dim);
+    padding: 10px;
+    border-bottom: 1px solid var(--border-soft);
+    background: #151719;
+    position: sticky;
+    top: 0;
+}
+.table-container td { padding: 10px; border-bottom: 1px solid var(--border-soft); font-size: 13px; }
+.table-container tr:hover td { background: var(--bg-hover); }
+
+.month-tabs { display: flex; gap: 10px; font-size: 11px; }
+.month-tab { color: var(--text-dim); cursor: pointer; padding-bottom: 3px; }
+.month-tab.active { color: #fff; border-bottom: 2px solid #fff; }
+
 #loading-halus {
     position: absolute;
     top: 0;
@@ -144,6 +190,9 @@ html, body {
     text-transform: uppercase;
     font-weight: 700;
     margin-top: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .border-blue { border-left: 4px solid var(--accent-blue); }
@@ -158,10 +207,11 @@ html, body {
     color: #fff;
     padding: 2px 6px;
     border-radius: 4px;
-    font-size: 10px;
+    font-size: 9px;
+    font-weight: 800;
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: 12px;
+    right: 12px;
 }
 
 .audit-detail {
@@ -184,7 +234,20 @@ html, body {
 
 .card-header {
     border-bottom: 1px solid var(--border-soft) !important;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
+
+.card-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #eee;
+}
+
+.card-body { padding: 20px; flex: 1; position: relative; }
 
 #tabel_riwayat tr { background: transparent !important; transition: background 0.2s; }
 #tabel_riwayat tr:hover td { background: var(--bg-hover) !important; color: #fff; }
@@ -196,3 +259,18 @@ html, body {
 .card-body::-webkit-scrollbar-thumb:hover { background: #555; }
 
 .highcharts-container { filter: drop-shadow(0 0 5px rgba(0,0,0,0.2)); }
+
+.resource-footer {
+    display: flex;
+    gap: 20px;
+    font-size: 10px;
+    color: var(--text-dim);
+    background: var(--bg-card);
+    padding: 10px 20px;
+    border-radius: 8px;
+}
+
+@media (max-width: 1024px) {
+    .row-kpi { grid-template-columns: repeat(2, 1fr); }
+    .dashboard-grid { grid-template-columns: 1fr; }
+}
