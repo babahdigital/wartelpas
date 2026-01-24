@@ -78,12 +78,6 @@ body {
     overflow-y: auto;
 }
 
-.table-container td { 
-    padding: 6px 12px; /* Lebih rapat */
-    font-size: 12px;
-    height: var(--trx-row-height);
-}
-
 .table-container table { width: 100%; border-collapse: collapse; }
 .table-container th {
     text-align: left;
@@ -95,7 +89,7 @@ body {
     position: sticky;
     top: 0;
 }
-.table-container td { padding: 10px; border-bottom: 1px solid var(--border-soft); font-size: 13px; height: var(--trx-row-height); }
+.table-container td { padding: 6px 12px; border-bottom: 1px solid var(--border-soft); font-size: 12px; height: var(--trx-row-height); }
 .table-container tr:hover td { background: var(--bg-hover); }
 
 .month-tabs { display: flex; gap: 10px; font-size: 11px; }
