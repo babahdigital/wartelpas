@@ -230,6 +230,15 @@ if ($idleto != "disable") {
     #main { margin-left: 0; padding: 20px; }
     .main-container-fluid { width: 100%; }
 
+    /* Override legacy sidebar layout */
+    #main { margin-left: 0 !important; margin-top: 60px !important; }
+    .sidenav { width: 0 !important; border-right: 0 !important; }
+    #openNav, #closeNav, #cpage { display: none !important; }
+
+    @media (max-width: 750px) {
+        #brand { display: flex !important; }
+    }
+
     @media (min-width: 993px) {
         .nav-links {
             display: flex; gap: 5px; flex-grow: 1; align-items: center;
