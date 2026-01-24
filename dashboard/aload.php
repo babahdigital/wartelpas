@@ -224,7 +224,7 @@ if ($load == "sysresource") {
     $sys_mem = isset($resource['free-memory']) ? formatBytes($resource['free-memory'], 2) : '0 B';
     $sys_hdd = isset($resource['free-hdd-space']) ? formatBytes($resource['free-hdd-space'], 2) : '0 B';
     ?>
-    <div id="r_1" class="row">
+    <div id="r_1" class="row sys-mini">
       <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-calendar"></i></div><div class="box-group-area"><span>Date & Time<br><?= $sys_date . " " . $sys_time ?><br>Uptime : <?= $sys_uptime ?></span></div></div></div></div>
       <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-info-circle"></i></div><div class="box-group-area"><span>Board : <?= $sys_board ?><br/>Model : <?= $sys_model ?><br/>Router OS : <?= $sys_os ?></span></div></div></div></div>
       <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-server"></i></div><div class="box-group-area"><span>CPU : <?= $sys_cpu ?>%<br/>Free Mem : <?= $sys_mem ?><br/>Free HDD : <?= $sys_hdd ?></span></div></div></div></div> 
