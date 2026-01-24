@@ -305,13 +305,15 @@ if ($load == "sysresource") {
                 } ?>
             </div>
         </div>
-        <div id="chart_income_stat" style="width:100%; height:350px;"></div>
+        <div id="chart_container" style="width:100%;">
+            <div id="chart_income_stat" style="width:100%; height:320px;"></div>
+        </div>
         <script type="text/javascript">
             if(typeof Highcharts !== 'undefined') {
                 Highcharts.chart('chart_income_stat', {
-                    chart: { backgroundColor: 'transparent', height: 350, zoomType: 'xy' },
+                    chart: { backgroundColor: 'transparent', height: 320, zoomType: 'xy' },
                     title: { text: '' },
-                    xAxis: { categories: <?= $jsonCategories ?>, crosshair: true, lineColor: '#444', tickColor: '#444', labels: {style:{color:'#ccc'}} },
+                    xAxis: { categories: <?= $jsonCategories ?>, crosshair: true, lineColor: '#444', tickColor: '#444', labels: {style:{color:'#ccc'}}, gridLineWidth: 0 },
                     yAxis: [{
                         labels: { style: { color: '#00c0ef' }, formatter: function () { return (this.value / 1000) + 'k'; } },
                         title: { text: 'Pendapatan (Rp)', style: { color: '#00c0ef' } },
@@ -323,13 +325,22 @@ if ($load == "sysresource") {
                         gridLineWidth: 0
                     }],
                     tooltip: { shared: true, backgroundColor: 'rgba(0,0,0,0.85)', style: {color: '#fff'}, borderRadius: 8 },
-                    plotOptions: { column: { borderRadius: 2 } },
+                    plotOptions: {
+                        area: {
+                            marker: { enabled: false },
+                            fillColor: {
+                                linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+                                stops: [[0, '#00c0ef'], [1, 'rgba(0,192,239,0)']]
+                            }
+                        },
+                        spline: { marker: { enabled: true, radius: 2 } }
+                    },
                     series: [{
                         name: 'Pendapatan',
-                        type: 'column',
+                        type: 'area',
                         yAxis: 0,
                         data: <?= $jsonDataIncome ?>,
-                        color: { linearGradient: { x1: 0, x2: 0, y1: 0, y2: 1 }, stops: [[0, '#00c0ef'], [1, '#007aa3']] },
+                        color: '#00c0ef',
                         tooltip: { valuePrefix: 'Rp ' }
                     }, {
                         name: 'Terjual',
@@ -337,7 +348,7 @@ if ($load == "sysresource") {
                         yAxis: 1,
                         data: <?= $jsonDataQty ?>,
                         color: '#f39c12',
-                        marker: { lineWidth: 2, lineColor: '#f39c12', fillColor: '#fff' },
+                        marker: { lineWidth: 1, lineColor: '#f39c12', fillColor: '#fff' },
                         tooltip: { valueSuffix: ' lbr' }
                     }],
                     credits: { enabled: false },
