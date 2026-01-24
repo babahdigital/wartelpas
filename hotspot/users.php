@@ -1275,6 +1275,7 @@ $summary_ready_by_blok = [];
 $summary_ready_total = 0;
 $summary_rusak_total = 0;
 $summary_retur_total = 0;
+$summary_seen_users = [];
 if (!empty($router_users)) {
   foreach ($router_users as $u) {
     $name = $u['name'] ?? '';
@@ -1286,13 +1287,17 @@ if (!empty($router_users)) {
     $cm = extract_ip_mac_from_comment($comment);
     $blok = extract_blok_name($comment);
 
+    if ($name !== '') {
+      $summary_seen_users[strtolower($name)] = true;
+    }
+
     if ($only_wartel && !is_wartel_client($comment, $blok)) {
       continue;
     }
 
     $comment_rusak = preg_match('/\bAudit:\s*RUSAK\b/i', $comment) || preg_match('/^\s*RUSAK\b/i', $comment);
     $is_rusak = $comment_rusak || (stripos($comment, 'RUSAK') !== false) || ($disabled === 'true');
-    $is_retur = (stripos($comment, '(Retur)') !== false) || (stripos($comment, 'Retur Ref:') !== false);
+    $is_retur = (stripos($comment, '(Retur)') !== false) || (stripos($comment, 'Retur Ref:') !== false) || preg_match('/\bRETUR\b/i', $comment);
     if ($db && $name !== '') {
       $hist_sum = get_user_history($name);
       $hist_status = strtolower($hist_sum['last_status'] ?? '');
@@ -1330,6 +1335,28 @@ if (!empty($router_users)) {
   if (!empty($summary_ready_by_blok)) {
     ksort($summary_ready_by_blok, SORT_NATURAL | SORT_FLAG_CASE);
   }
+}
+
+if ($db) {
+  try {
+    $stmtSum = $db->query("SELECT username, last_status, raw_comment, blok_name FROM login_history WHERE username IS NOT NULL AND username != ''");
+    $rows = $stmtSum->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($rows as $row) {
+      $uname = strtolower($row['username'] ?? '');
+      if ($uname === '' || isset($summary_seen_users[$uname])) continue;
+      $raw_comment = (string)($row['raw_comment'] ?? '');
+      $blok_name = (string)($row['blok_name'] ?? '');
+      if ($only_wartel && !is_wartel_client($raw_comment, $blok_name)) continue;
+      $hist_status = strtolower((string)($row['last_status'] ?? ''));
+      $is_hist_rusak = $hist_status === 'rusak' || preg_match('/\bAudit:\s*RUSAK\b/i', $raw_comment) || preg_match('/^\s*RUSAK\b/i', $raw_comment) || (stripos($raw_comment, 'RUSAK') !== false);
+      $is_hist_retur = $hist_status === 'retur' || (stripos($raw_comment, '(Retur)') !== false) || (stripos($raw_comment, 'Retur Ref:') !== false) || preg_match('/\bRETUR\b/i', $raw_comment);
+      if ($is_hist_rusak) {
+        $summary_rusak_total++;
+      } elseif ($is_hist_retur) {
+        $summary_retur_total++;
+      }
+    }
+  } catch (Exception $e) {}
 }
 
 $is_ajax = isset($_GET['ajax']) && $_GET['ajax'] == '1';

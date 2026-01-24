@@ -176,7 +176,7 @@ if (!isset($_SESSION["mikhmon"])) {
 
         $comment_rusak = preg_match('/\bAudit:\s*RUSAK\b/i', $comment) || preg_match('/^\s*RUSAK\b/i', $comment);
         $is_rusak = $comment_rusak || (stripos($comment, 'RUSAK') !== false) || ($disabled === 'true');
-        $is_retur = (stripos($comment, '(Retur)') !== false) || (stripos($comment, 'Retur Ref:') !== false);
+        $is_retur = (stripos($comment, '(Retur)') !== false) || (stripos($comment, 'Retur Ref:') !== false) || preg_match('/\bRETUR\b/i', $comment);
         if ($is_rusak) $is_retur = false;
 
         $is_used = (!$is_retur && !$is_rusak && $disabled !== 'true') &&
