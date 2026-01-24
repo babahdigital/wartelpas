@@ -422,7 +422,7 @@ $print_time = date('d-m-Y H:i:s');
             <div class="summary-value" style="font-size:20px; font-weight:bold;"><?= $cur ?> <?= number_format((int)$total_omzet_gross,0,',','.') ?></div>
         </div>
         <div class="summary-card" style="border:1px solid #fca5a5; background:#fff1f2; padding:15px; border-radius:4px;">
-            <div class="summary-title" style="color:#991b1b; font-size:11px; text-transform:uppercase;">Total Kerugian (Voucher Loss)</div>
+            <div class="summary-title" style="color:#991b1b; font-size:11px; text-transform:uppercase;">Voucher Loss</div>
             <div class="summary-value" style="font-size:20px; font-weight:bold; color:#991b1b;">- <?= $cur ?> <?= number_format((int)$total_voucher_loss,0,',','.') ?></div>
             <div style="font-size:10px; color:#b91c1c;">(Rusak & Invalid)</div>
         </div>
@@ -432,7 +432,7 @@ $print_time = date('d-m-Y H:i:s');
             <div style="font-size:10px; color:#e67e22;">(Belanja Toko)</div>
         </div>
         <div class="summary-card" style="border:1px solid #ddd; padding:15px; border-radius:4px; background:#fff;">
-            <div class="summary-title" style="color:#666; font-size:11px; text-transform:uppercase;">Total Setoran Fisik (Audit)</div>
+            <div class="summary-title" style="color:#666; font-size:11px; text-transform:uppercase;">Setoran Fisik</div>
             <div class="summary-value" style="font-size:20px; font-weight:bold; color:#1e3a8a;"><?= $cur ?> <?= number_format((int)$total_net_audit,0,',','.') ?></div>
         </div>
         <div class="summary-card" style="border:1px solid <?= $total_selisih < 0 ? '#fca5a5' : ($total_selisih > 0 ? '#86efac' : '#ddd') ?>; background: <?= $total_selisih < 0 ? '#fee2e2' : ($total_selisih > 0 ? '#dcfce7' : '#fff') ?>; padding:15px; border-radius:4px;">
