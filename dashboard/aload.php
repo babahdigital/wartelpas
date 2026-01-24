@@ -461,6 +461,37 @@ if ($load == "logs") {
         }
     }
 
+    if (!empty($finalLogs) && isset($db)) {
+        $usernames = [];
+        foreach ($finalLogs as $log) {
+            $uname = trim((string)($log['username'] ?? ''));
+            if ($uname !== '') {
+                $usernames[$uname] = true;
+            }
+        }
+
+        if (!empty($usernames)) {
+            $placeholders = implode(',', array_fill(0, count($usernames), '?'));
+            try {
+                $stmtLogin = $db->prepare("SELECT username, first_login_real FROM login_history WHERE username IN ($placeholders)");
+                $stmtLogin->execute(array_keys($usernames));
+                $loginMap = [];
+                foreach ($stmtLogin->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                    $loginMap[$row['username']] = $row['first_login_real'] ?? '';
+                }
+                foreach ($finalLogs as $k => $log) {
+                    $uname = $log['username'] ?? '';
+                    $firstLogin = $loginMap[$uname] ?? '';
+                    $ts = $firstLogin ? strtotime($firstLogin) : false;
+                    if ($ts !== false) {
+                        $finalLogs[$k]['time_str'] = date('d/m/Y H:i', $ts);
+                    }
+                }
+            } catch (Exception $e) {
+            }
+        }
+    }
+
     krsort($finalLogs);
     $maxShow = 10; $count = 0;
     foreach ($finalLogs as $log) {

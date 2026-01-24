@@ -391,7 +391,7 @@
 
             if (data.audit_status === 'LOSS') {
                 $('#audit-box').removeClass('border-audit border-warning').addClass('border-loss');
-                $('#audit-status').html('<i class="fa fa-exclamation-triangle"></i> LOSS')
+                $('#audit-status').text('LOSS')
                     .css('color', 'var(--accent-red)');
             } else if (parseInt(data.ghost || 0, 10) > 0) {
                 $('#audit-box').removeClass('border-audit border-loss').addClass('border-warning');
