@@ -453,6 +453,10 @@ body {
     fill: transparent !important;
 }
 
+.highcharts-plot-background {
+    fill: transparent !important;
+}
+
 /* Highcharts Customization */
 .highcharts-axis-line,
 .highcharts-tick,

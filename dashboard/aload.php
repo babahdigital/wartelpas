@@ -337,7 +337,7 @@ if ($load == "hotspot") {
         <script type="text/javascript">
             if(typeof Highcharts !== 'undefined') {
                 Highcharts.chart('chart_income_stat', {
-                    chart: { backgroundColor: 'transparent', type: 'area', spacingBottom: 0, reflow: true, zoomType: 'xy', height: null, borderWidth: 0, spacing: [10, 0, 10, 0] },
+                    chart: { backgroundColor: 'transparent', plotBackgroundColor: 'transparent', type: 'area', spacingBottom: 0, reflow: true, zoomType: 'xy', height: null, borderWidth: 0, spacing: [10, 0, 10, 0] },
                     title: { text: null },
                     xAxis: { categories: <?= $jsonCategories ?>, crosshair: true, lineColor: '#444', tickColor: '#444', labels: {style:{color:'#888', fontSize:'10px'}}, gridLineWidth: 0 },
                     yAxis: [{
