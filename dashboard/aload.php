@@ -557,7 +557,7 @@ if ($load == "hotspot") {
             if(typeof Highcharts !== 'undefined') {
                 var catLen = <?= count($categories) ?>;
                 Highcharts.chart('chart_income_stat', {
-                    chart: { backgroundColor: 'transparent', plotBackgroundColor: 'transparent', type: 'area', spacingBottom: 0, reflow: true, zoomType: 'xy', height: null, borderWidth: 0, spacing: [10, 0, 10, 0] },
+                    chart: { backgroundColor: 'transparent', plotBackgroundColor: 'transparent', type: 'area', spacingBottom: 0, reflow: true, zoomType: 'xy', height: null, borderWidth: 0, spacing: [10, 0, 10, 0], marginLeft: 0, marginRight: 0 },
                     title: { text: null },
                     xAxis: {
                         categories: <?= $jsonCategories ?>,
@@ -597,6 +597,9 @@ if ($load == "hotspot") {
                     }],
                     tooltip: { shared: true, backgroundColor: '#1c1f26', style: {color: '#fff'}, borderWidth: 0, borderRadius: 10 },
                     plotOptions: {
+                        series: {
+                            pointPlacement: 'on'
+                        },
                         area: {
                             marker: { enabled: false },
                             fillColor: {
