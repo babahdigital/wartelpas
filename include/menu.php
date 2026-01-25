@@ -377,6 +377,97 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         .dropdown-menu { display: none; position: static; background: #1a2226; box-shadow: none; width: 100%; }
         .nav-item.active-mobile .dropdown-menu { display: block; }
     }
+
+    /* --- Styles untuk Overlay Popup Modern --- */
+    .overlay-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 20000;
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(4px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .overlay-backdrop.show {
+        display: flex;
+        opacity: 1;
+    }
+
+    .overlay-modal {
+        background: #1e282c;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        width: 100%;
+        max-width: 380px;
+        padding: 25px;
+        text-align: center;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+        transform: scale(0.9);
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .overlay-backdrop.show .overlay-modal {
+        transform: scale(1);
+    }
+
+    .overlay-icon-box {
+        width: 70px;
+        height: 70px;
+        margin: 0 auto 15px auto;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        background: rgba(255, 255, 255, 0.05);
+        transition: all 0.3s;
+    }
+
+    .status-loading .overlay-icon-box { color: #3c8dbc; border: 2px solid rgba(60, 141, 188, 0.3); background: rgba(60, 141, 188, 0.1); }
+    .status-success .overlay-icon-box { color: #00a65a; border: 2px solid rgba(0, 166, 90, 0.3); background: rgba(0, 166, 90, 0.1); }
+    .status-error   .overlay-icon-box { color: #dd4b39; border: 2px solid rgba(221, 75, 57, 0.3); background: rgba(221, 75, 57, 0.1); }
+
+    .overlay-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #fff;
+        margin-bottom: 8px;
+        letter-spacing: 0.5px;
+    }
+
+    .overlay-message {
+        font-size: 14px;
+        color: #b8c7ce;
+        line-height: 1.5;
+        margin-bottom: 20px;
+    }
+
+    .overlay-btn {
+        background: #3c8dbc;
+        color: white;
+        border: none;
+        padding: 10px 25px;
+        border-radius: 50px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        outline: none;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+
+    .overlay-btn:hover {
+        background: #367fa9;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    }
+
+    .status-error .overlay-btn { background: #d73925; }
+    .status-error .overlay-btn:hover { background: #ac2925; }
 </style>
 
 <?php if ($id != "") { ?>
