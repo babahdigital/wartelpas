@@ -759,7 +759,18 @@ if ($load == "logs") {
         if ($uptimeDisplay === '') {
             $uptimeDisplay = '-';
         } else {
-            $uptimeDisplay = preg_replace('/\s+/', '', formatDTM($uptimeDisplay));
+            if (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})$/', $uptimeDisplay, $m)) {
+                $hh = (int)$m[1];
+                $mm = (int)$m[2];
+                $ss = (int)$m[3];
+                $parts = [];
+                if ($hh > 0) $parts[] = $hh . 'h';
+                if ($mm > 0 || $hh > 0) $parts[] = $mm . 'm';
+                $parts[] = $ss . 's';
+                $uptimeDisplay = implode('', $parts);
+            } else {
+                $uptimeDisplay = preg_replace('/\s+/', '', formatDTM($uptimeDisplay));
+            }
         }
 
         $statusLabel = strtoupper((string)($log['status'] ?? 'USED'));
