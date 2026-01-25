@@ -128,7 +128,10 @@ Require all denied
 <If "%{REQUEST_URI} =~ m#^/report/print_rincian\.php$#">
     Require all granted
 </If>
-<If "%{REQUEST_URI} =~ m#^/hotspot/print\.detail\.php$#">
+<If "%{REQUEST_URI} =~ m#hotspot/print\.detail\.php$#">
+    Require all granted
+</If>
+<If "%{REQUEST_URI} =~ m#hotspot/print\.used\.php$#">
     Require all granted
 </If>
 

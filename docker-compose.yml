@@ -47,6 +47,7 @@ services:
       - ./hotspot/cookies.php:/var/www/html/hotspot/cookies.php
       - ./hotspot/save_logout_time.php:/var/www/html/hotspot/save_logout_time.php
       - ./hotspot/print.detail.php:/var/www/html/hotspot/print.detail.php
+      - ./hotspot/print.used.php:/var/www/html/hotspot/print.used.php
       # Keamanan: Overwrite file asli dengan file custom
       - ./hotspot/adduser.php:/var/www/html/hotspot/adduser.php
       - ./hotspot/quickuser.php:/var/www/html/hotspot/quickuser.php
