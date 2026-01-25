@@ -1240,6 +1240,23 @@ foreach ($rows as $r) {
             continue;
         }
         $profile = $r['profile_snapshot'] ?? ($r['profile'] ?? '-');
+        if ($profile === '' || $profile === '-') {
+            $hint = (string)($r['validity'] ?? '') . ' ' . $raw_comment;
+            if (preg_match('/\b30\s*(menit|m)\b|30menit/i', $hint)) {
+                $profile = '30 Menit';
+                if ($price <= 0) $price = 20000;
+            } elseif (preg_match('/\b10\s*(menit|m)\b|10menit/i', $hint)) {
+                $profile = '10 Menit';
+                if ($price <= 0) $price = 5000;
+            }
+        } elseif ($price <= 0) {
+            if (preg_match('/\b30\s*(menit|m)\b|30menit/i', $profile)) {
+                $price = 20000;
+            } elseif (preg_match('/\b10\s*(menit|m)\b|10menit/i', $profile)) {
+                $price = 5000;
+            }
+        }
+        $line_price = $price * $qty;
         $blok = normalize_block_name($r['blok_name'] ?? '', $raw_comment);
         $status = strtolower((string)($r['status'] ?? ''));
         $lh_status = strtolower((string)($r['last_status'] ?? ''));
