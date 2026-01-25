@@ -1110,7 +1110,7 @@ if ($is_ajax) {
 }
 
 if ($debug_mode && !$is_ajax) {
-  $logDir = dirname(__DIR__) . '/logs';
+  $logDir = __DIR__ . '/../../logs';
   if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
   $logFile = $logDir . '/users_debug.log';
   foreach ($debug_rows as $row) {

@@ -140,7 +140,7 @@ function normalize_dt($dateStr) {
 }
 
 // --- DATABASE ---
-$dbDir = dirname(__DIR__) . '/db_data';
+$dbDir = __DIR__ . '/../../db_data';
 $dbFile = $dbDir . '/mikhmon_stats.db';
 $db = null;
 if (file_exists($dbFile)) {

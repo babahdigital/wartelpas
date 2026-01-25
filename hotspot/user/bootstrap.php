@@ -86,7 +86,7 @@ if (!function_exists('decrypt')) {
 }
 
 // --- DATABASE ---
-$dbDir = dirname(__DIR__) . '/db_data';
+$dbDir = __DIR__ . '/../../db_data';
 if (!is_dir($dbDir)) mkdir($dbDir, 0755, true);
 $dbFile = $dbDir . '/mikhmon_stats.db';
 

@@ -203,7 +203,7 @@ function gen_user($profile, $comment_ref, $orig_user = '') {
 }
 
 function log_ready_skip_users($message) {
-  $logDir = dirname(__DIR__) . '/logs';
+  $logDir = __DIR__ . '/../../logs';
   if (!is_dir($logDir)) {
     @mkdir($logDir, 0755, true);
   }
