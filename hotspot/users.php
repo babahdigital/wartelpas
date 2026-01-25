@@ -5,6 +5,19 @@ require __DIR__ . '/user/data.php';
 require __DIR__ . '/user/actions.php';
 require __DIR__ . '/user/render.php';
 __halt_compiler();
+<?php
+require __DIR__ . '/user/bootstrap.php';
+require __DIR__ . '/user/helpers.php';
+require __DIR__ . '/user/data.php';
+require __DIR__ . '/user/actions.php';
+require __DIR__ . '/user/render.php';
+session_start();
+if (!isset($_SESSION["mikhmon"]) || !isset($_GET['session'])) {
+  header("Location:../admin.php?id=login");
+  exit();
+}
+// Additional code continues here...
+// Your existing code continues...
 
 session_start();
 if (!isset($_SESSION["mikhmon"]) || !isset($_GET['session'])) {
