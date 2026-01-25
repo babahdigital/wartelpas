@@ -16,6 +16,10 @@ if ($session === '' || $user === '') {
 }
 
 include('../include/config.php');
+if ($session === '' || !isset($data[$session])) {
+    echo "Session tidak valid.";
+    exit;
+}
 include('../include/readcfg.php');
 include_once('../lib/routeros_api.class.php');
 include_once('../lib/formatbytesbites.php');
@@ -305,13 +309,14 @@ foreach ($relogin_events as $ev) {
 }
 $relogin_events = $relogin_events_filtered;
 $relogin_date_label = $date_key ? format_dmy_date($date_key) : '';
+$relogin_date_label_safe = htmlspecialchars($relogin_date_label, ENT_QUOTES);
 
 $detail_rows = [
-    ['User', htmlspecialchars($user)],
-    ['Blok', htmlspecialchars($blok_label !== '' ? $blok_label : '-')],
-    ['Profile', htmlspecialchars($profile_label !== '' ? $profile_label : '-')],
-    ['IP', htmlspecialchars($ip_addr ?: '-')],
-    ['MAC', htmlspecialchars($mac_addr ?: '-')],
+    ['User', $user],
+    ['Blok', $blok_label !== '' ? $blok_label : '-'],
+    ['Profile', $profile_label !== '' ? $profile_label : '-'],
+    ['IP', $ip_addr ?: '-'],
+    ['MAC', $mac_addr ?: '-'],
     ['Status', $is_active ? 'ONLINE' : (strtoupper((string)$last_status) ?: 'OFFLINE')],
     ['First Login', format_dmy($first_login_real)],
     ['Login', format_dmy($login_time_real)],
@@ -320,6 +325,8 @@ $detail_rows = [
     ['Uptime', $uptime ?: '0s'],
     ['Total Uptime', seconds_to_uptime($total_uptime_sec)]
 ];
+
+$API->disconnect();
 ?>
 <!DOCTYPE html>
 <html>
@@ -341,7 +348,6 @@ $detail_rows = [
 <body>
     <div class="toolbar">
         <button class="btn" onclick="window.print()">Print / Download PDF</button>
-        <button class="btn" onclick="window.print()">Download PDF</button>
     </div>
 
     <h3>Detail User</h3>
@@ -353,13 +359,13 @@ $detail_rows = [
         </thead>
         <tbody>
             <?php foreach ($detail_rows as $row): ?>
-                <tr><td><?= $row[0] ?></td><td><?= $row[1] ?></td></tr>
+                <tr><td><?= htmlspecialchars($row[0], ENT_QUOTES) ?></td><td><?= htmlspecialchars((string)$row[1], ENT_QUOTES) ?></td></tr>
             <?php endforeach; ?>
         </tbody>
     </table>
 
     <?php if (count($relogin_events) > 1): ?>
-        <div class="section-title">Rincian Relogin<?= $relogin_date_label ? ' (Tanggal ' . $relogin_date_label . ')' : '' ?></div>
+        <div class="section-title">Rincian Relogin<?= $relogin_date_label_safe ? ' (Tanggal ' . $relogin_date_label_safe . ')' : '' ?></div>
         <table>
             <thead>
                 <tr><th>#</th><th>Login</th><th>Logout</th></tr>
