@@ -555,11 +555,19 @@ if ($load == "hotspot") {
         </div>
         <script type="text/javascript">
             if(typeof Highcharts !== 'undefined') {
+                var catLen = <?= count($categories) ?>;
                 Highcharts.chart('chart_income_stat', {
                     chart: { backgroundColor: 'transparent', plotBackgroundColor: 'transparent', type: 'area', spacingBottom: 0, reflow: true, zoomType: 'xy', height: null, borderWidth: 0, spacing: [10, 0, 10, 0] },
                     title: { text: null },
                     xAxis: {
                         categories: <?= $jsonCategories ?>,
+                        min: 0,
+                        max: catLen > 0 ? (catLen - 1) : null,
+                        startOnTick: false,
+                        endOnTick: false,
+                        minPadding: 0,
+                        maxPadding: 0,
+                        tickmarkPlacement: 'on',
                         crosshair: false,
                         lineWidth: 0,
                         tickLength: 0,
