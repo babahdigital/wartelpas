@@ -783,11 +783,11 @@ if ($load == "logs") {
         elseif ($statusLabel === 'INVALID') $statusColor = '#9b59b6';
 
         echo "<tr>";
-        echo "<td style='color:#8898aa; font-family:monospace;'>" . substr($log['time_str'], 11, 5) . "</td>";
-        echo "<td style='font-weight:600; font-size:12px; overflow:hidden; text-overflow:ellipsis; text-transform:uppercase;' title='" . htmlspecialchars($log['username']) . "'>" . strtoupper($log['username']) . "</td>";
-        echo "<td style='text-align:center;'><span style='background:#333; padding:2px 6px; border-radius:3px; font-size:10px;'>" . $blokDisplay . "</span></td>";
-        echo "<td style='text-align:center;'><span style='background:rgba(255,255,255,0.06); color:" . $statusColor . "; padding:2px 6px; border-radius:3px; font-size:10px; font-weight:600;'>" . $statusLabel . "</span></td>";
-        echo "<td style='text-align:right; font-family:monospace; font-size:12px; font-weight:bold; color:#9ad0ec; padding-right:30px;'$titleAttr>" . $uptimeDisplay . "</td>";
+        echo "<td style='width:12%; color:#8898aa; font-family:\"SF Mono\", \"Roboto Mono\", monospace; font-size:13px;'>" . substr($log['time_str'], 11, 5) . "</td>";
+        echo "<td style='width:28%; font-weight:600; font-size:12.5px; overflow:hidden; text-overflow:ellipsis; text-transform:uppercase; max-width:180px;' title='" . htmlspecialchars($log['username']) . "'>" . strtoupper($log['username']) . "</td>";
+        echo "<td style='width:12%; text-align:center;'><span style='background:#2a2d35; padding:4px 8px; border-radius:5px; font-size:11px; font-weight:700; color:#fff; display:inline-block; min-width:28px;'>" . $blokDisplay . "</span></td>";
+        echo "<td style='width:18%; text-align:center;'><span style='background:rgba(255,255,255,0.06); color:" . $statusColor . "; padding:4px 8px; border-radius:5px; font-size:10.5px; font-weight:600; display:inline-block; min-width:65px;'>" . $statusLabel . "</span></td>";
+        echo "<td style='width:30%; text-align:right; font-family:monospace; font-size:13px; font-weight:bold; color:#9ad0ec; padding-right:25px;'$titleAttr>" . $uptimeDisplay . "</td>";
         echo "</tr>";
         $count++;
     }

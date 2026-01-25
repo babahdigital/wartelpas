@@ -229,15 +229,18 @@ body {
 .table-container {
     height: 100%;
     overflow-y: auto;
-    overflow-x: hidden;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     width: 100%;
     flex: 1;
 }
 
 .table-container table {
     width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: auto;
+    min-width: 600px;
 }
 
 .table-container thead {
@@ -262,30 +265,53 @@ body {
 /* Enhanced column widths */
 .table-container th:nth-child(1),
 .table-container td:nth-child(1) {
-    width: 18%;
-    min-width: 70px;
-    padding-left: 20px;
+    width: 12% !important;
+    min-width: 65px;
+    padding-left: 15px;
 }
 
 .table-container th:nth-child(2),
 .table-container td:nth-child(2) {
-    width: 37%;
-    min-width: 140px;
+    width: 28% !important;
+    min-width: 120px;
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .table-container th:nth-child(3),
 .table-container td:nth-child(3) {
-    width: 15%;
-    min-width: 60px;
+    width: 12% !important;
+    min-width: 55px;
     text-align: center;
 }
 
 .table-container th:nth-child(4),
 .table-container td:nth-child(4) {
-    width: 30%;
-    min-width: 90px;
+    width: 18% !important;
+    min-width: 85px;
+    text-align: center;
+}
+
+.table-container th:nth-child(5),
+.table-container td:nth-child(5) {
+    width: 30% !important;
+    min-width: 100px;
     text-align: right;
-    padding-right: 20px;
+    padding-right: 25px;
+}
+
+@media screen and (min-resolution: 120dpi) {
+    .table-container td {
+        font-size: 13px !important;
+        padding: 14px 8px !important;
+    }
+
+    .table-container th {
+        font-size: 11px !important;
+        padding: 14px 8px !important;
+    }
 }
 
 /* Table row styling */

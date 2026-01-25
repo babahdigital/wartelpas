@@ -184,16 +184,16 @@ else {
             var m = $(this).data("month");
             if (m) changeMonth(m);
         });
+        var resizeTimer;
         $(window).on('resize', function() {
-            if (window.Highcharts && window.Highcharts.charts) {
-                setTimeout(function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function() {
+                if (window.Highcharts && window.Highcharts.charts) {
                     window.Highcharts.charts.forEach(function(chart) {
-                        if (chart && chart.reflow) {
-                            chart.reflow();
-                        }
+                        if (chart && chart.reflow) chart.reflow();
                     });
-                }, 150);
-            }
+                }
+            }, 250);
         });
     });
 </script>
@@ -261,15 +261,15 @@ for ($i = 5; $i >= 0; $i--) {
                     <table>
                         <thead>
                             <tr>
-                                <th style="width:80px;">JAM</th>
-                                <th style="width:140px;">USER</th>
-                                <th style="text-align:center; width:70px;">BLOK</th>
-                                <th style="text-align:center; width:90px;">STATUS</th>
-                                <th style="text-align:right; width:110px; padding-right:30px;">UPTIME</th>
+                                <th>JAM</th>
+                                <th>USER</th>
+                                <th style="text-align:center;">BLOK</th>
+                                <th style="text-align:center;">STATUS</th>
+                                <th style="text-align:right; padding-right:25px;">UPTIME</th>
                             </tr>
                         </thead>
                         <tbody id="tabel_riwayat">
-                            <tr><td colspan="4" class="text-center" style="padding:30px; color:#8898aa; font-style:italic;">
+                            <tr><td colspan="5" class="text-center" style="padding:30px; color:#8898aa; font-style:italic;">
                                 <i class="fa fa-clock-o" style="margin-right:8px;"></i>Memuat transaksi...
                             </td></tr>
                         </tbody>
