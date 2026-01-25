@@ -2,7 +2,27 @@
 // Restore SQLite DB from backup (protected)
 ini_set('display_errors', 0);
 error_reporting(0);
-header('Content-Type: text/html; charset=utf-8');
+// Mode respons
+$is_ajax = (isset($_GET['ajax']) && $_GET['ajax'] == '1') ||
+    (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower((string)$_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') ||
+    (isset($_SERVER['HTTP_ACCEPT']) && stripos((string)$_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
+
+if ($is_ajax) {
+    header('Content-Type: application/json; charset=utf-8');
+} else {
+    header('Content-Type: text/html; charset=utf-8');
+}
+
+function respond_restore($ok, $message, $data = [], $code = 200) {
+    global $is_ajax;
+    http_response_code($code);
+    if ($is_ajax) {
+        echo json_encode(array_merge(['ok' => $ok, 'message' => $message], $data));
+    } else {
+        echo $message;
+    }
+    exit;
+}
 
 // Konfigurasi terpusat
 $envFile = dirname(__DIR__) . '/include/env.php';
@@ -18,9 +38,7 @@ if ($key === '' && isset($_SERVER['HTTP_X_BACKUP_KEY'])) {
     $key = (string)$_SERVER['HTTP_X_BACKUP_KEY'];
 }
 if (!hash_equals($secret, (string)$key)) {
-    http_response_code(403);
-    echo "Forbidden";
-    exit;
+    respond_restore(false, 'Forbidden', [], 403);
 }
 
 $allowedIpList = isset($env['backup']['allowed_ips']) && is_array($env['backup']['allowed_ips'])
@@ -29,9 +47,7 @@ $allowedIpList = isset($env['backup']['allowed_ips']) && is_array($env['backup']
 if (!empty($_SERVER['REMOTE_ADDR']) && !empty($allowedIpList)) {
     $clientIp = (string)$_SERVER['REMOTE_ADDR'];
     if (!in_array($clientIp, $allowedIpList, true)) {
-        http_response_code(403);
-        echo "IP not allowed";
-        exit;
+        respond_restore(false, 'IP not allowed', [], 403);
     }
 }
 
@@ -51,9 +67,7 @@ $hits = array_values(array_filter($hits, function($t) use ($now, $rateWindow) {
     return is_int($t) && ($now - $t) <= $rateWindow;
 }));
 if (count($hits) >= $rateLimit) {
-    http_response_code(429);
-    echo "Rate limited";
-    exit;
+    respond_restore(false, 'Rate limited', [], 429);
 }
 $hits[] = $now;
 @file_put_contents($rateFile, json_encode($hits));
@@ -85,8 +99,7 @@ if (empty($files) && $rcloneEnable && $rcloneDownload && $rcloneBin !== '' && $r
     }
 }
 if (empty($files)) {
-    echo "No backup files";
-    exit;
+    respond_restore(false, 'No backup files', [], 404);
 }
 
 rsort($files);
@@ -95,24 +108,20 @@ $target = basename((string)$target);
 $src = $backupDir . '/' . $target;
 
 if (!file_exists($src)) {
-    echo "Backup not found";
-    exit;
+    respond_restore(false, 'Backup not found', [], 404);
 }
 
 if (!is_writable(dirname($dbFile))) {
-    echo "DB folder not writable";
-    exit;
+    respond_restore(false, 'DB folder not writable', [], 500);
 }
 
 if (!is_readable($src)) {
-    echo "Backup not readable";
-    exit;
+    respond_restore(false, 'Backup not readable', [], 500);
 }
 
 $tmpRestore = $dbFile . '.restore-tmp';
 if (!copy($src, $tmpRestore)) {
-    echo "Restore failed";
-    exit;
+    respond_restore(false, 'Restore failed', [], 500);
 }
 
 try {
@@ -125,20 +134,24 @@ try {
     $db->exec('VACUUM;');
 } catch (Exception $e) {
     @unlink($tmpRestore);
-    echo "Restore integrity failed: " . htmlspecialchars($e->getMessage());
-    exit;
+    respond_restore(false, 'Restore integrity failed: ' . htmlspecialchars($e->getMessage()), [], 500);
 }
 
 if (!@rename($tmpRestore, $dbFile)) {
     @unlink($tmpRestore);
-    echo "Failed to finalize restore";
-    exit;
+    respond_restore(false, 'Failed to finalize restore', [], 500);
 }
 
 $logFile = dirname(__DIR__) . '/logs/restore_db.log';
 $logLine = date('Y-m-d H:i:s') . "\t" . $target . "\t" . ($downloaded ? 'From Cloud' : 'Local') . "\n";
 @file_put_contents($logFile, $logLine, FILE_APPEND);
 
+if ($is_ajax) {
+    respond_restore(true, 'Restore OK', [
+        'file' => $target,
+        'source' => $downloaded ? 'cloud' : 'local'
+    ], 200);
+}
 echo "Restore OK: " . htmlspecialchars($target);
 if ($downloaded) {
     echo " (Restored from Google Drive)";

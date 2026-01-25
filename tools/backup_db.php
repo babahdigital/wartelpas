@@ -2,7 +2,27 @@
 // Simple DB backup endpoint (protected)
 ini_set('display_errors', 0);
 error_reporting(0);
-header('Content-Type: text/plain; charset=utf-8');
+// Mode respons
+$is_ajax = (isset($_GET['ajax']) && $_GET['ajax'] == '1') ||
+    (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower((string)$_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') ||
+    (isset($_SERVER['HTTP_ACCEPT']) && stripos((string)$_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
+
+if ($is_ajax) {
+    header('Content-Type: application/json; charset=utf-8');
+} else {
+    header('Content-Type: text/plain; charset=utf-8');
+}
+
+function respond_backup($ok, $message, $data = [], $code = 200) {
+    global $is_ajax;
+    http_response_code($code);
+    if ($is_ajax) {
+        echo json_encode(array_merge(['ok' => $ok, 'message' => $message], $data));
+    } else {
+        echo $message;
+    }
+    exit;
+}
 
 // Konfigurasi terpusat
 $envFile = dirname(__DIR__) . '/include/env.php';
@@ -18,9 +38,7 @@ if ($key === '' && isset($_SERVER['HTTP_X_BACKUP_KEY'])) {
     $key = (string)$_SERVER['HTTP_X_BACKUP_KEY'];
 }
 if (!hash_equals($secret, (string)$key)) {
-    http_response_code(403);
-    echo "Forbidden";
-    exit;
+    respond_backup(false, 'Forbidden', [], 403);
 }
 
 $allowedIpList = isset($env['backup']['allowed_ips']) && is_array($env['backup']['allowed_ips'])
@@ -29,9 +47,7 @@ $allowedIpList = isset($env['backup']['allowed_ips']) && is_array($env['backup']
 if (!empty($_SERVER['REMOTE_ADDR']) && !empty($allowedIpList)) {
     $clientIp = (string)$_SERVER['REMOTE_ADDR'];
     if (!in_array($clientIp, $allowedIpList, true)) {
-        http_response_code(403);
-        echo "IP not allowed";
-        exit;
+        respond_backup(false, 'IP not allowed', [], 403);
     }
 }
 
@@ -51,9 +67,7 @@ $hits = array_values(array_filter($hits, function($t) use ($now, $rateWindow) {
     return is_int($t) && ($now - $t) <= $rateWindow;
 }));
 if (count($hits) >= $rateLimit) {
-    http_response_code(429);
-    echo "Rate limited";
-    exit;
+    respond_backup(false, 'Rate limited', [], 429);
 }
 $hits[] = $now;
 @file_put_contents($rateFile, json_encode($hits));
@@ -61,9 +75,7 @@ $hits[] = $now;
 $root = dirname(__DIR__);
 $dbFile = $root . '/db_data/mikhmon_stats.db';
 if (!file_exists($dbFile)) {
-    http_response_code(404);
-    echo "DB not found";
-    exit;
+    respond_backup(false, 'DB not found', [], 404);
 }
 
 $backupDir = $root . '/db_data/backups';
@@ -71,9 +83,7 @@ if (!is_dir($backupDir)) {
     @mkdir($backupDir, 0777, true);
 }
 if (!is_dir($backupDir) || !is_writable($backupDir)) {
-    http_response_code(500);
-    echo "Backup dir not writable";
-    exit;
+    respond_backup(false, 'Backup dir not writable', [], 500);
 }
 
 $keepDays = isset($_GET['keep_days']) ? (int)$_GET['keep_days'] : (int)($env['backup']['keep_days'] ?? 14);
@@ -88,9 +98,7 @@ $tempFile = $backupFile . '.tmp';
 $minDbSize = isset($env['backup']['min_db_size']) ? (int)$env['backup']['min_db_size'] : (1024 * 64);
 $srcSize = @filesize($dbFile);
 if (!$srcSize || $srcSize < $minDbSize) {
-    http_response_code(500);
-    echo "Source DB too small or unreadable";
-    exit;
+    respond_backup(false, 'Source DB too small or unreadable', [], 500);
 }
 
 $ok = false;
@@ -111,17 +119,13 @@ try {
 }
 
 if (!$ok || !file_exists($tempFile)) {
-    http_response_code(500);
-    echo $message ?: 'Backup failed';
-    exit;
+    respond_backup(false, $message ?: 'Backup failed', [], 500);
 }
 
 $tmpSize = @filesize($tempFile);
 if (!$tmpSize || $tmpSize < ($srcSize * 0.8)) {
     @unlink($tempFile);
-    http_response_code(500);
-    echo "Backup size invalid";
-    exit;
+    respond_backup(false, 'Backup size invalid', [], 500);
 }
 
 try {
@@ -135,16 +139,12 @@ try {
     }
 } catch (Exception $e) {
     @unlink($tempFile);
-    http_response_code(500);
-    echo "Backup integrity failed";
-    exit;
+    respond_backup(false, 'Backup integrity failed', [], 500);
 }
 
 if (!@rename($tempFile, $backupFile)) {
     @unlink($tempFile);
-    http_response_code(500);
-    echo "Failed to finalize backup";
-    exit;
+    respond_backup(false, 'Failed to finalize backup', [], 500);
 }
 
 // Sync ke Google Drive via rclone (opsional)
@@ -198,6 +198,13 @@ foreach ($sidecars as $f) {
     if (@unlink($f)) $deleted++;
 }
 
+if ($is_ajax) {
+    respond_backup(true, 'Backup success', [
+        'backup' => basename($backupFile),
+        'cloud' => $cloudStatus,
+        'deleted' => $deleted
+    ], 200);
+}
 echo "OK\n";
 echo "Backup: " . basename($backupFile) . "\n";
 echo "Cloud: " . $cloudStatus . "\n";
