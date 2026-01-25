@@ -664,8 +664,25 @@ if ($load == "logs") {
         try {
             $db = new PDO('sqlite:' . $dbFile);
             if (table_exists($db, 'sales_history')) {
-                $resSales = $db->query("SELECT full_raw_data FROM sales_history ORDER BY id DESC LIMIT 1500");
-                if ($resSales) { foreach($resSales as $row) { $rawDataMerged[] = $row['full_raw_data']; } }
+                $monthLike = sprintf('%04d-%02d%%', (int)$filterYear, (int)$filterMonth);
+                $raw1 = sprintf('%02d/%%/%04d', (int)$filterMonth, (int)$filterYear);
+                $raw2 = sprintf('%%/%02d/%04d', (int)$filterMonth, (int)$filterYear);
+                $raw3 = date('M', mktime(0, 0, 0, (int)$filterMonth, 1, (int)$filterYear)) . '/%/' . (int)$filterYear;
+                try {
+                    $stmtSales = $db->prepare("SELECT full_raw_data FROM sales_history WHERE (sale_date LIKE :monthLike OR raw_date LIKE :raw1 OR raw_date LIKE :raw2 OR raw_date LIKE :raw3) ORDER BY id DESC LIMIT 1000");
+                    $stmtSales->execute([
+                        ':monthLike' => $monthLike,
+                        ':raw1' => $raw1,
+                        ':raw2' => $raw2,
+                        ':raw3' => $raw3
+                    ]);
+                    foreach ($stmtSales->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                        $rawDataMerged[] = $row['full_raw_data'];
+                    }
+                } catch (Exception $e) {
+                    $resSales = $db->query("SELECT full_raw_data FROM sales_history ORDER BY id DESC LIMIT 1000");
+                    if ($resSales) { foreach($resSales as $row) { $rawDataMerged[] = $row['full_raw_data']; } }
+                }
             }
             if (table_exists($db, 'live_sales')) {
                 try {
