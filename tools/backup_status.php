@@ -4,12 +4,29 @@ ini_set('display_errors', 0);
 error_reporting(0);
 header('Content-Type: application/json; charset=utf-8');
 
-$secret = 'WartelpasSecureKey';
+// Konfigurasi terpusat
+$envFile = dirname(__DIR__) . '/include/env.php';
+if (is_file($envFile)) {
+    require_once $envFile;
+}
+$secret = isset($env['backup']['secret']) ? (string)$env['backup']['secret'] : 'WartelpasSecureKey';
 $key = $_GET['key'] ?? '';
-if ($key !== $secret) {
+if (!hash_equals($secret, (string)$key)) {
     http_response_code(403);
     echo json_encode(['ok' => false, 'message' => 'Forbidden']);
     exit;
+}
+
+$allowedIpList = isset($env['backup']['allowed_ips']) && is_array($env['backup']['allowed_ips'])
+    ? $env['backup']['allowed_ips']
+    : ['127.0.0.1', '::1', '10.10.83.1', '172.19.0.1'];
+if (!empty($_SERVER['REMOTE_ADDR']) && !empty($allowedIpList)) {
+    $clientIp = (string)$_SERVER['REMOTE_ADDR'];
+    if (!in_array($clientIp, $allowedIpList, true)) {
+        http_response_code(403);
+        echo json_encode(['ok' => false, 'message' => 'IP not allowed']);
+        exit;
+    }
 }
 
 $root = dirname(__DIR__);

@@ -4,7 +4,12 @@ ini_set('display_errors', 0);
 error_reporting(0);
 header('Content-Type: text/plain; charset=utf-8');
 
-$secret = 'WartelpasSecureKey';
+// Konfigurasi terpusat
+$envFile = dirname(__DIR__) . '/include/env.php';
+if (is_file($envFile)) {
+    require_once $envFile;
+}
+$secret = isset($env['backup']['secret']) ? (string)$env['backup']['secret'] : 'WartelpasSecureKey';
 $key = $_GET['key'] ?? '';
 if ($key === '' && isset($_POST['key'])) {
     $key = (string)$_POST['key'];
@@ -18,7 +23,9 @@ if (!hash_equals($secret, (string)$key)) {
     exit;
 }
 
-$allowedIpList = ['127.0.0.1', '::1', '10.10.83.1', '172.19.0.1'];
+$allowedIpList = isset($env['backup']['allowed_ips']) && is_array($env['backup']['allowed_ips'])
+    ? $env['backup']['allowed_ips']
+    : ['127.0.0.1', '::1', '10.10.83.1', '172.19.0.1'];
 if (!empty($_SERVER['REMOTE_ADDR']) && !empty($allowedIpList)) {
     $clientIp = (string)$_SERVER['REMOTE_ADDR'];
     if (!in_array($clientIp, $allowedIpList, true)) {
@@ -29,8 +36,8 @@ if (!empty($_SERVER['REMOTE_ADDR']) && !empty($allowedIpList)) {
 }
 
 $rateFile = sys_get_temp_dir() . '/backup_db.rate';
-$rateWindow = 300;
-$rateLimit = 1;
+$rateWindow = isset($env['backup']['rate_window']) ? (int)$env['backup']['rate_window'] : 300;
+$rateLimit = isset($env['backup']['rate_limit']) ? (int)$env['backup']['rate_limit'] : 1;
 $now = time();
 $hits = [];
 if (is_file($rateFile)) {
@@ -69,8 +76,8 @@ if (!is_dir($backupDir) || !is_writable($backupDir)) {
     exit;
 }
 
-$keepDays = isset($_GET['keep_days']) ? (int)$_GET['keep_days'] : 14;
-$keepCount = isset($_GET['keep_count']) ? (int)$_GET['keep_count'] : 30;
+$keepDays = isset($_GET['keep_days']) ? (int)$_GET['keep_days'] : (int)($env['backup']['keep_days'] ?? 14);
+$keepCount = isset($_GET['keep_count']) ? (int)$_GET['keep_count'] : (int)($env['backup']['keep_count'] ?? 30);
 if ($keepDays <= 0) $keepDays = 14;
 if ($keepCount <= 0) $keepCount = 30;
 
@@ -78,8 +85,9 @@ $stamp = date('Ymd_His');
 $backupFile = $backupDir . '/mikhmon_stats_' . $stamp . '.db';
 $tempFile = $backupFile . '.tmp';
 
+$minDbSize = isset($env['backup']['min_db_size']) ? (int)$env['backup']['min_db_size'] : (1024 * 64);
 $srcSize = @filesize($dbFile);
-if (!$srcSize || $srcSize < 1024 * 64) {
+if (!$srcSize || $srcSize < $minDbSize) {
     http_response_code(500);
     echo "Source DB too small or unreadable";
     exit;
@@ -139,8 +147,20 @@ if (!@rename($tempFile, $backupFile)) {
     exit;
 }
 
+// Sync ke Google Drive via rclone (opsional)
+$cloudStatus = 'Skipped';
+$rcloneEnable = isset($env['rclone']['enable']) ? (bool)$env['rclone']['enable'] : false;
+$rcloneUpload = isset($env['rclone']['upload']) ? (bool)$env['rclone']['upload'] : false;
+$rcloneBin = isset($env['rclone']['bin']) ? (string)$env['rclone']['bin'] : '';
+$rcloneRemote = isset($env['rclone']['remote']) ? (string)$env['rclone']['remote'] : '';
+if ($rcloneEnable && $rcloneUpload && $rcloneBin !== '' && $rcloneRemote !== '' && file_exists($rcloneBin)) {
+    $cmd = sprintf('%s copyto "%s" "%s/%s" 2>&1', $rcloneBin, $backupFile, $rcloneRemote, basename($backupFile));
+    exec($cmd, $output, $returnVar);
+    $cloudStatus = ($returnVar === 0) ? 'Uploaded to Drive' : 'Upload Failed';
+}
+
 $logFile = $root . '/logs/backup_db.log';
-$logLine = date('Y-m-d H:i:s') . "\t" . basename($backupFile) . "\t" . ($tmpSize ?? 0) . "\n";
+$logLine = date('Y-m-d H:i:s') . "\t" . basename($backupFile) . "\t" . ($tmpSize ?? 0) . "\t" . $cloudStatus . "\n";
 @file_put_contents($logFile, $logLine, FILE_APPEND);
 
 // Cleanup old backups by days
@@ -180,4 +200,5 @@ foreach ($sidecars as $f) {
 
 echo "OK\n";
 echo "Backup: " . basename($backupFile) . "\n";
+echo "Cloud: " . $cloudStatus . "\n";
 echo "Deleted: " . $deleted . "\n";
