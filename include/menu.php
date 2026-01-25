@@ -547,12 +547,6 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                 </a>
             </li>
 
-            <li class="nav-item">
-                <a class="nav-link <?= $susersl; ?>" href="./?hotspot=users&profile=all&session=<?= $session; ?>">
-                    <i class="fa fa-list"></i> <?= $_user_list ?>
-                </a>
-            </li>
-
             <li class="nav-item" onclick="toggleMobileSub(this)">
                 <a class="nav-link <?= trim($susersl . ' ' . $sgenuser . ' ' . $suserprofiles . ' ' . $suserprof); ?>" href="javascript:void(0)">
                     <i class="fa fa-users"></i> <?= $_users ?> <i class="fa fa-caret-down" style="margin-left:auto;font-size:10px;"></i>
