@@ -430,6 +430,9 @@ foreach($all_users as $u) {
     $comment = $u['comment'] ?? '';
     $disabled = $u['disabled'] ?? 'false';
     $is_active = isset($activeMap[$name]);
+    if ($name !== '' && isset($retur_ref_map[strtolower($name)])) {
+      continue;
+    }
 
     $f_ip = $is_active ? ($activeMap[$name]['address'] ?? '-') : '-';
     $f_mac = $is_active ? ($activeMap[$name]['mac-address'] ?? '-') : '-';
@@ -637,6 +640,9 @@ foreach($all_users as $u) {
     $retur_hist = null;
     if ($is_retur) {
       $retur_ref_user = extract_retur_user_from_ref($comment);
+      if ($retur_ref_user === '' && $hist && !empty($hist['raw_comment'])) {
+        $retur_ref_user = extract_retur_user_from_ref($hist['raw_comment']);
+      }
       if ($retur_ref_user != '') {
         $retur_hist = get_user_history($retur_ref_user);
       }
@@ -860,6 +866,7 @@ foreach($all_users as $u) {
         'is_disabled' => ($disabled === 'true') ? 1 : 0,
         'first_login' => $first_login_disp,
         'retur_ref' => $is_retur ? extract_retur_ref($comment) : '',
+        'retur_from' => $retur_ref_user,
         'uptime' => $uptime,
         'bytes' => $bytes,
         'status' => $status,
@@ -986,14 +993,13 @@ if ($is_ajax) {
             <?php if(!empty($u['relogin'])): ?><span class="status-badge st-relogin clickable" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'], ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'], ENT_QUOTES) ?>" style="margin-left:6px;">RELOGIN</span><?php endif; ?>
           </div>
           <div style="font-size:11px; color:var(--txt-muted); max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:5px;" title="<?= htmlspecialchars($u['comment']) ?>">
-            <?php $retur_from = extract_retur_user_from_ref($u['comment'] ?? '') ?: ($u['retur_ref'] ?? ''); ?>
-            <?php if ($retur_from !== ''): ?>
-              Retur dari: <?= htmlspecialchars($retur_from) ?>
+            <?php if (($u['status'] ?? '') === 'RETUR'): ?>
+              Retur dari: <?= htmlspecialchars($u['retur_from'] ?? '-') ?>
             <?php else: ?>
               First login: <?= formatDateIndo($u['first_login'] ?? '-') ?>
             <?php endif; ?>
           </div>
-          <?php if (!empty($u['retur_ref'])): ?>
+          <?php if (!empty($u['retur_ref']) && ($u['status'] ?? '') !== 'RETUR'): ?>
             <div style="font-size:10px;color:#b2bec3;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<?= htmlspecialchars($u['retur_ref']) ?>">
               Retur dari: <?= htmlspecialchars($u['retur_ref']) ?>
             </div>
