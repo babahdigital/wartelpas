@@ -138,6 +138,14 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - Kriteria rusak disempurnakan menggunakan **akumulasi uptime** dari `login_events` + **minimum relogin >= 3**.
 - Print rusak menampilkan tabel relogin dengan rentang waktu yang selaras dengan perhitungan.
 
+### 2.17.1 Penyempurnaan Users & Print (2026-01-25)
+- **Deteksi profil 10/30** ditingkatkan dengan toleransi uptime (9.5–11 menit, 29–31 menit).
+- **Tampilan profil** di `users.php` memakai fallback `profile_kind` bila kolom profile kosong.
+- **Optimasi simpan DB**: update `login_history` hanya saat ada perubahan signifikan (status/bytes/uptime/waktu) untuk mengurangi I/O.
+- **Logout 00:00:00** pada status TERPAKAI diperbaiki (fallback `updated_at` atau login + uptime).
+- **Keamanan batch delete**: blok kosong diblokir sebelum proses hapus massal.
+- **Print Used/Detail**: fallback uptime/bytes dari DB agar laporan tidak kosong ketika data RouterOS sudah hilang.
+
 ### 2.18 Perbaikan Rekap Penjualan (Dedup & Non‑Wartel)
 - **report/print_rekap.php** dan **report/selling.php**: deduplikasi penjualan berdasarkan `username + sale_date` agar relogin tidak menghitung ganda.
 - **report/live_ingest.php** dan **report/sync_sales.php**: menolak data tanpa BLOK (non‑Wartel).
