@@ -1232,7 +1232,6 @@ foreach ($rows as $r) {
         }
         $qty = (int)($r['qty'] ?? 0);
         if ($qty <= 0) $qty = 1;
-        $line_price = $price * $qty;
         $comment = format_first_login($r['first_login_real'] ?? '');
         $raw_comment = (string)($r['comment'] ?? '');
         $blok_row = (string)($r['blok_name'] ?? '');
@@ -1240,6 +1239,23 @@ foreach ($rows as $r) {
             continue;
         }
         $profile = $r['profile_snapshot'] ?? ($r['profile'] ?? '-');
+        if ($profile === '' || $profile === '-') {
+            $hint = (string)($r['validity'] ?? '') . ' ' . $raw_comment;
+            if (preg_match('/\b30\s*(menit|m)\b|30menit|profile\s*[:=]?\s*30\b|\b30m\b/i', $hint)) {
+                $profile = '30 Menit';
+                if ($price <= 0) $price = 20000;
+            } elseif (preg_match('/\b10\s*(menit|m)\b|10menit|profile\s*[:=]?\s*10\b|\b10m\b/i', $hint)) {
+                $profile = '10 Menit';
+                if ($price <= 0) $price = 5000;
+            }
+        } elseif ($price <= 0) {
+            if (preg_match('/\b30\s*(menit|m)\b|30menit|\b30m\b/i', $profile)) {
+                $price = 20000;
+            } elseif (preg_match('/\b10\s*(menit|m)\b|10menit|\b10m\b/i', $profile)) {
+                $price = 5000;
+            }
+        }
+        $line_price = $price * $qty;
         if ($profile === '' || $profile === '-') {
             $hint = (string)($r['validity'] ?? '') . ' ' . $raw_comment;
             if (preg_match('/\b30\s*(menit|m)\b|30menit/i', $hint)) {
