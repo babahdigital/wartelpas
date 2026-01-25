@@ -840,7 +840,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         .then(function(resp){ return resp.json(); })
         .then(function(data){
             if (data && data.ok) {
-                notifyLocal('Backup sukses: ' + (data.backup || '-') + ' | Cloud: ' + (data.cloud || '-'), 'success', false);
+                notifyLocal('Backup sukses: ' + (data.backup || '-') + ' <br> Cloud: ' + (data.cloud || '-'), 'success', false);
                 updateBackupStatus();
             } else {
                 notifyLocal('Backup gagal: ' + ((data && data.message) ? data.message : 'Unknown'), 'error', false);
@@ -868,7 +868,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         .then(function(resp){ return resp.json(); })
         .then(function(data){
             if (data && data.ok) {
-                notifyLocal('Restore sukses: ' + (data.file || '-') + ' | Sumber: ' + (data.source || '-'), 'success', false);
+                notifyLocal('Restore sukses: ' + (data.file || '-') + ' <br> Sumber: ' + (data.source || '-'), 'success', false);
                 updateDbStatus();
             } else {
                 notifyLocal('Restore gagal: ' + ((data && data.message) ? data.message : 'Unknown'), 'error', false);
