@@ -1356,27 +1356,42 @@ if (!function_exists('detect_profile_kind_from_comment')) {
   }
 }
 if (!function_exists('detect_profile_kind_unified')) {
-  function detect_profile_kind_unified($profile, $comment, $blok) {
+  function detect_profile_kind_unified($profile, $comment, $blok, $uptime = '') {
     $kind = detect_profile_kind_summary($profile);
-    if ($kind === 'other') {
-      $kind = detect_profile_kind_from_comment($comment);
+    if ($kind !== 'other') return $kind;
+
+    $kind = detect_profile_kind_from_comment($comment);
+    if ($kind !== 'other') return $kind;
+
+    $combined = strtolower(trim((string)$comment . ' ' . (string)$blok));
+    if (preg_match('/\b10\b/', $combined)) return '10';
+    if (preg_match('/\b30\b/', $combined)) return '30';
+    if (preg_match('/\b10\s*(menit|m|min)\b/', $combined)) return '10';
+    if (preg_match('/\b30\s*(menit|m|min)\b/', $combined)) return '30';
+
+    if (!empty($uptime) && $uptime !== '0s') {
+      $sec = uptime_to_seconds($uptime);
+      if ($sec >= 590 && $sec <= 610) return '10';
+      if ($sec >= 1790 && $sec <= 1810) return '30';
     }
-    if ($kind === 'other') {
-      $combined = strtolower(trim((string)$comment . ' ' . (string)$blok));
-      if (preg_match('/\b10\b/', $combined)) return '10';
-      if (preg_match('/\b30\b/', $combined)) return '30';
-      if (preg_match('/\b10\s*(menit|m|min)\b/', $combined)) return '10';
-      if (preg_match('/\b30\s*(menit|m|min)\b/', $combined)) return '30';
-    }
-    return $kind;
+
+    return 'other';
   }
 }
 if (!function_exists('resolve_profile_from_history')) {
-  function resolve_profile_from_history($comment, $validity = '') {
+  function resolve_profile_from_history($comment, $validity = '', $uptime = '') {
     $validity = trim((string)$validity);
     if ($validity !== '') return $validity;
+
     $kind = detect_profile_kind_from_comment($comment);
-    if ($kind !== 'other') return $kind . 'm';
+    if ($kind !== 'other') return $kind . ' Menit';
+
+    if (!empty($uptime) && $uptime !== '0s') {
+      $sec = uptime_to_seconds($uptime);
+      if ($sec >= 590 && $sec <= 610) return '10 Menit';
+      if ($sec >= 1790 && $sec <= 1810) return '30 Menit';
+    }
+
     if (preg_match('/profile\s*[:=]?\s*([a-z0-9]+)/i', (string)$comment, $m)) {
       return $m[1];
     }
@@ -1501,7 +1516,8 @@ if ($db) {
         $uname = $row['username'] ?? '';
         if ($uname === '' || isset($existing[$uname])) continue;
         $comment = (string)($row['raw_comment'] ?? '');
-        $hist_profile = resolve_profile_from_history($comment, $row['validity'] ?? '');
+        $uptime_hist = (string)($row['last_uptime'] ?? '');
+        $hist_profile = resolve_profile_from_history($comment, $row['validity'] ?? '', $uptime_hist);
         $hist_blok = (string)($row['blok_name'] ?? '');
         if ($only_wartel && !is_wartel_client($comment, $hist_blok)) continue;
         $st = strtolower((string)($row['last_status'] ?? ''));
@@ -1858,7 +1874,7 @@ foreach($all_users as $u) {
         }
     }
 
-    $profile_kind = detect_profile_kind_unified($u['profile'] ?? '', $comment, $f_blok);
+    $profile_kind = detect_profile_kind_unified($u['profile'] ?? '', $comment, $f_blok, $uptime);
 
     // Filter blok
     if ($req_comm != '') {
@@ -2009,7 +2025,7 @@ if ($debug_mode) {
     'other' => ['count' => 0, 'ready' => 0, 'online' => 0, 'used' => 0, 'rusak' => 0, 'retur' => 0, 'invalid' => 0]
   ];
   foreach ($display_data as $row) {
-    $kind = $row['profile_kind'] ?? detect_profile_kind_unified($row['profile'] ?? '', $row['comment'] ?? '', $row['blok'] ?? '');
+    $kind = $row['profile_kind'] ?? detect_profile_kind_unified($row['profile'] ?? '', $row['comment'] ?? '', $row['blok'] ?? '', $row['uptime'] ?? '');
     if (!isset($profile_totals[$kind])) {
       $kind = 'other';
     }
