@@ -606,3 +606,51 @@ File diagnostik & migrasi sementara yang sudah tidak diperlukan:
 ---
 
 Jika ada tambahan perubahan atau aturan bisnis baru, dokumentasi ini akan diperbarui.
+
+## 6) Ringkasan Implementasi Terbaru (2026-01-25)
+### 6.1 Dashboard – Tabel Transaksi (Stabil di Zoom)
+- Perbaikan layout tabel transaksi agar kolom UPTIME tidak hilang saat zoom, termasuk:
+  - Penyesuaian proporsi kolom dan padding.
+  - Kontrol scroll horizontal yang adaptif.
+  - Fallback grid untuk kondisi ekstrem (zoom tinggi/mobile).
+- Refactor HTML tabel transaksi agar lebih konsisten dan modular (class CSS khusus kolom).
+- Penambahan indikator “LIVE UPDATE” dan waktu update terakhir.
+
+**File terkait:**
+- [css/dashboard-clean-pro.css](css/dashboard-clean-pro.css)
+- [dashboard/home.php](dashboard/home.php)
+- [dashboard/aload.php](dashboard/aload.php)
+
+### 6.2 Dashboard – Optimasi JS & Status Live Berdasar Jam
+- Optimasi layout tabel pada resize/refresh.
+- Indikator LIVE hanya muncul pada jam 08:00–18:15 WITA (Asia/Makassar).
+
+**File terkait:**
+- [dashboard/home.php](dashboard/home.php)
+
+### 6.3 Backup DB – Hardening Keamanan & Kebersihan File
+- Endpoint backup kini mendukung key via GET/POST/header `X-Backup-Key` dengan `hash_equals`.
+- Allowlist IP ditambahkan (termasuk 10.10.83.1 dan 172.19.0.1).
+- Rate limit sederhana (1 request/5 menit).
+- Logging backup ke logs/backup_db.log.
+- Cleanup file samping WAL/SHM/TMP di folder backup.
+- Whitelist endpoint backup di htaccess untuk MikroTik.
+
+**File terkait:**
+- [tools/backup_db.php](tools/backup_db.php)
+- [htaccess](htaccess)
+
+### 6.4 Restore DB – Hardening & Validasi
+- Endpoint restore kini mendukung key via GET/POST/header `X-Backup-Key` dengan `hash_equals`.
+- Allowlist IP + rate limit.
+- Restore dilakukan via file temp, diverifikasi `quick_check` + `VACUUM`, lalu replace atomik.
+- Logging restore ke logs/restore_db.log.
+
+**File terkait:**
+- [tools/restore_db.php](tools/restore_db.php)
+
+### 6.5 Laporan Penjualan – Rincian Transaksi
+- Kolom “Efektif” di bagian Rincian Transaksi dihapus agar tabel lebih ringkas.
+
+**File terkait:**
+- [report/selling.php](report/selling.php)
