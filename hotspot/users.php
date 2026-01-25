@@ -1973,6 +1973,29 @@ foreach($all_users as $u) {
         'relogin_count' => $relogin_count
     ];
 }
+$profile_totals = [];
+if ($debug_mode) {
+  $profile_totals = [
+    '10' => ['count' => 0, 'ready' => 0, 'online' => 0, 'used' => 0, 'rusak' => 0, 'retur' => 0, 'invalid' => 0],
+    '30' => ['count' => 0, 'ready' => 0, 'online' => 0, 'used' => 0, 'rusak' => 0, 'retur' => 0, 'invalid' => 0],
+    'other' => ['count' => 0, 'ready' => 0, 'online' => 0, 'used' => 0, 'rusak' => 0, 'retur' => 0, 'invalid' => 0]
+  ];
+  foreach ($display_data as $row) {
+    $kind = detect_profile_kind_summary($row['profile'] ?? '');
+    if ($kind === 'other') {
+      $kind = detect_profile_kind_from_comment($row['comment'] ?? '');
+    }
+    if (!isset($profile_totals[$kind])) {
+      $kind = 'other';
+    }
+    $status_key = strtolower($row['status'] ?? 'ready');
+    if ($status_key === 'terpakai') $status_key = 'used';
+    $profile_totals[$kind]['count']++;
+    if (isset($profile_totals[$kind][$status_key])) {
+      $profile_totals[$kind][$status_key]++;
+    }
+  }
+}
 $API->disconnect();
 
 // READY tetap ditampilkan walau ada transaksi pada tanggal filter
@@ -2612,6 +2635,14 @@ if ($debug_mode && !$is_ajax) {
         <?php if ($debug_mode): ?>
           <div style="background:#111827;color:#e5e7eb;padding:10px 14px;border-bottom:1px solid #374151;font-family:monospace;font-size:12px;">
             <div style="margin-bottom:6px;">DEBUG DB/ROUTER (showing first 10 rows)</div>
+            <?php if (!empty($profile_totals)): ?>
+              <div style="margin-bottom:8px;">
+                <strong>Audit Total Profil:</strong>
+                <div>10 Menit: <?= (int)$profile_totals['10']['count'] ?> | ready <?= (int)$profile_totals['10']['ready'] ?> | online <?= (int)$profile_totals['10']['online'] ?> | used <?= (int)$profile_totals['10']['used'] ?> | rusak <?= (int)$profile_totals['10']['rusak'] ?> | retur <?= (int)$profile_totals['10']['retur'] ?></div>
+                <div>30 Menit: <?= (int)$profile_totals['30']['count'] ?> | ready <?= (int)$profile_totals['30']['ready'] ?> | online <?= (int)$profile_totals['30']['online'] ?> | used <?= (int)$profile_totals['30']['used'] ?> | rusak <?= (int)$profile_totals['30']['rusak'] ?> | retur <?= (int)$profile_totals['30']['retur'] ?></div>
+                <div>Other: <?= (int)$profile_totals['other']['count'] ?> | ready <?= (int)$profile_totals['other']['ready'] ?> | online <?= (int)$profile_totals['other']['online'] ?> | used <?= (int)$profile_totals['other']['used'] ?> | rusak <?= (int)$profile_totals['other']['rusak'] ?> | retur <?= (int)$profile_totals['other']['retur'] ?></div>
+              </div>
+            <?php endif; ?>
             <table style="width:100%;border-collapse:collapse;">
               <thead>
                 <tr>
