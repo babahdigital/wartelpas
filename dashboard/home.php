@@ -242,6 +242,7 @@ for ($i = 5; $i >= 0; $i--) {
                                 <th>JAM</th>
                                 <th>USER</th>
                                 <th style="text-align:center;">BLOK</th>
+                                <th style="text-align:center;">STATUS</th>
                                 <th style="text-align:right;">UPTIME</th>
                             </tr>
                         </thead>

@@ -693,7 +693,7 @@ if ($load == "logs") {
             $paket = (isset($parts[7]) && $parts[7] != "") ? trim($parts[7]) : '-';
             $comment = (isset($parts[8])) ? trim($parts[8]) : '';
             $key = $tstamp . '_' . str_pad((string)count($finalLogs), 4, '0', STR_PAD_LEFT);
-            $finalLogs[$key] = [ 'time_str' => date("d/m/Y H:i", $tstamp), 'username' => $username, 'paket' => $paket, 'comment' => $comment, 'price' => $price ];
+            $finalLogs[$key] = [ 'time_str' => date("d/m/Y H:i", $tstamp), 'username' => $username, 'paket' => $paket, 'comment' => $comment, 'price' => $price, 'status' => 'USED' ];
         }
     }
 
@@ -709,13 +709,14 @@ if ($load == "logs") {
         if (!empty($usernames)) {
             $placeholders = implode(',', array_fill(0, count($usernames), '?'));
             try {
-                $stmtLogin = $db->prepare("SELECT username, COALESCE(NULLIF(last_login_real,''), first_login_real) AS last_login_real, last_uptime FROM login_history WHERE username IN ($placeholders)");
+                $stmtLogin = $db->prepare("SELECT username, COALESCE(NULLIF(last_login_real,''), first_login_real) AS last_login_real, last_uptime, last_status FROM login_history WHERE username IN ($placeholders)");
                 $stmtLogin->execute(array_keys($usernames));
                 $loginMap = [];
                 foreach ($stmtLogin->fetchAll(PDO::FETCH_ASSOC) as $row) {
                     $loginMap[$row['username']] = [
                         'last_login_real' => $row['last_login_real'] ?? '',
-                        'last_uptime' => $row['last_uptime'] ?? ''
+                        'last_uptime' => $row['last_uptime'] ?? '',
+                        'last_status' => $row['last_status'] ?? ''
                     ];
                 }
                 $rekeyed = [];
@@ -723,6 +724,7 @@ if ($load == "logs") {
                     $uname = $log['username'] ?? '';
                     $lastLogin = $loginMap[$uname]['last_login_real'] ?? '';
                     $log['uptime'] = $loginMap[$uname]['last_uptime'] ?? '';
+                    $log['status'] = $loginMap[$uname]['last_status'] ?? ($log['status'] ?? 'USED');
                     $ts = $lastLogin ? strtotime($lastLogin) : false;
                     if ($ts !== false) {
                         $log['time_str'] = date('d/m/Y H:i', $ts);
@@ -760,10 +762,19 @@ if ($load == "logs") {
             $uptimeDisplay = formatDTM($uptimeDisplay);
         }
 
+        $statusLabel = strtoupper((string)($log['status'] ?? 'USED'));
+        $statusColor = '#6c757d';
+        if ($statusLabel === 'ONLINE') $statusColor = '#2ecc71';
+        elseif ($statusLabel === 'USED') $statusColor = '#00c0ef';
+        elseif ($statusLabel === 'RUSAK') $statusColor = '#e74c3c';
+        elseif ($statusLabel === 'RETUR') $statusColor = '#f39c12';
+        elseif ($statusLabel === 'INVALID') $statusColor = '#9b59b6';
+
         echo "<tr>";
         echo "<td style='color:#8898aa; font-family:monospace;'>" . substr($log['time_str'], 11, 5) . "</td>";
         echo "<td style='font-weight:600; font-size:12px; overflow:hidden; text-overflow:ellipsis; text-transform:uppercase;' title='" . htmlspecialchars($log['username']) . "'>" . strtoupper($log['username']) . "</td>";
         echo "<td style='text-align:center;'><span style='background:#333; padding:2px 6px; border-radius:3px; font-size:10px;'>" . $blokDisplay . "</span></td>";
+        echo "<td style='text-align:center;'><span style='background:rgba(255,255,255,0.06); color:" . $statusColor . "; padding:2px 6px; border-radius:3px; font-size:10px; font-weight:600;'>" . $statusLabel . "</span></td>";
         echo "<td style='text-align:right; font-family:monospace; font-size:12px; font-weight:bold; color:#9ad0ec;'$titleAttr>" . $uptimeDisplay . "</td>";
         echo "</tr>";
         $count++;
