@@ -2095,9 +2095,9 @@ if ($is_ajax) {
             $can_mark_rusak = ($is_used || $is_invalid) && !$is_online;
           ?>
           <?php if (in_array($req_status, ['all','ready','used','rusak','online','retur'], true)): ?>
-            <?php if ($is_used && in_array($req_status, ['all','used'], true)): ?>
+            <?php if ($is_used): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print.used.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
-            <?php elseif ($is_online && in_array($req_status, ['all','online'], true)): ?>
+            <?php elseif ($is_online): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print.used.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
             <?php elseif ($is_rusak && in_array($req_status, ['all','rusak'], true)): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=rusak&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Rusak"><i class="fa fa-print"></i></button>
