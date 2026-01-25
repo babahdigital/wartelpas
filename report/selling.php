@@ -695,6 +695,141 @@ function build_ghost_hint($selisih_qty, $selisih_rp) {
     return 'Kemungkinan: ' . implode(' + ', $parts) . '.';
 }
 
+function detect_profile_kind_from_label($label) {
+    $low = strtolower((string)$label);
+    if (preg_match('/\b30\s*(menit|m)\b|30menit/', $low)) return '30';
+    if (preg_match('/\b10\s*(menit|m)\b|10menit/', $low)) return '10';
+    return '10';
+}
+
+function parse_reported_users_from_audit($row) {
+    $users = [];
+    $raw = trim((string)($row['audit_username'] ?? ''));
+    if ($raw !== '') {
+        foreach (preg_split('/[\n,]+/', $raw) as $u) {
+            $u = trim((string)$u);
+            if ($u !== '') $users[] = $u;
+        }
+    }
+    if (!empty($row['user_evidence'])) {
+        $ev = json_decode((string)$row['user_evidence'], true);
+        if (is_array($ev) && !empty($ev['users']) && is_array($ev['users'])) {
+            foreach (array_keys($ev['users']) as $u) {
+                $u = trim((string)$u);
+                if ($u !== '') $users[] = $u;
+            }
+        }
+    }
+    $uniq = [];
+    foreach ($users as $u) {
+        $key = strtolower($u);
+        $uniq[$key] = $u;
+    }
+    return array_values($uniq);
+}
+
+function get_ghost_suspects(PDO $db, $audit_date, $audit_blok, array $reported_users = [], $min_bytes = 51200) {
+    $audit_date = trim((string)$audit_date);
+    $audit_blok = normalize_block_name($audit_blok);
+    $reported_map = [];
+    foreach ($reported_users as $u) {
+        $reported_map[strtolower((string)$u)] = true;
+    }
+    $suspects = [];
+    $stmt = $db->prepare("SELECT username, blok_name, raw_comment, validity, last_status, last_bytes, last_uptime, login_time_real, last_login_real, logout_time_real, updated_at, first_ip, first_mac, last_ip, last_mac
+        FROM login_history
+        WHERE username != '' AND (
+            substr(login_time_real,1,10) = :d OR
+            substr(last_login_real,1,10) = :d OR
+            substr(logout_time_real,1,10) = :d OR
+            substr(updated_at,1,10) = :d OR
+            login_date = :d
+        )");
+    $stmt->execute([':d' => $audit_date]);
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $username = trim((string)($row['username'] ?? ''));
+        if ($username === '') continue;
+        if (isset($reported_map[strtolower($username)])) continue;
+        $blok = normalize_block_name($row['blok_name'] ?? '', $row['raw_comment'] ?? '');
+        if ($blok !== $audit_blok) continue;
+
+        $status = strtolower((string)($row['last_status'] ?? ''));
+        if (in_array($status, ['ready','rusak','retur','invalid'], true)) continue;
+
+        $bytes = (int)($row['last_bytes'] ?? 0);
+        $uptime = (string)($row['last_uptime'] ?? '');
+        $has_login_time = !empty($row['login_time_real']) || !empty($row['last_login_real']) || !empty($row['logout_time_real']);
+        $has_usage = $bytes > 0 || ($uptime !== '' && $uptime !== '0s') || $has_login_time;
+        if (!$has_usage) continue; // READY: belum pernah login sama sekali
+
+        if ($bytes < $min_bytes && !$has_login_time && ($uptime === '' || $uptime === '0s')) continue;
+
+        $profile_label = (string)($row['validity'] ?? '');
+        $profile_kind = detect_profile_kind_from_label($profile_label);
+        $score = 0;
+        if ($bytes >= 5 * 1024 * 1024) $score += 30;
+        elseif ($bytes >= 1024 * 1024) $score += 20;
+        elseif ($bytes >= 100 * 1024) $score += 10;
+        if ($status === 'online') $score += 30;
+        elseif ($status === 'terpakai') $score += 20;
+        else $score += 10;
+        $login_time = (string)($row['login_time_real'] ?? $row['last_login_real'] ?? '');
+        if ($login_time !== '') $score += 10;
+        if ($score > 100) $score = 100;
+
+        $suspects[] = [
+            'username' => $username,
+            'profile' => $profile_label !== '' ? $profile_label : ($profile_kind === '30' ? '30 Menit' : '10 Menit'),
+            'profile_kind' => $profile_kind,
+            'bytes' => $bytes,
+            'uptime' => $uptime,
+            'status' => strtoupper($status !== '' ? $status : 'TERPAKAI'),
+            'login_time' => $login_time !== '' ? $login_time : (string)($row['updated_at'] ?? ''),
+            'ip' => (string)($row['first_ip'] ?? $row['last_ip'] ?? '-'),
+            'mac' => (string)($row['first_mac'] ?? $row['last_mac'] ?? '-'),
+            'confidence' => $score,
+            'blok' => $blok
+        ];
+    }
+    usort($suspects, function($a, $b){ return ($b['confidence'] ?? 0) <=> ($a['confidence'] ?? 0); });
+    return $suspects;
+}
+
+// Ghost hunter endpoint
+if (isset($_GET['ghost']) && $_GET['ghost'] == '1') {
+    header('Content-Type: application/json');
+    if (!isset($db) || !($db instanceof PDO)) {
+        echo json_encode(['ok' => false, 'message' => 'DB tidak tersedia.']);
+        exit;
+    }
+    $g_date = trim((string)($_GET['date'] ?? ''));
+    $g_blok = trim((string)($_GET['blok'] ?? ''));
+    if ($g_date === '' || $g_blok === '') {
+        echo json_encode(['ok' => false, 'message' => 'Tanggal atau blok tidak valid.']);
+        exit;
+    }
+    $reported_users = [];
+    if (table_exists($db, 'audit_rekap_manual')) {
+        try {
+            $stmt = $db->prepare("SELECT audit_username, user_evidence FROM audit_rekap_manual WHERE report_date = :d AND UPPER(blok_name) = :b LIMIT 1");
+            $stmt->execute([':d' => $g_date, ':b' => strtoupper($g_blok)]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            if (!empty($row)) {
+                $reported_users = parse_reported_users_from_audit($row);
+            }
+        } catch (Exception $e) {}
+    }
+    $suspects = get_ghost_suspects($db, $g_date, $g_blok, $reported_users, 51200);
+    echo json_encode([
+        'ok' => true,
+        'date' => $g_date,
+        'blok' => normalize_block_name($g_blok),
+        'count' => count($suspects),
+        'ghosts' => $suspects
+    ]);
+    exit;
+}
+
 function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
     $seen_sales = [];
     $seen_user_day = [];
@@ -3173,6 +3308,11 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             <td class="text-center"><small><?= number_format($profile_qty_10,0,',','.') ?></small></td>
                             <td class="text-center"><small><?= number_format($profile_qty_30,0,',','.') ?></small></td>
                             <td class="text-right">
+                                <?php if ($sq < 0): ?>
+                                    <button type="button" class="btn-act" title="Cek Ghost" style="background:#8e44ad;color:#fff;" onclick="openGhostModal('<?= htmlspecialchars($audit_block_row); ?>','<?= htmlspecialchars($audit_date_row); ?>',<?= abs((int)$sq); ?>)">
+                                        <i class="fa fa-ghost"></i>
+                                    </button>
+                                <?php endif; ?>
                                 <button type="button" class="btn-act" onclick="openAuditEdit(this)" <?= $is_locked_row ? 'disabled style="opacity:.5;cursor:not-allowed;"' : '' ?>
                                     data-blok="<?= htmlspecialchars($ar['blok_name'] ?? ''); ?>"
                                     data-user="<?= htmlspecialchars($ar['audit_username'] ?? ''); ?>"
