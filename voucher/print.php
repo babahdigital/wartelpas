@@ -412,31 +412,31 @@ if (!isset($_SESSION["mikhmon"])) {
   
   // --- AMBIL PROFILE ---
     if ($TotalReg > 0) {
-      $getuprofile = $getuser[0]['profile'];
-      $getprofile = $API->comm("/ip/hotspot/user/profile/print", array("?name" => "$getuprofile"));
-      
-      if (count($getprofile) > 0) {
-        $ponlogin = isset($getprofile[0]['on-login']) ? $getprofile[0]['on-login'] : '';
-        $parts = explode(",", $ponlogin);
-        $getprice = isset($parts[2]) ? $parts[2] : '0';
-        $getsprice = isset($parts[4]) ? $parts[4] : '0';
-        $validity = isset($parts[3]) ? $parts[3] : '';
+        $getuprofile = $getuser[0]['profile'];
+        $getprofile = $API->comm("/ip/hotspot/user/profile/print", array("?name" => "$getuprofile"));
+
+        if (count($getprofile) > 0) {
+          $ponlogin = isset($getprofile[0]['on-login']) ? $getprofile[0]['on-login'] : '';
+          $parts = array_map('trim', explode(",", $ponlogin));
+          $getprice = isset($parts[2]) ? $parts[2] : '0';
+          $getsprice = isset($parts[4]) ? $parts[4] : '0';
+          $validity = isset($parts[3]) ? $parts[3] : '';
+        } else {
+          $getprice = "0"; $getsprice = "0"; $validity = '';
+        }
       } else {
-        $getprice = "0"; $getsprice = "0"; $validity = '';
+        $getprice = "0"; $getsprice = "0"; $getuprofile = "Unknown"; $validity = '';
       }
-    } else {
-      $getprice = "0"; $getsprice = "0"; $getuprofile = "Unknown"; $validity = '';
-    }
 
   // --- FORMAT HARGA ---
   if($getsprice == "0" && $getprice != "0"){
-      if ($currency == in_array($currency, $cekindo['indo'])) {
+      if (in_array($currency, $cekindo['indo'], true)) {
         $price = $currency . " " . number_format((float)$getprice, 0, ",", ".");
       } else {
         $price = $currency . " " . number_format((float)$getprice, 2);
       }
   }else if($getsprice != "0"){
-      if ($currency == in_array($currency, $cekindo['indo'])) {
+      if (in_array($currency, $cekindo['indo'], true)) {
         $price = $currency . " " . number_format((float)$getsprice, 0, ",", ".");
       } else {
         $price = $currency . " " . number_format((float)$getsprice, 2);
