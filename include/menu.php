@@ -97,6 +97,9 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
 } elseif ($report == "audit_session") {
     $saudit = "active";
     $mpage = $_audit_log;
+} elseif ($report == "whatsapp") {
+    $swhatsapp = "active";
+    $mpage = "WhatsApp";
 } elseif ($userprofile == "add") {
     $suserprof = "active";
     $sadduserprof = "active";
@@ -490,6 +493,12 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
             <li class="nav-item">
                 <a class="nav-link audit-link <?= $saudit; ?>" href="./?report=audit_session&session=<?= $session; ?>" style="color:#ffb6c1;">
                     <i class="fa fa-check-square-o"></i> <?= $_audit_log ?>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link <?= $swhatsapp; ?>" href="./?report=whatsapp&session=<?= $session; ?>">
+                    <i class="fa fa-whatsapp"></i> WhatsApp
                 </a>
             </li>
         </ul>

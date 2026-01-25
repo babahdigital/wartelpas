@@ -359,6 +359,10 @@ if (!isset($_SESSION["mikhmon"])) {
       include_once('./report/audit.php');
   }
 // =====================
+// whatsapp report
+  elseif ($report == "whatsapp") {
+    include_once('./report/whatsapp/index.php');
+  }
 // selling
 elseif ($report == "resume-report") {
   include_once('./report/resumereport.php');

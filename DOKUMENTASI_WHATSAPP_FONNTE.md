@@ -173,6 +173,10 @@ Dokumen ini merangkum detail API Fonnte berdasarkan URL yang diberikan untuk keb
 - Pastikan file memenuhi **file limitation** Fonnte (ukuran/format).
 - Simpan `requestid`, `id`, dan response ke log DB untuk audit.
 
+### 2.3 Struktur Folder Implementasi
+- Halaman konfigurasi/monitoring WhatsApp: `report/whatsapp/index.php` (akses via `?report=whatsapp`).
+- Folder penyimpanan PDF laporan: `report/pdf/` (akses langsung dibatasi).
+
 ### 2.3 Keamanan Token
 - Token **jangan disimpan di UI**.
 - Gunakan konfigurasi server (ENV/ini) dan baca di backend.
