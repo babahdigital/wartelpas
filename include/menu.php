@@ -612,8 +612,15 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
 
         document.addEventListener('mousemove', function(e) {
             if (!tip.classList.contains('show')) return;
+            var pad = 8;
             var x = e.clientX + 12;
             var y = e.clientY - 10;
+            var rect = tip.getBoundingClientRect();
+            var maxX = window.innerWidth - rect.width - pad;
+            var maxY = window.innerHeight - rect.height - pad;
+            if (x > maxX) x = Math.max(pad, maxX);
+            if (y > maxY) y = Math.max(pad, maxY);
+            if (y < pad) y = pad;
             tip.style.left = x + 'px';
             tip.style.top = y + 'px';
         });
