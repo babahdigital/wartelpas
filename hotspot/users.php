@@ -1361,17 +1361,26 @@ if (!function_exists('detect_profile_kind_unified')) {
     if ($kind === 'other') {
       $kind = detect_profile_kind_from_comment($comment);
     }
-    if ($kind === 'other' && !empty($blok)) {
-      if (preg_match('/\b(10|30)\b/', $blok, $m)) {
-        $kind = $m[1];
-      }
-    }
-    if ($kind === 'other' && !empty($comment)) {
-      if (preg_match('/\b(10|30)\b/', $comment, $m)) {
-        $kind = $m[1];
-      }
+    if ($kind === 'other') {
+      $combined = strtolower(trim((string)$comment . ' ' . (string)$blok));
+      if (preg_match('/\b10\b/', $combined)) return '10';
+      if (preg_match('/\b30\b/', $combined)) return '30';
+      if (preg_match('/\b10\s*(menit|m|min)\b/', $combined)) return '10';
+      if (preg_match('/\b30\s*(menit|m|min)\b/', $combined)) return '30';
     }
     return $kind;
+  }
+}
+if (!function_exists('resolve_profile_from_history')) {
+  function resolve_profile_from_history($comment, $validity = '') {
+    $validity = trim((string)$validity);
+    if ($validity !== '') return $validity;
+    $kind = detect_profile_kind_from_comment($comment);
+    if ($kind !== 'other') return $kind . 'm';
+    if (preg_match('/profile\s*[:=]?\s*([a-z0-9]+)/i', (string)$comment, $m)) {
+      return $m[1];
+    }
+    return '';
   }
 }
 if (!empty($router_users)) {
@@ -1483,7 +1492,7 @@ if ($db) {
   try {
     $need_history = in_array(strtolower($req_status), ['used','rusak','retur','all']) || trim($req_search) !== '';
     if ($need_history) {
-      $res = $db->query("SELECT username, raw_comment, last_status, last_bytes, last_uptime, ip_address, mac_address, blok_name FROM login_history WHERE username IS NOT NULL AND username != ''");
+      $res = $db->query("SELECT username, raw_comment, last_status, last_bytes, last_uptime, ip_address, mac_address, blok_name, validity FROM login_history WHERE username IS NOT NULL AND username != ''");
       $existing = [];
       foreach ($all_users as $u) {
         if (!empty($u['name'])) $existing[$u['name']] = true;
@@ -1492,6 +1501,7 @@ if ($db) {
         $uname = $row['username'] ?? '';
         if ($uname === '' || isset($existing[$uname])) continue;
         $comment = (string)($row['raw_comment'] ?? '');
+        $hist_profile = resolve_profile_from_history($comment, $row['validity'] ?? '');
         $hist_blok = (string)($row['blok_name'] ?? '');
         if ($only_wartel && !is_wartel_client($comment, $hist_blok)) continue;
         $st = strtolower((string)($row['last_status'] ?? ''));
@@ -1536,7 +1546,7 @@ if ($db) {
         $all_users[] = [
           'name' => $uname,
           'comment' => $comment,
-          'profile' => '',
+          'profile' => $hist_profile,
           'disabled' => $h_status === 'RUSAK' ? 'true' : 'false',
           'bytes-in' => $bytes_hist,
           'bytes-out' => 0,
