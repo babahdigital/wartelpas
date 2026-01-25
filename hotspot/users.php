@@ -2098,12 +2098,9 @@ if ($is_ajax) {
             <?php if ($is_used && in_array($req_status, ['all','used'], true)): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print.used.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
             <?php elseif ($is_online && in_array($req_status, ['all','online'], true)): ?>
-              <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=online&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Online"><i class="fa fa-print"></i></button>
+              <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print.used.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
             <?php elseif ($is_rusak && in_array($req_status, ['all','rusak'], true)): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=rusak&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Rincian Rusak"><i class="fa fa-print"></i></button>
-            <?php elseif ($is_retur && in_array($req_status, ['all','retur'], true)): ?>
-              <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher Retur"><i class="fa fa-print"></i></button>
-              <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&download=1&img=1&session=<?= $session ?>','_blank')" title="Download Voucher (PNG)"><i class="fa fa-download"></i></button>
             <?php elseif ($is_ready && in_array($req_status, ['all','ready'], true)): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
             <?php endif; ?>
