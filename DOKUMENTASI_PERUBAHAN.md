@@ -662,3 +662,36 @@ Jika ada tambahan perubahan atau aturan bisnis baru, dokumentasi ini akan diperb
 
 **File terkait:**
 - [report/selling.php](report/selling.php)
+
+### 6.6 Users – Modularisasi, Asset Eksternal, dan Perbaikan Path (2026-01-26)
+- **Modularisasi users.php** menjadi loader yang memanggil:
+  - `hotspot/user/bootstrap.php`
+  - `hotspot/user/helpers.php`
+  - `hotspot/user/data.php`
+  - `hotspot/user/actions.php`
+  - `hotspot/user/render.php`
+- **Backup** versi lama disimpan sebagai `hotspot/user.old.php`.
+- **Pemisahan CSS/JS**:
+  - CSS dipindah ke `hotspot/user/css/users.css`.
+  - JS dipindah ke `hotspot/user/js/users.js`.
+- **Perbaikan path file** agar konsisten dengan struktur folder baru:
+  - Print detail/used sekarang di `hotspot/print/`.
+  - `aload_users` berada di `hotspot/user/`.
+  - Semua include menggunakan `__DIR__` agar aman di Docker.
+- **Perbaikan path DB/logs** supaya mengarah ke root proyek:
+  - `db_data` dan `logs` tidak lagi mengarah ke `hotspot/`.
+- **Debug loader** di `hotspot/users.php` untuk menampilkan error saat `?debug=1`.
+- **Session guard**: `session_start()` dibungkus `session_status()` agar tidak notice saat session sudah aktif.
+
+**File terkait:**
+- [hotspot/users.php](hotspot/users.php)
+- [hotspot/user/bootstrap.php](hotspot/user/bootstrap.php)
+- [hotspot/user/helpers.php](hotspot/user/helpers.php)
+- [hotspot/user/data.php](hotspot/user/data.php)
+- [hotspot/user/actions.php](hotspot/user/actions.php)
+- [hotspot/user/render.php](hotspot/user/render.php)
+- [hotspot/user/css/users.css](hotspot/user/css/users.css)
+- [hotspot/user/js/users.js](hotspot/user/js/users.js)
+- [hotspot/user/aload_users.php](hotspot/user/aload_users.php)
+- [hotspot/print/print.detail.php](hotspot/print/print.detail.php)
+- [hotspot/print/print.used.php](hotspot/print/print.used.php)
