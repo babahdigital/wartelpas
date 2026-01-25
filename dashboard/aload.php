@@ -759,7 +759,7 @@ if ($load == "logs") {
         if ($uptimeDisplay === '') {
             $uptimeDisplay = '-';
         } else {
-            $uptimeDisplay = formatDTM($uptimeDisplay);
+            $uptimeDisplay = preg_replace('/\s+/', '', formatDTM($uptimeDisplay));
         }
 
         $statusLabel = strtoupper((string)($log['status'] ?? 'USED'));
