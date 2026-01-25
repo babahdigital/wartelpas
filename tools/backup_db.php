@@ -18,7 +18,7 @@ if (!hash_equals($secret, (string)$key)) {
     exit;
 }
 
-$allowedIpList = ['127.0.0.1', '::1', '10.10.83.1'];
+$allowedIpList = ['127.0.0.1', '::1', '10.10.83.1', '172.19.0.1'];
 if (!empty($_SERVER['REMOTE_ADDR']) && !empty($allowedIpList)) {
     $clientIp = (string)$_SERVER['REMOTE_ADDR'];
     if (!in_array($clientIp, $allowedIpList, true)) {
