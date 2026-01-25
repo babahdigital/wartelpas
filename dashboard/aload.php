@@ -756,6 +756,7 @@ if ($load == "logs") {
         $titleAttr = $paketTitle !== '' && $paketTitle !== '-' ? " title=\"Paket: " . htmlspecialchars($paketTitle) . "\"" : '';
 
         $uptimeDisplay = $log['uptime'] ?? '';
+        $uptimeDisplay = trim((string)$uptimeDisplay);
         if ($uptimeDisplay === '') {
             $uptimeDisplay = '-';
         } else {
