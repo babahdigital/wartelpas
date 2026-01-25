@@ -779,6 +779,6 @@ if ($load == "logs") {
         echo "</tr>";
         $count++;
     }
-    if ($count == 0) { echo "<tr><td colspan='4' class='text-center' style='padding:20px;'>Belum ada transaksi bulan ini.</td></tr>"; }
+    if ($count == 0) { echo "<tr><td colspan='5' class='text-center' style='padding:20px;'>Belum ada transaksi bulan ini.</td></tr>"; }
 }
 ?>

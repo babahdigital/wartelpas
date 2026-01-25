@@ -52,7 +52,7 @@ else {
         }
         chartWrap.css("opacity", "0.7");
         $("#r_2_content").html('<div style="text-align:center; padding:50px; color:#ccc;">Memproses grafik...</div>');
-        $("#tabel_riwayat").html('<tr><td colspan="4" class="text-center" style="padding:20px;">Memuat...</td></tr>');
+        $("#tabel_riwayat").html('<tr><td colspan="5" class="text-center" style="padding:20px;">Memuat...</td></tr>');
         $("#row-count").text("Memuat...");
 
         $.get("./dashboard/aload.php?session=<?= $session ?>&load=hotspot&m=" + m)
@@ -78,7 +78,7 @@ else {
             $.get(withTestDate("./dashboard/aload.php?session=<?= $session ?>&load=logs&m=" + m))
                 .done(function(dataLogs) {
                     if(dataLogs.trim() == "") {
-                        $("#tabel_riwayat").html('<tr><td colspan="4" class="text-center text-muted" style="padding:20px;">Belum ada transaksi.</td></tr>');
+                        $("#tabel_riwayat").html('<tr><td colspan="5" class="text-center text-muted" style="padding:20px;">Belum ada transaksi.</td></tr>');
                         $("#row-count").text("0 transaksi ditemukan");
                     } else {
                         $("#tabel_riwayat").html(dataLogs);
@@ -88,7 +88,7 @@ else {
                     }
                 })
                 .fail(function() {
-                    $("#tabel_riwayat").html('<tr><td colspan="4" class="text-center text-danger">Gagal koneksi server.</td></tr>');
+                    $("#tabel_riwayat").html('<tr><td colspan="5" class="text-center text-danger">Gagal koneksi server.</td></tr>');
                     $("#row-count").text("Error loading data");
                 })
                 .always(function() {
