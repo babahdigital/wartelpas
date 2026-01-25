@@ -154,6 +154,9 @@ function extract_retur_user_from_ref($comment) {
   if (preg_match('/\b([a-z0-9]{6})\b/i', $ref, $m)) {
     return $m[1];
   }
+  $clean = trim(preg_replace('/[^a-z0-9\-_]/i', ' ', $ref));
+  $parts = array_filter(preg_split('/\s+/', $clean));
+  return $parts ? array_values($parts)[0] : '';
   return '';
 }
 
