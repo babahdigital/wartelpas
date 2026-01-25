@@ -2804,7 +2804,7 @@ $list_page = array_slice($list, $tx_offset, $tx_page_size);
                         <i class="fa fa-minus-circle"></i> Ops: <?= $cur ?> <?= number_format((int)$total_expenses_today,0,',','.') ?> (Bon)
                     </div>
                 <?php else: ?>
-                    <div style="font-size:11px;color:#555;">Murni Tunai</div>
+                    <div style="font-size:11px;color:#777; position:relative; top:3px;">Murni Tunai</div>
                 <?php endif; ?>
             </div>
             <div class="summary-card">
