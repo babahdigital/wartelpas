@@ -31,7 +31,7 @@ $_please_login = isset($_please_login) ? $_please_login : 'Silakan Login';
                             <label class="sr-only" for="_username">Username</label>
                             <div class="input-group">
                                 <span class="input-group-addon"><i class="fa fa-user"></i></span>
-                                <input type="text" class="form-control" id="_username" name="user" placeholder="Username" required autofocus>
+                                <input type="text" class="form-control" id="_username" name="user" placeholder="Username" required autofocus autocomplete="username">
                             </div>
                             <span class="help-block" id="error-username">Username wajib diisi.</span>
                         </div>
@@ -41,7 +41,7 @@ $_please_login = isset($_please_login) ? $_please_login : 'Silakan Login';
                             <label class="sr-only" for="password">Password</label>
                             <div class="input-group">
                                 <span class="input-group-addon"><i class="fa fa-lock"></i></span>
-                                <input type="password" class="form-control" id="password" name="pass" placeholder="Password" required>
+                                <input type="password" class="form-control" id="password" name="pass" placeholder="Password" required autocomplete="current-password">
                             </div>
                             <span class="help-block" id="error-password">Password wajib diisi.</span>
                         </div>
