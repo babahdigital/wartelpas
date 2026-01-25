@@ -10,14 +10,9 @@ if (!isset($_GET['key']) || $_GET['key'] !== $secret_token) {
     die("Error: Token Salah.");
 }
 
-$session = $_GET['session'] ?? '';
-if ($session === '') {
-    http_response_code(403);
-    die("Error: Session tidak valid.");
-}
-
 $scope = strtolower(trim($_GET['scope'] ?? 'basic'));
 $purgeSettlement = isset($_GET['purge']) && $_GET['purge'] === '1';
+$maxMb = isset($_GET['max_mb']) ? (int)$_GET['max_mb'] : 0;
 
 $logDir = dirname(__DIR__) . '/logs';
 if (!is_dir($logDir)) {
@@ -25,32 +20,61 @@ if (!is_dir($logDir)) {
     exit;
 }
 
-$targets = [
-    $logDir . '/usage_ingest.log',
-    $logDir . '/live_ingest.log'
-];
+$targets = [];
+$targets[] = $logDir . '/usage_ingest.log';
+$targets[] = $logDir . '/live_ingest.log';
 
 if ($scope === 'all') {
-    $targets[] = $logDir . '/settlement_ingest_debug.log';
-    $targets[] = $logDir . '/ready_skip.log';
-    $targets[] = $logDir . '/sync_usage.log';
-}
-
-if ($purgeSettlement) {
-    $settlementLogs = glob($logDir . '/settlement_*.log');
-    if (is_array($settlementLogs)) {
-        foreach ($settlementLogs as $file) {
+    $extra = glob($logDir . '/*.log') ?: [];
+    foreach ($extra as $file) {
+        $targets[] = $file;
+    }
+    $archiveDir = $logDir . '/settlement_archive';
+    if (is_dir($archiveDir)) {
+        $archived = glob($archiveDir . '/*.log') ?: [];
+        foreach ($archived as $file) {
             $targets[] = $file;
         }
     }
 }
 
-$cleared = 0;
-foreach ($targets as $file) {
-    if (file_exists($file)) {
-        @file_put_contents($file, '');
-        $cleared++;
+if ($purgeSettlement) {
+    $settlementLogs = glob($logDir . '/settlement_*.log') ?: [];
+    foreach ($settlementLogs as $file) {
+        $targets[] = $file;
     }
 }
 
-echo "OK cleared=" . $cleared . " scope=" . $scope . " purge_settlement=" . ($purgeSettlement ? '1' : '0');
+$targets = array_values(array_unique($targets));
+
+function truncate_file($file) {
+    $fp = @fopen($file, 'c+');
+    if (!$fp) return false;
+    $ok = @ftruncate($fp, 0);
+    @fclose($fp);
+    return $ok;
+}
+
+$cleared = 0;
+$skipped = 0;
+$errors = 0;
+foreach ($targets as $file) {
+    if (!file_exists($file) || is_dir($file)) {
+        $skipped++;
+        continue;
+    }
+    if ($maxMb > 0) {
+        $size = @filesize($file);
+        if ($size !== false && $size < ($maxMb * 1024 * 1024)) {
+            $skipped++;
+            continue;
+        }
+    }
+    if (truncate_file($file)) {
+        $cleared++;
+    } else {
+        $errors++;
+    }
+}
+
+echo "OK cleared=" . $cleared . " skipped=" . $skipped . " errors=" . $errors . " scope=" . $scope . " purge_settlement=" . ($purgeSettlement ? '1' : '0');
