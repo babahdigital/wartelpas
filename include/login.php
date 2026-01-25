@@ -68,6 +68,15 @@ $_please_login = isset($_please_login) ? $_please_login : 'Silakan Login';
         </div>
     </div>
 
+    <div id="sidenav" style="display:none"></div>
+    <div id="main" style="display:none"></div>
+    <a id="openNav" href="javascript:void(0)" style="display:none"></a>
+    <a id="closeNav" href="javascript:void(0)" style="display:none"></a>
+    <div id="overL" style="display:none"></div>
+    <span id="idto" style="display:none">disable</span>
+    <span id="timer" style="display:none"></span>
+    <a id="logout" href="javascript:void(0)" style="display:none"></a>
+
     <!-- jQuery & Bootstrap 3 JS -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
