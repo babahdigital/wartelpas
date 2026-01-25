@@ -143,7 +143,7 @@ if (file_exists($dbFile)) {
 function get_user_history($db, $name) {
     if (!$db) return null;
     try {
-        $stmt = $db->prepare("SELECT username, login_time_real, logout_time_real, blok_name, ip_address, mac_address, last_status, first_login_real, last_login_real FROM login_history WHERE username = :u LIMIT 1");
+        $stmt = $db->prepare("SELECT username, login_time_real, logout_time_real, blok_name, ip_address, mac_address, last_status, first_login_real, last_login_real, last_uptime, last_bytes, raw_comment FROM login_history WHERE username = :u LIMIT 1");
         $stmt->execute([':u' => $name]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
@@ -241,8 +241,35 @@ $mac_addr = $hist_mac ?: ($c_ipmac['mac'] ?? '');
 
 $bytes_total = ($urow['bytes-in'] ?? 0) + ($urow['bytes-out'] ?? 0);
 $bytes_active = ($arow['bytes-in'] ?? 0) + ($arow['bytes-out'] ?? 0);
-$bytes = max((int)$bytes_total, (int)$bytes_active);
-$uptime = $urow['uptime'] ?? ($arow['uptime'] ?? '0s');
+$bytes_hist = (int)($hist['last_bytes'] ?? 0);
+$bytes = max((int)$bytes_total, (int)$bytes_active, $bytes_hist);
+
+$uptime_user = $urow['uptime'] ?? '';
+$uptime_active = $arow['uptime'] ?? '';
+$uptime_hist = $hist['last_uptime'] ?? '';
+
+$sec_user = uptime_to_seconds($uptime_user);
+$sec_active = uptime_to_seconds($uptime_active);
+$sec_hist = uptime_to_seconds($uptime_hist);
+$max_sec = max($sec_user, $sec_active, $sec_hist);
+
+if ($max_sec == $sec_active && $sec_active > 0) {
+    $uptime = $uptime_active;
+} elseif ($max_sec == $sec_user && $sec_user > 0) {
+    $uptime = $uptime_user;
+} elseif ($max_sec == $sec_hist && $sec_hist > 0) {
+    $uptime = $uptime_hist;
+} else {
+    $uptime = '0s';
+}
+
+if ($profile_label === '' || $profile_label === '-') {
+    if ($max_sec >= 590 && $max_sec <= 610) $profile_label = '10 Menit';
+    elseif ($max_sec >= 1790 && $max_sec <= 1810) $profile_label = '30 Menit';
+    elseif (!empty($hist['raw_comment']) && preg_match('/\b(10|30)\s*(menit|m)\b/i', $hist['raw_comment'], $m)) {
+        $profile_label = $m[1] . ' Menit';
+    }
+}
 
 $is_active = isset($arow['user']);
 

@@ -2742,7 +2742,15 @@ if ($debug_mode && !$is_ajax) {
                         </div>
                       <?php endif; ?>
                     </td>
-                    <td><span class="badge badge-dark border border-secondary p-1"><?= htmlspecialchars($u['profile']) ?></span></td>
+                    <td>
+                      <?php
+                        $display_profile = $u['profile'] ?? '';
+                        if ($display_profile === '' && !empty($u['profile_kind']) && $u['profile_kind'] !== 'other') {
+                          $display_profile = $u['profile_kind'] . ' Menit';
+                        }
+                      ?>
+                      <span class="badge badge-dark border border-secondary p-1"><?= htmlspecialchars($display_profile) ?></span>
+                    </td>
                     <td><span class="id-badge"><?= htmlspecialchars($u['blok'] ?: '-') ?></span></td>
                     <td>
                       <div style="font-family:monospace; font-size:12px; color:#aeb6bf"><?= htmlspecialchars($u['mac']) ?></div>
