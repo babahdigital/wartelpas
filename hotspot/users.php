@@ -2927,76 +2927,10 @@ if ($debug_mode && !$is_ajax) {
       if (confirmClose) confirmClose.onclick = () => cleanup(false);
       if (confirmPrint) confirmPrint.onclick = () => {
         if (!rusakPrintPayload) return;
-        const { headerMsg: hm, items: itms, meta: mt } = rusakPrintPayload;
-        const rowsPrint = itms.map(it => {
-          const status = it.ok ? 'OK' : 'TIDAK';
-          const statusClass = it.ok ? 'status-ok' : 'status-bad';
-          const rowClass = it.ok ? 'row-ok' : 'row-bad';
-          return `<tr class="${rowClass}"><td>${it.label}</td><td>${it.value}</td><td class="${statusClass}">${status}</td></tr>`;
-        }).join('');
-        const metaRows = [];
-        if (mt && mt.date) metaRows.push(`<tr><td>Tanggal</td><td>${mt.date}</td></tr>`);
-        if (mt && mt.username) metaRows.push(`<tr><td>User</td><td>${mt.username}</td></tr>`);
-        if (mt && mt.blok) metaRows.push(`<tr><td>Blok</td><td>${mt.blok}</td></tr>`);
-        if (mt && mt.profile) metaRows.push(`<tr><td>Profile</td><td>${mt.profile}</td></tr>`);
-        if (mt && mt.first_login) metaRows.push(`<tr class="meta-first-login"><td>First Login</td><td>${mt.first_login}</td></tr>`);
-        if (mt && mt.login) metaRows.push(`<tr class="meta-login"><td>Login</td><td>${mt.login}</td></tr>`);
-        if (mt && mt.logout) metaRows.push(`<tr class="meta-logout"><td>Logout</td><td>${mt.logout}</td></tr>`);
-        const metaBlock = metaRows.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px;margin:6px 0 10px 0;">
-          <thead><tr><th style="text-align:left;padding:6px 8px;border:1px solid #444;background:#f0f0f0;">Info</th><th style="text-align:left;padding:6px 8px;border:1px solid #444;background:#f0f0f0;">Deskripsi</th></tr></thead>
-          <tbody>${metaRows.join('')}</tbody></table>` : '';
-        const msgLine = hm ? `<div style="margin:6px 0 10px 0;font-size:12px;color:#444;">${hm}</div>` : '';
-        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cek Kelayakan Rusak</title>
-          <style>
-            body{font-family:Arial,sans-serif;color:#111;margin:20px;}
-            h3{margin:0 0 6px 0;}
-            table{width:100%;border-collapse:collapse;font-size:12px;}
-            th,td{border:1px solid #444;padding:6px 8px;text-align:left;}
-            th{background:#f0f0f0;}
-            .status-ok{color:#0b7a0b !important;font-weight:700;}
-            .status-bad{color:#c62828 !important;font-weight:700;}
-            .row-ok td{background:#e8f5e9 !important;}
-            .row-bad td{background:#ffebee !important;}
-            .meta-first-login td{background:#e3f2fd !important;}
-            .meta-login td{background:#e8f5e9 !important;}
-            .meta-logout td{background:#fff3e0 !important;}
-            @media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
-          </style>
-        </head><body>
-          <h3>Cek Kelayakan Rusak</h3>
-          ${metaBlock}
-          ${msgLine}
-          <table><thead><tr><th>Kriteria</th><th>Nilai</th><th>Status</th></tr></thead><tbody>${rowsPrint}</tbody></table>
-          ${(() => {
-            const reloginDateLabel = (mt && mt.relogin_date) ? formatDateHeader(mt.relogin_date) : '';
-            const reloginTitle = reloginDateLabel ? `Rincian Relogin (Tanggal ${reloginDateLabel})` : 'Rincian Relogin';
-            if (!mt || !Array.isArray(mt.relogin_events) || mt.relogin_events.length === 0) {
-              if (mt && (mt.relogin_count || 0) > 0) {
-                return `<div style="margin:10px 0 6px 0;font-size:12px;font-weight:600;">${reloginTitle}</div>
-                  <table><thead><tr><th>#</th><th>Login</th><th>Logout</th></tr></thead><tbody>
-                    <tr><td colspan="3" style="text-align:center;">Detail relogin tidak tersedia</td></tr>
-                  </tbody></table>`;
-              }
-              return '';
-            }
-            const rows = mt.relogin_events.map((ev, idx) => {
-              const seq = ev.seq || (idx + 1);
-              const loginLabel = formatTimeOnly(ev.login_time);
-              const logoutLabel = formatTimeOnly(ev.logout_time);
-              const note = (!ev.login_time && ev.logout_time) ? ' (logout tanpa login)' : '';
-              return `<tr><td>#${seq}</td><td>${loginLabel}${note}</td><td>${logoutLabel}</td></tr>`;
-            }).join('');
-            return `<div style="margin:10px 0 6px 0;font-size:12px;font-weight:600;">${reloginTitle}</div>
-              <table><thead><tr><th>#</th><th>Login</th><th>Logout</th></tr></thead><tbody>${rows}</tbody></table>`;
-          })()}
-        </body></html>`;
-        const w = window.open('', '_blank');
-        if (!w) return;
-        w.document.open();
-        w.document.write(html);
-        w.document.close();
-        w.focus();
-        w.print();
+        const mt = rusakPrintPayload.meta || {};
+        if (!mt.username) return;
+        const url = './hotspot/print.detail.php?session=<?= $session ?>&user=' + encodeURIComponent(mt.username);
+        window.open(url, '_blank');
       };
     });
   }
