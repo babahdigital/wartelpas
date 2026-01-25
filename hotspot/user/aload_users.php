@@ -7,17 +7,32 @@
 
 session_start();
 if (!isset($_SESSION["mikhmon"])) {
-    die(json_encode(['error' => 'Unauthorized']));
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Unauthorized']);
+    exit;
 }
 
-$session = $_GET['session'] ?? '';
-$load = $_GET['load'] ?? '';
+$session = trim((string)($_GET['session'] ?? ''));
+$load = trim((string)($_GET['load'] ?? ''));
 
 // Load config & API
 include('../include/config.php');
-include('../include/readcfg.php');
 include_once('../lib/routeros_api.class.php');
 include_once('../lib/formatbytesbites.php');
+
+if ($session === '' || !isset($data[$session])) {
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Session tidak valid']);
+    exit;
+}
+
+include('../include/readcfg.php');
+
+if ($load === '') {
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Parameter tidak lengkap']);
+    exit;
+}
 
 $API = new RouterosAPI();
 $API->debug = false;
@@ -26,7 +41,7 @@ $API->attempts = 1;
 $hotspot_server = $hotspot_server ?? 'wartel'; // dari config, fallback wartel
 
 if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-    if ($load == 'users_status') {
+    if ($load === 'users_status') {
         // Get active users only
         $active = $API->comm("/ip/hotspot/active/print", array(
             "?server" => $hotspot_server,
@@ -60,6 +75,8 @@ if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
                     'uptime' => $a['uptime'] ?? '0s',
                     'address' => $a['address'] ?? '-',
                     'mac' => $a['mac-address'] ?? '-',
+                    'bytes-in' => (int)($a['bytes-in'] ?? 0),
+                    'bytes-out' => (int)($a['bytes-out'] ?? 0),
                     'online' => true,
                     'login_time' => ''
                 ];
@@ -78,11 +95,16 @@ if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
 
         header('Content-Type: application/json');
         echo json_encode($result);
+        $API->disconnect();
+        exit;
     }
-
     $API->disconnect();
-} else {
     header('Content-Type: application/json');
-    echo json_encode(['error' => 'Connection failed']);
+    echo json_encode(['error' => 'Load tidak dikenal']);
+    exit;
 }
+
+header('Content-Type: application/json');
+echo json_encode(['error' => 'Connection failed']);
+exit;
 ?>

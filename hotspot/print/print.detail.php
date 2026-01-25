@@ -16,6 +16,10 @@ if ($session === '' || $user === '') {
 }
 
 include('../include/config.php');
+if ($session === '' || !isset($data[$session])) {
+    echo "Session tidak valid.";
+    exit;
+}
 include('../include/readcfg.php');
 include_once('../lib/routeros_api.class.php');
 include_once('../lib/formatbytesbites.php');
@@ -323,7 +327,9 @@ $criteria = [
 $ok = $criteria['offline'] && $criteria['bytes_ok'] && $criteria['first_login_ok'];
 
 $status_label = $ok ? 'Terpenuhi' : 'Belum';
+$status_label_safe = htmlspecialchars($status_label, ENT_QUOTES);
 $relogin_date_label = $date_key ? format_dmy_date($date_key) : '';
+$relogin_date_label_safe = htmlspecialchars($relogin_date_label, ENT_QUOTES);
 
 $detail_rows = [
     ['User', htmlspecialchars($user)],
@@ -346,6 +352,8 @@ $criteria_rows = [
     ['Uptime (informasi)', true, seconds_to_uptime($total_uptime_sec)],
     ['Pernah login (first login ada)', $criteria['first_login_ok'], $first_login_real ? format_dmy($first_login_real) : '-']
 ];
+
+$API->disconnect();
 ?>
 <!DOCTYPE html>
 <html>
@@ -371,11 +379,10 @@ $criteria_rows = [
 <body>
     <div class="toolbar">
         <button class="btn" onclick="window.print()">Print / Download PDF</button>
-        <button class="btn" onclick="window.print()">Download PDF</button>
     </div>
     <h3>Cek Kelayakan Rusak</h3>
     <div style="margin:6px 0 10px 0;font-size:12px;color:#444;">
-        <strong>Kelayakan Untuk Rusak:</strong> <span class="<?= $ok ? 'status-ok' : 'status-bad' ?>"><?= $status_label ?></span>
+        <strong>Kelayakan Untuk Rusak:</strong> <span class="<?= $ok ? 'status-ok' : 'status-bad' ?>"><?= $status_label_safe ?></span>
     </div>
 
     <div class="section-title">Detail User</div>
@@ -385,7 +392,7 @@ $criteria_rows = [
         </thead>
         <tbody>
             <?php foreach ($detail_rows as $row): ?>
-                <tr><td><?= $row[0] ?></td><td><?= $row[1] ?></td></tr>
+                <tr><td><?= htmlspecialchars($row[0], ENT_QUOTES) ?></td><td><?= htmlspecialchars((string)$row[1], ENT_QUOTES) ?></td></tr>
             <?php endforeach; ?>
         </tbody>
     </table>
@@ -409,7 +416,7 @@ $criteria_rows = [
     </table>
 
     <?php if (count($relogin_events) > 1): ?>
-        <div class="section-title">Rincian Relogin<?= $relogin_date_label ? ' (Tanggal ' . $relogin_date_label . ')' : '' ?></div>
+        <div class="section-title">Rincian Relogin<?= $relogin_date_label_safe ? ' (Tanggal ' . $relogin_date_label_safe . ')' : '' ?></div>
         <table>
             <thead>
                 <tr><th>#</th><th>Login</th><th>Logout</th></tr>
@@ -425,9 +432,5 @@ $criteria_rows = [
             </tbody>
         </table>
     <?php endif; ?>
-
-    <script>
-        // manual print via toolbar
-    </script>
 </body>
 </html>
