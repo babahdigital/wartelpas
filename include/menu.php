@@ -782,20 +782,52 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
 
     function showOverlayNotice(msg, type, lockClose){
         var overlay = document.getElementById('ajax-overlay');
-        var text = document.getElementById('ajax-overlay-text');
+        var container = document.getElementById('ajax-modal-container');
+        var titleEl = document.getElementById('ajax-overlay-title');
+        var textEl = document.getElementById('ajax-overlay-text');
         var icon = document.getElementById('ajax-overlay-icon');
         var btn = document.getElementById('ajax-overlay-close');
-        if (!overlay || !text || !icon || !btn) return;
-        overlay.style.display = 'flex';
-        text.textContent = msg || '-';
+
+        if (!overlay || !container || !titleEl || !textEl || !icon || !btn) return;
+
+        container.classList.remove('status-loading', 'status-success', 'status-error');
         var t = (type || 'info').toLowerCase();
-        icon.className = 'fa ' + (t === 'error' ? 'fa-times-circle' : (t === 'success' ? 'fa-check-circle' : 'fa-spinner fa-spin'));
-        btn.style.display = lockClose ? 'none' : 'inline-flex';
+        if (t === 'error') {
+            container.classList.add('status-error');
+            icon.className = 'fa fa-times';
+            titleEl.textContent = 'Gagal!';
+        } else if (t === 'success') {
+            container.classList.add('status-success');
+            icon.className = 'fa fa-check';
+            titleEl.textContent = 'Berhasil!';
+        } else {
+            container.classList.add('status-loading');
+            icon.className = 'fa fa-circle-o-notch fa-spin';
+            titleEl.textContent = 'Memproses...';
+        }
+
+        textEl.textContent = msg || '';
+        if (lockClose) {
+            btn.style.display = 'none';
+        } else {
+            btn.style.display = 'inline-block';
+            setTimeout(function(){ btn.focus(); }, 100);
+        }
+
+        overlay.style.display = 'flex';
+        setTimeout(function(){
+            overlay.classList.add('show');
+        }, 10);
     }
 
     function hideOverlayNotice(){
         var overlay = document.getElementById('ajax-overlay');
-        if (overlay) overlay.style.display = 'none';
+        if (overlay) {
+            overlay.classList.remove('show');
+            setTimeout(function(){
+                overlay.style.display = 'none';
+            }, 300);
+        }
     }
 
     function notifyLocal(msg, type, lockClose){
