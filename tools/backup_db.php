@@ -37,27 +37,66 @@ if ($keepCount <= 0) $keepCount = 30;
 
 $stamp = date('Ymd_His');
 $backupFile = $backupDir . '/mikhmon_stats_' . $stamp . '.db';
+$tempFile = $backupFile . '.tmp';
+
+$srcSize = @filesize($dbFile);
+if (!$srcSize || $srcSize < 1024 * 64) {
+    http_response_code(500);
+    echo "Source DB too small or unreadable";
+    exit;
+}
 
 $ok = false;
 $message = '';
 try {
     if (class_exists('SQLite3')) {
         $src = new SQLite3($dbFile, SQLITE3_OPEN_READONLY);
-        $dest = new SQLite3($backupFile, SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE);
+        $dest = new SQLite3($tempFile, SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE);
         $src->backup($dest);
         $dest->close();
         $src->close();
         $ok = true;
     } else {
-        $ok = @copy($dbFile, $backupFile);
+        $ok = @copy($dbFile, $tempFile);
     }
 } catch (Exception $e) {
     $message = 'Backup failed.';
 }
 
-if (!$ok || !file_exists($backupFile)) {
+if (!$ok || !file_exists($tempFile)) {
     http_response_code(500);
     echo $message ?: 'Backup failed';
+    exit;
+}
+
+$tmpSize = @filesize($tempFile);
+if (!$tmpSize || $tmpSize < ($srcSize * 0.8)) {
+    @unlink($tempFile);
+    http_response_code(500);
+    echo "Backup size invalid";
+    exit;
+}
+
+try {
+    if (class_exists('SQLite3')) {
+        $chk = new SQLite3($tempFile, SQLITE3_OPEN_READONLY);
+        $res = $chk->querySingle('PRAGMA quick_check;');
+        $chk->close();
+        if (strtolower((string)$res) !== 'ok') {
+            throw new Exception('quick_check failed');
+        }
+    }
+} catch (Exception $e) {
+    @unlink($tempFile);
+    http_response_code(500);
+    echo "Backup integrity failed";
+    exit;
+}
+
+if (!@rename($tempFile, $backupFile)) {
+    @unlink($tempFile);
+    http_response_code(500);
+    echo "Failed to finalize backup";
     exit;
 }
 
