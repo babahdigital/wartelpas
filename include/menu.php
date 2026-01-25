@@ -861,11 +861,16 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
 <div id="notify"><div class="message"></div></div>
 <div id="temp"></div>
 
-<div id="ajax-overlay" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);z-index:20000;">
-    <div style="background:#1f2327;color:#e5e5e5;border:1px solid #3a4046;border-radius:10px;min-width:320px;max-width:90vw;padding:18px 20px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,0.6);">
-        <div style="font-size:32px;margin-bottom:8px;color:#f39c12;"><i id="ajax-overlay-icon" class="fa fa-spinner fa-spin"></i></div>
-        <div id="ajax-overlay-text" style="font-size:14px;line-height:1.6;margin-bottom:14px;">-</div>
-        <button id="ajax-overlay-close" type="button" class="btn-print btn-default-dark" onclick="hideOverlayNotice()">Tutup</button>
+<div id="ajax-overlay" class="overlay-backdrop">
+    <div class="overlay-modal" id="ajax-modal-container">
+        <div class="overlay-icon-box">
+            <i id="ajax-overlay-icon" class="fa fa-circle-o-notch fa-spin"></i>
+        </div>
+        <div class="overlay-title" id="ajax-overlay-title">Processing</div>
+        <div class="overlay-message" id="ajax-overlay-text">Mohon tunggu sebentar...</div>
+        <button id="ajax-overlay-close" type="button" class="overlay-btn" onclick="hideOverlayNotice()">
+            Tutup
+        </button>
     </div>
 </div>
 
