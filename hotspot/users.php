@@ -774,6 +774,12 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       }
     }
 
+    if (!$action_blocked && $act == 'batch_delete') {
+      if (trim((string)$blok) === '') {
+        $action_blocked = true;
+        $action_error = 'Gagal: nama blok tidak boleh kosong.';
+      }
+    }
     if (!$action_blocked && $act == 'batch_delete' && $blok != '') {
       if (!$db) {
         $action_blocked = true;
@@ -1371,8 +1377,8 @@ if (!function_exists('detect_profile_kind_unified')) {
 
     if (!empty($uptime) && $uptime !== '0s') {
       $sec = uptime_to_seconds($uptime);
-      if ($sec >= 590 && $sec <= 610) return '10';
-      if ($sec >= 1790 && $sec <= 1810) return '30';
+      if ($sec >= 570 && $sec <= 660) return '10';
+      if ($sec >= 1740 && $sec <= 1860) return '30';
     }
 
     return 'other';
@@ -1388,8 +1394,8 @@ if (!function_exists('resolve_profile_from_history')) {
 
     if (!empty($uptime) && $uptime !== '0s') {
       $sec = uptime_to_seconds($uptime);
-      if ($sec >= 590 && $sec <= 610) return '10 Menit';
-      if ($sec >= 1790 && $sec <= 1810) return '30 Menit';
+      if ($sec >= 570 && $sec <= 660) return '10 Menit';
+      if ($sec >= 1740 && $sec <= 1860) return '30 Menit';
     }
 
     if (preg_match('/profile\s*[:=]?\s*([a-z0-9]+)/i', (string)$comment, $m)) {
@@ -1837,18 +1843,27 @@ foreach($all_users as $u) {
           $should_save = false;
           log_ready_skip_users("users.php skip READY user={$name}");
         }
-        if (!$hist) {
-          $should_save = !$skip_ready_save;
-        } else {
-          $should_save = (!$skip_ready_save) && (
-            strtolower((string)($hist['last_status'] ?? '')) !== $next_status ||
-            (string)($hist['last_uptime'] ?? '') !== (string)$uptime ||
-            (int)($hist['last_bytes'] ?? 0) !== (int)$bytes ||
-            (string)($hist['ip_address'] ?? '') !== (string)$f_ip ||
-            (string)($hist['mac_address'] ?? '') !== (string)$f_mac ||
-            (string)($hist['login_time_real'] ?? '') !== (string)($login_time_real ?? '') ||
-            (string)($hist['logout_time_real'] ?? '') !== (string)($logout_time_real ?? '')
-          );
+        if (!$skip_ready_save) {
+          if (!$hist) {
+            $should_save = true;
+          } else {
+            $db_status = strtolower((string)($hist['last_status'] ?? ''));
+            $db_uptime = (string)($hist['last_uptime'] ?? '');
+            $db_bytes = (int)($hist['last_bytes'] ?? 0);
+
+            $u_sec_new = uptime_to_seconds($uptime);
+            $u_sec_db = uptime_to_seconds($db_uptime);
+
+            $status_changed = ($db_status !== $next_status);
+            $bytes_changed = (abs($bytes - $db_bytes) > 1024);
+            $uptime_changed = (abs($u_sec_new - $u_sec_db) > 60);
+            $time_changed = ((string)($hist['login_time_real'] ?? '') !== (string)($login_time_real ?? '') ||
+                             (string)($hist['logout_time_real'] ?? '') !== (string)($logout_time_real ?? ''));
+
+            if ($status_changed || $bytes_changed || $uptime_changed || $time_changed) {
+              $should_save = true;
+            }
+          }
         }
         if ($should_save) {
           $save_data = [
@@ -1939,6 +1954,17 @@ foreach($all_users as $u) {
     }
     if ($logout_disp !== '-' && substr($logout_disp, -8) === '00:00:00' && !empty($hist['updated_at'])) {
       $logout_disp = merge_date_time($logout_disp, $hist['updated_at']);
+    }
+    if ($status === 'TERPAKAI' && $logout_disp !== '-' && substr($logout_disp, -8) === '00:00:00') {
+      if (!empty($hist['updated_at'])) {
+        $logout_disp = $hist['updated_at'];
+      } elseif (!empty($uptime) && !empty($login_disp) && $login_disp !== '-') {
+        $ts_login = strtotime($login_disp);
+        $sec_up = uptime_to_seconds($uptime);
+        if ($ts_login && $sec_up > 0) {
+          $logout_disp = date('Y-m-d H:i:s', $ts_login + $sec_up);
+        }
+      }
     }
 
     $relogin_flag = ((int)($hist['login_count'] ?? 0) > 1);
