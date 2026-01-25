@@ -263,13 +263,8 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         100% { transform: scale(1); opacity: 0.9; }
     }
 
-    .tooltip-simple { position: relative; }
-    .tooltip-simple::after {
-        content: attr(data-tooltip);
-        position: absolute;
-        bottom: calc(100% + 8px);
-        left: 50%;
-        transform: translateX(-50%) translateY(6px);
+    .global-tooltip {
+        position: fixed;
         background: rgba(15, 23, 28, 0.95);
         color: #e6eef2;
         padding: 6px 10px;
@@ -277,30 +272,17 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         font-size: 11px;
         line-height: 1.2;
         white-space: nowrap;
-        opacity: 0;
         pointer-events: none;
-        transition: opacity 0.2s ease, transform 0.2s ease;
+        opacity: 0;
+        transform: translateY(6px);
+        transition: opacity 0.15s ease, transform 0.15s ease;
         border: 1px solid rgba(255,255,255,0.08);
         box-shadow: 0 6px 16px rgba(0,0,0,0.25);
-        z-index: 9999;
+        z-index: 99999;
     }
-    .tooltip-simple::before {
-        content: '';
-        position: absolute;
-        bottom: calc(100% + 2px);
-        left: 50%;
-        transform: translateX(-50%);
-        border: 6px solid transparent;
-        border-top-color: rgba(15, 23, 28, 0.95);
-        opacity: 0;
-        transition: opacity 0.2s ease;
-        pointer-events: none;
-        z-index: 9998;
-    }
-    .tooltip-simple:hover::after,
-    .tooltip-simple:hover::before {
+    .global-tooltip.show {
         opacity: 1;
-        transform: translateX(-50%) translateY(0);
+        transform: translateY(0);
     }
     .logout-btn {
         height: 36px;
@@ -604,16 +586,42 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
     }
 
     function initGlobalTooltips() {
-        var nodes = document.querySelectorAll('[title]');
-        nodes.forEach(function(el) {
-            if (el.closest('.highcharts-container') || el.closest('.highcharts-tooltip') || el.closest('#chart_container')) {
-                return;
-            }
-            var title = el.getAttribute('title');
+        if (window.__tooltipInit) return;
+        window.__tooltipInit = true;
+
+        var tip = document.createElement('div');
+        tip.className = 'global-tooltip';
+        document.body.appendChild(tip);
+
+        function isChartArea(el) {
+            return el && (el.closest('.highcharts-container') || el.closest('.highcharts-tooltip') || el.closest('#chart_container'));
+        }
+
+        document.addEventListener('mouseover', function(e) {
+            var el = e.target.closest('[title], [data-tooltip]');
+            if (!el || isChartArea(el)) return;
+            var title = el.getAttribute('data-tooltip') || el.getAttribute('title');
             if (!title) return;
-            el.setAttribute('data-tooltip', title);
-            el.removeAttribute('title');
-            el.classList.add('tooltip-simple');
+            if (!el.getAttribute('data-tooltip')) {
+                el.setAttribute('data-tooltip', title);
+                el.removeAttribute('title');
+            }
+            tip.textContent = title;
+            tip.classList.add('show');
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!tip.classList.contains('show')) return;
+            var x = e.clientX + 12;
+            var y = e.clientY - 10;
+            tip.style.left = x + 'px';
+            tip.style.top = y + 'px';
+        });
+
+        document.addEventListener('mouseout', function(e) {
+            var el = e.target.closest('[data-tooltip]');
+            if (!el) return;
+            tip.classList.remove('show');
         });
     }
 
@@ -633,7 +641,6 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         updateDbStatus();
         setInterval(updateDbStatus, 30000);
         initGlobalTooltips();
-        setInterval(initGlobalTooltips, 5000);
     });
 </script>
 
