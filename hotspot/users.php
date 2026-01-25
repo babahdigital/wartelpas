@@ -1355,6 +1355,25 @@ if (!function_exists('detect_profile_kind_from_comment')) {
     return 'other';
   }
 }
+if (!function_exists('detect_profile_kind_unified')) {
+  function detect_profile_kind_unified($profile, $comment, $blok) {
+    $kind = detect_profile_kind_summary($profile);
+    if ($kind === 'other') {
+      $kind = detect_profile_kind_from_comment($comment);
+    }
+    if ($kind === 'other' && !empty($blok)) {
+      if (preg_match('/\b(10|30)\b/', $blok, $m)) {
+        $kind = $m[1];
+      }
+    }
+    if ($kind === 'other' && !empty($comment)) {
+      if (preg_match('/\b(10|30)\b/', $comment, $m)) {
+        $kind = $m[1];
+      }
+    }
+    return $kind;
+  }
+}
 if (!empty($router_users)) {
   foreach ($router_users as $u) {
     $name = $u['name'] ?? '';
@@ -1858,13 +1877,11 @@ foreach($all_users as $u) {
       if (strcasecmp($f_blok, $req_comm) != 0) continue;
     }
 
+    $profile_kind = detect_profile_kind_unified($u['profile'] ?? '', $comment, $f_blok);
+
     // Filter profil (10/30)
     if ($req_prof !== 'all') {
-      $kind = detect_profile_kind_summary($u['profile'] ?? '');
-      if ($kind === 'other') {
-        $kind = detect_profile_kind_from_comment($comment);
-      }
-      if ($kind !== $req_prof) continue;
+      if ($profile_kind !== $req_prof) continue;
     }
 
     // Search
@@ -1955,6 +1972,7 @@ foreach($all_users as $u) {
       'uid' => $u['.id'] ?? '',
         'name' => $name,
         'profile' => $u['profile'] ?? '',
+        'profile_kind' => $profile_kind,
         'blok' => $f_blok,
         'ip' => $f_ip,
         'mac' => $f_mac,
@@ -1981,10 +1999,7 @@ if ($debug_mode) {
     'other' => ['count' => 0, 'ready' => 0, 'online' => 0, 'used' => 0, 'rusak' => 0, 'retur' => 0, 'invalid' => 0]
   ];
   foreach ($display_data as $row) {
-    $kind = detect_profile_kind_summary($row['profile'] ?? '');
-    if ($kind === 'other') {
-      $kind = detect_profile_kind_from_comment($row['comment'] ?? '');
-    }
+    $kind = $row['profile_kind'] ?? detect_profile_kind_unified($row['profile'] ?? '', $row['comment'] ?? '', $row['blok'] ?? '');
     if (!isset($profile_totals[$kind])) {
       $kind = 'other';
     }
