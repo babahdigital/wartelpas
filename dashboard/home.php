@@ -239,11 +239,11 @@ for ($i = 5; $i >= 0; $i--) {
                     <table>
                         <thead>
                             <tr>
-                                <th>JAM</th>
-                                <th>USER</th>
-                                <th style="text-align:center;">BLOK</th>
-                                <th style="text-align:center;">STATUS</th>
-                                <th style="text-align:right;">UPTIME</th>
+                                <th style="width:80px;">JAM</th>
+                                <th style="width:140px;">USER</th>
+                                <th style="text-align:center; width:70px;">BLOK</th>
+                                <th style="text-align:center; width:90px;">STATUS</th>
+                                <th style="text-align:right; width:110px;">UPTIME</th>
                             </tr>
                         </thead>
                         <tbody id="tabel_riwayat">
