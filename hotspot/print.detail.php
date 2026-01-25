@@ -261,6 +261,8 @@ $criteria_rows = [
     <style>
         body{font-family:Arial,sans-serif;color:#111;margin:20px;}
         h3{margin:0 0 6px 0;}
+        .toolbar { margin-bottom:14px; display:flex; gap:8px; flex-wrap:wrap; }
+        .btn { padding:6px 10px; border:1px solid #999; background:#f2f2f2; cursor:pointer; border-radius:4px; font-size:12px; }
         .section-title{margin:12px 0 6px 0;font-weight:700;font-size:13px;}
         table{width:100%;border-collapse:collapse;font-size:12px;}
         th,td{border:1px solid #444;padding:6px 8px;text-align:left;}
@@ -269,10 +271,14 @@ $criteria_rows = [
         .status-bad{color:#c62828 !important;font-weight:700;}
         .row-ok td{background:#e8f5e9 !important;}
         .row-bad td{background:#ffebee !important;}
-        @media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+        @media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact;} .toolbar{display:none;}}
     </style>
 </head>
 <body>
+    <div class="toolbar">
+        <button class="btn" onclick="window.print()">Print / Download PDF</button>
+        <button class="btn" onclick="window.print()">Download PDF</button>
+    </div>
     <h3>Cek Kelayakan Rusak</h3>
     <div style="margin:6px 0 10px 0;font-size:12px;color:#444;">
         <strong>Kelayakan Untuk Rusak:</strong> <span class="<?= $ok ? 'status-ok' : 'status-bad' ?>"><?= $status_label ?></span>
@@ -327,9 +333,7 @@ $criteria_rows = [
     <?php endif; ?>
 
     <script>
-        window.onload = function(){
-            window.print();
-        };
+        // manual print via toolbar
     </script>
 </body>
 </html>
