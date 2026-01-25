@@ -1897,6 +1897,16 @@ foreach($all_users as $u) {
       if (!$found) continue;
     }
 
+    if ($debug_mode) {
+      $kind_key = isset($profile_totals_all[$profile_kind]) ? $profile_kind : 'other';
+      $status_key = strtolower($status);
+      if ($status_key === 'terpakai') $status_key = 'used';
+      $profile_totals_all[$kind_key]['count']++;
+      if (isset($profile_totals_all[$kind_key][$status_key])) {
+        $profile_totals_all[$kind_key][$status_key]++;
+      }
+    }
+
     $login_disp = $login_time_real ?? ($hist['login_time_real'] ?? ($hist['first_login_real'] ?? '-'));
     $logout_disp = $logout_time_real ?? ($hist['logout_time_real'] ?? ($hist['last_login_real'] ?? '-'));
     if ($status === 'READY') {
@@ -1965,16 +1975,6 @@ foreach($all_users as $u) {
         if ($filtering_by_date) {
           $has_transactions_in_filter = true;
         }
-      }
-    }
-
-    if ($debug_mode) {
-      $kind_key = isset($profile_totals_all[$profile_kind]) ? $profile_kind : 'other';
-      $status_key = strtolower($status);
-      if ($status_key === 'terpakai') $status_key = 'used';
-      $profile_totals_all[$kind_key]['count']++;
-      if (isset($profile_totals_all[$kind_key][$status_key])) {
-        $profile_totals_all[$kind_key][$status_key]++;
       }
     }
 
