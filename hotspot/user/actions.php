@@ -723,7 +723,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $API->write('=comment='.$gen['c']);
         $API->read();
 
-        // Simpan status retur untuk user baru
+        // Simpan status READY untuk user baru (hasil retur)
         if ($db) {
           $new_blok = extract_blok_name($gen['c']);
           $save_new = [
@@ -735,7 +735,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             'raw' => $gen['c'],
             'login_time_real' => null,
             'logout_time_real' => null,
-            'status' => 'retur'
+            'status' => 'ready'
           ];
           save_user_history($gen['u'], $save_new);
         }
