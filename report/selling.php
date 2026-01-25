@@ -804,6 +804,7 @@ if (isset($_GET['ghost']) && $_GET['ghost'] == '1') {
     }
     $g_date = trim((string)($_GET['date'] ?? ''));
     $g_blok = trim((string)($_GET['blok'] ?? ''));
+    $g_blok_norm = normalize_block_name($g_blok);
     if ($g_date === '' || $g_blok === '') {
         echo json_encode(['ok' => false, 'message' => 'Tanggal atau blok tidak valid.']);
         exit;
@@ -812,18 +813,18 @@ if (isset($_GET['ghost']) && $_GET['ghost'] == '1') {
     if (table_exists($db, 'audit_rekap_manual')) {
         try {
             $stmt = $db->prepare("SELECT audit_username, user_evidence FROM audit_rekap_manual WHERE report_date = :d AND UPPER(blok_name) = :b LIMIT 1");
-            $stmt->execute([':d' => $g_date, ':b' => strtoupper($g_blok)]);
+            $stmt->execute([':d' => $g_date, ':b' => strtoupper($g_blok_norm)]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
             if (!empty($row)) {
                 $reported_users = parse_reported_users_from_audit($row);
             }
         } catch (Exception $e) {}
     }
-    $suspects = get_ghost_suspects($db, $g_date, $g_blok, $reported_users, 51200);
+    $suspects = get_ghost_suspects($db, $g_date, $g_blok_norm, $reported_users, 51200);
     echo json_encode([
         'ok' => true,
         'date' => $g_date,
-        'blok' => normalize_block_name($g_blok),
+        'blok' => $g_blok_norm,
         'count' => count($suspects),
         'ghosts' => $suspects
     ]);
