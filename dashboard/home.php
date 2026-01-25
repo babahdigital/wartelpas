@@ -103,7 +103,6 @@ else {
             $('#kpi-active').text(data.active);
             $('#kpi-sold').text(data.sold);
             $('#kpi-income').text('Rp ' + data.income);
-            $('#kpi-gross').text('Rp ' + (data.gross_income || '0'));
             $('#kpi-est').text('Proyeksi: Rp ' + data.est_income);
 
             if (parseInt(data.ghost || 0, 10) > 0) {
@@ -207,7 +206,6 @@ for ($i = 5; $i >= 0; $i--) {
         </div>
         <div class="kpi-box border-yellow">
             <h1 id="kpi-income">Rp 0</h1>
-            <div class="label" id="kpi-gross">Gross: Rp 0</div>
             <div class="label" id="kpi-est">Proyeksi: Rp 0</div>
         </div>
         <div class="kpi-box border-audit" id="audit-box">
