@@ -775,7 +775,7 @@ if ($load == "logs") {
         echo "<td style='font-weight:600; font-size:12px; overflow:hidden; text-overflow:ellipsis; text-transform:uppercase;' title='" . htmlspecialchars($log['username']) . "'>" . strtoupper($log['username']) . "</td>";
         echo "<td style='text-align:center;'><span style='background:#333; padding:2px 6px; border-radius:3px; font-size:10px;'>" . $blokDisplay . "</span></td>";
         echo "<td style='text-align:center;'><span style='background:rgba(255,255,255,0.06); color:" . $statusColor . "; padding:2px 6px; border-radius:3px; font-size:10px; font-weight:600;'>" . $statusLabel . "</span></td>";
-        echo "<td style='text-align:right; font-family:monospace; font-size:12px; font-weight:bold; color:#9ad0ec;'$titleAttr>" . $uptimeDisplay . "</td>";
+        echo "<td style='text-align:right; font-family:monospace; font-size:12px; font-weight:bold; color:#9ad0ec; padding-right:30px;'$titleAttr>" . $uptimeDisplay . "</td>";
         echo "</tr>";
         $count++;
     }
