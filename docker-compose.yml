@@ -43,6 +43,7 @@ services:
       # ==========================================
       # 4. MODUL HOTSPOT (FILE SPESIFIK)
       # ==========================================
+      - ./hotspot/user:/var/www/html/hotspot/user
       - ./hotspot/generateuser.php:/var/www/html/hotspot/generateuser.php
       - ./hotspot/users.php:/var/www/html/hotspot/users.php
       - ./hotspot/hotspotactive.php:/var/www/html/hotspot/hotspotactive.php
