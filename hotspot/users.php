@@ -108,6 +108,14 @@ function extract_blok_name($comment) {
     }
     if ($raw !== '') return 'BLOK-' . $raw;
   }
+  if (preg_match('/\b([A-Z](?:[-\s]?\d{1,2})?)\b/', $comment, $m)) {
+    $candidate = strtoupper(trim($m[1]));
+    if (strlen($candidate) <= 5) {
+      $candidate = preg_replace('/\s+/', '', $candidate);
+      $candidate = preg_replace('/^-+/', '', $candidate);
+      return 'BLOK-' . $candidate;
+    }
+  }
   return '';
 }
 
@@ -241,6 +249,7 @@ function normalize_blok_param($blok) {
   }
   return $blok;
 }
+$req_comm = normalize_blok_param($req_comm);
 
 // Helper: Normalisasi tanggal untuk filter (harian/bulanan/tahunan)
 function normalize_date_key($dateTime, $mode) {
@@ -1314,16 +1323,24 @@ $summary_seen_users = [];
 if (!function_exists('detect_profile_kind_summary')) {
   function detect_profile_kind_summary($profile) {
     $p = strtolower((string)$profile);
-    if (preg_match('/\b10\s*(menit|m)\b|10menit/i', $p)) return '10';
-    if (preg_match('/\b30\s*(menit|m)\b|30menit/i', $p)) return '30';
+    if (preg_match('/(\d+)\s*(menit|m|min)\b/i', $p, $m)) {
+      return (string)((int)$m[1]);
+    }
+    if (preg_match('/(\d+)(menit|m)\b/i', $p, $m)) {
+      return (string)((int)$m[1]);
+    }
     return 'other';
   }
 }
 if (!function_exists('detect_profile_kind_from_comment')) {
   function detect_profile_kind_from_comment($comment) {
     $c = strtolower((string)$comment);
-    if (preg_match('/profile\s*:\s*10\s*(menit|m)/i', $c)) return '10';
-    if (preg_match('/profile\s*:\s*30\s*(menit|m)/i', $c)) return '30';
+    if (preg_match('/profile\s*:\s*(\d+)\s*(menit|m|min)?/i', $c, $m)) {
+      return (string)((int)$m[1]);
+    }
+    if (preg_match('/(\d+)\s*(menit|m|min)\b/i', $c, $m)) {
+      return (string)((int)$m[1]);
+    }
     return 'other';
   }
 }
@@ -1501,12 +1518,12 @@ if ($db) {
   } catch (Exception $e) {}
 }
 
-// List blok untuk dropdown (pakai data router agar blok lama tidak muncul)
+// List blok untuk dropdown (gabungkan router + history agar filter konsisten)
 $list_blok = [];
 if (!$is_ajax) {
-  if (!empty($router_users)) {
-    foreach ($router_users as $u) {
-      $bn = extract_blok_name($u['comment'] ?? '');
+  if (!empty($all_users)) {
+    foreach ($all_users as $u) {
+      $bn = extract_blok_name($u['comment'] ?? '') ?: extract_blok_name($u['raw_comment'] ?? '');
       if ($bn && !in_array($bn, $list_blok)) $list_blok[] = $bn;
     }
   }
@@ -1817,19 +1834,12 @@ foreach($all_users as $u) {
     }
 
     // Filter status
-    if ($req_status == 'ready') {
-      if (!$is_ready_now) continue;
-    }
-    if ($req_status == 'all' && $status === 'READY') {
-      continue;
-    }
-    if ($req_status == 'online' && !$is_active) continue;
-    if ($req_status == 'online' && $f_blok == '') continue;
-    if ($req_status == 'used') {
-      if (!$is_used || $is_active || $is_rusak) continue;
-    }
-    if ($req_status == 'rusak' && !$is_rusak) continue;
-    if ($req_status == 'retur' && !$is_retur) continue;
+    if ($req_status == 'ready' && $status !== 'READY') continue;
+    if ($req_status == 'all' && $status === 'READY') continue;
+    if ($req_status == 'online' && $status !== 'ONLINE') continue;
+    if ($req_status == 'used' && $status !== 'TERPAKAI') continue;
+    if ($req_status == 'rusak' && $status !== 'RUSAK') continue;
+    if ($req_status == 'retur' && $status !== 'RETUR') continue;
     if ($req_status == 'invalid') continue;
 
     // Filter blok
@@ -1843,8 +1853,7 @@ foreach($all_users as $u) {
       if ($kind === 'other') {
         $kind = detect_profile_kind_from_comment($comment);
       }
-      if ($req_prof === '10' && $kind !== '10') continue;
-      if ($req_prof === '30' && $kind !== '30') continue;
+      if ($kind !== $req_prof) continue;
     }
 
     // Search
