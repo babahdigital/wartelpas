@@ -19,6 +19,15 @@ if (!file_exists($dbFile)) {
     exit;
 }
 
+if (!class_exists('PDO')) {
+    echo "PDO not available";
+    exit;
+}
+if (!extension_loaded('pdo_sqlite')) {
+    echo "PDO SQLite extension not loaded";
+    exit;
+}
+
 try {
     $db = new PDO('sqlite:' . $dbFile);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -64,5 +73,5 @@ try {
     echo "</tbody></table>";
 } catch (Exception $e) {
     http_response_code(500);
-    echo "DB error";
+    echo "DB error: " . htmlspecialchars($e->getMessage());
 }
