@@ -2709,7 +2709,7 @@ if ($debug_mode && !$is_ajax) {
                       ?>
                       <?php if (in_array($req_status, ['all','ready','used','rusak','online','retur'], true)): ?>
                         <?php if ($is_used && in_array($req_status, ['all','used'], true)): ?>
-                          <button type="button" class="btn-act btn-act-print" onclick="window.open('./report/print_rincian.php?mode=usage&status=used&user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
+                          <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print.used.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
                         <?php elseif ($is_online && in_array($req_status, ['all','online'], true)): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print.used.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
                         <?php elseif ($is_rusak && in_array($req_status, ['all','rusak'], true)): ?>
@@ -2721,7 +2721,7 @@ if ($debug_mode && !$is_ajax) {
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
                         <?php endif; ?>
                       <?php endif; ?>
-                      <?php if($u['uid']): ?>
+                      <?php if($u['uid'] || $can_mark_rusak): ?>
                         <?php
                           $keep_params = '&profile=' . urlencode($req_prof) .
                             '&comment=' . urlencode($req_comm) .
