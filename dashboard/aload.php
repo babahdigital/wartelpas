@@ -103,6 +103,7 @@ if ($load == "live_data") {
         'active' => 0,
         'sold' => 0,
         'income' => '0',
+        'gross_income' => '0',
         'est_income' => '0',
         'ghost' => 0,
         'audit_status' => 'CLEAR',
@@ -194,6 +195,7 @@ if ($load == "live_data") {
             $seen_user_day = [];
             $total_net_month = 0;
             $total_net_today = 0;
+            $total_gross_today = 0;
 
             foreach ($rows as $r) {
                 $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
@@ -244,11 +246,13 @@ if ($load == "live_data") {
                 $total_net_month += $net_add;
                 if ($sale_date === $today) {
                     $total_net_today += $net_add;
+                    $total_gross_today += $line_price;
                 }
             }
 
             $sumIncome = $total_net_today;
             $sumIncomeMonth = $total_net_month;
+            $sumGrossToday = $total_gross_today;
 
             $sumSold = 0;
             if (table_exists($db, 'sales_history') || table_exists($db, 'live_sales') || table_exists($db, 'login_history')) {
@@ -376,6 +380,7 @@ if ($load == "live_data") {
 
             $dataResponse['sold'] = $sumSold;
             $dataResponse['income'] = number_format($sumIncome, 0, ",", ".");
+            $dataResponse['gross_income'] = number_format($sumGrossToday, 0, ",", ".");
             $dataResponse['est_income'] = number_format($estIncome, 0, ",", ".");
 
             $stmtAudit = $db->prepare("SELECT SUM(selisih_qty) AS ghost_qty, SUM(selisih_setoran) AS selisih
