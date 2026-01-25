@@ -709,16 +709,20 @@ if ($load == "logs") {
         if (!empty($usernames)) {
             $placeholders = implode(',', array_fill(0, count($usernames), '?'));
             try {
-                $stmtLogin = $db->prepare("SELECT username, COALESCE(NULLIF(last_login_real,''), first_login_real) AS last_login_real FROM login_history WHERE username IN ($placeholders)");
+                $stmtLogin = $db->prepare("SELECT username, COALESCE(NULLIF(last_login_real,''), first_login_real) AS last_login_real, last_uptime FROM login_history WHERE username IN ($placeholders)");
                 $stmtLogin->execute(array_keys($usernames));
                 $loginMap = [];
                 foreach ($stmtLogin->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                    $loginMap[$row['username']] = $row['last_login_real'] ?? '';
+                    $loginMap[$row['username']] = [
+                        'last_login_real' => $row['last_login_real'] ?? '',
+                        'last_uptime' => $row['last_uptime'] ?? ''
+                    ];
                 }
                 $rekeyed = [];
                 foreach ($finalLogs as $k => $log) {
                     $uname = $log['username'] ?? '';
-                    $lastLogin = $loginMap[$uname] ?? '';
+                    $lastLogin = $loginMap[$uname]['last_login_real'] ?? '';
+                    $log['uptime'] = $loginMap[$uname]['last_uptime'] ?? '';
                     $ts = $lastLogin ? strtotime($lastLogin) : false;
                     if ($ts !== false) {
                         $log['time_str'] = date('d/m/Y H:i', $ts);
@@ -746,19 +750,21 @@ if ($load == "logs") {
             if (strlen($cleanCom) > 0) $blokDisplay = strtoupper(substr($cleanCom, 0, 1));
         }
 
-        $colorClass = "#ccc";
-        if ($log['price'] >= 20000) { $colorClass = "#f39c12"; }
-        elseif ($log['price'] >= 10000) { $colorClass = "#00c0ef"; }
-        elseif ($log['price'] >= 5000) { $colorClass = "#00a65a"; }
-
         $paketTitle = trim((string)($log['paket'] ?? ''));
         $titleAttr = $paketTitle !== '' && $paketTitle !== '-' ? " title=\"Paket: " . htmlspecialchars($paketTitle) . "\"" : '';
+
+        $uptimeDisplay = $log['uptime'] ?? '';
+        if ($uptimeDisplay === '') {
+            $uptimeDisplay = '-';
+        } else {
+            $uptimeDisplay = formatDTM($uptimeDisplay);
+        }
 
         echo "<tr>";
         echo "<td style='color:#8898aa; font-family:monospace;'>" . substr($log['time_str'], 11, 5) . "</td>";
         echo "<td style='font-weight:600; font-size:12px; overflow:hidden; text-overflow:ellipsis; text-transform:uppercase;' title='" . htmlspecialchars($log['username']) . "'>" . strtoupper($log['username']) . "</td>";
         echo "<td style='text-align:center;'><span style='background:#333; padding:2px 6px; border-radius:3px; font-size:10px;'>" . $blokDisplay . "</span></td>";
-        echo "<td style='text-align:right; font-family:monospace; font-size:12px; font-weight:bold; color:$colorClass;'$titleAttr>" . number_format($log['price'],0,',','.') . "</td>";
+        echo "<td style='text-align:right; font-family:monospace; font-size:12px; font-weight:bold; color:#9ad0ec;'$titleAttr>" . $uptimeDisplay . "</td>";
         echo "</tr>";
         $count++;
     }
