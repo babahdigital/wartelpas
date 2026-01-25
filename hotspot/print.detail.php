@@ -128,6 +128,13 @@ function format_dmy_date($dateStr) {
     return date('d-m-Y', $ts);
 }
 
+function normalize_dt($dateStr) {
+    if (empty($dateStr)) return '';
+    $ts = strtotime($dateStr);
+    if ($ts === false) return '';
+    return date('Y-m-d H:i:s', $ts);
+}
+
 // --- DATABASE ---
 $dbDir = dirname(__DIR__) . '/db_data';
 $dbFile = $dbDir . '/mikhmon_stats.db';
@@ -265,6 +272,25 @@ if (!empty($first_login_real)) {
 $total_uptime_sec = get_cumulative_uptime_from_events($db, $user, $date_key, $logout_time_real);
 $relogin_events = get_relogin_events($db, $user, $date_key);
 
+$first_login_norm = normalize_dt($first_login_real);
+$login_norm = normalize_dt($login_time_real);
+$logout_norm = normalize_dt($logout_time_real);
+$relogin_events_filtered = [];
+foreach ($relogin_events as $ev) {
+    $ev_login = normalize_dt($ev['login_time'] ?? '');
+    $ev_logout = normalize_dt($ev['logout_time'] ?? '');
+    $is_same = false;
+    if ($ev_login !== '' && $ev_logout !== '') {
+        if (($ev_login === $first_login_norm || $ev_login === $login_norm) && $ev_logout === $logout_norm) {
+            $is_same = true;
+        }
+    }
+    if (!$is_same) {
+        $relogin_events_filtered[] = $ev;
+    }
+}
+$relogin_events = $relogin_events_filtered;
+
 $criteria = [
     'offline' => !$is_active,
     'bytes_ok' => $bytes <= $limits['bytes'],
@@ -358,7 +384,7 @@ $criteria_rows = [
         </tbody>
     </table>
 
-    <?php if (!empty($relogin_events)): ?>
+    <?php if (count($relogin_events) > 1): ?>
         <div class="section-title">Rincian Relogin<?= $relogin_date_label ? ' (Tanggal ' . $relogin_date_label . ')' : '' ?></div>
         <table>
             <thead>
