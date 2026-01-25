@@ -156,17 +156,25 @@ if (!isset($_SESSION["mikhmon"])) {
                             $is_voucher = (stripos($comment, 'vc-') === 0 || stripos($comment, 'up-') === 0);
                             
                             if ($is_voucher) {
-                                // Jika ada Blok-
+                                // Jika ada Blok- (contoh: Blok-F30 | IP:...)
                                 if (strpos($comment, 'Blok-') !== false) {
-                                    $parts = explode('Blok-', $comment);
-                                    $clean_blok = 'Blok-' . end($parts);
-                                    echo "<span class='badge badge-primary badge-modern'>" . $clean_blok . "</span>";
-                                    
+                                    $clean_label = '';
+                                    if (preg_match('/Blok-([A-Za-z]+)\s*([0-9]+)/i', $comment, $m)) {
+                                        $blok = strtoupper($m[1]);
+                                        $durasi = $m[2];
+                                        $clean_label = 'Blok-' . $blok . ' - Profile ' . $durasi . ' Menit';
+                                    } else {
+                                        $parts = explode('Blok-', $comment);
+                                        $clean_blok = 'Blok-' . trim(end($parts));
+                                        $clean_label = $clean_blok;
+                                    }
+                                    echo "<span class='badge badge-primary badge-modern'>" . $clean_label . "</span>";
+
                                 } elseif (strpos($comment, 'Kamar-') !== false) {
                                     $parts = explode('Kamar-', $comment);
-                                    $clean_kamar = 'Kamar-' . end($parts);
+                                    $clean_kamar = 'Kamar-' . trim(end($parts));
                                     echo "<span class='badge badge-success badge-modern'>" . $clean_kamar . "</span>";
-                                    
+
                                 } else {
                                     // Voucher biasa tanpa Blok -> Sembunyikan (tampil kosong)
                                     echo ""; 
