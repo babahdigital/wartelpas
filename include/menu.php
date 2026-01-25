@@ -617,20 +617,23 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         });
     }
 
-    $(document).ready(function(){
-        $(".connect").click(function(){
-            notify("<?= $_connecting ?>");
-            connect(this.id)
-        });
-        $(".slang").change(function(){
-            notify("<?= $_loading ?>");
-            stheme(this.value)
-        });
+    document.addEventListener('DOMContentLoaded', function(){
+        if (window.jQuery) {
+            $(".connect").click(function(){
+                notify("<?= $_connecting ?>");
+                connect(this.id)
+            });
+            $(".slang").change(function(){
+                notify("<?= $_loading ?>");
+                stheme(this.value)
+            });
+        }
         updateRealTimeBadge();
         setInterval(updateRealTimeBadge, 1000);
         updateDbStatus();
         setInterval(updateDbStatus, 30000);
         initGlobalTooltips();
+        setInterval(initGlobalTooltips, 5000);
     });
 </script>
 
