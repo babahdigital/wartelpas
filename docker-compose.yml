@@ -8,6 +8,7 @@ services:
       - "8081:80"
     environment:
       - TZ=Asia/Makassar
+      - RCLONE_CONFIG=/var/www/html/config/rclone.conf
     volumes:
       # ==========================================
       # 1. PERSISTENSI DATA (WAJIB AMAN)
