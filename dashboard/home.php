@@ -82,6 +82,7 @@ else {
                         $("#row-count").text("0 transaksi ditemukan");
                     } else {
                         $("#tabel_riwayat").html(dataLogs);
+                        formatUptimeCells();
                         var rowCount = $("#tabel_riwayat tr:not(.text-center)").length;
                         if (rowCount > 10) rowCount = 10;
                         $("#row-count").text("Menampilkan " + rowCount + " transaksi");
@@ -147,6 +148,27 @@ else {
             var visibleRows = $("#tabel_riwayat tr:not(.text-center)").length;
             if (visibleRows > 10) visibleRows = 10;
             $("#row-count").text("Menampilkan " + visibleRows + " transaksi");
+            formatUptimeCells();
+        });
+    }
+
+    function formatUptimeCells() {
+        $('#tabel_riwayat tr').each(function() {
+            var $tds = $(this).find('td');
+            if ($tds.length < 5) return;
+            var $uptime = $tds.eq(4);
+            var val = ($uptime.text() || '').trim();
+            var m = val.match(/^(\d{1,2}):(\d{2}):(\d{2})$/);
+            if (m) {
+                var hh = parseInt(m[1], 10) || 0;
+                var mm = parseInt(m[2], 10) || 0;
+                var ss = parseInt(m[3], 10) || 0;
+                var parts = [];
+                if (hh > 0) parts.push(hh + 'h');
+                if (mm > 0 || hh > 0) parts.push(mm + 'm');
+                parts.push(ss + 's');
+                $uptime.text(parts.join(''));
+            }
         });
     }
 
