@@ -9,6 +9,7 @@ services:
     environment:
       - TZ=Asia/Makassar
       - /home/abdullah/.config/rclone/rclone.conf:/var/www/html/config/rclone.conf:ro
+      - /home/abdullah/.config/rclone/rclone.conf:/var/www/html/config/rclone.conf:ro
     volumes:
       # ==========================================
       # 1. PERSISTENSI DATA (WAJIB AMAN)
