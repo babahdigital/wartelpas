@@ -2202,7 +2202,7 @@ if ($is_ajax) {
             $has_rusak_comment = !empty($u['comment_rusak']);
             $is_disabled = !empty($u['is_disabled']);
             $can_enable = $is_rusak && $is_disabled && !$has_rusak_comment;
-            $can_mark_rusak = ($is_used || $is_invalid) && !$is_online;
+            $can_mark_rusak = $is_used && !$is_online;
           ?>
           <?php if (in_array($req_status, ['all','ready','used','rusak','online','retur'], true)): ?>
             <?php if ($is_used): ?>
@@ -2218,7 +2218,7 @@ if ($is_ajax) {
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
             <?php endif; ?>
           <?php endif; ?>
-          <?php if($u['uid']): ?>
+          <?php if($u['uid'] || $can_mark_rusak): ?>
             <?php if ($is_rusak && !$can_enable): ?>
               <button type="button" class="btn-act btn-act-retur" onclick="actionRequest('./?hotspot=users&action=retur&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&p=<?= urlencode($u['profile']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','RETUR Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Retur"><i class="fa fa-exchange"></i></button>
               <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=rollback&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','Rollback RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rollback"><i class="fa fa-undo"></i></button>
@@ -2811,7 +2811,7 @@ if ($debug_mode && !$is_ajax) {
                         $has_rusak_comment = !empty($u['comment_rusak']);
                         $is_disabled = !empty($u['is_disabled']);
                         $can_enable = $is_rusak && $is_disabled && !$has_rusak_comment;
-                        $can_mark_rusak = ($is_used || $is_invalid) && !$is_online;
+                        $can_mark_rusak = $is_used && !$is_online;
                       ?>
                       <?php if (in_array($req_status, ['all','ready','used','rusak','online','retur'], true)): ?>
                         <?php if ($is_used && in_array($req_status, ['all','used'], true)): ?>
