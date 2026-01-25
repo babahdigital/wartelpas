@@ -194,11 +194,11 @@ function gen_user($profile, $comment_ref, $orig_user = '') {
   $pass = $user;
   $blok_part = $blok != '' ? $blok . ' ' : '';
   $ref_user = trim((string)$orig_user);
-  $ref_label = $ref_user !== '' ? "Ref:$ref_user" : "Ref:$clean_ref";
+  $ref_label = $ref_user !== '' ? "Retur Ref:$ref_user" : "Retur Ref:$clean_ref";
   if ($ref_user !== '' && stripos($clean_ref, $ref_user) === false) {
-    $ref_label = "Ref:$ref_user | $clean_ref";
+    $ref_label = "Retur Ref:$ref_user | $clean_ref";
   }
-  $new_comm = trim($blok_part . $ref_label . " | Profile:$profile");
+  $new_comm = trim($blok_part . "(Retur) Valid: $ref_label | Profile:$profile");
   return ['u'=>$user, 'p'=>$pass, 'c'=>$new_comm];
 }
 
