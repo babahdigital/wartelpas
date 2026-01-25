@@ -258,6 +258,67 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **Akar masalah**: endpoint tidak mengirim JSON yang diharapkan.
 - **Solusi**: kirim `ajax=1`, arahkan ke `report/hp_save.php`, respons JSON konsisten.
 
+## 4) Penyempurnaan Terbaru (Tahap Lanjutan)
+### 4.1 Filter Hotspot (Active/Hosts/Cookies/DHCP)
+- **hotspot/active.php**: filter user aktif hanya **server wartel** (tanpa server-profile) agar data tidak kosong.
+- **hotspot/hosts.php**: filter host hanya **server wartel**.
+- **hotspot/cookies.php**: filter cookie hanya **server wartel**; fallback dari pola user (6 huruf kecil+angka) bila server kosong.
+- **dhcp/dhcpleases.php**: filter DHCP leases hanya **server wartelpas** (case-insensitive).
+
+### 4.2 Pembersihan Komentar Active/Host
+- Komentar voucher seperti `Blok-F30 | IP:... | MAC:...` diringkas menjadi **“Blok-F - Profile 30 Menit”**.
+- Berlaku di **hotspot/active.php** dan **hotspot/hosts.php**.
+
+### 4.3 Print Rusak & Used (Rincian Detail)
+- **hotspot/print.detail.php**: print khusus rusak dengan:
+  - Detail User, Kelayakan Untuk Rusak (status), dan Rincian Relogin (hanya jika >1 & beda dari first/login/logout).
+  - Tambahan IP/MAC dari login_history atau comment.
+  - Blok tanpa prefix “BLOK-”, Profile format “10 Menit/30 Menit”.
+- **hotspot/print.used.php**: print khusus **TERPAKAI/ONLINE** (tanpa Kelayakan Rusak).
+- Tombol aksi di **hotspot/users.php**:
+  - TERPAKAI/ONLINE → print.used.php
+  - RUSAK → print.detail.php
+  - RETUR → tetap print voucher (barcode/PNG).
+
+### 4.4 Menu Kesehatan DB + Backup/Restore
+- Menu kanan menampilkan ikon heartbeat status DB (hijau/merah) dengan cek berkala **30 detik**.
+- Tombol **Restore** disembunyikan jika DB sehat.
+- Tombol **Backup** disembunyikan jika sudah ada backup **valid** hari ini.
+- Endpoint baru: **tools/backup_status.php**.
+
+### 4.5 Perbaikan Backup/Restore
+- **tools/backup_db.php**: backup via file temp + validasi ukuran + quick_check sebelum rename.
+- **tools/restore_db.php**: restore dari backup terbaru/tertentu + quick_check + VACUUM.
+
+### 4.6 Tooltip Global
+- Tooltip global floating dengan transisi halus.
+- Dikecualikan untuk chart (Highcharts).
+- Posisi tooltip dijaga agar tidak keluar layar.
+
+### 4.7 Dashboard (Chart & KPI)
+- Chart “Performa Bisnis” dirapatkan ke kiri/kanan (min/max, padding, pointPlacement).
+- KPI **Pendapatan** kini **harian (today)**.
+- **Gross income** dihitung di backend (harian) untuk kebutuhan berikutnya.
+
+### 4.8 HTACCESS
+- Whitelist endpoint baru:
+  - **hotspot/print.detail.php**
+  - **hotspot/print.used.php**
+  - Pattern disesuaikan agar bekerja di subfolder.
+
+### 4.9 Login (Warning Browser)
+- Tambah `autocomplete="username"` dan `autocomplete="current-password"`.
+- Tambah placeholder DOM untuk mencegah error JS global di halaman login.
+
+## 5) Rencana Pengembangan (Diskusi WhatsApp)
+- Target: setelah audit/settlement selesai, **kirim PDF laporan harian** ke beberapa nomor via WhatsApp.
+- Dipilih gateway **Fonnte**.
+- Rencana komponen:
+  1) Manajemen daftar nomor (CRUD, validasi format 62xxx).
+  2) Template pesan + attachment PDF.
+  3) Queue/log pengiriman (status sukses/gagal).
+  4) Trigger: otomatis setelah settlement selesai atau jadwal tertentu.
+
 ## 4) Update Terbaru (Audit & Penyesuaian 2026-01-22)
 ### 4.1 Filter tanggal & ketepatan laporan penjualan
 - **Masalah**: Data hari ini muncul kosong atau bercampur dengan hari lain.
