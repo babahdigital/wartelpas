@@ -243,7 +243,7 @@ for ($i = 5; $i >= 0; $i--) {
                                 <th style="width:140px;">USER</th>
                                 <th style="text-align:center; width:70px;">BLOK</th>
                                 <th style="text-align:center; width:90px;">STATUS</th>
-                                <th style="text-align:right; width:110px;">UPTIME</th>
+                                <th style="text-align:right; width:110px; padding-right:30px;">UPTIME</th>
                             </tr>
                         </thead>
                         <tbody id="tabel_riwayat">
