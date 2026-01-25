@@ -208,11 +208,40 @@ else {
         }));
     }
 
+    function updateLiveWindow() {
+        var now = new Date();
+        var parts = new Intl.DateTimeFormat('id-ID', {
+            timeZone: 'Asia/Makassar',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        }).formatToParts(now);
+        var hh = 0;
+        var mm = 0;
+        parts.forEach(function(p) {
+            if (p.type === 'hour') hh = parseInt(p.value, 10) || 0;
+            if (p.type === 'minute') mm = parseInt(p.value, 10) || 0;
+        });
+
+        var minutes = (hh * 60) + mm;
+        var start = (8 * 60);
+        var end = (18 * 60) + 15;
+        var isLive = minutes >= start && minutes < end;
+
+        if (isLive) {
+            $('.live-window').show();
+        } else {
+            $('.live-window').hide();
+        }
+    }
+
     $(document).ready(function() {
         $("#r_1_display").load("./dashboard/aload.php?session=<?= $session ?>&load=sysresource #r_1_content_raw");
         changeMonth(<?= (int)date('m') ?>);
         updateDashboard();
         setInterval(updateDashboard, 10000);
+        updateLiveWindow();
+        setInterval(updateLiveWindow, 60000);
         setInterval(function() {
             $("#r_1_display").load("./dashboard/aload.php?session=<?= $session ?>&load=sysresource #r_1_content_raw");
         }, 10000);
@@ -259,7 +288,7 @@ for ($i = 5; $i >= 0; $i--) {
             <h1 id="kpi-active">0</h1>
             <div class="label">
                 User Active
-                <span class="blink" style="color:var(--accent-green)">● LIVE</span>
+                <span class="blink live-window" style="color:var(--accent-green)">● LIVE</span>
             </div>
         </div>
         <div class="kpi-box border-blue">
@@ -295,7 +324,7 @@ for ($i = 5; $i >= 0; $i--) {
         <div class="card card-transaction">
             <div class="card-header">
                 <h3><i class="fa fa-history"></i> TRANSAKSI TERAKHIR</h3>
-                <span class="blink" style="font-size:10px; font-weight:bold; color:var(--accent-green);">
+                <span class="blink live-window" style="font-size:10px; font-weight:bold; color:var(--accent-green);">
                     <i class="fa fa-circle"></i> LIVE UPDATE
                 </span>
             </div>
@@ -323,7 +352,7 @@ for ($i = 5; $i >= 0; $i--) {
             </div>
             <div class="card-footer">
                 <span id="row-count">Memuat...</span>
-                <span class="live-indicator blink">
+                <span class="live-indicator blink live-window">
                     <i class="fa fa-refresh"></i> Update: <span id="last-update">--:--</span>
                 </span>
             </div>
