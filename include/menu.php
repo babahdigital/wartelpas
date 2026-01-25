@@ -498,7 +498,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
             <a class="db-tools" href="./tools/backup_db.php?key=WartelpasSecureKey" target="_blank" title="Backup Database">
                 <i class="fa fa-database"></i> Backup
             </a>
-            <a class="db-tools" href="./tools/restore_db.php?key=WartelpasSecureKey" target="_blank" title="Restore Backup Terbaru" onclick="return confirm('Restore backup terbaru? Data saat ini akan tertimpa.');">
+            <a id="db-restore" class="db-tools" href="./tools/restore_db.php?key=WartelpasSecureKey" target="_blank" title="Restore Backup Terbaru" onclick="return confirm('Restore backup terbaru? Data saat ini akan tertimpa.');">
                 <i class="fa fa-history"></i> Restore
             </a>
             <span class="timer-badge" title="Waktu Saat Ini">
@@ -567,6 +567,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
 
     function updateDbStatus() {
         var el = document.getElementById('db-status');
+        var restoreBtn = document.getElementById('db-restore');
         if (!el) return;
         fetch('./tools/db_check.php?key=WartelpasSecureKey')
             .then(function(resp) {
@@ -578,10 +579,14 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                 var ok = low.indexOf('db error') === -1 && low.indexOf('not found') === -1 && low.indexOf('forbidden') === -1;
                 el.classList.remove('db-ok', 'db-error');
                 el.classList.add(ok ? 'db-ok' : 'db-error');
+                if (restoreBtn) {
+                    restoreBtn.style.display = ok ? 'none' : 'inline-flex';
+                }
             })
             .catch(function() {
                 el.classList.remove('db-ok');
                 el.classList.add('db-error');
+                if (restoreBtn) restoreBtn.style.display = 'inline-flex';
             });
     }
 
