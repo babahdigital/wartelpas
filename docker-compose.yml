@@ -23,6 +23,7 @@ services:
       # ==========================================
       - /home/abdullah/.config/rclone/rclone.conf:/var/www/html/config/rclone.conf:ro
       - ./include/config.php:/var/www/html/include/config.php
+      - ./include/env.php:/var/www/html/include/env.php
       - ./settings/settings.php:/var/www/html/settings/settings.php
       - ./include/readcfg.php:/var/www/html/include/readcfg.php
       - ./custom.ini:/usr/local/etc/php/conf.d/custom.ini
