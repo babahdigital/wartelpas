@@ -251,6 +251,48 @@ try {
             ORDER BY sale_datetime DESC, raw_date DESC");
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
 
+        // Tambahkan data dari login_history untuk status rusak/retur/invalid
+        try {
+            $lhWhere = "(substr(login_time_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR substr(logout_time_real,1,10) = :d OR substr(updated_at,1,10) = :d OR login_date = :d)";
+            if ($req_show === 'bulanan') {
+                $lhWhere = "(substr(login_time_real,1,7) = :d OR substr(last_login_real,1,7) = :d OR substr(logout_time_real,1,7) = :d OR substr(updated_at,1,7) = :d OR substr(login_date,1,7) = :d)";
+            } elseif ($req_show === 'tahunan') {
+                $lhWhere = "(substr(login_time_real,1,4) = :d OR substr(last_login_real,1,4) = :d OR substr(logout_time_real,1,4) = :d OR substr(updated_at,1,4) = :d OR substr(login_date,1,4) = :d)";
+            }
+            $stmtLh = $db->prepare("SELECT
+                '' AS raw_date,
+                '' AS raw_time,
+                COALESCE(NULLIF(substr(login_time_real,1,10),''), NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(logout_time_real,1,10),''), NULLIF(substr(updated_at,1,10),''), login_date) AS sale_date,
+                COALESCE(NULLIF(substr(login_time_real,12,8),''), NULLIF(substr(last_login_real,12,8),''), NULLIF(substr(logout_time_real,12,8),''), NULLIF(substr(updated_at,12,8),''), login_time) AS sale_time,
+                COALESCE(NULLIF(login_time_real,''), NULLIF(last_login_real,''), NULLIF(logout_time_real,''), NULLIF(updated_at,'')) AS sale_datetime,
+                username,
+                COALESCE(NULLIF(validity,''), '-') AS profile,
+                COALESCE(NULLIF(validity,''), '-') AS profile_snapshot,
+                CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price,
+                CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price_snapshot,
+                CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS sprice_snapshot,
+                validity,
+                raw_comment AS comment,
+                blok_name,
+                COALESCE(NULLIF(last_status,''), '') AS status,
+                0 AS is_rusak,
+                0 AS is_retur,
+                0 AS is_invalid,
+                1 AS qty,
+                '' AS full_raw_data,
+                last_status,
+                last_bytes
+              FROM login_history
+              WHERE username != ''
+                AND $lhWhere
+                AND lower(COALESCE(NULLIF(last_status,''), 'ready')) IN ('rusak','retur','invalid')");
+            $stmtLh->execute([':d' => $filter_date]);
+            $lhRows = $stmtLh->fetchAll(PDO::FETCH_ASSOC);
+            if (!empty($lhRows)) {
+                $rows = array_merge($lhRows, $rows);
+            }
+        } catch (Exception $e) {}
+
         if ($req_show === 'harian') {
             try {
                 $stmtN = $db->prepare("SELECT note FROM daily_report_notes WHERE report_date = :d");
