@@ -1283,6 +1283,53 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           save_user_history($gen['u'], $save_new);
         }
       }
+    } elseif ($act == 'invalid' && $name != '' && $db) {
+      // fallback: jika user sudah hilang di RouterOS, tetap tandai RUSAK di DB
+      $hist = get_user_history($name);
+      $base_comment = $comm != '' ? $comm : ($hist['raw_comment'] ?? '');
+      $new_c = "Audit: RUSAK " . date("d/m/y") . " " . $base_comment;
+      $logout_time_real = $hist['logout_time_real'] ?? null;
+      if (empty($logout_time_real)) {
+        $comment_dt = extract_datetime_from_comment($base_comment);
+        $logout_time_real = $comment_dt != '' ? $comment_dt : date('Y-m-d H:i:s');
+      }
+      $login_time_real = $hist['login_time_real'] ?? null;
+      if (empty($login_time_real) && !empty($logout_time_real)) {
+        $login_time_real = $logout_time_real;
+      }
+      $save_data = [
+        'ip' => $hist['ip_address'] ?? '-',
+        'mac' => $hist['mac_address'] ?? '-',
+        'uptime' => $hist['last_uptime'] ?? '0s',
+        'bytes' => (int)($hist['last_bytes'] ?? 0),
+        'first_ip' => $hist['first_ip'] ?? '',
+        'first_mac' => $hist['first_mac'] ?? '',
+        'last_ip' => $hist['last_ip'] ?? '',
+        'last_mac' => $hist['last_mac'] ?? '',
+        'blok' => $hist['blok_name'] ?? extract_blok_name($base_comment),
+        'raw' => $new_c,
+        'login_time_real' => $login_time_real,
+        'logout_time_real' => $logout_time_real,
+        'status' => 'rusak'
+      ];
+      save_user_history($name, $save_data);
+
+      try {
+        $stmt = $db->prepare("UPDATE login_history SET updated_at=CURRENT_TIMESTAMP,
+          login_time_real=COALESCE(NULLIF(login_time_real,''), CURRENT_TIMESTAMP),
+          last_login_real=COALESCE(NULLIF(last_login_real,''), CURRENT_TIMESTAMP)
+          WHERE username = :u");
+        $stmt->execute([':u' => $name]);
+      } catch(Exception $e) {}
+
+      try {
+        $stmt = $db->prepare("UPDATE sales_history SET status='rusak', is_rusak=1, is_retur=0, is_invalid=0 WHERE username = :u");
+        $stmt->execute([':u' => $name]);
+      } catch(Exception $e) {}
+      try {
+        $stmt = $db->prepare("UPDATE live_sales SET status='rusak', is_rusak=1, is_retur=0, is_invalid=0 WHERE username = :u AND sync_status = 'pending'");
+        $stmt->execute([':u' => $name]);
+      } catch(Exception $e) {}
     }
   }
   $redir_params = [
