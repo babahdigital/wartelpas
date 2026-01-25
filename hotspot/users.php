@@ -1056,6 +1056,13 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         }
       } elseif ($act == 'invalid') {
         $new_c = "Audit: RUSAK " . date("d/m/y") . " " . $comm;
+        $profile_label = (string)($urow['profile'] ?? '');
+        $price_value = 0;
+        if (preg_match('/\b30\s*(menit|m)\b|30menit/i', $profile_label)) {
+          $price_value = 20000;
+        } else {
+          $price_value = 5000;
+        }
         $API->write('/ip/hotspot/user/set', false);
         $API->write('=.id='.$uid, false);
         $API->write('=disabled=yes', false);
@@ -1112,6 +1119,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             'last_mac' => ($mac_final && $mac_final != '-') ? $mac_final : ($hist['last_mac'] ?? ''),
             'blok' => extract_blok_name($comm),
             'raw' => $new_c,
+            'validity' => $profile_label,
+            'price' => $price_value,
             'login_time_real' => $login_time_real,
             'logout_time_real' => $logout_time_real,
             'status' => 'rusak'
@@ -1288,6 +1297,17 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $hist = get_user_history($name);
       $base_comment = $comm != '' ? $comm : ($hist['raw_comment'] ?? '');
       $new_c = "Audit: RUSAK " . date("d/m/y") . " " . $base_comment;
+      $profile_label = (string)($hist['validity'] ?? '');
+      if ($profile_label === '') {
+        if (preg_match('/\b30\s*(menit|m)\b|30menit/i', $base_comment)) $profile_label = '30 Menit';
+        elseif (preg_match('/\b10\s*(menit|m)\b|10menit/i', $base_comment)) $profile_label = '10 Menit';
+      }
+      $price_value = 0;
+      if (preg_match('/\b30\s*(menit|m)\b|30menit/i', $profile_label)) {
+        $price_value = 20000;
+      } else {
+        $price_value = 5000;
+      }
       $logout_time_real = $hist['logout_time_real'] ?? null;
       if (empty($logout_time_real)) {
         $comment_dt = extract_datetime_from_comment($base_comment);
@@ -1308,6 +1328,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         'last_mac' => $hist['last_mac'] ?? '',
         'blok' => $hist['blok_name'] ?? extract_blok_name($base_comment),
         'raw' => $new_c,
+        'validity' => $profile_label,
+        'price' => $price_value,
         'login_time_real' => $login_time_real,
         'logout_time_real' => $logout_time_real,
         'status' => 'rusak'
@@ -1984,13 +2006,14 @@ foreach($all_users as $u) {
       }
     }
     if ($status === 'RUSAK') {
-      $profile_name = $u['profile'] ?? '';
-      $limits = resolve_rusak_limits($profile_name);
-      $uptime_sec = uptime_to_seconds($uptime);
-      $show_rusak_times = ($uptime_sec > 0 || $bytes > 0) && $uptime_sec <= $limits['uptime'] && $bytes <= $limits['bytes'];
-      if (!$show_rusak_times) {
-        $login_disp = '-';
-        $logout_disp = '-';
+      if ($logout_disp === '-' && !empty($hist['updated_at'])) {
+        $logout_disp = $hist['updated_at'];
+      }
+      if ($login_disp === '-' && $logout_disp !== '-' && !empty($uptime) && $uptime !== '0s') {
+        $u_sec = uptime_to_seconds($uptime);
+        if ($u_sec > 0) {
+          $login_disp = date('Y-m-d H:i:s', strtotime($logout_disp) - $u_sec);
+        }
       }
     }
     if ($login_disp !== '-' && strtotime($login_disp) !== false && date('Y', strtotime($login_disp)) < 2000) {
