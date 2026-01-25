@@ -111,12 +111,11 @@ if ($load == "live_data") {
 
     $counthotspotactive = 0;
     if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-        $rawActive = $API->comm("/ip/hotspot/active/print", array(".proplist" => "server,server-profile"));
+        $rawActive = $API->comm("/ip/hotspot/active/print", array(".proplist" => "server"));
         if (is_array($rawActive)) {
             foreach ($rawActive as $act) {
                 $server = isset($act['server']) ? strtolower((string)$act['server']) : '';
-                $server_profile = isset($act['server-profile']) ? strtolower((string)$act['server-profile']) : '';
-                if ($server === 'wartel' && $server_profile === 'wartelpas') {
+                if ($server === 'wartel') {
                     $counthotspotactive++;
                 }
             }
