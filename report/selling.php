@@ -3616,6 +3616,81 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
     }
     window.sellingPauseReload = false;
     setInterval(softReloadSelling, 30000);
+
+    function formatBytesShortJS(bytes){
+        var b = parseInt(bytes || 0, 10);
+        if (!b || b <= 0) return '0 B';
+        var units = ['B','KB','MB','GB','TB'];
+        var i = 0;
+        var n = b;
+        while (n >= 1024 && i < units.length - 1) {
+            n = n / 1024;
+            i++;
+        }
+        var dec = i >= 2 ? 2 : 0;
+        return n.toFixed(dec) + ' ' + units[i];
+    }
+
+    window.openGhostModal = function(blok, date, diff){
+        var modal = document.getElementById('ghost-modal');
+        var body = document.getElementById('ghost-body');
+        var status = document.getElementById('ghost-status');
+        var meta = document.getElementById('ghost-meta');
+        if (body) body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--txt-muted);padding:20px;">Memuat data...</td></tr>';
+        if (status) status.textContent = 'Memindai kandidat ghost...';
+        if (meta) meta.textContent = 'Blok: ' + (blok || '-') + ' | Tanggal: ' + (date || '-') + ' | Selisih: ' + (diff || 0) + ' unit';
+        if (modal) modal.style.display = 'flex';
+        window.sellingPauseReload = true;
+
+        var params = new URLSearchParams();
+        params.set('report', 'selling');
+        params.set('ghost', '1');
+        params.set('date', date || '');
+        params.set('blok', blok || '');
+        <?php if ($session_id !== ''): ?>
+        params.set('session', '<?= htmlspecialchars($session_id); ?>');
+        <?php endif; ?>
+
+        fetch('<?= './?report=selling'; ?>' + '&' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+                if (!data || !data.ok) {
+                    if (status) status.textContent = (data && data.message) ? data.message : 'Gagal mengambil data ghost.';
+                    if (body) body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#fca5a5;padding:20px;">Tidak ada data.</td></tr>';
+                    return;
+                }
+                if (status) status.textContent = 'Ditemukan ' + data.count + ' kandidat.';
+                if (!data.ghosts || data.ghosts.length === 0) {
+                    if (body) body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--txt-muted);padding:20px;">Tidak ada kandidat ghost.</td></tr>';
+                    return;
+                }
+                var rows = '';
+                data.ghosts.forEach(function(g){
+                    var score = parseInt(g.confidence || 0, 10);
+                    var scoreColor = score >= 80 ? '#e74c3c' : (score >= 60 ? '#f39c12' : '#3498db');
+                    rows += '<tr>' +
+                        '<td>' + String(g.username || '-') + '<br><span style="color:#8aa0b4;font-size:11px;">' + String(g.ip || '-') + ' | ' + String(g.mac || '-') + '</span></td>' +
+                        '<td class="text-center">' + String(g.profile || '-') + '</td>' +
+                        '<td class="text-center">' + String(g.status || '-') + '</td>' +
+                        '<td class="text-center">' + String(g.uptime || '-') + '</td>' +
+                        '<td class="text-center">' + formatBytesShortJS(g.bytes) + '</td>' +
+                        '<td class="text-center">' + String(g.login_time || '-') + '</td>' +
+                        '<td class="text-center"><span style="color:' + scoreColor + ';font-weight:600;">' + score + '%</span></td>' +
+                        '</tr>';
+                });
+                if (body) body.innerHTML = rows;
+            })
+            .catch(function(){
+                if (status) status.textContent = 'Gagal mengambil data ghost.';
+                if (body) body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#fca5a5;padding:20px;">Tidak ada data.</td></tr>';
+            });
+    };
+
+    window.closeGhostModal = function(){
+        var modal = document.getElementById('ghost-modal');
+        if (modal) modal.style.display = 'none';
+        window.sellingPauseReload = false;
+    };
 </script>
 <?php endif; ?>
 
