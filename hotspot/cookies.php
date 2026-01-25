@@ -9,18 +9,59 @@ error_reporting(0);
 if (!isset($_SESSION["mikhmon"])) {
     header("Location:../admin.php?id=login");
 } else {
-    $getcookies = $API->comm("/ip/hotspot/cookie/print");
-    $filtered_cookies = array();
-    foreach ($getcookies as $cookie) {
-        $server = isset($cookie['server']) ? strtolower((string)$cookie['server']) : '';
-        $server_profile = isset($cookie['server-profile']) ? strtolower((string)$cookie['server-profile']) : '';
-        if ($server === 'wartel' && ($server_profile === '' || $server_profile === 'wartelpas')) {
-            $filtered_cookies[] = $cookie;
+    // load session MikroTik
+    $session = $_GET['session'];
+
+    // load config
+    include('../include/config.php');
+    include('../include/readcfg.php');
+
+    // lang
+    include('../include/lang.php');
+    include('../lang/'.$langid.'.php');
+
+    // routeros api
+    include_once('../lib/routeros_api.class.php');
+    include_once('../lib/formatbytesbites.php');
+
+    $API = new RouterosAPI();
+    $API->debug = false;
+
+    if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
+        $getcookies = $API->comm("/ip/hotspot/cookie/print");
+
+        // mapping server -> profile
+        $server_profile_map = array();
+        $servers = $API->comm("/ip/hotspot/server/print");
+        if (is_array($servers)) {
+            foreach ($servers as $srv) {
+                $srv_name = isset($srv['name']) ? strtolower((string)$srv['name']) : '';
+                $srv_profile = isset($srv['profile']) ? strtolower((string)$srv['profile']) : '';
+                if ($srv_name !== '') {
+                    $server_profile_map[$srv_name] = $srv_profile;
+                }
+            }
         }
+
+        $filtered_cookies = array();
+        foreach ($getcookies as $cookie) {
+            $server = isset($cookie['server']) ? strtolower((string)$cookie['server']) : '';
+            $server_profile = isset($cookie['server-profile']) ? strtolower((string)$cookie['server-profile']) : '';
+            if ($server_profile === '' && isset($server_profile_map[$server])) {
+                $server_profile = $server_profile_map[$server];
+            }
+            if ($server === 'wartel' && $server_profile === 'wartelpas') {
+                $filtered_cookies[] = $cookie;
+            }
+        }
+        $getcookies = $filtered_cookies;
+        $TotalReg = count($getcookies);
+        $countcookies = $TotalReg;
+    } else {
+        $getcookies = array();
+        $TotalReg = 0;
+        $countcookies = 0;
     }
-    $getcookies = $filtered_cookies;
-    $TotalReg = count($getcookies);
-    $countcookies = $TotalReg;
 }
 ?>
 

@@ -12,25 +12,62 @@ if (!isset($_SESSION["mikhmon"])) {
 	header("Location:../admin.php?id=login");
 } else {
 
-	// --- UPDATE LOGIC: FILTER BY IP SEGMEN ---
-	// 1. Tarik SEMUA data lease dulu
-	$getlease = $API->comm("/ip/dhcp-server/lease/print");
-	
-	// 2. Siapkan array penampung
-	$filtered_leases = array();
-	
-    // 3. Filter berdasarkan server wartel + profile wartelpas (jika tersedia)
-    foreach ($getlease as $lease) {
-        $server = isset($lease['server']) ? strtolower((string)$lease['server']) : '';
-        $server_profile = isset($lease['server-profile']) ? strtolower((string)$lease['server-profile']) : '';
+    // load session MikroTik
+    $session = $_GET['session'];
 
-        if ($server === 'wartel' && ($server_profile === '' || $server_profile === 'wartelpas')) {
-            $filtered_leases[] = $lease;
+    // load config
+    include('../include/config.php');
+    include('../include/readcfg.php');
+
+    // lang
+    include('../include/lang.php');
+    include('../lang/'.$langid.'.php');
+
+    // routeros api
+    include_once('../lib/routeros_api.class.php');
+    include_once('../lib/formatbytesbites.php');
+
+    $API = new RouterosAPI();
+    $API->debug = false;
+
+    if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
+        // 1. Tarik SEMUA data lease dulu
+        $getlease = $API->comm("/ip/dhcp-server/lease/print");
+
+        // 2. Mapping server -> profile
+        $server_profile_map = array();
+        $servers = $API->comm("/ip/hotspot/server/print");
+        if (is_array($servers)) {
+            foreach ($servers as $srv) {
+                $srv_name = isset($srv['name']) ? strtolower((string)$srv['name']) : '';
+                $srv_profile = isset($srv['profile']) ? strtolower((string)$srv['profile']) : '';
+                if ($srv_name !== '') {
+                    $server_profile_map[$srv_name] = $srv_profile;
+                }
+            }
         }
+
+        // 3. Filter berdasarkan server wartel + profile wartelpas
+        $filtered_leases = array();
+        foreach ($getlease as $lease) {
+            $server = isset($lease['server']) ? strtolower((string)$lease['server']) : '';
+            $server_profile = isset($lease['server-profile']) ? strtolower((string)$lease['server-profile']) : '';
+            if ($server_profile === '' && isset($server_profile_map[$server])) {
+                $server_profile = $server_profile_map[$server];
+            }
+
+            if ($server === 'wartel' && $server_profile === 'wartelpas') {
+                $filtered_leases[] = $lease;
+            }
+        }
+
+        $TotalReg = count($filtered_leases);
+        $countlease = $TotalReg;
+    } else {
+        $filtered_leases = array();
+        $TotalReg = 0;
+        $countlease = 0;
     }
-	
-	$TotalReg = count($filtered_leases);
-	$countlease = $TotalReg;
 }
 ?>
 
