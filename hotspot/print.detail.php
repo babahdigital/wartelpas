@@ -79,6 +79,20 @@ function extract_blok_name($comment) {
     return '';
 }
 
+function extract_ip_mac_from_comment($comment) {
+    $ip = '';
+    $mac = '';
+    if (!empty($comment)) {
+        if (preg_match('/\bIP\s*:\s*([^|\s]+)/i', $comment, $m)) {
+            $ip = trim($m[1]);
+        }
+        if (preg_match('/\bMAC\s*:\s*([^|\s]+)/i', $comment, $m)) {
+            $mac = trim($m[1]);
+        }
+    }
+    return ['ip' => $ip, 'mac' => $mac];
+}
+
 function format_dmy($dateStr) {
     if (empty($dateStr) || $dateStr === '-') return '-';
     $ts = strtotime($dateStr);
@@ -111,7 +125,7 @@ if (file_exists($dbFile)) {
 function get_user_history($db, $name) {
     if (!$db) return null;
     try {
-        $stmt = $db->prepare("SELECT username, login_time_real, logout_time_real, blok_name, last_status, first_login_real, last_login_real FROM login_history WHERE username = :u LIMIT 1");
+        $stmt = $db->prepare("SELECT username, login_time_real, logout_time_real, blok_name, ip_address, mac_address, last_status, first_login_real, last_login_real FROM login_history WHERE username = :u LIMIT 1");
         $stmt->execute([':u' => $name]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
@@ -200,6 +214,11 @@ $blok = $hist['blok_name'] ?? '';
 if ($blok === '') {
     $blok = extract_blok_name($comment);
 }
+$hist_ip = $hist['ip_address'] ?? '';
+$hist_mac = $hist['mac_address'] ?? '';
+$c_ipmac = extract_ip_mac_from_comment($comment);
+$ip_addr = $hist_ip ?: ($c_ipmac['ip'] ?? '');
+$mac_addr = $hist_mac ?: ($c_ipmac['mac'] ?? '');
 
 $bytes_total = ($urow['bytes-in'] ?? 0) + ($urow['bytes-out'] ?? 0);
 $bytes_active = ($arow['bytes-in'] ?? 0) + ($arow['bytes-out'] ?? 0);
@@ -237,6 +256,8 @@ $detail_rows = [
     ['User', htmlspecialchars($user)],
     ['Blok', htmlspecialchars($blok ?: '-')],
     ['Profile', htmlspecialchars($profile ?: '-')],
+    ['IP', htmlspecialchars($ip_addr ?: '-')],
+    ['MAC', htmlspecialchars($mac_addr ?: '-')],
     ['Status', $is_active ? 'ONLINE' : (strtoupper((string)$last_status) ?: 'OFFLINE')],
     ['First Login', format_dmy($first_login_real)],
     ['Login', format_dmy($login_time_real)],
