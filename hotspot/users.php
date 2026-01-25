@@ -1567,14 +1567,6 @@ $has_transactions_in_filter = false;
 $filtering_by_date = ($req_status === 'all' && $req_show !== 'semua' && !empty($filter_date));
 $debug_rows = [];
 $search_terms = array_filter(array_map('trim', preg_split('/[,\s]+/', $req_search)));
-$profile_totals_all = [];
-if ($debug_mode) {
-  $profile_totals_all = [
-    '10' => ['count' => 0, 'ready' => 0, 'online' => 0, 'used' => 0, 'rusak' => 0, 'retur' => 0, 'invalid' => 0],
-    '30' => ['count' => 0, 'ready' => 0, 'online' => 0, 'used' => 0, 'rusak' => 0, 'retur' => 0, 'invalid' => 0],
-    'other' => ['count' => 0, 'ready' => 0, 'online' => 0, 'used' => 0, 'rusak' => 0, 'retur' => 0, 'invalid' => 0]
-  ];
-}
 foreach($all_users as $u) {
     $name = $u['name'] ?? '';
     $comment = $u['comment'] ?? '';
@@ -1854,21 +1846,6 @@ foreach($all_users as $u) {
           save_user_history($name, $save_data);
           $hist = get_user_history($name);
         }
-    }
-
-    if ($debug_mode) {
-      $debug_rows[] = [
-        'name' => $name,
-        'status' => $status,
-        'bytes_total' => $bytes_total,
-        'bytes_active' => $bytes_active,
-        'bytes_hist' => $hist['last_bytes'] ?? 0,
-        'uptime_user' => $uptime_user,
-        'uptime_active' => $uptime_active,
-        'uptime_hist' => $hist['last_uptime'] ?? '',
-        'login' => $login_time_real,
-        'logout' => $logout_time_real
-      ];
     }
 
     $profile_kind = detect_profile_kind_unified($u['profile'] ?? '', $comment, $f_blok);
