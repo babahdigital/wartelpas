@@ -14,6 +14,14 @@ if (!isset($_SESSION["mikhmon"]) || !isset($_GET['session'])) {
 $session = $_GET['session'];
 
 $req_prof = isset($_GET['profile']) ? $_GET['profile'] : 'all';
+$req_prof = strtolower(trim((string)$req_prof));
+if ($req_prof !== 'all') {
+  if (preg_match('/(\d+)/', $req_prof, $m)) {
+    $req_prof = (string)((int)$m[1]);
+  } else {
+    $req_prof = 'all';
+  }
+}
 $req_comm = isset($_GET['comment']) ? urldecode($_GET['comment']) : '';
 $req_status = isset($_GET['status']) ? strtolower(trim((string)$_GET['status'])) : 'all';
 if ($req_status === '') $req_status = 'all';
@@ -1328,6 +1336,9 @@ if (!function_exists('detect_profile_kind_summary')) {
     }
     if (preg_match('/(\d+)(menit|m)\b/i', $p, $m)) {
       return (string)((int)$m[1]);
+    }
+    if (preg_match('/(^|[^0-9])(10|30)([^0-9]|$)/', $p, $m)) {
+      return (string)$m[2];
     }
     return 'other';
   }
