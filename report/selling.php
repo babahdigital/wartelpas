@@ -3556,6 +3556,42 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
 </div>
 <?php endif; ?>
 
+<?php if (!$is_ajax): ?>
+<div id="ghost-modal" class="modal-backdrop" onclick="if(event.target===this){closeGhostModal();}">
+    <div class="modal-card" style="width:760px;max-width:96vw;">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fa fa-ghost" style="color:#8e44ad;margin-right:6px;"></i> Ghost Hunter</div>
+            <button type="button" onclick="closeGhostModal()" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="ghost-meta" style="font-size:12px;color:var(--txt-muted);margin-bottom:8px;"></div>
+            <div id="ghost-status" style="font-size:12px;color:#ccc;margin-bottom:10px;"></div>
+            <div class="table-responsive" style="max-height:360px;overflow:auto;">
+                <table class="table-dark-solid text-nowrap" id="ghost-table" style="font-size:12px;">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th class="text-center">Profile</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center">Uptime</th>
+                            <th class="text-center">Usage</th>
+                            <th class="text-center">Login</th>
+                            <th class="text-center">Skor</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ghost-body">
+                        <tr><td colspan="7" style="text-align:center;color:var(--txt-muted);padding:20px;">Belum ada data.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" onclick="closeGhostModal()" class="btn-print btn-default-dark">Tutup</button>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <?php if ($is_ajax) { echo ob_get_clean(); exit; } ?>
 
 <?php if (!$is_ajax): ?>
