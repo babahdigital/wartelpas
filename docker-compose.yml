@@ -8,8 +8,7 @@ services:
       - "8081:80"
     environment:
       - TZ=Asia/Makassar
-      - /home/abdullah/.config/rclone/rclone.conf:/var/www/html/config/rclone.conf:ro
-      - /home/abdullah/.config/rclone/rclone.conf:/var/www/html/config/rclone.conf:ro
+      - RCLONE_CONFIG=/var/www/html/config/rclone.conf
     volumes:
       # ==========================================
       # 1. PERSISTENSI DATA (WAJIB AMAN)
@@ -22,6 +21,7 @@ services:
       # ==========================================
       # 2. KONFIGURASI SERVER & PHP
       # ==========================================
+      - /home/abdullah/.config/rclone/rclone.conf:/var/www/html/config/rclone.conf:ro
       - ./include/config.php:/var/www/html/include/config.php
       - ./settings/settings.php:/var/www/html/settings/settings.php
       - ./include/readcfg.php:/var/www/html/include/readcfg.php
