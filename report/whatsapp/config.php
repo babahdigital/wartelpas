@@ -7,7 +7,7 @@ return [
     'timezone' => 'Asia/Makassar',
     'wa' => [
         'endpoint_send' => 'https://api.fonnte.com/send',
-        'token' => '',
+        'token' => 'g7A8dpDfJrnR5SBGXunU',
         'country_code' => '62'
     ]
 ];
