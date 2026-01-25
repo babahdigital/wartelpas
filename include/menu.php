@@ -209,6 +209,9 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         transition: 0.2s;
     }
 
+    .dropdown-item.audit-item { color: #ffb6c1; }
+    .dropdown-item.audit-item:hover { color: #fff; }
+
     .dropdown-item i { margin-right: 10px; width: 15px; text-align: center; }
 
     .nav-right { display: flex; align-items: center; gap: 12px; padding-left: 20px; }
@@ -459,16 +462,15 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                 </a>
             </li>
 
-            <li class="nav-item">
-                <a class="nav-link <?= $sgenuser; ?>" href="./?hotspot-user=generate&session=<?= $session; ?>">
-                    <i class="fa fa-user-plus"></i> <?= $_generate ?>
+            <li class="nav-item" onclick="toggleMobileSub(this)">
+                <a class="nav-link <?= trim($susersl . ' ' . $sgenuser . ' ' . $suserprofiles . ' ' . $suserprof); ?>" href="javascript:void(0)">
+                    <i class="fa fa-users"></i> <?= $_users ?> <i class="fa fa-caret-down" style="margin-left:auto;font-size:10px;"></i>
                 </a>
-            </li>
-
-            <li class="nav-item">
-                <a class="nav-link <?= $suserprofiles; ?>" href="./?hotspot=user-profiles&session=<?= $session; ?>">
-                    <i class="fa fa-pie-chart"></i> <?= $_user_profile_list ?>
-                </a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="./?hotspot=users&profile=all&session=<?= $session; ?>"><i class="fa fa-list"></i> <?= $_user_list ?></a>
+                    <a class="dropdown-item" href="./?hotspot-user=generate&session=<?= $session; ?>"><i class="fa fa-user-plus"></i> <?= $_generate ?></a>
+                    <a class="dropdown-item" href="./?hotspot=user-profiles&session=<?= $session; ?>"><i class="fa fa-pie-chart"></i> <?= $_user_profile_list ?></a>
+                </div>
             </li>
 
 
@@ -484,16 +486,14 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                 </div>
             </li>
 
-            <li class="nav-item">
-                <a class="nav-link <?= $sselling; ?>" href="./?report=selling&idbl=<?= strtolower(date("M")) . date("Y"); ?>&session=<?= $session; ?>">
-                    <i class="fa fa-money"></i> <?= $_report ?>
+            <li class="nav-item" onclick="toggleMobileSub(this)">
+                <a class="nav-link <?= trim($sselling . ' ' . $saudit); ?>" href="javascript:void(0)">
+                    <i class="fa fa-money"></i> <?= $_report ?> <i class="fa fa-caret-down" style="margin-left:auto;font-size:10px;"></i>
                 </a>
-            </li>
-
-            <li class="nav-item">
-                <a class="nav-link audit-link <?= $saudit; ?>" href="./?report=audit_session&session=<?= $session; ?>" style="color:#ffb6c1;">
-                    <i class="fa fa-check-square-o"></i> <?= $_audit_log ?>
-                </a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="./?report=selling&idbl=<?= strtolower(date("M")) . date("Y"); ?>&session=<?= $session; ?>"><i class="fa fa-line-chart"></i> <?= $_report ?></a>
+                    <a class="dropdown-item audit-item" href="./?report=audit_session&session=<?= $session; ?>"><i class="fa fa-check-square-o"></i> <?= $_audit_log ?></a>
+                </div>
             </li>
 
             <li class="nav-item">
