@@ -160,7 +160,7 @@
         if (!rusakPrintPayload) return;
         const mt = rusakPrintPayload.meta || {};
         if (!mt.username) return;
-        const url = './hotspot/print.detail.php?session=' + encodeURIComponent(usersSession) + '&user=' + encodeURIComponent(mt.username);
+        const url = './hotspot/print/print.detail.php?session=' + encodeURIComponent(usersSession) + '&user=' + encodeURIComponent(mt.username);
         window.open(url, '_blank');
       };
     });
@@ -530,7 +530,7 @@
   async function refreshActiveStatus() {
     if (!activeBadge) return;
     try {
-      const url = './hotspot/aload_users.php?session=' + encodeURIComponent(usersSession) + '&load=users_status&_=' + Date.now();
+      const url = './hotspot/user/aload_users.php?session=' + encodeURIComponent(usersSession) + '&load=users_status&_=' + Date.now();
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) return;
       const data = await res.json();

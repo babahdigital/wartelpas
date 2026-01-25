@@ -1,7 +1,7 @@
 <?php
 /*
  * AJAX LOADER - Lightweight Status Update
- * File: hotspot/aload_users.php
+ * File: hotspot/user/aload_users.php
  * Purpose: Update user status tanpa reload full page
  */
 
