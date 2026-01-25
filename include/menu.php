@@ -613,8 +613,8 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         document.addEventListener('mousemove', function(e) {
             if (!tip.classList.contains('show')) return;
             var pad = 8;
-            var x = e.clientX + 12;
-            var y = e.clientY - 10;
+            var x = e.clientX + 18;
+            var y = e.clientY - 18;
             var rect = tip.getBoundingClientRect();
             var maxX = window.innerWidth - rect.width - pad;
             var maxY = window.innerHeight - rect.height - pad;
