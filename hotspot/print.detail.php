@@ -79,6 +79,27 @@ function extract_blok_name($comment) {
     return '';
 }
 
+function normalize_blok_label($blok) {
+    $raw = strtoupper(trim((string)$blok));
+    if ($raw === '') return '';
+    $raw = preg_replace('/[^A-Z0-9]/', '', $raw);
+    $raw = preg_replace('/^BLOK/', '', $raw);
+    if (preg_match('/^([A-Z]+)/', $raw, $m)) {
+        return $m[1];
+    }
+    return $raw;
+}
+
+function normalize_profile_label($profile) {
+    $p = trim((string)$profile);
+    if ($p === '') return '';
+    if (preg_match('/\b(10|30)\s*(menit|m)\b/i', $p, $m)) {
+        return $m[1] . ' Menit';
+    }
+    $p = preg_replace('/\s*menit\b/i', ' Menit', $p);
+    return $p;
+}
+
 function extract_ip_mac_from_comment($comment) {
     $ip = '';
     $mac = '';
@@ -214,6 +235,8 @@ $blok = $hist['blok_name'] ?? '';
 if ($blok === '') {
     $blok = extract_blok_name($comment);
 }
+$blok_label = normalize_blok_label($blok ?: extract_blok_name($comment));
+$profile_label = normalize_profile_label($profile);
 $hist_ip = $hist['ip_address'] ?? '';
 $hist_mac = $hist['mac_address'] ?? '';
 $c_ipmac = extract_ip_mac_from_comment($comment);
@@ -254,8 +277,8 @@ $relogin_date_label = $date_key ? format_dmy_date($date_key) : '';
 
 $detail_rows = [
     ['User', htmlspecialchars($user)],
-    ['Blok', htmlspecialchars($blok ?: '-')],
-    ['Profile', htmlspecialchars($profile ?: '-')],
+    ['Blok', htmlspecialchars($blok_label !== '' ? $blok_label : '-')],
+    ['Profile', htmlspecialchars($profile_label !== '' ? $profile_label : '-')],
     ['IP', htmlspecialchars($ip_addr ?: '-')],
     ['MAC', htmlspecialchars($mac_addr ?: '-')],
     ['Status', $is_active ? 'ONLINE' : (strtoupper((string)$last_status) ?: 'OFFLINE')],
