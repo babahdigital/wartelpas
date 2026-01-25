@@ -219,3 +219,77 @@ function is_wartel_client($comment, $hist_blok = '') {
   if (!empty($comment) && stripos($comment, 'blok-') !== false) return true;
   return false;
 }
+
+if (!function_exists('detect_profile_kind_summary')) {
+  function detect_profile_kind_summary($profile) {
+    $p = strtolower((string)$profile);
+    if (preg_match('/(\d+)\s*(menit|m|min)\b/i', $p, $m)) {
+      return (string)((int)$m[1]);
+    }
+    if (preg_match('/(\d+)(menit|m)\b/i', $p, $m)) {
+      return (string)((int)$m[1]);
+    }
+    if (preg_match('/(^|[^0-9])(10|30)([^0-9]|$)/', $p, $m)) {
+      return (string)$m[2];
+    }
+    return 'other';
+  }
+}
+
+if (!function_exists('detect_profile_kind_from_comment')) {
+  function detect_profile_kind_from_comment($comment) {
+    $c = strtolower((string)$comment);
+    if (preg_match('/profile\s*:\s*(\d+)\s*(menit|m|min)?/i', $c, $m)) {
+      return (string)((int)$m[1]);
+    }
+    if (preg_match('/(\d+)\s*(menit|m|min)\b/i', $c, $m)) {
+      return (string)((int)$m[1]);
+    }
+    return 'other';
+  }
+}
+
+if (!function_exists('detect_profile_kind_unified')) {
+  function detect_profile_kind_unified($profile, $comment, $blok, $uptime = '') {
+    $kind = detect_profile_kind_summary($profile);
+    if ($kind !== 'other') return $kind;
+
+    $kind = detect_profile_kind_from_comment($comment);
+    if ($kind !== 'other') return $kind;
+
+    $combined = strtolower(trim((string)$comment . ' ' . (string)$blok));
+    if (preg_match('/\b10\b/', $combined)) return '10';
+    if (preg_match('/\b30\b/', $combined)) return '30';
+    if (preg_match('/\b10\s*(menit|m|min)\b/', $combined)) return '10';
+    if (preg_match('/\b30\s*(menit|m|min)\b/', $combined)) return '30';
+
+    if (!empty($uptime) && $uptime !== '0s') {
+      $sec = uptime_to_seconds($uptime);
+      if ($sec >= 570 && $sec <= 660) return '10';
+      if ($sec >= 1740 && $sec <= 1860) return '30';
+    }
+
+    return 'other';
+  }
+}
+
+if (!function_exists('resolve_profile_from_history')) {
+  function resolve_profile_from_history($comment, $validity = '', $uptime = '') {
+    $validity = trim((string)$validity);
+    if ($validity !== '') return $validity;
+
+    $kind = detect_profile_kind_from_comment($comment);
+    if ($kind !== 'other') return $kind . ' Menit';
+
+    if (!empty($uptime) && $uptime !== '0s') {
+      $sec = uptime_to_seconds($uptime);
+      if ($sec >= 570 && $sec <= 660) return '10 Menit';
+      if ($sec >= 1740 && $sec <= 1860) return '30 Menit';
+    }
+
+    if (preg_match('/profile\s*[:=]?\s*([a-z0-9]+)/i', (string)$comment, $m)) {
+      return $m[1];
+    }
+    return '';
+  }
+}
