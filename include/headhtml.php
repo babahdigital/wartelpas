@@ -32,7 +32,6 @@ error_reporting(0);
 		<meta name="theme-color" content="<?= $themecolor ?>" />
 		<!-- Font Awesome -->
 		<link rel="stylesheet" type="text/css" href="css/font-awesome/css/font-awesome.min.css" />
-		<link rel="stylesheet" type="text/css" href="css/font-awesome/css/all.min.css">
 		<!-- Mikhmon UI -->
 		<link rel="stylesheet" href="css/mikhmon-ui.<?= $theme; ?>.min.css">
 		<!-- favicon -->
