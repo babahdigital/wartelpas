@@ -1,4 +1,4 @@
-FROM php:7.4-apache
+FROM php:8.3-apache
 
 # 1. Install Library Pendukung & Rclone
 # Tambahkan 'curl' dan 'gnupg' untuk download rclone, lalu install rclone via script resmi
