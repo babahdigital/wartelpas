@@ -3233,13 +3233,12 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         <th style="text-align:center;">Blok</th>
                         <th style="text-align:center;">Status</th>
                         <th style="text-align:right; padding-right:12px;">Harga</th>
-                        <th style="text-align:right; padding-right:12px;">Efektif</th>
                         <th style="text-align:right; padding-right:12px;">Bandwidth</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($list_page)): ?>
-                        <tr><td colspan="8" style="text-align:center;color:var(--txt-muted);padding:30px;">Tidak ada data pada periode ini.</td></tr>
+                        <tr><td colspan="7" style="text-align:center;color:var(--txt-muted);padding:30px;">Tidak ada data pada periode ini.</td></tr>
                     <?php else: foreach ($list_page as $it): ?>
                         <tr>
                             <td><?= htmlspecialchars($it['dt']) ?></td>
@@ -3254,7 +3253,6 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                 <span class="status-badge <?= $cls; ?>"><?= htmlspecialchars($it['status']) ?></span>
                             </td>
                             <td class="text-right"><?= number_format($it['price'],0,',','.') ?></td>
-                            <td class="text-right"><?= number_format($it['net'],0,',','.') ?></td>
                             <td class="text-right"><?= htmlspecialchars(format_bytes_short((int)($it['bytes'] ?? 0))) ?></td>
                         </tr>
                     <?php endforeach; endif; ?>
