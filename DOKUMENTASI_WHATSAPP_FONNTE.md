@@ -177,6 +177,13 @@ Dokumen ini merangkum detail API Fonnte berdasarkan URL yang diberikan untuk keb
 - Halaman konfigurasi/monitoring WhatsApp: `report/whatsapp/index.php` (akses via `?report=whatsapp`).
 - Folder penyimpanan PDF laporan: `report/pdf/` (akses langsung dibatasi).
 
+### 2.4 Struktur Data (SQLite)
+- `whatsapp_recipients`
+  - Menyimpan daftar penerima (label, target, tipe, status aktif).
+  - Target bisa nomor (`62xxx`) atau group id (`@g.us`).
+- `whatsapp_logs`
+  - Menyimpan log pengiriman (target, status, file PDF, response JSON).
+
 ### 2.3 Keamanan Token
 - Token **jangan disimpan di UI**.
 - Gunakan konfigurasi server (ENV/ini) dan baca di backend.
