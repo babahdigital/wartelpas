@@ -504,10 +504,10 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         </ul>
 
         <div class="nav-right">
-            <a id="db-backup" class="db-tools" href="./tools/backup_db.php?key=WartelpasSecureKey" target="_blank" title="Backup Database">
+            <a id="db-backup" class="db-tools" href="javascript:void(0)" title="Backup Database" onclick="runBackupAjax()">
                 <i class="fa fa-database"></i> Backup
             </a>
-            <a id="db-restore" class="db-tools" href="./tools/restore_db.php?key=WartelpasSecureKey" target="_blank" title="Restore Backup Terbaru" onclick="return confirm('Restore backup terbaru? Data saat ini akan tertimpa.');">
+            <a id="db-restore" class="db-tools" href="javascript:void(0)" title="Restore Backup Terbaru" onclick="runRestoreAjax()">
                 <i class="fa fa-history"></i> Restore
             </a>
             <span class="timer-badge" title="Waktu Saat Ini">
@@ -578,7 +578,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         var el = document.getElementById('db-status');
         var restoreBtn = document.getElementById('db-restore');
         if (!el) return;
-        fetch('./tools/db_check.php?key=WartelpasSecureKey')
+        fetch('./tools/db_check.php?key=' + encodeURIComponent(window.__backupKey || 'WartelpasSecureKey'))
             .then(function(resp) {
                 if (!resp.ok) throw new Error('bad');
                 return resp.text();
@@ -602,7 +602,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
     function updateBackupStatus() {
         var backupBtn = document.getElementById('db-backup');
         if (!backupBtn) return;
-        fetch('./tools/backup_status.php?key=WartelpasSecureKey')
+        fetch('./tools/backup_status.php?key=' + encodeURIComponent(window.__backupKey || 'WartelpasSecureKey'))
             .then(function(resp) {
                 if (!resp.ok) throw new Error('bad');
                 return resp.json();
@@ -669,6 +669,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
     }
 
     document.addEventListener('DOMContentLoaded', function(){
+        window.__backupKey = 'WartelpasSecureKey';
         if (window.jQuery) {
             $(".connect").click(function(){
                 notify("<?= $_connecting ?>");
@@ -687,6 +688,73 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         setInterval(updateBackupStatus, 60000);
         initGlobalTooltips();
     });
+
+    function notifyLocal(msg, type){
+        if (typeof window.showActionPopup === 'function') {
+            window.showActionPopup(type || 'success', msg);
+            return;
+        }
+        if (typeof window.notify === 'function') {
+            window.notify(msg);
+            return;
+        }
+        alert(msg);
+    }
+
+    function runBackupAjax(){
+        var btn = document.getElementById('db-backup');
+        if (!btn) return;
+        btn.style.pointerEvents = 'none';
+        btn.style.opacity = '0.6';
+        notifyLocal('Proses backup...', 'info');
+        fetch('./tools/backup_db.php?ajax=1&key=' + encodeURIComponent(window.__backupKey || 'WartelpasSecureKey'), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(resp){ return resp.json(); })
+        .then(function(data){
+            if (data && data.ok) {
+                notifyLocal('Backup sukses: ' + (data.backup || '-') + ' | Cloud: ' + (data.cloud || '-'), 'success');
+                updateBackupStatus();
+            } else {
+                notifyLocal('Backup gagal: ' + ((data && data.message) ? data.message : 'Unknown'), 'error');
+            }
+        })
+        .catch(function(){
+            notifyLocal('Backup gagal: koneksi.', 'error');
+        })
+        .finally(function(){
+            btn.style.pointerEvents = 'auto';
+            btn.style.opacity = '1';
+        });
+    }
+
+    function runRestoreAjax(){
+        if (!confirm('Restore backup terbaru? Data saat ini akan tertimpa.')) return;
+        var btn = document.getElementById('db-restore');
+        if (!btn) return;
+        btn.style.pointerEvents = 'none';
+        btn.style.opacity = '0.6';
+        notifyLocal('Proses restore...', 'info');
+        fetch('./tools/restore_db.php?ajax=1&key=' + encodeURIComponent(window.__backupKey || 'WartelpasSecureKey'), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(resp){ return resp.json(); })
+        .then(function(data){
+            if (data && data.ok) {
+                notifyLocal('Restore sukses: ' + (data.file || '-') + ' | Sumber: ' + (data.source || '-'), 'success');
+                updateDbStatus();
+            } else {
+                notifyLocal('Restore gagal: ' + ((data && data.message) ? data.message : 'Unknown'), 'error');
+            }
+        })
+        .catch(function(){
+            notifyLocal('Restore gagal: koneksi.', 'error');
+        })
+        .finally(function(){
+            btn.style.pointerEvents = 'auto';
+            btn.style.opacity = '1';
+        });
+    }
 </script>
 
 <div id="notify"><div class="message"></div></div>
