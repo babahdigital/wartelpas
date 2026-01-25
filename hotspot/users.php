@@ -1,4 +1,46 @@
 <?php
+require __DIR__ . '/user/bootstrap.php';
+require __DIR__ . '/user/helpers.php';
+require __DIR__ . '/user/data.php';
+require __DIR__ . '/user/actions.php';
+require __DIR__ . '/user/render.php';
+__halt_compiler();
+
+session_start();
+if (!isset($_SESSION["mikhmon"]) || !isset($_GET['session'])) {
+    header("Location:../admin.php?id=login");
+    exit();
+}
+
+// Additional code continues here...
+
+// Your existing code continues...
+
+// Helper: Normalisasi param blok dari dropdown (hapus suffix count seperti ":1")
+function normalize_blok_param($blok) {
+  if (empty($blok)) return $blok;
+  if (preg_match('/^(.+?):\d+$/', $blok, $m)) {
+    return $m[1];
+  }
+  return $blok;
+}
+
+// Your existing code continues...
+
+// --- DATABASE ---
+...
+
+// Your existing code continues...
+
+// --- ROUTEROS ---
+$API = new RouterosAPI();
+$API->debug = false;
+$API->timeout = 5;
+$API->attempts = 1;
+
+// Your existing code continues...
+
+<?php
 /*
  * WARTELPAS USER MANAGEMENT (REBUILD - STEP 1)
  * Basis: user-old.php

@@ -135,6 +135,10 @@ function get_relogin_count_from_events($username, $first_login_real = '') {
   }
 }
 
+if (isset($_GET['action']) || isset($_POST['action'])) {
+  return;
+}
+
 $all_users = $API->comm("/ip/hotspot/user/print", array(
     "?server" => $hotspot_server,
   ".proplist" => ".id,name,comment,profile,disabled,bytes-in,bytes-out,uptime"
