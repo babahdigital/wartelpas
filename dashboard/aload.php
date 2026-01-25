@@ -193,6 +193,7 @@ if ($load == "live_data") {
             $monthKey = $year . '-' . $month;
             $seen_user_day = [];
             $total_net_month = 0;
+            $total_net_today = 0;
 
             foreach ($rows as $r) {
                 $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
@@ -241,9 +242,13 @@ if ($load == "live_data") {
                 $loss_invalid = ($status === 'invalid') ? $line_price : 0;
                 $net_add = $line_price - $loss_rusak - $loss_invalid;
                 $total_net_month += $net_add;
+                if ($sale_date === $today) {
+                    $total_net_today += $net_add;
+                }
             }
 
-            $sumIncome = $total_net_month;
+            $sumIncome = $total_net_today;
+            $sumIncomeMonth = $total_net_month;
 
             $sumSold = 0;
             if (table_exists($db, 'sales_history') || table_exists($db, 'live_sales') || table_exists($db, 'login_history')) {
@@ -366,8 +371,8 @@ if ($load == "live_data") {
                 }
             }
 
-            $avgDaily = $currentDay > 0 ? ($sumIncome / $currentDay) : 0;
-            $estIncome = $sumIncome + ($avgDaily * ($daysInMonth - $currentDay));
+            $avgDaily = $currentDay > 0 ? ($sumIncomeMonth / $currentDay) : 0;
+            $estIncome = $sumIncomeMonth + ($avgDaily * ($daysInMonth - $currentDay));
 
             $dataResponse['sold'] = $sumSold;
             $dataResponse['income'] = number_format($sumIncome, 0, ",", ".");
