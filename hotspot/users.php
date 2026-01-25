@@ -1567,6 +1567,14 @@ $has_transactions_in_filter = false;
 $filtering_by_date = ($req_status === 'all' && $req_show !== 'semua' && !empty($filter_date));
 $debug_rows = [];
 $search_terms = array_filter(array_map('trim', preg_split('/[,\s]+/', $req_search)));
+$profile_totals_all = [];
+if ($debug_mode) {
+  $profile_totals_all = [
+    '10' => ['count' => 0, 'ready' => 0, 'online' => 0, 'used' => 0, 'rusak' => 0, 'retur' => 0, 'invalid' => 0],
+    '30' => ['count' => 0, 'ready' => 0, 'online' => 0, 'used' => 0, 'rusak' => 0, 'retur' => 0, 'invalid' => 0],
+    'other' => ['count' => 0, 'ready' => 0, 'online' => 0, 'used' => 0, 'rusak' => 0, 'retur' => 0, 'invalid' => 0]
+  ];
+}
 foreach($all_users as $u) {
     $name = $u['name'] ?? '';
     $comment = $u['comment'] ?? '';
@@ -1863,21 +1871,12 @@ foreach($all_users as $u) {
       ];
     }
 
-    // Filter status
-    if ($req_status == 'ready' && $status !== 'READY') continue;
-    if ($req_status == 'all' && $status === 'READY') continue;
-    if ($req_status == 'online' && $status !== 'ONLINE') continue;
-    if ($req_status == 'used' && $status !== 'TERPAKAI') continue;
-    if ($req_status == 'rusak' && $status !== 'RUSAK') continue;
-    if ($req_status == 'retur' && $status !== 'RETUR') continue;
-    if ($req_status == 'invalid') continue;
+    $profile_kind = detect_profile_kind_unified($u['profile'] ?? '', $comment, $f_blok);
 
     // Filter blok
     if ($req_comm != '') {
       if (strcasecmp($f_blok, $req_comm) != 0) continue;
     }
-
-    $profile_kind = detect_profile_kind_unified($u['profile'] ?? '', $comment, $f_blok);
 
     // Filter profil (10/30)
     if ($req_prof !== 'all') {
@@ -1968,6 +1967,25 @@ foreach($all_users as $u) {
         }
       }
     }
+
+    if ($debug_mode) {
+      $kind_key = isset($profile_totals_all[$profile_kind]) ? $profile_kind : 'other';
+      $status_key = strtolower($status);
+      if ($status_key === 'terpakai') $status_key = 'used';
+      $profile_totals_all[$kind_key]['count']++;
+      if (isset($profile_totals_all[$kind_key][$status_key])) {
+        $profile_totals_all[$kind_key][$status_key]++;
+      }
+    }
+
+    // Filter status
+    if ($req_status == 'ready' && $status !== 'READY') continue;
+    if ($req_status == 'all' && $status === 'READY') continue;
+    if ($req_status == 'online' && $status !== 'ONLINE') continue;
+    if ($req_status == 'used' && $status !== 'TERPAKAI') continue;
+    if ($req_status == 'rusak' && $status !== 'RUSAK') continue;
+    if ($req_status == 'retur' && $status !== 'RETUR') continue;
+    if ($req_status == 'invalid') continue;
     $display_data[] = [
       'uid' => $u['.id'] ?? '',
         'name' => $name,
@@ -1991,26 +2009,7 @@ foreach($all_users as $u) {
         'relogin_count' => $relogin_count
     ];
 }
-$profile_totals = [];
-if ($debug_mode) {
-  $profile_totals = [
-    '10' => ['count' => 0, 'ready' => 0, 'online' => 0, 'used' => 0, 'rusak' => 0, 'retur' => 0, 'invalid' => 0],
-    '30' => ['count' => 0, 'ready' => 0, 'online' => 0, 'used' => 0, 'rusak' => 0, 'retur' => 0, 'invalid' => 0],
-    'other' => ['count' => 0, 'ready' => 0, 'online' => 0, 'used' => 0, 'rusak' => 0, 'retur' => 0, 'invalid' => 0]
-  ];
-  foreach ($display_data as $row) {
-    $kind = $row['profile_kind'] ?? detect_profile_kind_unified($row['profile'] ?? '', $row['comment'] ?? '', $row['blok'] ?? '');
-    if (!isset($profile_totals[$kind])) {
-      $kind = 'other';
-    }
-    $status_key = strtolower($row['status'] ?? 'ready');
-    if ($status_key === 'terpakai') $status_key = 'used';
-    $profile_totals[$kind]['count']++;
-    if (isset($profile_totals[$kind][$status_key])) {
-      $profile_totals[$kind][$status_key]++;
-    }
-  }
-}
+$profile_totals = $profile_totals_all;
 $API->disconnect();
 
 // READY tetap ditampilkan walau ada transaksi pada tanggal filter
