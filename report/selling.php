@@ -3644,7 +3644,6 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         window.sellingPauseReload = true;
 
         var params = new URLSearchParams();
-        params.set('report', 'selling');
         params.set('ghost', '1');
         params.set('date', date || '');
         params.set('blok', blok || '');
