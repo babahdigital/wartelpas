@@ -112,8 +112,8 @@ Require all denied
     Require all granted
 </If>
 
-# Settlement log ingest + clear logs (MikroTik only)
-<If "%{REQUEST_URI} =~ m#^/tools/(clear_logs|settlement_log_ingest)\.php$#">
+# Settlement log ingest + clear logs + backup DB (MikroTik only)
+<If "%{REQUEST_URI} =~ m#^/tools/(clear_logs|settlement_log_ingest|backup_db)\.php$#">
     <RequireAny>
         Require ip 10.10.83.1
         Require ip 172.19.0.0/16
