@@ -689,16 +689,26 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         initGlobalTooltips();
     });
 
-    function notifyLocal(msg, type){
-        if (typeof window.showActionPopup === 'function') {
-            window.showActionPopup(type || 'success', msg);
-            return;
-        }
-        if (typeof window.notify === 'function') {
-            window.notify(msg);
-            return;
-        }
-        alert(msg);
+    function showOverlayNotice(msg, type, lockClose){
+        var overlay = document.getElementById('ajax-overlay');
+        var text = document.getElementById('ajax-overlay-text');
+        var icon = document.getElementById('ajax-overlay-icon');
+        var btn = document.getElementById('ajax-overlay-close');
+        if (!overlay || !text || !icon || !btn) return;
+        overlay.style.display = 'flex';
+        text.textContent = msg || '-';
+        var t = (type || 'info').toLowerCase();
+        icon.className = 'fa ' + (t === 'error' ? 'fa-times-circle' : (t === 'success' ? 'fa-check-circle' : 'fa-spinner fa-spin'));
+        btn.style.display = lockClose ? 'none' : 'inline-flex';
+    }
+
+    function hideOverlayNotice(){
+        var overlay = document.getElementById('ajax-overlay');
+        if (overlay) overlay.style.display = 'none';
+    }
+
+    function notifyLocal(msg, type, lockClose){
+        showOverlayNotice(msg, type, !!lockClose);
     }
 
     function runBackupAjax(){
@@ -706,21 +716,21 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         if (!btn) return;
         btn.style.pointerEvents = 'none';
         btn.style.opacity = '0.6';
-        notifyLocal('Proses backup...', 'info');
+        notifyLocal('Proses backup...', 'info', true);
         fetch('./tools/backup_db.php?ajax=1&key=' + encodeURIComponent(window.__backupKey || 'WartelpasSecureKey'), {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(function(resp){ return resp.json(); })
         .then(function(data){
             if (data && data.ok) {
-                notifyLocal('Backup sukses: ' + (data.backup || '-') + ' | Cloud: ' + (data.cloud || '-'), 'success');
+                notifyLocal('Backup sukses: ' + (data.backup || '-') + ' | Cloud: ' + (data.cloud || '-'), 'success', false);
                 updateBackupStatus();
             } else {
-                notifyLocal('Backup gagal: ' + ((data && data.message) ? data.message : 'Unknown'), 'error');
+                notifyLocal('Backup gagal: ' + ((data && data.message) ? data.message : 'Unknown'), 'error', false);
             }
         })
         .catch(function(){
-            notifyLocal('Backup gagal: koneksi.', 'error');
+            notifyLocal('Backup gagal: koneksi.', 'error', false);
         })
         .finally(function(){
             btn.style.pointerEvents = 'auto';
@@ -734,21 +744,21 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         if (!btn) return;
         btn.style.pointerEvents = 'none';
         btn.style.opacity = '0.6';
-        notifyLocal('Proses restore...', 'info');
+        notifyLocal('Proses restore...', 'info', true);
         fetch('./tools/restore_db.php?ajax=1&key=' + encodeURIComponent(window.__backupKey || 'WartelpasSecureKey'), {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(function(resp){ return resp.json(); })
         .then(function(data){
             if (data && data.ok) {
-                notifyLocal('Restore sukses: ' + (data.file || '-') + ' | Sumber: ' + (data.source || '-'), 'success');
+                notifyLocal('Restore sukses: ' + (data.file || '-') + ' | Sumber: ' + (data.source || '-'), 'success', false);
                 updateDbStatus();
             } else {
-                notifyLocal('Restore gagal: ' + ((data && data.message) ? data.message : 'Unknown'), 'error');
+                notifyLocal('Restore gagal: ' + ((data && data.message) ? data.message : 'Unknown'), 'error', false);
             }
         })
         .catch(function(){
-            notifyLocal('Restore gagal: koneksi.', 'error');
+            notifyLocal('Restore gagal: koneksi.', 'error', false);
         })
         .finally(function(){
             btn.style.pointerEvents = 'auto';
@@ -759,6 +769,14 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
 
 <div id="notify"><div class="message"></div></div>
 <div id="temp"></div>
+
+<div id="ajax-overlay" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);z-index:20000;">
+    <div style="background:#1f2327;color:#e5e5e5;border:1px solid #3a4046;border-radius:10px;min-width:320px;max-width:90vw;padding:18px 20px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,0.6);">
+        <div style="font-size:32px;margin-bottom:8px;color:#f39c12;"><i id="ajax-overlay-icon" class="fa fa-spinner fa-spin"></i></div>
+        <div id="ajax-overlay-text" style="font-size:14px;line-height:1.6;margin-bottom:14px;">-</div>
+        <button id="ajax-overlay-close" type="button" class="btn-print btn-default-dark" onclick="hideOverlayNotice()">Tutup</button>
+    </div>
+</div>
 
 <?php
 if ($id != "") {
