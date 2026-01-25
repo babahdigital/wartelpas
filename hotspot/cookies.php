@@ -31,10 +31,19 @@ if (!isset($_SESSION["mikhmon"])) {
         $getcookies = $API->comm("/ip/hotspot/cookie/print");
 
         $allowed_servers = array('wartel');
+        $username_phone_pattern = '/^08\d+/';
+        $username_wartel_pattern = '/^[a-z0-9]{6}$/';
         $filtered_cookies = array();
         foreach ($getcookies as $cookie) {
             $server = isset($cookie['server']) ? strtolower((string)$cookie['server']) : '';
-            if (in_array($server, $allowed_servers, true)) {
+            $user = isset($cookie['user']) ? (string)$cookie['user'] : '';
+            $user_lc = strtolower($user);
+
+            $is_wartel_server = in_array($server, $allowed_servers, true);
+            $is_phone_user = preg_match($username_phone_pattern, $user_lc) === 1;
+            $is_wartel_user = preg_match($username_wartel_pattern, $user_lc) === 1;
+
+            if ($is_wartel_server || ($server === '' && ($is_phone_user || $is_wartel_user))) {
                 $filtered_cookies[] = $cookie;
             }
         }
