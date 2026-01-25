@@ -34,29 +34,12 @@ if (!isset($_SESSION["mikhmon"])) {
         // 1. Tarik SEMUA data lease dulu
         $getlease = $API->comm("/ip/dhcp-server/lease/print");
 
-        // 2. Mapping server -> profile
-        $server_profile_map = array();
-        $servers = $API->comm("/ip/hotspot/server/print");
-        if (is_array($servers)) {
-            foreach ($servers as $srv) {
-                $srv_name = isset($srv['name']) ? strtolower((string)$srv['name']) : '';
-                $srv_profile = isset($srv['profile']) ? strtolower((string)$srv['profile']) : '';
-                if ($srv_name !== '') {
-                    $server_profile_map[$srv_name] = $srv_profile;
-                }
-            }
-        }
-
-        // 3. Filter berdasarkan server wartel + profile wartelpas
+        // 2. Filter berdasarkan server DHCP wartelpas (case-insensitive)
+        $allowed_servers = array('wartelpas');
         $filtered_leases = array();
         foreach ($getlease as $lease) {
             $server = isset($lease['server']) ? strtolower((string)$lease['server']) : '';
-            $server_profile = isset($lease['server-profile']) ? strtolower((string)$lease['server-profile']) : '';
-            if ($server_profile === '' && isset($server_profile_map[$server])) {
-                $server_profile = $server_profile_map[$server];
-            }
-
-            if ($server === 'wartel' && $server_profile === 'wartelpas') {
+            if (in_array($server, $allowed_servers, true)) {
                 $filtered_leases[] = $lease;
             }
         }

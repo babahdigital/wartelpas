@@ -44,28 +44,12 @@ if (!isset($_SESSION["mikhmon"])) {
 			$titlename = "Host List";
 		}
 
-        // 2. Mapping server -> profile
-        $server_profile_map = array();
-        $servers = $API->comm("/ip/hotspot/server/print");
-        if (is_array($servers)) {
-            foreach ($servers as $srv) {
-                $srv_name = isset($srv['name']) ? strtolower((string)$srv['name']) : '';
-                $srv_profile = isset($srv['profile']) ? strtolower((string)$srv['profile']) : '';
-                if ($srv_name !== '') {
-                    $server_profile_map[$srv_name] = $srv_profile;
-                }
-            }
-        }
-
-        // 3. Filter Array di PHP (server wartel + profile wartelpas)
+        // 2. Filter Array di PHP (hanya server wartel)
+        $allowed_servers = array('wartel');
         $filtered_hosts = array();
         foreach ($raw_hosts as $h) {
             $server = isset($h['server']) ? strtolower((string)$h['server']) : '';
-            $server_profile = isset($h['server-profile']) ? strtolower((string)$h['server-profile']) : '';
-            if ($server_profile === '' && isset($server_profile_map[$server])) {
-                $server_profile = $server_profile_map[$server];
-            }
-            if ($server === 'wartel' && $server_profile === 'wartelpas') {
+            if (in_array($server, $allowed_servers, true)) {
                 $filtered_hosts[] = $h;
             }
         }

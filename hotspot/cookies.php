@@ -30,27 +30,11 @@ if (!isset($_SESSION["mikhmon"])) {
     if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
         $getcookies = $API->comm("/ip/hotspot/cookie/print");
 
-        // mapping server -> profile
-        $server_profile_map = array();
-        $servers = $API->comm("/ip/hotspot/server/print");
-        if (is_array($servers)) {
-            foreach ($servers as $srv) {
-                $srv_name = isset($srv['name']) ? strtolower((string)$srv['name']) : '';
-                $srv_profile = isset($srv['profile']) ? strtolower((string)$srv['profile']) : '';
-                if ($srv_name !== '') {
-                    $server_profile_map[$srv_name] = $srv_profile;
-                }
-            }
-        }
-
+        $allowed_servers = array('wartel');
         $filtered_cookies = array();
         foreach ($getcookies as $cookie) {
             $server = isset($cookie['server']) ? strtolower((string)$cookie['server']) : '';
-            $server_profile = isset($cookie['server-profile']) ? strtolower((string)$cookie['server-profile']) : '';
-            if ($server_profile === '' && isset($server_profile_map[$server])) {
-                $server_profile = $server_profile_map[$server];
-            }
-            if ($server === 'wartel' && $server_profile === 'wartelpas') {
+            if (in_array($server, $allowed_servers, true)) {
                 $filtered_cookies[] = $cookie;
             }
         }

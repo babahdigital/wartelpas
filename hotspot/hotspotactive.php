@@ -36,29 +36,12 @@ if (!isset($_SESSION["mikhmon"])) {
         // 1. Tarik SEMUA user active
         $gethotspotactive = $API->comm("/ip/hotspot/active/print");
 
-        // 2. Bangun mapping server -> server profile
-        $server_profile_map = array();
-        $servers = $API->comm("/ip/hotspot/server/print");
-        if (is_array($servers)) {
-            foreach ($servers as $srv) {
-                $srv_name = isset($srv['name']) ? strtolower((string)$srv['name']) : '';
-                $srv_profile = isset($srv['profile']) ? strtolower((string)$srv['profile']) : '';
-                if ($srv_name !== '') {
-                    $server_profile_map[$srv_name] = $srv_profile;
-                }
-            }
-        }
-
-        // 3. Filter Array di PHP
+        // 2. Filter Array di PHP (hanya server wartel)
+        $allowed_servers = array('wartel');
         $filtered_active = array();
         foreach ($gethotspotactive as $user) {
             $server = isset($user['server']) ? strtolower((string)$user['server']) : '';
-            $server_profile = isset($user['server-profile']) ? strtolower((string)$user['server-profile']) : '';
-            if ($server_profile === '' && isset($server_profile_map[$server])) {
-                $server_profile = $server_profile_map[$server];
-            }
-
-            if ($server === 'wartel' && $server_profile === 'wartelpas') {
+            if (in_array($server, $allowed_servers, true)) {
                 $filtered_active[] = $user;
             }
         }
