@@ -256,7 +256,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
     }
     .db-status.db-ok { color: #2ecc71; border-color: rgba(46,204,113,0.6); background: rgba(46,204,113,0.15); }
     .db-status.db-error { color: #e74c3c; border-color: rgba(231,76,60,0.6); background: rgba(231,76,60,0.15); }
-    .db-status i { animation: dbPulse 1.2s ease-in-out infinite; }
+    .db-status.db-ok i { animation: dbPulse 1.2s ease-in-out infinite; }
     @keyframes dbPulse {
         0% { transform: scale(1); opacity: 0.9; }
         50% { transform: scale(1.15); opacity: 1; }
