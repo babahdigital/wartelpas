@@ -241,6 +241,21 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         transform: translateY(-1px);
     }
     .db-tools i { opacity: 0.8; }
+    .db-status {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: #8aa2ad;
+        font-size: 14px;
+        transition: 0.2s;
+    }
+    .db-status.db-ok { color: #2ecc71; border-color: rgba(46,204,113,0.6); background: rgba(46,204,113,0.15); }
+    .db-status.db-error { color: #e74c3c; border-color: rgba(231,76,60,0.6); background: rgba(231,76,60,0.15); }
     .logout-btn {
         height: 36px;
         width: 36px;
@@ -452,20 +467,20 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         </ul>
 
         <div class="nav-right">
-            <a class="db-tools" href="./tools/db_check.php?key=WartelpasSecureKey" target="_blank" title="Kesehatan Database">
-                <i class="fa fa-heartbeat"></i> DB Check
+            <a id="logout" class="logout-btn" href="./?hotspot=logout&session=<?= $session; ?>" title="<?= $_logout ?>">
+                <i class="fa fa-sign-out fa-lg"></i>
             </a>
+            <span id="db-status" class="db-status" title="Kesehatan Database">
+                <i class="fa fa-heart"></i>
+            </span>
+            <span class="timer-badge" title="Waktu Saat Ini">
+                <i class="fa fa-clock-o"></i> <span id="timer_val">--:--</span>
+            </span>
             <a class="db-tools" href="./tools/backup_db.php?key=WartelpasSecureKey" target="_blank" title="Backup Database">
                 <i class="fa fa-database"></i> Backup
             </a>
             <a class="db-tools" href="./tools/restore_db.php?key=WartelpasSecureKey" target="_blank" title="Restore Backup Terbaru" onclick="return confirm('Restore backup terbaru? Data saat ini akan tertimpa.');">
                 <i class="fa fa-history"></i> Restore
-            </a>
-            <span class="timer-badge" title="Waktu Saat Ini">
-                <i class="fa fa-clock-o"></i> <span id="timer_val">--:--</span>
-            </span>
-            <a id="logout" class="logout-btn" href="./?hotspot=logout&session=<?= $session; ?>" title="<?= $_logout ?>">
-                <i class="fa fa-sign-out fa-lg"></i>
             </a>
         </div>
     </nav>
@@ -522,6 +537,26 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         if (fallback) fallback.textContent = full;
     }
 
+    function updateDbStatus() {
+        var el = document.getElementById('db-status');
+        if (!el) return;
+        fetch('./tools/db_check.php?key=WartelpasSecureKey')
+            .then(function(resp) {
+                if (!resp.ok) throw new Error('bad');
+                return resp.text();
+            })
+            .then(function(txt) {
+                var low = txt ? txt.toLowerCase() : '';
+                var ok = low.indexOf('db error') === -1 && low.indexOf('not found') === -1 && low.indexOf('forbidden') === -1;
+                el.classList.remove('db-ok', 'db-error');
+                el.classList.add(ok ? 'db-ok' : 'db-error');
+            })
+            .catch(function() {
+                el.classList.remove('db-ok');
+                el.classList.add('db-error');
+            });
+    }
+
     $(document).ready(function(){
         $(".connect").click(function(){
             notify("<?= $_connecting ?>");
@@ -533,6 +568,8 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         });
         updateRealTimeBadge();
         setInterval(updateRealTimeBadge, 1000);
+        updateDbStatus();
+        setInterval(updateDbStatus, 30000);
     });
 </script>
 
