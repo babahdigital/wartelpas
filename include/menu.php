@@ -597,6 +597,20 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
             return el && (el.closest('.highcharts-container') || el.closest('.highcharts-tooltip') || el.closest('#chart_container'));
         }
 
+        function positionTooltip(e) {
+            var pad = 8;
+            var x = e.clientX + 18;
+            var y = e.clientY - 18;
+            var rect = tip.getBoundingClientRect();
+            var maxX = window.innerWidth - rect.width - pad;
+            var maxY = window.innerHeight - rect.height - pad;
+            if (x > maxX) x = Math.max(pad, maxX);
+            if (y > maxY) y = Math.max(pad, maxY);
+            if (y < pad) y = pad;
+            tip.style.left = x + 'px';
+            tip.style.top = y + 'px';
+        }
+
         document.addEventListener('mouseover', function(e) {
             var el = e.target.closest('[title], [data-tooltip]');
             if (!el || isChartArea(el)) return;
@@ -608,21 +622,12 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
             }
             tip.textContent = title;
             tip.classList.add('show');
+            positionTooltip(e);
         });
 
         document.addEventListener('mousemove', function(e) {
             if (!tip.classList.contains('show')) return;
-            var pad = 8;
-            var x = e.clientX - 20;
-            var y = e.clientY + 30;
-            var rect = tip.getBoundingClientRect();
-            var maxX = window.innerWidth - rect.width - pad;
-            var maxY = window.innerHeight - rect.height - pad;
-            if (x > maxX) x = Math.max(pad, maxX);
-            if (y > maxY) y = Math.max(pad, maxY);
-            if (y < pad) y = pad;
-            tip.style.left = x + 'px';
-            tip.style.top = y + 'px';
+            positionTooltip(e);
         });
 
         document.addEventListener('mouseout', function(e) {
