@@ -15,7 +15,7 @@ $env = [
     ],
     'rclone' => [
         'bin' => '/usr/bin/rclone',
-        'remote' => 'Wartelpas:backup_wartelpas',
+        'remote' => 'Wartelpas:Wartelpas',
         'enable' => true,
         'upload' => true,
         'download' => true
