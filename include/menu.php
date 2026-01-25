@@ -262,6 +262,46 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         50% { transform: scale(1.15); opacity: 1; }
         100% { transform: scale(1); opacity: 0.9; }
     }
+
+    .tooltip-simple { position: relative; }
+    .tooltip-simple::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%) translateY(6px);
+        background: rgba(15, 23, 28, 0.95);
+        color: #e6eef2;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        line-height: 1.2;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+        z-index: 9999;
+    }
+    .tooltip-simple::before {
+        content: '';
+        position: absolute;
+        bottom: calc(100% + 2px);
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-top-color: rgba(15, 23, 28, 0.95);
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        pointer-events: none;
+        z-index: 9998;
+    }
+    .tooltip-simple:hover::after,
+    .tooltip-simple:hover::before {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
     .logout-btn {
         height: 36px;
         width: 36px;
@@ -563,6 +603,20 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
             });
     }
 
+    function initGlobalTooltips() {
+        var nodes = document.querySelectorAll('[title]');
+        nodes.forEach(function(el) {
+            if (el.closest('.highcharts-container') || el.closest('.highcharts-tooltip') || el.closest('#chart_container')) {
+                return;
+            }
+            var title = el.getAttribute('title');
+            if (!title) return;
+            el.setAttribute('data-tooltip', title);
+            el.removeAttribute('title');
+            el.classList.add('tooltip-simple');
+        });
+    }
+
     $(document).ready(function(){
         $(".connect").click(function(){
             notify("<?= $_connecting ?>");
@@ -576,6 +630,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         setInterval(updateRealTimeBadge, 1000);
         updateDbStatus();
         setInterval(updateDbStatus, 30000);
+        initGlobalTooltips();
     });
 </script>
 
