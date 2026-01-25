@@ -495,7 +495,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         </ul>
 
         <div class="nav-right">
-            <a class="db-tools" href="./tools/backup_db.php?key=WartelpasSecureKey" target="_blank" title="Backup Database">
+            <a id="db-backup" class="db-tools" href="./tools/backup_db.php?key=WartelpasSecureKey" target="_blank" title="Backup Database">
                 <i class="fa fa-database"></i> Backup
             </a>
             <a id="db-restore" class="db-tools" href="./tools/restore_db.php?key=WartelpasSecureKey" target="_blank" title="Restore Backup Terbaru" onclick="return confirm('Restore backup terbaru? Data saat ini akan tertimpa.');">
@@ -590,6 +590,23 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
             });
     }
 
+    function updateBackupStatus() {
+        var backupBtn = document.getElementById('db-backup');
+        if (!backupBtn) return;
+        fetch('./tools/backup_status.php?key=WartelpasSecureKey')
+            .then(function(resp) {
+                if (!resp.ok) throw new Error('bad');
+                return resp.json();
+            })
+            .then(function(data) {
+                var validToday = data && data.valid_today === true;
+                backupBtn.style.display = validToday ? 'none' : 'inline-flex';
+            })
+            .catch(function() {
+                backupBtn.style.display = 'inline-flex';
+            });
+    }
+
     function initGlobalTooltips() {
         if (window.__tooltipInit) return;
         window.__tooltipInit = true;
@@ -657,6 +674,8 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         setInterval(updateRealTimeBadge, 1000);
         updateDbStatus();
         setInterval(updateDbStatus, 30000);
+        updateBackupStatus();
+        setInterval(updateBackupStatus, 60000);
         initGlobalTooltips();
     });
 </script>
