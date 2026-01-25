@@ -221,6 +221,26 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         border: 1px solid rgba(255,255,255,0.1);
         white-space: nowrap;
     }
+    .db-tools {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        color: var(--nav-text);
+        font-size: 12px;
+        text-decoration: none;
+        transition: 0.2s;
+        white-space: nowrap;
+    }
+    .db-tools:hover {
+        background: rgba(255,255,255,0.08);
+        color: #fff;
+        transform: translateY(-1px);
+    }
+    .db-tools i { opacity: 0.8; }
     .logout-btn {
         height: 36px;
         width: 36px;
@@ -432,6 +452,15 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         </ul>
 
         <div class="nav-right">
+            <a class="db-tools" href="./tools/db_check.php?key=WartelpasSecureKey" target="_blank" title="Kesehatan Database">
+                <i class="fa fa-heartbeat"></i> DB Check
+            </a>
+            <a class="db-tools" href="./tools/backup_db.php?key=WartelpasSecureKey" target="_blank" title="Backup Database">
+                <i class="fa fa-database"></i> Backup
+            </a>
+            <a class="db-tools" href="./tools/restore_db.php?key=WartelpasSecureKey" target="_blank" title="Restore Backup Terbaru" onclick="return confirm('Restore backup terbaru? Data saat ini akan tertimpa.');">
+                <i class="fa fa-history"></i> Restore
+            </a>
             <span class="timer-badge" title="Waktu Saat Ini">
                 <i class="fa fa-clock-o"></i> <span id="timer_val">--:--</span>
             </span>
