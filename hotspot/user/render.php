@@ -1,4 +1,3 @@
-?>
 
   <link rel="stylesheet" href="./hotspot/user/css/users.css">
 
