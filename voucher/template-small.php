@@ -24,6 +24,32 @@ $validity_display = str_replace("m", " Menit", $validity_display);
 $validity_display = str_replace("h", " Jam", $validity_display);
 $profile_display = isset($profile_name) ? preg_replace('/(\d+)([A-Za-z]+)/', '$1 $2', $profile_name) : '';
 $display_paket = trim($waktu_custom) !== "" ? ($waktu_custom . " / ") : (trim($profile_display) !== "" ? ($profile_display . " / ") : (trim($validity_display) !== "" ? ($validity_display . " / ") : ""));
+
+// Fallback harga jika tidak terbaca dari profile on-login
+$price_display = $price ?? '';
+$price_value = 0;
+$profile_hint = strtolower(trim((string)$profile_name . ' ' . (string)$timelimit . ' ' . (string)$validity . ' ' . (string)$comment));
+if (trim($price_display) === '') {
+  if (preg_match('/\b30\s*(menit|m)\b|30menit|\b30m\b/i', $profile_hint)) {
+    $price_value = 20000;
+  } elseif (preg_match('/\b10\s*(menit|m)\b|10menit|\b10m\b/i', $profile_hint)) {
+    $price_value = 5000;
+  }
+  if ($price_value > 0) {
+    if (isset($currency) && isset($cekindo) && in_array($currency, $cekindo['indo'], true)) {
+      $price_display = $currency . " " . number_format((float)$price_value, 0, ",", ".");
+    } else {
+      $price_display = isset($currency) && $currency !== ''
+        ? ($currency . " " . number_format((float)$price_value, 2))
+        : number_format((float)$price_value, 0, ",", ".");
+    }
+  }
+}
+
+if (trim($display_paket) === '') {
+  if ($price_value === 20000) $display_paket = '30 Menit / ';
+  if ($price_value === 5000) $display_paket = '10 Menit / ';
+}
 ?>
 
 <table class="voucher" data-username="<?= htmlspecialchars($username) ?>" style="width: 160px;">
@@ -50,7 +76,7 @@ $display_paket = trim($waktu_custom) !== "" ? ($waktu_custom . " / ") : (trim($p
                   </tr>
                   <tr>
                     <td colspan="2" style="font-weight:bold; padding-top:3px;">
-                      <?php echo $display_paket;?> <?php echo $price;?>
+                      <?php echo $display_paket;?> <?php echo $price_display;?>
                         
                       <?php if($lokasi_blok != ""): ?>
                         <div style="text-align: right; margin-top: 8px;">
@@ -75,7 +101,7 @@ $display_paket = trim($waktu_custom) !== "" ? ($waktu_custom . " / ") : (trim($p
                   </tr>
                   <tr>
                     <td colspan="2" style="font-weight:bold; padding-top:2px;">
-                        <?php echo $display_paket;?> <?php echo $price;?>
+                        <?php echo $display_paket;?> <?php echo $price_display;?>
                         
                         <?php if($lokasi_blok != ""): ?>
                             <div style="text-align: right; margin-top: 2px;">
