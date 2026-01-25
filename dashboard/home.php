@@ -172,6 +172,25 @@ else {
         });
     }
 
+    function checkTableOverflow() {
+        var $tableContainer = $('.table-container');
+        var $table = $tableContainer.find('table');
+        var $indicator = $('.scroll-indicator');
+
+        if ($table.length && $tableContainer.length) {
+            var tableWidth = $table[0].scrollWidth;
+            var containerWidth = $tableContainer[0].clientWidth;
+
+            if (tableWidth > containerWidth) {
+                $indicator.show();
+                $tableContainer.css('overflow-x', 'auto');
+            } else {
+                $indicator.hide();
+                $tableContainer.css('overflow-x', 'hidden');
+            }
+        }
+    }
+
     $(document).ready(function() {
         $("#r_1_display").load("./dashboard/aload.php?session=<?= $session ?>&load=sysresource #r_1_content_raw");
         changeMonth(<?= (int)date('m') ?>);
@@ -180,6 +199,12 @@ else {
         setInterval(function() {
             $("#r_1_display").load("./dashboard/aload.php?session=<?= $session ?>&load=sysresource #r_1_content_raw");
         }, 10000);
+
+        setTimeout(checkTableOverflow, 500);
+        $(document).ajaxComplete(function() {
+            setTimeout(checkTableOverflow, 100);
+        });
+
         $(".month-tab").on("click", function() {
             var m = $(this).data("month");
             if (m) changeMonth(m);
@@ -193,6 +218,7 @@ else {
                         if (chart && chart.reflow) chart.reflow();
                     });
                 }
+                checkTableOverflow();
             }, 250);
         });
     });
@@ -258,14 +284,17 @@ for ($i = 5; $i >= 0; $i--) {
             </div>
             <div class="card-body" style="display:flex; flex-direction:column;">
                 <div class="table-container">
+                    <div class="scroll-indicator" style="position:absolute; bottom:0; right:0; background:var(--accent-blue); color:white; font-size:9px; padding:2px 6px; border-radius:3px 0 0 0; display:none; z-index:10;">
+                        ← Scroll →
+                    </div>
                     <table>
                         <thead>
                             <tr>
-                                <th>JAM</th>
-                                <th>USER</th>
-                                <th style="text-align:center;">BLOK</th>
-                                <th style="text-align:center;">STATUS</th>
-                                <th style="text-align:right; padding-right:25px;">UPTIME</th>
+                                <th style="width:10%; min-width:60px; padding-left:12px;">JAM</th>
+                                <th style="width:22%; min-width:100px;">USER</th>
+                                <th style="width:10%; min-width:50px; text-align:center;">BLOK</th>
+                                <th style="width:15%; min-width:75px; text-align:center;">STATUS</th>
+                                <th style="width:43%; min-width:120px; text-align:right; padding-right:20px;">UPTIME</th>
                             </tr>
                         </thead>
                         <tbody id="tabel_riwayat">

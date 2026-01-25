@@ -800,11 +800,11 @@ if ($load == "logs") {
         elseif ($statusLabel === 'INVALID') $statusColor = '#9b59b6';
 
         echo "<tr>";
-        echo "<td style='width:12%; color:#8898aa; font-family:\"SF Mono\", \"Roboto Mono\", monospace; font-size:13px;'>" . substr($log['time_str'], 11, 5) . "</td>";
-        echo "<td style='width:28%; font-weight:600; font-size:12.5px; overflow:hidden; text-overflow:ellipsis; text-transform:uppercase; max-width:180px;' title='" . htmlspecialchars($log['username']) . "'>" . strtoupper($log['username']) . "</td>";
-        echo "<td style='width:12%; text-align:center;'><span style='background:#2a2d35; padding:4px 8px; border-radius:5px; font-size:11px; font-weight:700; color:#fff; display:inline-block; min-width:28px;'>" . $blokDisplay . "</span></td>";
-        echo "<td style='width:18%; text-align:center;'><span style='background:rgba(255,255,255,0.06); color:" . $statusColor . "; padding:4px 8px; border-radius:5px; font-size:10.5px; font-weight:600; display:inline-block; min-width:65px;'>" . $statusLabel . "</span></td>";
-        echo "<td style='width:30%; text-align:right; font-family:monospace; font-size:13px; font-weight:bold; color:#9ad0ec; padding-right:25px;'$titleAttr>" . $uptimeDisplay . "</td>";
+        echo "<td style='width:10%; min-width:60px; max-width:70px; color:#8898aa; font-family:\"SF Mono\",\"Roboto Mono\",monospace; font-size:0.8125rem; padding:0.9375rem 0.5rem;'>" . substr($log['time_str'], 11, 5) . "</td>";
+        echo "<td style='width:22%; min-width:100px; max-width:140px; font-weight:600; font-size:0.8125rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-transform:uppercase; padding:0.9375rem 0.5rem;' title='" . htmlspecialchars($log['username']) . "'>" . strtoupper($log['username']) . "</td>";
+        echo "<td style='width:10%; min-width:50px; max-width:60px; text-align:center; padding:0.9375rem 0.5rem;'><span style='background:#2a2d35; padding:4px 6px; border-radius:4px; font-size:0.6875rem; font-weight:700; color:#fff; display:inline-block; min-width:24px;'>" . $blokDisplay . "</span></td>";
+        echo "<td style='width:15%; min-width:75px; max-width:90px; text-align:center; padding:0.9375rem 0.5rem;'><span style='background:rgba(255,255,255,0.06); color:" . $statusColor . "; padding:4px 6px; border-radius:4px; font-size:0.6875rem; font-weight:600; display:inline-block; min-width:55px;'>" . $statusLabel . "</span></td>";
+        echo "<td style='width:43%; min-width:120px; text-align:right; font-family:monospace; font-size:0.8125rem; font-weight:bold; color:#9ad0ec; padding:0.9375rem 0.5rem 0.9375rem 10px; padding-right:20px; white-space:nowrap; overflow:visible;'$titleAttr>" . $uptimeDisplay . "</td>";
         echo "</tr>";
         $count++;
     }
