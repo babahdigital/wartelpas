@@ -3311,7 +3311,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             <td class="text-right">
                                 <?php if ($sq < 0): ?>
                                     <button type="button" class="btn-act" title="Cek Ghost" style="background:#8e44ad;color:#fff;" onclick="openGhostModal('<?= htmlspecialchars($audit_block_row); ?>','<?= htmlspecialchars($audit_date_row); ?>',<?= abs((int)$sq); ?>)">
-                                        <i class="fa fa-ghost"></i>
+                                        <i class="fa-solid fa-ghost"></i>
                                     </button>
                                 <?php endif; ?>
                                 <button type="button" class="btn-act" onclick="openAuditEdit(this)" <?= $is_locked_row ? 'disabled style="opacity:.5;cursor:not-allowed;"' : '' ?>
