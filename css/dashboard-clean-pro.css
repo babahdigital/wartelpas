@@ -18,6 +18,7 @@
     --safe-area-inset: env(safe-area-inset-bottom, 0px);
     --shadow-card: 0 8px 30px rgba(0, 0, 0, 0.25);
     --shadow-nav: 0 4px 20px rgba(0, 0, 0, 0.35);
+    --zoom-factor: 1;
 }
 
 /* Fix 1: GLOBAL RESET */
@@ -159,10 +160,10 @@ body {
 
 /* Fix 7: CARD STYLES - ENHANCED */
 .card {
-    background: var(--bg-card) !important;
-    border-radius: 16px !important;
-    border: 1px solid var(--border-soft) !important;
-    box-shadow: var(--shadow-card) !important;
+    background: var(--bg-card);
+    border-radius: 16px;
+    border: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-card);
     display: flex;
     flex-direction: column;
     min-height: 420px;
@@ -254,20 +255,33 @@ body {
     border-spacing: 0;
     table-layout: auto;
     min-width: 600px;
+    transform: translateZ(0);
+    backface-visibility: hidden;
 }
 
 .table-container thead {
     position: sticky;
     top: 0;
     z-index: 10;
-    background: #1a1d24;
+    background: rgba(26, 29, 36, 0.95);
+    backdrop-filter: blur(10px);
+}
+
+.table-container thead::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent-blue), transparent);
 }
 
 .table-container th {
     text-align: left;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--text-dim);
-    padding: 16px 12px;
+    padding: 0.9375rem 0.75rem;
     border-bottom: 1px solid var(--border-soft);
     font-weight: 600;
     letter-spacing: 0.3px;
@@ -317,13 +331,13 @@ body {
 
 @media screen and (min-resolution: 120dpi) {
     .table-container td {
-        font-size: 13px !important;
-        padding: 14px 8px !important;
+        font-size: calc(0.8125rem * var(--zoom-factor)) !important;
+        padding: calc(0.875rem * var(--zoom-factor)) calc(0.5rem * var(--zoom-factor)) !important;
     }
 
     .table-container th {
-        font-size: 11px !important;
-        padding: 14px 8px !important;
+        font-size: calc(0.6875rem * var(--zoom-factor)) !important;
+        padding: calc(0.875rem * var(--zoom-factor)) calc(0.5rem * var(--zoom-factor)) !important;
     }
 }
 
@@ -338,8 +352,8 @@ body {
 }
 
 .table-container td {
-    padding: 15px 12px;
-    font-size: 13.5px;
+    padding: 0.9375rem 0.75rem;
+    font-size: 0.875rem;
     color: var(--text-bright);
     vertical-align: middle;
     height: var(--trx-row-height);
@@ -352,7 +366,7 @@ body {
 /* Time column styling */
 .table-container td:first-child {
     font-family: 'SF Mono', 'Roboto Mono', monospace;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--text-dim);
 }
 
@@ -374,7 +388,7 @@ body {
 .table-container td:last-child {
     font-family: 'SF Mono', 'Roboto Mono', monospace;
     font-weight: 700;
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 
 /* Fix 10: RESOURCE FOOTER */
