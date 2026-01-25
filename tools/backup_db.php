@@ -6,11 +6,50 @@ header('Content-Type: text/plain; charset=utf-8');
 
 $secret = 'WartelpasSecureKey';
 $key = $_GET['key'] ?? '';
-if ($key !== $secret) {
+if ($key === '' && isset($_POST['key'])) {
+    $key = (string)$_POST['key'];
+}
+if ($key === '' && isset($_SERVER['HTTP_X_BACKUP_KEY'])) {
+    $key = (string)$_SERVER['HTTP_X_BACKUP_KEY'];
+}
+if (!hash_equals($secret, (string)$key)) {
     http_response_code(403);
     echo "Forbidden";
     exit;
 }
+
+$allowedIpList = ['127.0.0.1', '::1'];
+if (!empty($_SERVER['REMOTE_ADDR']) && !empty($allowedIpList)) {
+    $clientIp = (string)$_SERVER['REMOTE_ADDR'];
+    if (!in_array($clientIp, $allowedIpList, true)) {
+        http_response_code(403);
+        echo "IP not allowed";
+        exit;
+    }
+}
+
+$rateFile = sys_get_temp_dir() . '/backup_db.rate';
+$rateWindow = 300;
+$rateLimit = 1;
+$now = time();
+$hits = [];
+if (is_file($rateFile)) {
+    $raw = @file_get_contents($rateFile);
+    $decoded = json_decode($raw, true);
+    if (is_array($decoded)) {
+        $hits = $decoded;
+    }
+}
+$hits = array_values(array_filter($hits, function($t) use ($now, $rateWindow) {
+    return is_int($t) && ($now - $t) <= $rateWindow;
+}));
+if (count($hits) >= $rateLimit) {
+    http_response_code(429);
+    echo "Rate limited";
+    exit;
+}
+$hits[] = $now;
+@file_put_contents($rateFile, json_encode($hits));
 
 $root = dirname(__DIR__);
 $dbFile = $root . '/db_data/mikhmon_stats.db';
@@ -100,6 +139,10 @@ if (!@rename($tempFile, $backupFile)) {
     exit;
 }
 
+$logFile = $root . '/logs/backup_db.log';
+$logLine = date('Y-m-d H:i:s') . "\t" . basename($backupFile) . "\t" . ($tmpSize ?? 0) . "\n";
+@file_put_contents($logFile, $logLine, FILE_APPEND);
+
 // Cleanup old backups by days
 $files = glob($backupDir . '/mikhmon_stats_*.db') ?: [];
 $now = time();
@@ -121,6 +164,18 @@ if (count($files) > $keepCount) {
     foreach ($toDelete as $f) {
         if (@unlink($f)) $deleted++;
     }
+}
+
+// Cleanup WAL/SHM/temp artifacts in backup folder
+$sidecars = array_merge(
+    glob($backupDir . '/mikhmon_stats_*.db-wal') ?: [],
+    glob($backupDir . '/mikhmon_stats_*.db-shm') ?: [],
+    glob($backupDir . '/mikhmon_stats_*.db.tmp-wal') ?: [],
+    glob($backupDir . '/mikhmon_stats_*.db.tmp-shm') ?: [],
+    glob($backupDir . '/mikhmon_stats_*.db.tmp') ?: []
+);
+foreach ($sidecars as $f) {
+    if (@unlink($f)) $deleted++;
 }
 
 echo "OK\n";
