@@ -149,6 +149,7 @@ else {
             if (visibleRows > 10) visibleRows = 10;
             $("#row-count").text("Menampilkan " + visibleRows + " transaksi");
             formatUptimeCells();
+            setTimeout(optimizeTableLayout, 50);
         });
     }
 
@@ -172,23 +173,39 @@ else {
         });
     }
 
-    function checkTableOverflow() {
-        var $tableContainer = $('.table-container');
-        var $table = $tableContainer.find('table');
+    function optimizeTableLayout() {
+        var $container = $('.table-container');
+        var $table = $container.find('table');
         var $indicator = $('.scroll-indicator');
 
-        if ($table.length && $tableContainer.length) {
-            var tableWidth = $table[0].scrollWidth;
-            var containerWidth = $tableContainer[0].clientWidth;
+        if (!$table.length) return;
 
-            if (tableWidth > containerWidth) {
-                $indicator.show();
-                $tableContainer.css('overflow-x', 'auto');
-            } else {
+        var containerWidth = $container.width();
+        var tableWidth = $table[0].scrollWidth;
+
+        if (window.innerWidth >= 769) {
+            if (tableWidth <= containerWidth) {
+                $container.css('overflow-x', 'hidden');
                 $indicator.hide();
-                $tableContainer.css('overflow-x', 'hidden');
+            } else {
+                $container.css('overflow-x', 'auto');
+                $indicator.show();
             }
         }
+
+        if (window.innerWidth <= 768) {
+            var isLandscape = window.innerWidth > window.innerHeight;
+            $table.toggleClass('mobile-landscape', isLandscape);
+
+            if (isLandscape) {
+                $container.css('overflow-x', 'hidden');
+            }
+        }
+
+        $('#last-update').text(new Date().toLocaleTimeString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit'
+        }));
     }
 
     $(document).ready(function() {
@@ -200,9 +217,9 @@ else {
             $("#r_1_display").load("./dashboard/aload.php?session=<?= $session ?>&load=sysresource #r_1_content_raw");
         }, 10000);
 
-        setTimeout(checkTableOverflow, 500);
+        optimizeTableLayout();
         $(document).ajaxComplete(function() {
-            setTimeout(checkTableOverflow, 100);
+            setTimeout(optimizeTableLayout, 50);
         });
 
         $(".month-tab").on("click", function() {
@@ -218,7 +235,7 @@ else {
                         if (chart && chart.reflow) chart.reflow();
                     });
                 }
-                checkTableOverflow();
+                optimizeTableLayout();
             }, 250);
         });
     });
@@ -278,37 +295,36 @@ for ($i = 5; $i >= 0; $i--) {
         <div class="card card-transaction">
             <div class="card-header">
                 <h3><i class="fa fa-history"></i> TRANSAKSI TERAKHIR</h3>
-                <span class="blink" style="font-size:10px; font-weight:bold; color:var(--accent-green); letter-spacing:0.5px;">
-                    <i class="fa fa-circle"></i> LIVE
+                <span class="blink" style="font-size:10px; font-weight:bold; color:var(--accent-green);">
+                    <i class="fa fa-circle"></i> LIVE UPDATE
                 </span>
             </div>
-            <div class="card-body" style="display:flex; flex-direction:column;">
+            <div class="card-body">
                 <div class="table-container">
-                    <div class="scroll-indicator" style="position:absolute; bottom:0; right:0; background:var(--accent-blue); color:white; font-size:9px; padding:2px 6px; border-radius:3px 0 0 0; display:none; z-index:10;">
-                        ← Scroll →
-                    </div>
-                    <table>
+                    <table class="zoom-resilient table-zoom-fix">
                         <thead>
                             <tr>
-                                <th style="width:10%; min-width:60px; padding-left:12px;">JAM</th>
-                                <th style="width:22%; min-width:100px;">USER</th>
-                                <th style="width:10%; min-width:50px; text-align:center;">BLOK</th>
-                                <th style="width:15%; min-width:75px; text-align:center;">STATUS</th>
-                                <th style="width:43%; min-width:120px; text-align:right; padding-right:20px;">UPTIME</th>
+                                <th>JAM</th>
+                                <th>USER</th>
+                                <th class="text-center">BLOK</th>
+                                <th class="text-center">STATUS</th>
+                                <th class="text-right">UPTIME</th>
                             </tr>
                         </thead>
                         <tbody id="tabel_riwayat">
-                            <tr><td colspan="5" class="text-center" style="padding:30px; color:#8898aa; font-style:italic;">
-                                <i class="fa fa-clock-o" style="margin-right:8px;"></i>Memuat transaksi...
-                            </td></tr>
+                            <tr>
+                                <td colspan="5" class="text-center" style="padding:40px; color:var(--text-dim);">
+                                    <i class="fa fa-spinner fa-spin"></i> Memuat transaksi...
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
             <div class="card-footer">
-                <span id="row-count">Menampilkan 0 transaksi</span>
-                <span style="color:var(--accent-green); font-size:10px;">
-                    <i class="fa fa-refresh"></i> Auto-refresh
+                <span id="row-count">Memuat...</span>
+                <span class="live-indicator blink">
+                    <i class="fa fa-refresh"></i> Update: <span id="last-update">--:--</span>
                 </span>
             </div>
         </div>

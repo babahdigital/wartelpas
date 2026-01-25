@@ -1028,3 +1028,19 @@ body {
 .status-badge[style*="#e74c3c"] { background: var(--accent-red) !important; }
 .status-badge[style*="#f39c12"] { background: var(--accent-yellow) !important; }
 .status-badge[style*="#9b59b6"] { background: var(--accent-purple) !important; }
+
+.time-col {
+    color: var(--text-dim);
+    font-family: 'SF Mono', 'Roboto Mono', monospace;
+}
+
+.user-col {
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.uptime-col {
+    font-family: 'SF Mono', 'Roboto Mono', monospace;
+    font-weight: 700;
+    color: #9ad0ec;
+}
