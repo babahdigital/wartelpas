@@ -44,14 +44,14 @@ if ($req_show === 'semua') {
 $debug_mode = isset($_GET['debug']) && $_GET['debug'] == '1';
 $enforce_rusak_rules = !(isset($_GET['rusak_free']) && $_GET['rusak_free'] == '1');
 
-include('../include/config.php');
+include(__DIR__ . '/../../include/config.php');
 if (!isset($data[$session])) {
   header("Location:../admin.php?id=login");
   exit();
 }
-include('../include/readcfg.php');
-include_once('../lib/routeros_api.class.php');
-include_once('../lib/formatbytesbites.php');
+include(__DIR__ . '/../../include/readcfg.php');
+include_once(__DIR__ . '/../../lib/routeros_api.class.php');
+include_once(__DIR__ . '/../../lib/formatbytesbites.php');
 
 if (!function_exists('formatBytes')) {
     function formatBytes($size, $precision = 2) {

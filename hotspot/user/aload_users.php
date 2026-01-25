@@ -16,9 +16,9 @@ $session = trim((string)($_GET['session'] ?? ''));
 $load = trim((string)($_GET['load'] ?? ''));
 
 // Load config & API
-include('../include/config.php');
-include_once('../lib/routeros_api.class.php');
-include_once('../lib/formatbytesbites.php');
+include(__DIR__ . '/../../include/config.php');
+include_once(__DIR__ . '/../../lib/routeros_api.class.php');
+include_once(__DIR__ . '/../../lib/formatbytesbites.php');
 
 if ($session === '' || !isset($data[$session])) {
     header('Content-Type: application/json');
@@ -26,7 +26,7 @@ if ($session === '' || !isset($data[$session])) {
     exit;
 }
 
-include('../include/readcfg.php');
+include(__DIR__ . '/../../include/readcfg.php');
 
 if ($load === '') {
     header('Content-Type: application/json');

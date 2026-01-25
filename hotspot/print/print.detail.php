@@ -15,14 +15,14 @@ if ($session === '' || $user === '') {
     exit;
 }
 
-include('../include/config.php');
+include(__DIR__ . '/../../include/config.php');
 if ($session === '' || !isset($data[$session])) {
     echo "Session tidak valid.";
     exit;
 }
-include('../include/readcfg.php');
-include_once('../lib/routeros_api.class.php');
-include_once('../lib/formatbytesbites.php');
+include(__DIR__ . '/../../include/readcfg.php');
+include_once(__DIR__ . '/../../lib/routeros_api.class.php');
+include_once(__DIR__ . '/../../lib/formatbytesbites.php');
 
 function uptime_to_seconds($uptime) {
     if (empty($uptime)) return 0;
