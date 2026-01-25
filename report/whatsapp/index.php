@@ -181,22 +181,27 @@ if (is_dir($pdf_dir)) {
 
 <style>
     .wa-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; }
-    .wa-card { background: #fff; border: 1px solid #e6e6e6; border-radius: 6px; padding: 16px; }
-    .wa-card h4 { margin: 0 0 12px; font-size: 14px; font-weight: 700; }
+    .wa-card { background: #2b3138; border: 1px solid #3b424a; border-radius: 6px; padding: 16px; color: #e6edf3; }
+    .wa-card h4 { margin: 0 0 12px; font-size: 14px; font-weight: 700; color: #f2f6f9; }
     .wa-form-row { display: grid; grid-template-columns: 140px 1fr; gap: 10px; align-items: center; margin-bottom: 10px; }
-    .wa-form-row input, .wa-form-row select { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 4px; }
+    .wa-form-row label { color: #cbd5db; }
+    .wa-form-row input, .wa-form-row select {
+        width: 100%; padding: 8px 10px; border: 1px solid #4b535c; border-radius: 4px;
+        background: #1f242a; color: #e6edf3;
+    }
+    .wa-form-row input::placeholder { color: #7f8a93; }
     .wa-actions { display: flex; gap: 8px; margin-top: 12px; }
     .wa-badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; }
     .wa-badge.on { background: rgba(46,204,113,0.15); color: #2ecc71; border: 1px solid rgba(46,204,113,0.4); }
     .wa-badge.off { background: rgba(231,76,60,0.12); color: #e74c3c; border: 1px solid rgba(231,76,60,0.35); }
-    .wa-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-    .wa-table th, .wa-table td { border-bottom: 1px solid #eee; padding: 8px; text-align: left; }
-    .wa-table th { font-weight: 700; background: #fafafa; }
-    .wa-empty { padding: 12px; color: #888; font-size: 12px; }
-    .wa-help { font-size: 12px; color: #777; margin-top: 6px; }
-    .wa-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); align-items: center; justify-content: center; z-index: 9999; }
+    .wa-table { width: 100%; border-collapse: collapse; font-size: 12.5px; color: #d9e1e7; }
+    .wa-table th, .wa-table td { border-bottom: 1px solid #3a4149; padding: 8px; text-align: left; }
+    .wa-table th { font-weight: 700; background: #242a30; color: #f0f4f7; }
+    .wa-empty { padding: 12px; color: #9aa6af; font-size: 12px; }
+    .wa-help { font-size: 12px; color: #9aa6af; margin-top: 6px; }
+    .wa-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); align-items: center; justify-content: center; z-index: 9999; }
     .wa-modal.show { display: flex; }
-    .wa-modal-card { background: #fff; padding: 18px; border-radius: 8px; width: 320px; }
+    .wa-modal-card { background: #2b3138; padding: 18px; border-radius: 8px; width: 320px; color: #e6edf3; border: 1px solid #3b424a; }
     .wa-modal-card h5 { margin: 0 0 10px; }
     .wa-modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
     @media (max-width: 980px) { .wa-grid { grid-template-columns: 1fr; } }
