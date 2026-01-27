@@ -115,9 +115,20 @@
       if (opts.type === 'danger') {
         overlayContainer.classList.add('status-error');
         overlayIcon.className = 'fa fa-exclamation-triangle';
+        overlayIcon.style.removeProperty('color');
+      } else if (opts.type === 'warning') {
+        overlayContainer.classList.remove('status-error');
+        overlayIcon.className = 'fa fa-exclamation-circle';
+        overlayIcon.style.color = '#f59e0b';
       } else {
         overlayContainer.classList.add('status-loading');
         overlayIcon.className = 'fa fa-question-circle';
+        overlayIcon.style.removeProperty('color');
+      }
+      if (opts.layout === 'vertical') {
+        overlayActions.classList.add('layout-vertical');
+      } else {
+        overlayActions.classList.remove('layout-vertical');
       }
       overlayActions.innerHTML = '';
       const buttons = Array.isArray(opts.buttons) ? opts.buttons : [];
@@ -125,6 +136,7 @@
         overlayBackdrop.classList.remove('show');
         setTimeout(() => {
           overlayBackdrop.style.display = 'none';
+          overlayActions.classList.remove('layout-vertical');
         }, 250);
         overlayActions.innerHTML = '';
         resolve(val);
@@ -133,7 +145,7 @@
         const b = document.createElement('button');
         b.type = 'button';
         b.className = 'overlay-btn' + (btn.className ? (' ' + btn.className) : '');
-        b.textContent = btn.label || 'OK';
+        b.innerHTML = btn.label || 'OK';
         if (btn.disabled) {
           b.disabled = true;
           b.style.opacity = '0.6';
@@ -263,40 +275,55 @@
     const isAdmin = !!window.isSuperAdmin;
     const firstMessage = `
       <div style="text-align:left;">
-        <div style="font-weight:600;margin-bottom:6px;">Hapus Blok: ${blokLabel}</div>
-        <div style="font-size:12px;color:#b8c7ce;margin-bottom:10px;">
-          Pilih jenis penghapusan di bawah ini.
+        <div style="font-weight:600; font-size:15px; margin-bottom:10px; color:#fff;">
+          Blok Target: <span style="color:#f39c12">${blokLabel}</span>
         </div>
-        <ul style="padding-left:16px;margin:0;font-size:12px;color:#cbd5e1;">
-          <li><strong>Hapus Router Saja</strong>: menghapus user di MikroTik (offline saja), data laporan di DB tetap.</li>
-          <li><strong>Hapus Total (Router + DB)</strong>: menghapus user di MikroTik dan seluruh data DB (login_history, login_events, sales_history, live_sales).</li>
+        <div style="font-size:13px; color:#b8c7ce; margin-bottom:10px;">
+          Pilih metode penghapusan:
+        </div>
+        <ul class="popup-desc-list">
+          <li><strong>Hapus Router Saja:</strong> User hilang di MikroTik agar tidak bisa login lagi. Data laporan (uang/history) AMAN.</li>
+          <li><strong>Hapus Total:</strong> Hapus user di MikroTik DAN hapus semua jejak uang/history di database. <strong>Data hilang permanen.</strong></li>
         </ul>
-        ${isAdmin ? '' : '<div style="margin-top:8px;color:#f59e0b;font-size:12px;">Catatan: Hapus Total hanya untuk Superadmin.</div>'}
+        ${isAdmin ? '' : '<div class="popup-note"><i class="fa fa-lock"></i> Hapus Total hanya untuk Superadmin.</div>'}
       </div>`;
     const choice = await showOverlayChoice({
-      title: 'Pilih Jenis Penghapusan',
+      title: 'Hapus Blok Voucher',
       messageHtml: firstMessage,
-      type: 'danger',
+      type: 'warning',
+      layout: 'vertical',
       buttons: [
-        { label: 'Batal', value: 'cancel', className: 'overlay-btn-muted' },
-        { label: 'Hapus Router Saja', value: 'router', className: 'overlay-btn-secondary' },
-        { label: 'Hapus Total (Router + DB)', value: 'full', className: 'overlay-btn-danger', disabled: !isAdmin }
+        {
+          label: '<i class="fa fa-server"></i> Hapus Router Saja (Aman)',
+          value: 'router',
+          className: 'overlay-btn-warning'
+        },
+        {
+          label: '<i class="fa fa-trash"></i> Hapus Total (Router + DB)',
+          value: 'full',
+          className: 'overlay-btn-danger',
+          disabled: !isAdmin
+        },
+        { label: 'Batal', value: 'cancel', className: 'overlay-btn-muted' }
       ]
     });
     if (!choice || choice === 'cancel') return;
     if (choice === 'router') {
       const detail = `
-        <div style="text-align:left;">
-          <div style="margin-bottom:6px;">Anda akan menghapus semua user di MikroTik pada blok <strong>${blokLabel}</strong>.</div>
-          <div style="font-size:12px;color:#cbd5e1;">Data database tidak dihapus. User online tidak akan dihapus.</div>
+        <div style="text-align:center;">
+          <div style="font-size:16px; margin-bottom:10px;">Konfirmasi Akhir</div>
+          <div style="color:#cbd5e1; margin-bottom:15px;">
+            Hapus user di Router untuk <strong>${blokLabel}</strong>?<br>
+            User online tidak akan terputus. Data penjualan tetap ada.
+          </div>
         </div>`;
       const ok = await showOverlayChoice({
-        title: 'Konfirmasi Hapus Router',
+        title: 'Eksekusi Hapus Router',
         messageHtml: detail,
-        type: 'danger',
+        type: 'warning',
         buttons: [
           { label: 'Batal', value: false, className: 'overlay-btn-muted' },
-          { label: 'Ya, Hapus', value: true, className: 'overlay-btn-danger' }
+          { label: '<i class="fa fa-check"></i> Ya, Eksekusi', value: true, className: 'overlay-btn-warning' }
         ]
       });
       if (ok !== true) return;
@@ -306,17 +333,17 @@
     }
     if (choice === 'full') {
       const detail = `
-        <div style="text-align:left;">
-          <div style="margin-bottom:6px;">Anda akan menghapus total blok <strong>${blokLabel}</strong>.</div>
-          <div style="font-size:12px;color:#cbd5e1;">
-            Tindakan ini akan menghapus user di MikroTik (termasuk aktif) dan membersihkan DB:
-            <ul style="padding-left:16px;margin:6px 0 0 0;">
-              <li>login_history</li>
-              <li>login_events</li>
-              <li>sales_history</li>
-              <li>live_sales</li>
-            </ul>
+        <div style="text-align:center;">
+          <div style="font-size:18px; color:#ef4444; margin-bottom:10px; font-weight:bold;">PERINGATAN KERAS!</div>
+          <div style="color:#e2e8f0; margin-bottom:15px; line-height:1.5;">
+            Anda akan menghapus <strong>${blokLabel}</strong> secara PERMANEN.<br><br>
+            <span style="color:#fca5a5;">
+            • Semua History Login Hilang<br>
+            • Semua Data Penjualan Hilang<br>
+            • User di Router Hilang
+            </span>
           </div>
+          <div style="font-size:12px; color:#cbd5e1;">Tindakan ini tidak bisa dibatalkan.</div>
         </div>`;
       const ok = await showOverlayChoice({
         title: 'Konfirmasi Hapus Total',
@@ -324,7 +351,7 @@
         type: 'danger',
         buttons: [
           { label: 'Batal', value: false, className: 'overlay-btn-muted' },
-          { label: 'Ya, Hapus Total', value: true, className: 'overlay-btn-danger' }
+          { label: '<i class="fa fa-bomb"></i> Ya, Hancurkan Data', value: true, className: 'overlay-btn-danger' }
         ]
       });
       if (ok !== true) return;
