@@ -648,6 +648,103 @@
         });
         if (!ok) return;
         confirmMsg = null;
+      } else if (msgLower.includes('retur voucher')) {
+        const match = confirmMsg.match(/RETUR Voucher\s+([^\?]+)/i);
+        const voucherName = match ? match[1].trim() : 'Target';
+        const detailMsg = `
+          <div style="text-align:left;">
+             <div style="margin-bottom:8px; color:#cbd5e1; font-size:13px;">Target Retur:</div>
+             <div style="font-size:20px; font-weight:bold; color:#fff; margin-bottom:15px; border-left:4px solid #8e44ad; padding-left:12px;">
+               ${voucherName}
+             </div>
+             
+             <div class="popup-info-box purple">
+               <i class="fa fa-exchange" style="font-size:18px; color:#a569bd; margin-top:2px;"></i>
+               <div>
+                 <strong>Mekanisme Retur:</strong><br>
+                 1. Voucher lama (${voucherName}) akan dihapus/diarsipkan.<br>
+                 2. <strong>Voucher BARU</strong> akan otomatis dibuat sebagai pengganti.<br>
+                 <span style="color:#d2b4de; font-size:12px;">(Saldo/Laporan tidak berubah, hanya tukar voucher).</span>
+               </div>
+             </div>
+          </div>
+        `;
+
+        const ok = await showOverlayChoice({
+          title: 'Konfirmasi Retur',
+          messageHtml: detailMsg,
+          type: 'warning',
+          layout: 'vertical',
+          buttons: [
+            {
+              label: `
+                <i class="fa fa-random"></i>
+                <div class="btn-rich-text">
+                  <span class="btn-rich-title">Ya, Proses Retur</span>
+                  <span class="btn-rich-desc">Generate voucher pengganti sekarang.</span>
+                </div>`,
+              value: true,
+              className: 'overlay-btn-purple'
+            },
+            {
+              label: `
+                <i class="fa fa-times"></i>
+                <div class="btn-rich-text"><span class="btn-rich-title">Batal</span></div>`,
+              value: false,
+              className: 'overlay-btn-muted'
+            }
+          ]
+        });
+        if (!ok) return;
+        confirmMsg = null;
+      } else if (msgLower.includes('rollback rusak')) {
+        const match = confirmMsg.match(/Rollback RUSAK\s+([^\?]+)/i);
+        const voucherName = match ? match[1].trim() : 'Target';
+        const detailMsg = `
+          <div style="text-align:left;">
+             <div style="margin-bottom:8px; color:#cbd5e1; font-size:13px;">Target Pemulihan:</div>
+             <div style="font-size:20px; font-weight:bold; color:#fff; margin-bottom:15px; border-left:4px solid #2ecc71; padding-left:12px;">
+               ${voucherName}
+             </div>
+             
+             <div class="popup-info-box green">
+               <i class="fa fa-undo" style="font-size:18px; color:#4ade80; margin-top:2px;"></i>
+               <div>
+                 <strong>Efek Rollback:</strong><br>
+                 Status voucher akan dikembalikan dari <strong>RUSAK</strong> menjadi <strong>READY/AKTIF</strong>.<br>
+                 <span style="color:#86efac; font-weight:600;"><i class="fa fa-check"></i> User bisa login kembali.</span>
+               </div>
+             </div>
+          </div>
+        `;
+
+        const ok = await showOverlayChoice({
+          title: 'Batalkan Status Rusak',
+          messageHtml: detailMsg,
+          type: 'info',
+          layout: 'vertical',
+          buttons: [
+            {
+              label: `
+                <i class="fa fa-history"></i>
+                <div class="btn-rich-text">
+                  <span class="btn-rich-title">Ya, Pulihkan Voucher</span>
+                  <span class="btn-rich-desc">Kembalikan akses user ini.</span>
+                </div>`,
+              value: true,
+              className: 'overlay-btn-success'
+            },
+            {
+              label: `
+                <i class="fa fa-times"></i>
+                <div class="btn-rich-text"><span class="btn-rich-title">Batal</span></div>`,
+              value: false,
+              className: 'overlay-btn-muted'
+            }
+          ]
+        });
+        if (!ok) return;
+        confirmMsg = null;
       } else {
         const ok = await showOverlayChoice({
           title: 'Konfirmasi',

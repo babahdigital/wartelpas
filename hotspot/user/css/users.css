@@ -258,6 +258,51 @@
 .confirm-btn-warning { background: #ff9800; color: #fff; }
 .confirm-btn i.fa.fa-print.dul { margin-top:3px; position: relative; margin-right: 8px; }
 .relogin-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); z-index: 10002; }
+
+/* --- Tambahan Warna Tombol Rich UI --- */
+
+/* Tombol Ungu untuk Retur */
+.overlay-btn-purple {
+  background: #8e44ad;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.overlay-btn-purple:hover {
+  background: #732d91;
+}
+
+/* Tombol Hijau untuk Rollback/Restore */
+.overlay-btn-success {
+  background: #16a34a;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.overlay-btn-success:hover {
+  background: #15803d;
+}
+
+/* Style tambahan untuk kotak info di popup */
+.popup-info-box {
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #e2e8f0;
+  line-height: 1.5;
+  margin-bottom: 15px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.popup-info-box.purple {
+  background: rgba(142, 68, 173, 0.15);
+  border: 1px solid rgba(142, 68, 173, 0.4);
+}
+
+.popup-info-box.green {
+  background: rgba(22, 163, 74, 0.15);
+  border: 1px solid rgba(22, 163, 74, 0.4);
+}
 .relogin-card { background: #2c2c2c; color: #e0e0e0; border-radius: 8px; width: 440px; max-width: 92vw; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; }
 .relogin-header { background: #252525; border-bottom: 1px solid #3d3d3d; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; }
 .relogin-title { font-weight: 600; color: #fff; font-size: 15px; margin: 0; }
