@@ -14,12 +14,6 @@
   const clearBtn = document.getElementById('search-clear');
   const pageDim = document.getElementById('page-dim');
   const actionBanner = document.getElementById('action-banner');
-  const confirmModal = document.getElementById('confirm-modal');
-  const confirmMessage = document.getElementById('confirm-message');
-  const confirmOk = document.getElementById('confirm-ok');
-  const confirmCancel = document.getElementById('confirm-cancel');
-  const confirmClose = document.getElementById('confirm-close');
-  const confirmPrint = document.getElementById('confirm-print');
   const overlayBackdrop = document.getElementById('users-overlay');
   const overlayContainer = document.getElementById('users-overlay-container');
   const overlayTitle = document.getElementById('users-overlay-title');
@@ -185,17 +179,6 @@
     }).then((val) => val === true);
   }
 
-  if (confirmPrint) {
-    confirmPrint.addEventListener('click', (e) => {
-      if (e && typeof e.preventDefault === 'function') e.preventDefault();
-      const url = confirmPrint.dataset.url || '';
-      if (!url) return;
-      const w = window.open(url, '_blank');
-      if (!w) {
-        window.location.href = url;
-      }
-    });
-  }
 
   let rusakPrintPayload = null;
 
@@ -761,10 +744,6 @@
       if (el) {
         const uname = el.getAttribute('data-user') || '';
         if (uname) {
-          if (confirmPrint) {
-            const url = './hotspot/print/print.detail.php?session=' + encodeURIComponent(usersSession) + '&user=' + encodeURIComponent(uname);
-            confirmPrint.dataset.url = url;
-          }
           try {
             const params = new URLSearchParams();
             params.set('action', 'login_events');

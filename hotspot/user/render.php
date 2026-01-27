@@ -6,23 +6,6 @@
     <div class="spinner"><i class="fa fa-circle-o-notch fa-spin"></i> Memproses...</div>
   </div>
   <div id="action-banner" class="action-banner" aria-live="polite"></div>
-  <div id="confirm-modal" class="confirm-modal">
-    <div class="confirm-card">
-      <div class="confirm-header">
-        <div class="confirm-title">Konfirmasi Tindakan</div>
-        <button type="button" class="confirm-close" id="confirm-close">&times;</button>
-      </div>
-      <div class="confirm-body">
-        <div class="confirm-icon"><i class="fa fa-question-circle"></i></div>
-        <div id="confirm-message" class="confirm-message"></div>
-      </div>
-      <div class="confirm-footer">
-        <button type="button" class="confirm-btn confirm-btn-secondary" id="confirm-print"><i class="fa fa-print dul"></i> Print</button>
-        <button type="button" class="confirm-btn confirm-btn-secondary" id="confirm-cancel">Batal</button>
-        <button type="button" class="confirm-btn confirm-btn-warning" id="confirm-ok">Ya, Lanjutkan</button>
-      </div>
-    </div>
-  </div>
   <div id="users-overlay" class="overlay-backdrop">
     <div class="overlay-modal" id="users-overlay-container">
       <div class="overlay-icon-box">
