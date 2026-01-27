@@ -560,7 +560,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         }
       }
 
-      if (!empty($base_router_map)) {
+      if (!empty($base_router_map) || !empty($delete_name_map)) {
         foreach ($list as $usr) {
           $uname = $usr['name'] ?? '';
           if ($uname === '') continue;
@@ -568,7 +568,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           $ref_user = extract_retur_user_from_ref($c);
           if ($ref_user !== '') {
             $ref_key = strtolower($ref_user);
-            if (isset($base_router_map[$ref_key])) {
+            if (isset($base_router_map[$ref_key]) || isset($delete_name_map[$ref_key])) {
               $uname_key = strtolower($uname);
               if (!isset($delete_name_map[$uname_key])) {
                 $delete_name_map[$uname_key] = $uname;
