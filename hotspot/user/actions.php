@@ -468,16 +468,16 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $target_cmp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $target_norm));
       $blok_clean = preg_replace('/[^A-Za-z0-9]/i', '', (string)$target_norm);
       $blok_keyword = preg_replace('/^BLOK/i', '', strtoupper($blok_clean));
+      if (preg_match('/^([A-Z]+)/', $blok_keyword, $m)) {
+        $blok_keyword = $m[1];
+      }
       $blok_upper = 'BLOK' . $blok_keyword;
-      $use_glob = !preg_match('/\d$/', $blok_upper);
-      $glob_pattern = $use_glob ? ($blok_upper . '[0-9]*') : '';
+      $blok_like = $blok_upper . '%';
       $sql_pattern_1 = 'BLOK-' . $blok_keyword;
       $sql_pattern_2 = 'BLOK ' . $blok_keyword;
-      $sql_pattern_3 = 'BLOK' . $blok_keyword;
       $raw_like1 = '%' . $sql_pattern_1 . '%';
       $raw_like2 = '%' . $sql_pattern_2 . '%';
-      $raw_like3 = '%' . $sql_pattern_3 . '%';
-      $raw_like4 = '%' . $blok_keyword . '%';
+      $raw_like3 = '%|BLOK-' . $blok_keyword . '%';
 
       $active_list = $API->comm('/ip/hotspot/active/print', [
         '?server' => $hotspot_server,
@@ -491,13 +491,15 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $base_usernames = [];
       $retur_usernames = [];
       $delete_name_map = [];
-      $whereBlok = "UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) = :b_clean" . ($use_glob ? " OR UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) GLOB :bg" : "");
-      $whereRaw = " OR UPPER(raw_comment) LIKE :rc1 OR UPPER(raw_comment) LIKE :rc2 OR UPPER(raw_comment) LIKE :rc3 OR UPPER(raw_comment) LIKE :rc4 OR raw_comment LIKE :rc5 OR raw_comment LIKE :rc6";
+      $whereBlok = "UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) LIKE :b_like";
+      $whereRaw = " OR UPPER(raw_comment) LIKE :rc1 OR UPPER(raw_comment) LIKE :rc2 OR UPPER(raw_comment) LIKE :rc3";
       $whereMatch = "(" . $whereBlok . $whereRaw . ")";
-      $raw_like5 = '%Blok-' . $blok_keyword . '%';
-      $raw_like6 = '%Blok ' . $blok_keyword . '%';
-      $base_params = $use_glob ? [':b_clean' => $blok_upper, ':bg' => $glob_pattern, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4, ':rc5' => $raw_like5, ':rc6' => $raw_like6]
-        : [':b_clean' => $blok_upper, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4, ':rc5' => $raw_like5, ':rc6' => $raw_like6];
+      $base_params = [
+        ':b_like' => $blok_like,
+        ':rc1' => $raw_like1,
+        ':rc2' => $raw_like2,
+        ':rc3' => $raw_like3
+      ];
 
       try {
         $stmt = $db->prepare("SELECT username FROM login_history WHERE $whereMatch");
@@ -662,7 +664,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $stmt = $db->prepare("DELETE FROM live_sales WHERE $whereMatch$userClause");
         $stmt->execute(array_merge($params, $userParams));
 
-        $blok_params = $use_glob ? [':b_clean' => $blok_upper, ':bg' => $glob_pattern] : [':b_clean' => $blok_upper];
+        $blok_params = [':b_like' => $blok_like];
         try {
           $stmtChk = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='audit_rekap_manual' LIMIT 1");
           if ($stmtChk && $stmtChk->fetchColumn()) {
