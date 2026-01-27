@@ -492,10 +492,12 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $retur_usernames = [];
       $delete_name_map = [];
       $whereBlok = "UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) = :b_clean" . ($use_glob ? " OR UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) GLOB :bg" : "");
-      $whereRaw = " OR UPPER(raw_comment) LIKE :rc1 OR UPPER(raw_comment) LIKE :rc2 OR UPPER(raw_comment) LIKE :rc3 OR UPPER(raw_comment) LIKE :rc4";
+      $whereRaw = " OR UPPER(raw_comment) LIKE :rc1 OR UPPER(raw_comment) LIKE :rc2 OR UPPER(raw_comment) LIKE :rc3 OR UPPER(raw_comment) LIKE :rc4 OR raw_comment LIKE :rc5 OR raw_comment LIKE :rc6";
       $whereMatch = "(" . $whereBlok . $whereRaw . ")";
-      $base_params = $use_glob ? [':b_clean' => $blok_upper, ':bg' => $glob_pattern, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4]
-        : [':b_clean' => $blok_upper, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4];
+      $raw_like5 = '%Blok-' . $blok_keyword . '%';
+      $raw_like6 = '%Blok ' . $blok_keyword . '%';
+      $base_params = $use_glob ? [':b_clean' => $blok_upper, ':bg' => $glob_pattern, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4, ':rc5' => $raw_like5, ':rc6' => $raw_like6]
+        : [':b_clean' => $blok_upper, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4, ':rc5' => $raw_like5, ':rc6' => $raw_like6];
 
       try {
         $stmt = $db->prepare("SELECT username FROM login_history WHERE $whereMatch");
