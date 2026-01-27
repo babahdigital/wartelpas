@@ -1038,8 +1038,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $p30_tt = $p30_qty > 0 ? number_format($p30_qty,0,',','.') : '-';
                             $audit_total_profile_qty_10 += $p10_qty;
                             $audit_total_profile_qty_30 += $p30_qty;
-                            $p10_sum_calc = $profile10_sum > 0 ? $profile10_sum : ($p10_qty > 0 ? $p10_qty * $price10 : null);
-                            $p30_sum_calc = $profile30_sum > 0 ? $profile30_sum : ($p30_qty > 0 ? $p30_qty * $price30 : null);
+                            $p10_sum_calc = $p10_qty * $price10;
+                            $p30_sum_calc = $p30_qty * $price30;
 
                             $manual_net_qty_10 = max(0, $p10_qty - $cnt_rusak_10 - $cnt_invalid_10 + $cnt_retur_10);
                             $manual_net_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30 + $cnt_retur_30);
