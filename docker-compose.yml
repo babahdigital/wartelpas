@@ -24,6 +24,7 @@ services:
       - /home/abdullah/.config/rclone/rclone.conf:/var/www/html/config/rclone.conf:ro
       - ./include/config.php:/var/www/html/include/config.php
       - ./include/env.php:/var/www/html/include/env.php
+      - ./include/quickbt.php:/var/www/html/include/quickbt.php
       - ./settings/settings.php:/var/www/html/settings/settings.php
       - ./settings/sessions.php:/var/www/html/settings/sessions.php
       - ./settings/uplogo.php:/var/www/html/settings/uplogo.php
