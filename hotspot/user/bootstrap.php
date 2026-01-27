@@ -7,6 +7,9 @@ if (!isset($_SESSION["mikhmon"]) || !isset($_GET['session'])) {
     exit();
 }
 
+require_once(__DIR__ . '/../../include/acl.php');
+$is_superadmin = isSuperAdmin();
+
 $session = $_GET['session'];
 
 $req_prof = isset($_GET['profile']) ? $_GET['profile'] : 'all';
