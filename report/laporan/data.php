@@ -3,6 +3,9 @@
 require_once __DIR__ . '/helpers.php';
 
 $root_dir = dirname(__DIR__, 2);
+require_once $root_dir . '/include/acl.php';
+$is_superadmin = isset($_SESSION['mikhmon']) ? isSuperAdmin() : false;
+$is_operator = isset($_SESSION['mikhmon']) ? isOperator() : false;
 $env = [];
 $envFile = $root_dir . '/include/env.php';
 if (file_exists($envFile)) {
@@ -592,6 +595,14 @@ if (isset($db) && $db instanceof PDO && isset($_GET['hp_delete'])) {
 
 // Kunci audit manual (harian)
 if (isset($db) && $db instanceof PDO && isset($_GET['audit_lock'])) {
+    if ($is_operator) {
+        $audit_error = 'Akses ditolak. Kunci audit hanya untuk Superadmin.';
+        $audit_redirect = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+        if (!headers_sent()) {
+            header('Location: ' . $audit_redirect);
+            exit;
+        }
+    }
     $lock_date = trim($_GET['audit_date'] ?? $filter_date);
     if ($req_show !== 'harian' || $lock_date === '') {
         $audit_error = 'Penguncian hanya tersedia untuk rekap harian.';
@@ -621,6 +632,14 @@ if (isset($db) && $db instanceof PDO && isset($_GET['audit_lock'])) {
 
 // Hapus audit manual rekap (harian)
 if (isset($db) && $db instanceof PDO && isset($_GET['audit_delete'])) {
+    if ($is_operator) {
+        $audit_error = 'Akses ditolak. Hapus audit hanya untuk Superadmin.';
+        $audit_redirect = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+        if (!headers_sent()) {
+            header('Location: ' . $audit_redirect);
+            exit;
+        }
+    }
     $del_date = trim($_GET['audit_date'] ?? '');
     $del_blok = strtoupper(trim($_GET['audit_blok'] ?? ''));
     if ($del_date !== '' && $del_blok !== '') {

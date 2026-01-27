@@ -736,7 +736,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                         <i class="fa fa-search"></i>
                                     </button>
                                 <?php endif; ?>
-                                <button type="button" class="btn-act" onclick="openAuditEdit(this)" <?= $is_locked_row ? 'disabled style="opacity:.5;cursor:not-allowed;"' : '' ?>
+                                <?php $audit_btn_disabled = (!$is_superadmin || $is_locked_row) ? 'disabled style="opacity:.5;cursor:not-allowed;"' : ''; ?>
+                                <button type="button" class="btn-act" onclick="openAuditEdit(this)" <?= $audit_btn_disabled ?>
                                     data-blok="<?= htmlspecialchars($ar['blok_name'] ?? ''); ?>"
                                     data-user="<?= htmlspecialchars($ar['audit_username'] ?? ''); ?>"
                                     data-date="<?= htmlspecialchars($ar['report_date'] ?? $filter_date); ?>"
@@ -746,7 +747,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                     data-qty30="<?= (int)$profile_qty_30; ?>">
                                     <i class="fa fa-edit"></i>
                                 </button>
-                                <button type="button" class="btn-act btn-act-danger" onclick="openDeleteAuditModal('<?= './?report=selling' . $session_qs . '&show=' . $req_show . '&date=' . urlencode($filter_date) . '&audit_delete=1&audit_blok=' . urlencode($ar['blok_name'] ?? '') . '&audit_date=' . urlencode($filter_date); ?>','<?= htmlspecialchars($ar['blok_name'] ?? '-'); ?>','<?= htmlspecialchars($filter_date); ?>')" <?= $is_locked_row ? 'disabled style="opacity:.5;cursor:not-allowed;"' : '' ?> >
+                                <button type="button" class="btn-act btn-act-danger" onclick="openDeleteAuditModal('<?= './?report=selling' . $session_qs . '&show=' . $req_show . '&date=' . urlencode($filter_date) . '&audit_delete=1&audit_blok=' . urlencode($ar['blok_name'] ?? '') . '&audit_date=' . urlencode($filter_date); ?>','<?= htmlspecialchars($ar['blok_name'] ?? '-'); ?>','<?= htmlspecialchars($filter_date); ?>')" <?= $audit_btn_disabled ?> >
                                     <i class="fa fa-trash"></i>
                                 </button>
                             </td>
@@ -980,6 +981,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
 <?php endif; ?>
 
 <?php if (!$is_ajax): ?>
+<?php if (!empty($is_superadmin)): ?>
 <div id="audit-lock-modal" class="modal-backdrop" onclick="if(event.target===this){closeAuditLockModal();}">
     <div class="modal-card" style="width:440px;">
         <div class="modal-header">
@@ -996,6 +998,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         </div>
     </div>
 </div>
+<?php endif; ?>
 <?php endif; ?>
 
 <?php if (!$is_ajax): ?>
