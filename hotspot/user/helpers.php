@@ -18,26 +18,20 @@ if (!function_exists('format_comment_display')) {
 if (!function_exists('extract_blok_name')) {
   function extract_blok_name($comment) {
     if (empty($comment)) return '';
-    if (preg_match('/\|\s*Blok-([A-Za-z0-9]+)/i', $comment, $m)) {
-      return 'BLOK-' . strtoupper($m[1]);
+    $clean_blok = '';
+    if (preg_match('/(?:^|\||-)\s*(Blok-[A-Za-z0-9]+)/i', $comment, $m)) {
+      $clean_blok = $m[1];
+    } elseif (preg_match('/\b(Blok\s*[-_]?\s*[A-Za-z0-9]+)\b/i', $comment, $m)) {
+      $clean_blok = $m[1];
+    } elseif (preg_match('/^([A-Z][0-9]+)$/', trim($comment), $m)) {
+      $clean_blok = 'Blok-' . $m[1];
     }
-    if (preg_match('/\bblok\s*[-_]*\s*([A-Za-z0-9]+)(?:\s*[-_]*\s*([0-9]+))?/i', $comment, $m)) {
-      $raw = strtoupper($m[1] . ($m[2] ?? ''));
-      $raw = strtoupper(preg_replace('/[^A-Z0-9]/', '', $raw));
-      $raw = preg_replace('/^BLOK/', '', $raw);
-      if (preg_match('/^([A-Z]+)/', $raw, $mx)) {
-        $raw = $mx[1];
+    if ($clean_blok !== '') {
+      $clean_blok = preg_replace('/\s+/', '-', strtoupper($clean_blok));
+      if (strpos($clean_blok, 'BLOK-') !== 0) {
+        $clean_blok = 'BLOK-' . str_replace('BLOK', '', $clean_blok);
       }
-      if ($raw !== '') return 'BLOK-' . $raw;
-    }
-    if (preg_match('/\b([A-Z](?:[-\s]?\d{1,2})?)\b/', $comment, $m)) {
-      $candidate = strtoupper(trim($m[1]));
-      $ignored = ['VALID', 'AUDIT', 'RETUR', 'RUSAK', 'INFO', 'LOGIN'];
-      if (strlen($candidate) <= 5 && !in_array($candidate, $ignored, true)) {
-        $candidate = preg_replace('/\s+/', '', $candidate);
-        $candidate = preg_replace('/^-+/', '', $candidate);
-        return 'BLOK-' . $candidate;
-      }
+      return preg_replace('/[^A-Z0-9\-]/', '', $clean_blok);
     }
     return '';
   }
