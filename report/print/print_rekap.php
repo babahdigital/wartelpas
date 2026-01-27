@@ -1138,6 +1138,13 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
                             $expected_qty = (int)($ar['expected_qty'] ?? 0);
                             $expected_setoran = (int)($ar['expected_setoran'] ?? 0);
+                            if (!empty($rows)) {
+                                $expected_calc = calc_expected_for_block($rows, $filter_date, $audit_block_key);
+                                if (!empty($expected_calc)) {
+                                    $expected_qty = (int)($expected_calc['qty'] ?? $expected_qty);
+                                    $expected_setoran = (int)($expected_calc['net'] ?? $expected_setoran);
+                                }
+                            }
                             $expected_adj_qty = $expected_qty;
                             $expected_adj_setoran = $expected_setoran;
                             if ($has_manual_evidence) {
