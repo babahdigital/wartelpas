@@ -628,12 +628,14 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
 
       if ($search_pattern !== '') {
         $scripts = $API->comm('/system/script/print', [
-          '?comment' => 'mikhmon',
           '.proplist' => '.id,name,comment'
         ]);
+        $search_pattern_alt = str_replace('-', ' ', $search_pattern);
         foreach ($scripts as $scr) {
           $sname = $scr['name'] ?? '';
-          if ($sname !== '' && stripos($sname, $search_pattern) !== false) {
+          $scomment = $scr['comment'] ?? '';
+          $hay = $sname . ' ' . $scomment;
+          if ($hay !== '' && (stripos($hay, $search_pattern) !== false || stripos($hay, $search_pattern_alt) !== false)) {
             if (isset($scr['.id'])) {
               $API->write('/system/script/remove', false);
               $API->write('=.id=' . $scr['.id']);
