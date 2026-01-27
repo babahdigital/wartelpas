@@ -40,55 +40,61 @@ if (!function_exists('extract_blok_name')) {
 }
 
 // Helper: Ekstrak IP/MAC dari comment (format: IP:... | MAC:...)
-function extract_ip_mac_from_comment($comment) {
-  $ip = '';
-  $mac = '';
-  if (!empty($comment)) {
-    if (preg_match('/\bIP\s*:\s*([^|\s]+)/i', $comment, $m)) {
-      $ip = trim($m[1]);
+if (!function_exists('extract_ip_mac_from_comment')) {
+  function extract_ip_mac_from_comment($comment) {
+    $ip = '';
+    $mac = '';
+    if (!empty($comment)) {
+      if (preg_match('/\bIP\s*:\s*([^|\s]+)/i', $comment, $m)) {
+        $ip = trim($m[1]);
+      }
+      if (preg_match('/\bMAC\s*:\s*([^|\s]+)/i', $comment, $m)) {
+        $mac = trim($m[1]);
+      }
     }
-    if (preg_match('/\bMAC\s*:\s*([^|\s]+)/i', $comment, $m)) {
-      $mac = trim($m[1]);
-    }
+    return ['ip' => $ip, 'mac' => $mac];
   }
-  return ['ip' => $ip, 'mac' => $mac];
 }
 
 // Helper: Konversi uptime (1w2d3h4m5s) ke detik
-function uptime_to_seconds($uptime) {
-  if (empty($uptime)) return 0;
-  if ($uptime === '0s') return 0;
-  $total = 0;
-  if (preg_match_all('/(\d+)(w|d|h|m|s)/i', $uptime, $m, PREG_SET_ORDER)) {
-    foreach ($m as $part) {
-      $val = (int)$part[1];
-      switch (strtolower($part[2])) {
-        case 'w': $total += $val * 7 * 24 * 3600; break;
-        case 'd': $total += $val * 24 * 3600; break;
-        case 'h': $total += $val * 3600; break;
-        case 'm': $total += $val * 60; break;
-        case 's': $total += $val; break;
+if (!function_exists('uptime_to_seconds')) {
+  function uptime_to_seconds($uptime) {
+    if (empty($uptime)) return 0;
+    if ($uptime === '0s') return 0;
+    $total = 0;
+    if (preg_match_all('/(\d+)(w|d|h|m|s)/i', $uptime, $m, PREG_SET_ORDER)) {
+      foreach ($m as $part) {
+        $val = (int)$part[1];
+        switch (strtolower($part[2])) {
+          case 'w': $total += $val * 7 * 24 * 3600; break;
+          case 'd': $total += $val * 24 * 3600; break;
+          case 'h': $total += $val * 3600; break;
+          case 'm': $total += $val * 60; break;
+          case 's': $total += $val; break;
+        }
       }
     }
+    return $total;
   }
-  return $total;
 }
 
 // Helper: Konversi detik ke uptime RouterOS
-function seconds_to_uptime($seconds) {
-  $seconds = (int)$seconds;
-  if ($seconds <= 0) return '0s';
-  $parts = [];
-  $weeks = intdiv($seconds, 7 * 24 * 3600); $seconds %= 7 * 24 * 3600;
-  $days = intdiv($seconds, 24 * 3600); $seconds %= 24 * 3600;
-  $hours = intdiv($seconds, 3600); $seconds %= 3600;
-  $mins = intdiv($seconds, 60); $seconds %= 60;
-  if ($weeks) $parts[] = $weeks . 'w';
-  if ($days) $parts[] = $days . 'd';
-  if ($hours) $parts[] = $hours . 'h';
-  if ($mins) $parts[] = $mins . 'm';
-  if ($seconds || empty($parts)) $parts[] = $seconds . 's';
-  return implode('', $parts);
+if (!function_exists('seconds_to_uptime')) {
+  function seconds_to_uptime($seconds) {
+    $seconds = (int)$seconds;
+    if ($seconds <= 0) return '0s';
+    $parts = [];
+    $weeks = intdiv($seconds, 7 * 24 * 3600); $seconds %= 7 * 24 * 3600;
+    $days = intdiv($seconds, 24 * 3600); $seconds %= 24 * 3600;
+    $hours = intdiv($seconds, 3600); $seconds %= 3600;
+    $mins = intdiv($seconds, 60); $seconds %= 60;
+    if ($weeks) $parts[] = $weeks . 'w';
+    if ($days) $parts[] = $days . 'd';
+    if ($hours) $parts[] = $hours . 'h';
+    if ($mins) $parts[] = $mins . 'm';
+    if ($seconds || empty($parts)) $parts[] = $seconds . 's';
+    return implode('', $parts);
+  }
 }
 
 // Helper: Ambil batas rusak/retur per profil
