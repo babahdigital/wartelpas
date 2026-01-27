@@ -479,6 +479,44 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         if (!empty($a['user'])) $active_map[$a['user']] = $a['.id'] ?? '';
       }
 
+      $base_usernames = [];
+      $retur_usernames = [];
+      $delete_name_map = [];
+      $whereBlok = "UPPER(blok_name) = :b" . ($use_glob ? " OR UPPER(blok_name) GLOB :bg" : "");
+      $base_params = $use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern] : [':b' => $blok_upper];
+
+      try {
+        $stmt = $db->prepare("SELECT username FROM login_history WHERE ($whereBlok)");
+        $stmt->execute($base_params);
+        $base_usernames = $stmt->fetchAll(PDO::FETCH_COLUMN, 0);
+        foreach ($base_usernames as $uname) {
+          $key = strtolower((string)$uname);
+          if ($key !== '') $delete_name_map[$key] = $uname;
+        }
+      } catch (Exception $e) {}
+
+      if (!empty($delete_name_map)) {
+        try {
+          $stmt = $db->query("SELECT username, raw_comment FROM login_history WHERE raw_comment IS NOT NULL AND raw_comment != ''");
+          foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $ru = (string)($row['username'] ?? '');
+            $rc = (string)($row['raw_comment'] ?? '');
+            if ($ru === '' || $rc === '') continue;
+            $ref_user = extract_retur_user_from_ref($rc);
+            if ($ref_user !== '') {
+              $ref_key = strtolower($ref_user);
+              if (isset($delete_name_map[$ref_key])) {
+                $ru_key = strtolower($ru);
+                if (!isset($delete_name_map[$ru_key])) {
+                  $delete_name_map[$ru_key] = $ru;
+                  $retur_usernames[] = $ru;
+                }
+              }
+            }
+          }
+        } catch (Exception $e) {}
+      }
+
       $list = $API->comm('/ip/hotspot/user/print', [
         '?server' => $hotspot_server,
         '.proplist' => '.id,name,comment'
@@ -490,11 +528,13 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $c = $usr['comment'] ?? '';
         $cblok = extract_blok_name($c);
         $cblok_cmp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $cblok));
-        if ($cblok_cmp != '' && $cblok_cmp === $target_cmp) {
+        $uname_key = strtolower($uname);
+        if (($cblok_cmp != '' && $cblok_cmp === $target_cmp) || isset($delete_name_map[$uname_key])) {
           $to_delete[] = ['id' => $usr['.id'] ?? '', 'name' => $uname];
         }
       }
 
+      $router_deleted = 0;
       foreach ($to_delete as $d) {
         $uname = $d['name'] ?? '';
         if ($uname !== '' && !empty($active_map[$uname])) {
@@ -506,48 +546,41 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           $API->write('/ip/hotspot/user/remove', false);
           $API->write('=.id=' . $d['id']);
           $API->read();
+          $router_deleted++;
         }
       }
 
-      $usernames = [];
-      try {
-        $whereBlok = "UPPER(blok_name) = :b" . ($use_glob ? " OR UPPER(blok_name) GLOB :bg" : "");
-        $params = $use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern] : [':b' => $blok_upper];
-        $stmt = $db->prepare("SELECT username FROM login_history WHERE ($whereBlok)");
-        $stmt->execute($params);
-        $usernames = $stmt->fetchAll(PDO::FETCH_COLUMN, 0);
-      } catch (Exception $e) {}
-
+      $db_delete_names = array_values(array_unique(array_merge($base_usernames, $retur_usernames)));
+      $db_deleted_count = 0;
       try {
         $db->beginTransaction();
-        $whereBlok = "UPPER(blok_name) = :b" . ($use_glob ? " OR UPPER(blok_name) GLOB :bg" : "");
-        $params = $use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern] : [':b' => $blok_upper];
+        $params = $base_params;
 
-        $stmt = $db->prepare("DELETE FROM login_history WHERE ($whereBlok)");
-        $stmt->execute($params);
+        $userClause = '';
+        $userParams = [];
+        if (!empty($db_delete_names)) {
+          $placeholders = [];
+          foreach ($db_delete_names as $i => $uname) {
+            $key = ':u' . $i;
+            $placeholders[] = $key;
+            $userParams[$key] = $uname;
+          }
+          $userClause = " OR username IN (" . implode(',', $placeholders) . ")";
+        }
 
-        if (!empty($usernames)) {
+        $stmt = $db->prepare("DELETE FROM login_history WHERE ($whereBlok)$userClause");
+        $stmt->execute(array_merge($params, $userParams));
+
+        if (!empty($db_delete_names)) {
           $placeholders = [];
           $userParams = [];
-          foreach ($usernames as $i => $uname) {
-            $key = ':u' . $i;
+          foreach ($db_delete_names as $i => $uname) {
+            $key = ':e' . $i;
             $placeholders[] = $key;
             $userParams[$key] = $uname;
           }
           $stmt = $db->prepare("DELETE FROM login_events WHERE username IN (" . implode(',', $placeholders) . ")");
           $stmt->execute($userParams);
-        }
-
-        $userClause = '';
-        $userParams = [];
-        if (!empty($usernames)) {
-          $placeholders = [];
-          foreach ($usernames as $i => $uname) {
-            $key = ':us' . $i;
-            $placeholders[] = $key;
-            $userParams[$key] = $uname;
-          }
-          $userClause = " OR username IN (" . implode(',', $placeholders) . ")";
         }
 
         $stmt = $db->prepare("DELETE FROM sales_history WHERE ($whereBlok)$userClause");
@@ -557,6 +590,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $stmt->execute(array_merge($params, $userParams));
 
         $db->commit();
+        $db_deleted_count = count($db_delete_names);
       } catch (Exception $e) {
         if ($db->inTransaction()) {
           $db->rollBack();
@@ -570,7 +604,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $admin_name = $_SESSION['mikhmon'] ?? 'superadmin';
       $log_line = '[' . date('Y-m-d H:i:s') . '] ' . $admin_name . ' delete_block_full ' . $blok_upper . "\n";
       @file_put_contents($log_dir . '/admin_actions.log', $log_line, FILE_APPEND);
-      $action_message = 'Berhasil hapus total blok ' . $blok_upper . ' (Router + DB).';
+      $retur_note = !empty($retur_usernames) ? ' (termasuk retur: ' . count($retur_usernames) . ' user)' : '';
+      $action_message = 'Berhasil hapus total blok ' . $blok_upper . ' (Router: ' . $router_deleted . ' user, DB: ' . $db_deleted_count . ' user)' . $retur_note . '.';
     } elseif ($act == 'delete_status') {
       $status_map = [
         'used' => 'terpakai',
