@@ -435,6 +435,18 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 ### 6.7 Catatan Harian (Laporan ke Owner)
 - Modal catatan dipastikan bisa diketik dengan memaksa fokus dan menghapus state disabled/readonly.
 
+### 6.8 Sentralisasi Helper Audit & Refactor Print
+- Helper audit dipusatkan di **report/laporan/helpers_audit.php**.
+- **print_rekap.php**, **print_rekap_bulanan.php**, **print_rekap_tahunan.php**, dan **print_rincian.php** memakai helper terpusat untuk menghilangkan duplikasi fungsi.
+
+### 6.9 Bug Fix Rekap Tahunan (Expenses)
+- Memperbaiki akumulasi pengeluaran bulanan di **print_rekap_tahunan.php** dengan buffer sementara (`$temp_expenses`).
+- Mencegah error variabel belum terdefinisi dan memastikan kolom pengeluaran tampil akurat.
+
+### 6.10 Ghost Hunter Threshold (Konfigurabel)
+- Ambang deteksi ghost kini bisa diatur melalui `env.php` (`system.ghost_min_bytes`).
+- Default diturunkan ke **50KB (51200 bytes)** agar konsisten dengan logika pemakaian.
+
   ## 6) Update Terbaru (Audit & Penyempurnaan 2026-01-27)
   Bagian ini merangkum pekerjaan dari awal sesi hingga akhir, khususnya untuk laporan, print, retur, dan perbaikan data hotspot.
 
