@@ -107,21 +107,21 @@ try {
         $stmtAudit = $db->prepare("SELECT report_date, expected_setoran, actual_setoran, user_evidence, expenses_amt
             FROM audit_rekap_manual
             WHERE report_date LIKE :y");
-            $stmtAudit->execute([':y' => $filter_year . '%']);
-            foreach ($stmtAudit->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                $d = $row['report_date'] ?? '';
-                if ($d === '') continue;
-                [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($row);
-                $expense = (int)($row['expenses_amt'] ?? 0);
-                $mm = substr($d, 5, 2);
-                if (isset($months[$mm])) {
-                    $months[$mm]['expenses'] += $expense;
-                }
-                $total_expenses_year += $expense;
-                $net_cash_audit = (int)$manual_setoran - $expense;
-                $audit_net[$d] = (int)($audit_net[$d] ?? 0) + $net_cash_audit;
-                $audit_system[$d] = (int)($audit_system[$d] ?? 0) + (int)$expected_adj_setoran;
-                $audit_selisih[$d] = (int)($audit_selisih[$d] ?? 0) + ((int)$manual_setoran - (int)$expected_adj_setoran);
+        $stmtAudit->execute([':y' => $filter_year . '%']);
+        $temp_expenses = [];
+        foreach ($stmtAudit->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $d = $row['report_date'] ?? '';
+            if ($d === '') continue;
+            [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($row);
+            $expense = (int)($row['expenses_amt'] ?? 0);
+            $mm = substr($d, 5, 2);
+            if (!isset($temp_expenses[$mm])) $temp_expenses[$mm] = 0;
+            $temp_expenses[$mm] += $expense;
+            $total_expenses_year += $expense;
+            $net_cash_audit = (int)$manual_setoran - $expense;
+            $audit_net[$d] = (int)($audit_net[$d] ?? 0) + $net_cash_audit;
+            $audit_system[$d] = (int)($audit_system[$d] ?? 0) + (int)$expected_adj_setoran;
+            $audit_selisih[$d] = (int)($audit_selisih[$d] ?? 0) + ((int)$manual_setoran - (int)$expected_adj_setoran);
         }
     }
 } catch (Exception $e) {
@@ -242,7 +242,7 @@ for ($m = 1; $m <= 12; $m++) {
         'phone_days' => 0,
         'loss_voucher' => 0,
         'loss_setoran' => 0,
-        'expenses' => 0
+        'expenses' => (int)($temp_expenses[$mm] ?? 0)
     ];
 }
 
