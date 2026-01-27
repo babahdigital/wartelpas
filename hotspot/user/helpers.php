@@ -208,9 +208,9 @@ if (!function_exists('merge_date_time')) {
   }
 }
 
-// Helper: Ambil riwayat user dari DB
-if (!function_exists('get_user_history')) {
-  function get_user_history($db, $name) {
+// Helper: Ambil riwayat user dari DB (standalone)
+if (!function_exists('get_user_history_from_db')) {
+  function get_user_history_from_db($db, $name) {
     if (!$db) return null;
     try {
       $stmt = $db->prepare("SELECT username, login_time_real, logout_time_real, blok_name, ip_address, mac_address, last_status, first_login_real, last_login_real, last_uptime, last_bytes, raw_comment FROM login_history WHERE username = :u LIMIT 1");
@@ -222,9 +222,9 @@ if (!function_exists('get_user_history')) {
   }
 }
 
-// Helper: Total uptime dari event login
-if (!function_exists('get_cumulative_uptime_from_events')) {
-  function get_cumulative_uptime_from_events($db, $username, $date_key = '', $fallback_logout = '') {
+// Helper: Total uptime dari event login (standalone)
+if (!function_exists('get_cumulative_uptime_from_events_db')) {
+  function get_cumulative_uptime_from_events_db($db, $username, $date_key = '', $fallback_logout = '') {
     if (!$db || empty($username)) return 0;
     $params = [':u' => $username];
     $where = "username = :u";
@@ -261,9 +261,9 @@ if (!function_exists('get_cumulative_uptime_from_events')) {
   }
 }
 
-// Helper: Ambil event relogin
-if (!function_exists('get_relogin_events')) {
-  function get_relogin_events($db, $username, $date_key = '') {
+// Helper: Ambil event relogin (standalone)
+if (!function_exists('get_relogin_events_db')) {
+  function get_relogin_events_db($db, $username, $date_key = '') {
     if (!$db || empty($username) || empty($date_key)) return [];
     try {
       $stmt = $db->prepare("SELECT login_time, logout_time, seq FROM login_events WHERE username = :u AND date_key = :d ORDER BY seq ASC, id ASC");

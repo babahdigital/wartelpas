@@ -70,7 +70,7 @@ $comment = $urow['comment'] ?? '';
 $profile = $urow['profile'] ?? '';
 $disabled = $urow['disabled'] ?? 'false';
 
-$hist = get_user_history($db, $user);
+$hist = get_user_history_from_db($db, $user);
 $blok = $hist['blok_name'] ?? '';
 if ($blok === '') {
     $blok = extract_blok_name($comment);
@@ -126,8 +126,8 @@ if (!empty($first_login_real)) {
     $date_key = date('Y-m-d', strtotime($first_login_real));
 }
 
-$total_uptime_sec = get_cumulative_uptime_from_events($db, $user, $date_key, $logout_time_real);
-$relogin_events = get_relogin_events($db, $user, $date_key);
+$total_uptime_sec = get_cumulative_uptime_from_events_db($db, $user, $date_key, $logout_time_real);
+$relogin_events = get_relogin_events_db($db, $user, $date_key);
 
 $first_login_norm = normalize_dt($first_login_real);
 $login_norm = normalize_dt($login_time_real);
