@@ -198,6 +198,15 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **tools/check_block.php** (baru):
   - Endpoint audit untuk mengecek keberadaan blok pada semua tabel.
 - **report/laporan/services/live_ingest.php**:
+### 2.24 Sentralisasi Helper & Code Hygiene (2026-01-28)
+- **report/laporan/helpers.php** menjadi *single source of truth* untuk helper audit/rekap.
+- **print_rekap.php / print_rekap_bulanan.php / print_rekap_tahunan.php / print_rincian.php / print_audit.php / audit.php**: semua mengarah ke helper terpusat.
+- **helpers_audit.php** dihapus dari penggunaan untuk mencegah duplikasi fungsi.
+- **print_rincian.php**: fungsi lokal rawan konflik dibersihkan/ditambahkan guard `function_exists`.
+- **print_rekap.php**: konsistensi nilai Rupiah (Qty * Harga) dan ghost hint tanpa double-deduction.
+- **ghost.php**: defensif (anti-cache, query_only, validasi input, helper fallback).
+- **hotspot/user/actions.php**: memuat `hotspot/user/helpers.php` agar fungsi utilitas tersedia saat aksi via AJAX.
+- **hotspot/user/data.php**: pembersihan duplikasi deteksi profil; mengandalkan helper user.
   - Validasi session config & hanya izinkan **hotspot_server=wartel**.
 - **report/laporan/services/sync_stats.php**:
   - Filter berdasarkan hotspot server + skip user tanpa marker BLOK agar data non‑Wartel tidak masuk lagi saat settlement.

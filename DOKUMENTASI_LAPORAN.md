@@ -181,10 +181,11 @@ Catatan implementasi penting:
 - Default saat ini **50KB (51200 bytes)** agar konsisten dengan logika pemakaian.
 - DB di-set **read-only** (query_only) untuk keamanan.
 
-## 12.1 Helper Audit Terpusat (helpers_audit.php)
+## 12.1 Helper Audit Terpusat (helpers.php)
 
-- Fungsi umum audit (`format_bytes_short`, `norm_date_from_raw_report`, `month_label_id`, `calc_audit_adjusted_setoran`) dipusatkan di `report/laporan/helpers_audit.php`.
-- Semua file print utama wajib menggunakan helper ini agar perhitungan konsisten.
+- Fungsi umum audit dipusatkan di `report/laporan/helpers.php` (single source of truth).
+- Semua file `print_*` dan `audit.php` menggunakan helper ini agar perhitungan konsisten.
+- Tidak ada file helper audit terpisah untuk menghindari duplikasi dan konflik fungsi.
 
 ## 13) Contoh Komentar di User MikroTik
 
