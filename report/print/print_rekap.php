@@ -16,7 +16,7 @@ $envFile = $root_dir . '/include/env.php';
 if (file_exists($envFile)) {
     require $envFile;
 }
-require_once($root_dir . '/report/laporan/helpers_audit.php');
+require_once($root_dir . '/report/laporan/helpers.php');
 $system_cfg = $env['system'] ?? [];
 $db_rel = $system_cfg['db_file'] ?? 'db_data/mikhmon_stats.db';
 if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
@@ -47,21 +47,23 @@ if ($req_show === 'harian') {
     $filter_date = $filter_date ?: date('Y');
 }
 
-function normalize_block_name($blok_name, $comment = '') {
-    $raw = strtoupper(trim((string)$blok_name));
-    if ($raw === '' && $comment !== '') {
-        if (preg_match('/\bblok\s*[-_]*\s*([A-Z0-9]+)(?:\s*[-_]*\s*([0-9]+))?/i', $comment, $m)) {
-            $raw = strtoupper($m[1] . ($m[2] ?? ''));
+if (!function_exists('normalize_block_name')) {
+    function normalize_block_name($blok_name, $comment = '') {
+        $raw = strtoupper(trim((string)$blok_name));
+        if ($raw === '' && $comment !== '') {
+            if (preg_match('/\bblok\s*[-_]*\s*([A-Z0-9]+)(?:\s*[-_]*\s*([0-9]+))?/i', $comment, $m)) {
+                $raw = strtoupper($m[1] . ($m[2] ?? ''));
+            }
         }
+        if ($raw === '') return 'BLOK-LAIN';
+        $raw = strtoupper(preg_replace('/[^A-Z0-9]/', '', $raw));
+        $raw = preg_replace('/^BLOK/', '', $raw);
+        if (preg_match('/^([A-Z]+)/', $raw, $m)) {
+            $raw = $m[1];
+        }
+        if ($raw === '') return 'BLOK-LAIN';
+        return 'BLOK-' . $raw;
     }
-    if ($raw === '') return 'BLOK-LAIN';
-    $raw = strtoupper(preg_replace('/[^A-Z0-9]/', '', $raw));
-    $raw = preg_replace('/^BLOK/', '', $raw);
-    if (preg_match('/^([A-Z]+)/', $raw, $m)) {
-        $raw = $m[1];
-    }
-    if ($raw === '') return 'BLOK-LAIN';
-    return 'BLOK-' . $raw;
 }
 
 function get_block_label($block_name, $blok_names = []) {
