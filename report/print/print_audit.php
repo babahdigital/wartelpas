@@ -8,6 +8,7 @@ $envFile = $root_dir . '/include/env.php';
 if (file_exists($envFile)) {
   require $envFile;
 }
+require_once($root_dir . '/report/laporan/helpers.php');
 $pricing = $env['pricing'] ?? [];
 $price10 = (int)($pricing['price_10'] ?? 0);
 $price30 = (int)($pricing['price_30'] ?? 0);
@@ -28,45 +29,6 @@ if ($req_show === 'harian') {
   if (strlen($filter_date) > 4) $filter_date = substr($filter_date, 0, 4);
 }
 
-function table_exists($db, $name) {
-    try {
-        $stmt = $db->prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name = :n LIMIT 1");
-        $stmt->execute([':n' => $name]);
-        return (bool)$stmt->fetchColumn();
-    } catch (Exception $e) {
-        return false;
-    }
-}
-
-function format_bytes_short($bytes) {
-    $b = (float)$bytes;
-    if ($b <= 0) return '0 B';
-    $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    $i = 0;
-    while ($b >= 1024 && $i < count($units) - 1) {
-        $b /= 1024;
-        $i++;
-    }
-    $dec = $i >= 2 ? 2 : 0;
-    return number_format($b, $dec, ',', '.') . ' ' . $units[$i];
-}
-
-function format_date_dmy($date) {
-    if (!$date) return '';
-    if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $m)) {
-        return $m[3] . '-' . $m[2] . '-' . $m[1];
-    }
-    if (preg_match('/^(\d{4})-(\d{2})$/', $date, $m)) {
-        return $m[2] . '-' . $m[1];
-    }
-    return $date;
-}
-
-function format_blok_label($blok) {
-    $blok = (string)$blok;
-    if ($blok === '') return '';
-    return preg_replace('/^BLOK-?/i', '', $blok);
-}
 
 function extract_profile_from_comment($comment) {
     $comment = (string)$comment;
@@ -84,44 +46,6 @@ function infer_profile_from_blok($blok) {
     return '';
 }
 
-function build_ghost_hint($selisih_qty, $selisih_rp) {
-  $ghost_qty = abs((int)$selisih_qty);
-  $ghost_rp = abs((int)$selisih_rp);
-  if ($ghost_qty <= 0 || $ghost_rp <= 0) return '';
-
-  global $price10, $price30;
-  $divisor = $price30 - $price10;
-  $ghost_10 = 0;
-  $ghost_30 = 0;
-
-  if ($ghost_rp >= ($ghost_qty * $price10) && $divisor > 0) {
-    $numerator = $ghost_rp - ($ghost_qty * $price10);
-    if ($numerator % $divisor === 0) {
-      $ghost_30 = (int)($numerator / $divisor);
-      $ghost_10 = $ghost_qty - $ghost_30;
-    }
-  }
-
-  if ($ghost_10 < 0 || $ghost_30 < 0) {
-    $ghost_10 = 0;
-    $ghost_30 = 0;
-  }
-
-  if ($ghost_10 === 0 && $ghost_30 === 0) {
-    if ($ghost_rp === ($price30 * $ghost_qty)) {
-      $ghost_30 = $ghost_qty;
-    } elseif ($ghost_rp === ($price10 * $ghost_qty)) {
-      $ghost_10 = $ghost_qty;
-    }
-  }
-
-  if ($ghost_10 <= 0 && $ghost_30 <= 0) return '';
-  $parts = [];
-  if ($ghost_10 > 0) $parts[] = number_format($ghost_10, 0, ',', '.') . ' unit 10 menit';
-  if ($ghost_30 > 0) $parts[] = number_format($ghost_30, 0, ',', '.') . ' unit 30 menit';
-  $total_ghost = $ghost_10 + $ghost_30;
-  return 'Analisa dari selisih ' . number_format($total_ghost, 0, ',', '.') . ' lembar: ' . implode(' + ', $parts);
-}
 
 function calc_audit_adjusted_totals(array $ar) {
   global $price10, $price30;

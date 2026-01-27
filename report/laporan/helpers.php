@@ -64,6 +64,12 @@ function format_date_dmy($dateStr) {
     return date('d-m-Y H:i', $ts);
 }
 
+function format_blok_label($blok) {
+    $blok = (string)$blok;
+    if ($blok === '') return '';
+    return preg_replace('/^BLOK-?/i', '', $blok);
+}
+
 function render_audit_lines($lines) {
     if (empty($lines)) return '-';
     return implode('', array_map(function($line) {

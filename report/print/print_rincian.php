@@ -193,32 +193,6 @@ function extract_datetime_from_comment($comment) {
     return date('Y-m-d H:i:s', $ts);
 }
 
-function extract_retur_user_from_ref($comment) {
-    if (empty($comment)) return '';
-    if (preg_match('/Retur\s*Ref\s*:\s*([^|]+)/i', $comment, $m)) {
-        $ref = trim($m[1]);
-        if ($ref !== '') {
-            if (preg_match('/\b(vc-[A-Za-z0-9._-]+)/i', $ref, $m2)) {
-                $ref = $m2[1];
-            }
-            $ref = preg_replace('/\s+.*/', '', $ref);
-            if (stripos($ref, 'vc-') === 0) {
-                $ref = substr($ref, 3);
-            }
-            return trim($ref);
-        }
-    }
-    if (preg_match('/Retur\s*dari\s*:\s*([^|]+)/i', $comment, $m)) {
-        $ref = trim($m[1]);
-        $ref = preg_replace('/\s+.*/', '', $ref);
-        if (stripos($ref, 'vc-') === 0) {
-            $ref = substr($ref, 3);
-        }
-        return trim($ref);
-    }
-    return '';
-}
-
 function format_date_indo($dateStr) {
     if (empty($dateStr) || $dateStr === '-') return '-';
     $ts = strtotime($dateStr);
