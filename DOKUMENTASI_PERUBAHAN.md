@@ -213,6 +213,15 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
   - Threshold ghost dinaikkan ke 200KB.
   - DB read-only (PRAGMA query_only) untuk keamanan.
 
+### 2.27 Refactor Print Standalone + Perbaikan Blank Page (2026-01-27)
+- **hotspot/print/print.detail.php** dan **hotspot/print/print.used.php** kini memakai helper terpusat via `include_once ../../hotspot/user/helpers.php`.
+- Ditambahkan helper umum di **hotspot/user/helpers.php**: normalisasi blok/profile, format tanggal, konversi waktu/uptime, serta helper DB khusus standalone.
+- Menghindari konflik fungsi dengan **hotspot/user/data.php** dengan mengganti nama helper DB menjadi:
+  - `get_user_history_from_db`
+  - `get_cumulative_uptime_from_events_db`
+  - `get_relogin_events_db`
+- Perbaikan ini mencegah **halaman users blank** akibat fatal error redeclare, tanpa mengubah hasil print.
+
 ### 2.24 Penyempurnaan Users Modular (2026-01-26)
 - Tombol **clear search (X)** stabil saat kehilangan fokus (klik di luar/ke taskbar).
 - `Retur dari` kini menampilkan username bersih (tanpa prefix **vc-**), parsing `Retur Ref` lebih fleksibel.

@@ -221,3 +221,7 @@ Audit: RUSAK 26/01/26 vc-316-01.26.26-Blok-A10 | Blok-A10 | IP:172.16.12.146 | M
 ### 14.4 Konsistensi Data List
 - Sumber retur tidak ditampilkan ganda pada list transaksi, namun tetap dihitung dalam total.
 - Penyaringan READY pada print list membuat data audit lebih rapi tanpa mengubah logika akuntansi.
+
+### 14.5 Print Standalone Menggunakan Helper Terpusat
+- **hotspot/print/print.detail.php** dan **hotspot/print/print.used.php** kini memakai helper terpusat agar logika uptime/bytes, blok, profil, dan format tanggal konsisten.
+- Helper DB untuk print standalone memakai nama khusus (`get_user_history_from_db`, `get_cumulative_uptime_from_events_db`, `get_relogin_events_db`) agar tidak bentrok dengan fungsi di `hotspot/user/data.php`.
