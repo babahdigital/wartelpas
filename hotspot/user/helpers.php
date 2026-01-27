@@ -39,6 +39,33 @@ if (!function_exists('extract_blok_name')) {
   }
 }
 
+// Helper: Normalisasi label blok
+if (!function_exists('normalize_blok_label')) {
+  function normalize_blok_label($blok) {
+    $raw = strtoupper(trim((string)$blok));
+    if ($raw === '') return '';
+    $raw = preg_replace('/[^A-Z0-9]/', '', $raw);
+    $raw = preg_replace('/^BLOK/', '', $raw);
+    if (preg_match('/^([A-Z]+)/', $raw, $m)) {
+      return $m[1];
+    }
+    return $raw;
+  }
+}
+
+// Helper: Normalisasi label profile
+if (!function_exists('normalize_profile_label')) {
+  function normalize_profile_label($profile) {
+    $p = trim((string)$profile);
+    if ($p === '') return '';
+    if (preg_match('/\b(10|30)\s*(menit|m)\b/i', $p, $m)) {
+      return $m[1] . ' Menit';
+    }
+    $p = preg_replace('/\s*menit\b/i', ' Menit', $p);
+    return $p;
+  }
+}
+
 // Helper: Ekstrak IP/MAC dari comment (format: IP:... | MAC:...)
 if (!function_exists('extract_ip_mac_from_comment')) {
   function extract_ip_mac_from_comment($comment) {
@@ -110,6 +137,36 @@ if (!function_exists('resolve_rusak_limits')) {
   }
 }
 
+// Helper: Format tanggal ke d-m-Y H:i:s
+if (!function_exists('format_dmy')) {
+  function format_dmy($dateStr) {
+    if (empty($dateStr) || $dateStr === '-') return '-';
+    $ts = strtotime($dateStr);
+    if ($ts === false) return $dateStr;
+    return date('d-m-Y H:i:s', $ts);
+  }
+}
+
+// Helper: Format tanggal ke d-m-Y
+if (!function_exists('format_dmy_date')) {
+  function format_dmy_date($dateStr) {
+    if (empty($dateStr)) return '';
+    $ts = strtotime($dateStr);
+    if ($ts === false) return $dateStr;
+    return date('d-m-Y', $ts);
+  }
+}
+
+// Helper: Normalisasi datetime ke Y-m-d H:i:s
+if (!function_exists('normalize_dt')) {
+  function normalize_dt($dateStr) {
+    if (empty($dateStr)) return '';
+    $ts = strtotime($dateStr);
+    if ($ts === false) return '';
+    return date('Y-m-d H:i:s', $ts);
+  }
+}
+
 // Helper: Ekstrak datetime dari comment (format umum MikroTik)
 if (!function_exists('extract_datetime_from_comment')) {
   function extract_datetime_from_comment($comment) {
@@ -148,6 +205,73 @@ if (!function_exists('merge_date_time')) {
     $date = date('Y-m-d', strtotime($dateStr));
     $time = date('H:i:s', strtotime($timeStr));
     return $date . ' ' . $time;
+  }
+}
+
+// Helper: Ambil riwayat user dari DB
+if (!function_exists('get_user_history')) {
+  function get_user_history($db, $name) {
+    if (!$db) return null;
+    try {
+      $stmt = $db->prepare("SELECT username, login_time_real, logout_time_real, blok_name, ip_address, mac_address, last_status, first_login_real, last_login_real, last_uptime, last_bytes, raw_comment FROM login_history WHERE username = :u LIMIT 1");
+      $stmt->execute([':u' => $name]);
+      return $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+      return null;
+    }
+  }
+}
+
+// Helper: Total uptime dari event login
+if (!function_exists('get_cumulative_uptime_from_events')) {
+  function get_cumulative_uptime_from_events($db, $username, $date_key = '', $fallback_logout = '') {
+    if (!$db || empty($username)) return 0;
+    $params = [':u' => $username];
+    $where = "username = :u";
+    if (!empty($date_key)) {
+      $where .= " AND date_key = :d";
+      $params[':d'] = $date_key;
+    }
+    try {
+      $stmt = $db->prepare("SELECT login_time, logout_time FROM login_events WHERE $where ORDER BY seq ASC, id ASC");
+      foreach ($params as $k => $v) {
+        $stmt->bindValue($k, $v);
+      }
+      $stmt->execute();
+      $total = 0;
+      $fallback_ts = !empty($fallback_logout) ? strtotime($fallback_logout) : 0;
+      while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $login_time = $row['login_time'] ?? '';
+        $logout_time = $row['logout_time'] ?? '';
+        if (empty($login_time)) continue;
+        $login_ts = strtotime($login_time);
+        if (!$login_ts) continue;
+        $logout_ts = !empty($logout_time) ? strtotime($logout_time) : 0;
+        if (!$logout_ts && $fallback_ts && $fallback_ts >= $login_ts) {
+          $logout_ts = $fallback_ts;
+        }
+        if ($logout_ts && $logout_ts >= $login_ts) {
+          $total += ($logout_ts - $login_ts);
+        }
+      }
+      return (int)$total;
+    } catch (Exception $e) {
+      return 0;
+    }
+  }
+}
+
+// Helper: Ambil event relogin
+if (!function_exists('get_relogin_events')) {
+  function get_relogin_events($db, $username, $date_key = '') {
+    if (!$db || empty($username) || empty($date_key)) return [];
+    try {
+      $stmt = $db->prepare("SELECT login_time, logout_time, seq FROM login_events WHERE username = :u AND date_key = :d ORDER BY seq ASC, id ASC");
+      $stmt->execute([':u' => $username, ':d' => $date_key]);
+      return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+      return [];
+    }
   }
 }
 
