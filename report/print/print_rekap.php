@@ -125,6 +125,18 @@ function format_date_ddmmyyyy($dateStr) {
     return date('d-m-Y', $ts);
 }
 
+function normalize_status_value($status) {
+    $status = strtolower(trim((string)$status));
+    if ($status === '') return '';
+    if (strpos($status, 'rusak') !== false) return 'rusak';
+    if (strpos($status, 'retur') !== false) return 'retur';
+    if (strpos($status, 'invalid') !== false) return 'invalid';
+    if (strpos($status, 'online') !== false) return 'online';
+    if (strpos($status, 'terpakai') !== false) return 'terpakai';
+    if (strpos($status, 'ready') !== false) return 'ready';
+    return $status;
+}
+
 function calc_audit_adjusted_setoran(array $ar) {
     $price10 = isset($GLOBALS['price10']) ? (int)$GLOBALS['price10'] : 0;
     $price30 = isset($GLOBALS['price30']) ? (int)$GLOBALS['price30'] : 0;
@@ -154,7 +166,7 @@ function calc_audit_adjusted_setoran(array $ar) {
             if (!empty($evidence['users']) && is_array($evidence['users'])) {
                 foreach ($evidence['users'] as $ud) {
                     $kind = (string)($ud['profile_kind'] ?? '10');
-                    $status = strtolower((string)($ud['last_status'] ?? ''));
+                    $status = normalize_status_value($ud['last_status'] ?? '');
                     if ($kind === '30') {
                         $profile30_users++;
                         if ($status === 'invalid') $cnt_invalid_30++;
@@ -207,7 +219,7 @@ function generate_nested_table_user($items, $align = 'left') {
     $count = count($items);
     foreach ($items as $i => $item) {
         $label = is_array($item) ? ($item['label'] ?? '-') : (string)$item;
-        $status = is_array($item) ? strtolower((string)($item['status'] ?? '')) : '';
+        $status = is_array($item) ? normalize_status_value($item['status'] ?? '') : '';
         
         // Logika Warna:
         // Merah = Rusak
@@ -316,7 +328,11 @@ try {
               FROM login_history
               WHERE username != ''
                 AND $lhWhere
-                AND lower(COALESCE(NULLIF(last_status,''), 'ready')) IN ('rusak','retur','invalid')");
+                                AND (
+                                        instr(lower(COALESCE(NULLIF(last_status,''), '')), 'rusak') > 0
+                                        OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'retur') > 0
+                                        OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'invalid') > 0
+                                )");
             $stmtLh->execute([':d' => $filter_date]);
             $lhRows = $stmtLh->fetchAll(PDO::FETCH_ASSOC);
             if (!empty($lhRows)) {
@@ -962,7 +978,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             $kind = (string)($ud['profile_kind'] ?? '10');
                                             $bucket = ($kind === '30') ? $profile30 : $profile10;
                                             // Collecting data
-                                            $u_status = strtolower((string)($ud['last_status'] ?? ''));
+                                            $u_status = normalize_status_value($ud['last_status'] ?? '');
                                             $is_unreported = ($uname !== '' && $uname !== '-') && ($u_status !== 'rusak') && ($u_status !== 'retur');
                                             $bucket['user'][] = ['label' => (string)$uname, 'status' => $u_status];
                                             $bucket['up'][] = $upt;

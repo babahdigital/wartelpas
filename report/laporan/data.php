@@ -288,7 +288,11 @@ if (file_exists($dbFile)) {
                   FROM login_history
                   WHERE username != ''
                     AND $lhWhere
-                    AND lower(COALESCE(NULLIF(last_status,''), 'ready')) IN ('rusak','retur','invalid')");
+                                        AND (
+                                                instr(lower(COALESCE(NULLIF(last_status,''), '')), 'rusak') > 0
+                                                OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'retur') > 0
+                                                OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'invalid') > 0
+                                        )");
                 $stmtLh->execute([':d' => $filter_date]);
                 $lhRows = $stmtLh->fetchAll(PDO::FETCH_ASSOC);
                 if (!empty($lhRows)) {
