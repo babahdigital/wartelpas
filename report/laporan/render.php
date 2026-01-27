@@ -27,33 +27,33 @@
 <div id="hpModal" class="modal-backdrop" onclick="if(event.target===this){closeHpModal();}">
     <div class="modal-card">
         <div class="modal-header">
-            <div class="modal-title">Input Handphone per Blok (Harian)</div>
+            <div class="modal-title"><i class="fa fa-mobile" style="color:#4ea8ff; margin-right:8px;"></i> Input Handphone Harian</div>
             <button type="button" class="modal-close" onclick="closeHpModal()">&times;</button>
         </div>
         <form id="hpForm" method="post" action="report/laporan/services/hp_save.php">
             <?php if ($session_id !== ''): ?>
                 <input type="hidden" name="session" value="<?= htmlspecialchars($session_id); ?>">
             <?php endif; ?>
-            <input type="hidden" name="show" value="<?= htmlspecialchars($req_show); ?>">
-            <input type="hidden" name="date" value="<?= htmlspecialchars($filter_date); ?>">
-            <input type="hidden" name="report" value="selling">
-            <?php if ($session_id !== ''): ?>
-                <input type="hidden" name="session" value="<?= htmlspecialchars($session_id); ?>">
-            <?php endif; ?>
             <input type="hidden" name="ajax" value="1">
             <input type="hidden" name="show" value="<?= htmlspecialchars($req_show); ?>">
             <input type="hidden" name="date" value="<?= htmlspecialchars($filter_date); ?>">
+            <input type="hidden" name="report" value="selling">
+            
+            <input type="checkbox" name="unit_wartel" value="1" checked style="display:none;">
+            <input type="checkbox" name="unit_kamtib" value="1" checked style="display:none;">
+            <input type="hidden" name="active_units" value="0">
+
             <div class="modal-body">
-                <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;">
-                    <div style="font-size:22px;color:#4caf50;line-height:1;"><i class="fa fa-info-circle"></i></div>
-                    <div style="font-size:12px;color:#9aa0a6;line-height:1.4;">
-                        Data harian akan otomatis mengikuti data tanggal terakhir jika belum ada input untuk hari ini.
-                        Edit hanya diperlukan saat ada perubahan atau penambahan.
+                <div class="modal-info-banner">
+                    <div class="modal-info-icon"><i class="fa fa-info-circle"></i></div>
+                    <div class="modal-info-text">
+                        Data harian mengikuti data hari sebelumnya secara otomatis. Input hanya jika ada perubahan jumlah fisik HP.
                     </div>
                 </div>
+
                 <div class="form-grid-2">
                     <div>
-                        <label>Blok</label>
+                        <label class="label-icon"><i class="fa fa-th-large"></i> Blok</label>
                         <select class="form-input" name="blok_name" required>
                             <option value="" disabled selected>Pilih Blok</option>
                             <?php foreach ($blok_letters as $b): ?>
@@ -62,60 +62,54 @@
                         </select>
                     </div>
                     <div>
-                        <label>Tanggal</label>
+                        <label class="label-icon"><i class="fa fa-calendar"></i> Tanggal</label>
                         <input class="form-input" type="date" name="report_date" value="<?= htmlspecialchars($filter_date); ?>" required>
                     </div>
                 </div>
-                <div class="form-grid-2" style="margin-top:10px;">
-                    <div>
-                        <label>Total Unit</label>
-                        <input class="form-input" type="number" name="total_units" min="0" value="0" required>
-                    </div>
-                    <div>
-                        <label>Rusak</label>
-                        <input class="form-input" type="number" name="rusak_units" min="0" value="0">
-                    </div>
-                    <div>
-                        <label>Spam</label>
-                        <input class="form-input" type="number" name="spam_units" min="0" value="0">
-                    </div>
-                </div>
-                <input type="hidden" name="active_units" value="0">
-                <div style="margin-top:10px;">
-                    <label>Distribusi Unit (wajib pilih salah satu)</label>
-                    <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-top:6px;">
-                        <label style="display:flex; gap:6px; align-items:center;">
-                            <input type="checkbox" id="chk_wartel" name="unit_wartel" value="1">
-                            <span>WARTEL</span>
-                        </label>
-                        <label style="display:flex; gap:6px; align-items:center;">
-                            <input type="checkbox" id="chk_kamtib" name="unit_kamtib" value="1">
-                            <span>KAMTIB</span>
-                        </label>
-                    </div>
-                    <div class="form-grid-2" style="margin-top:8px;">
-                        <div id="wartel_wrap" style="display:none;">
-                            <label>Jumlah WARTEL</label>
-                            <input class="form-input" type="number" name="wartel_units" min="0" value="0">
+
+                <div class="form-group-box" style="margin-top:12px;">
+                    <div class="form-group-title"><i class="fa fa-cubes"></i> Sumber Unit (Fisik)</div>
+                    <div class="form-grid-2">
+                        <div>
+                            <label style="color:#7ee2a8;">Jumlah WARTEL</label>
+                            <input class="form-input" type="number" name="wartel_units" min="0" value="0" placeholder="0">
                         </div>
-                        <div id="kamtib_wrap" style="display:none;">
-                            <label>Jumlah KAMTIB</label>
-                            <input class="form-input" type="number" name="kamtib_units" min="0" value="0">
+                        <div>
+                            <label style="color:#9cc7ff;">Jumlah KAMTIB</label>
+                            <input class="form-input" type="number" name="kamtib_units" min="0" value="0" placeholder="0">
                         </div>
                     </div>
-                    <div style="font-size:12px;color:var(--txt-muted);margin-top:6px;">
-                        Jika memilih satu unit saja, jumlahnya harus sama dengan Total Unit.
-                    </div>
-                    <div id="hpClientError" style="display:none;margin-top:8px;color:#fca5a5;font-size:12px;"></div>
                 </div>
-                <div style="margin-top:10px;">
-                    <label>Catatan</label>
-                    <input class="form-input" name="notes" placeholder="opsional">
+
+                <div class="form-group-box">
+                    <div class="form-group-title"><i class="fa fa-calculator"></i> Total & Kondisi</div>
+                    <div class="form-grid-2">
+                        <div style="grid-column: span 2;">
+                            <label class="label-icon" style="color:#f39c12;"><i class="fa fa-check-circle"></i> Total Unit (Otomatis)</label>
+                            <input class="form-input" type="number" name="total_units" min="0" value="0" readonly tabindex="-1">
+                        </div>
+                        <div>
+                            <label>Rusak</label>
+                            <input class="form-input" type="number" name="rusak_units" min="0" value="0">
+                        </div>
+                        <div>
+                            <label>Spam</label>
+                            <input class="form-input" type="number" name="spam_units" min="0" value="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="hpClientError" style="display:none; margin-bottom:10px; color:#fca5a5; font-size:12px; background:rgba(220,38,38,0.2); padding:8px; border-radius:4px;"></div>
+                
+                <div>
+                    <label class="label-icon"><i class="fa fa-pencil"></i> Catatan (Opsional)</label>
+                    <input class="form-input" name="notes" placeholder="Keterangan tambahan...">
                 </div>
             </div>
+
             <div class="modal-footer">
-                <button type="button" class="btn-print" onclick="closeHpModal()">Batal</button>
-                <button type="submit" id="hpSubmitBtn" name="hp_submit" class="btn-print" disabled>Simpan</button>
+                <button type="button" class="btn-print btn-default-dark" onclick="closeHpModal()">Batal</button>
+                <button type="submit" id="hpSubmitBtn" name="hp_submit" class="btn-print" style="background:#2ecc71;">Simpan Data</button>
             </div>
         </form>
     </div>
@@ -124,7 +118,7 @@
 <div id="auditModal" class="modal-backdrop" onclick="if(event.target===this){closeAuditModal();}">
     <div class="modal-card">
         <div class="modal-header">
-            <div class="modal-title">Audit Manual Rekap Harian</div>
+            <div class="modal-title"><i class="fa fa-check-square-o" style="color:#f39c12; margin-right:8px;"></i> Audit Manual Rekap</div>
             <button type="button" class="modal-close" onclick="closeAuditModal()">&times;</button>
         </div>
         <form id="auditForm" method="post" action="report/selling.php">
@@ -136,21 +130,17 @@
             <input type="hidden" name="report" value="selling">
             <input type="hidden" name="ajax" value="1">
             <input type="hidden" name="audit_submit" value="1">
+            
             <div class="modal-body">
-                <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:6px;">
-                    <div style="font-size:22px;color:#4ea8ff;line-height:1;"><i class="fa fa-edit"></i></div>
-                    <div class="audit-modal-desc" style="font-size:12px;color:#9aa0a6;line-height:1.4;">
-                        Isi laporan manual untuk membandingkan dengan rekap sistem (qty dan uang). Selisih akan dihitung otomatis.
-                    </div>
-                </div>
                 <?php if ($audit_locked_today): ?>
-                    <div style="margin:6px 0 10px;padding:8px 10px;border:1px solid #555;background:#2b2b2b;color:#f39c12;font-size:12px;border-radius:6px;">
-                        Audit hari ini sudah dikunci. Input tidak bisa disimpan.
+                    <div style="margin-bottom:15px; padding:10px; border:1px solid #c0392b; background:rgba(192, 57, 43, 0.2); color:#fca5a5; font-size:12px; border-radius:4px; display:flex; align-items:center; gap:8px;">
+                        <i class="fa fa-lock"></i> Audit hari ini sudah dikunci. Tidak dapat diubah.
                     </div>
                 <?php endif; ?>
+
                 <div class="form-grid-2">
                     <div>
-                        <label>Blok</label>
+                        <label class="label-icon">Blok</label>
                         <select class="form-input" name="audit_blok" required>
                             <option value="" disabled selected>Pilih Blok</option>
                             <?php foreach ($blok_letters as $b): ?>
@@ -159,61 +149,66 @@
                         </select>
                     </div>
                     <div>
-                        <label>Tanggal</label>
+                        <label class="label-icon">Tanggal</label>
                         <input class="form-input" type="date" name="audit_date" value="<?= htmlspecialchars($filter_date); ?>" required>
                     </div>
                 </div>
-                <div style="margin-top:10px;">
-                    <div style="display:flex; gap:10px;">
-                        <div style="flex:1;">
-                            <label style="display:block;margin-top:6px;">Profil 10 Menit</label>
-                            <input class="form-input" type="number" id="audit_prof10_qty" name="audit_qty_10" min="0" value="0" required>
+
+                <div class="form-group-box" style="margin-top:12px;">
+                    <div class="form-group-title"><i class="fa fa-ticket"></i> Fisik Voucher (Lapangan)</div>
+                    <div class="form-grid-2">
+                        <div>
+                            <label>Profil 10 Menit</label>
+                            <input class="form-input" type="number" id="audit_prof10_qty" name="audit_qty_10" min="0" value="0" required placeholder="0">
                         </div>
-                        <div style="flex:1;">
-                            <label style="display:block;margin-top:6px;">Profil 30 Menit</label>
-                            <input class="form-input" type="number" id="audit_prof30_qty" name="audit_qty_30" min="0" value="0" required>
+                        <div>
+                            <label>Profil 30 Menit</label>
+                            <input class="form-input" type="number" id="audit_prof30_qty" name="audit_qty_30" min="0" value="0" required placeholder="0">
                         </div>
-                    </div>
-                    <div class="modal-note">Isi sesuai data dari lapangan.</div>
-                </div>
-                <div class="form-grid-2" style="margin-top:10px;">
-                    <div>
-                        <label>Total Qty (otomatis)</label>
-                        <input class="form-input" type="number" name="audit_qty" min="0" value="0" readonly>
-                    </div>
-                    <div>
-                        <label>Total Setoran (otomatis)</label>
-                        <input class="form-input" type="number" name="audit_setoran" min="0" value="0" readonly>
                     </div>
                 </div>
-                <div style="margin-top:10px; padding-top:10px; border-top:1px dashed #555;">
-                    <label style="color:#f39c12;"><i class="fa fa-shopping-cart"></i> Pengeluaran Operasional (Dari Laci)</label>
+
+                <div class="form-grid-2">
+                    <div>
+                        <label class="label-icon" style="color:#ccc;">Total Qty (Otomatis)</label>
+                        <input class="form-input" type="number" name="audit_qty" min="0" value="0" readonly tabindex="-1">
+                    </div>
+                    <div>
+                        <label class="label-icon" style="color:#f39c12;">Total Setoran (Otomatis)</label>
+                        <input class="form-input" type="number" name="audit_setoran" min="0" value="0" readonly tabindex="-1">
+                    </div>
+                </div>
+
+                <div class="form-group-box" style="margin-top:12px; border-color: rgba(231, 76, 60, 0.3);">
+                    <div class="form-group-title" style="color:#e74c3c;"><i class="fa fa-minus-circle"></i> Pengeluaran / Bon (Opsional)</div>
                     <div class="form-grid-2">
                         <div>
                             <label>Nominal (Rp)</label>
-                            <input class="form-input" type="number" name="audit_expense_amt" min="0" value="0" placeholder="Contoh: 50000">
+                            <input class="form-input" type="number" name="audit_expense_amt" min="0" value="0" placeholder="0">
                         </div>
                         <div>
-                            <label>Keterangan (Wajib jika ada)</label>
+                            <label>Keterangan</label>
                             <input class="form-input" type="text" name="audit_expense_desc" placeholder="Contoh: Beli Kertas Thermal">
                         </div>
                     </div>
-                    <div class="modal-note" style="color:#aaa;">*Nominal ini akan ditambahkan ke perhitungan setoran fisik.</div>
                 </div>
-                <div style="margin-top:8px;">
-                    <label>Username Yang Tidak Dilaporkan</label>
+
+                <div style="margin-top:10px;">
+                    <label class="label-icon"><i class="fa fa-user-times"></i> Username Tak Terlapor (Retur/Rusak System)</label>
                     <input type="hidden" name="audit_username" id="auditUsernameHidden">
                     <div class="audit-user-picker">
                         <div id="audit-user-chips" class="audit-user-chips"></div>
-                        <input class="form-input" type="text" id="audit-user-input" placeholder="Rusak & Retur Automatis By System">
+                        <input class="form-input" type="text" id="audit-user-input" placeholder="Ketik username...">
                         <div id="audit-user-suggest" class="audit-user-suggest"></div>
                     </div>
                 </div>
-                <div id="auditClientError" style="display:none;margin-top:8px;color:#fca5a5;font-size:12px;"></div>
+                
+                <div id="auditClientError" style="display:none; margin-top:10px; color:#fca5a5; font-size:12px;"></div>
             </div>
+            
             <div class="modal-footer">
-                <button type="button" class="btn-print" onclick="closeAuditModal()">Batal</button>
-                <button type="submit" id="auditSubmitBtn" name="audit_submit" class="btn-print" <?= $audit_locked_today ? 'disabled style="opacity:.6;cursor:not-allowed;"' : '' ?>>Simpan</button>
+                <button type="button" class="btn-print btn-default-dark" onclick="closeAuditModal()">Batal</button>
+                <button type="submit" id="auditSubmitBtn" name="audit_submit" class="btn-print" style="background:#f39c12;" <?= $audit_locked_today ? 'disabled' : '' ?>>Simpan Audit</button>
             </div>
         </form>
     </div>
