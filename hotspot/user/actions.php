@@ -84,6 +84,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     $status = $_GET['status'] ?? '';
     $action_blocked = false;
     $action_error = '';
+    $action_message = '';
     $hist_action = null;
     $is_rusak_target = false;
     $new_user = '';
@@ -392,6 +393,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $admin_name = $_SESSION['mikhmon'] ?? 'superadmin';
       $log_line = '[' . date('Y-m-d H:i:s') . '] ' . $admin_name . ' delete_user_full ' . $name . "\n";
       @file_put_contents($log_dir . '/admin_actions.log', $log_line, FILE_APPEND);
+      $action_message = 'Berhasil hapus total user ' . $name . ' (Router + DB).';
     } elseif ($act == 'delete_block_full') {
       $blok_norm = extract_blok_name($blok);
       $target_norm = $blok_norm ?: $blok;
@@ -500,6 +502,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $admin_name = $_SESSION['mikhmon'] ?? 'superadmin';
       $log_line = '[' . date('Y-m-d H:i:s') . '] ' . $admin_name . ' delete_block_full ' . $blok_upper . "\n";
       @file_put_contents($log_dir . '/admin_actions.log', $log_line, FILE_APPEND);
+      $action_message = 'Berhasil hapus total blok ' . $blok_upper . ' (Router + DB).';
     } elseif ($act == 'delete_status') {
       $status_map = [
         'used' => 'terpakai',
@@ -626,6 +629,9 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           }
         } catch(Exception $e) {}
       }
+      if ($target_status !== '') {
+        $action_message = 'Berhasil hapus voucher status ' . $target_status . ($blok_norm ? (' pada ' . $blok_norm) : '') . '.';
+      }
     } elseif ($act == 'batch_delete' && $blok != '') {
       $active_list = $API->comm("/ip/hotspot/active/print", array(
         "?server" => $hotspot_server,
@@ -664,6 +670,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         // Jangan hapus histori pemakaian (login_history) saat hapus blok
       }
       // Jangan hapus histori pemakaian per blok di login_history
+      $action_message = 'Berhasil hapus user Router untuk blok ' . ($blok_norm ?: $blok_raw) . '.';
     } elseif ($uid != '') {
       if ($act == 'delete') {
         $API->write('/ip/hotspot/user/remove', false);
@@ -675,6 +682,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             $stmt->execute([':u' => $name]);
           } catch(Exception $e) {}
         }
+        $action_message = 'Berhasil hapus user ' . $name . ' dari Router.';
       } elseif ($act == 'disable') {
         $active_check = $API->comm('/ip/hotspot/active/print', [
           '?server' => $hotspot_server,
@@ -700,6 +708,9 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             } catch(Exception $e) {}
           }
         }
+        if (!$action_blocked) {
+          $action_message = 'Berhasil disable voucher ' . $name . '.';
+        }
       } elseif ($act == 'enable') {
         $API->write('/ip/hotspot/user/set', false);
         $API->write('=.id='.$uid, false);
@@ -711,6 +722,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             $stmt->execute([':u' => $name]);
           } catch(Exception $e) {}
         }
+        $action_message = 'Berhasil enable voucher ' . $name . '.';
       } elseif ($act == 'invalid') {
         $new_c = "Audit: RUSAK " . date("d/m/y") . " " . $comm;
         $profile_label = (string)($urow['profile'] ?? '');
@@ -806,6 +818,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             } catch(Exception $e) {}
           }
         }
+        $action_message = 'Berhasil set RUSAK untuk ' . $name . '.';
       } elseif ($act == 'rollback') {
         // Kembalikan status RUSAK
         $uinfo = $API->comm('/ip/hotspot/user/print', [
@@ -843,6 +856,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             } catch(Exception $e) {}
           }
         }
+        $action_message = 'Berhasil rollback RUSAK untuk ' . $name . '.';
       } elseif ($act == 'retur') {
         // Simpan data voucher lama ke DB sebelum dihapus
         $user_info = $API->comm("/ip/hotspot/user/print", array(
@@ -1029,6 +1043,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $stmt->execute([':u' => $name]);
       } catch(Exception $e) {}
     }
+    $action_message = $action_message ?: ('Berhasil retur voucher ' . $name . '.');
   }
   $redir_params = [
     'hotspot' => 'users',
@@ -1042,12 +1057,18 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
   if (isset($_GET['date'])) $redir_params['date'] = $_GET['date'];
   if (isset($_GET['debug'])) $redir_params['debug'] = $_GET['debug'];
   if (isset($_GET['only_wartel'])) $redir_params['only_wartel'] = $_GET['only_wartel'];
+  if (in_array($act, ['delete_block_full','batch_delete','delete_status'], true)) {
+    $redir_params['status'] = 'all';
+    $redir_params['comment'] = '';
+    $redir_params['q'] = '';
+    $redir_params['page'] = 1;
+  }
   $redir = './?' . http_build_query($redir_params);
   if ($is_action_ajax) {
     header('Content-Type: application/json');
     echo json_encode([
       'ok' => !$action_blocked,
-      'message' => $action_blocked ? $action_error : 'Berhasil diproses.',
+      'message' => $action_blocked ? $action_error : ($action_message ?: 'Berhasil diproses.'),
       'redirect' => $action_blocked ? '' : $redir,
       'new_user' => (!$action_blocked && $act === 'retur' && $new_user !== '') ? $new_user : ''
     ]);
