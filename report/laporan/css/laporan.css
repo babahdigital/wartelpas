@@ -87,3 +87,69 @@ body { overflow-x: hidden; }
 .log-system { color:#00bcd4; }
 .cursor-blink { display:inline-block; width:8px; height:15px; background-color:#00ff00; animation: blink 1s infinite; vertical-align:middle; margin-left:5px; }
 @keyframes blink { 0%{opacity:0;} 50%{opacity:1;} 100%{opacity:0;} }
+
+/* --- Style Tambahan untuk Form Modal Rich UI --- */
+
+/* Field Readonly yang terlihat seperti Display/Kalkulasi */
+.form-input[readonly] {
+	background: #1a1d21;
+	border-color: #3a4046;
+	color: #f39c12;
+	font-weight: bold;
+	font-family: 'Courier New', monospace;
+	cursor: not-allowed;
+}
+
+/* Grouping Box di dalam Modal */
+.form-group-box {
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 8px;
+	padding: 12px;
+	margin-bottom: 12px;
+}
+
+.form-group-title {
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	color: #9aa0a6;
+	margin-bottom: 8px;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+/* Info Banner di dalam modal */
+.modal-info-banner {
+	display: flex;
+	gap: 12px;
+	align-items: flex-start;
+	background: rgba(52, 152, 219, 0.1);
+	border-left: 3px solid #3498db;
+	padding: 10px 14px;
+	border-radius: 4px;
+	margin-bottom: 15px;
+}
+
+.modal-info-icon {
+	font-size: 18px;
+	color: #3498db;
+	margin-top: 2px;
+}
+
+.modal-info-text {
+	font-size: 12px;
+	color: #d1d5db;
+	line-height: 1.4;
+}
+
+/* Label field dengan ikon kecil */
+.label-icon {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 4px;
+	font-size: 12px;
+	color: #ccc;
+}
