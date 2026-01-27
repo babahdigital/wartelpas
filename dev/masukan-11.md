@@ -60,12 +60,24 @@ Semua fungsi di `helpers.php` (`format_comment_display`, `uptime_to_seconds`, dl
 
 **Status: TIDAK KRITIS (Boleh diabaikan untuk saat ini)**
 
-Saya melihat file **`print.detail.php`** dan **`print.used.php`** masih mendefinisikan ulang fungsi helper secara internal (seperti `uptime_to_seconds`, `extract_blok_name`) tanpa pembungkus `function_exists`.
+Saya menemukan dua file print yang berjalan secara standalone dan mendefinisikan ulang helper lokal tanpa pembungkus function_exists:
 
-* **Mengapa ini TIDAK ERROR?**
-Karena file-file ini dijalankan secara *standalone* (dibuka di tab baru via `window.open`). Mereka tidak meng-include `helpers.php` ataupun `bootstrap.php`, jadi tidak ada bentrok nama fungsi.
-* **Saran Jangka Panjang:**
-Jika nanti Anda ingin merapikan kode, Anda bisa menghapus fungsi-fungsi di dalam file print tersebut dan menggantinya dengan `include_once '../../hotspot/user/helpers.php';`. Tapi untuk sekarang, **biarkan saja** agar tidak mengambil risiko merusak tampilan print yang sudah jalan.
+1) File hotspot/print/print.detail.php
+    - Helper lokal yang didefinisikan: uptime_to_seconds, seconds_to_uptime, resolve_rusak_limits, extract_blok_name, normalize_blok_label, normalize_profile_label, extract_ip_mac_from_comment, format_dmy, format_dmy_date, normalize_dt, get_user_history, get_cumulative_uptime_from_events, get_relogin_events.
+    - Pola aman saat ini: file ini tidak meng-include helpers.php atau bootstrap.php, sehingga tidak ada konflik nama fungsi.
+
+2) File hotspot/print/print.used.php
+    - Helper lokal yang didefinisikan: uptime_to_seconds, seconds_to_uptime, extract_blok_name, normalize_blok_label, normalize_profile_label, extract_ip_mac_from_comment, format_dmy, format_dmy_date, normalize_dt, get_user_history, get_cumulative_uptime_from_events, get_relogin_events.
+    - Pola aman saat ini: file ini juga tidak meng-include helpers.php atau bootstrap.php.
+
+**Mengapa ini TIDAK ERROR saat ini?**
+Karena kedua file tersebut dipanggil sebagai halaman cetak terpisah (standalone). Tidak ada include ganda helper global, sehingga tidak terjadi redeclare.
+
+**Risiko Masa Depan:**
+Jika suatu saat file print ini mulai meng-include hotspot/user/helpers.php atau hotspot/user/bootstrap.php, maka akan terjadi fatal error Cannot redeclare function.
+
+**Saran Jangka Panjang (Opsional):**
+Jika ingin merapikan, pindahkan helper lokal ke hotspot/user/helpers.php dan gunakan include_once + guard function_exists, tetapi disarankan dilakukan saat maintenance khusus agar tidak merusak tampilan print yang sudah stabil.
 
 ---
 
