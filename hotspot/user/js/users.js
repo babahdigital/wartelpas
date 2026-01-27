@@ -93,7 +93,9 @@
     actionBanner.classList.add(type === 'error' ? 'error' : 'success');
     actionBanner.innerHTML = `<i class="fa ${type === 'error' ? 'fa-times-circle' : 'fa-check-circle'}"></i><span>${message}</span>`;
     actionBanner.style.display = 'flex';
-    setTimeout(() => { actionBanner.style.display = 'none'; }, 2800);
+    const msgLen = (message || '').length;
+    const delay = Math.min(8000, Math.max(4500, msgLen * 55));
+    setTimeout(() => { actionBanner.style.display = 'none'; }, delay);
   };
 
   function showOverlayChoice(options) {

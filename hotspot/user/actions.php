@@ -467,8 +467,13 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $target_norm = $blok_norm ?: $blok;
       $target_cmp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $target_norm));
       $blok_upper = strtoupper($blok_norm ?: $blok);
+      $blok_keyword = preg_replace('/^BLOK[-\s]*/i', '', $blok_upper);
       $use_glob = !preg_match('/\d$/', $blok_upper);
       $glob_pattern = $use_glob ? ($blok_upper . '[0-9]*') : '';
+      $raw_like1 = '%' . $blok_upper . '%';
+      $raw_like2 = '%' . ('BLOK ' . $blok_keyword) . '%';
+      $raw_like3 = '%' . ('BLOK-' . $blok_keyword) . '%';
+      $raw_like4 = '%' . $blok_keyword . '%';
 
       $active_list = $API->comm('/ip/hotspot/active/print', [
         '?server' => $hotspot_server,
@@ -483,10 +488,13 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $retur_usernames = [];
       $delete_name_map = [];
       $whereBlok = "UPPER(blok_name) = :b" . ($use_glob ? " OR UPPER(blok_name) GLOB :bg" : "");
-      $base_params = $use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern] : [':b' => $blok_upper];
+      $whereRaw = " OR UPPER(raw_comment) LIKE :rc1 OR UPPER(raw_comment) LIKE :rc2 OR UPPER(raw_comment) LIKE :rc3 OR UPPER(raw_comment) LIKE :rc4";
+      $whereMatch = "(" . $whereBlok . $whereRaw . ")";
+      $base_params = $use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4]
+        : [':b' => $blok_upper, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4];
 
       try {
-        $stmt = $db->prepare("SELECT username FROM login_history WHERE ($whereBlok)");
+        $stmt = $db->prepare("SELECT username FROM login_history WHERE $whereMatch");
         $stmt->execute($base_params);
         $base_usernames = $stmt->fetchAll(PDO::FETCH_COLUMN, 0);
         foreach ($base_usernames as $uname) {
@@ -522,6 +530,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         '.proplist' => '.id,name,comment'
       ]);
       $to_delete = [];
+      $base_router_map = [];
       foreach ($list as $usr) {
         $uname = $usr['name'] ?? '';
         if ($uname === '') continue;
@@ -531,6 +540,27 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $uname_key = strtolower($uname);
         if (($cblok_cmp != '' && $cblok_cmp === $target_cmp) || isset($delete_name_map[$uname_key])) {
           $to_delete[] = ['id' => $usr['.id'] ?? '', 'name' => $uname];
+          $base_router_map[$uname_key] = true;
+        }
+      }
+
+      if (!empty($base_router_map)) {
+        foreach ($list as $usr) {
+          $uname = $usr['name'] ?? '';
+          if ($uname === '') continue;
+          $c = $usr['comment'] ?? '';
+          $ref_user = extract_retur_user_from_ref($c);
+          if ($ref_user !== '') {
+            $ref_key = strtolower($ref_user);
+            if (isset($base_router_map[$ref_key])) {
+              $uname_key = strtolower($uname);
+              if (!isset($delete_name_map[$uname_key])) {
+                $delete_name_map[$uname_key] = $uname;
+                $retur_usernames[] = $uname;
+              }
+              $to_delete[] = ['id' => $usr['.id'] ?? '', 'name' => $uname];
+            }
+          }
         }
       }
 
@@ -550,7 +580,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         }
       }
 
-      $db_delete_names = array_values(array_unique(array_merge($base_usernames, $retur_usernames)));
+      $router_names = array_values(array_unique(array_merge($base_usernames, $retur_usernames, array_keys($delete_name_map))));
+      $db_delete_names = array_values(array_unique($router_names));
       $db_deleted_count = 0;
       try {
         $db->beginTransaction();
@@ -568,7 +599,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           $userClause = " OR username IN (" . implode(',', $placeholders) . ")";
         }
 
-        $stmt = $db->prepare("DELETE FROM login_history WHERE ($whereBlok)$userClause");
+        $stmt = $db->prepare("DELETE FROM login_history WHERE $whereMatch$userClause");
         $stmt->execute(array_merge($params, $userParams));
 
         if (!empty($db_delete_names)) {
@@ -583,10 +614,10 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           $stmt->execute($userParams);
         }
 
-        $stmt = $db->prepare("DELETE FROM sales_history WHERE ($whereBlok)$userClause");
+        $stmt = $db->prepare("DELETE FROM sales_history WHERE $whereMatch$userClause");
         $stmt->execute(array_merge($params, $userParams));
 
-        $stmt = $db->prepare("DELETE FROM live_sales WHERE ($whereBlok)$userClause");
+        $stmt = $db->prepare("DELETE FROM live_sales WHERE $whereMatch$userClause");
         $stmt->execute(array_merge($params, $userParams));
 
         $db->commit();
