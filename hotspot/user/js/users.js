@@ -20,6 +20,7 @@
   const overlayText = document.getElementById('users-overlay-text');
   const overlayIcon = document.getElementById('users-overlay-icon');
   const overlayActions = document.getElementById('users-overlay-actions');
+  let overlayFadeTimer = null;
   const reloginModal = document.getElementById('relogin-modal');
   const reloginBody = document.getElementById('relogin-body');
   const reloginTitle = document.getElementById('relogin-title');
@@ -106,10 +107,14 @@
         resolve(null);
         return;
       }
+      if (overlayFadeTimer) {
+        clearTimeout(overlayFadeTimer);
+        overlayFadeTimer = null;
+      }
       const opts = options || {};
       overlayTitle.textContent = opts.title || 'Konfirmasi';
       overlayText.innerHTML = opts.messageHtml || '';
-      overlayContainer.classList.remove('status-loading', 'status-success', 'status-error');
+      overlayContainer.classList.remove('status-loading', 'status-success', 'status-error', 'status-warning');
       if (opts.type === 'danger') {
         overlayContainer.classList.add('status-error');
         overlayIcon.className = 'fa fa-exclamation-triangle';
@@ -118,6 +123,10 @@
         overlayContainer.classList.remove('status-error');
         overlayIcon.className = 'fa fa-exclamation-circle';
         overlayIcon.style.color = '#f59e0b';
+      } else if (opts.type === 'info') {
+        overlayContainer.classList.remove('status-error');
+        overlayIcon.className = 'fa fa-info-circle';
+        overlayIcon.style.color = '#3b82f6';
       } else {
         overlayContainer.classList.add('status-loading');
         overlayIcon.className = 'fa fa-question-circle';
@@ -132,9 +141,10 @@
       const buttons = Array.isArray(opts.buttons) ? opts.buttons : [];
       const cleanup = (val) => {
         overlayBackdrop.classList.remove('show');
-        setTimeout(() => {
+        overlayFadeTimer = setTimeout(() => {
           overlayBackdrop.style.display = 'none';
           overlayActions.classList.remove('layout-vertical');
+          overlayFadeTimer = null;
         }, 250);
         overlayActions.innerHTML = '';
         resolve(val);
@@ -159,9 +169,8 @@
         overlayActions.appendChild(b);
       });
       overlayBackdrop.style.display = 'flex';
-      setTimeout(() => {
-        overlayBackdrop.classList.add('show');
-      }, 10);
+      void overlayBackdrop.offsetWidth;
+      overlayBackdrop.classList.add('show');
       overlayBackdrop.onclick = (e) => {
         if (e.target === overlayBackdrop && !opts.lockClose) {
           cleanup('cancel');
@@ -812,6 +821,7 @@
       if (data && data.ok) {
         const isBlockDelete = url.includes('action=batch_delete') || url.includes('action=delete_block_full');
         if (isBlockDelete) {
+          await new Promise((resolve) => setTimeout(resolve, 300));
           const msg = data.message || 'Blok berhasil dihapus.';
           await showOverlayChoice({
             title: 'Sukses Hapus Blok',
