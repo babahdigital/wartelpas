@@ -311,6 +311,14 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
             else $status = 'normal';
         }
 
+        if ($status === 'retur') {
+            $has_retur_marker = (strpos($cmt_low, 'retur') !== false);
+            $has_rusak_marker = (strpos($cmt_low, 'rusak') !== false) || ($lh_status === 'rusak') || ((int)($r['is_rusak'] ?? 0) === 1);
+            if (!$has_retur_marker && $has_rusak_marker) {
+                $status = 'rusak';
+            }
+        }
+
         $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
         if ($price <= 0) $price = (int)($r['sprice_snapshot'] ?? 0);
         $qty = (int)($r['qty'] ?? 0);
