@@ -210,51 +210,80 @@
       const limits = data.limits || {};
       const headerMsg = data.message || '';
       const meta = data.meta || {};
+      const isValid = !!data.ok;
+
+      const statusIcon = isValid ? 'fa-check-circle' : 'fa-times-circle';
+      const statusClass = isValid ? 'success' : 'error';
+      const statusText = isValid ? 'Syarat terpenuhi. User Layak diganti.' : 'Syarat TIDAK terpenuhi.';
+      const bannerHtml = `
+        <div class="status-banner ${statusClass}">
+          <i class="fa ${statusIcon}" style="font-size:18px;"></i>
+          <span>${statusText}</span>
+        </div>`;
+
       const items = [
-        { label: `Offline (tidak sedang online)`, ok: !!criteria.offline, value: values.online || '-' },
-        { label: `Bytes maksimal ${limits.bytes || '-'}`, ok: !!criteria.bytes_ok, value: values.bytes || '-' },
-        { label: `Uptime (informasi)`, ok: true, value: values.total_uptime || '-' },
-        { label: `Pernah login (first login ada)`, ok: !!criteria.first_login_ok, value: String(values.first_login ?? '-') }
+        { label: `Offline (Tidak aktif)`, ok: !!criteria.offline, value: values.online === 'Tidak' ? 'Offline' : 'Online' },
+        { label: `Usage < ${limits.bytes || '-'}`, ok: !!criteria.bytes_ok, value: values.bytes || '-' },
+        { label: `Uptime (Info)`, ok: true, value: values.total_uptime || '-' },
+        { label: `History Login`, ok: !!criteria.first_login_ok, value: values.first_login !== '-' ? 'Ada' : 'Kosong' }
       ];
+
       const rows = items.map(it => {
-        const icon = it.ok ? 'fa-check-circle' : 'fa-times-circle';
-        const color = it.ok ? '#16a34a' : '#dc2626';
-        return `<tr>
-          <td style="padding:6px 8px;border-bottom:1px solid #3d3d3d;"><i class="fa ${icon}" style="color:${color};margin-right:6px;"></i>${it.label}</td>
-          <td style="padding:6px 8px;border-bottom:1px solid #3d3d3d;color:#cbd5e1;text-align:right;">${it.value}</td>
-        </tr>`;
+        const icon = it.ok ? 'fa-check' : 'fa-times';
+        const color = it.ok ? '#4ade80' : '#f87171';
+        return `
+          <tr>
+            <td><i class="fa ${icon}" style="color:${color}; width:16px;"></i> ${it.label}</td>
+            <td style="text-align:right; font-family:monospace;">${it.value}</td>
+          </tr>`;
       }).join('');
-      const msgHtml = headerMsg ? `<div style="margin-bottom:8px;color:#f3c969;">${headerMsg}</div>` : '';
-      const messageHtml = `
-        <div style="text-align:left;">
-          <div style="margin-bottom:8px;font-weight:600;">Cek Kelayakan Rusak</div>
-          ${msgHtml}
-          <table style="width:100%;border-collapse:collapse;font-size:12px;">
-            <thead>
-              <tr>
-                <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #3d3d3d;">Kriteria</th>
-                <th style="text-align:right;padding:6px 8px;border-bottom:1px solid #3d3d3d;">Nilai</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows}
-            </tbody>
+
+      const tableHtml = `
+        <div class="checklist-container">
+          <table class="checklist-table">
+            <thead><tr><th>Kriteria</th><th style="text-align:right;">Nilai Aktual</th></tr></thead>
+            <tbody>${rows}</tbody>
           </table>
         </div>`;
-      const isValid = !!data.ok;
-      rusakPrintPayload = { headerMsg, items, meta, fallbackUser: (meta && meta.username) ? meta.username : '' };
-      const mt = rusakPrintPayload ? (rusakPrintPayload.meta || {}) : {};
-      const uname = (mt.username || rusakPrintPayload?.fallbackUser || '').toString();
+
+      const targetUser = (meta && meta.username) ? meta.username : 'Unknown';
+      const messageHtml = `
+        <div style="text-align:left;">
+          <div style="font-size:14px; color:#cbd5e1; margin-bottom:4px;">Audit User:</div>
+          <div style="font-size:18px; font-weight:bold; color:#fff; margin-bottom:12px;">${targetUser}</div>
+          ${headerMsg ? `<div style="margin-bottom:8px;color:#f3c969;">${headerMsg}</div>` : ''}
+          ${bannerHtml}
+          ${tableHtml}
+        </div>`;
+
       const sess = (usersSession || '').toString();
-      const printUrl = uname ? ('./hotspot/print/print.detail.php?session=' + encodeURIComponent(sess) + '&user=' + encodeURIComponent(uname)) : '';
+      const printUrl = targetUser ? ('./hotspot/print/print.detail.php?session=' + encodeURIComponent(sess) + '&user=' + encodeURIComponent(targetUser)) : '';
+
       showOverlayChoice({
-        title: 'Konfirmasi Rusak',
+        title: 'Verifikasi Kondisi Rusak',
         messageHtml,
-        type: 'danger',
+        type: isValid ? 'warning' : 'danger',
+        layout: 'vertical',
         buttons: [
           {
-            label: 'Print Rincian',
-            className: 'overlay-btn-secondary',
+            label: `
+              <i class="fa fa-gavel"></i>
+              <div class="btn-rich-text">
+                <span class="btn-rich-title">Tetapkan Status RUSAK</span>
+                <span class="btn-rich-desc">User akan diblokir & laporan disesuaikan.</span>
+              </div>`,
+            value: true,
+            className: 'overlay-btn-warning',
+            disabled: !isValid
+          },
+          {
+            label: `
+              <i class="fa fa-print"></i>
+              <div class="btn-rich-text">
+                <span class="btn-rich-title">Print Rincian</span>
+                <span class="btn-rich-desc">Cetak bukti diagnosa sebelum eksekusi.</span>
+              </div>`,
+            className: 'overlay-btn-info',
             closeOnClick: false,
             onClick: () => {
               if (!printUrl) return;
@@ -262,8 +291,13 @@
               if (!w) window.location.href = printUrl;
             }
           },
-          { label: 'Batal', value: false, className: 'overlay-btn-muted' },
-          { label: 'Ya, Lanjutkan', value: true, disabled: !isValid }
+          {
+            label: `
+              <i class="fa fa-times"></i>
+              <div class="btn-rich-text"><span class="btn-rich-title">Batal</span></div>`,
+            value: false,
+            className: 'overlay-btn-muted'
+          }
         ]
       }).then((val) => resolve(val === true));
     });
@@ -470,8 +504,60 @@
 
   window.actionRequest = async function(url, confirmMsg) {
     if (confirmMsg) {
-      const ok = await showConfirm(confirmMsg);
-      if (!ok) return;
+      const msgLower = confirmMsg.toLowerCase();
+      if (msgLower.includes('hapus total user')) {
+        const match = confirmMsg.match(/user\s+([^\s]+)/i);
+        const userName = match ? match[1] : 'Target';
+        const detailMsg = `
+          <div style="text-align:left;">
+             <div style="margin-bottom:10px; color:#cbd5e1;">Anda akan menghapus user:</div>
+             <div style="font-size:20px; font-weight:bold; color:#fff; margin-bottom:15px; border-left:4px solid #ef4444; padding-left:12px;">
+               ${userName}
+             </div>
+             <div style="background:rgba(239, 68, 68, 0.1); border:1px solid rgba(239, 68, 68, 0.3); padding:10px; border-radius:6px; font-size:13px; color:#fca5a5;">
+               <i class="fa fa-exclamation-triangle"></i> <strong>Peringatan:</strong><br>
+               Tindakan ini akan menghapus user dari MikroTik DAN menghapus seluruh riwayat keuangan/login di database. Data tidak bisa dikembalikan.
+             </div>
+          </div>
+        `;
+        const ok = await showOverlayChoice({
+          title: 'Hapus User Permanen',
+          messageHtml: detailMsg,
+          type: 'danger',
+          layout: 'vertical',
+          buttons: [
+            {
+              label: `
+                <i class="fa fa-trash"></i>
+                <div class="btn-rich-text">
+                  <span class="btn-rich-title">Ya, Hapus Total</span>
+                  <span class="btn-rich-desc">Hapus Router + Database Permanen.</span>
+                </div>`,
+              value: true,
+              className: 'overlay-btn-danger'
+            },
+            {
+              label: 'Batal',
+              value: false,
+              className: 'overlay-btn-muted'
+            }
+          ]
+        });
+        if (!ok) return;
+        confirmMsg = null;
+      } else {
+        const ok = await showOverlayChoice({
+          title: 'Konfirmasi',
+          messageHtml: `<div style="text-align:left;font-size:14px;">${confirmMsg}</div>`,
+          type: 'info',
+          buttons: [
+            { label: 'Batal', value: false, className: 'overlay-btn-muted' },
+            { label: 'Ya, Lanjutkan', value: true, className: 'overlay-btn-secondary' }
+          ]
+        });
+        if (!ok) return;
+        confirmMsg = null;
+      }
     }
     try {
       if (pageDim) pageDim.style.display = 'flex';
