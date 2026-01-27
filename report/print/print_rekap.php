@@ -949,9 +949,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             if ($kind === '30') {
                                                 $profile30_sum += $price_val;
                                                 $profile30_items[] = $item;
-                                                if (!in_array($u_status, ['rusak', 'invalid'], true)) {
-                                                    $profile30_display_items[] = $item;
-                                                }
+                                                $profile30_display_items[] = $item;
                                                 if ($u_status === 'rusak') $cnt_rusak_30++;
                                                 if ($u_status === 'retur') $cnt_retur_30++;
                                                 if ($u_status === 'invalid') $cnt_invalid_30++;
@@ -959,9 +957,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             } else {
                                                 $profile10_sum += $price_val;
                                                 $profile10_items[] = $item;
-                                                if (!in_array($u_status, ['rusak', 'invalid'], true)) {
-                                                    $profile10_display_items[] = $item;
-                                                }
+                                                $profile10_display_items[] = $item;
                                                 if ($u_status === 'rusak') $cnt_rusak_10++;
                                                 if ($u_status === 'retur') $cnt_retur_10++;
                                                 if ($u_status === 'invalid') $cnt_invalid_10++;
@@ -1008,18 +1004,14 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     if ($kind === '30') {
                                         $profile30_sum += $price_val;
                                         $profile30_items[] = $item;
-                                        if (!in_array($u_status, ['rusak', 'invalid'], true)) {
-                                            $profile30_display_items[] = $item;
-                                        }
+                                        $profile30_display_items[] = $item;
                                         if ($u_status === 'rusak') $cnt_rusak_30++;
                                         if ($u_status === 'retur') $cnt_retur_30++;
                                         if ($u_status === 'invalid') $cnt_invalid_30++;
                                     } else {
                                         $profile10_sum += $price_val;
                                         $profile10_items[] = $item;
-                                        if (!in_array($u_status, ['rusak', 'invalid'], true)) {
-                                            $profile10_display_items[] = $item;
-                                        }
+                                        $profile10_display_items[] = $item;
                                         if ($u_status === 'rusak') $cnt_rusak_10++;
                                         if ($u_status === 'retur') $cnt_retur_10++;
                                         if ($u_status === 'invalid') $cnt_invalid_10++;
