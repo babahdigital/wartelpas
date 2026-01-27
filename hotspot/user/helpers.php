@@ -1,15 +1,17 @@
 <?php
 // Helper: Format comment untuk display
-function format_comment_display($comment) {
-  if (empty($comment)) return '-';
-  if (preg_match('/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}:\d{2}:\d{2})\s*\|\s*([^|]+)/i', $comment, $m)) {
-    $date_formatted = "{$m[3]}-{$m[2]}-{$m[1]} {$m[4]}";
-    $blok = trim($m[5]);
-    return "Valid {$date_formatted} | {$blok}";
+if (!function_exists('format_comment_display')) {
+  function format_comment_display($comment) {
+    if (empty($comment)) return '-';
+    if (preg_match('/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}:\d{2}:\d{2})\s*\|\s*([^|]+)/i', $comment, $m)) {
+      $date_formatted = "{$m[3]}-{$m[2]}-{$m[1]} {$m[4]}";
+      $blok = trim($m[5]);
+      return "Valid {$date_formatted} | {$blok}";
+    }
+    $short = preg_replace('/\|\s*IP:[^\|]+/', '', $comment);
+    $short = preg_replace('/\|\s*MAC:[^\|]+/', '', $short);
+    return trim($short);
   }
-  $short = preg_replace('/\|\s*IP:[^\|]+/', '', $comment);
-  $short = preg_replace('/\|\s*MAC:[^\|]+/', '', $short);
-  return trim($short);
 }
 
 // Helper: Ekstrak nama blok dari comment
