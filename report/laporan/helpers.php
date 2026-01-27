@@ -258,6 +258,42 @@ function get_ghost_suspects(PDO $db, $audit_date, $audit_blok, array $reported_u
 }
 
 function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
+    $rusak_user_map = [];
+    $retur_ref_map = [];
+    foreach ($rows as $r) {
+        $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
+        if ($sale_date !== $audit_date) continue;
+        $raw_comment = (string)($r['comment'] ?? '');
+        $blok = normalize_block_name($r['blok_name'] ?? '', $raw_comment);
+        if ($blok !== $audit_blok) continue;
+
+        $status = strtolower((string)($r['status'] ?? ''));
+        $lh_status = strtolower((string)($r['last_status'] ?? ''));
+        $cmt_low = strtolower($raw_comment);
+        if ($status === '' || $status === 'normal') {
+            if ((int)($r['is_invalid'] ?? 0) === 1) $status = 'invalid';
+            elseif ((int)($r['is_retur'] ?? 0) === 1) $status = 'retur';
+            elseif ((int)($r['is_rusak'] ?? 0) === 1) $status = 'rusak';
+            elseif (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
+            elseif (strpos($cmt_low, 'retur') !== false) $status = 'retur';
+            elseif (strpos($cmt_low, 'rusak') !== false || $lh_status === 'rusak') $status = 'rusak';
+            else $status = 'normal';
+        }
+
+        if ($status === 'retur') {
+            $ref_user = extract_retur_user_from_ref($raw_comment);
+            if ($ref_user !== '') {
+                $retur_ref_map[strtolower($ref_user)] = true;
+            }
+        }
+        if ($status === 'rusak') {
+            $username = strtolower((string)($r['username'] ?? ''));
+            if ($username !== '') {
+                $rusak_user_map[$username] = true;
+            }
+        }
+    }
+
     $seen_sales = [];
     $seen_user_day = [];
     $qty_total = 0;
@@ -330,16 +366,37 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
         $loss_invalid = 0;
         $net_add = 0;
 
+        $rusak_recovered = false;
+        if ($status === 'rusak') {
+            $uname_key = strtolower((string)($username ?? ''));
+            if ($uname_key !== '' && isset($retur_ref_map[$uname_key])) {
+                $rusak_recovered = true;
+            }
+        }
+        $retur_ref_user = '';
+        if ($status === 'retur') {
+            $retur_ref_user = extract_retur_user_from_ref($raw_comment);
+        }
+
         if ($status === 'invalid') {
             $gross_add = 0;
             $net_add = 0;
         } elseif ($status === 'retur') {
             $gross_add = 0;
-            $net_add = $line_price;
+            if ($retur_ref_user !== '' && isset($rusak_user_map[strtolower($retur_ref_user)])) {
+                $net_add = 0;
+            } else {
+                $net_add = $line_price;
+            }
         } elseif ($status === 'rusak') {
             $gross_add = $line_price;
-            $loss_rusak = $line_price;
-            $net_add = 0;
+            if ($rusak_recovered) {
+                $loss_rusak = 0;
+                $net_add = $line_price;
+            } else {
+                $loss_rusak = $line_price;
+                $net_add = 0;
+            }
         } else {
             $gross_add = $line_price;
             $net_add = $line_price;

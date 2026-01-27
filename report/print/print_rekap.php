@@ -376,6 +376,63 @@ $seen_sales = [];
 $seen_user_day = [];
 $unique_laku_users = [];
 $system_incidents_by_block = [];
+$rusak_user_map = [];
+$retur_ref_map = [];
+
+foreach ($rows as $r) {
+    $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
+    $sale_time = $r['sale_time'] ?? ($r['raw_time'] ?? '');
+    $match = false;
+    if ($req_show === 'harian') $match = ($sale_date === $filter_date);
+    elseif ($req_show === 'bulanan') $match = (strpos((string)$sale_date, $filter_date) === 0);
+    else $match = (strpos((string)$sale_date, $filter_date) === 0);
+    if (!$match) continue;
+
+    $comment = (string)($r['comment'] ?? '');
+    $blok_row = (string)($r['blok_name'] ?? '');
+    if ($blok_row === '' && !preg_match('/\bblok\s*[-_]?\s*[A-Za-z0-9]+/i', $comment)) {
+        continue;
+    }
+    $block = normalize_block_name($r['blok_name'] ?? '', $comment);
+
+    $status_db = normalize_status_value($r['status'] ?? '');
+    $lh_status = normalize_status_value($r['last_status'] ?? '');
+    $cmt_low = strtolower($comment);
+    $status = 'normal';
+    if (
+        $status_db === 'invalid' || $lh_status === 'invalid' ||
+        strpos($cmt_low, 'invalid') !== false || (int)($r['is_invalid'] ?? 0) === 1
+    ) {
+        $status = 'invalid';
+    } elseif (
+        $status_db === 'retur' || $lh_status === 'retur' ||
+        strpos($cmt_low, 'retur') !== false || (int)($r['is_retur'] ?? 0) === 1
+    ) {
+        $status = 'retur';
+    } elseif (
+        $status_db === 'rusak' || $lh_status === 'rusak' ||
+        strpos($cmt_low, 'rusak') !== false || (int)($r['is_rusak'] ?? 0) === 1
+    ) {
+        $status = 'rusak';
+    } elseif (in_array($status_db, ['online', 'terpakai', 'ready'], true)) {
+        $status = $status_db;
+    }
+
+    if ($status === 'retur') {
+        $ref_user = extract_retur_user_from_ref($comment);
+        if ($ref_user !== '') {
+            if (!isset($retur_ref_map[$block])) $retur_ref_map[$block] = [];
+            $retur_ref_map[$block][strtolower($ref_user)] = true;
+        }
+    }
+    if ($status === 'rusak') {
+        $username = strtolower((string)($r['username'] ?? ''));
+        if ($username !== '') {
+            if (!isset($rusak_user_map[$block])) $rusak_user_map[$block] = [];
+            $rusak_user_map[$block][$username] = true;
+        }
+    }
+}
 
 foreach ($rows as $r) {
     $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
@@ -478,16 +535,36 @@ foreach ($rows as $r) {
     $loss_invalid = 0;
     $net_add = 0;
 
+    $rusak_recovered = false;
+    if ($status === 'rusak' && $username !== '') {
+        if (isset($retur_ref_map[$block][strtolower($username)])) {
+            $rusak_recovered = true;
+        }
+    }
+    $retur_ref_user = '';
+    if ($status === 'retur') {
+        $retur_ref_user = extract_retur_user_from_ref($comment);
+    }
+
     if ($status === 'invalid') {
         $gross_add = 0;
         $net_add = 0;
     } elseif ($status === 'retur') {
         $gross_add = 0;
-        $net_add = $line_price;
+        if ($retur_ref_user !== '' && isset($rusak_user_map[$block][strtolower($retur_ref_user)])) {
+            $net_add = 0;
+        } else {
+            $net_add = $line_price;
+        }
     } elseif ($status === 'rusak') {
         $gross_add = $line_price;
-        $loss_rusak = $line_price;
-        $net_add = 0;
+        if ($rusak_recovered) {
+            $loss_rusak = 0;
+            $net_add = $line_price;
+        } else {
+            $loss_rusak = $line_price;
+            $net_add = 0;
+        }
     } else {
         $gross_add = $line_price;
         $net_add = $line_price;
@@ -512,10 +589,14 @@ foreach ($rows as $r) {
             $net_line = 0;
         } elseif ($status === 'retur') {
             $gross_line = 0;
-            $net_line = $line_price;
+            if ($retur_ref_user !== '' && isset($rusak_user_map[$block][strtolower($retur_ref_user)])) {
+                $net_line = 0;
+            } else {
+                $net_line = $line_price;
+            }
         } elseif ($status === 'rusak') {
             $gross_line = $line_price;
-            $net_line = 0;
+            $net_line = $rusak_recovered ? $line_price : 0;
         } else {
             $gross_line = $line_price;
             $net_line = $line_price;
