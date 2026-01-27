@@ -99,16 +99,6 @@ function get_block_label($block_name, $blok_names = []) {
     return (string)$block_name;
 }
 
-function get_block_short_label($block_name) {
-    $raw = strtoupper((string)$block_name);
-    if (preg_match('/^BLOK-([A-F])\b/', $raw, $m)) {
-        return $m[1];
-    }
-    if (preg_match('/\b([A-F])\b/', $raw, $m)) {
-        return $m[1];
-    }
-    return '-';
-}
 
 function detect_profile_minutes($profile) {
     $p = strtolower((string)$profile);
@@ -1201,7 +1191,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
                             // Capture data for summary
                             $audit_summary_report[] = [
-                                'blok' => get_block_short_label(normalize_block_name($ar['blok_name'] ?? '-', (string)($ar['comment'] ?? ''))),
+                                'blok' => get_block_label(normalize_block_name($ar['blok_name'] ?? '-', (string)($ar['comment'] ?? '')), $blok_names),
                                 'selisih_setoran' => (int)$selisih_setoran,
                                 'p10_qty' => $p10_qty,
                                 'p10_sum' => $p10_sum_calc,
@@ -1218,7 +1208,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 'retur_30' => (int)$cnt_retur_30
                             ];
                         ?>
-                        <?php $audit_blk_label = get_block_short_label(normalize_block_name($ar['blok_name'] ?? '-', (string)($ar['comment'] ?? ''))); ?>
+                        <?php $audit_blk_label = get_block_label(normalize_block_name($ar['blok_name'] ?? '-', (string)($ar['comment'] ?? '')), $blok_names); ?>
                         <tr>
                             <td style="text-align: left;"><?= htmlspecialchars($audit_blk_label) ?></td>
                             <td style="text-align:center;"><?= number_format((int)$expected_adj_qty,0,',','.') ?></td>
@@ -1340,7 +1330,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <div class="audit-item" style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid #eee;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                                 <div style="font-size:13px;">
-                                    <strong><?= ($idx + 1) ?>. Blok <?= htmlspecialchars(get_block_short_label($rep['blok'])) ?></strong>
+                                    <strong><?= ($idx + 1) ?>. Blok <?= htmlspecialchars($rep['blok']) ?></strong>
                                 </div>
                                 <div style="font-size:12px; font-weight:bold;">
                                     <?php 
