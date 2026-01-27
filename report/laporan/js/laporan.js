@@ -51,6 +51,14 @@ function buildReportUrl(params){
 function openNoteModal(){
     var modal = document.getElementById('noteModal');
     if (modal) modal.style.display = 'flex';
+    if (modal) {
+        var noteInput = modal.querySelector('textarea[name="note_text"]');
+        if (noteInput) {
+            noteInput.disabled = false;
+            noteInput.readOnly = false;
+            noteInput.focus();
+        }
+    }
 }
 function closeNoteModal(){
     var modal = document.getElementById('noteModal');
