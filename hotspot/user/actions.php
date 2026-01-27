@@ -333,57 +333,120 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     if ($action_blocked) {
       // skip action
     } elseif ($act == 'delete_user_full') {
-      $active_rows = $API->comm('/ip/hotspot/active/print', [
+      $delete_map = [];
+      if ($name != '') {
+        $delete_map[strtolower($name)] = $name;
+      }
+
+      $base_comment = '';
+      $uinfo_full = $API->comm('/ip/hotspot/user/print', [
         '?server' => $hotspot_server,
-        '?user' => $name,
-        '.proplist' => '.id,user'
+        '?name' => $name,
+        '.proplist' => '.id,name,comment'
       ]);
-      if (!empty($active_rows)) {
-        foreach ($active_rows as $a) {
-          if (!empty($a['.id'])) {
-            $API->write('/ip/hotspot/active/remove', false);
-            $API->write('=.id=' . $a['.id']);
-            $API->read();
+      if (!empty($uinfo_full[0]['comment'])) {
+        $base_comment = $uinfo_full[0]['comment'];
+      }
+      if ($base_comment === '' && $db && $name != '') {
+        $hist = get_user_history($name);
+        if ($hist && !empty($hist['raw_comment'])) {
+          $base_comment = $hist['raw_comment'];
+        }
+      }
+
+      $ref_user = extract_retur_user_from_ref($base_comment);
+      if ($ref_user != '') {
+        $delete_map[strtolower($ref_user)] = $ref_user;
+      }
+
+      $target_ref = 'Retur Ref:vc-' . $name;
+      $target_ref_alt = 'Retur Ref:' . $name;
+      $list = $API->comm('/ip/hotspot/user/print', [
+        '?server' => $hotspot_server,
+        '.proplist' => '.id,name,comment'
+      ]);
+      foreach ($list as $usr) {
+        $cmt = $usr['comment'] ?? '';
+        $uname = $usr['name'] ?? '';
+        if ($uname != '' && $cmt != '') {
+          if (stripos($cmt, $target_ref) !== false || stripos($cmt, $target_ref_alt) !== false) {
+            $delete_map[strtolower($uname)] = $uname;
           }
         }
       }
 
-      $uid_target = $uid;
-      if ($uid_target == '') {
+      if ($db && $name != '') {
+        try {
+          $stmt = $db->prepare("SELECT DISTINCT username FROM login_history WHERE raw_comment LIKE :a OR raw_comment LIKE :b");
+          $stmt->execute([
+            ':a' => '%Retur Ref:vc-' . $name . '%',
+            ':b' => '%Retur Ref:' . $name . '%'
+          ]);
+          while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $uname = $row['username'] ?? '';
+            if ($uname != '') {
+              $delete_map[strtolower($uname)] = $uname;
+            }
+          }
+        } catch (Exception $e) {}
+      }
+
+      $delete_names = array_values($delete_map);
+      $deleted_list = [];
+
+      foreach ($delete_names as $del_name) {
+        if ($del_name == '') continue;
+        $active_rows = $API->comm('/ip/hotspot/active/print', [
+          '?server' => $hotspot_server,
+          '?user' => $del_name,
+          '.proplist' => '.id,user'
+        ]);
+        if (!empty($active_rows)) {
+          foreach ($active_rows as $a) {
+            if (!empty($a['.id'])) {
+              $API->write('/ip/hotspot/active/remove', false);
+              $API->write('=.id=' . $a['.id']);
+              $API->read();
+            }
+          }
+        }
+
+        $uid_target = '';
         $uget = $API->comm('/ip/hotspot/user/print', [
           '?server' => $hotspot_server,
-          '?name' => $name,
+          '?name' => $del_name,
           '.proplist' => '.id'
         ]);
         if (isset($uget[0]['.id'])) {
           $uid_target = $uget[0]['.id'];
         }
-      }
-      if ($uid_target != '') {
-        $API->write('/ip/hotspot/user/remove', false);
-        $API->write('=.id=' . $uid_target);
-        $API->read();
-      }
+        if ($uid_target != '') {
+          $API->write('/ip/hotspot/user/remove', false);
+          $API->write('=.id=' . $uid_target);
+          $API->read();
+        }
 
-      try {
-        $db->beginTransaction();
-        $tables = [
-          'login_history' => 'username',
-          'login_events' => 'username',
-          'sales_history' => 'username',
-          'live_sales' => 'username'
-        ];
-        foreach ($tables as $table => $col) {
-          try {
-            $stmt = $db->prepare("DELETE FROM {$table} WHERE {$col} = :u");
-            $stmt->execute([':u' => $name]);
-          } catch (Exception $e) {}
+        try {
+          $db->beginTransaction();
+          $tables = [
+            'login_history' => 'username',
+            'login_events' => 'username',
+            'sales_history' => 'username',
+            'live_sales' => 'username'
+          ];
+          foreach ($tables as $table => $col) {
+            try {
+              $stmt = $db->prepare("DELETE FROM {$table} WHERE {$col} = :u");
+              $stmt->execute([':u' => $del_name]);
+            } catch (Exception $e) {}
+          }
+          $db->commit();
+        } catch (Exception $e) {
+          if ($db->inTransaction()) {
+            $db->rollBack();
+          }
         }
-        $db->commit();
-      } catch (Exception $e) {
-        if ($db->inTransaction()) {
-          $db->rollBack();
-        }
+        $deleted_list[] = $del_name;
       }
 
       $log_dir = $root_dir . '/logs';
@@ -391,9 +454,13 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         @mkdir($log_dir, 0755, true);
       }
       $admin_name = $_SESSION['mikhmon'] ?? 'superadmin';
-      $log_line = '[' . date('Y-m-d H:i:s') . '] ' . $admin_name . ' delete_user_full ' . $name . "\n";
+      $log_line = '[' . date('Y-m-d H:i:s') . '] ' . $admin_name . ' delete_user_full ' . implode(',', $deleted_list) . "\n";
       @file_put_contents($log_dir . '/admin_actions.log', $log_line, FILE_APPEND);
-      $action_message = 'Berhasil hapus total user ' . $name . ' (Router + DB).';
+      if (count($deleted_list) > 1) {
+        $action_message = 'Berhasil hapus total user: ' . implode(', ', $deleted_list) . ' (Router + DB).';
+      } else {
+        $action_message = 'Berhasil hapus total user ' . ($deleted_list[0] ?? $name) . ' (Router + DB).';
+      }
     } elseif ($act == 'delete_block_full') {
       $blok_norm = extract_blok_name($blok);
       $target_norm = $blok_norm ?: $blok;
