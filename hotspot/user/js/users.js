@@ -409,118 +409,74 @@
     }
   };
 
-  window.openPrintListPopup = async function(payload) {
-    if (!payload || !payload.url) {
-      return;
-    }
-    const statusMap = {
-      all: 'Semua',
-      used: 'Terpakai',
-      online: 'Online',
-      rusak: 'Rusak',
-      ready: 'Ready',
-      retur: 'Retur'
-    };
-    const statusLabel = statusMap[payload.status] || (payload.status || 'Semua');
-    const blokLabel = payload.blok ? payload.blok : '-';
-    const profileLabel = payload.profile && payload.profile !== 'all' ? payload.profile + ' Menit' : 'Semua Profil';
-    const periodeLabel = payload.show || 'harian';
-    const dateLabel = payload.date || '-';
+  window.openUnifiedPrintPopup = async function(payload) {
+    const listUrl = payload && payload.listUrl ? payload.listUrl : '';
+    const codeUrl = payload && payload.codeUrl ? payload.codeUrl : '';
+    const blokLabel = payload && payload.blok ? payload.blok : '-';
+    if (!listUrl && !codeUrl) return;
 
     const detailMsg = `
       <div style="text-align:left;">
-        <div style="font-weight:600; font-size:15px; margin-bottom:6px; color:#fff;">
-          Konfirmasi Print List
-        </div>
-        <div style="font-size:13px; color:#cbd5e1; margin-bottom:12px;">
-          Cetak daftar berdasarkan filter saat ini.
-        </div>
-        <div style="background:rgba(59, 130, 246, 0.12); border:1px solid rgba(59, 130, 246, 0.3); padding:10px; border-radius:6px; font-size:12px; color:#e2e8f0; line-height:1.5;">
-          <div><strong>Status:</strong> ${statusLabel}</div>
-          <div><strong>Blok:</strong> ${blokLabel}</div>
-          <div><strong>Profil:</strong> ${profileLabel}</div>
-          <div><strong>Periode:</strong> ${periodeLabel}</div>
-          <div><strong>Tanggal:</strong> ${dateLabel}</div>
-        </div>
-      </div>
-    `;
-
-    const ok = await showOverlayChoice({
-      title: 'Print List',
-      messageHtml: detailMsg,
-      type: 'info',
-      layout: 'vertical',
-      buttons: [
-        {
-          label: `
-            <i class="fa fa-print"></i>
-            <div class="btn-rich-text">
-              <span class="btn-rich-title">Print Sekarang</span>
-              <span class="btn-rich-desc">Buka jendela cetak daftar.</span>
-            </div>`,
-          value: true,
-          className: 'overlay-btn-info'
-        },
-        {
-          label: `
-            <i class="fa fa-times"></i>
-            <div class="btn-rich-text"><span class="btn-rich-title">Batal</span></div>`,
-          value: false,
-          className: 'overlay-btn-muted'
-        }
-      ]
-    });
-    if (!ok) return;
-    const w = window.open(payload.url, '_blank');
-    if (!w) window.location.href = payload.url;
-  };
-
-  window.openPrintCodePopup = async function(url, blokLabel) {
-    if (!url) return;
-    const detailMsg = `
-      <div style="text-align:left;">
-        <div style="font-weight:600; font-size:15px; margin-bottom:6px; color:#fff;">Konfirmasi Print Kode</div>
-        <div style="font-size:13px; color:#cbd5e1; margin-bottom:12px;">Cetak voucher sesuai blok yang dipilih.</div>
+        <div style="font-weight:600; font-size:15px; margin-bottom:6px; color:#fff;">Pilih Jenis Print</div>
+        <div style="font-size:13px; color:#cbd5e1; margin-bottom:12px;">Pilih salah satu opsi di bawah ini.</div>
         <div style="background:rgba(59, 130, 246, 0.12); border:1px solid rgba(59, 130, 246, 0.3); padding:10px; border-radius:6px; font-size:12px; color:#e2e8f0;">
           <strong>Blok:</strong> ${blokLabel || '-'}
         </div>
       </div>
     `;
+
     const ok = await showOverlayChoice({
-      title: 'Print Kode',
+      title: 'Print',
       messageHtml: detailMsg,
       type: 'info',
       layout: 'vertical',
       buttons: [
         {
           label: `
-            <i class="fa fa-print"></i>
+            <i class="fa fa-list"></i>
             <div class="btn-rich-text">
-              <span class="btn-rich-title">Print Sekarang</span>
-              <span class="btn-rich-desc">Buka jendela cetak kode voucher.</span>
+              <span class="btn-rich-title">Print List</span>
+              <span class="btn-rich-desc">Cetak daftar sesuai filter saat ini.</span>
             </div>`,
-          value: true,
-          className: 'overlay-btn-info'
+          value: 'list',
+          className: 'overlay-btn-info',
+          disabled: !listUrl
+        },
+        {
+          label: `
+            <i class="fa fa-ticket"></i>
+            <div class="btn-rich-text">
+              <span class="btn-rich-title">Print Kode</span>
+              <span class="btn-rich-desc">Cetak voucher sesuai blok terpilih.</span>
+            </div>`,
+          value: 'code',
+          className: 'overlay-btn-info',
+          disabled: !codeUrl
         },
         {
           label: `
             <i class="fa fa-times"></i>
             <div class="btn-rich-text"><span class="btn-rich-title">Batal</span></div>`,
-          value: false,
+          value: 'cancel',
           className: 'overlay-btn-muted'
         }
       ]
     });
-    if (!ok) return;
-    const w = window.open(url, '_blank');
-    if (w) {
-      try {
-        w.onload = function() {
-          setTimeout(() => { try { w.print(); } catch (e) {} }, 400);
-        };
-      } catch (e) {}
-    } else {
-      window.location.href = url;
+
+    if (ok === 'list') {
+      const w = window.open(listUrl, '_blank');
+      if (!w) window.location.href = listUrl;
+    } else if (ok === 'code') {
+      const w = window.open(codeUrl, '_blank');
+      if (w) {
+        try {
+          w.onload = function() {
+            setTimeout(() => { try { w.print(); } catch (e) {} }, 400);
+          };
+        } catch (e) {}
+      } else {
+        window.location.href = codeUrl;
+      }
     }
   };
 
