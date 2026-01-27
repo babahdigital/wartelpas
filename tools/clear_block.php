@@ -57,6 +57,7 @@ $glob_pattern = $use_glob ? ($blok_upper . '[0-9]*') : '';
 $date = trim((string)($_GET['date'] ?? ''));
 $delete_hp = isset($_GET['delete_hp']) && $_GET['delete_hp'] === '1';
 $delete_login = isset($_GET['delete_login']) && $_GET['delete_login'] === '1';
+$delete_audit = isset($_GET['delete_audit']) && $_GET['delete_audit'] === '1';
 $dateClause = '';
 $dateParams = [];
 if ($date !== '') {
@@ -109,7 +110,19 @@ try {
         $deleted_hp = $stmt->rowCount();
     }
 
-    echo "OK login=" . ($delete_login ? $deleted_login : 'skipped') . ", sales=" . $deleted_sales . ", live=" . $deleted_live . ", hp=" . ($delete_hp ? $deleted_hp : 'skipped');
+    $deleted_audit = 0;
+    if ($delete_audit) {
+        try {
+            $stmtChk = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='audit_rekap_manual' LIMIT 1");
+            if ($stmtChk && $stmtChk->fetchColumn()) {
+                $stmt = $db->prepare("DELETE FROM audit_rekap_manual WHERE (" . $whereBlok . ")" . ($date !== '' ? " AND report_date = :d" : ""));
+                $stmt->execute(array_merge($use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern] : [':b' => $blok_upper], $date !== '' ? [':d' => $date] : []));
+                $deleted_audit = $stmt->rowCount();
+            }
+        } catch (Exception $e) {}
+    }
+
+    echo "OK login=" . ($delete_login ? $deleted_login : 'skipped') . ", sales=" . $deleted_sales . ", live=" . $deleted_live . ", hp=" . ($delete_hp ? $deleted_hp : 'skipped') . ", audit=" . ($delete_audit ? $deleted_audit : 'skipped');
 } catch (Exception $e) {
     http_response_code(500);
     echo "Error";
