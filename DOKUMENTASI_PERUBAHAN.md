@@ -222,6 +222,11 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
   - `get_relogin_events_db`
 - Perbaikan ini mencegah **halaman users blank** akibat fatal error redeclare, tanpa mengubah hasil print.
 
+### 2.28 Aksi Hapus Total User (Superadmin) (2026-01-27)
+- Tambah aksi **Hapus Total** di halaman users untuk **superadmin**.
+- Aksi ini menghapus user dari **RouterOS** (user + active) dan menghapus data di **login_history**, **login_events**, **sales_history**, **live_sales**.
+- Aktivitas dicatat ke **logs/admin_actions.log**.
+
 ### 2.24 Penyempurnaan Users Modular (2026-01-26)
 - Tombol **clear search (X)** stabil saat kehilangan fokus (klik di luar/ke taskbar).
 - `Retur dari` kini menampilkan username bersih (tanpa prefix **vc-**), parsing `Retur Ref` lebih fleksibel.

@@ -504,6 +504,9 @@
                           <button type="button" class="btn-act btn-act-invalid" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'], ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'], ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'], ENT_QUOTES) ?>" data-login="<?= htmlspecialchars($u['login_time'], ENT_QUOTES) ?>" data-logout="<?= htmlspecialchars($u['logout_time'], ENT_QUOTES) ?>" data-bytes="<?= (int)$u['bytes'] ?>" data-uptime="<?= htmlspecialchars($u['uptime'], ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'], ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" onclick="actionRequestRusak(this,'./?hotspot=users&action=invalid&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','SET RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rusak"><i class="fa fa-ban"></i></button>
                         <?php endif; ?>
                       <?php endif; ?>
+                      <?php if (!empty($is_superadmin)): ?>
+                        <button type="button" class="btn-act btn-act-delete" onclick="actionRequest('./?hotspot=users&action=delete_user_full&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Hapus total user <?= htmlspecialchars($u['name']) ?> (Router + DB)?')" title="Hapus Total"><i class="fa fa-trash"></i></button>
+                      <?php endif; ?>
                     </td>
                   </tr>
                 <?php endforeach; ?>

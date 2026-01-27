@@ -2,6 +2,7 @@
 // Action handler sederhana (invalid/retur/delete)
 if (isset($_GET['action']) || isset($_POST['action'])) {
   $root_dir = dirname(__DIR__, 2);
+  require_once($root_dir . '/include/acl.php');
   $env = [];
   $envFile = $root_dir . '/include/env.php';
   if (file_exists($envFile)) {
@@ -74,7 +75,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       exit();
     }
   }
-  if ($act == 'invalid' || $act == 'retur' || $act == 'rollback' || $act == 'delete' || $act == 'batch_delete' || $act == 'delete_status' || $act == 'check_rusak' || $act == 'disable' || $act == 'enable') {
+  if ($act == 'invalid' || $act == 'retur' || $act == 'rollback' || $act == 'delete' || $act == 'delete_user_full' || $act == 'batch_delete' || $act == 'delete_status' || $act == 'check_rusak' || $act == 'disable' || $act == 'enable') {
     $uid = $_GET['uid'] ?? '';
     $name = $_GET['name'] ?? '';
     $comm = $_GET['c'] ?? '';
@@ -96,7 +97,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $is_rusak_target = true;
     }
 
-    if ($uid == '' && $name != '' && in_array($act, ['invalid','retur','rollback','delete','disable','enable'])) {
+    if ($uid == '' && $name != '' && in_array($act, ['invalid','retur','rollback','delete','delete_user_full','disable','enable'])) {
       $uget = $API->comm('/ip/hotspot/user/print', [
         '?server' => $hotspot_server,
         '?name' => $name,
@@ -290,6 +291,19 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $action_error = 'Gagal: database belum siap. Sync dulu sebelum hapus status.';
     }
 
+    if (!$action_blocked && $act == 'delete_user_full') {
+      if (!isSuperAdmin()) {
+        $action_blocked = true;
+        $action_error = 'Akses ditolak. Hanya Superadmin.';
+      } elseif ($name == '') {
+        $action_blocked = true;
+        $action_error = 'User tidak ditemukan.';
+      } elseif (!$db) {
+        $action_blocked = true;
+        $action_error = 'Gagal: database belum siap.';
+      }
+    }
+
     if (!$action_blocked && $act == 'delete' && $name != '') {
       $active_check = $API->comm('/ip/hotspot/active/print', [
         '?server' => $hotspot_server,
@@ -304,6 +318,67 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
 
     if ($action_blocked) {
       // skip action
+    } elseif ($act == 'delete_user_full') {
+      $active_rows = $API->comm('/ip/hotspot/active/print', [
+        '?server' => $hotspot_server,
+        '?user' => $name,
+        '.proplist' => '.id,user'
+      ]);
+      if (!empty($active_rows)) {
+        foreach ($active_rows as $a) {
+          if (!empty($a['.id'])) {
+            $API->write('/ip/hotspot/active/remove', false);
+            $API->write('=.id=' . $a['.id']);
+            $API->read();
+          }
+        }
+      }
+
+      $uid_target = $uid;
+      if ($uid_target == '') {
+        $uget = $API->comm('/ip/hotspot/user/print', [
+          '?server' => $hotspot_server,
+          '?name' => $name,
+          '.proplist' => '.id'
+        ]);
+        if (isset($uget[0]['.id'])) {
+          $uid_target = $uget[0]['.id'];
+        }
+      }
+      if ($uid_target != '') {
+        $API->write('/ip/hotspot/user/remove', false);
+        $API->write('=.id=' . $uid_target);
+        $API->read();
+      }
+
+      try {
+        $db->beginTransaction();
+        $tables = [
+          'login_history' => 'username',
+          'login_events' => 'username',
+          'sales_history' => 'username',
+          'live_sales' => 'username'
+        ];
+        foreach ($tables as $table => $col) {
+          try {
+            $stmt = $db->prepare("DELETE FROM {$table} WHERE {$col} = :u");
+            $stmt->execute([':u' => $name]);
+          } catch (Exception $e) {}
+        }
+        $db->commit();
+      } catch (Exception $e) {
+        if ($db->inTransaction()) {
+          $db->rollBack();
+        }
+      }
+
+      $log_dir = $root_dir . '/logs';
+      if (!is_dir($log_dir)) {
+        @mkdir($log_dir, 0755, true);
+      }
+      $admin_name = $_SESSION['mikhmon'] ?? 'superadmin';
+      $log_line = '[' . date('Y-m-d H:i:s') . '] ' . $admin_name . ' delete_user_full ' . $name . "\n";
+      @file_put_contents($log_dir . '/admin_actions.log', $log_line, FILE_APPEND);
     } elseif ($act == 'delete_status') {
       $status_map = [
         'used' => 'terpakai',
