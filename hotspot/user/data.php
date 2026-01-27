@@ -339,18 +339,6 @@ if (!$is_ajax) {
   if (!empty($all_users)) {
     foreach ($all_users as $u) {
       $bn = extract_blok_name($u['comment'] ?? '') ?: extract_blok_name($u['raw_comment'] ?? '');
-      if ($bn === '' && !empty($u['name'])) {
-        $hist_blok = '';
-        $hist = get_user_history($u['name']);
-        if (!empty($hist['blok_name'])) {
-          $hist_blok = $hist['blok_name'];
-        } elseif (!empty($hist['raw_comment'])) {
-          $hist_blok = $hist['raw_comment'];
-        }
-        if ($hist_blok !== '') {
-          $bn = extract_blok_name($hist_blok);
-        }
-      }
       if ($bn && !in_array($bn, $list_blok)) $list_blok[] = $bn;
     }
   }

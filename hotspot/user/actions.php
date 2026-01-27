@@ -468,17 +468,16 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $target_cmp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $target_norm));
       $blok_clean = preg_replace('/[^A-Za-z0-9]/i', '', (string)$target_norm);
       $blok_keyword = preg_replace('/^BLOK/i', '', strtoupper($blok_clean));
-      if (preg_match('/^([A-Z]+)/', $blok_keyword, $m)) {
-        $blok_keyword = $m[1];
-      }
       $blok_upper = 'BLOK' . $blok_keyword;
-      $blok_like = $blok_upper . '%';
+      $use_glob = !preg_match('/\d$/', $blok_upper);
+      $glob_pattern = $use_glob ? ($blok_upper . '[0-9]*') : '';
       $sql_pattern_1 = 'BLOK-' . $blok_keyword;
       $sql_pattern_2 = 'BLOK ' . $blok_keyword;
+      $sql_pattern_3 = 'BLOK' . $blok_keyword;
       $raw_like1 = '%' . $sql_pattern_1 . '%';
       $raw_like2 = '%' . $sql_pattern_2 . '%';
-      $raw_like3 = '%|BLOK-' . $blok_keyword . '%';
-      $search_pattern = 'Blok-' . $blok_keyword;
+      $raw_like3 = '%' . $sql_pattern_3 . '%';
+      $raw_like4 = '%' . $blok_keyword . '%';
 
       $active_list = $API->comm('/ip/hotspot/active/print', [
         '?server' => $hotspot_server,
@@ -492,15 +491,11 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $base_usernames = [];
       $retur_usernames = [];
       $delete_name_map = [];
-      $whereBlok = "UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) LIKE :b_like";
-      $whereRaw = " OR UPPER(raw_comment) LIKE :rc1 OR UPPER(raw_comment) LIKE :rc2 OR UPPER(raw_comment) LIKE :rc3";
+      $whereBlok = "UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) = :b_clean" . ($use_glob ? " OR UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) GLOB :bg" : "");
+      $whereRaw = " OR UPPER(raw_comment) LIKE :rc1 OR UPPER(raw_comment) LIKE :rc2 OR UPPER(raw_comment) LIKE :rc3 OR UPPER(raw_comment) LIKE :rc4";
       $whereMatch = "(" . $whereBlok . $whereRaw . ")";
-      $base_params = [
-        ':b_like' => $blok_like,
-        ':rc1' => $raw_like1,
-        ':rc2' => $raw_like2,
-        ':rc3' => $raw_like3
-      ];
+      $base_params = $use_glob ? [':b_clean' => $blok_upper, ':bg' => $glob_pattern, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4]
+        : [':b_clean' => $blok_upper, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4];
 
       try {
         $stmt = $db->prepare("SELECT username FROM login_history WHERE $whereMatch");
@@ -610,7 +605,6 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       }
 
       $router_deleted = 0;
-      $router_deleted_scripts = 0;
       foreach ($to_delete as $d) {
         $uname = $d['name'] ?? '';
         if ($uname !== '' && !empty($active_map[$uname])) {
@@ -623,26 +617,6 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           $API->write('=.id=' . $d['id']);
           $API->read();
           $router_deleted++;
-        }
-      }
-
-      if ($search_pattern !== '') {
-        $scripts = $API->comm('/system/script/print', [
-          '.proplist' => '.id,name,comment'
-        ]);
-        $search_pattern_alt = str_replace('-', ' ', $search_pattern);
-        foreach ($scripts as $scr) {
-          $sname = $scr['name'] ?? '';
-          $scomment = $scr['comment'] ?? '';
-          $hay = $sname . ' ' . $scomment;
-          if ($hay !== '' && (stripos($hay, $search_pattern) !== false || stripos($hay, $search_pattern_alt) !== false)) {
-            if (isset($scr['.id'])) {
-              $API->write('/system/script/remove', false);
-              $API->write('=.id=' . $scr['.id']);
-              $API->read();
-              $router_deleted_scripts++;
-            }
-          }
         }
       }
 
@@ -686,7 +660,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $stmt = $db->prepare("DELETE FROM live_sales WHERE $whereMatch$userClause");
         $stmt->execute(array_merge($params, $userParams));
 
-        $blok_params = [':b_like' => $blok_like];
+        $blok_params = $use_glob ? [':b_clean' => $blok_upper, ':bg' => $glob_pattern] : [':b_clean' => $blok_upper];
         try {
           $stmtChk = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='audit_rekap_manual' LIMIT 1");
           if ($stmtChk && $stmtChk->fetchColumn()) {
@@ -715,10 +689,10 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         @mkdir($log_dir, 0755, true);
       }
       $admin_name = $_SESSION['mikhmon'] ?? 'superadmin';
-      $log_line = '[' . date('Y-m-d H:i:s') . '] ' . $admin_name . ' delete_block_full ' . $blok_upper . ' users=' . $router_deleted . ' scripts=' . $router_deleted_scripts . "\n";
+      $log_line = '[' . date('Y-m-d H:i:s') . '] ' . $admin_name . ' delete_block_full ' . $blok_upper . "\n";
       @file_put_contents($log_dir . '/admin_actions.log', $log_line, FILE_APPEND);
       $retur_note = !empty($retur_usernames) ? ' (termasuk retur: ' . count($retur_usernames) . ' user)' : '';
-      $action_message = 'Berhasil hapus total blok ' . $blok_upper . ' (Router: ' . $router_deleted . ' user, Script: ' . $router_deleted_scripts . ', DB: ' . $db_deleted_count . ' user)' . $retur_note . '.';
+      $action_message = 'Berhasil hapus total blok ' . $blok_upper . ' (Router: ' . $router_deleted . ' user, DB: ' . $db_deleted_count . ' user)' . $retur_note . '.';
     } elseif ($act == 'delete_status') {
       $status_map = [
         'used' => 'terpakai',
@@ -1061,15 +1035,6 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             'status' => 'ready'
           ];
           save_user_history($name, $save_data);
-
-          try {
-            $stmt = $db->prepare("UPDATE sales_history SET status='ready', is_rusak=0, is_retur=0, is_invalid=0 WHERE username = :u");
-            $stmt->execute([':u' => $name]);
-          } catch(Exception $e) {}
-          try {
-            $stmt = $db->prepare("UPDATE live_sales SET status='ready', is_rusak=0, is_retur=0, is_invalid=0 WHERE username = :u AND sync_status = 'pending'");
-            $stmt->execute([':u' => $name]);
-          } catch(Exception $e) {}
 
           if ($db && $name != '') {
             try {
