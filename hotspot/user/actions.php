@@ -706,6 +706,17 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             'status' => 'retur'
           ];
           save_user_history($name, $save_data);
+
+          if ($name != '') {
+            try {
+              $stmt = $db->prepare("UPDATE sales_history SET status='retur', is_rusak=0, is_retur=1, is_invalid=0 WHERE username = :u");
+              $stmt->execute([':u' => $name]);
+            } catch(Exception $e) {}
+            try {
+              $stmt = $db->prepare("UPDATE live_sales SET status='retur', is_rusak=0, is_retur=1, is_invalid=0 WHERE username = :u AND sync_status = 'pending'");
+              $stmt->execute([':u' => $name]);
+            } catch(Exception $e) {}
+          }
         }
 
         // Hapus voucher lama
