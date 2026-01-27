@@ -449,6 +449,14 @@ foreach ($rows as $r) {
         $status = $status_db;
     }
 
+    if ($status === 'retur') {
+        $has_retur_marker = (strpos($cmt_low, 'retur') !== false);
+        $has_rusak_marker = (strpos($cmt_low, 'rusak') !== false) || ($lh_status === 'rusak') || ((int)($r['is_rusak'] ?? 0) === 1);
+        if (!$has_retur_marker && $has_rusak_marker) {
+            $status = 'rusak';
+        }
+    }
+
     if (in_array($status, ['rusak', 'retur', 'invalid'], true) && $username !== '') {
         $kind = detect_profile_minutes($profile);
         $inc_key = $username . '|' . $kind . '|' . $status;

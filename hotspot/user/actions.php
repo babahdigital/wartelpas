@@ -864,6 +864,40 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       }
       // Jangan hapus histori pemakaian per blok di login_history
       $action_message = 'Berhasil hapus user Router untuk blok ' . ($blok_norm ?: $blok_raw) . '.';
+    } elseif ($act == 'rollback' && $uid == '' && $name != '' && $db) {
+      $hist = get_user_history($name);
+      $base_comment = $comm != '' ? $comm : (string)($hist['raw_comment'] ?? '');
+      $clean_comment = preg_replace('/\bAudit:\s*RUSAK\s*\d{2}\/\d{2}\/\d{2}\s*/i', '', $base_comment);
+      $clean_comment = preg_replace('/\bRUSAK\b\s*/i', '', $clean_comment);
+      $clean_comment = preg_replace('/\(Retur\)\s*/i', '', $clean_comment);
+      $clean_comment = preg_replace('/Retur\s*Ref\s*:[^|]+/i', '', $clean_comment);
+      $clean_comment = preg_replace('/\s+\|\s+/', ' | ', $clean_comment);
+      $clean_comment = trim($clean_comment);
+
+      $save_data = [
+        'raw' => $clean_comment,
+        'status' => 'ready'
+      ];
+      save_user_history($name, $save_data);
+
+      try {
+        $stmt = $db->prepare("UPDATE login_history SET last_status='ready', updated_at=CURRENT_TIMESTAMP,
+          login_time_real=COALESCE(NULLIF(login_time_real,''), CURRENT_TIMESTAMP),
+          last_login_real=COALESCE(NULLIF(last_login_real,''), CURRENT_TIMESTAMP)
+          WHERE username = :u");
+        $stmt->execute([':u' => $name]);
+      } catch(Exception $e) {}
+
+      try {
+        $stmt = $db->prepare("UPDATE sales_history SET status='normal', is_rusak=0, is_retur=0, is_invalid=0 WHERE username = :u");
+        $stmt->execute([':u' => $name]);
+      } catch(Exception $e) {}
+      try {
+        $stmt = $db->prepare("UPDATE live_sales SET status='normal', is_rusak=0, is_retur=0, is_invalid=0 WHERE username = :u");
+        $stmt->execute([':u' => $name]);
+      } catch(Exception $e) {}
+
+      $action_message = 'Berhasil rollback RUSAK untuk ' . $name . ' (DB).';
     } elseif ($uid != '') {
       if ($act == 'delete') {
         $API->write('/ip/hotspot/user/remove', false);
