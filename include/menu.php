@@ -482,12 +482,15 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
 
 <?php if ($id != "") { ?>
     <nav class="top-navbar">
-        <a id="brand" class="wartelpas-brand" href="javascript:void(0)">MIKHMON</a>
+        <a id="brand" class="wartelpas-brand" href="./admin.php?id=sessions">
+            <img src="img/logo.png" alt="MIKHMON" class="brand-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <span style="display:none; color:#fff; font-weight:bold; font-size:18px;">WARTELPAS</span>
+        </a>
 
         <div class="mobile-toggle" onclick="toggleMenu()"><i class="fa fa-bars"></i></div>
 
         <ul class="nav-links" id="mainNav">
-            <?php if (isSuperAdmin() && (($id == "settings" && $session == "new") || $id == "settings" || $id == "editor" || $id == "uplogo" || $id == "connect")): ?>
+            <?php if (isSuperAdmin() && (($id == "settings" && $session == "new") || $id == "settings" || $id == "uplogo" || $id == "connect")): ?>
                 <li class="nav-item">
                     <a class="nav-link connect <?= $shome; ?>" id="<?= $session; ?>&c=settings" href="javascript:void(0)">
                         <i class="fa fa-tachometer"></i> <?= $_dashboard ?> (<?= $session; ?>)
@@ -496,11 +499,6 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                 <li class="nav-item">
                     <a class="nav-link <?= $ssettings; ?>" href="./admin.php?id=settings&session=<?= $session; ?>">
                         <i class="fa fa-gear"></i> <?= $_session_settings ?>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <?= $seditor; ?>" href="./admin.php?id=editor&template=default&session=<?= $session; ?>">
-                        <i class="fa fa-edit"></i> <?= $_template_editor ?>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -527,20 +525,25 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         </ul>
 
         <div class="nav-right">
-            <select class="slang" onchange="stheme(this.value)" style="background:#374850;color:#fff;border:none;padding:5px;border-radius:4px;">
-                <option><?= $language ?></option>
-                <?php
-                    $fileList = glob('lang/*');
-                    foreach ($fileList as $filename) {
-                        if (is_file($filename)) {
-                            $fname = substr(explode("/", $filename)[1], 0, -4);
-                            if ($fname != "isocodelang") {
-                                echo '<option value="'.$url.'&setlang=' . $fname . '">'. $isocodelang[$fname]. '</option>';
-                            }
-                        }
-                    }
-                ?>
-            </select>
+            <?php $is_superadmin = isSuperAdmin(); ?>
+            <?php if ($is_superadmin): ?>
+                <a id="db-backup" class="db-tools" href="javascript:void(0)" title="Backup Database" onclick="runBackupAjax()">
+                    <i class="fa fa-database"></i> Backup
+                </a>
+                <a id="db-restore" class="db-tools" href="javascript:void(0)" title="Restore Backup Terbaru" onclick="runRestoreAjax()">
+                    <i class="fa fa-history"></i> Restore
+                </a>
+            <?php else: ?>
+                <a id="db-restore" class="db-tools" href="javascript:void(0)" title="Restore Backup Terbaru" onclick="runRestoreAjax()" style="display:none;">
+                    <i class="fa fa-history"></i> Restore
+                </a>
+            <?php endif; ?>
+            <span class="timer-badge" title="Waktu Saat Ini">
+                <i class="fa fa-clock-o"></i> <span id="timer_val">--:--</span>
+            </span>
+            <span id="db-status" class="db-status" title="Kesehatan Database">
+                <i class="fa fa-heart"></i>
+            </span>
             <a id="logout" href="./admin.php?id=logout" title="<?= $_logout ?>"><i class="fa fa-sign-out fa-lg"></i></a>
         </div>
     </nav>

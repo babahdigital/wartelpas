@@ -244,8 +244,8 @@ if ($id == "login" || substr($url, -1) == "p") {
   unlink("$remlogo");
   echo "<script>window.location='./admin.php?id=uplogo&session=" . $session . "'</script>";
 } elseif ($id == "editor"  && !empty($session)) {
-  include_once('./include/menu.php');
-  include_once('./settings/vouchereditor.php');
+  echo "<script>window.location='./error.php?code=404'</script>";
+  exit;
 } elseif (empty($id)) {
   echo "<script>window.location='./admin.php?id=sessions'</script>";
 } elseif(in_array($id, $ids) && empty($session)){
