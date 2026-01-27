@@ -990,8 +990,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <?php
                             $evidence = [];
                             $profile_qty = [];
-                            $profile10 = ['user' => [], 'up' => [], 'byte' => [], 'login' => [], 'total' => []];
-                            $profile30 = ['user' => [], 'up' => [], 'byte' => [], 'login' => [], 'total' => []];
+                            $profile10_items = [];
+                            $profile30_items = [];
                             $profile10_sum = 0;
                             $profile30_sum = 0;
                             $cnt_rusak_10 = 0;
@@ -1021,26 +1021,29 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             $price_val = (int)($ud['price'] ?? 0);
                                             $upt = $upt !== '' ? $upt : '-';
                                             $kind = (string)($ud['profile_kind'] ?? '10');
-                                            $bucket = ($kind === '30') ? $profile30 : $profile10;
                                             // Collecting data
                                             $u_status = normalize_status_value($ud['last_status'] ?? '');
-                                            $is_unreported = ($uname !== '' && $uname !== '-') && ($u_status !== 'rusak') && ($u_status !== 'retur');
-                                            $bucket['user'][] = ['label' => (string)$uname, 'status' => $u_status];
-                                            $bucket['up'][] = $upt;
-                                            $bucket['byte'][] = $lb;
-                                            $bucket['login'][] = $cnt . 'x';
-                                            $bucket['total'][] = number_format($price_val,0,',','.');
+                                            if (!in_array($u_status, ['rusak', 'retur', 'invalid'], true)) {
+                                                $u_status = 'anomaly';
+                                            }
+                                            $is_unreported = ($uname !== '' && $uname !== '-') && ($u_status === 'anomaly');
+                                            $item = [
+                                                'label' => (string)$uname,
+                                                'status' => $u_status,
+                                                'uptime' => $upt,
+                                                'bytes' => $lb
+                                            ];
                                             
                                             if ($kind === '30') {
                                                 $profile30_sum += $price_val;
-                                                $profile30 = $bucket;
+                                                $profile30_items[] = $item;
                                                 if($u_status === 'rusak') $cnt_rusak_30++;
                                                 if($u_status === 'retur') $cnt_retur_30++;
                                                 if($u_status === 'invalid') $cnt_invalid_30++;
                                                 if ($is_unreported) $cnt_unreported_30++;
                                             } else {
                                                 $profile10_sum += $price_val;
-                                                $profile10 = $bucket;
+                                                $profile10_items[] = $item;
                                                 if($u_status === 'rusak') $cnt_rusak_10++;
                                                 if($u_status === 'retur') $cnt_retur_10++;
                                                 if($u_status === 'invalid') $cnt_invalid_10++;
@@ -1054,11 +1057,12 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                         $lb = format_bytes_short((int)($evidence['last_bytes'] ?? 0));
                                         $price_val = (int)($evidence['price'] ?? 0);
                                         $upt = $upt !== '' ? $upt : '-';
-                                        $profile10['user'][] = ['label' => '-', 'status' => ''];
-                                        $profile10['up'][] = $upt;
-                                        $profile10['byte'][] = $lb;
-                                        $profile10['login'][] = $cnt . 'x';
-                                        $profile10['total'][] = number_format($price_val,0,',','.');
+                                        $profile10_items[] = [
+                                            'label' => '-',
+                                            'status' => 'normal',
+                                            'uptime' => $upt,
+                                            'bytes' => $lb
+                                        ];
                                         $profile10_sum += $price_val;
                                     }
                                 }
@@ -1073,23 +1077,22 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     $lb = format_bytes_short((int)($inc['last_bytes'] ?? 0));
                                     $price_val = (int)($inc['price'] ?? 0);
                                     $upt = $upt !== '' ? $upt : '-';
-                                    $bucket = ($kind === '30') ? $profile30 : $profile10;
-
-                                    $bucket['user'][] = ['label' => $uname, 'status' => $u_status];
-                                    $bucket['up'][] = $upt;
-                                    $bucket['byte'][] = $lb;
-                                    $bucket['login'][] = '-';
-                                    $bucket['total'][] = number_format($price_val,0,',','.');
+                                    $item = [
+                                        'label' => $uname,
+                                        'status' => $u_status,
+                                        'uptime' => $upt,
+                                        'bytes' => $lb
+                                    ];
 
                                     if ($kind === '30') {
                                         $profile30_sum += $price_val;
-                                        $profile30 = $bucket;
+                                        $profile30_items[] = $item;
                                         if ($u_status === 'rusak') $cnt_rusak_30++;
                                         if ($u_status === 'retur') $cnt_retur_30++;
                                         if ($u_status === 'invalid') $cnt_invalid_30++;
                                     } else {
                                         $profile10_sum += $price_val;
-                                        $profile10 = $bucket;
+                                        $profile10_items[] = $item;
                                         if ($u_status === 'rusak') $cnt_rusak_10++;
                                         if ($u_status === 'retur') $cnt_retur_10++;
                                         if ($u_status === 'invalid') $cnt_invalid_10++;
@@ -1097,18 +1100,18 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 }
                             }
                             // Generate HTML Tables using helper
-                            $p10_us = generate_nested_table_user($profile10['user'], 'center');
-                            $p10_up = generate_nested_table($profile10['up'], 'right');
-                            $p10_bt = generate_nested_table($profile10['byte'], 'right');
+                            $p10_us = generate_audit_cell($profile10_items, 'label', 'center');
+                            $p10_up = generate_audit_cell($profile10_items, 'uptime', 'center');
+                            $p10_bt = generate_audit_cell($profile10_items, 'bytes', 'center');
                             
-                            $p30_us = generate_nested_table_user($profile30['user'], 'center');
-                            $p30_up = generate_nested_table($profile30['up'], 'right');
-                            $p30_bt = generate_nested_table($profile30['byte'], 'right');
+                            $p30_us = generate_audit_cell($profile30_items, 'label', 'center');
+                            $p30_up = generate_audit_cell($profile30_items, 'uptime', 'center');
+                            $p30_bt = generate_audit_cell($profile30_items, 'bytes', 'center');
 
                             $p10_qty = (int)($profile_qty['qty_10'] ?? 0);
                             $p30_qty = (int)($profile_qty['qty_30'] ?? 0);
-                            if ($p10_qty <= 0) $p10_qty = count($profile10['user'] ?? []);
-                            if ($p30_qty <= 0) $p30_qty = count($profile30['user'] ?? []);
+                            if ($p10_qty <= 0) $p10_qty = count($profile10_items);
+                            if ($p30_qty <= 0) $p30_qty = count($profile30_items);
                             $p10_tt = $p10_qty > 0 ? number_format($p10_qty,0,',','.') : '-';
                             $p30_tt = $p30_qty > 0 ? number_format($p30_qty,0,',','.') : '-';
                             $audit_total_profile_qty_10 += $p10_qty;
