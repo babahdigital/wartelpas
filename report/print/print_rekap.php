@@ -778,7 +778,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
     </div>
 
     <h2>Rekap Laporan Penjualan</h2>
-    <div class="meta">Periode: <?= htmlspecialchars($period_label) ?> | Tanggal: <?= htmlspecialchars(format_date_ddmmyyyy($filter_date)) ?> | Blok: <?= htmlspecialchars($filter_blok !== '' ? strtoupper($filter_blok) : 'Semua') ?> | Dicetak: <?= date('d-m-Y H:i:s') ?></div>
+    <div class="meta">Periode: <?= htmlspecialchars($period_label) ?> | Tanggal: <?= htmlspecialchars(format_date_ddmmyyyy($filter_date)) ?> | Blok: <?= htmlspecialchars($filter_blok !== '' ? get_block_short_label(normalize_block_name($filter_blok)) : 'Semua') ?> | Dicetak: <?= date('d-m-Y H:i:s') ?></div>
 
     <div class="grid">
         <div class="card">
