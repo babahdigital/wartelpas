@@ -542,7 +542,19 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $cblok = extract_blok_name($c);
         $cblok_cmp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $cblok));
         $uname_key = strtolower($uname);
-        if (($cblok_cmp != '' && $cblok_cmp === $target_cmp) || isset($delete_name_map[$uname_key])) {
+        $is_target = false;
+        if ($cblok_cmp != '' && $cblok_cmp === $target_cmp) {
+          $is_target = true;
+        }
+        if (!$is_target && $blok_keyword !== '' && $c !== '') {
+          if (preg_match('/\b' . preg_quote($blok_keyword, '/') . '\b/i', $c)) {
+            $is_target = true;
+          }
+        }
+        if (!$is_target && isset($delete_name_map[$uname_key])) {
+          $is_target = true;
+        }
+        if ($is_target) {
           $to_delete[] = ['id' => $usr['.id'] ?? '', 'name' => $uname];
           $base_router_map[$uname_key] = true;
         }
@@ -623,6 +635,22 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
 
         $stmt = $db->prepare("DELETE FROM live_sales WHERE $whereMatch$userClause");
         $stmt->execute(array_merge($params, $userParams));
+
+        $blok_params = $use_glob ? [':b_clean' => $blok_upper, ':bg' => $glob_pattern] : [':b_clean' => $blok_upper];
+        try {
+          $stmtChk = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='audit_rekap_manual' LIMIT 1");
+          if ($stmtChk && $stmtChk->fetchColumn()) {
+            $stmt = $db->prepare("DELETE FROM audit_rekap_manual WHERE $whereBlok");
+            $stmt->execute($blok_params);
+          }
+        } catch (Exception $e) {}
+        try {
+          $stmtChk = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='phone_block_daily' LIMIT 1");
+          if ($stmtChk && $stmtChk->fetchColumn()) {
+            $stmt = $db->prepare("DELETE FROM phone_block_daily WHERE $whereBlok");
+            $stmt->execute($blok_params);
+          }
+        } catch (Exception $e) {}
 
         $db->commit();
         $db_deleted_count = count($db_delete_names);
