@@ -236,6 +236,34 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         }
       }
       if ($last_status !== 'rusak' && !$comment_rusak) {
+        if ($db && $name != '') {
+          try {
+            $stmt = $db->prepare("SELECT status, is_rusak FROM sales_history WHERE username = :u ORDER BY sale_datetime DESC LIMIT 1");
+            $stmt->execute([':u' => $name]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+              $st = strtolower((string)($row['status'] ?? ''));
+              if ($st === 'rusak' || (int)($row['is_rusak'] ?? 0) === 1) {
+                $comment_rusak = true;
+              }
+            }
+          } catch (Exception $e) {}
+          if (!$comment_rusak) {
+            try {
+              $stmt = $db->prepare("SELECT status, is_rusak FROM live_sales WHERE username = :u ORDER BY sale_datetime DESC LIMIT 1");
+              $stmt->execute([':u' => $name]);
+              $row = $stmt->fetch(PDO::FETCH_ASSOC);
+              if ($row) {
+                $st = strtolower((string)($row['status'] ?? ''));
+                if ($st === 'rusak' || (int)($row['is_rusak'] ?? 0) === 1) {
+                  $comment_rusak = true;
+                }
+              }
+            } catch (Exception $e) {}
+          }
+        }
+      }
+      if ($last_status !== 'rusak' && !$comment_rusak) {
         $action_blocked = true;
         $action_error = 'Gagal: voucher harus status RUSAK dulu sebelum RETUR.';
       }
@@ -864,6 +892,40 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       }
       // Jangan hapus histori pemakaian per blok di login_history
       $action_message = 'Berhasil hapus user Router untuk blok ' . ($blok_norm ?: $blok_raw) . '.';
+    } elseif ($act == 'rollback' && $uid == '' && $name != '' && $db) {
+      $hist = get_user_history($name);
+      $base_comment = $comm != '' ? $comm : (string)($hist['raw_comment'] ?? '');
+      $clean_comment = preg_replace('/\bAudit:\s*RUSAK\s*\d{2}\/\d{2}\/\d{2}\s*/i', '', $base_comment);
+      $clean_comment = preg_replace('/\bRUSAK\b\s*/i', '', $clean_comment);
+      $clean_comment = preg_replace('/\(Retur\)\s*/i', '', $clean_comment);
+      $clean_comment = preg_replace('/Retur\s*Ref\s*:[^|]+/i', '', $clean_comment);
+      $clean_comment = preg_replace('/\s+\|\s+/', ' | ', $clean_comment);
+      $clean_comment = trim($clean_comment);
+
+      $save_data = [
+        'raw' => $clean_comment,
+        'status' => 'ready'
+      ];
+      save_user_history($name, $save_data);
+
+      try {
+        $stmt = $db->prepare("UPDATE login_history SET last_status='ready', updated_at=CURRENT_TIMESTAMP,
+          login_time_real=COALESCE(NULLIF(login_time_real,''), CURRENT_TIMESTAMP),
+          last_login_real=COALESCE(NULLIF(last_login_real,''), CURRENT_TIMESTAMP)
+          WHERE username = :u");
+        $stmt->execute([':u' => $name]);
+      } catch(Exception $e) {}
+
+      try {
+        $stmt = $db->prepare("UPDATE sales_history SET status='normal', is_rusak=0, is_retur=0, is_invalid=0 WHERE username = :u");
+        $stmt->execute([':u' => $name]);
+      } catch(Exception $e) {}
+      try {
+        $stmt = $db->prepare("UPDATE live_sales SET status='normal', is_rusak=0, is_retur=0, is_invalid=0 WHERE username = :u");
+        $stmt->execute([':u' => $name]);
+      } catch(Exception $e) {}
+
+      $action_message = 'Berhasil rollback RUSAK untuk ' . $name . ' (DB).';
     } elseif ($uid != '') {
       if ($act == 'delete') {
         $API->write('/ip/hotspot/user/remove', false);
@@ -1119,17 +1181,17 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             'raw' => $cmt,
             'login_time_real' => $login_time_real,
             'logout_time_real' => $logout_time_real,
-            'status' => 'retur'
+            'status' => 'rusak'
           ];
           save_user_history($name, $save_data);
 
           if ($name != '') {
             try {
-              $stmt = $db->prepare("UPDATE sales_history SET status='retur', is_rusak=0, is_retur=1, is_invalid=0 WHERE username = :u");
+              $stmt = $db->prepare("UPDATE sales_history SET status='rusak', is_rusak=1, is_retur=0, is_invalid=0 WHERE username = :u");
               $stmt->execute([':u' => $name]);
             } catch(Exception $e) {}
             try {
-              $stmt = $db->prepare("UPDATE live_sales SET status='retur', is_rusak=0, is_retur=1, is_invalid=0 WHERE username = :u AND sync_status = 'pending'");
+              $stmt = $db->prepare("UPDATE live_sales SET status='rusak', is_rusak=1, is_retur=0, is_invalid=0 WHERE username = :u AND sync_status = 'pending'");
               $stmt->execute([':u' => $name]);
             } catch(Exception $e) {}
           }
