@@ -414,17 +414,7 @@
     const codeUrl = payload && payload.codeUrl ? payload.codeUrl : '';
     const blokLabel = payload && payload.blok ? payload.blok : '-';
     if (!listUrl && !codeUrl) return;
-    if (window.hasUserData === false) {
-      await showOverlayChoice({
-        title: 'Print Dinonaktifkan',
-        messageHtml: '<div style="text-align:left;font-size:13px;color:#cbd5e1;">Tidak ada data untuk dicetak. Silakan ubah filter terlebih dahulu.</div>',
-        type: 'info',
-        buttons: [
-          { label: 'Tutup', value: true, className: 'overlay-btn-muted' }
-        ]
-      });
-      return;
-    }
+    const hasData = window.hasUserData !== false;
 
     const detailMsg = `
       <div style="text-align:left;">
@@ -451,7 +441,7 @@
             </div>`,
           value: 'list',
           className: 'overlay-btn-info',
-          disabled: !listUrl
+          disabled: !listUrl || !hasData
         },
         {
           label: `

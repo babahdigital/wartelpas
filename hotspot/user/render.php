@@ -250,7 +250,7 @@
                 $print_all_url = './hotspot/print/print_list.php?' . http_build_query($print_all_params);
               ?>
               <?php if ($can_print_list || $print_code_url !== ''): ?>
-                <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.openUnifiedPrintPopupWithCode && window.openUnifiedPrintPopupWithCode('<?= $print_code_url ?>','<?= htmlspecialchars($req_comm, ENT_QUOTES) ?>')" <?= ((int)$total_items === 0) ? 'disabled' : '' ?>>
+                <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.openUnifiedPrintPopupWithCode && window.openUnifiedPrintPopupWithCode('<?= $print_code_url ?>','<?= htmlspecialchars($req_comm, ENT_QUOTES) ?>')">
                   <i class="fa fa-print"></i> Print
                 </button>
               <?php endif; ?>
@@ -266,7 +266,7 @@
               <?php endif; ?>
             <?php endif; ?>
             <?php if ($req_comm == '' && $can_print_list): ?>
-              <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.openPrintPopup && window.openPrintPopup()" <?= ((int)$total_items === 0) ? 'disabled' : '' ?>>
+              <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.openPrintPopup && window.openPrintPopup()">
                 <i class="fa fa-print"></i> Print
               </button>
             <?php endif; ?>
