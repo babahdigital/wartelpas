@@ -399,6 +399,43 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
   - `report/selling.php` dan `report/print_rekap.php` menghitung **unik per username per tanggal**.
   - Label/angka transaksi per baris dihapus agar tidak menimbulkan kebingungan.
 
+## 6) Update Terbaru (Audit Holistik 2026-01-28)
+### 6.1 Hapus Blok Total (Router + DB + Script)
+- **hotspot/user/actions.php**:
+  - Hapus total blok kini menyapu **RouterOS user + active + system script** terkait blok.
+  - Penghapusan DB menggunakan pola **prefix BLOK-X** dan pencarian **raw_comment** agresif (format `-|-` ikut terhapus).
+  - Retur/child voucher ikut terhapus dengan **parent/child detection** lintas Router + DB.
+  - Log admin_actions mencatat jumlah user/script terhapus.
+
+### 6.2 Dropdown Blok & Profil (Filter Kombinasi)
+- **hotspot/user/helpers.php**:
+  - `extract_blok_name` kini **bersih**: hanya huruf blok (A/B/C), buang angka profil.
+  - Deteksi blok tahan format `-|-` agar dropdown tidak tercemar string panjang.
+- **hotspot/user/data.php**:
+  - Dropdown blok dibangun dari semua data (router + history) dengan **fallback ke history** jika comment kosong.
+  - Profil kosong/default diberi **fallback** dari komentar/blok agar filter profil bekerja.
+  - READY **tidak tampil** saat status=Semua (sesuai permintaan terbaru).
+
+### 6.3 Popup Aksi & Anti‑Blink
+- **hotspot/user/js/users.js**:
+  - Overlay kini **anti‑blink** (timer fade dibatalkan jika ada popup baru).
+  - Aksi hapus blok memakai **modal sukses khusus** + tombol “Tutup & Reload” (tanpa banner kecil & tanpa auto refresh).
+  - Auto‑refresh AJAX disuspend selama popup aksi aktif.
+
+### 6.4 Rollback Rusak → Status Transaksi
+- **hotspot/user/actions.php**:
+  - Rollback RUSAK kini **mengubah status** di `sales_history` dan `live_sales` ke `ready`.
+
+### 6.5 Tools Clear Block (Audit Manual)
+- **tools/clear_block.php**:
+  - Dukungan `delete_audit=1` untuk menghapus **audit_rekap_manual**.
+  - Output sekarang melaporkan jumlah audit yang terhapus.
+
+### 6.6 Perbaikan Retur & Delete Pair
+- **hotspot/user/actions.php**:
+  - `delete_user_full` otomatis menghapus **pasangan retur** (parent/child) dalam satu aksi.
+  - Penghapusan retur juga membaca **raw_comment** DB jika data router kosong.
+
 ### 4.3 Users.php filter tanggal lebih akurat
 - **Masalah**: Filter tanggal di users.php tercampur karena memakai display time yang bisa dipengaruhi `updated_at`.
 - **Solusi**: Filter memakai timestamp mentah (`last_login_real`, `login_time_real`, `logout_time_real`) agar hasil tepat.
