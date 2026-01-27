@@ -84,6 +84,8 @@
   const ajaxBase = './hotspot/users.php';
   const baseParams = new URLSearchParams(window.location.search);
 
+  let suspendAutoRefresh = false;
+
   let lastFetchId = 0;
   let appliedQuery = (baseParams.get('q') || '').trim();
 
@@ -291,6 +293,7 @@
   window.openDeleteBlockPopup = async function(blok) {
     const blokLabel = (blok || '').toString().trim();
     if (!blokLabel) return;
+    suspendAutoRefresh = true;
     const isAdmin = !!window.isSuperAdmin;
     const firstMessage = `
       <div style="text-align:left;">
@@ -302,44 +305,49 @@
         </div>
         ${isAdmin ? '' : '<div class="popup-note"><i class="fa fa-lock"></i> Hapus Total dikunci (Khusus Superadmin).</div>'}
       </div>`;
-    const choice = await showOverlayChoice({
-      title: 'Hapus Blok Voucher',
-      messageHtml: firstMessage,
-      type: 'warning',
-      layout: 'vertical',
-      buttons: [
-        { 
-          label: `
-            <i class="fa fa-server"></i>
-            <div class="btn-rich-text">
-              <span class="btn-rich-title">Hapus Router Saja (Aman)</span>
-              <span class="btn-rich-desc">User offline, Laporan/Uang TETAP ADA.</span>
-            </div>`,
-          value: 'router', 
-          className: 'overlay-btn-warning' 
-        },
-        { 
-          label: `
-            <i class="fa fa-trash"></i>
-            <div class="btn-rich-text">
-              <span class="btn-rich-title">Hapus Total (Router + DB)</span>
-              <span class="btn-rich-desc">Hapus user & HAPUS SEMUA JEJAK UANG.</span>
-            </div>`,
-          value: 'full', 
-          className: 'overlay-btn-danger', 
-          disabled: !isAdmin 
-        },
-        { 
-          label: `
-            <i class="fa fa-times"></i>
-            <div class="btn-rich-text">
-              <span class="btn-rich-title">Batal</span>
-            </div>`,
-          value: 'cancel', 
-          className: 'overlay-btn-muted' 
-        }
-      ]
-    });
+    let choice = null;
+    try {
+      choice = await showOverlayChoice({
+        title: 'Hapus Blok Voucher',
+        messageHtml: firstMessage,
+        type: 'warning',
+        layout: 'vertical',
+        buttons: [
+          { 
+            label: `
+              <i class="fa fa-server"></i>
+              <div class="btn-rich-text">
+                <span class="btn-rich-title">Hapus Router Saja (Aman)</span>
+                <span class="btn-rich-desc">User offline, Laporan/Uang TETAP ADA.</span>
+              </div>`,
+            value: 'router', 
+            className: 'overlay-btn-warning' 
+          },
+          { 
+            label: `
+              <i class="fa fa-trash"></i>
+              <div class="btn-rich-text">
+                <span class="btn-rich-title">Hapus Total (Router + DB)</span>
+                <span class="btn-rich-desc">Hapus user & HAPUS SEMUA JEJAK UANG.</span>
+              </div>`,
+            value: 'full', 
+            className: 'overlay-btn-danger', 
+            disabled: !isAdmin 
+          },
+          { 
+            label: `
+              <i class="fa fa-times"></i>
+              <div class="btn-rich-text">
+                <span class="btn-rich-title">Batal</span>
+              </div>`,
+            value: 'cancel', 
+            className: 'overlay-btn-muted' 
+          }
+        ]
+      });
+    } finally {
+      if (!choice || choice === 'cancel') suspendAutoRefresh = false;
+    }
     if (!choice || choice === 'cancel') return;
     if (choice === 'router') {
       const detail = `
@@ -359,7 +367,10 @@
           { label: 'Ya, Eksekusi', value: true, className: 'overlay-btn-warning' }
         ]
       });
-      if (ok !== true) return;
+      if (ok !== true) {
+        suspendAutoRefresh = false;
+        return;
+      }
       const url = './?hotspot=users&action=batch_delete&blok=' + encodeURIComponent(blokLabel) + '&session=' + encodeURIComponent(usersSession);
       actionRequest(url, null);
       return;
@@ -388,7 +399,10 @@
           { label: 'Ya, HAPUS PERMANEN', value: true, className: 'overlay-btn-danger' }
         ]
       });
-      if (ok !== true) return;
+      if (ok !== true) {
+        suspendAutoRefresh = false;
+        return;
+      }
       const url = './?hotspot=users&action=delete_block_full&blok=' + encodeURIComponent(blokLabel) + '&session=' + encodeURIComponent(usersSession);
       actionRequest(url, null);
     }
@@ -1225,6 +1239,8 @@
   }
 
   function canAutoRefresh() {
+    if (suspendAutoRefresh) return false;
+    if (overlayBackdrop && overlayBackdrop.classList.contains('show')) return false;
     const statusOk = !statusSelect || statusSelect.value === 'all';
     const blokOk = !commentSelect || commentSelect.value === '';
     return statusOk && blokOk;
