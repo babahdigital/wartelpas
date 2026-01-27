@@ -98,51 +98,57 @@ if (!function_exists('seconds_to_uptime')) {
 }
 
 // Helper: Ambil batas rusak/retur per profil
-function resolve_rusak_limits($profile) {
-  $p = strtolower((string)$profile);
-  $limits = ['uptime' => 300, 'bytes' => 5 * 1024 * 1024, 'uptime_label' => '5 menit', 'bytes_label' => '5MB'];
-  if (preg_match('/\b10\s*(menit|m)\b|10menit/i', $p)) {
-    $limits['uptime'] = 180;
-    $limits['uptime_label'] = '3 menit';
+if (!function_exists('resolve_rusak_limits')) {
+  function resolve_rusak_limits($profile) {
+    $p = strtolower((string)$profile);
+    $limits = ['uptime' => 300, 'bytes' => 5 * 1024 * 1024, 'uptime_label' => '5 menit', 'bytes_label' => '5MB'];
+    if (preg_match('/\b10\s*(menit|m)\b|10menit/i', $p)) {
+      $limits['uptime'] = 180;
+      $limits['uptime_label'] = '3 menit';
+    }
+    return $limits;
   }
-  return $limits;
 }
 
 // Helper: Ekstrak datetime dari comment (format umum MikroTik)
-function extract_datetime_from_comment($comment) {
-  if (empty($comment)) return '';
-  // Support format: "Audit: RUSAK dd/mm/yy YYYY-mm-dd HH:MM:SS"
-  if (preg_match('/RUSAK\s*\d{2}\/\d{2}\/\d{2}\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})/i', $comment, $m)) {
-    return $m[1];
+if (!function_exists('extract_datetime_from_comment')) {
+  function extract_datetime_from_comment($comment) {
+    if (empty($comment)) return '';
+    // Support format: "Audit: RUSAK dd/mm/yy YYYY-mm-dd HH:MM:SS"
+    if (preg_match('/RUSAK\s*\d{2}\/\d{2}\/\d{2}\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})/i', $comment, $m)) {
+      return $m[1];
+    }
+    // Support format: mm.dd.yy (contoh: 01.20.26)
+    if (preg_match('/\b(\d{2})[\.\/-](\d{2})[\.\/-](\d{2})\b/', $comment, $m)) {
+      $yy = (int)$m[3];
+      $year = $yy < 70 ? (2000 + $yy) : (1900 + $yy);
+      return sprintf('%04d-%02d-%02d 00:00:00', $year, (int)$m[1], (int)$m[2]);
+    }
+    // Support format: "Valid dd-mm-YYYY HH:MM:SS" (or with colon)
+    if (preg_match('/\bValid\s*:?(\d{2})-(\d{2})-(\d{4})\s+(\d{2}:\d{2}:\d{2})/i', $comment, $m)) {
+      return $m[3] . '-' . $m[2] . '-' . $m[1] . ' ' . $m[4];
+    }
+    // Support format: "Valid dd-mm-YYYY" (tanpa jam)
+    if (preg_match('/\bValid\s*:?(\d{2})-(\d{2})-(\d{4})\b/i', $comment, $m)) {
+      return $m[3] . '-' . $m[2] . '-' . $m[1] . ' 00:00:00';
+    }
+    // Fallback: parse first segment before '|'
+    $first = trim(explode('|', $comment)[0] ?? '');
+    if ($first === '') return '';
+    $ts = strtotime($first);
+    if ($ts === false) return '';
+    return date('Y-m-d H:i:s', $ts);
   }
-  // Support format: mm.dd.yy (contoh: 01.20.26)
-  if (preg_match('/\b(\d{2})[\.\/-](\d{2})[\.\/-](\d{2})\b/', $comment, $m)) {
-    $yy = (int)$m[3];
-    $year = $yy < 70 ? (2000 + $yy) : (1900 + $yy);
-    return sprintf('%04d-%02d-%02d 00:00:00', $year, (int)$m[1], (int)$m[2]);
-  }
-  // Support format: "Valid dd-mm-YYYY HH:MM:SS" (or with colon)
-  if (preg_match('/\bValid\s*:?(\d{2})-(\d{2})-(\d{4})\s+(\d{2}:\d{2}:\d{2})/i', $comment, $m)) {
-    return $m[3] . '-' . $m[2] . '-' . $m[1] . ' ' . $m[4];
-  }
-  // Support format: "Valid dd-mm-YYYY" (tanpa jam)
-  if (preg_match('/\bValid\s*:?(\d{2})-(\d{2})-(\d{4})\b/i', $comment, $m)) {
-    return $m[3] . '-' . $m[2] . '-' . $m[1] . ' 00:00:00';
-  }
-  // Fallback: parse first segment before '|'
-  $first = trim(explode('|', $comment)[0] ?? '');
-  if ($first === '') return '';
-  $ts = strtotime($first);
-  if ($ts === false) return '';
-  return date('Y-m-d H:i:s', $ts);
 }
 
 // Helper: gabungkan tanggal dari $dateStr dengan jam dari $timeStr
-function merge_date_time($dateStr, $timeStr) {
-  if (empty($dateStr) || empty($timeStr)) return $dateStr;
-  $date = date('Y-m-d', strtotime($dateStr));
-  $time = date('H:i:s', strtotime($timeStr));
-  return $date . ' ' . $time;
+if (!function_exists('merge_date_time')) {
+  function merge_date_time($dateStr, $timeStr) {
+    if (empty($dateStr) || empty($timeStr)) return $dateStr;
+    $date = date('Y-m-d', strtotime($dateStr));
+    $time = date('H:i:s', strtotime($timeStr));
+    return $date . ' ' . $time;
+  }
 }
 
 // Helper: Ekstrak sumber retur dari comment
