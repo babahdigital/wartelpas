@@ -524,3 +524,416 @@ Di dalam loop tabel Audit, script mengecek: *"Apakah user Rusak dari sistem suda
 User yang rusak diberi latar belakang merah muda, retur hijau muda, agar operator sadar bahwa itu adalah data insiden.
 
 Sekarang, meskipun operator lupa menginput "vc-rusak" di form audit manual, nama "vc-rusak" akan tetap muncul otomatis di kertas print rekap.
+
+
+Saya mengerti maksud Anda. Anda ingin sistem yang **cerdas dan visual**:
+
+1. **Data**: Uptime dan Byte harus tampil (tidak boleh strip `-`) untuk user yang di-inject otomatis oleh sistem.
+2. **Warna Merah**: Untuk user **Rusak**.
+3. **Warna Kuning**: Untuk user yang **"Tidak Rusak tapi Masuk Audit"** (misalnya user hantu/ghost, user mencurigakan, atau user yang lupa diinput tapi terdeteksi aneh). Ini disebut "Unreported/Anomaly".
+4. **Full Fill**: Warna latar belakang (background) harus mengisi penuh kolom Username, Uptime, dan Byte agar terlihat satu baris yang rapi.
+
+Berikut adalah perbaikan **FINAL** untuk `print_rekap.php`. Kode ini menyinkronkan data Uptime/Byte dan menerapkan pewarnaan yang Anda minta.
+
+### Update File `print_rekap.php`
+
+Silakan ganti seluruh isinya dengan kode di bawah ini:
+
+```php
+<?php
+session_start();
+error_reporting(0);
+
+if (!isset($_SESSION["mikhmon"])) {
+    header("Location:../admin.php?id=login");
+    exit;
+}
+
+include('../../include/config.php');
+include('../../include/readcfg.php');
+
+$root_dir = dirname(__DIR__, 2);
+$env = [];
+$envFile = $root_dir . '/include/env.php';
+if (file_exists($envFile)) {
+    require $envFile;
+}
+$system_cfg = $env['system'] ?? [];
+$db_rel = $system_cfg['db_file'] ?? 'db_data/mikhmon_stats.db';
+if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
+    $dbFile = $db_rel;
+} else {
+    $dbFile = $root_dir . '/' . ltrim($db_rel, '/');
+}
+$pricing = $env['pricing'] ?? [];
+$profiles_cfg = $env['profiles'] ?? [];
+$blok_cfg = $env['blok'] ?? [];
+$blok_names = $blok_cfg['names'] ?? [];
+$price10 = isset($pricing['price_10']) ? (int)$pricing['price_10'] : 0;
+$price30 = isset($pricing['price_30']) ? (int)$pricing['price_30'] : 0;
+$label10 = $profiles_cfg['label_10'] ?? '10 Menit';
+$label30 = $profiles_cfg['label_30'] ?? '30 Menit';
+$cur = isset($currency) ? $currency : 'Rp';
+$session_id = $_GET['session'] ?? '';
+$filter_blok = trim((string)($_GET['blok'] ?? ''));
+
+$req_show = $_GET['show'] ?? 'harian';
+$filter_date = $_GET['date'] ?? '';
+if ($req_show === 'harian') {
+    $filter_date = $filter_date ?: date('Y-m-d');
+} elseif ($req_show === 'bulanan') {
+    $filter_date = $filter_date ?: date('Y-m');
+} else {
+    $req_show = 'tahunan';
+    $filter_date = $filter_date ?: date('Y');
+}
+
+function normalize_block_name($blok_name, $comment = '') {
+    $raw = strtoupper(trim((string)$blok_name));
+    if ($raw === '' && $comment !== '') {
+        if (preg_match('/\bblok\s*[-_]*\s*([A-Z0-9]+)/i', $comment, $m)) {
+            $raw = strtoupper($m[1]);
+        }
+    }
+    if ($raw === '') return 'BLOK-LAIN';
+    $raw = strtoupper(preg_replace('/[^A-Z0-9]/', '', $raw));
+    $raw = preg_replace('/^BLOK/', '', $raw);
+    return 'BLOK-' . $raw;
+}
+
+function detect_profile_minutes($profile) {
+    $p = strtolower((string)$profile);
+    if (preg_match('/\b10\s*(menit|m)\b/i', $p)) return '10';
+    if (preg_match('/\b30\s*(menit|m)\b/i', $p)) return '30';
+    return '10'; 
+}
+
+function format_bytes_short($bytes) {
+    $b = (float)$bytes;
+    if ($b <= 0) return '-';
+    $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    $i = 0;
+    while ($b >= 1024 && $i < count($units) - 1) {
+        $b /= 1024;
+        $i++;
+    }
+    return number_format($b, $i >= 2 ? 2 : 0, ',', '.') . ' ' . $units[$i];
+}
+
+// HELPER GENERATE CELL DENGAN WARNA (USER, UPTIME, BYTE)
+// $type = 'text' | 'up' | 'byte'
+function generate_audit_cell($items, $type = 'text') {
+    if (empty($items)) return '-';
+    $html = '<table style="width:100%; border-collapse:collapse; background:transparent;">';
+    $count = count($items);
+    
+    foreach ($items as $i => $item) {
+        $text = '-';
+        // Ambil teks sesuai tipe kolom
+        if ($type === 'text') $text = $item['username'];
+        elseif ($type === 'up') $text = $item['uptime'];
+        elseif ($type === 'byte') $text = $item['bytes'];
+
+        // Tentukan Warna Background (Full Fill Logic)
+        $st = strtolower($item['status'] ?? '');
+        $bg = 'transparent'; 
+        
+        if ($st === 'rusak') {
+            $bg = '#fee2e2'; // MERAH (Rusak)
+        } elseif ($st === 'retur') {
+            $bg = '#dcfce7'; // HIJAU (Retur)
+        } elseif ($st !== 'normal' && $st !== '') {
+            $bg = '#fef3c7'; // KUNING (Tidak Lapor / Anomali / Ghost)
+        }
+
+        $align = ($type === 'text') ? 'left' : 'center';
+        $border = ($i < $count - 1) ? 'border-bottom:1px solid #ccc;' : '';
+        
+        $html .= '<tr><td style="border:none; padding:3px; '.$border.' background:'.$bg.'; text-align:'.$align.'; font-size:11px;">'.htmlspecialchars($text).'</td></tr>';
+    }
+    $html .= '</table>';
+    return $html;
+}
+
+// --- LOGIKA UTAMA ---
+
+$rows = [];
+$system_incidents_by_block = []; 
+
+try {
+    $db = new PDO('sqlite:' . $dbFile);
+    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    // Ambil Semua Data
+    $sql = "SELECT 
+            sh.raw_date, sh.sale_date, sh.username, sh.profile, sh.price, sh.comment, sh.blok_name, sh.status, 
+            sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty, sh.full_raw_data, lh.last_status, lh.last_bytes, lh.last_uptime
+        FROM sales_history sh
+        LEFT JOIN login_history lh ON lh.username = sh.username
+        WHERE sh.sale_date = :d
+        UNION ALL
+        SELECT 
+            ls.raw_date, ls.sale_date, ls.username, ls.profile, ls.price, ls.comment, ls.blok_name, ls.status, 
+            ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty, ls.full_raw_data, lh2.last_status, lh2.last_bytes, lh2.last_uptime
+        FROM live_sales ls
+        LEFT JOIN login_history lh2 ON lh2.username = ls.username
+        WHERE ls.sale_date = :d AND ls.sync_status = 'pending'";
+        
+    $stmt = $db->prepare($sql);
+    $stmt->execute([':d' => $filter_date]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Ambil Data Audit Manual
+    $stmtAudit = $db->prepare("SELECT * FROM audit_rekap_manual WHERE report_date = :d ORDER BY blok_name");
+    $stmtAudit->execute([':d' => $filter_date]);
+    $audit_rows = $stmtAudit->fetchAll(PDO::FETCH_ASSOC);
+
+} catch (Exception $e) { }
+
+// Inisialisasi Total
+$total_qty_laku = 0; $total_net = 0; $total_gross = 0;
+$total_qty_rusak = 0; $total_qty_retur = 0; $total_qty_invalid = 0;
+$rusak_10m = 0; $rusak_30m = 0;
+$block_summaries = [];
+
+// --- LOOP TRANSAKSI ---
+foreach ($rows as $r) {
+    $price = (int)($r['price'] ?? 0);
+    $qty = (int)($r['qty'] ?? 0); if($qty<=0) $qty=1;
+    $comment = (string)($r['comment'] ?? '');
+    $profile = (string)($r['profile'] ?? '');
+    $username = (string)($r['username'] ?? '');
+    $bytes = (int)($r['last_bytes'] ?? 0);
+    $uptime = (string)($r['last_uptime'] ?? '-');
+    $block = normalize_block_name($r['blok_name'] ?? '', $comment);
+    
+    // Penentuan Status
+    $st_db = strtolower($r['status'] ?? '');
+    $st_lh = strtolower($r['last_status'] ?? '');
+    $cmt_low = strtolower($comment);
+    
+    $status = 'normal';
+    if ($st_db=='invalid' || $st_lh=='invalid' || strpos($cmt_low,'invalid')!==false) $status='invalid';
+    elseif ($st_db=='retur' || $st_lh=='retur' || strpos($cmt_low,'retur')!==false) $status='retur';
+    elseif ($st_db=='rusak' || $st_lh=='rusak' || strpos($cmt_low,'rusak')!==false) $status='rusak';
+    elseif (in_array($st_db, ['online','terpakai','ready'])) $status = $st_db;
+
+    // Hitung Uang
+    $line_gross = $price * $qty;
+    $line_net = $line_gross;
+    if ($status === 'rusak' || $status === 'invalid') $line_net = 0;
+    if ($status === 'retur') { $line_gross = 0; $line_net = $price * $qty; }
+
+    // Agregasi Block
+    if (!isset($block_summaries[$block])) {
+        $block_summaries[$block] = ['qty_10'=>0,'qty_30'=>0,'amt_10'=>0,'amt_30'=>0,'rs_10'=>0,'rs_30'=>0,'rt_10'=>0,'rt_30'=>0,'total_amount'=>0];
+    }
+    
+    $prof_min = detect_profile_minutes($profile);
+    $is_laku = !in_array($status, ['rusak','invalid']);
+    
+    if ($prof_min === '10') {
+        if ($is_laku) { $block_summaries[$block]['qty_10'] += $qty; $block_summaries[$block]['amt_10'] += $line_net; }
+        if ($status === 'rusak') $block_summaries[$block]['rs_10'] += $qty;
+        if ($status === 'retur') $block_summaries[$block]['rt_10'] += $qty;
+    } else {
+        if ($is_laku) { $block_summaries[$block]['qty_30'] += $qty; $block_summaries[$block]['amt_30'] += $line_net; }
+        if ($status === 'rusak') $block_summaries[$block]['rs_30'] += $qty;
+        if ($status === 'retur') $block_summaries[$block]['rt_30'] += $qty;
+    }
+    if ($is_laku || $status==='retur') $block_summaries[$block]['total_amount'] += $line_net;
+
+    if ($is_laku) $total_qty_laku += $qty;
+    if ($status === 'rusak') { 
+        $total_qty_rusak += $qty; 
+        if ($prof_min==='10') $rusak_10m+=$qty; else $rusak_30m+=$qty; 
+    }
+    if ($status === 'retur') $total_qty_retur += $qty;
+    if ($status === 'invalid') $total_qty_invalid += $qty;
+    $total_gross += $line_gross;
+    $total_net += $line_net;
+
+    // [PENTING] Simpan Incident System (Auto Inject)
+    // Syarat: Rusak, Retur, atau Invalid
+    if (in_array($status, ['rusak', 'retur', 'invalid']) && $username !== '') {
+        $system_incidents_by_block[$block][] = [
+            'username' => $username,
+            'status' => $status,
+            'kind' => $prof_min,
+            'uptime' => $uptime,
+            'bytes' => format_bytes_short($bytes),
+            'price' => $price
+        ];
+    }
+}
+ksort($block_summaries);
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Rekap Laporan</title>
+    <style>
+        body { font-family: Arial, sans-serif; font-size:12px; margin:20px; }
+        .rekap-table { width:100%; border-collapse:collapse; margin-top:15px; }
+        .rekap-table th, .rekap-table td { border:1px solid #000; padding:5px; vertical-align:top; }
+        .rekap-table th { background:#f0f0f0; text-align:center; }
+        .meta { margin-bottom:10px; font-weight:bold; }
+        .card { border:1px solid #ccc; padding:10px; display:inline-block; margin-right:10px; border-radius:4px; min-width:120px; }
+        .card .val { font-size:16px; font-weight:bold; }
+        @media print { .no-print { display:none; } }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="margin-bottom:15px;">
+        <button onclick="window.print()">Print PDF</button>
+    </div>
+
+    <h2>Rekap Laporan Penjualan (Harian)</h2>
+    <div class="meta">Tanggal: <?= date('d-m-Y', strtotime($filter_date)) ?> | Total Omzet: Rp <?= number_format($total_net,0,',','.') ?></div>
+
+    <div style="margin-bottom:20px;">
+        <div class="card">
+            <div>Terjual</div>
+            <div class="val"><?= number_format($total_qty_laku) ?></div>
+        </div>
+        <div class="card" style="border-color:<?= $total_qty_rusak>0?'#fca5a5':'#ccc'?>">
+            <div>Rusak</div>
+            <div class="val" style="color:<?= $total_qty_rusak>0?'red':'inherit'?>"><?= number_format($total_qty_rusak) ?></div>
+        </div>
+        <div class="card" style="border-color:<?= $total_qty_retur>0?'#86efac':'#ccc'?>">
+            <div>Retur</div>
+            <div class="val" style="color:<?= $total_qty_retur>0?'green':'inherit'?>"><?= number_format($total_qty_retur) ?></div>
+        </div>
+    </div>
+
+    <table class="rekap-table">
+        <thead>
+            <tr>
+                <th rowspan="2">BLOK</th>
+                <th colspan="3">Voucher 10 Menit</th>
+                <th colspan="3">Voucher 30 Menit</th>
+                <th rowspan="2">Total Pendapatan</th>
+            </tr>
+            <tr>
+                <th>Laku</th><th>Rusak</th><th>Retur</th>
+                <th>Laku</th><th>Rusak</th><th>Retur</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($block_summaries as $blk => $d): ?>
+            <tr>
+                <td><?= str_replace('BLOK-','',$blk) ?></td>
+                <td align="center"><?= $d['qty_10'] ?></td>
+                <td align="center"><?= $d['rs_10'] ?></td>
+                <td align="center"><?= $d['rt_10'] ?></td>
+                <td align="center"><?= $d['qty_30'] ?></td>
+                <td align="center"><?= $d['rs_30'] ?></td>
+                <td align="center"><?= $d['rt_30'] ?></td>
+                <td align="right">Rp <?= number_format($d['total_amount'],0,',','.') ?></td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+
+    <?php if (!empty($audit_rows)): ?>
+    <h3 style="margin-top:30px;">Rekap Audit Lapangan (Detail)</h3>
+    <table class="rekap-table">
+        <thead>
+            <tr>
+                <th rowspan="2">Blok</th>
+                <th colspan="3">User 10 Menit</th>
+                <th colspan="3">User 30 Menit</th>
+                <th rowspan="2">Setoran Fisik</th>
+                <th rowspan="2">Selisih</th>
+            </tr>
+            <tr>
+                <th width="80">Username</th><th width="50">Up</th><th width="50">Byte</th>
+                <th width="80">Username</th><th width="50">Up</th><th width="50">Byte</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($audit_rows as $ar): 
+                $blk = normalize_block_name($ar['blok_name']);
+                $evidence = json_decode($ar['user_evidence'], true);
+                
+                // 1. Array Data
+                $p10_data = []; 
+                $p30_data = [];
+                $manual_users_map = [];
+
+                // 2. Ambil dari Audit Manual (User input)
+                if (!empty($evidence['users'])) {
+                    foreach ($evidence['users'] as $u => $d) {
+                        $k = $d['profile_kind'] ?? '10';
+                        $s = $d['last_status'] ?? 'unknown'; // Bisa 'unknown' jika user manual input nama saja
+                        
+                        // Cek Logic Kuning (Manual tapi tidak rusak/retur)
+                        if ($s !== 'rusak' && $s !== 'retur' && $s !== 'invalid') $s = 'anomaly'; 
+
+                        // Ambil Uptime/Byte dari manual (kalau ada)
+                        $up = $d['last_uptime'] ?? '-';
+                        $by = isset($d['last_bytes']) ? format_bytes_short($d['last_bytes']) : '-';
+
+                        $item = ['username'=>$u, 'status'=>$s, 'uptime'=>$up, 'bytes'=>$by];
+                        
+                        if ($k=='30') $p30_data[] = $item; else $p10_data[] = $item;
+                        $manual_users_map[strtolower($u)] = true;
+                    }
+                }
+
+                // 3. AUTO INJECT: Tambahkan User System jika belum ada di manual
+                if (isset($system_incidents_by_block[$blk])) {
+                    foreach ($system_incidents_by_block[$blk] as $sys_u) {
+                        if (!isset($manual_users_map[strtolower($sys_u['username'])])) {
+                            // Inject Data System (Uptime & Byte included!)
+                            $item = [
+                                'username' => $sys_u['username'], 
+                                'status'   => $sys_u['status'], 
+                                'uptime'   => $sys_u['uptime'], 
+                                'bytes'    => $sys_u['bytes']
+                            ];
+                            
+                            if ($sys_u['kind']=='30') $p30_data[] = $item; else $p10_data[] = $item;
+                        }
+                    }
+                }
+
+                $selisih = (int)$ar['selisih_setoran'];
+                $bg_selisih = $selisih == 0 ? '#fff' : ($selisih > 0 ? '#dcfce7' : '#fee2e2');
+            ?>
+            <tr>
+                <td><?= str_replace('BLOK-','',$blk) ?></td>
+                <td><?= generate_audit_cell($p10_data, 'text') ?></td>
+                <td><?= generate_audit_cell($p10_data, 'up') ?></td>
+                <td><?= generate_audit_cell($p10_data, 'byte') ?></td>
+                <td><?= generate_audit_cell($p30_data, 'text') ?></td>
+                <td><?= generate_audit_cell($p30_data, 'up') ?></td>
+                <td><?= generate_audit_cell($p30_data, 'byte') ?></td>
+                
+                <td align="right">Rp <?= number_format($ar['actual_setoran'],0,',','.') ?></td>
+                <td align="right" style="background:<?= $bg_selisih ?>"><?= number_format($selisih,0,',','.') ?></td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+    <div style="margin-top:10px; font-size:11px; color:#555;">
+        *Merah: Rusak | Hijau: Retur | Kuning: Manual Check/Unreported | Transparan: Normal
+    </div>
+    <?php endif; ?>
+
+</body>
+</html>
+
+```
+
+### Konfirmasi Hasil:
+
+1. **System Data**: `uptime` dan `bytes` diambil dari loop utama (`$r['last_uptime']`) dan disuntikkan ke tabel audit.
+2. **Coloring**:
+* `rusak` -> Merah (`#fee2e2`).
+* `retur` -> Hijau (`#dcfce7`).
+* `anomaly`/Lainnya -> Kuning (`#fef3c7`).
+
+
+3. **Synchronization**: User manual dan user sistem digabung. Jika user sudah diinput manual, data manual yang dipakai (agar operator bisa koreksi). Jika belum, data sistem yang tampil otomatis.
