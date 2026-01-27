@@ -20,6 +20,12 @@
   const confirmCancel = document.getElementById('confirm-cancel');
   const confirmClose = document.getElementById('confirm-close');
   const confirmPrint = document.getElementById('confirm-print');
+  const overlayBackdrop = document.getElementById('users-overlay');
+  const overlayContainer = document.getElementById('users-overlay-container');
+  const overlayTitle = document.getElementById('users-overlay-title');
+  const overlayText = document.getElementById('users-overlay-text');
+  const overlayIcon = document.getElementById('users-overlay-icon');
+  const overlayActions = document.getElementById('users-overlay-actions');
   const reloginModal = document.getElementById('relogin-modal');
   const reloginBody = document.getElementById('relogin-body');
   const reloginTitle = document.getElementById('relogin-title');
@@ -96,26 +102,75 @@
     setTimeout(() => { actionBanner.style.display = 'none'; }, 2800);
   };
 
-  function showConfirm(message) {
+  function showOverlayChoice(options) {
     return new Promise((resolve) => {
-      if (!confirmModal || !confirmMessage || !confirmOk || !confirmCancel) {
-        resolve(true);
+      if (!overlayBackdrop || !overlayContainer || !overlayTitle || !overlayText || !overlayIcon || !overlayActions) {
+        resolve(null);
         return;
       }
-      confirmMessage.textContent = message || 'Lanjutkan aksi ini?';
-      confirmModal.style.display = 'flex';
-      const cleanup = (result) => {
-        confirmModal.style.display = 'none';
-        confirmOk.onclick = null;
-        confirmCancel.onclick = null;
-        try { document.activeElement && document.activeElement.blur(); } catch (e) {}
-        try { document.body.focus(); } catch (e) {}
-        resolve(result);
+      const opts = options || {};
+      overlayTitle.textContent = opts.title || 'Konfirmasi';
+      overlayText.innerHTML = opts.messageHtml || '';
+      overlayContainer.classList.remove('status-loading', 'status-success', 'status-error');
+      if (opts.type === 'danger') {
+        overlayContainer.classList.add('status-error');
+        overlayIcon.className = 'fa fa-exclamation-triangle';
+      } else {
+        overlayContainer.classList.add('status-loading');
+        overlayIcon.className = 'fa fa-question-circle';
+      }
+      overlayActions.innerHTML = '';
+      const buttons = Array.isArray(opts.buttons) ? opts.buttons : [];
+      const cleanup = (val) => {
+        overlayBackdrop.classList.remove('show');
+        setTimeout(() => {
+          overlayBackdrop.style.display = 'none';
+        }, 250);
+        overlayActions.innerHTML = '';
+        resolve(val);
       };
-      confirmOk.onclick = () => cleanup(true);
-      confirmCancel.onclick = () => cleanup(false);
-      if (confirmClose) confirmClose.onclick = () => cleanup(false);
+      buttons.forEach((btn) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'overlay-btn' + (btn.className ? (' ' + btn.className) : '');
+        b.textContent = btn.label || 'OK';
+        if (btn.disabled) {
+          b.disabled = true;
+          b.style.opacity = '0.6';
+          b.style.cursor = 'not-allowed';
+        }
+        b.onclick = () => {
+          if (btn.onClick) {
+            btn.onClick();
+          }
+          if (btn.closeOnClick === false) return;
+          cleanup(btn.value ?? null);
+        };
+        overlayActions.appendChild(b);
+      });
+      overlayBackdrop.style.display = 'flex';
+      setTimeout(() => {
+        overlayBackdrop.classList.add('show');
+      }, 10);
+      overlayBackdrop.onclick = (e) => {
+        if (e.target === overlayBackdrop && !opts.lockClose) {
+          cleanup('cancel');
+        }
+      };
     });
+  }
+
+  function showConfirm(message, type) {
+    const msg = message || 'Lanjutkan aksi ini?';
+    return showOverlayChoice({
+      title: 'Konfirmasi',
+      messageHtml: `<div style="text-align:left;">${msg}</div>`,
+      type: type === 'danger' ? 'danger' : 'info',
+      buttons: [
+        { label: 'Batal', value: false, className: 'overlay-btn-muted' },
+        { label: 'Ya, Lanjutkan', value: true }
+      ]
+    }).then((val) => val === true);
   }
 
   if (confirmPrint) {
@@ -134,7 +189,7 @@
 
   function showRusakChecklist(data) {
     return new Promise((resolve) => {
-      if (!confirmModal || !confirmMessage || !confirmOk || !confirmCancel) {
+      if (!overlayBackdrop || !overlayText) {
         resolve(false);
         return;
       }
@@ -158,7 +213,7 @@
         </tr>`;
       }).join('');
       const msgHtml = headerMsg ? `<div style="margin-bottom:8px;color:#f3c969;">${headerMsg}</div>` : '';
-      confirmMessage.innerHTML = `
+      const messageHtml = `
         <div style="text-align:left;">
           <div style="margin-bottom:8px;font-weight:600;">Cek Kelayakan Rusak</div>
           ${msgHtml}
@@ -175,53 +230,108 @@
           </table>
         </div>`;
       const isValid = !!data.ok;
-      confirmOk.textContent = 'Ya, Lanjutkan';
-      confirmOk.disabled = !isValid;
-      confirmOk.style.opacity = isValid ? '1' : '0.5';
-      confirmOk.style.cursor = isValid ? 'pointer' : 'not-allowed';
-      if (confirmPrint) {
-        confirmPrint.style.display = 'inline-flex';
-        confirmPrint.disabled = false;
-        confirmPrint.style.pointerEvents = 'auto';
-        confirmPrint.style.opacity = '1';
-        confirmPrint.style.cursor = 'pointer';
-      }
-      confirmModal.style.display = 'flex';
       rusakPrintPayload = { headerMsg, items, meta, fallbackUser: (meta && meta.username) ? meta.username : '' };
-      if (confirmPrint) {
-        confirmPrint.dataset.username = (meta && meta.username) ? meta.username : (rusakPrintPayload.fallbackUser || '');
-        confirmPrint.dataset.session = usersSession || '';
-      }
-      const cleanup = (result) => {
-        confirmModal.style.display = 'none';
-        confirmOk.onclick = null;
-        confirmCancel.onclick = null;
-        if (confirmPrint) confirmPrint.onclick = null;
-        confirmOk.disabled = false;
-        confirmOk.style.opacity = '1';
-        confirmOk.style.cursor = 'pointer';
-        if (confirmPrint) confirmPrint.style.display = 'none';
-        try { document.activeElement && document.activeElement.blur(); } catch (e) {}
-        try { document.body.focus(); } catch (e) {}
-        resolve(result);
-      };
-      confirmOk.onclick = () => cleanup(true);
-      confirmCancel.onclick = () => cleanup(false);
-      if (confirmClose) confirmClose.onclick = () => cleanup(false);
-      if (confirmPrint) confirmPrint.onclick = (e) => {
-        if (e && typeof e.preventDefault === 'function') e.preventDefault();
-        const mt = rusakPrintPayload ? (rusakPrintPayload.meta || {}) : {};
-        const uname = (mt.username || rusakPrintPayload?.fallbackUser || confirmPrint.dataset.username || '').toString();
-        const sess = (usersSession || confirmPrint.dataset.session || '').toString();
-        if (!uname) return;
-        const url = './hotspot/print/print.detail.php?session=' + encodeURIComponent(sess) + '&user=' + encodeURIComponent(uname);
-        const w = window.open(url, '_blank');
-        if (!w) {
-          window.location.href = url;
-        }
-      };
+      const mt = rusakPrintPayload ? (rusakPrintPayload.meta || {}) : {};
+      const uname = (mt.username || rusakPrintPayload?.fallbackUser || '').toString();
+      const sess = (usersSession || '').toString();
+      const printUrl = uname ? ('./hotspot/print/print.detail.php?session=' + encodeURIComponent(sess) + '&user=' + encodeURIComponent(uname)) : '';
+      showOverlayChoice({
+        title: 'Konfirmasi Rusak',
+        messageHtml,
+        type: 'danger',
+        buttons: [
+          {
+            label: 'Print Rincian',
+            className: 'overlay-btn-secondary',
+            closeOnClick: false,
+            onClick: () => {
+              if (!printUrl) return;
+              const w = window.open(printUrl, '_blank');
+              if (!w) window.location.href = printUrl;
+            }
+          },
+          { label: 'Batal', value: false, className: 'overlay-btn-muted' },
+          { label: 'Ya, Lanjutkan', value: true, disabled: !isValid }
+        ]
+      }).then((val) => resolve(val === true));
     });
   }
+
+  window.openDeleteBlockPopup = async function(blok) {
+    const blokLabel = (blok || '').toString().trim();
+    if (!blokLabel) return;
+    const isAdmin = !!window.isSuperAdmin;
+    const firstMessage = `
+      <div style="text-align:left;">
+        <div style="font-weight:600;margin-bottom:6px;">Hapus Blok: ${blokLabel}</div>
+        <div style="font-size:12px;color:#b8c7ce;margin-bottom:10px;">
+          Pilih jenis penghapusan di bawah ini.
+        </div>
+        <ul style="padding-left:16px;margin:0;font-size:12px;color:#cbd5e1;">
+          <li><strong>Hapus Router Saja</strong>: menghapus user di MikroTik (offline saja), data laporan di DB tetap.</li>
+          <li><strong>Hapus Total (Router + DB)</strong>: menghapus user di MikroTik dan seluruh data DB (login_history, login_events, sales_history, live_sales).</li>
+        </ul>
+        ${isAdmin ? '' : '<div style="margin-top:8px;color:#f59e0b;font-size:12px;">Catatan: Hapus Total hanya untuk Superadmin.</div>'}
+      </div>`;
+    const choice = await showOverlayChoice({
+      title: 'Pilih Jenis Penghapusan',
+      messageHtml: firstMessage,
+      type: 'danger',
+      buttons: [
+        { label: 'Batal', value: 'cancel', className: 'overlay-btn-muted' },
+        { label: 'Hapus Router Saja', value: 'router', className: 'overlay-btn-secondary' },
+        { label: 'Hapus Total (Router + DB)', value: 'full', className: 'overlay-btn-danger', disabled: !isAdmin }
+      ]
+    });
+    if (!choice || choice === 'cancel') return;
+    if (choice === 'router') {
+      const detail = `
+        <div style="text-align:left;">
+          <div style="margin-bottom:6px;">Anda akan menghapus semua user di MikroTik pada blok <strong>${blokLabel}</strong>.</div>
+          <div style="font-size:12px;color:#cbd5e1;">Data database tidak dihapus. User online tidak akan dihapus.</div>
+        </div>`;
+      const ok = await showOverlayChoice({
+        title: 'Konfirmasi Hapus Router',
+        messageHtml: detail,
+        type: 'danger',
+        buttons: [
+          { label: 'Batal', value: false, className: 'overlay-btn-muted' },
+          { label: 'Ya, Hapus', value: true, className: 'overlay-btn-danger' }
+        ]
+      });
+      if (ok !== true) return;
+      const url = './?hotspot=users&action=batch_delete&blok=' + encodeURIComponent(blokLabel) + '&session=' + encodeURIComponent(usersSession);
+      actionRequest(url, null);
+      return;
+    }
+    if (choice === 'full') {
+      const detail = `
+        <div style="text-align:left;">
+          <div style="margin-bottom:6px;">Anda akan menghapus total blok <strong>${blokLabel}</strong>.</div>
+          <div style="font-size:12px;color:#cbd5e1;">
+            Tindakan ini akan menghapus user di MikroTik (termasuk aktif) dan membersihkan DB:
+            <ul style="padding-left:16px;margin:6px 0 0 0;">
+              <li>login_history</li>
+              <li>login_events</li>
+              <li>sales_history</li>
+              <li>live_sales</li>
+            </ul>
+          </div>
+        </div>`;
+      const ok = await showOverlayChoice({
+        title: 'Konfirmasi Hapus Total',
+        messageHtml: detail,
+        type: 'danger',
+        buttons: [
+          { label: 'Batal', value: false, className: 'overlay-btn-muted' },
+          { label: 'Ya, Hapus Total', value: true, className: 'overlay-btn-danger' }
+        ]
+      });
+      if (ok !== true) return;
+      const url = './?hotspot=users&action=delete_block_full&blok=' + encodeURIComponent(blokLabel) + '&session=' + encodeURIComponent(usersSession);
+      actionRequest(url, null);
+    }
+  };
 
   function uptimeToSeconds(uptime) {
     if (!uptime) return 0;

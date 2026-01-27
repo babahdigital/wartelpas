@@ -227,6 +227,12 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - Aksi ini menghapus user dari **RouterOS** (user + active) dan menghapus data di **login_history**, **login_events**, **sales_history**, **live_sales**.
 - Aktivitas dicatat ke **logs/admin_actions.log**.
 
+### 2.29 Popup Hapus Blok + Hapus Total Blok (2026-01-28)
+- Tombol **Hapus Blok** kini menampilkan popup pilihan dengan detail dampak aksi.
+- Opsi **Hapus Router Saja**: menghapus user MikroTik per blok (user online di-skip), database tetap.
+- Opsi **Hapus Total (Router + DB)** khusus superadmin: menghapus user MikroTik (termasuk active) dan membersihkan `login_history`, `login_events`, `sales_history`, `live_sales`.
+- Popup konfirmasi menggunakan style overlay seperti di menu.php.
+
 ### 2.24 Penyempurnaan Users Modular (2026-01-26)
 - Tombol **clear search (X)** stabil saat kehilangan fokus (klik di luar/ke taskbar).
 - `Retur dari` kini menampilkan username bersih (tanpa prefix **vc-**), parsing `Retur Ref` lebih fleksibel.

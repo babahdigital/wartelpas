@@ -75,7 +75,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       exit();
     }
   }
-  if ($act == 'invalid' || $act == 'retur' || $act == 'rollback' || $act == 'delete' || $act == 'delete_user_full' || $act == 'batch_delete' || $act == 'delete_status' || $act == 'check_rusak' || $act == 'disable' || $act == 'enable') {
+  if ($act == 'invalid' || $act == 'retur' || $act == 'rollback' || $act == 'delete' || $act == 'delete_user_full' || $act == 'delete_block_full' || $act == 'batch_delete' || $act == 'delete_status' || $act == 'check_rusak' || $act == 'disable' || $act == 'enable') {
     $uid = $_GET['uid'] ?? '';
     $name = $_GET['name'] ?? '';
     $comm = $_GET['c'] ?? '';
@@ -304,6 +304,19 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       }
     }
 
+    if (!$action_blocked && $act == 'delete_block_full') {
+      if (!isSuperAdmin()) {
+        $action_blocked = true;
+        $action_error = 'Akses ditolak. Hanya Superadmin.';
+      } elseif (trim((string)$blok) === '') {
+        $action_blocked = true;
+        $action_error = 'Blok tidak ditemukan.';
+      } elseif (!$db) {
+        $action_blocked = true;
+        $action_error = 'Gagal: database belum siap.';
+      }
+    }
+
     if (!$action_blocked && $act == 'delete' && $name != '') {
       $active_check = $API->comm('/ip/hotspot/active/print', [
         '?server' => $hotspot_server,
@@ -378,6 +391,113 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       }
       $admin_name = $_SESSION['mikhmon'] ?? 'superadmin';
       $log_line = '[' . date('Y-m-d H:i:s') . '] ' . $admin_name . ' delete_user_full ' . $name . "\n";
+      @file_put_contents($log_dir . '/admin_actions.log', $log_line, FILE_APPEND);
+    } elseif ($act == 'delete_block_full') {
+      $blok_norm = extract_blok_name($blok);
+      $blok_upper = strtoupper($blok_norm ?: $blok);
+      $use_glob = !preg_match('/\d$/', $blok_upper);
+      $glob_pattern = $use_glob ? ($blok_upper . '[0-9]*') : '';
+
+      $active_list = $API->comm('/ip/hotspot/active/print', [
+        '?server' => $hotspot_server,
+        '.proplist' => '.id,user'
+      ]);
+      $active_map = [];
+      foreach ($active_list as $a) {
+        if (!empty($a['user'])) $active_map[$a['user']] = $a['.id'] ?? '';
+      }
+
+      $list = $API->comm('/ip/hotspot/user/print', [
+        '?server' => $hotspot_server,
+        '.proplist' => '.id,name,comment'
+      ]);
+      $to_delete = [];
+      foreach ($list as $usr) {
+        $uname = $usr['name'] ?? '';
+        if ($uname === '') continue;
+        $c = $usr['comment'] ?? '';
+        $cblok = extract_blok_name($c);
+        $cblok_cmp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $cblok));
+        $blok_cmp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $blok_norm ?: $blok));
+        if (($cblok != '' && strcasecmp($cblok, $blok_norm) == 0) || ($cblok_cmp != '' && $cblok_cmp == $blok_cmp) || ($blok != '' && stripos($c, $blok) !== false)) {
+          $to_delete[] = ['id' => $usr['.id'] ?? '', 'name' => $uname];
+        }
+      }
+
+      foreach ($to_delete as $d) {
+        $uname = $d['name'] ?? '';
+        if ($uname !== '' && !empty($active_map[$uname])) {
+          $API->write('/ip/hotspot/active/remove', false);
+          $API->write('=.id=' . $active_map[$uname]);
+          $API->read();
+        }
+        if (!empty($d['id'])) {
+          $API->write('/ip/hotspot/user/remove', false);
+          $API->write('=.id=' . $d['id']);
+          $API->read();
+        }
+      }
+
+      $usernames = [];
+      try {
+        $whereBlok = "UPPER(blok_name) = :b" . ($use_glob ? " OR UPPER(blok_name) GLOB :bg" : "");
+        $params = $use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern] : [':b' => $blok_upper];
+        $stmt = $db->prepare("SELECT username FROM login_history WHERE ($whereBlok)");
+        $stmt->execute($params);
+        $usernames = $stmt->fetchAll(PDO::FETCH_COLUMN, 0);
+      } catch (Exception $e) {}
+
+      try {
+        $db->beginTransaction();
+        $whereBlok = "UPPER(blok_name) = :b" . ($use_glob ? " OR UPPER(blok_name) GLOB :bg" : "");
+        $params = $use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern] : [':b' => $blok_upper];
+
+        $stmt = $db->prepare("DELETE FROM login_history WHERE ($whereBlok)");
+        $stmt->execute($params);
+
+        if (!empty($usernames)) {
+          $placeholders = [];
+          $userParams = [];
+          foreach ($usernames as $i => $uname) {
+            $key = ':u' . $i;
+            $placeholders[] = $key;
+            $userParams[$key] = $uname;
+          }
+          $stmt = $db->prepare("DELETE FROM login_events WHERE username IN (" . implode(',', $placeholders) . ")");
+          $stmt->execute($userParams);
+        }
+
+        $userClause = '';
+        $userParams = [];
+        if (!empty($usernames)) {
+          $placeholders = [];
+          foreach ($usernames as $i => $uname) {
+            $key = ':us' . $i;
+            $placeholders[] = $key;
+            $userParams[$key] = $uname;
+          }
+          $userClause = " OR username IN (" . implode(',', $placeholders) . ")";
+        }
+
+        $stmt = $db->prepare("DELETE FROM sales_history WHERE ($whereBlok)$userClause");
+        $stmt->execute(array_merge($params, $userParams));
+
+        $stmt = $db->prepare("DELETE FROM live_sales WHERE ($whereBlok)$userClause");
+        $stmt->execute(array_merge($params, $userParams));
+
+        $db->commit();
+      } catch (Exception $e) {
+        if ($db->inTransaction()) {
+          $db->rollBack();
+        }
+      }
+
+      $log_dir = $root_dir . '/logs';
+      if (!is_dir($log_dir)) {
+        @mkdir($log_dir, 0755, true);
+      }
+      $admin_name = $_SESSION['mikhmon'] ?? 'superadmin';
+      $log_line = '[' . date('Y-m-d H:i:s') . '] ' . $admin_name . ' delete_block_full ' . $blok_upper . "\n";
       @file_put_contents($log_dir . '/admin_actions.log', $log_line, FILE_APPEND);
     } elseif ($act == 'delete_status') {
       $status_map = [
