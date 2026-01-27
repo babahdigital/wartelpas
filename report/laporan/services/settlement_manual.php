@@ -371,6 +371,19 @@ if ($action === 'start') {
                 '?name' => $script_name
             ]);
             if (!is_array($scriptRows) || count($scriptRows) === 0) {
+                $fallback = 'CleanWartel';
+                if ($script_name !== $fallback) {
+                    $scriptRows = $API->comm('/system/script/print', [
+                        '?name' => $fallback
+                    ]);
+                    if (is_array($scriptRows) && count($scriptRows) > 0) {
+                        $script_name = $fallback;
+                        $params = ['number' => $script_name];
+                        append_settlement_debug($debugFile, 'script_fallback=' . $script_name);
+                    }
+                }
+            }
+            if (!is_array($scriptRows) || count($scriptRows) === 0) {
                 append_settlement_debug($debugFile, 'script_not_found=' . $script_name);
                 $API->disconnect();
                 echo json_encode(['ok' => false, 'message' => 'Script tidak ditemukan di MikroTik: ' . $script_name]);
