@@ -392,7 +392,7 @@
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
                         <?php endif; ?>
                       <?php endif; ?>
-                      <?php if($u['uid'] || $can_mark_rusak): ?>
+                      <?php if($u['uid'] || $can_mark_rusak || $is_rusak): ?>
                         <?php
                           $keep_params = '&profile=' . urlencode($req_prof) .
                             '&comment=' . urlencode($req_comm) .

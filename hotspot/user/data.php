@@ -657,6 +657,17 @@ foreach($all_users as $u) {
         $profile_kind_filter = detect_profile_kind_from_comment($comment);
       }
     }
+    if ($profile_kind_filter === 'other' && in_array($status, ['RUSAK','RETUR'], true)) {
+      $hist_validity = (string)($hist['validity'] ?? '');
+      $profile_hint = resolve_profile_from_history($comment, $hist_validity, $uptime);
+      $fallback_kind = detect_profile_kind_summary($profile_hint);
+      if ($fallback_kind === 'other') {
+        $fallback_kind = detect_profile_kind_from_comment($profile_hint);
+      }
+      if ($fallback_kind !== 'other') {
+        $profile_kind_filter = $fallback_kind;
+      }
+    }
 
     // Filter blok
     if ($req_comm != '') {
