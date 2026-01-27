@@ -243,6 +243,34 @@ function generate_nested_table_user($items, $align = 'left') {
     return $html;
 }
 
+function generate_audit_cell($items, $key = 'label', $align = 'left') {
+    if (empty($items)) return '-';
+    $html = '<table style="width:100%; border-collapse:collapse; margin:0; padding:0; background:transparent;">';
+    $count = count($items);
+    foreach ($items as $i => $item) {
+        $text = is_array($item) ? (string)($item[$key] ?? '-') : (string)$item;
+        $status = normalize_status_value(is_array($item) ? ($item['status'] ?? '') : '');
+        if ($status !== '' && !in_array($status, ['rusak', 'retur', 'invalid', 'normal'], true)) {
+            $status = 'anomaly';
+        }
+
+        if ($status === 'rusak' || $status === 'invalid') {
+            $bg = '#fee2e2';
+        } elseif ($status === 'retur') {
+            $bg = '#dcfce7';
+        } elseif ($status === 'anomaly') {
+            $bg = '#fef3c7';
+        } else {
+            $bg = 'transparent';
+        }
+
+        $border = ($i < $count - 1) ? 'border-bottom:1px solid #999;' : '';
+        $html .= '<tr><td style="border:none; padding:4px 2px; '.$border.' text-align:'.$align.'; vertical-align:middle; line-height:1.2; word-wrap:break-word; background:'.$bg.';">'.htmlspecialchars($text).'</td></tr>';
+    }
+    $html .= '</table>';
+    return $html;
+}
+
 $rows = [];
 $hp_total_units = 0;
 $hp_active_units = 0;
@@ -278,7 +306,7 @@ try {
                 sh.username, sh.profile, sh.profile_snapshot,
                 sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
                 sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
-                sh.full_raw_data, lh.last_status, lh.last_bytes
+                sh.full_raw_data, lh.last_status, lh.last_bytes, lh.last_uptime
             FROM sales_history sh
             LEFT JOIN login_history lh ON lh.username = sh.username
             UNION ALL
@@ -287,7 +315,7 @@ try {
                 ls.username, ls.profile, ls.profile_snapshot,
                 ls.price, ls.price_snapshot, ls.sprice_snapshot, ls.validity,
                 ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
-                ls.full_raw_data, lh2.last_status, lh2.last_bytes
+                ls.full_raw_data, lh2.last_status, lh2.last_bytes, lh2.last_uptime
             FROM live_sales ls
             LEFT JOIN login_history lh2 ON lh2.username = ls.username
             WHERE ls.sync_status = 'pending'
@@ -324,7 +352,8 @@ try {
                 1 AS qty,
                 '' AS full_raw_data,
                 last_status,
-                last_bytes
+                                last_bytes,
+                                last_uptime
               FROM login_history
               WHERE username != ''
                 AND $lhWhere
@@ -544,7 +573,7 @@ foreach ($rows as $r) {
                 'username' => $username,
                 'status' => $status,
                 'profile_kind' => $kind,
-                'last_uptime' => '-',
+                'last_uptime' => trim((string)($r['last_uptime'] ?? '')),
                 'last_bytes' => $bytes,
                 'price' => $price
             ];
