@@ -682,14 +682,20 @@
           meta: {}
         };
       }
+      if (data && !data.meta) {
+        data.meta = {};
+      }
       if (data && data.meta) {
         if (reloginEvents.length > 0) data.meta.relogin_events = reloginEvents;
         if (reloginEvents.length > 0) data.meta.relogin_count = reloginEvents.length;
         const firstLoginMeta = el ? (el.getAttribute('data-first-login') || '') : '';
         const dateKeyMeta = extractDateKey(firstLoginMeta);
         if (dateKeyMeta) data.meta.relogin_date = dateKeyMeta;
-        if (!data.meta.username && el) {
-          data.meta.username = el.getAttribute('data-user') || '';
+        if (!data.meta.username) {
+          const elUser = el ? (el.getAttribute('data-user') || '') : '';
+          const urlUserMatch = url.match(/name=([^&]+)/i);
+          const urlUser = urlUserMatch ? decodeURIComponent(urlUserMatch[1]) : '';
+          data.meta.username = elUser || urlUser || '';
         }
       }
       const ok = await showRusakChecklist(data);
