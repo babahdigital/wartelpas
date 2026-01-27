@@ -430,53 +430,47 @@ function typeSettlementMessage(target, text, speed, done){
     });
 })();
 (function(){
-    var w = document.getElementById('chk_wartel');
-    var k = document.getElementById('chk_kamtib');
-    var ww = document.getElementById('wartel_wrap');
-    var kw = document.getElementById('kamtib_wrap');
-    var wu = ww ? ww.querySelector('input') : null;
-    var ku = kw ? kw.querySelector('input') : null;
     var form = document.getElementById('hpForm');
+    if (!form) return;
     var btn = document.getElementById('hpSubmitBtn');
     var err = document.getElementById('hpClientError');
-    var totalEl = form ? form.querySelector('input[name="total_units"]') : null;
-    var activeEl = form ? form.querySelector('input[name="active_units"]') : null;
-    var wartelEl = form ? form.querySelector('input[name="wartel_units"]') : null;
-    var kamtibEl = form ? form.querySelector('input[name="kamtib_units"]') : null;
-    var rusakEl = form ? form.querySelector('input[name="rusak_units"]') : null;
-    var spamEl = form ? form.querySelector('input[name="spam_units"]') : null;
-    function toggle(){
-        if (ww) ww.style.display = w && w.checked ? 'block' : 'none';
-        if (kw) kw.style.display = k && k.checked ? 'block' : 'none';
-        if (wu) wu.required = !!(w && w.checked);
-        if (ku) ku.required = !!(k && k.checked);
-        validate();
+    var totalEl = form.querySelector('input[name="total_units"]');
+    var activeEl = form.querySelector('input[name="active_units"]');
+    var wartelEl = form.querySelector('input[name="wartel_units"]');
+    var kamtibEl = form.querySelector('input[name="kamtib_units"]');
+    var rusakEl = form.querySelector('input[name="rusak_units"]');
+    var spamEl = form.querySelector('input[name="spam_units"]');
+
+    function num(el){
+        var v = el ? parseInt(el.value || '0', 10) : 0;
+        return isNaN(v) ? 0 : v;
     }
+
+    function sanitize(el){
+        if (!el) return;
+        var v = num(el);
+        if (v < 0) v = 0;
+        el.value = v;
+    }
+
     function validate(){
-        if (!form || !btn || !err) return;
-        var total = totalEl ? parseInt(totalEl.value || '0', 10) : 0;
-        var wartel = wartelEl ? parseInt(wartelEl.value || '0', 10) : 0;
-        var kamtib = kamtibEl ? parseInt(kamtibEl.value || '0', 10) : 0;
-        var rusak = rusakEl ? parseInt(rusakEl.value || '0', 10) : 0;
-        var spam = spamEl ? parseInt(spamEl.value || '0', 10) : 0;
-        if (activeEl) {
-            var calcActive = total - rusak - spam;
-            activeEl.value = calcActive >= 0 ? calcActive : 0;
-        }
-        var useW = !!(w && w.checked);
-        var useK = !!(k && k.checked);
+        if (!btn || !err) return;
+        var wartel = num(wartelEl);
+        var kamtib = num(kamtibEl);
+        var rusak = num(rusakEl);
+        var spam = num(spamEl);
+        var total = wartel + kamtib;
+        if (totalEl) totalEl.value = total;
+        var active = total - rusak - spam;
+        if (activeEl) activeEl.value = active >= 0 ? active : 0;
+
         var msg = '';
-        if (!useW && !useK) {
-            msg = 'Pilih minimal salah satu unit (WARTEL/KAMTIB).';
-        } else if (useW && !useK && total !== wartel) {
-            msg = 'Jika hanya WARTEL dipilih, jumlahnya harus sama dengan total.';
-        } else if (!useW && useK && total !== kamtib) {
-            msg = 'Jika hanya KAMTIB dipilih, jumlahnya harus sama dengan total.';
-        } else if (useW && useK && total !== (wartel + kamtib)) {
-            msg = 'Total unit harus sama dengan jumlah WARTEL + KAMTIB.';
+        if (total <= 0) {
+            msg = 'Total unit masih 0. Isi jumlah WARTEL atau KAMTIB.';
         } else if (total < (rusak + spam)) {
             msg = 'Total unit tidak boleh kurang dari Rusak + Spam.';
         }
+
         if (msg) {
             err.textContent = msg;
             err.style.display = 'block';
@@ -487,42 +481,43 @@ function typeSettlementMessage(target, text, speed, done){
             btn.disabled = false;
         }
     }
-    if (w) w.addEventListener('change', toggle);
-    if (k) k.addEventListener('change', toggle);
-    if (totalEl) totalEl.addEventListener('input', validate);
-    if (wartelEl) wartelEl.addEventListener('input', validate);
-    if (kamtibEl) kamtibEl.addEventListener('input', validate);
-    if (rusakEl) rusakEl.addEventListener('input', validate);
-    if (spamEl) spamEl.addEventListener('input', validate);
-    if (form) {
-        form.addEventListener('submit', function(e){
-            e.preventDefault();
-            if (btn && btn.disabled) return;
-            window.sellingPauseReload = true;
-            var fd = new FormData(form);
-            fd.append('ajax', '1');
-            fetch(form.action, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(function(r){ return r.text(); })
-                .then(function(text){
-                    var data = null;
-                    try { data = JSON.parse(text); } catch (e) {}
-                    if (data && data.ok && data.redirect) {
-                        window.location.replace(data.redirect);
-                        return;
-                    }
-                    var msg = (data && data.message) ? data.message : 'Respon tidak valid dari server.';
-                    err.textContent = msg;
-                    err.style.display = 'block';
-                    if (btn) btn.disabled = true;
-                })
-                .catch(function(){
-                    err.textContent = 'Gagal mengirim data. Coba lagi.';
-                    err.style.display = 'block';
-                    if (btn) btn.disabled = true;
-                });
+
+    [wartelEl, kamtibEl, rusakEl, spamEl].forEach(function(el){
+        if (!el) return;
+        el.addEventListener('input', function(){
+            sanitize(el);
+            validate();
         });
-    }
-    toggle();
+    });
+
+    form.addEventListener('submit', function(e){
+        e.preventDefault();
+        if (btn && btn.disabled) return;
+        window.sellingPauseReload = true;
+        var fd = new FormData(form);
+        fd.append('ajax', '1');
+        fetch(form.action, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r){ return r.text(); })
+            .then(function(text){
+                var data = null;
+                try { data = JSON.parse(text); } catch (e) {}
+                if (data && data.ok && data.redirect) {
+                    window.location.replace(data.redirect);
+                    return;
+                }
+                var msg = (data && data.message) ? data.message : 'Respon tidak valid dari server.';
+                err.textContent = msg;
+                err.style.display = 'block';
+                if (btn) btn.disabled = true;
+            })
+            .catch(function(){
+                err.textContent = 'Gagal mengirim data. Coba lagi.';
+                err.style.display = 'block';
+                if (btn) btn.disabled = true;
+            });
+    });
+
+    validate();
 })();
 
 function openHpModal(){
@@ -542,7 +537,6 @@ window.openHpEdit = function(btn){
     if (!form || !btn) return;
     form.querySelector('select[name="blok_name"]').value = btn.getAttribute('data-blok') || '';
     form.querySelector('input[name="report_date"]').value = btn.getAttribute('data-date') || '';
-    form.querySelector('input[name="total_units"]').value = btn.getAttribute('data-total') || '0';
     form.querySelector('input[name="rusak_units"]').value = btn.getAttribute('data-rusak') || '0';
     form.querySelector('input[name="spam_units"]').value = btn.getAttribute('data-spam') || '0';
     form.querySelector('input[name="notes"]').value = btn.getAttribute('data-notes') || '';
@@ -550,20 +544,20 @@ window.openHpEdit = function(btn){
     var wartel = parseInt(btn.getAttribute('data-wartel') || '0', 10);
     var kamtib = parseInt(btn.getAttribute('data-kamtib') || '0', 10);
 
-    var w = document.getElementById('chk_wartel');
-    var k = document.getElementById('chk_kamtib');
     var wartelEl = form.querySelector('input[name="wartel_units"]');
     var kamtibEl = form.querySelector('input[name="kamtib_units"]');
+    var rusakEl = form.querySelector('input[name="rusak_units"]');
+    var spamEl = form.querySelector('input[name="spam_units"]');
 
-    if (w) w.checked = wartel > 0;
-    if (k) k.checked = kamtib > 0;
     if (wartelEl) wartelEl.value = wartel;
     if (kamtibEl) kamtibEl.value = kamtib;
 
     if (typeof window.dispatchEvent === 'function') {
-        var evt = new Event('change');
-        if (w) w.dispatchEvent(evt);
-        if (k) k.dispatchEvent(evt);
+        var evt = new Event('input', { bubbles: true });
+        if (wartelEl) wartelEl.dispatchEvent(evt);
+        if (kamtibEl) kamtibEl.dispatchEvent(evt);
+        if (rusakEl) rusakEl.dispatchEvent(evt);
+        if (spamEl) spamEl.dispatchEvent(evt);
     }
 
     openHpModal();
