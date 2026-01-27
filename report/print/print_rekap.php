@@ -630,7 +630,7 @@ foreach ($rows as $r) {
             if ($is_laku) {
                 $block_summaries[$block]['qty_10'] += $qty_count;
             }
-            if ($is_laku || $status === 'retur') {
+            if ($is_laku || $status === 'retur' || $rusak_recovered) {
                 $block_summaries[$block]['amt_10'] += $net_line;
             }
             if ($status === 'rusak') $block_summaries[$block]['rs_10'] += $qty_count;
@@ -640,7 +640,7 @@ foreach ($rows as $r) {
             if ($is_laku) {
                 $block_summaries[$block]['qty_30'] += $qty_count;
             }
-            if ($is_laku || $status === 'retur') {
+            if ($is_laku || $status === 'retur' || $rusak_recovered) {
                 $block_summaries[$block]['amt_30'] += $net_line;
             }
             if ($status === 'rusak') $block_summaries[$block]['rs_30'] += $qty_count;
@@ -650,7 +650,7 @@ foreach ($rows as $r) {
             $block_summaries[$block]['total_qty'] += $qty_count;
             $block_summaries[$block]['total_bw'] += $bw_line;
         }
-        if ($is_laku || $status === 'retur') {
+        if ($is_laku || $status === 'retur' || $rusak_recovered) {
             $block_summaries[$block]['total_amount'] += $net_line;
         }
         if ($status === 'rusak') $block_summaries[$block]['rs_total'] += $qty_count;
