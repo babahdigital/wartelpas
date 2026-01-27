@@ -1119,8 +1119,20 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
                             $p10_qty = (int)($profile_qty['qty_10'] ?? 0);
                             $p30_qty = (int)($profile_qty['qty_30'] ?? 0);
-                            if ($p10_qty <= 0) $p10_qty = count($profile10_items);
-                            if ($p30_qty <= 0) $p30_qty = count($profile30_items);
+                            if ($p10_qty <= 0 && !empty($profile10_items)) {
+                                $p10_qty = 0;
+                                foreach ($profile10_items as $itm) {
+                                    $st = normalize_status_value($itm['status'] ?? '');
+                                    if ($st !== 'rusak') $p10_qty++;
+                                }
+                            }
+                            if ($p30_qty <= 0 && !empty($profile30_items)) {
+                                $p30_qty = 0;
+                                foreach ($profile30_items as $itm) {
+                                    $st = normalize_status_value($itm['status'] ?? '');
+                                    if ($st !== 'rusak') $p30_qty++;
+                                }
+                            }
                             $p10_tt = $p10_qty > 0 ? number_format($p10_qty,0,',','.') : '-';
                             $p30_tt = $p30_qty > 0 ? number_format($p30_qty,0,',','.') : '-';
                             $audit_total_profile_qty_10 += $p10_qty;
