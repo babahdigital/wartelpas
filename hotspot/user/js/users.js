@@ -810,30 +810,19 @@
       let data = null;
       try { data = JSON.parse(text); } catch (e) { data = null; }
       if (data && data.ok) {
-        window.showActionPopup('success', data.message || 'Berhasil diproses.');
-        suspendAutoRefresh = false;
-        if (data.new_user) {
-          const printUrl = './voucher/print.php?user=vc-' + encodeURIComponent(data.new_user) + '&small=yes&session=' + encodeURIComponent(usersSession);
-          setTimeout(() => {
-            const w = window.open(printUrl, '_blank');
-            if (w) {
-              try {
-                w.onload = function() {
-                  setTimeout(() => { try { w.print(); } catch (e) {} }, 400);
-                };
-              } catch (e) {}
-            }
-          }, 500);
-        }
-        if (url.includes('action=batch_delete') || url.includes('action=delete_block_full')) {
+        const isBlockDelete = url.includes('action=batch_delete') || url.includes('action=delete_block_full');
+        if (isBlockDelete) {
           const msg = data.message || 'Blok berhasil dihapus.';
           await showOverlayChoice({
-            title: 'Sukses',
+            title: 'Sukses Hapus Blok',
             messageHtml: `
               <div style="text-align:center;">
-                <div style="font-size:40px; color:#10b981; margin-bottom:10px;"><i class="fa fa-check-circle"></i></div>
-                <div style="font-size:16px; font-weight:bold; color:#fff; margin-bottom:8px;">Berhasil!</div>
-                <div style="color:#e2e8f0; margin-bottom:15px;">${msg}</div>
+                <div style="font-size:50px; color:#10b981; margin-bottom:15px;"><i class="fa fa-check-circle"></i></div>
+                <div style="font-size:18px; font-weight:bold; color:#fff; margin-bottom:10px;">Penghapusan Selesai!</div>
+                <div style="color:#e2e8f0; margin-bottom:20px; font-size:14px; line-height:1.5;">${msg}</div>
+                <div style="background:rgba(16, 185, 129, 0.1); border:1px solid rgba(16, 185, 129, 0.3); padding:10px; border-radius:6px; font-size:12px; color:#a7f3d0;">
+                    Database dan Router telah disinkronisasi.
+                </div>
               </div>`,
             type: 'info',
             buttons: [
@@ -849,6 +838,21 @@
             lockClose: true
           });
           return;
+        }
+        window.showActionPopup('success', data.message || 'Berhasil diproses.');
+        suspendAutoRefresh = false;
+        if (data.new_user) {
+          const printUrl = './voucher/print.php?user=vc-' + encodeURIComponent(data.new_user) + '&small=yes&session=' + encodeURIComponent(usersSession);
+          setTimeout(() => {
+            const w = window.open(printUrl, '_blank');
+            if (w) {
+              try {
+                w.onload = function() {
+                  setTimeout(() => { try { w.print(); } catch (e) {} }, 400);
+                };
+              } catch (e) {}
+            }
+          }, 500);
         }
         if (url.includes('action=delete_status')) {
           const params = new URLSearchParams(window.location.search);
@@ -865,17 +869,16 @@
         }
         fetchUsers(true, false);
       } else if (!data) {
-        window.showActionPopup('success', 'Berhasil diproses.');
-        suspendAutoRefresh = false;
-        if (url.includes('action=batch_delete') || url.includes('action=delete_block_full')) {
+        const isBlockDelete = url.includes('action=batch_delete') || url.includes('action=delete_block_full');
+        if (isBlockDelete) {
           const msg = 'Blok berhasil dihapus.';
           await showOverlayChoice({
-            title: 'Sukses',
+            title: 'Sukses Hapus Blok',
             messageHtml: `
               <div style="text-align:center;">
-                <div style="font-size:40px; color:#10b981; margin-bottom:10px;"><i class="fa fa-check-circle"></i></div>
-                <div style="font-size:16px; font-weight:bold; color:#fff; margin-bottom:8px;">Berhasil!</div>
-                <div style="color:#e2e8f0; margin-bottom:15px;">${msg}</div>
+                <div style="font-size:50px; color:#10b981; margin-bottom:15px;"><i class="fa fa-check-circle"></i></div>
+                <div style="font-size:18px; font-weight:bold; color:#fff; margin-bottom:10px;">Penghapusan Selesai!</div>
+                <div style="color:#e2e8f0; margin-bottom:20px; font-size:14px; line-height:1.5;">${msg}</div>
               </div>`,
             type: 'info',
             buttons: [
@@ -892,6 +895,8 @@
           });
           return;
         }
+        window.showActionPopup('success', 'Berhasil diproses.');
+        suspendAutoRefresh = false;
         if (url.includes('action=delete_status')) {
           const params = new URLSearchParams(window.location.search);
           params.set('hotspot', 'users');
