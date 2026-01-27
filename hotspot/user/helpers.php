@@ -152,97 +152,111 @@ if (!function_exists('merge_date_time')) {
 }
 
 // Helper: Ekstrak sumber retur dari comment
-function extract_retur_ref($comment) {
-  if (empty($comment)) return '';
-  if (preg_match('/Retur\s*Ref\s*:\s*([^|]+)/i', $comment, $m)) {
-    return trim($m[1]);
+if (!function_exists('extract_retur_ref')) {
+  function extract_retur_ref($comment) {
+    if (empty($comment)) return '';
+    if (preg_match('/Retur\s*Ref\s*:\s*([^|]+)/i', $comment, $m)) {
+      return trim($m[1]);
+    }
+    return '';
   }
-  return '';
 }
 
 // Helper: Ekstrak username asal retur dari comment
-function extract_retur_user_from_ref($comment) {
-  $ref = extract_retur_ref($comment);
-  if ($ref === '') return '';
-  $ref = trim($ref);
-  if (preg_match('/\bvc-([A-Za-z0-9._-]+)/', $ref, $m)) {
-    return $m[1];
-  }
-  if (preg_match('/^([A-Za-z0-9._-]+)/', $ref, $m)) {
-    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $m[1])) {
+if (!function_exists('extract_retur_user_from_ref')) {
+  function extract_retur_user_from_ref($comment) {
+    $ref = extract_retur_ref($comment);
+    if ($ref === '') return '';
+    $ref = trim($ref);
+    if (preg_match('/\bvc-([A-Za-z0-9._-]+)/', $ref, $m)) {
       return $m[1];
     }
+    if (preg_match('/^([A-Za-z0-9._-]+)/', $ref, $m)) {
+      if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $m[1])) {
+        return $m[1];
+      }
+    }
+    return '';
   }
-  return '';
 }
 
 // Helper: Normalisasi param blok dari dropdown (hapus suffix count seperti ":1")
-function normalize_blok_param($blok) {
-  if (empty($blok)) return $blok;
-  if (preg_match('/^(.+?):\d+$/', $blok, $m)) {
-    return $m[1];
+if (!function_exists('normalize_blok_param')) {
+  function normalize_blok_param($blok) {
+    if (empty($blok)) return $blok;
+    if (preg_match('/^(.+?):\d+$/', $blok, $m)) {
+      return $m[1];
+    }
+    return $blok;
   }
-  return $blok;
 }
 
 // Helper: Normalisasi tanggal untuk filter (harian/bulanan/tahunan)
-function normalize_date_key($dateTime, $mode) {
-  if (empty($dateTime)) return '';
-  $ts = strtotime($dateTime);
-  if ($ts === false) return '';
-  if ($mode === 'bulanan') return date('Y-m', $ts);
-  if ($mode === 'tahunan') return date('Y', $ts);
-  return date('Y-m-d', $ts);
+if (!function_exists('normalize_date_key')) {
+  function normalize_date_key($dateTime, $mode) {
+    if (empty($dateTime)) return '';
+    $ts = strtotime($dateTime);
+    if ($ts === false) return '';
+    if ($mode === 'bulanan') return date('Y-m', $ts);
+    if ($mode === 'tahunan') return date('Y', $ts);
+    return date('Y-m-d', $ts);
+  }
 }
 
 // Helper: Generator User Baru (retur)
-function gen_user($profile, $comment_ref, $orig_user = '') {
-  $blok = '';
-  if (preg_match('/(Blok-[A-Za-z0-9]+)/i', $comment_ref, $m)) $blok = $m[1];
-  if ($blok === '') {
-    $blok = extract_blok_name($comment_ref);
-  }
-  // Hindari nested Retur Ref
-  $clean_ref = $comment_ref;
-  $clean_ref = preg_replace('/\(Retur\)/i', '', $clean_ref);
-  $clean_ref = preg_replace('/Retur\s*Ref\s*:[^|]+/i', '', $clean_ref);
-  $clean_ref = preg_replace('/\s+\|\s+/', ' | ', $clean_ref);
-  $clean_ref = trim($clean_ref);
-  $char = "abcdefghijklmnopqrstuvwxyz0123456789"; 
-  $user = substr(str_shuffle($char), 0, 6);
-  $pass = $user;
-  $blok_part = $blok != '' ? $blok . ' ' : '';
-  $ref_user = trim((string)$orig_user);
-  if ($ref_user !== '') {
-    $ref_label = "Retur Ref:vc-{$ref_user}";
-  } else {
-    $ref_user_simple = extract_retur_user_from_ref($comment_ref);
-    if ($ref_user_simple !== '') {
-      $ref_label = "Retur Ref:vc-{$ref_user_simple}";
-    } else {
-      $ref_label = 'Retur Ref:' . substr(preg_replace('/[^A-Za-z0-9]/', '', $clean_ref), 0, 20);
+if (!function_exists('gen_user')) {
+  function gen_user($profile, $comment_ref, $orig_user = '') {
+    $blok = '';
+    if (preg_match('/(Blok-[A-Za-z0-9]+)/i', $comment_ref, $m)) $blok = $m[1];
+    if ($blok === '') {
+      $blok = extract_blok_name($comment_ref);
     }
+    // Hindari nested Retur Ref
+    $clean_ref = $comment_ref;
+    $clean_ref = preg_replace('/\(Retur\)/i', '', $clean_ref);
+    $clean_ref = preg_replace('/Retur\s*Ref\s*:[^|]+/i', '', $clean_ref);
+    $clean_ref = preg_replace('/\s+\|\s+/', ' | ', $clean_ref);
+    $clean_ref = trim($clean_ref);
+    $char = "abcdefghijklmnopqrstuvwxyz0123456789"; 
+    $user = substr(str_shuffle($char), 0, 6);
+    $pass = $user;
+    $blok_part = $blok != '' ? $blok . ' ' : '';
+    $ref_user = trim((string)$orig_user);
+    if ($ref_user !== '') {
+      $ref_label = "Retur Ref:vc-{$ref_user}";
+    } else {
+      $ref_user_simple = extract_retur_user_from_ref($comment_ref);
+      if ($ref_user_simple !== '') {
+        $ref_label = "Retur Ref:vc-{$ref_user_simple}";
+      } else {
+        $ref_label = 'Retur Ref:' . substr(preg_replace('/[^A-Za-z0-9]/', '', $clean_ref), 0, 20);
+      }
+    }
+    $new_comm = trim("{$blok_part}(Retur) Valid: {$ref_label} | Profile:{$profile}");
+    return ['u'=>$user, 'p'=>$pass, 'c'=>$new_comm];
   }
-  $new_comm = trim("{$blok_part}(Retur) Valid: {$ref_label} | Profile:{$profile}");
-  return ['u'=>$user, 'p'=>$pass, 'c'=>$new_comm];
 }
 
-function log_ready_skip_users($message) {
-  $logDir = __DIR__ . '/../../logs';
-  if (!is_dir($logDir)) {
-    @mkdir($logDir, 0755, true);
+if (!function_exists('log_ready_skip_users')) {
+  function log_ready_skip_users($message) {
+    $logDir = __DIR__ . '/../../logs';
+    if (!is_dir($logDir)) {
+      @mkdir($logDir, 0755, true);
+    }
+    $logFile = $logDir . '/ready_skip.log';
+    $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
+    @file_put_contents($logFile, $line, FILE_APPEND);
   }
-  $logFile = $logDir . '/ready_skip.log';
-  $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
-  @file_put_contents($logFile, $line, FILE_APPEND);
 }
 
-function is_wartel_client($comment, $hist_blok = '') {
-  if (!empty($hist_blok)) return true;
-  $blok = extract_blok_name($comment);
-  if (!empty($blok)) return true;
-  if (!empty($comment) && stripos($comment, 'blok-') !== false) return true;
-  return false;
+if (!function_exists('is_wartel_client')) {
+  function is_wartel_client($comment, $hist_blok = '') {
+    if (!empty($hist_blok)) return true;
+    $blok = extract_blok_name($comment);
+    if (!empty($blok)) return true;
+    if (!empty($comment) && stripos($comment, 'blok-') !== false) return true;
+    return false;
+  }
 }
 
 if (!function_exists('detect_profile_kind_summary')) {
