@@ -574,6 +574,7 @@
   }
 
   window.actionRequest = async function(url, confirmMsg) {
+    suspendAutoRefresh = true;
     if (confirmMsg) {
       const msgLower = confirmMsg.toLowerCase();
       if (msgLower.includes('hapus total user')) {
@@ -625,7 +626,10 @@
             }
           ]
         });
-        if (!ok) return;
+        if (!ok) {
+          suspendAutoRefresh = false;
+          return;
+        }
         confirmMsg = null;
       } else if (msgLower.includes('disable voucher')) {
         const match = confirmMsg.match(/Voucher\s+([^\?]+)/i);
@@ -673,7 +677,10 @@
             }
           ]
         });
-        if (!ok) return;
+        if (!ok) {
+          suspendAutoRefresh = false;
+          return;
+        }
         confirmMsg = null;
       } else if (msgLower.includes('retur voucher')) {
         const match = confirmMsg.match(/RETUR Voucher\s+([^\?]+)/i);
@@ -722,7 +729,10 @@
             }
           ]
         });
-        if (!ok) return;
+        if (!ok) {
+          suspendAutoRefresh = false;
+          return;
+        }
         confirmMsg = null;
       } else if (msgLower.includes('rollback rusak')) {
         const match = confirmMsg.match(/Rollback RUSAK\s+([^\?]+)/i);
@@ -770,7 +780,10 @@
             }
           ]
         });
-        if (!ok) return;
+        if (!ok) {
+          suspendAutoRefresh = false;
+          return;
+        }
         confirmMsg = null;
       } else {
         const ok = await showOverlayChoice({
@@ -782,7 +795,10 @@
             { label: 'Ya, Lanjutkan', value: true, className: 'overlay-btn-secondary' }
           ]
         });
-        if (!ok) return;
+        if (!ok) {
+          suspendAutoRefresh = false;
+          return;
+        }
         confirmMsg = null;
       }
     }
@@ -795,6 +811,7 @@
       try { data = JSON.parse(text); } catch (e) { data = null; }
       if (data && data.ok) {
         window.showActionPopup('success', data.message || 'Berhasil diproses.');
+        suspendAutoRefresh = false;
         if (data.new_user) {
           const printUrl = './voucher/print.php?user=vc-' + encodeURIComponent(data.new_user) + '&small=yes&session=' + encodeURIComponent(usersSession);
           setTimeout(() => {
@@ -849,6 +866,7 @@
         fetchUsers(true, false);
       } else if (!data) {
         window.showActionPopup('success', 'Berhasil diproses.');
+        suspendAutoRefresh = false;
         if (url.includes('action=batch_delete') || url.includes('action=delete_block_full')) {
           const msg = 'Blok berhasil dihapus.';
           await showOverlayChoice({
@@ -887,9 +905,11 @@
         fetchUsers(true, false);
       } else {
         window.showActionPopup('error', (data && data.message) ? data.message : 'Gagal memproses.');
+        suspendAutoRefresh = false;
       }
     } catch (e) {
       window.showActionPopup('error', 'Gagal memproses.');
+      suspendAutoRefresh = false;
     } finally {
       if (pageDim) pageDim.style.display = 'none';
     }
