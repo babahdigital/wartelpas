@@ -54,13 +54,6 @@ function normalize_profile_filter($profile) {
     return $p;
 }
 
-function detect_profile_kind_from_label($profile_label) {
-    $p = normalize_profile_label($profile_label);
-    if (preg_match('/\b(10|30)\s*menit\b/i', $p, $m)) return $m[1];
-    if (preg_match('/\b(10|30)\b/', $p, $m)) return $m[1];
-    return 'other';
-}
-
 $filter_profile_kind = normalize_profile_filter($filter_profile);
 
 $filter_date = $_GET['date'] ?? '';
