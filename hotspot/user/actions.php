@@ -507,7 +507,31 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         }
       } catch (Exception $e) {}
 
-      if (!empty($delete_name_map)) {
+      $parent_name_map = $delete_name_map;
+      if ($db) {
+        try {
+          $stmt = $db->prepare("SELECT username FROM sales_history WHERE $whereMatch");
+          $stmt->execute($base_params);
+          foreach ($stmt->fetchAll(PDO::FETCH_COLUMN, 0) as $uname) {
+            $key = strtolower((string)$uname);
+            if ($key !== '' && !isset($parent_name_map[$key])) {
+              $parent_name_map[$key] = $uname;
+            }
+          }
+        } catch (Exception $e) {}
+        try {
+          $stmt = $db->prepare("SELECT username FROM live_sales WHERE $whereMatch");
+          $stmt->execute($base_params);
+          foreach ($stmt->fetchAll(PDO::FETCH_COLUMN, 0) as $uname) {
+            $key = strtolower((string)$uname);
+            if ($key !== '' && !isset($parent_name_map[$key])) {
+              $parent_name_map[$key] = $uname;
+            }
+          }
+        } catch (Exception $e) {}
+      }
+
+      if (!empty($delete_name_map) || !empty($parent_name_map)) {
         try {
           $stmt = $db->query("SELECT username, raw_comment FROM login_history WHERE raw_comment IS NOT NULL AND raw_comment != ''");
           foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
@@ -517,7 +541,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             $ref_user = extract_retur_user_from_ref($rc);
             if ($ref_user !== '') {
               $ref_key = strtolower($ref_user);
-              if (isset($delete_name_map[$ref_key])) {
+              if (isset($delete_name_map[$ref_key]) || isset($parent_name_map[$ref_key])) {
                 $ru_key = strtolower($ru);
                 if (!isset($delete_name_map[$ru_key])) {
                   $delete_name_map[$ru_key] = $ru;
@@ -560,7 +584,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         }
       }
 
-      if (!empty($base_router_map) || !empty($delete_name_map)) {
+      if (!empty($base_router_map) || !empty($delete_name_map) || !empty($parent_name_map)) {
         foreach ($list as $usr) {
           $uname = $usr['name'] ?? '';
           if ($uname === '') continue;
@@ -568,7 +592,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           $ref_user = extract_retur_user_from_ref($c);
           if ($ref_user !== '') {
             $ref_key = strtolower($ref_user);
-            if (isset($base_router_map[$ref_key]) || isset($delete_name_map[$ref_key])) {
+            if (isset($base_router_map[$ref_key]) || isset($delete_name_map[$ref_key]) || isset($parent_name_map[$ref_key])) {
               $uname_key = strtolower($uname);
               if (!isset($delete_name_map[$uname_key])) {
                 $delete_name_map[$uname_key] = $uname;
