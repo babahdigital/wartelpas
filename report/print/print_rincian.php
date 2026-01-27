@@ -119,13 +119,15 @@ function extract_profile_from_comment($comment) {
     return '';
 }
 
-function normalize_profile_label($profile) {
-    $p = trim((string)$profile);
-    if ($p === '') return '-';
-    if (preg_match('/\b(10|30)\s*(menit|m|min)\b/i', $p, $m)) {
-        return $m[1] . ' Menit';
+if (!function_exists('normalize_profile_label')) {
+    function normalize_profile_label($profile) {
+        $p = trim((string)$profile);
+        if ($p === '') return '-';
+        if (preg_match('/\b(10|30)\s*(menit|m|min)\b/i', $p, $m)) {
+            return $m[1] . ' Menit';
+        }
+        return $p;
     }
-    return $p;
 }
 
 function extract_ip_mac_from_comment($comment) {
@@ -150,54 +152,62 @@ function is_wartel_client($comment, $hist_blok = '') {
     return false;
 }
 
-function uptime_to_seconds($uptime) {
-    if (empty($uptime) || $uptime === '0s') return 0;
-    $total = 0;
-    if (preg_match_all('/(\d+)(w|d|h|m|s)/i', $uptime, $m, PREG_SET_ORDER)) {
-        foreach ($m as $part) {
-            $val = (int)$part[1];
-            switch (strtolower($part[2])) {
-                case 'w': $total += $val * 7 * 24 * 3600; break;
-                case 'd': $total += $val * 24 * 3600; break;
-                case 'h': $total += $val * 3600; break;
-                case 'm': $total += $val * 60; break;
-                case 's': $total += $val; break;
+if (!function_exists('uptime_to_seconds')) {
+    function uptime_to_seconds($uptime) {
+        if (empty($uptime) || $uptime === '0s') return 0;
+        $total = 0;
+        if (preg_match_all('/(\d+)(w|d|h|m|s)/i', $uptime, $m, PREG_SET_ORDER)) {
+            foreach ($m as $part) {
+                $val = (int)$part[1];
+                switch (strtolower($part[2])) {
+                    case 'w': $total += $val * 7 * 24 * 3600; break;
+                    case 'd': $total += $val * 24 * 3600; break;
+                    case 'h': $total += $val * 3600; break;
+                    case 'm': $total += $val * 60; break;
+                    case 's': $total += $val; break;
+                }
             }
         }
+        return $total;
     }
-    return $total;
 }
 
-function seconds_to_uptime($seconds) {
-    $seconds = (int)$seconds;
-    if ($seconds <= 0) return '0s';
-    $parts = [];
-    $w = intdiv($seconds, 604800);
-    if ($w > 0) { $parts[] = $w . 'w'; $seconds %= 604800; }
-    $d = intdiv($seconds, 86400);
-    if ($d > 0) { $parts[] = $d . 'd'; $seconds %= 86400; }
-    $h = intdiv($seconds, 3600);
-    if ($h > 0) { $parts[] = $h . 'h'; $seconds %= 3600; }
-    $m = intdiv($seconds, 60);
-    if ($m > 0) { $parts[] = $m . 'm'; $seconds %= 60; }
-    if ($seconds > 0) { $parts[] = $seconds . 's'; }
-    return implode('', $parts);
+if (!function_exists('seconds_to_uptime')) {
+    function seconds_to_uptime($seconds) {
+        $seconds = (int)$seconds;
+        if ($seconds <= 0) return '0s';
+        $parts = [];
+        $w = intdiv($seconds, 604800);
+        if ($w > 0) { $parts[] = $w . 'w'; $seconds %= 604800; }
+        $d = intdiv($seconds, 86400);
+        if ($d > 0) { $parts[] = $d . 'd'; $seconds %= 86400; }
+        $h = intdiv($seconds, 3600);
+        if ($h > 0) { $parts[] = $h . 'h'; $seconds %= 3600; }
+        $m = intdiv($seconds, 60);
+        if ($m > 0) { $parts[] = $m . 'm'; $seconds %= 60; }
+        if ($seconds > 0) { $parts[] = $seconds . 's'; }
+        return implode('', $parts);
+    }
 }
 
-function extract_datetime_from_comment($comment) {
-    if (empty($comment)) return '';
-    $first = trim(explode('|', $comment)[0] ?? '');
-    if ($first === '') return '';
-    $ts = strtotime($first);
-    if ($ts === false) return '';
-    return date('Y-m-d H:i:s', $ts);
+if (!function_exists('extract_datetime_from_comment')) {
+    function extract_datetime_from_comment($comment) {
+        if (empty($comment)) return '';
+        $first = trim(explode('|', $comment)[0] ?? '');
+        if ($first === '') return '';
+        $ts = strtotime($first);
+        if ($ts === false) return '';
+        return date('Y-m-d H:i:s', $ts);
+    }
 }
 
-function format_date_indo($dateStr) {
-    if (empty($dateStr) || $dateStr === '-') return '-';
-    $ts = strtotime($dateStr);
-    if ($ts === false) return $dateStr;
-    return date('d-m-Y H:i:s', $ts);
+if (!function_exists('format_date_indo')) {
+    function format_date_indo($dateStr) {
+        if (empty($dateStr) || $dateStr === '-') return '-';
+        $ts = strtotime($dateStr);
+        if ($ts === false) return $dateStr;
+        return date('d-m-Y H:i:s', $ts);
+    }
 }
 
 function format_date_long_indo($dateStr) {
