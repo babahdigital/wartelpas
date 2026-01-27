@@ -1003,18 +1003,21 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $cnt_invalid_10 = 0;
                             $cnt_invalid_30 = 0;
                             $has_manual_evidence = false;
+                            $manual_users_map = [];
                             $audit_block_key = normalize_block_name($ar['blok_name'] ?? '', (string)($ar['comment'] ?? ''));
                             $system_incidents = $system_incidents_by_block[$audit_block_key] ?? [];
 
                             if (!empty($ar['user_evidence'])) {
                                 $evidence = json_decode((string)$ar['user_evidence'], true);
                                 if (is_array($evidence)) {
-                                    $has_manual_evidence = !empty($evidence['users']) || !empty($evidence['profile_qty']);
                                     if (!empty($evidence['profile_qty']) && is_array($evidence['profile_qty'])) {
                                         $profile_qty = $evidence['profile_qty'];
                                     }
                                     if (!empty($evidence['users']) && is_array($evidence['users'])) {
+                                        $has_manual_evidence = true;
                                         foreach ($evidence['users'] as $uname => $ud) {
+                                            $uname = trim((string)$uname);
+                                            if ($uname === '') continue;
                                             $cnt = isset($ud['events']) && is_array($ud['events']) ? count($ud['events']) : 0;
                                             $upt = trim((string)($ud['last_uptime'] ?? ''));
                                             $lb = format_bytes_short((int)($ud['last_bytes'] ?? 0));
@@ -1026,31 +1029,33 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             if (!in_array($u_status, ['rusak', 'retur', 'invalid'], true)) {
                                                 $u_status = 'anomaly';
                                             }
-                                            $is_unreported = ($uname !== '' && $uname !== '-') && ($u_status === 'anomaly');
+                                            $is_unreported = ($u_status === 'anomaly');
                                             $item = [
-                                                'label' => (string)$uname,
+                                                'label' => $uname,
                                                 'status' => $u_status,
                                                 'uptime' => $upt,
                                                 'bytes' => $lb
                                             ];
-                                            
+
+                                            $manual_users_map[strtolower($uname)] = true;
+
                                             if ($kind === '30') {
                                                 $profile30_sum += $price_val;
                                                 $profile30_items[] = $item;
-                                                if($u_status === 'rusak') $cnt_rusak_30++;
-                                                if($u_status === 'retur') $cnt_retur_30++;
-                                                if($u_status === 'invalid') $cnt_invalid_30++;
+                                                if ($u_status === 'rusak') $cnt_rusak_30++;
+                                                if ($u_status === 'retur') $cnt_retur_30++;
+                                                if ($u_status === 'invalid') $cnt_invalid_30++;
                                                 if ($is_unreported) $cnt_unreported_30++;
                                             } else {
                                                 $profile10_sum += $price_val;
                                                 $profile10_items[] = $item;
-                                                if($u_status === 'rusak') $cnt_rusak_10++;
-                                                if($u_status === 'retur') $cnt_retur_10++;
-                                                if($u_status === 'invalid') $cnt_invalid_10++;
+                                                if ($u_status === 'rusak') $cnt_rusak_10++;
+                                                if ($u_status === 'retur') $cnt_retur_10++;
+                                                if ($u_status === 'invalid') $cnt_invalid_10++;
                                                 if ($is_unreported) $cnt_unreported_10++;
                                             }
                                         }
-                                    } else {
+                                    } elseif (!empty($evidence['events'])) {
                                         // Fallback legacy format
                                         $cnt = isset($evidence['events']) && is_array($evidence['events']) ? count($evidence['events']) : 0;
                                         $upt = trim((string)($evidence['last_uptime'] ?? ''));
@@ -1068,9 +1073,12 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 }
                             }
 
-                            if (!$has_manual_evidence && !empty($system_incidents)) {
+                            if (!empty($system_incidents)) {
                                 foreach ($system_incidents as $inc) {
-                                    $uname = (string)($inc['username'] ?? '-');
+                                    $uname = trim((string)($inc['username'] ?? ''));
+                                    if ($uname === '') continue;
+                                    if (isset($manual_users_map[strtolower($uname)])) continue;
+
                                     $u_status = normalize_status_value($inc['status'] ?? '');
                                     $kind = (string)($inc['profile_kind'] ?? '10');
                                     $upt = trim((string)($inc['last_uptime'] ?? ''));
