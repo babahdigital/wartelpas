@@ -18,6 +18,37 @@
 .btn-act { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 4px; border: none; color: white; transition: all 0.2s; margin: 0 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 .btn-act, .btn, button, .search-clear-btn, .custom-select-solid { cursor: pointer; }
 .btn-act-print { background: var(--c-blue); } .btn-act-retur { background: var(--c-orange); } .btn-act-invalid { background: var(--c-red); } .btn-act-enable { background: #16a34a; } .btn-act-delete { background: #7f1d1d; }
+
+.overlay-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.overlay-btn-secondary {
+  background: #374151;
+}
+
+.overlay-btn-secondary:hover {
+  background: #1f2937;
+}
+
+.overlay-btn-danger {
+  background: #d73925;
+}
+
+.overlay-btn-danger:hover {
+  background: #ac2925;
+}
+
+.overlay-btn-muted {
+  background: #2c3e50;
+}
+
+.overlay-btn-muted:hover {
+  background: #1f2a36;
+}
 .toolbar-container { padding: 15px; background: rgba(0,0,0,0.15); border-bottom: 1px solid var(--border-col); }
 .toolbar-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
 .toolbar-left { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex: 1 1 auto; }

@@ -23,6 +23,16 @@
       </div>
     </div>
   </div>
+  <div id="users-overlay" class="overlay-backdrop">
+    <div class="overlay-modal" id="users-overlay-container">
+      <div class="overlay-icon-box">
+        <i id="users-overlay-icon" class="fa fa-question-circle"></i>
+      </div>
+      <div class="overlay-title" id="users-overlay-title">Konfirmasi</div>
+      <div class="overlay-message" id="users-overlay-text"></div>
+      <div class="overlay-actions" id="users-overlay-actions"></div>
+    </div>
+  </div>
   <div id="relogin-modal" class="relogin-modal" aria-hidden="true">
     <div class="relogin-card">
       <div class="relogin-header">
@@ -343,7 +353,7 @@
                 </button>
               <?php endif; ?>
               <?php if ($req_status == 'all'): ?>
-                <button type="button" class="btn btn-danger" style="height:40px;" onclick="actionRequest('./?hotspot=users&action=batch_delete&blok=<?= urlencode($req_comm) ?>&session=<?= $session ?>','Hapus semua voucher di <?= htmlspecialchars($req_comm) ?>?')">
+                <button type="button" class="btn btn-danger" style="height:40px;" onclick="openDeleteBlockPopup('<?= htmlspecialchars($req_comm, ENT_QUOTES) ?>')">
                   <i class="fa fa-trash"></i> Hapus Blok
                 </button>
               <?php endif; ?>
@@ -351,6 +361,9 @@
           </div>
         </form>
       </div>
+      <script>
+        window.isSuperAdmin = <?= !empty($is_superadmin) ? 'true' : 'false' ?>;
+      </script>
       <div class="card-body p-0">
         <?php if ($debug_mode): ?>
           <div style="background:#111827;color:#e5e7eb;padding:10px 14px;border-bottom:1px solid #374151;font-family:monospace;font-size:12px;">
