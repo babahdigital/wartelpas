@@ -256,6 +256,7 @@ requireSuperAdmin('../admin.php?id=sessions');
 </div>
 </div>
 </form>
+<script type="text/javascript">
   var sessionName = "<?= htmlspecialchars($session); ?>";
 
   function pingTest() {
