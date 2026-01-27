@@ -399,6 +399,42 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **Solusi**:
   - **report/laporan/services/settlement_log_ingest.php**: endpoint baru menerima log dari MikroTik dan menulis ke file `logs/settlement_<session>_<date>.log`.
 
+## 6) Update Terbaru (ACL, Rekap Audit, dan UI — 2026-01-27)
+### 6.1 Pemisahan Role Superadmin vs Operator
+- Menambah helper ACL (`include/acl.php`) dan menerapkan pembatasan akses di halaman admin, settings, tools, system, dan proses kritikal.
+- Operator hanya bisa akses laporan/rekap, settlement, dan fitur operasional terbatas.
+- Superadmin mempertahankan akses penuh (manajemen sesi, pengaturan, audit lock, shutdown/reboot).
+
+### 6.2 Perbaikan Menu & Header Admin
+- Header admin diseragamkan dengan halaman utama (logo/brand konsisten).
+- Menu editor template dan pilihan bahasa dihapus.
+- Status DB + tombol backup/restore ditampilkan dengan aturan: superadmin selalu tampil, operator hanya muncul saat DB error.
+
+### 6.3 Perbaikan Session & Config
+- Normalisasi suffix sesi (contoh `~wartel`) agar tidak loop.
+- Listing sesi bersih (menggunakan `$data` config, bukan baca file per baris).
+- Perbaikan permission `include/config.php` dan `include/quickbt.php` via entrypoint + volume docker.
+
+### 6.4 Settlement & Audit
+- Operator boleh menjalankan settlement, namun audit lock/edit/delete tetap khusus superadmin.
+- Fallback settlement script: bila `CuciGudangManual` tidak ada, gunakan `CleanWartel`.
+
+### 6.5 Rekap Print & Audit Manual (Auto Inject)
+- Normalisasi status `rusak/retur/invalid` agar variasi teks (contoh `RUSAK (DIGANTI)`) tetap terbaca.
+- Auto-inject user insiden ke tabel audit bila operator tidak input manual.
+- Tabel audit menampilkan **Username/Up/Byte** dengan warna penuh per baris:
+  - Merah: rusak/invalid
+  - Hijau: retur
+  - Kuning: anomali (manual input tapi status normal)
+- Uptime/bytes diambil dari `login_history` agar tidak kosong.
+
+### 6.6 Perhitungan Qty Audit (Anti Double Count)
+- Saat Qty manual kosong, hitung otomatis **tanpa** memasukkan status rusak agar tidak dobel (rusak tidak menambah qty jual).
+- Retur dan anomali tetap dihitung sebagai qty valid.
+
+### 6.7 Catatan Harian (Laporan ke Owner)
+- Modal catatan dipastikan bisa diketik dengan memaksa fokus dan menghapus state disabled/readonly.
+
   ## 6) Update Terbaru (Audit & Penyempurnaan 2026-01-27)
   Bagian ini merangkum pekerjaan dari awal sesi hingga akhir, khususnya untuk laporan, print, retur, dan perbaikan data hotspot.
 
