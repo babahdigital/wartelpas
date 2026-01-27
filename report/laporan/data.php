@@ -858,6 +858,19 @@ foreach ($rows as $r) {
     $blok = normalize_block_name($r['blok_name'] ?? '', $raw_comment);
     $status = strtolower((string)($r['status'] ?? ''));
     $lh_status = strtolower((string)($r['last_status'] ?? ''));
+    if ($status !== '') {
+        if (strpos($status, 'rusak') !== false) $status = 'rusak';
+        elseif (strpos($status, 'retur') !== false) $status = 'retur';
+        elseif (strpos($status, 'invalid') !== false) $status = 'invalid';
+        elseif (strpos($status, 'online') !== false) $status = 'online';
+        elseif (strpos($status, 'terpakai') !== false) $status = 'terpakai';
+        elseif (strpos($status, 'ready') !== false) $status = 'ready';
+    }
+    if ($lh_status !== '') {
+        if (strpos($lh_status, 'rusak') !== false) $lh_status = 'rusak';
+        elseif (strpos($lh_status, 'retur') !== false) $lh_status = 'retur';
+        elseif (strpos($lh_status, 'invalid') !== false) $lh_status = 'invalid';
+    }
     $cmt_low = strtolower($raw_comment);
 
     if ($status === '' || $status === 'normal') {
