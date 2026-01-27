@@ -99,6 +99,17 @@ function get_block_label($block_name, $blok_names = []) {
     return (string)$block_name;
 }
 
+function get_block_short_label($block_name) {
+    $raw = strtoupper((string)$block_name);
+    if (preg_match('/^BLOK-([A-F])\b/', $raw, $m)) {
+        return $m[1];
+    }
+    if (preg_match('/\b([A-F])\b/', $raw, $m)) {
+        return $m[1];
+    }
+    return '-';
+}
+
 function detect_profile_minutes($profile) {
     $p = strtolower((string)$profile);
     if (preg_match('/\b10\s*(menit|m)\b/i', $p)) return '10';
@@ -892,7 +903,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 <?php else: ?>
                                     <?php foreach ($block_summaries as $blk => $bdata): ?>
                                         <?php
-                                            $blk_label = get_block_label($blk, $blok_names);
+                                            $blk_label = get_block_short_label($blk);
                                             $hp_stat = $hp_stats_by_block[$blk] ?? ['total' => 0, 'active' => 0, 'rusak' => 0, 'spam' => 0];
                                         ?>
                                         <tr>
@@ -1190,7 +1201,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
                             // Capture data for summary
                             $audit_summary_report[] = [
-                                'blok' => get_block_label($ar['blok_name'] ?? '-', $blok_names),
+                                'blok' => get_block_short_label(normalize_block_name($ar['blok_name'] ?? '-', (string)($ar['comment'] ?? ''))),
                                 'selisih_setoran' => (int)$selisih_setoran,
                                 'p10_qty' => $p10_qty,
                                 'p10_sum' => $p10_sum_calc,
@@ -1207,7 +1218,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 'retur_30' => (int)$cnt_retur_30
                             ];
                         ?>
-                        <?php $audit_blk_label = get_block_label($ar['blok_name'] ?? '-', $blok_names); ?>
+                        <?php $audit_blk_label = get_block_short_label(normalize_block_name($ar['blok_name'] ?? '-', (string)($ar['comment'] ?? ''))); ?>
                         <tr>
                             <td style="text-align: left;"><?= htmlspecialchars($audit_blk_label) ?></td>
                             <td style="text-align:center;"><?= number_format((int)$expected_adj_qty,0,',','.') ?></td>
@@ -1329,7 +1340,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <div class="audit-item" style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid #eee;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                                 <div style="font-size:13px;">
-                                    <strong><?= ($idx + 1) ?>. Blok <?= htmlspecialchars($rep['blok']) ?></strong>
+                                    <strong><?= ($idx + 1) ?>. Blok <?= htmlspecialchars(get_block_short_label($rep['blok'])) ?></strong>
                                 </div>
                                 <div style="font-size:12px; font-weight:bold;">
                                     <?php 
