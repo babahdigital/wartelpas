@@ -394,6 +394,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       @file_put_contents($log_dir . '/admin_actions.log', $log_line, FILE_APPEND);
     } elseif ($act == 'delete_block_full') {
       $blok_norm = extract_blok_name($blok);
+      $target_norm = $blok_norm ?: $blok;
+      $target_cmp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $target_norm));
       $blok_upper = strtoupper($blok_norm ?: $blok);
       $use_glob = !preg_match('/\d$/', $blok_upper);
       $glob_pattern = $use_glob ? ($blok_upper . '[0-9]*') : '';
@@ -418,8 +420,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $c = $usr['comment'] ?? '';
         $cblok = extract_blok_name($c);
         $cblok_cmp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $cblok));
-        $blok_cmp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $blok_norm ?: $blok));
-        if (($cblok != '' && strcasecmp($cblok, $blok_norm) == 0) || ($cblok_cmp != '' && $cblok_cmp == $blok_cmp) || ($blok != '' && stripos($c, $blok) !== false)) {
+        if ($cblok_cmp != '' && $cblok_cmp === $target_cmp) {
           $to_delete[] = ['id' => $usr['.id'] ?? '', 'name' => $uname];
         }
       }
@@ -650,7 +651,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         }
         $cblok = extract_blok_name($c);
         $cblok_cmp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $cblok));
-        if (($cblok != '' && strcasecmp($cblok, $blok_norm) == 0) || ($cblok_cmp != '' && $cblok_cmp == $blok_cmp) || ($blok_raw != '' && stripos($c, $blok_raw) !== false)) {
+        if ($cblok_cmp != '' && $cblok_cmp == $blok_cmp) {
           $to_delete[] = ['id' => $usr['.id'], 'name' => $uname];
         }
       }
