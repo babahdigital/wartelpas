@@ -478,6 +478,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $raw_like1 = '%' . $sql_pattern_1 . '%';
       $raw_like2 = '%' . $sql_pattern_2 . '%';
       $raw_like3 = '%|BLOK-' . $blok_keyword . '%';
+      $search_pattern = 'Blok-' . $blok_keyword;
 
       $active_list = $API->comm('/ip/hotspot/active/print', [
         '?server' => $hotspot_server,
@@ -609,6 +610,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       }
 
       $router_deleted = 0;
+      $router_deleted_scripts = 0;
       foreach ($to_delete as $d) {
         $uname = $d['name'] ?? '';
         if ($uname !== '' && !empty($active_map[$uname])) {
@@ -621,6 +623,24 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           $API->write('=.id=' . $d['id']);
           $API->read();
           $router_deleted++;
+        }
+      }
+
+      if ($search_pattern !== '') {
+        $scripts = $API->comm('/system/script/print', [
+          '?comment' => 'mikhmon',
+          '.proplist' => '.id,name,comment'
+        ]);
+        foreach ($scripts as $scr) {
+          $sname = $scr['name'] ?? '';
+          if ($sname !== '' && stripos($sname, $search_pattern) !== false) {
+            if (isset($scr['.id'])) {
+              $API->write('/system/script/remove', false);
+              $API->write('=.id=' . $scr['.id']);
+              $API->read();
+              $router_deleted_scripts++;
+            }
+          }
         }
       }
 
@@ -693,10 +713,10 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         @mkdir($log_dir, 0755, true);
       }
       $admin_name = $_SESSION['mikhmon'] ?? 'superadmin';
-      $log_line = '[' . date('Y-m-d H:i:s') . '] ' . $admin_name . ' delete_block_full ' . $blok_upper . "\n";
+      $log_line = '[' . date('Y-m-d H:i:s') . '] ' . $admin_name . ' delete_block_full ' . $blok_upper . ' users=' . $router_deleted . ' scripts=' . $router_deleted_scripts . "\n";
       @file_put_contents($log_dir . '/admin_actions.log', $log_line, FILE_APPEND);
       $retur_note = !empty($retur_usernames) ? ' (termasuk retur: ' . count($retur_usernames) . ' user)' : '';
-      $action_message = 'Berhasil hapus total blok ' . $blok_upper . ' (Router: ' . $router_deleted . ' user, DB: ' . $db_deleted_count . ' user)' . $retur_note . '.';
+      $action_message = 'Berhasil hapus total blok ' . $blok_upper . ' (Router: ' . $router_deleted . ' user, Script: ' . $router_deleted_scripts . ', DB: ' . $db_deleted_count . ' user)' . $retur_note . '.';
     } elseif ($act == 'delete_status') {
       $status_map = [
         'used' => 'terpakai',

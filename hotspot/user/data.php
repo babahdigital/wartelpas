@@ -794,10 +794,7 @@ foreach($all_users as $u) {
 
     // Filter status
     if ($req_status == 'ready' && $status !== 'READY') continue;
-    if ($req_status == 'all' && $status === 'READY') {
-      $has_filter = ($req_prof !== 'all') || ($req_comm !== '') || (!empty($req_search));
-      if (!$has_filter) continue;
-    }
+    if ($req_status == 'all' && $status === 'READY') continue;
     if ($req_status == 'online' && $status !== 'ONLINE') continue;
     if ($req_status == 'used' && !in_array($status, ['TERPAKAI','RETUR','RUSAK'])) continue;
     if ($req_status == 'rusak' && $status !== 'RUSAK') continue;
