@@ -404,6 +404,12 @@ if (!function_exists('detect_profile_kind_from_comment')) {
     if (preg_match('/(\d+)\s*(menit|m|min)\b/i', $c, $m)) {
       return (string)((int)$m[1]);
     }
+    if (preg_match('/\bblok\s*[-_ ]*\s*[a-z]{1,3}\s*[-_ ]*(10|30)\b/i', $c, $m)) {
+      return (string)$m[1];
+    }
+    if (preg_match('/\b[a-z]{1,3}\s*(10|30)\b/i', $c, $m)) {
+      return (string)$m[1];
+    }
     return 'other';
   }
 }
