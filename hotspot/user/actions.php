@@ -1051,6 +1051,16 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
               $stmt->execute([':u' => $name]);
             } catch(Exception $e) {}
           }
+
+          // Kembalikan status transaksi laporan agar tidak tetap rusak
+          try {
+            $stmt = $db->prepare("UPDATE sales_history SET status='normal', is_rusak=0, is_retur=0, is_invalid=0 WHERE username = :u");
+            $stmt->execute([':u' => $name]);
+          } catch(Exception $e) {}
+          try {
+            $stmt = $db->prepare("UPDATE live_sales SET status='normal', is_rusak=0, is_retur=0, is_invalid=0 WHERE username = :u");
+            $stmt->execute([':u' => $name]);
+          } catch(Exception $e) {}
         }
         $action_message = 'Berhasil rollback RUSAK untuk ' . $name . '.';
       } elseif ($act == 'retur') {
