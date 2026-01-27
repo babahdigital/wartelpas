@@ -18,6 +18,7 @@ $envFile = $root_dir . '/include/env.php';
 if (file_exists($envFile)) {
     require $envFile;
 }
+require_once($root_dir . '/report/laporan/helpers_audit.php');
 $system_cfg = $env['system'] ?? [];
 $db_rel = $system_cfg['db_file'] ?? 'db_data/mikhmon_stats.db';
 if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
@@ -297,41 +298,6 @@ function format_date_only_indo($dateStr) {
     $ts = strtotime($dateStr);
     if ($ts === false) return $dateStr;
     return date('d-m-Y', $ts);
-}
-
-function format_bytes_short($bytes) {
-    $b = (float)$bytes;
-    if ($b <= 0) return '0 B';
-    $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    $i = 0;
-    while ($b >= 1024 && $i < count($units) - 1) {
-        $b /= 1024;
-        $i++;
-    }
-    $dec = $i >= 2 ? 2 : 0;
-    return number_format($b, $dec, ',', '.') . ' ' . $units[$i];
-}
-
-function norm_date_from_raw_report($raw_date) {
-    $raw = trim((string)$raw_date);
-    if ($raw === '') return '';
-    if (preg_match('/^[a-zA-Z]{3}\/\d{2}\/\d{4}$/', $raw)) {
-        $mon = strtolower(substr($raw, 0, 3));
-        $map = [
-            'jan' => '01', 'feb' => '02', 'mar' => '03', 'apr' => '04', 'may' => '05', 'jun' => '06',
-            'jul' => '07', 'aug' => '08', 'sep' => '09', 'oct' => '10', 'nov' => '11', 'dec' => '12'
-        ];
-        $mm = $map[$mon] ?? '';
-        if ($mm !== '') {
-            $parts = explode('/', $raw);
-            return $parts[2] . '-' . $mm . '-' . $parts[1];
-        }
-    }
-    if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $raw)) {
-        $parts = explode('/', $raw);
-        return $parts[2] . '-' . $parts[0] . '-' . $parts[1];
-    }
-    return '';
 }
 
 $rows = [];

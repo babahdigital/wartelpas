@@ -63,7 +63,7 @@ if (table_exists($db, 'audit_rekap_manual')) {
     } catch (Exception $e) {}
 }
 
-$min_bytes_threshold = 204800;
+$min_bytes_threshold = (int)($system_cfg['ghost_min_bytes'] ?? 51200);
 $suspects = get_ghost_suspects($db, $g_date, $g_blok_norm, $reported_users, $min_bytes_threshold);
 
 echo json_encode([
