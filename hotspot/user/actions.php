@@ -466,13 +466,17 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $blok_norm = extract_blok_name($blok);
       $target_norm = $blok_norm ?: $blok;
       $target_cmp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $target_norm));
-      $blok_upper = strtoupper($blok_norm ?: $blok);
-      $blok_keyword = preg_replace('/^BLOK[-\s]*/i', '', $blok_upper);
+      $blok_clean = preg_replace('/[^A-Za-z0-9]/i', '', (string)$target_norm);
+      $blok_keyword = preg_replace('/^BLOK/i', '', strtoupper($blok_clean));
+      $blok_upper = 'BLOK' . $blok_keyword;
       $use_glob = !preg_match('/\d$/', $blok_upper);
       $glob_pattern = $use_glob ? ($blok_upper . '[0-9]*') : '';
-      $raw_like1 = '%' . $blok_upper . '%';
-      $raw_like2 = '%' . ('BLOK ' . $blok_keyword) . '%';
-      $raw_like3 = '%' . ('BLOK-' . $blok_keyword) . '%';
+      $sql_pattern_1 = 'BLOK-' . $blok_keyword;
+      $sql_pattern_2 = 'BLOK ' . $blok_keyword;
+      $sql_pattern_3 = 'BLOK' . $blok_keyword;
+      $raw_like1 = '%' . $sql_pattern_1 . '%';
+      $raw_like2 = '%' . $sql_pattern_2 . '%';
+      $raw_like3 = '%' . $sql_pattern_3 . '%';
       $raw_like4 = '%' . $blok_keyword . '%';
 
       $active_list = $API->comm('/ip/hotspot/active/print', [
@@ -487,11 +491,11 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $base_usernames = [];
       $retur_usernames = [];
       $delete_name_map = [];
-      $whereBlok = "UPPER(blok_name) = :b" . ($use_glob ? " OR UPPER(blok_name) GLOB :bg" : "");
+      $whereBlok = "UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) = :b_clean" . ($use_glob ? " OR UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) GLOB :bg" : "");
       $whereRaw = " OR UPPER(raw_comment) LIKE :rc1 OR UPPER(raw_comment) LIKE :rc2 OR UPPER(raw_comment) LIKE :rc3 OR UPPER(raw_comment) LIKE :rc4";
       $whereMatch = "(" . $whereBlok . $whereRaw . ")";
-      $base_params = $use_glob ? [':b' => $blok_upper, ':bg' => $glob_pattern, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4]
-        : [':b' => $blok_upper, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4];
+      $base_params = $use_glob ? [':b_clean' => $blok_upper, ':bg' => $glob_pattern, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4]
+        : [':b_clean' => $blok_upper, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4];
 
       try {
         $stmt = $db->prepare("SELECT username FROM login_history WHERE $whereMatch");
