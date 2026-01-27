@@ -1,6 +1,9 @@
 <?php
 // Action handler sederhana (invalid/retur/delete)
 if (isset($_GET['action']) || isset($_POST['action'])) {
+  // Non-aktifkan timeout agar proses massal tidak terputus
+  set_time_limit(0);
+  ignore_user_abort(true);
   $root_dir = dirname(__DIR__, 2);
   require_once($root_dir . '/include/acl.php');
   require_once(__DIR__ . '/helpers.php');
@@ -553,6 +556,70 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         } catch (Exception $e) {}
       }
 
+      $router_names = array_values(array_unique(array_merge($base_usernames, $retur_usernames, array_keys($delete_name_map))));
+      $db_delete_names = array_values(array_unique($router_names));
+      $db_deleted_count = 0;
+      try {
+        $db->beginTransaction();
+        $params = $base_params;
+
+        $userClause = '';
+        $userParams = [];
+        if (!empty($db_delete_names)) {
+          $placeholders = [];
+          foreach ($db_delete_names as $i => $uname) {
+            $key = ':u' . $i;
+            $placeholders[] = $key;
+            $userParams[$key] = $uname;
+          }
+          $userClause = " OR username IN (" . implode(',', $placeholders) . ")";
+        }
+
+        $stmt = $db->prepare("DELETE FROM login_history WHERE $whereMatch$userClause");
+        $stmt->execute(array_merge($params, $userParams));
+
+        if (!empty($db_delete_names)) {
+          $placeholders = [];
+          $userParams = [];
+          foreach ($db_delete_names as $i => $uname) {
+            $key = ':e' . $i;
+            $placeholders[] = $key;
+            $userParams[$key] = $uname;
+          }
+          $stmt = $db->prepare("DELETE FROM login_events WHERE username IN (" . implode(',', $placeholders) . ")");
+          $stmt->execute($userParams);
+        }
+
+        $stmt = $db->prepare("DELETE FROM sales_history WHERE $whereMatch$userClause");
+        $stmt->execute(array_merge($params, $userParams));
+
+        $stmt = $db->prepare("DELETE FROM live_sales WHERE $whereMatch$userClause");
+        $stmt->execute(array_merge($params, $userParams));
+
+        $blok_params = $use_glob ? [':b_clean' => $blok_upper, ':bg' => $glob_pattern] : [':b_clean' => $blok_upper];
+        try {
+          $stmtChk = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='audit_rekap_manual' LIMIT 1");
+          if ($stmtChk && $stmtChk->fetchColumn()) {
+            $stmt = $db->prepare("DELETE FROM audit_rekap_manual WHERE $whereBlok");
+            $stmt->execute($blok_params);
+          }
+        } catch (Exception $e) {}
+        try {
+          $stmtChk = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='phone_block_daily' LIMIT 1");
+          if ($stmtChk && $stmtChk->fetchColumn()) {
+            $stmt = $db->prepare("DELETE FROM phone_block_daily WHERE $whereBlok");
+            $stmt->execute($blok_params);
+          }
+        } catch (Exception $e) {}
+
+        $db->commit();
+        $db_deleted_count = count($db_delete_names);
+      } catch (Exception $e) {
+        if ($db->inTransaction()) {
+          $db->rollBack();
+        }
+      }
+
       $list = $API->comm('/ip/hotspot/user/print', [
         '?server' => $hotspot_server,
         '.proplist' => '.id,name,comment'
@@ -617,70 +684,6 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           $API->write('=.id=' . $d['id']);
           $API->read();
           $router_deleted++;
-        }
-      }
-
-      $router_names = array_values(array_unique(array_merge($base_usernames, $retur_usernames, array_keys($delete_name_map))));
-      $db_delete_names = array_values(array_unique($router_names));
-      $db_deleted_count = 0;
-      try {
-        $db->beginTransaction();
-        $params = $base_params;
-
-        $userClause = '';
-        $userParams = [];
-        if (!empty($db_delete_names)) {
-          $placeholders = [];
-          foreach ($db_delete_names as $i => $uname) {
-            $key = ':u' . $i;
-            $placeholders[] = $key;
-            $userParams[$key] = $uname;
-          }
-          $userClause = " OR username IN (" . implode(',', $placeholders) . ")";
-        }
-
-        $stmt = $db->prepare("DELETE FROM login_history WHERE $whereMatch$userClause");
-        $stmt->execute(array_merge($params, $userParams));
-
-        if (!empty($db_delete_names)) {
-          $placeholders = [];
-          $userParams = [];
-          foreach ($db_delete_names as $i => $uname) {
-            $key = ':e' . $i;
-            $placeholders[] = $key;
-            $userParams[$key] = $uname;
-          }
-          $stmt = $db->prepare("DELETE FROM login_events WHERE username IN (" . implode(',', $placeholders) . ")");
-          $stmt->execute($userParams);
-        }
-
-        $stmt = $db->prepare("DELETE FROM sales_history WHERE $whereMatch$userClause");
-        $stmt->execute(array_merge($params, $userParams));
-
-        $stmt = $db->prepare("DELETE FROM live_sales WHERE $whereMatch$userClause");
-        $stmt->execute(array_merge($params, $userParams));
-
-        $blok_params = $use_glob ? [':b_clean' => $blok_upper, ':bg' => $glob_pattern] : [':b_clean' => $blok_upper];
-        try {
-          $stmtChk = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='audit_rekap_manual' LIMIT 1");
-          if ($stmtChk && $stmtChk->fetchColumn()) {
-            $stmt = $db->prepare("DELETE FROM audit_rekap_manual WHERE $whereBlok");
-            $stmt->execute($blok_params);
-          }
-        } catch (Exception $e) {}
-        try {
-          $stmtChk = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='phone_block_daily' LIMIT 1");
-          if ($stmtChk && $stmtChk->fetchColumn()) {
-            $stmt = $db->prepare("DELETE FROM phone_block_daily WHERE $whereBlok");
-            $stmt->execute($blok_params);
-          }
-        } catch (Exception $e) {}
-
-        $db->commit();
-        $db_deleted_count = count($db_delete_names);
-      } catch (Exception $e) {
-        if ($db->inTransaction()) {
-          $db->rollBack();
         }
       }
 
@@ -868,8 +871,11 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $API->read();
         if ($db && $name != '') {
           try {
-            $stmt = $db->prepare("DELETE FROM login_history WHERE username = :u");
-            $stmt->execute([':u' => $name]);
+            $tables = ['login_history', 'login_events', 'sales_history', 'live_sales'];
+            foreach ($tables as $table) {
+              $stmt = $db->prepare("DELETE FROM {$table} WHERE username = :u");
+              $stmt->execute([':u' => $name]);
+            }
           } catch(Exception $e) {}
         }
         $action_message = 'Berhasil hapus user ' . $name . ' dari Router.';
