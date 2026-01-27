@@ -1,0 +1,12 @@
+:global syncUsageLock;
+:if ([:typeof $syncUsageLock] = "nothing") do={ :set syncUsageLock false; }
+:if ($syncUsageLock = true) do={ :log warning "SYNC USAGE: masih berjalan, skip"; :return; }
+:set syncUsageLock true;
+:local url "http://wartelpas.sobigidul.net/report/laporan/services/sync_usage.php?session=S3c7x9_LB&key=WartelpasSecureKey";
+:do {
+/tool fetch url=$url keep-result=no;
+:log info "SYNC USAGE: OK (2m)";
+} on-error={
+:log warning "SYNC USAGE: Gagal koneksi";
+}
+:set syncUsageLock false;

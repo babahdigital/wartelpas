@@ -41,6 +41,36 @@ if (!function_exists('extract_ip_mac_from_comment')) {
     }
 }
 
+$root_dir = dirname(__DIR__);
+$env = [];
+$envFile = $root_dir . '/include/env.php';
+if (file_exists($envFile)) {
+    require $envFile;
+}
+$profiles_cfg = $env['profiles'] ?? [];
+$blok_cfg = $env['blok'] ?? ($env['blocks'] ?? []);
+$profile10 = $profiles_cfg['profile_10'] ?? '10Menit';
+$profile30 = $profiles_cfg['profile_30'] ?? '30Menit';
+$profile_label10 = $profiles_cfg['label_10'] ?? '10 Menit';
+$profile_label30 = $profiles_cfg['label_30'] ?? '30 Menit';
+$block_letters_cfg = strtoupper(trim((string)($blok_cfg['letters'] ?? 'A-F')));
+$block_suffixes = $blok_cfg['suffixes'] ?? ['10', '30'];
+$block_suffixes = array_values(array_filter(array_map('strval', $block_suffixes)));
+if (empty($block_suffixes)) {
+    $block_suffixes = ['10', '30'];
+}
+$block_suffix_pattern = implode('|', array_map(function($s) { return preg_quote($s, '/'); }, $block_suffixes));
+$block_letters_range = [];
+if (preg_match('/^[A-Z]-[A-Z]$/', $block_letters_cfg)) {
+    $parts = explode('-', $block_letters_cfg);
+    $block_letters_range = range($parts[0], $parts[1]);
+} elseif (preg_match('/^[A-Z]+$/', $block_letters_cfg)) {
+    $block_letters_range = str_split($block_letters_cfg);
+}
+if (empty($block_letters_range)) {
+    $block_letters_range = range('A', 'F');
+}
+
 $session = isset($_GET['session']) ? $_GET['session'] : '';
 
 if (!isset($_SESSION["mikhmon"])) {
@@ -103,14 +133,18 @@ if (!isset($_SESSION["mikhmon"])) {
         if (stripos($block_id, 'BLOK-') === 0) {
             $block_id = substr($block_id, 5);
         }
-        if (!preg_match('/^[A-Z]+(10|30)$/', $block_id)) { $violation = true; }
-        $profile = (substr($block_id, -2) === '10') ? '10Menit' : '30Menit';
+        if (!preg_match('/^[' . $block_letters_cfg . ']+(' . $block_suffix_pattern . ')$/', $block_id)) { $violation = true; }
+        $profile = $profile10;
+        if (preg_match('/(' . $block_suffix_pattern . ')$/', $block_id, $m)) {
+            $suffix = $m[1];
+            $profile = ($suffix === ($block_suffixes[1] ?? '30')) ? $profile30 : $profile10;
+        }
         $adcomment = 'Blok-' . $block_id;
-        $allowed_profiles = ['10Menit', '30Menit'];
+        $allowed_profiles = [$profile10, $profile30];
         if (!in_array($profile, $allowed_profiles)) { $violation = true; }
         if ($violation) { echo "<script>window.location.href='./error.php';</script>"; exit(); }
 
-        $timelimit = ($profile == '10Menit') ? "10m" : (($profile == '30Menit') ? "30m" : "0");
+        $timelimit = ($profile == $profile10) ? ($block_suffixes[0] . "m") : (($profile == $profile30) ? (($block_suffixes[1] ?? '30') . "m") : "0");
         
         // Prepare Data
         $getprofile = $API->comm("/ip/hotspot/user/profile/print", array("?name" => "$profile"));
@@ -500,8 +534,11 @@ if (!isset($_SESSION["mikhmon"])) {
                                 <label>Blok ID</label>
                                 <select name="adcomment" id="blokId" class="form-control-mod" onchange="applyBlockProfile();" required>
                                     <?php
-                                    foreach(range('A', 'F') as $blk) {
-                                        foreach(['10', '30'] as $suf) echo "<option value='{$blk}{$suf}'>${blk}${suf}</option>";
+                                    foreach ($block_letters_range as $blk) {
+                                        foreach ($block_suffixes as $suf) {
+                                            $val = $blk . $suf;
+                                            echo "<option value='{$val}'>{$val}</option>";
+                                        }
                                     }
                                     ?>
                                 </select>
@@ -509,10 +546,10 @@ if (!isset($_SESSION["mikhmon"])) {
                             <div class="form-group">
                                 <label>Profil Paket</label>
                                 <select name="profile_display" id="uprof" class="form-control-mod locked-input" disabled>
-                                    <option value="10Menit">10Menit</option>
-                                    <option value="30Menit">30Menit</option>
+                                    <option value="<?= htmlspecialchars($profile10) ?>"><?= htmlspecialchars($profile10) ?></option>
+                                    <option value="<?= htmlspecialchars($profile30) ?>"><?= htmlspecialchars($profile30) ?></option>
                                 </select>
-                                <input type="hidden" name="profile" id="profileHidden" value="10Menit">
+                                <input type="hidden" name="profile" id="profileHidden" value="<?= htmlspecialchars($profile10) ?>">
                             </div>
                         </div>
 
@@ -603,6 +640,10 @@ if (!isset($_SESSION["mikhmon"])) {
 </div>
 
 <script>
+var profile10 = <?= json_encode($profile10) ?>;
+var profile30 = <?= json_encode($profile30) ?>;
+var suffix10 = <?= json_encode($block_suffixes[0] ?? '10') ?>;
+var suffix30 = <?= json_encode($block_suffixes[1] ?? '30') ?>;
 function GetVP(){
     var prof = document.getElementById('profileHidden').value || document.getElementById('uprof').value;
   // Reload div via AJAX
@@ -617,10 +658,10 @@ function updateTimeLimit() {
         var prof = document.getElementById('profileHidden').value || document.getElementById('uprof').value;
     var timeField = document.getElementById('timelimit');
     
-    if (prof === '10Menit') {
-        timeField.value = '10m';
-    } else if (prof === '30Menit') {
-        timeField.value = '30m';
+    if (prof === profile10) {
+        timeField.value = suffix10 + 'm';
+    } else if (prof === profile30) {
+        timeField.value = suffix30 + 'm';
     } else {
         timeField.value = '-';
     }
@@ -628,9 +669,9 @@ function updateTimeLimit() {
 
 function applyBlockProfile() {
     var blk = document.getElementById('blokId').value || '';
-    var prof = '10Menit';
-    if (blk.endsWith('30')) {
-        prof = '30Menit';
+    var prof = profile10;
+    if (suffix30 && blk.endsWith(suffix30)) {
+        prof = profile30;
     }
     document.getElementById('uprof').value = prof;
     document.getElementById('profileHidden').value = prof;

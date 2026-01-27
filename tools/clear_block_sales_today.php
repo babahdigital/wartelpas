@@ -1,11 +1,23 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../include/acl.php';
+requireLogin('../admin.php?id=login');
+requireSuperAdmin('../admin.php?id=sessions');
 // tools/clear_block_sales_today.php
 // Hapus data penjualan (sales_history + live_sales) untuk 1 blok di tanggal tertentu (aman)
 ini_set('display_errors', 0);
 error_reporting(0);
 header('Content-Type: text/plain');
 
-$secret_token = "WartelpasSecureKey";
+$root_dir = dirname(__DIR__);
+$env = [];
+$envFile = $root_dir . '/include/env.php';
+if (file_exists($envFile)) {
+    require $envFile;
+}
+$secret_token = $env['security']['tools']['token'] ?? ($env['backup']['secret'] ?? '');
 $key = $_GET['key'] ?? ($_POST['key'] ?? '');
 if ($key === '' && isset($_SERVER['HTTP_X_WARTELPAS_KEY'])) {
     $key = $_SERVER['HTTP_X_WARTELPAS_KEY'];
@@ -22,7 +34,6 @@ if ($session === '') {
     die("Error: Session tidak valid.");
 }
 
-$root_dir = dirname(__DIR__);
 require_once($root_dir . '/include/config.php');
 if (!isset($data[$session])) {
     http_response_code(403);

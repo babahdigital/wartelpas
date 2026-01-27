@@ -15,4 +15,5 @@ if ($session !== '') {
 }
 
 $_GET['ajax'] = '1';
-include(__DIR__ . '/selling.php');
+require_once __DIR__ . '/laporan/data.php';
+require_once __DIR__ . '/laporan/render.php';

@@ -1,4 +1,10 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../include/acl.php';
+requireLogin('../admin.php?id=login');
+requireSuperAdmin('../admin.php?id=sessions');
 // Simple DB backup endpoint (protected)
 ini_set('display_errors', 0);
 error_reporting(0);
@@ -29,7 +35,7 @@ $envFile = dirname(__DIR__) . '/include/env.php';
 if (is_file($envFile)) {
     require_once $envFile;
 }
-$secret = isset($env['backup']['secret']) ? (string)$env['backup']['secret'] : 'WartelpasSecureKey';
+$secret = isset($env['backup']['secret']) ? (string)$env['backup']['secret'] : '';
 $key = $_GET['key'] ?? '';
 if ($key === '' && isset($_POST['key'])) {
     $key = (string)$_POST['key'];

@@ -46,10 +46,40 @@
       if (e.target === summaryModal) summaryModal.style.display = 'none';
     });
   }
-
-  if (clearBtn) {
-    clearBtn.style.display = searchInput.value.trim() !== '' ? 'inline-block' : 'none';
+  function renderLowStockAlert() {
+    const info = window.lowStockInfo || null;
+    if (!info || !info.show) return;
+    if (document.getElementById('low-stock-alert')) return;
+    const alert = document.createElement('div');
+    alert.id = 'low-stock-alert';
+    alert.className = 'low-stock-alert';
+    const label = info.label && info.label !== 'total' ? ' ' + info.label : '';
+    alert.innerHTML = `
+      <div class="low-stock-text">
+        <i class="fa fa-exclamation-triangle"></i>
+        Stok voucher ready${label} tinggal <strong>${info.total}</strong>. Segera tambah stok.
+      </div>
+      <button type="button" class="low-stock-close" aria-label="Tutup">&times;</button>
+    `;
+    document.body.appendChild(alert);
+    const closeBtn = alert.querySelector('.low-stock-close');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        alert.style.display = 'none';
+      });
+    }
   }
+  renderLowStockAlert();
+
+  function toggleClearBtn() {
+    if (!clearBtn) return;
+    const hasValue = searchInput.value.trim() !== '';
+    clearBtn.classList.toggle('is-visible', hasValue);
+  }
+
+  toggleClearBtn();
+  window.addEventListener('focus', toggleClearBtn);
+  document.addEventListener('visibilitychange', toggleClearBtn);
 
   const ajaxBase = './hotspot/users.php';
   const baseParams = new URLSearchParams(window.location.search);
@@ -85,6 +115,18 @@
       confirmOk.onclick = () => cleanup(true);
       confirmCancel.onclick = () => cleanup(false);
       if (confirmClose) confirmClose.onclick = () => cleanup(false);
+    });
+  }
+
+  if (confirmPrint) {
+    confirmPrint.addEventListener('click', (e) => {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      const url = confirmPrint.dataset.url || '';
+      if (!url) return;
+      const w = window.open(url, '_blank');
+      if (!w) {
+        window.location.href = url;
+      }
     });
   }
 
@@ -137,9 +179,19 @@
       confirmOk.disabled = !isValid;
       confirmOk.style.opacity = isValid ? '1' : '0.5';
       confirmOk.style.cursor = isValid ? 'pointer' : 'not-allowed';
-      if (confirmPrint) confirmPrint.style.display = 'inline-flex';
+      if (confirmPrint) {
+        confirmPrint.style.display = 'inline-flex';
+        confirmPrint.disabled = false;
+        confirmPrint.style.pointerEvents = 'auto';
+        confirmPrint.style.opacity = '1';
+        confirmPrint.style.cursor = 'pointer';
+      }
       confirmModal.style.display = 'flex';
-      rusakPrintPayload = { headerMsg, items, meta };
+      rusakPrintPayload = { headerMsg, items, meta, fallbackUser: (meta && meta.username) ? meta.username : '' };
+      if (confirmPrint) {
+        confirmPrint.dataset.username = (meta && meta.username) ? meta.username : (rusakPrintPayload.fallbackUser || '');
+        confirmPrint.dataset.session = usersSession || '';
+      }
       const cleanup = (result) => {
         confirmModal.style.display = 'none';
         confirmOk.onclick = null;
@@ -156,12 +208,17 @@
       confirmOk.onclick = () => cleanup(true);
       confirmCancel.onclick = () => cleanup(false);
       if (confirmClose) confirmClose.onclick = () => cleanup(false);
-      if (confirmPrint) confirmPrint.onclick = () => {
-        if (!rusakPrintPayload) return;
-        const mt = rusakPrintPayload.meta || {};
-        if (!mt.username) return;
-        const url = './hotspot/print/print.detail.php?session=' + encodeURIComponent(usersSession) + '&user=' + encodeURIComponent(mt.username);
-        window.open(url, '_blank');
+      if (confirmPrint) confirmPrint.onclick = (e) => {
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        const mt = rusakPrintPayload ? (rusakPrintPayload.meta || {}) : {};
+        const uname = (mt.username || rusakPrintPayload?.fallbackUser || confirmPrint.dataset.username || '').toString();
+        const sess = (usersSession || confirmPrint.dataset.session || '').toString();
+        if (!uname) return;
+        const url = './hotspot/print/print.detail.php?session=' + encodeURIComponent(sess) + '&user=' + encodeURIComponent(uname);
+        const w = window.open(url, '_blank');
+        if (!w) {
+          window.location.href = url;
+        }
       };
     });
   }
@@ -273,6 +330,19 @@
       try { data = JSON.parse(text); } catch (e) { data = null; }
       if (data && data.ok) {
         window.showActionPopup('success', data.message || 'Berhasil diproses.');
+        if (data.new_user) {
+          const printUrl = './voucher/print.php?user=vc-' + encodeURIComponent(data.new_user) + '&small=yes&session=' + encodeURIComponent(usersSession);
+          setTimeout(() => {
+            const w = window.open(printUrl, '_blank');
+            if (w) {
+              try {
+                w.onload = function() {
+                  setTimeout(() => { try { w.print(); } catch (e) {} }, 400);
+                };
+              } catch (e) {}
+            }
+          }, 500);
+        }
         if (url.includes('action=batch_delete')) {
           window.location.href = './?hotspot=users&session=' + encodeURIComponent(usersSession);
           return;
@@ -333,6 +403,10 @@
       if (el) {
         const uname = el.getAttribute('data-user') || '';
         if (uname) {
+          if (confirmPrint) {
+            const url = './hotspot/print/print.detail.php?session=' + encodeURIComponent(usersSession) + '&user=' + encodeURIComponent(uname);
+            confirmPrint.dataset.url = url;
+          }
           try {
             const params = new URLSearchParams();
             params.set('action', 'login_events');
@@ -376,6 +450,9 @@
         const firstLoginMeta = el ? (el.getAttribute('data-first-login') || '') : '';
         const dateKeyMeta = extractDateKey(firstLoginMeta);
         if (dateKeyMeta) data.meta.relogin_date = dateKeyMeta;
+        if (!data.meta.username && el) {
+          data.meta.username = el.getAttribute('data-user') || '';
+        }
       }
       const ok = await showRusakChecklist(data);
       if (!ok) return;
@@ -569,17 +646,19 @@
     }
   });
   searchInput.addEventListener('input', () => {
-    if (clearBtn) {
-      clearBtn.style.display = searchInput.value.trim() !== '' ? 'inline-block' : 'none';
-    }
+    toggleClearBtn();
+  });
+  searchInput.addEventListener('blur', () => {
+    toggleClearBtn();
   });
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
       if (searchInput.value !== '') {
         searchInput.value = '';
-        clearBtn.style.display = 'none';
+        toggleClearBtn();
         updateSearchUrl('');
         fetchUsers(true, true);
+        searchInput.focus();
       }
     });
   }

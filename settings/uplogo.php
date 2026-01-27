@@ -18,9 +18,13 @@
 
 // hide all error
 error_reporting(0);
-if (!isset($_SESSION["mikhmon"])) {
-  header("Location:../admin.php?id=login");
-} else {
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
+}
+require_once __DIR__ . '/../include/acl.php';
+requireLogin('../admin.php?id=login');
+requireSuperAdmin('../admin.php?id=sessions');
+
 
   if (isset($_POST["submit"])) {
     $logo_dir = "./img/";
@@ -94,7 +98,6 @@ if (!isset($_SESSION["mikhmon"])) {
     }
 //echo "<script>window.location='./admin.php?id=uplogo&session=".$session."'</script>";
   }
-}
 ?>
 <div class="row">
 <div class="col-12">

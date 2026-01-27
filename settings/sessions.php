@@ -18,14 +18,28 @@
 
 // hide all error
 error_reporting(0);
-if (!isset($_SESSION["mikhmon"])) {
-  header("Location:../admin.php?id=login");
-} else {
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
+}
+require_once __DIR__ . '/../include/acl.php';
+requireLogin('../admin.php?id=login');
+
+$is_operator = isOperator();
+
 
 // array color
   $color = array('1' => 'bg-blue', 'bg-indigo', 'bg-purple', 'bg-pink', 'bg-red', 'bg-yellow', 'bg-green', 'bg-teal', 'bg-cyan', 'bg-grey', 'bg-light-blue');
 
   if (isset($_POST['save'])) {
+    if ($is_operator) {
+      echo "<script>alert('Akses ditolak. Hubungi Superadmin.'); window.location='./admin.php?id=sessions';</script>";
+      exit;
+    }
+
+    if (!is_writable('./include/config.php')) {
+      echo "<script>alert('Gagal menyimpan. File config.php tidak bisa ditulis.'); window.location='./admin.php?id=sessions';</script>";
+      exit;
+    }
 
     $suseradm = ($_POST['useradm']);
     $spassadm = encrypt($_POST['passadm']);
@@ -39,19 +53,25 @@ if (!isset($_SESSION["mikhmon"])) {
       $file = file("./include/config.php");
       $content = file_get_contents("./include/config.php");
       $newcontent = str_replace((string)$cari[$i], (string)$ganti[$i], "$content");
-      file_put_contents("./include/config.php", "$newcontent");
+      $write_ok = file_put_contents("./include/config.php", "$newcontent");
+      if ($write_ok === false) {
+        echo "<script>alert('Gagal menyimpan. Periksa permission config.php.'); window.location='./admin.php?id=sessions';</script>";
+        exit;
+      }
     }
 
   
   $gen = '<?php $qrbt="' . $qrbt . '";?>';
           $key = './include/quickbt.php';
+          if (!is_writable($key)) {
+            echo "<script>alert('Gagal menyimpan. File quickbt.php tidak bisa ditulis.'); window.location='./admin.php?id=sessions';</script>";
+            exit;
+          }
           $handle = fopen($key, 'w') or die('Cannot open file:  ' . $key);
           $data = $gen;
           fwrite($handle, $data);
     echo "<script>window.location='./admin.php?id=sessions'</script>";
   }
-
-}
 ?>
 <script>
   function Pass(id){
@@ -79,10 +99,14 @@ if (!isset($_SESSION["mikhmon"])) {
             <div class="card-body">
             <div class="row">
               <?php
-              foreach (file('./include/config.php') as $line) {
-                $value = explode("'", $line)[1];
-                if ($value == "" || $value == "mikhmon") {
-                } else { ?>
+              if (isset($data) && is_array($data)) {
+                foreach ($data as $key => $row) {
+                  if ($key == "mikhmon" || $key == "") {
+                    continue;
+                  }
+                  $value = $key;
+                  $hotspot_label = isset($row[4]) ? explode('%', $row[4])[1] : $value;
+                  ?>
                     <div class="col-12">
                         <div class="box bmh-75 box-bordered <?= $color[rand(1, 11)]; ?>">
                                 <div class="box-group">
@@ -95,12 +119,14 @@ if (!isset($_SESSION["mikhmon"])) {
                                 
                                   <div class="box-group-area">
                                     <span>
-                                      <?= $_hotspot_name ?> : <?= explode('%', $data[$value][4])[1]; ?><br>
-                                      <?= $_session_name ?> : <?= $value; ?><br>
-                                      <span class="connect pointer"  id="<?= $value; ?>"><i class="fa fa-external-link"></i> <?= $_open ?></span>&nbsp;
-                                      <a href="./admin.php?id=settings&session=<?= $value; ?>"><i class="fa fa-edit"></i> <?= $_edit ?></a>&nbsp;
-                                      <a href="javascript:void(0)" onclick="if(confirm('Are you sure to delete data <?= $value;
-                                      echo " (" . explode('%', $data[$value][4])[1] . ")"; ?>?')){loadpage('./admin.php?id=remove-session&session=<?= $value; ?>')}else{}"><i class="fa fa-remove"></i> <?= $_delete ?></a>
+                                      <?= $_hotspot_name ?> : <?= htmlspecialchars($hotspot_label); ?><br>
+                                      <?= $_session_name ?> : <?= htmlspecialchars($value); ?><br>
+                                      <span class="connect pointer"  id="<?= htmlspecialchars($value); ?>"><i class="fa fa-external-link"></i> <?= $_open ?></span>&nbsp;
+                                      <?php if (isSuperAdmin()): ?>
+                                      <a href="./admin.php?id=settings&session=<?= htmlspecialchars($value); ?>"><i class="fa fa-edit"></i> <?= $_edit ?></a>&nbsp;
+                                      <a href="javascript:void(0)" onclick="if(confirm('Are you sure to delete data <?= htmlspecialchars($value);
+                                      echo " (" . htmlspecialchars($hotspot_label) . ")"; ?>?')){loadpage('./admin.php?id=remove-session&session=<?= htmlspecialchars($value); ?>')}else{}"><i class="fa fa-remove"></i> <?= $_delete ?></a>
+                                      <?php endif; ?>
                                     </span>
 
                                   </div>
@@ -109,14 +135,26 @@ if (!isset($_SESSION["mikhmon"])) {
                             </div>
                           </div>
               <?php
-            }
-          }
-          ?>
+                }
+              }
+              ?>
               </div>
             </div>
           </div>
         </div>
 			    <div class="col-6">
+          <?php if ($is_operator): ?>
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title"><i class="fa fa-user-circle"></i> <?= $_admin ?></h3>
+              </div>
+              <div class="card-body">
+                <div class="box bg-warning" style="padding:10px;border-radius:6px;">
+                  Akses admin hanya untuk Superadmin.
+                </div>
+              </div>
+            </div>
+          <?php else: ?>
           <form autocomplete="off" method="post" action="">
             <div class="card">
               <div class="card-header">
@@ -169,7 +207,8 @@ if (!isset($_SESSION["mikhmon"])) {
       <div><b id="newVer" class="text-green"></b></div>
     </div>
     </div>
-    </form>
+        </form>
+          <?php endif; ?>
   </div>
 </div>
 </div>

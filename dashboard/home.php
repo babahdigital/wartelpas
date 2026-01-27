@@ -118,7 +118,7 @@ else {
                     .css('color', 'var(--accent-red)');
             } else if (parseInt(data.ghost || 0, 10) > 0) {
                 $('#audit-box').removeClass('border-audit border-loss').addClass('border-warning');
-                $('#audit-status').html('<i class="fa fa-ghost"></i> GHOST')
+                $('#audit-status').html('<i class="fa fa-search"></i> GHOST')
                     .css('color', 'var(--accent-yellow)');
             } else {
                 $('#audit-box').removeClass('border-loss border-warning').addClass('border-audit');
@@ -294,7 +294,7 @@ for ($i = 5; $i >= 0; $i--) {
         <div class="kpi-box border-blue">
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                 <h1 id="kpi-sold">0</h1>
-                <span id="ghost-tag" style="display:none;" class="ghost-alert blink"><i class="fa fa-ghost"></i> GHOST</span>
+                <span id="ghost-tag" style="display:none;" class="ghost-alert blink"><i class="fa fa-search"></i> GHOST</span>
             </div>
             <div class="label">Voucher Terjual (Hari Ini)</div>
         </div>

@@ -1,4 +1,10 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../include/acl.php';
+requireLogin('../admin.php?id=login');
+requireSuperAdmin('../admin.php?id=sessions');
 // Cleanup non-wartel entries in login_history (no BLOK info)
 
 ini_set('display_errors', 0);

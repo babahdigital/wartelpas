@@ -2,6 +2,16 @@
 session_start();
 error_reporting(0);
 
+$root_dir = dirname(__DIR__);
+$env = [];
+$envFile = $root_dir . '/include/env.php';
+if (file_exists($envFile)) {
+    require $envFile;
+}
+$pricing = $env['pricing'] ?? [];
+$price10 = (int)($pricing['price_10'] ?? 0);
+$price30 = (int)($pricing['price_30'] ?? 0);
+
 $dbFile = dirname(__DIR__) . '/db_data/mikhmon_stats.db';
 $session_id = $_GET['session'] ?? '';
 
@@ -83,8 +93,7 @@ function build_ghost_hint($selisih_qty, $selisih_rp) {
     $ghost_rp = abs((int)$selisih_rp);
     if ($ghost_qty <= 0 || $ghost_rp <= 0) return '';
 
-    $price10 = 5000;
-    $price30 = 20000;
+    global $price10, $price30;
     $divisor = $price30 - $price10;
     $ghost_10 = 0;
     $ghost_30 = 0;
@@ -119,8 +128,7 @@ function build_ghost_hint($selisih_qty, $selisih_rp) {
 }
 
 function calc_audit_adjusted_totals(array $ar) {
-    $price10 = 5000;
-    $price30 = 20000;
+    global $price10, $price30;
     $expected_qty = (int)($ar['expected_qty'] ?? 0);
     $expected_setoran = (int)($ar['expected_setoran'] ?? 0);
     $reported_qty = (int)($ar['reported_qty'] ?? 0);
@@ -171,8 +179,8 @@ function calc_audit_adjusted_totals(array $ar) {
     if ($p30_qty <= 0) $p30_qty = $profile30_users;
 
     if ($has_manual_evidence) {
-        $manual_net_qty_10 = max(0, $p10_qty - $cnt_rusak_10 - $cnt_invalid_10 + $cnt_retur_10);
-        $manual_net_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30 + $cnt_retur_30);
+        $manual_net_qty_10 = max(0, $p10_qty - $cnt_rusak_10 - $cnt_invalid_10);
+        $manual_net_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30);
         $manual_display_qty = $manual_net_qty_10 + $manual_net_qty_30;
         $manual_display_setoran = ($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30);
         $expected_adj_qty = $expected_qty;
@@ -282,12 +290,17 @@ if (file_exists($dbFile)) {
             foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
             $stmt->execute();
             $sumRow = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
-            $sales_summary['invalid'] = (int)($sumRow['invalid_sum'] ?? 0);
-            $sales_summary['rusak'] = (int)($sumRow['rusak_sum'] ?? 0);
-            $sales_summary['retur'] = (int)($sumRow['retur_sum'] ?? 0);
-            $sales_summary['gross'] = (int)($sumRow['gross_sum'] ?? 0);
+            $raw_gross = (int)($sumRow['gross_sum'] ?? 0);
+            $invalid_rp = (int)($sumRow['invalid_sum'] ?? 0);
+            $rusak_rp = (int)($sumRow['rusak_sum'] ?? 0);
+            $retur_rp = (int)($sumRow['retur_sum'] ?? 0);
+
+            $sales_summary['invalid'] = $invalid_rp;
+            $sales_summary['rusak'] = $rusak_rp;
+            $sales_summary['retur'] = $retur_rp;
+            $sales_summary['gross'] = $raw_gross - $invalid_rp - $retur_rp;
             $sales_summary['total'] = (int)($sumRow['total_cnt'] ?? 0);
-            $sales_summary['net'] = $sales_summary['gross'] - $sales_summary['rusak'] - $sales_summary['invalid'];
+            $sales_summary['net'] = $raw_gross - $invalid_rp - $rusak_rp;
         }
 
         if (table_exists($db, 'live_sales')) {
@@ -318,12 +331,17 @@ if (file_exists($dbFile)) {
             foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
             $stmt->execute();
             $p = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
-            $pending_summary['invalid'] = (int)($p['invalid_sum'] ?? 0);
-            $pending_summary['rusak'] = (int)($p['rusak_sum'] ?? 0);
-            $pending_summary['retur'] = (int)($p['retur_sum'] ?? 0);
-            $pending_summary['gross'] = (int)($p['gross_sum'] ?? 0);
+            $raw_gross = (int)($p['gross_sum'] ?? 0);
+            $invalid_rp = (int)($p['invalid_sum'] ?? 0);
+            $rusak_rp = (int)($p['rusak_sum'] ?? 0);
+            $retur_rp = (int)($p['retur_sum'] ?? 0);
+
+            $pending_summary['invalid'] = $invalid_rp;
+            $pending_summary['rusak'] = $rusak_rp;
+            $pending_summary['retur'] = $retur_rp;
+            $pending_summary['gross'] = $raw_gross - $invalid_rp - $retur_rp;
             $pending_summary['total'] = (int)($p['total_cnt'] ?? 0);
-            $pending_summary['net'] = $pending_summary['gross'] - $pending_summary['rusak'] - $pending_summary['invalid'];
+            $pending_summary['net'] = $raw_gross - $invalid_rp - $rusak_rp;
 
             if ($sales_summary['pending'] > 0) {
                 $rangeSql = "SELECT
@@ -380,7 +398,7 @@ if (file_exists($dbFile)) {
                             $st = strtolower((string)($u['last_status'] ?? ''));
                             $k = (string)($u['profile_kind'] ?? '10');
                             if ($st === 'rusak' || $st === 'invalid') {
-                                $price = ($k === '30') ? 20000 : 5000;
+                                    $price = ($k === '30') ? $price30 : $price10;
                                 $curr_rusak_rp += $price;
                             }
                         }
@@ -435,7 +453,7 @@ if (file_exists($dbFile)) {
 <div class="card card-solid">
     <div class="card-header-solid">
         <h3 class="card-title m-0"><i class="fa fa-shield"></i> Audit Keuangan & Voucher</h3>
-        <a class="btn-solid" style="text-decoration:none;" target="_blank" href="report/print_audit.php?session=<?= urlencode($session_id) ?>&show=<?= urlencode($req_show) ?>&date=<?= urlencode($filter_date) ?>"><i class="fa fa-print"></i> Print Laporan Keuangan</a>
+        <a class="btn-solid" style="text-decoration:none;" target="_blank" href="report/print/print_audit.php?session=<?= urlencode($session_id) ?>&show=<?= urlencode($req_show) ?>&date=<?= urlencode($filter_date) ?>"><i class="fa fa-print"></i> Print Laporan Keuangan</a>
     </div>
     <div class="card-body">
         <form method="GET" class="toolbar" action="?">
@@ -461,6 +479,16 @@ if (file_exists($dbFile)) {
         </form>
 
         <div class="section-title" style="margin-top:0;">Ringkasan Keuangan (Audit Manual vs Sistem)</div>
+
+        <div class="summary-card" style="border:1px dashed #3a4046;background:#1f2327;margin-bottom:14px;">
+            <div class="summary-title" style="color:#f39c12;"><i class="fa fa-info-circle"></i> SOP Input Audit (Wajib)</div>
+            <div style="font-size:12px;color:#cbd5e1;line-height:1.6;margin-top:6px;">
+                1) Total Qty fisik (termasuk retur sebagai pengganti).<br>
+                2) Total uang fisik di laci (sebelum pengeluaran).<br>
+                3) Pengeluaran opsional (jika ada, wajib isi keterangan).<br>
+                4) Evidence: tandai user rusak/retur agar selisih bisa dijelaskan.
+            </div>
+        </div>
 
         <?php if (!empty($daily_note_alert)): ?>
             <div style="background:#fff3cd; border:1px solid #ffeeba; border-left:5px solid #ffc107; padding:15px; border-radius:4px; margin-bottom:20px; color:#856404;">

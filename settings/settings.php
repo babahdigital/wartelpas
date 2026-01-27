@@ -19,9 +19,13 @@
 // hide all error
 error_reporting(0);
 
-if (!isset($_SESSION["mikhmon"])) {
-  header("Location:../admin.php?id=login");
-} else {
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
+}
+require_once __DIR__ . '/../include/acl.php';
+requireLogin('../admin.php?id=login');
+requireSuperAdmin('../admin.php?id=sessions');
+
 
   if ($id == "settings" && explode("-",$router)[0] == "new") {
     $data = '$data';
@@ -77,7 +81,6 @@ if (!isset($_SESSION["mikhmon"])) {
   if ($currency == "") {
     echo "<script>window.location='./admin.php?id=settings&session=" . $session . "'</script>";
   }
-}
 ?>
 <script>
   function PassMk(){

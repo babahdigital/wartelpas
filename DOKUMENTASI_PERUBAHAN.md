@@ -48,11 +48,11 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
   - `last_status`
 - Status ditentukan dengan prioritas:
   1) ONLINE
-  2) RUSAK
-  3) RETUR
+  2) RETUR
+  3) RUSAK
   4) TERPAKAI
   5) READY
-- Jika comment memiliki **Retur Ref**, status tetap **RETUR** meski ada kata “RUSAK” di ref.
+- Jika comment memiliki **Retur Ref** atau tag **(Retur)**, status **RETUR** diprioritaskan meski ada kata “RUSAK” di histori.
 
 ### 2.4 Aturan Rusak/Retur (Business Rules)
 - **RUSAK** hanya jika:
@@ -96,23 +96,23 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **users.php**: proteksi agar **user online tidak ikut terhapus**, tombol hover pointer, input search diperlebar.
 
 ### 2.11 Sinkronisasi & Maintenance
-- **report/sync_stats.php**: sink login_history tanpa mengubah comment RouterOS, WAL aktif, gunakan config/session (tanpa kredensial hardcode).
-- **report/sync_sales.php**: simpan blok_name, WAL aktif, gunakan config/session (tanpa kredensial hardcode).
+- **report/laporan/services/sync_stats.php**: sink login_history tanpa mengubah comment RouterOS, WAL aktif, gunakan config/session (tanpa kredensial hardcode).
+- **report/laporan/services/sync_sales.php**: simpan blok_name, WAL aktif, gunakan config/session (tanpa kredensial hardcode).
 - **Mikrotik-CleanWartel.rsc**: hapus preclean “hantu-sweeper”, **abort cleanup jika sync gagal**, URL fetch wajib membawa `session`.
 
 ### 2.12 Laporan Penjualan, HP Blok, & Print Rekap
 - **report/selling.php**: gabung data `sales_history` + `live_sales` (pending), perbaikan perhitungan status (normal/rusak/retur/invalid), summary card baru, perhitungan rusak 10/30 menit, dan layout full-height agar pagination tidak terpotong.
 - **Rincian Transaksi**: pagination manual (`tx_page`) + kolom **Bandwidth** (dari `login_history.last_bytes`).
 - **Input HP Blok**: perbaikan validasi, only TOTAL row punya aksi edit/hapus, breakdown WARTEL/KAMTIB ditampilkan, catatan wrap, total bar HP di bawah tabel.
-- **report/hp_save.php**: insert/update aman (tanpa DROP), transaksi, WAL/busy_timeout, validasi WARTEL/KAMTIB, response JSON, redirect date harian.
-- **report/print_rekap.php**: desain rekap harian diperluas dengan tabel detail per blok (B10/B30 + subtotal), kolom Qty dengan subkolom Total/RS/RT, kolom Device (Total/RS/SP), Unit (WR/KM), Bandwidth, Aktif; parsing blok dari `blok_name`/comment; warna print; note singkatan & catatan settlement (sementara jam 03:00, final jam 04:00); nama file PDF unik via `beforeprint` (timestamp).
-- **report/print_rincian.php**: halaman print rincian harian dengan print/share.
+- **report/laporan/services/hp_save.php**: insert/update aman (tanpa DROP), transaksi, WAL/busy_timeout, validasi WARTEL/KAMTIB, response JSON, redirect date harian.
+- **report/print/print_rekap.php**: desain rekap harian diperluas dengan tabel detail per blok (B10/B30 + subtotal), kolom Qty dengan subkolom Total/RS/RT, kolom Device (Total/RS/SP), Unit (WR/KM), Bandwidth, Aktif; parsing blok dari `blok_name`/comment; warna print; note singkatan & catatan settlement (sementara jam 03:00, final jam 04:00); nama file PDF unik via `beforeprint` (timestamp).
+- **report/print/print_rincian.php**: halaman print rincian harian dengan print/share.
 - **.htaccess**: whitelist endpoint print rekap/rincian.
 - **UI Tombol**: tombol Print Rekap/Print Rincian di header laporan.
 
 ### 2.13 Realtime Usage & Login/Logout Tracking
-- **process/usage_ingest.php**: diperkuat agar selalu `OK`, logging error, dan tidak memicu 500.
-- **report/live_ingest.php**: respon aman, log request invalid.
+- **report/laporan/services/usage_ingest.php**: diperkuat agar selalu `OK`, logging error, dan tidak memicu 500.
+- **report/laporan/services/live_ingest.php**: respon aman, log request invalid.
 - **MikroTik onlogin/onlogout**: selalu kirim usage ingest (login/logout) + uptime/IP/MAC.
 - **login_count & relogin**: pencatatan relogin dan badge di users + print.
 
@@ -128,7 +128,7 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **.htaccess**: whitelist endpoint maintenance dan ingest.
 
 ### 2.16 Stabilitas Sync Usage
-- **process/sync_usage.php**: respons cepat (early response + flush) agar MikroTik tidak timeout.
+- **report/laporan/services/sync_usage.php**: respons cepat (early response + flush) agar MikroTik tidak timeout.
 - Logging **sync_usage.log** untuk audit proses dan durasi.
 
 ### 2.17 Relogin Detail, Print, dan Validasi Rusak
@@ -147,8 +147,8 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **Print Used/Detail**: fallback uptime/bytes dari DB agar laporan tidak kosong ketika data RouterOS sudah hilang.
 
 ### 2.18 Perbaikan Rekap Penjualan (Dedup & Non‑Wartel)
-- **report/print_rekap.php** dan **report/selling.php**: deduplikasi penjualan berdasarkan `username + sale_date` agar relogin tidak menghitung ganda.
-- **report/live_ingest.php** dan **report/sync_sales.php**: menolak data tanpa BLOK (non‑Wartel).
+- **report/print/print_rekap.php** dan **report/selling.php**: deduplikasi penjualan berdasarkan `username + sale_date` agar relogin tidak menghitung ganda.
+- **report/laporan/services/live_ingest.php** dan **report/laporan/services/sync_sales.php**: menolak data tanpa BLOK (non‑Wartel).
 - Rekap hanya menampilkan blok yang memiliki metrik > 0 (mengurangi baris kosong).
 
 ### 2.19 Perbaikan Schema & Migrasi Otomatis Penjualan
@@ -162,12 +162,12 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 
 ### 2.20 Settlement Manual + Log Terkunci
 - Tambah **settlement manual** di **report/selling.php** untuk menjalankan scheduler MikroTik.
-- Endpoint **report/settlement_manual.php** menjalankan scheduler dan menulis log ke `settlement_log`.
+- Endpoint **report/laporan/services/settlement_manual.php** menjalankan scheduler dan menulis log ke `settlement_log`.
 - Modal log bergaya terminal dengan **lock** saat proses berjalan (tidak bisa ditutup sampai selesai).
 
 ### 2.21 Perbaikan Input HP Blok
-- **report/selling.php**: form HP mengirim `ajax=1` dan dialihkan ke **report/hp_save.php**.
-- **report/hp_save.php**: validasi & response JSON konsisten.
+- **report/selling.php**: form HP mengirim `ajax=1` dan dialihkan ke **report/laporan/services/hp_save.php**.
+- **report/laporan/services/hp_save.php**: validasi & response JSON konsisten.
 
 ### 2.22 UI Konfirmasi Tanpa Alert
 - Konfirmasi hapus/edit diganti menjadi **modal** bergaya design.html (tanpa `alert/confirm`).
@@ -183,7 +183,7 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
   - Perhitungan pendapatan **qty-aware**.
   - Definisi “laku” disamakan dengan selling (berdasarkan status, bukan bytes).
   - Whitelist blok harian berdasar **phone_block_daily** agar blok “uji coba” tidak ikut terhitung.
-- **report/settlement_manual.php**:
+- **report/laporan/services/settlement_manual.php**:
   - Menjalankan **script CuciGudangManual** langsung (tanpa scheduler).
   - Logging settlement dipersempit: hanya log dengan prefix SETTLE/CLEANUP/SYNC/MAINT/SUKSES.
   - Terminal log dibuat berurutan (typewriter), status **Selesai** muncul setelah log akhir.
@@ -197,10 +197,37 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
   - Data HP **tidak dihapus** default (opsional `delete_hp=1`).
 - **tools/check_block.php** (baru):
   - Endpoint audit untuk mengecek keberadaan blok pada semua tabel.
-- **report/live_ingest.php**:
+- **report/laporan/services/live_ingest.php**:
   - Validasi session config & hanya izinkan **hotspot_server=wartel**.
-- **report/sync_stats.php**:
+- **report/laporan/services/sync_stats.php**:
   - Filter berdasarkan hotspot server + skip user tanpa marker BLOK agar data non‑Wartel tidak masuk lagi saat settlement.
+
+### 2.26 Penyempurnaan Status Sync & Ghost Hunter (2026-01-27)
+- **report/laporan/services/sync_stats.php**:
+  - Deteksi status rusak/retur lebih fleksibel dari komentar (tidak hanya prefix).
+  - Penentuan status konsisten: online → rusak → retur → terpakai → ready.
+- **report/laporan/services/sync_sales.php**:
+  - Validasi ulang status dan flag saat settlement berdasarkan komentar terbaru.
+- **report/laporan/ghost.php**:
+  - Anti-cache untuk data realtime.
+  - Threshold ghost dinaikkan ke 200KB.
+  - DB read-only (PRAGMA query_only) untuk keamanan.
+
+### 2.24 Penyempurnaan Users Modular (2026-01-26)
+- Tombol **clear search (X)** stabil saat kehilangan fokus (klik di luar/ke taskbar).
+- `Retur dari` kini menampilkan username bersih (tanpa prefix **vc-**), parsing `Retur Ref` lebih fleksibel.
+- Status **RETUR** diprioritaskan di data router & history‑only sehingga tidak turun menjadi **RUSAK/READY** akibat histori “Audit: RUSAK”.
+- Auto‑print voucher baru saat aksi retur berhasil (response mengirim `new_user`).
+
+### 2.25 Konfigurasi Terpusat env.php (Endpoint Ingest/Sync)
+- **include/env.php** menampung token & allowlist untuk endpoint:
+  - `report/laporan/services/sync_usage.php`
+  - `report/laporan/services/usage_ingest.php`
+  - `report/laporan/services/live_ingest.php`
+  - `report/laporan/services/sync_sales.php`
+  - `report/laporan/services/sync_stats.php`
+- Semua endpoint membaca konfigurasi dari **env.php** terlebih dahulu, lalu fallback ke `getenv()` atau default.
+ - Token untuk tools maintenance dan backup UI juga dipusatkan di **env.php** (dipakai oleh tools dan menu backup/restore).
 
 ## 3) Masalah Khusus dan Fix Terkait
 ### 3.1 Waktu/Bytes/Uptime kosong saat RUSAK
@@ -248,7 +275,7 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 
 ### 3.12 Data non‑Wartel muncul lagi setelah settlement
 - **Gejala**: setelah cleanup, data non‑Wartel (contoh nomor 08) muncul kembali saat settlement.
-- **Akar masalah**: `report/sync_stats.php` menarik semua user hotspot tanpa filter `server` dan tanpa cek BLOK.
+- **Akar masalah**: `report/laporan/services/sync_stats.php` menarik semua user hotspot tanpa filter `server` dan tanpa cek BLOK.
 - **Solusi**: filter `?server=$hotspot_server` dan **skip user tanpa BLOK**.
 
 ### 3.13 Blok “uji coba” tetap muncul di rekap
@@ -264,7 +291,7 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 ### 3.10 Error input HP Blok
 - **Gejala**: “Respon tidak valid dari server”.
 - **Akar masalah**: endpoint tidak mengirim JSON yang diharapkan.
-- **Solusi**: kirim `ajax=1`, arahkan ke `report/hp_save.php`, respons JSON konsisten.
+- **Solusi**: kirim `ajax=1`, arahkan ke `report/laporan/services/hp_save.php`, respons JSON konsisten.
 
 ## 4) Penyempurnaan Terbaru (Tahap Lanjutan)
 ### 4.1 Filter Hotspot (Active/Hosts/Cookies/DHCP)
@@ -333,7 +360,7 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **Akar masalah**: `sale_date` kosong dan `raw_date` memakai format `YYYY-MM-DD` (kadang dengan jam) yang sebelumnya tidak terbaca.
 - **Solusi**:
   - `report/selling.php` dan `report/print_rekap.php` kini mengenali `YYYY-MM-DD` + jam.
-  - `report/sync_sales.php` disesuaikan agar `sale_date` terisi untuk format `YYYY-MM-DD`.
+  - `report/laporan/services/sync_sales.php` disesuaikan agar `sale_date` terisi untuk format `YYYY-MM-DD`.
   - Tool baru **tools/fix_sales_dates.php** untuk backfill `sale_date` dari `raw_date`.
 
 ### 4.2 Penyelarasan logika “voucher laku”
@@ -362,7 +389,7 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 ### 4.6 Ringkasan perubahan file utama
 - `report/selling.php`: parsing tanggal, logika unik voucher, perbaikan filter harian, ringkasan disesuaikan.
 - `report/print_rekap.php`: logika unik voucher, label tabel disesuaikan, parsing tanggal.
-- `report/sync_sales.php`: dukungan format `YYYY-MM-DD`.
+- `report/laporan/services/sync_sales.php`: dukungan format `YYYY-MM-DD`.
 - `tools/fix_sales_dates.php`: tool backfill `sale_date`.
 - `hotspot/users.php`: filter tanggal lebih akurat (timestamp mentah).
 
@@ -370,7 +397,49 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 ### 4.7.1 Log settlement real-time berbasis server
 - **Masalah**: log di popup sering tertunda/terbaca dari RouterOS saja, dan tidak stabil bila proses lama.
 - **Solusi**:
-  - **tools/settlement_log_ingest.php**: endpoint baru menerima log dari MikroTik dan menulis ke file `logs/settlement_<session>_<date>.log`.
+  - **report/laporan/services/settlement_log_ingest.php**: endpoint baru menerima log dari MikroTik dan menulis ke file `logs/settlement_<session>_<date>.log`.
+
+  ## 6) Update Terbaru (Audit & Penyempurnaan 2026-01-27)
+  Bagian ini merangkum pekerjaan dari awal sesi hingga akhir, khususnya untuk laporan, print, retur, dan perbaikan data hotspot.
+
+  ### 6.1 Laporan, Status, dan Akuntansi
+  - Penegasan logika **gross/net**: gross hanya **normal+rusak**, net **normal+retur**, invalid **0**.
+  - Penyesuaian tampilan status di laporan dengan label visual:
+    - **RUSAK (DIGANTI)** untuk rusak yang sudah ada pengganti retur.
+    - **RETUR (PENGGANTI)** untuk voucher hasil retur.
+  - Penambahan **Ref (user asal)** di bawah username pada laporan transaksi.
+  - Penghapusan **voucher asal retur** dari list transaksi (tetap masuk total).
+
+  ### 6.2 Print Rincian & Rekap
+  - **report/print/print_rincian.php**:
+    - Menampilkan **Retur Ref** dari komentar dan DB untuk menjaga konsistensi referensi.
+    - Status retur/rusak diprioritaskan agar tidak tertukar.
+    - Tampilan label **RUSAK (DIGANTI)** dan **RETUR (PENGGANTI)**.
+  - Print rincian tidak lagi menampilkan kolom yang tidak relevan untuk kebutuhan audit (disederhanakan sesuai kebutuhan wartel).
+
+  ### 6.3 Hotspot Print List (List Voucher)
+  - Membuat ulang **hotspot/print/print_list.php** sebagai basis print list dinamis.
+  - Print list mengikuti filter status/blok/profil/tanggal dari halaman users.
+  - Status **READY** di list print memiliki layout khusus:
+    - Kolom detail (MAC/IP/Login/Logout/Uptime/Bytes) disembunyikan.
+    - Kolom tambahan **Nama/Tujuan/Hubungan** hanya tampil saat READY.
+  - Perbaikan label default agar konsisten dengan konteks (Terpakai/Ready/Retur/Rusak).
+
+  ### 6.4 Filter Profil & Kode Voucher
+  - **voucher/print.php** ditambah parameter `profile=10|30` agar print kode tidak campur.
+  - Judul file PDF print voucher mengikuti profil yang dipilih.
+  - Tombol print di users membawa parameter profil ke print voucher.
+
+  ### 6.5 Retur User (RouterOS)
+  - Aksi retur sekarang **mengisi limit-uptime** sesuai profil (10m/30m) saat membuat user baru di RouterOS.
+
+  ### 6.6 Pembersihan Duplikasi & Tampilan
+  - Retur asal tidak lagi ditampilkan ganda di list **terpakai/retur/all**.
+  - Status dan ref retur diselaraskan antara data router dan DB.
+
+  ### 6.7 Sticky Notifikasi Stok Rendah
+  - Notifikasi stok rendah dibuat **sticky** dan hanya muncul via JS agar tidak mengganggu layout.
+  - Data stok dibawa dari backend ke JS untuk tampilan realtime yang konsisten.
   - Validasi `key` + `session` untuk mencegah spam.
   - Debug file `logs/settlement_ingest_debug.log` untuk audit request.
 
@@ -398,7 +467,7 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 ### 4.7.5 Settlement backend & fallback log
 - **Masalah**: response OK menutupi error trigger dan log kadang kosong.
 - **Solusi**:
-  - **report/settlement_manual.php** membaca log server lebih dulu (clearstatcache), fallback RouterOS.
+  - **report/laporan/services/settlement_manual.php** membaca log server lebih dulu (clearstatcache), fallback RouterOS.
   - Response tidak dipercepat agar error trigger terlihat.
   - Regex pencarian script diperbaiki.
 
@@ -523,7 +592,7 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **report/print_audit.php**: catatan ditampilkan di bawah header cetak.
 
 ### 4.9.6 Keamanan endpoint ingest
-- **report/live_ingest.php** menambahkan **IP allowlist** (env `WARTELPAS_SYNC_ALLOWLIST`, localhost tetap diizinkan).
+- **report/laporan/services/live_ingest.php** menambahkan **IP allowlist** (env `WARTELPAS_SYNC_ALLOWLIST`, localhost tetap diizinkan).
 
 ### 4.9.7 Penyesuaian tombol audit di selling
 - Tombol **Kunci Audit** disembunyikan dari toolbar harian agar fokus ke audit + catatan harian.
@@ -564,11 +633,11 @@ File diagnostik & migrasi sementara yang sudah tidak diperlukan:
 - hotspot/userprofile.php
 - hotspot/adduserprofile.php
 - hotspot/userprofilebyname.php
-- report/sync_stats.php
-- report/sync_sales.php
+- report/laporan/services/sync_stats.php
+- report/laporan/services/sync_sales.php
 - report/selling.php
-- report/settlement_manual.php
-- tools/settlement_log_ingest.php
+- report/laporan/services/settlement_manual.php
+- report/laporan/services/settlement_log_ingest.php
 - tools/cleanup_duplicate_sales.php
 - tools/cleanup_non_wartel_login_history.php
 - tools/cleanup_ready_login_history.php
@@ -576,12 +645,12 @@ File diagnostik & migrasi sementara yang sudah tidak diperlukan:
 - tools/clear_all.php
 - tools/build_sales_summary.php
 - tools/migrate_sales_reporting.php
-- report/hp_save.php
+- report/laporan/services/hp_save.php
 - report/print_rekap.php
 - report/print_rincian.php
-- process/usage_ingest.php
-- process/sync_usage.php
-- report/live_ingest.php
+- report/laporan/services/usage_ingest.php
+- report/laporan/services/sync_usage.php
+- report/laporan/services/live_ingest.php
 - tools/clear_logs.php
 - tools/clear_block.php
 - tools/delete_user.php
@@ -695,3 +764,113 @@ Jika ada tambahan perubahan atau aturan bisnis baru, dokumentasi ini akan diperb
 - [hotspot/user/aload_users.php](hotspot/user/aload_users.php)
 - [hotspot/print/print.detail.php](hotspot/print/print.detail.php)
 - [hotspot/print/print.used.php](hotspot/print/print.used.php)
+
+### 6.7 Users – Retur, Tombol Clear, dan Print Retur (2026-01-26)
+- **Retur**:
+  - Menampilkan label **“Retur dari”** pada baris RETUR (bukan First login).
+  - Menjaga list RETUR tetap tampil meski hanya ada di history (tidak hilang saat filter).
+- **Print RETUR**:
+  - Aksi print RETUR dipindah ke endpoint baru **hotspot/print/print.retur.php**.
+  - Template memakai style kecil agar konsisten dengan voucher kecil.
+- **Search Clear**:
+  - Tombol `X` dibuat stabil dengan class `is-visible` dan tidak hilang saat filter.
+
+**File terkait:**
+- [hotspot/print/print.retur.php](hotspot/print/print.retur.php)
+- [hotspot/user/data.php](hotspot/user/data.php)
+- [hotspot/user/render.php](hotspot/user/render.php)
+- [hotspot/user/js/users.js](hotspot/user/js/users.js)
+- [hotspot/user/css/users.css](hotspot/user/css/users.css)
+
+## 7) Update Terbaru (Refactor Laporan & Perapihan Print 2026-01-27)
+### 7.1 Refactor Struktur Layanan Laporan
+- Semua endpoint layanan laporan dipusatkan ke **report/laporan/services/**.
+- **report/selling.php** disederhanakan: hanya entrypoint ke laporan (`data.php` + `render.php`).
+- Endpoint legacy dihapus untuk menghilangkan 404/410:
+  - report/sync_sales.php, report/sync_stats.php, report/live_ingest.php, report/hp_save.php, report/settlement_manual.php
+  - process/usage_ingest.php, process/sync_usage.php
+  - wrapper print lama di report/laporan/print/*
+- **tools/settlement_log_ingest.php** dipindahkan ke **report/laporan/services/settlement_log_ingest.php**.
+- **report/sales_summary_helper.php** dipindahkan ke **report/laporan/sales_summary_helper.php**.
+
+### 7.2 Perapihan & Sinkronisasi Rute MikroTik
+- Script MikroTik (CleanWartel) diarahkan ke endpoint baru **report/laporan/services/**.
+- URL fetch dipastikan membawa `session` yang valid.
+
+### 7.3 Perbaikan Allowlist & Docker
+- .htaccess ditambahkan allowlist IP baru:
+  - **172.18.0.1**
+  - **10.0.0.6**
+- docker-compose.yml dirapikan:
+  - mapping layanan baru **report/laporan/services/** dan **report/print/**
+  - mapping endpoint yang sudah dihapus ikut dibersihkan.
+
+### 7.4 Audit & Perhitungan Retur (Masukan-26)
+- **Retur dihitung sebagai uang masuk (net)**, tetapi **tidak dihitung sebagai qty laku**.
+- Perhitungan audit manual setoran/qty dipisahkan agar tidak tercampur antar status.
+- Summary blok & profil di rekap disesuaikan agar konsisten dengan logika baru.
+
+### 7.5 Penyempurnaan Print Rekap & Rincian
+- **report/print/print_rekap.php**:
+  - Retur masuk ke total uang, qty laku hanya dari status laku.
+  - Rekap blok lebih stabil dan konsisten dengan audit manual.
+- **report/print/print_rincian.php**:
+  - Perbaikan include path root agar tidak blank.
+  - Normalisasi nama blok/profile agar konsisten.
+  - Filter status diperluas: **ready, online, terpakai, rusak, retur**.
+  - View READY disederhanakan (tanpa kolom waktu/IP/MAC/uptime/bytes).
+  - Judul print disesuaikan:
+    - Online → **List Pemakaian Online**
+    - Terpakai → **List Pemakaian Voucher**
+    - Rusak → **List Voucher Rusak**
+    - Retur → **List Voucher Yang Retur**
+    - Ready → **List Username Ready**
+- Disediakan kompatibilitas wrapper **report/print_rincian.php**.
+
+### 7.6 Sinkronisasi Status “Terpakai” & Retur
+- Status **TERPAKAI** mencakup retur untuk kebutuhan list/print pemakaian.
+- Data per blok/profil hanya menghitung qty **laku** (bukan retur).
+
+### 7.7 Perubahan UI/Label pada Users
+- Tombol:
+  - **Print Status** → **Print Kode**
+  - **Print Blok** → **Print Kode**
+  - **Retur** → **Print List**
+- Dropdown filter READY diganti menjadi **Voucher Baru**.
+- Print button diarahkan ke rute baru di **report/print/print_rincian.php**.
+
+### 7.8 Template Print Retur Disamakan
+- **hotspot/print/print.retur.php** disamakan gaya dan struktur dengan **voucher/print.php**:
+  - Fallback DB untuk **comment/validity/profile**
+  - Tag **(Retur)** wajib tampil
+  - Dukungan **Download PNG** (html2canvas) + link unduh di toolbar
+
+### 7.9 Popup “Konfirmasi Tindakan” (Print)
+- Perbaikan JS/CSS agar tombol print di popup selalu bisa diklik:
+  - `data-url` disimpan konsisten.
+  - `window.open` fallback ke redirect jika popup diblokir.
+  - Z-index & pointer-events dipastikan aktif.
+
+### 7.10 Tombol Restore Selalu Tampil
+- Menu backup/restore disesuaikan agar **tombol Restore selalu muncul** (sesuai permintaan uji coba).
+
+### 7.11 Pembersihan Endpoint & File Tak Terpakai
+- **hotspot/save_logout_time.php** dihapus karena tidak dipakai lagi.
+- Stubs/endpoint lama dihapus agar tidak ada 404/410.
+
+### 7.12 Ringkasan Akhir
+- Struktur layanan rapi, rute konsisten, dan dokumen ter-update.
+- Logika audit & retur konsisten di laporan dan print.
+- UI/print lebih jelas dan minim kebingungan.
+
+### 7.13 Penyempurnaan Print List (Blok & Profil)
+- **Print List** menggantikan label **Print Bukti** pada tombol saat blok dipilih.
+- Header print menampilkan **Blok tanpa prefix** (contoh: `BLOK-A` → `A`).
+- Jika filter profil dipilih, header menampilkan **Profile 10/30 Menit**.
+- Filter **profil** diteruskan ke print dan dipakai untuk penyaringan data:
+  - Jika profil 30 dipilih dan data kosong, print tampil kosong (tidak bocor ke profil 10).
+- Saat status **Semua** dan blok dipilih (tanpa filter lain), **Ready disembunyikan** dan **Rekap (Status/Blok/Profile)** tidak ditampilkan.
+
+**File terkait:**
+- [report/print/print_rincian.php](report/print/print_rincian.php)
+- [hotspot/user/render.php](hotspot/user/render.php)

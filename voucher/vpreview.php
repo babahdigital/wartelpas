@@ -36,6 +36,16 @@ if (!isset($_SESSION["mikhmon"])) {
   }
   include('../include/readcfg.php');
 
+  $root_dir = dirname(__DIR__);
+  $env = [];
+  $envFile = $root_dir . '/include/env.php';
+  if (file_exists($envFile)) {
+    require $envFile;
+  }
+  $pricing = $env['pricing'] ?? [];
+  $price10 = (int)($pricing['price_10'] ?? 0);
+  $price30 = (int)($pricing['price_30'] ?? 0);
+
   include('../lib/formatbytesbites.php');
 
   $id = $_GET['id'];
@@ -63,7 +73,7 @@ if (!isset($_SESSION["mikhmon"])) {
 
   
 if ($currency == in_array($currency, $cekindo['indo'])) {
-    $getprice = "5000";
+  $getprice = (string)$price10;
     $price = $currency . " " . number_format((float)$getprice, 0, ",", ".");
 } else {
     $getprice = "10";

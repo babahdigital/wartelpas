@@ -148,15 +148,15 @@ function extract_retur_ref($comment) {
 function extract_retur_user_from_ref($comment) {
   $ref = extract_retur_ref($comment);
   if ($ref === '') return '';
-  if (preg_match('/\b(vc-[A-Za-z0-9._-]+)/', $ref, $m)) {
+  $ref = trim($ref);
+  if (preg_match('/\bvc-([A-Za-z0-9._-]+)/', $ref, $m)) {
     return $m[1];
   }
-  if (preg_match('/\b([a-z0-9]{6})\b/i', $ref, $m)) {
-    return $m[1];
+  if (preg_match('/^([A-Za-z0-9._-]+)/', $ref, $m)) {
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $m[1])) {
+      return $m[1];
+    }
   }
-  $clean = trim(preg_replace('/[^a-z0-9\-_]/i', ' ', $ref));
-  $parts = array_filter(preg_split('/\s+/', $clean));
-  return $parts ? array_values($parts)[0] : '';
   return '';
 }
 
@@ -197,11 +197,17 @@ function gen_user($profile, $comment_ref, $orig_user = '') {
   $pass = $user;
   $blok_part = $blok != '' ? $blok . ' ' : '';
   $ref_user = trim((string)$orig_user);
-  $ref_label = $ref_user !== '' ? "Retur Ref:$ref_user" : "Retur Ref:$clean_ref";
-  if ($ref_user !== '' && stripos($clean_ref, $ref_user) === false) {
-    $ref_label = "Retur Ref:$ref_user | $clean_ref";
+  if ($ref_user !== '') {
+    $ref_label = "Retur Ref:vc-{$ref_user}";
+  } else {
+    $ref_user_simple = extract_retur_user_from_ref($comment_ref);
+    if ($ref_user_simple !== '') {
+      $ref_label = "Retur Ref:vc-{$ref_user_simple}";
+    } else {
+      $ref_label = 'Retur Ref:' . substr(preg_replace('/[^A-Za-z0-9]/', '', $clean_ref), 0, 20);
+    }
   }
-  $new_comm = trim($blok_part . "(Retur) Valid: $ref_label | Profile:$profile");
+  $new_comm = trim("{$blok_part}(Retur) Valid: {$ref_label} | Profile:{$profile}");
   return ['u'=>$user, 'p'=>$pass, 'c'=>$new_comm];
 }
 

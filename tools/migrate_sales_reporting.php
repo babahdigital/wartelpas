@@ -1,4 +1,10 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../include/acl.php';
+requireLogin('../admin.php?id=login');
+requireSuperAdmin('../admin.php?id=sessions');
 // FILE: tools/migrate_sales_reporting.php
 // MIGRASI DATABASE UNTUK LAPORAN PENJUALAN (WARTELPAS)
 // Jalankan sekali untuk menambahkan kolom-kolom laporan baru pada sales_history.
@@ -10,7 +16,7 @@ header('Content-Type: text/plain');
 $root_dir = dirname(__DIR__);
 $dbFile = $root_dir . '/db_data/mikhmon_stats.db';
 if (!file_exists($dbFile)) {
-    die("Error: Database tidak ditemukan. Jalankan sync_sales.php terlebih dahulu.\n");
+    die("Error: Database tidak ditemukan. Jalankan report/laporan/services/sync_sales.php terlebih dahulu.\n");
 }
 
 try {

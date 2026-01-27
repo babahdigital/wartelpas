@@ -1,17 +1,28 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../include/acl.php';
+requireLogin('../admin.php?id=login');
+requireSuperAdmin('../admin.php?id=sessions');
 session_start();
 ini_set('display_errors', 0);
 error_reporting(0);
 header('Content-Type: text/plain');
 
-$secret_token = 'WartelpasSecureKey';
+$root_dir = dirname(__DIR__);
+$env = [];
+$envFile = $root_dir . '/include/env.php';
+if (file_exists($envFile)) {
+    require $envFile;
+}
+$secret_token = $env['security']['tools']['token'] ?? ($env['backup']['secret'] ?? '');
 if (!isset($_GET['key']) || $_GET['key'] !== $secret_token) {
     die("Error: Token Salah.\n");
 }
 
 $target_date = isset($_GET['date']) && $_GET['date'] !== '' ? $_GET['date'] : date('Y-m-d');
 
-$root_dir = dirname(__DIR__);
 $dbFile = $root_dir . '/db_data/mikhmon_stats.db';
 if (!file_exists($dbFile)) {
     die("Error: Database tidak ditemukan.\n");

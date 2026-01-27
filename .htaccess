@@ -57,7 +57,7 @@ ErrorDocument 500 /error.php
 # C. BLOKIR FOLDER SYSTEM & LOGIC (Backend)
 # Folder ini berisi script inti yang tidak boleh dipanggil langsung browser
 RedirectMatch 403 ^/include/.*$
-RedirectMatch 403 ^/process/(?!sync_usage\.php$|usage_ingest\.php$).*$
+RedirectMatch 403 ^/process/.*$
 RedirectMatch 403 ^/system/.*$
 RedirectMatch 403 ^/lib/.*$
 
@@ -98,12 +98,38 @@ Require all denied
 </If>
 
 # Realtime ingest endpoint (allow direct access by path)
-<If "%{REQUEST_URI} =~ m#^/report/live_ingest\.php$#">
-    Require all granted
+<If "%{REQUEST_URI} =~ m#^/report/laporan/services/live_ingest\.php$#">
+    <RequireAny>
+        Require ip 10.10.83.1
+        Require ip 10.10.83.2
+        Require ip 172.18.0.1
+        Require ip 172.19.0.0/16
+        Require ip 127.0.0.1
+    </RequireAny>
+</If>
+
+<If "%{REQUEST_URI} =~ m#^/report/laporan/services/sync_stats\.php$#">
+    <RequireAny>
+        Require ip 10.10.83.1
+        Require ip 10.10.83.2
+        Require ip 172.18.0.1
+        Require ip 172.19.0.0/16
+        Require ip 127.0.0.1
+    </RequireAny>
+</If>
+
+<If "%{REQUEST_URI} =~ m#^/report/laporan/services/sync_sales\.php$#">
+    <RequireAny>
+        Require ip 10.10.83.1
+        Require ip 10.10.83.2
+        Require ip 172.18.0.1
+        Require ip 172.19.0.0/16
+        Require ip 127.0.0.1
+    </RequireAny>
 </If>
 
 # HP save endpoint (AJAX input)
-<If "%{REQUEST_URI} =~ m#^/report/hp_save\.php$#">
+<If "%{REQUEST_URI} =~ m#^/report/laporan/services/hp_save\.php$#">
     Require all granted
 </If>
 
@@ -118,7 +144,7 @@ Require all denied
 </If>
 
 # Settlement log ingest endpoint
-<If "%{REQUEST_URI} =~ m#^/tools/settlement_log_ingest\.php$#">
+<If "%{REQUEST_URI} =~ m#^/report/laporan/services/settlement_log_ingest\.php$#">
     Require all granted
 </If>
 
@@ -137,19 +163,29 @@ Require all denied
     Require all granted
 </If>
 
+# Backup status endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/backup_status\.php$#">
+    Require all granted
+</If>
+
+# Restore DB endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/restore_db\.php$#">
+    Require all granted
+</If>
+
 # Sales audit endpoint (protected)
 <If "%{REQUEST_URI} =~ m#^/tools/audit_sales\.php$#">
     Require all granted
 </If>
 
 # Print report endpoints
-<If "%{REQUEST_URI} =~ m#^/report/print_rekap\.php$#">
+<If "%{REQUEST_URI} =~ m#^/report/print/print_rekap\.php$#">
     Require all granted
 </If>
-<If "%{REQUEST_URI} =~ m#^/report/print_rekap_bulanan\.php$#">
+<If "%{REQUEST_URI} =~ m#^/report/print/print_rekap_bulanan\.php$#">
     Require all granted
 </If>
-<If "%{REQUEST_URI} =~ m#^/report/print_rekap_tahunan\.php$#">
+<If "%{REQUEST_URI} =~ m#^/report/print/print_rekap_tahunan\.php$#">
     Require all granted
 </If>
 <If "%{REQUEST_URI} =~ m#^/report/print_audit\.php$#">
@@ -170,7 +206,7 @@ Require all denied
 <If "%{REQUEST_URI} =~ m#^/tools/cleanup_login_events\.php$#">
     Require all granted
 </If>
-<If "%{REQUEST_URI} =~ m#^/report/print_rincian\.php$#">
+<If "%{REQUEST_URI} =~ m#^/report/print/print_rincian\.php$#">
     Require all granted
 </If>
 <If "%{REQUEST_URI} =~ m#^/report/print_audit\.php$#">
@@ -178,12 +214,16 @@ Require all denied
 </If>
 
 # Sync usage endpoint
-<If "%{REQUEST_URI} =~ m#^/process/sync_usage\.php$#">
+<If "%{REQUEST_URI} =~ m#^/report/laporan/services/sync_usage\.php$#">
     Require all granted
 </If>
 
 # Usage ingest endpoint (login/logout)
-<If "%{REQUEST_URI} =~ m#^/process/usage_ingest\.php$#">
+<If "%{REQUEST_URI} =~ m#^/report/laporan/services/usage_ingest\.php$#">
+    Require all granted
+</If>
+
+<If "%{REQUEST_URI} =~ m#^/report/laporan/services/settlement_manual\.php$#">
     Require all granted
 </If>
 
@@ -196,6 +236,7 @@ Require all denied
 # IP VIP boleh akses file AJAX (dashboard/, hotspot/, dll)
 <RequireAny>
     Require env TAMU_VIP
+    Require ip 10.0.0.6
     Require ip 127.0.0.1
     Require ip ::1
 </RequireAny>
@@ -203,14 +244,6 @@ Require all denied
 # ====================================================
 # 6. PINTU KHUSUS MIKROTIK (SYNC)
 # ====================================================
-<FilesMatch "^(sync_stats|sync_sales|live_ingest)\.php$">
-    <RequireAny>
-        Require ip 10.10.83.1
-        Require ip 10.10.83.2
-        Require ip 172.19.0.0/16
-        Require ip 127.0.0.1
-    </RequireAny>
-</FilesMatch>
 
 # ====================================================
 # 7. PINTU KHUSUS PRINT VOUCHER

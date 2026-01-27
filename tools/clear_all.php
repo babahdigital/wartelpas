@@ -1,4 +1,10 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../include/acl.php';
+requireLogin('../admin.php?id=login');
+requireSuperAdmin('../admin.php?id=sessions');
 // FILE: tools/clear_all.php
 // Clear semua data laporan & history
 
@@ -6,7 +12,13 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 header('Content-Type: text/plain');
 
-$secret_token = "WartelpasSecureKey";
+$root_dir = dirname(__DIR__);
+$env = [];
+$envFile = $root_dir . '/include/env.php';
+if (file_exists($envFile)) {
+    require $envFile;
+}
+$secret_token = $env['security']['tools']['token'] ?? ($env['backup']['secret'] ?? '');
 if (!isset($_GET['key']) || $_GET['key'] !== $secret_token) {
     http_response_code(403);
     die("Error: Token Salah.");
@@ -23,7 +35,6 @@ if ($confirm !== 'YES') {
     die("Error: Tambahkan confirm=YES untuk menjalankan reset total.\n");
 }
 
-$root_dir = dirname(__DIR__);
 $dbFile = $root_dir . '/db_data/mikhmon_stats.db';
 if (!file_exists($dbFile)) {
     die("Error: Database tidak ditemukan.\n");

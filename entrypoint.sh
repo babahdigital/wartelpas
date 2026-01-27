@@ -12,6 +12,7 @@ chmod -R 777 /var/www/html/img
 chmod -R 777 /var/www/html/logs
 chmod -R 777 /var/www/html/report
 chmod -R 777 /var/www/html/voucher
+chmod -R 755 /var/www/html/include/config.php
 
 # 2. Khusus folder settings agar bisa simpan config
 if [ -d "/var/www/html/settings" ]; then

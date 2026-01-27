@@ -1,256 +1,207 @@
-Mari saya analisis dan audit lengkap kode Anda:
+**Analisa & Masukan Menyeluruh: Pemisahan Role Super Admin & Operator**
 
-## **AUDIT KOMPREHENSIF - DASHBOARD SYSTEM**
+**Status:** **SANGAT MUNGKIN** dan sangat disarankan untuk keamanan operasional WartelPas.
 
-### **KEKUATAN KODE:**
-1. **Struktur yang Terorganisir** - Pemisahan logika (PHP), tampilan (HTML/CSS), dan JavaScript baik
-2. **Responsif** - Sudah menggunakan grid dan media queries
-3. **Live Features** - Real-time data dengan AJAX dan interval
-4. **Error Handling** - Ada try-catch untuk operasi database
-5. **Security** - Session management dan sanitasi input
+Berdasarkan analisa kode sumber (`admin.php`, `login.php`, `menu.php`) yang Anda berikan, Mikhmon v3 secara default didesain sebagai *Single User* (Satu Admin). Namun, karena struktur kodenya prosedural dan terbuka, kita bisa menyisipkan logika **Multi-Level Authentication** tanpa merusak inti fungsi.
 
-### **MASALAH UTAMA - TABEL TRANSAKSI:**
-**Identifikasi Masalah:**
-1. **Kolom username (37%) terlalu lebar** - Persentase tidak proporsional
-2. **Inkonsistensi width** - CSS vs inline style di HTML
-3. **Fixed table layout kurang optimal** - Saat zoom, konten bisa terpotong
-4. **Responsive behavior** - Layout break pada zoom tertentu
+Berikut adalah solusi teknis "Siap Pakai" untuk memisahkan **Super Admin** (Anda) dan **Operator** (Petugas Lapas).
 
-### **SOLUSI PERBAIKAN:**
+---
 
-**1. PERBAIKAN `dashboard-clean-pro.css` - Bagian Tabel:**
-```css
-/* GANTI bagian .table-container th dan td dengan ini: */
+### 1. Konsep Perubahan
 
-.table-container table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    table-layout: auto; /* Ubah dari fixed ke auto untuk fleksibilitas */
-}
+Kita akan memodifikasi logika login untuk mendeteksi dua jenis user:
 
-/* Perbaikan proporsi kolom yang lebih seimbang */
-.table-container th:nth-child(1),
-.table-container td:nth-child(1) {
-    width: 12% !important;    /* JAM: lebih proporsional */
-    min-width: 65px;
-    padding-left: 15px;
-}
+1. **Super Admin:** Menggunakan user/pass asli dari `config.php`. Punya akses penuh (Edit Session, Add Router, Settings).
+2. **Operator:** User tambahan (hardcoded atau file terpisah). Hanya bisa **Connect** ke sesi yang sudah ada, cetak voucher, dan lihat laporan.
 
-.table-container th:nth-child(2),
-.table-container td:nth-child(2) {
-    width: 28% !important;    /* USER: dikurangi dari 37% */
-    min-width: 120px;
-    max-width: 180px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+---
 
-.table-container th:nth-child(3),
-.table-container td:nth-child(3) {
-    width: 12% !important;    /* BLOK: lebih kecil */
-    min-width: 55px;
-    text-align: center;
-}
+### 2. Implementasi Kode (Lakukan Berurutan)
 
-.table-container th:nth-child(4),
-.table-container td:nth-child(4) {
-    width: 18% !important;    /* STATUS: proporsional */
-    min-width: 85px;
-    text-align: center;
-}
+#### Langkah A: Tentukan Kredensial Operator (Edit `include/config.php`)
 
-.table-container th:nth-child(5),
-.table-container td:nth-child(5) {
-    width: 30% !important;    /* UPTIME: lebih luas untuk konten */
-    min-width: 100px;
-    text-align: right;
-    padding-right: 25px;
-}
+Karena kita tidak ingin merusak fitur *Save Settings* bawaan Mikhmon yang menulis ulang `config.php`, cara teraman adalah membuat file terpisah atau memodifikasi `admin.php` langsung untuk user operator.
 
-/* Optimasi untuk zoom */
-@media screen and (min-resolution: 120dpi) {
-    .table-container td {
-        font-size: 13px !important;
-        padding: 14px 8px !important;
-    }
-    
-    .table-container th {
-        font-size: 11px !important;
-        padding: 14px 8px !important;
-    }
-}
+Namun, agar rapi, tambahkan ini manual di baris paling atas `admin.php` (setelah `<?php`):
 
-/* Tambahan: Responsive behavior untuk zoom extreme */
-.table-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-}
+**File: `admin.php**`
+*(Tambahkan kode ini di bagian paling atas setelah tag `<?php`)*
 
-.table-container table {
-    min-width: 600px; /* Minimum width untuk mencegah collapse */
-}
-```
-
-**2. PERBAIKAN `home.php` - Struktur Tabel:**
-```html
-<!-- GANTI bagian thead tabel dengan ini: -->
-<thead>
-    <tr>
-        <th>JAM</th>
-        <th>USER</th>
-        <th style="text-align:center;">BLOK</th>
-        <th style="text-align:center;">STATUS</th>
-        <th style="text-align:right; padding-right:25px;">UPTIME</th>
-    </tr>
-</thead>
-
-<!-- HAPUS semua inline width dari th -->
-```
-
-**3. PERBAIKAN `aload.php` - Output Tabel:**
 ```php
-// Di bagian output logs ($load == "logs"), perbaiki struktur td:
-echo "<td style='width:12%; color:#8898aa; font-family:\"SF Mono\", \"Roboto Mono\", monospace; font-size:13px;'>" . substr($log['time_str'], 11, 5) . "</td>";
-echo "<td style='width:28%; font-weight:600; font-size:12.5px; overflow:hidden; text-overflow:ellipsis; text-transform:uppercase; max-width:180px;' title='" . htmlspecialchars($log['username']) . "'>" . strtoupper($log['username']) . "</td>";
-echo "<td style='width:12%; text-align:center;'><span style='background:#2a2d35; padding:4px 8px; border-radius:5px; font-size:11px; font-weight:700; color:#fff; display:inline-block; min-width:28px;'>" . $blokDisplay . "</span></td>";
-echo "<td style='width:18%; text-align:center;'><span style='background:rgba(255,255,255,0.06); color:" . $statusColor . "; padding:4px 8px; border-radius:5px; font-size:10.5px; font-weight:600; display:inline-block; min-width:65px;'>" . $statusLabel . "</span></td>";
-echo "<td style='width:30%; text-align:right; font-family:monospace; font-size:13px; font-weight:bold; color:#9ad0ec; padding-right:25px;'$titleAttr>" . $uptimeDisplay . "</td>";
+// --- KONFIGURASI OPERATOR WARTELPAS ---
+// User & Password untuk Operator
+$op_user = "operator"; 
+$op_pass = "wartel123"; // Ganti dengan password yang diinginkan
+// --------------------------------------
+
 ```
 
-### **AUDIT MASALAH LAIN & REKOMENDASI:**
+#### Langkah B: Modifikasi Logika Login (Edit `admin.php`)
 
-**1. PERFORMANCE ISSUES:**
+Cari blok kode login di `admin.php`. Ganti logika validasinya agar mengenali Operator.
+
+**Cari kode ini di `admin.php`:**
+
 ```php
-// Di aload.php - Query database berat
-// REKOMENDASI: Optimasi query dengan index dan limit
-$resSales = $db->query("SELECT full_raw_data FROM sales_history 
-                       WHERE sale_date LIKE '$monthLike%' 
-                       ORDER BY id DESC LIMIT 1000"); // Tambah WHERE clause
+    if ($user == $useradm && $pass == decrypt($passadm)) {
+      $_SESSION["mikhmon"] = $user;
+      echo "<script>window.location='./admin.php?id=sessions'</script>";
+    } else {
+
 ```
 
-**2. CSS BLOAT - Perbaikan Efisiensi:**
-```css
-/* Gabungkan beberapa rule yang sama */
-.table-container th, 
-.table-container td {
-    padding: 15px 12px;
-    font-size: 13.5px;
-    /* ... */
-}
+**Ganti menjadi kode ini (Siap Pakai):**
 
-/* Hapus !important yang tidak perlu */
-.card {
-    background: var(--bg-card); /* Hapus !important */
-    border: 1px solid var(--border-soft); /* Hapus !important */
-}
-```
-
-**3. JAVASCRIPT OPTIMIZATION - `home.php`:**
-```javascript
-// Debounce resize untuk performa
-var resizeTimer;
-$(window).on('resize', function() {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(function() {
-        if (window.Highcharts && window.Highcharts.charts) {
-            window.Highcharts.charts.forEach(function(chart) {
-                if (chart && chart.reflow) chart.reflow();
-            });
-        }
-    }, 250);
-});
-```
-
-**4. ZOOM RESILIENCE - Tambahan CSS:**
-```css
-/* Tambah di :root */
-:root {
-    --zoom-factor: 1;
-}
-
-/* Media query khusus untuk zoom */
-@media (zoom: 1.5) {
-    :root {
-        --zoom-factor: 0.95;
-    }
+```php
+    // Cek Super Admin (Dari Config Asli)
+    if ($user == $useradm && $pass == decrypt($passadm)) {
+      $_SESSION["mikhmon"] = $user;
+      $_SESSION["mikhmon_level"] = "superadmin"; // Set Level Admin
+      echo "<script>window.location='./admin.php?id=sessions'</script>";
     
-    .table-container td {
-        font-size: calc(13px * var(--zoom-factor)) !important;
-        padding: calc(14px * var(--zoom-factor)) calc(10px * var(--zoom-factor)) !important;
+    // Cek Operator (Dari Variabel Diatas)
+    } elseif ($user == $op_user && $pass == $op_pass) {
+       $_SESSION["mikhmon"] = $user;
+       $_SESSION["mikhmon_level"] = "operator"; // Set Level Operator
+       echo "<script>window.location='./admin.php?id=sessions'</script>";
+
+    } else {
+
+```
+
+#### Langkah C: Proteksi Halaman Sensitif (Edit `admin.php`)
+
+Operator tidak boleh mengakses halaman settings, editor, atau hapus session meskipun mereka mengetik URL-nya manual. Tambahkan "Gerbang Keamanan" di `admin.php`.
+
+**Cari kode ini:**
+
+```php
+$ids = array(
+  "editor",
+  "uplogo",
+  "settings",
+);
+
+```
+
+**Tambahkan logika pemblokiran di bawahnya:**
+
+```php
+// --- PROTEKSI WARTELPAS ---
+// Daftar ID yang DILARANG untuk Operator
+$restricted_ids = array("settings", "uplogo", "editor", "remove-session", "remove-logo", "reboot", "shutdown");
+
+// Jika user adalah Operator DAN mencoba akses halaman terlarang -> TOLAK
+if (isset($_SESSION['mikhmon_level']) && $_SESSION['mikhmon_level'] == 'operator') {
+    if (in_array($id, $restricted_ids)) {
+        echo "<script>alert('AKSES DITOLAK: Hubungi Super Admin.'); window.location='./admin.php?id=sessions';</script>";
+        exit;
+    }
+    // Operator juga tidak boleh membuat Router Baru
+    if ($router == "new" || isset($_GET['router']) && strpos($_GET['router'], 'new') !== false) {
+         echo "<script>alert('AKSES DITOLAK: Operator tidak bisa menambah router.'); window.location='./admin.php?id=sessions';</script>";
+         exit;
     }
 }
+// --------------------------
 
-/* Force integer pixel untuk elemen tabel saat zoom */
-.table-container table {
-    transform: translateZ(0); /* Hardware acceleration */
-    backface-visibility: hidden;
-}
 ```
 
-**5. TABEL HEADER FIXED IMPROVEMENT:**
-```css
-/* Perbaiki sticky header untuk zoom */
-.table-container thead {
-    position: -webkit-sticky; /* Safari */
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    backdrop-filter: blur(10px);
-    background: rgba(26, 29, 36, 0.95) !important; /* Semi-transparent */
-}
+#### Langkah D: Sembunyikan Menu untuk Operator (Edit `include/menu.php`)
 
-/* Tambah border bottom yang lebih jelas */
-.table-container thead::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, var(--accent-blue), transparent);
-}
+Kita perlu menyembunyikan tombol "Add Router", "Settings", dan "Editor" dari sidebar jika yang login adalah Operator.
+
+**File: `include/menu.php**`
+
+**1. Sembunyikan Menu di Halaman Session List (Sidebar Kiri)**
+Cari bagian `div id="sidenav"`. Perhatikan blok `if` yang menampilkan menu. Kita akan membungkus menu admin dengan pengecekan level.
+
+**Cari kode ini:**
+
+```php
+  <a href="./admin.php?id=sessions" class="menu <?= $ssesslist; ?>"><i class="fa fa-gear"></i> <?= $_admin_settings ?></a>
+  <a href="./admin.php?id=settings&router=new-<?= rand(1111,9999) ?>" class="menu <?= $snsettings ?>"><i class="fa fa-plus"></i> <?= $_add_router ?></a>
+
 ```
 
-**6. KONSISTENSI SATUAN - Gunakan REM:**
-```css
-/* Ubah pixel ke rem untuk zoom yang lebih baik */
-.table-container td {
-    font-size: 0.875rem; /* 14px */
-    padding: 0.9375rem 0.75rem; /* 15px 12px */
-}
+**Ubah menjadi:**
 
-.kpi-box h1 {
-    font-size: 2rem; /* 32px */
-}
+```php
+  <a href="./admin.php?id=sessions" class="menu <?= $ssesslist; ?>"><i class="fa fa-list"></i> Daftar Lokasi</a>
+  
+  <?php if($_SESSION['mikhmon_level'] == 'superadmin') { ?>
+  <a href="./admin.php?id=settings&router=new-<?= rand(1111,9999) ?>" class="menu <?= $snsettings ?>"><i class="fa fa-plus"></i> <?= $_add_router ?></a>
+  <?php } ?>
 
-/* Media query dalam rem */
-@media (max-width: 64rem) { /* 1024px */
-    .row-kpi {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
 ```
 
-### **KESIMPULAN & REKOMENDASI PRIORITAS:**
+**2. Sembunyikan Menu Settings saat sudah Connect (Sidebar Kanan/Bawah)**
+Masih di `include/menu.php`, cari bagian bawah dimana menu dropdown "Settings" berada.
 
-**PRIORITAS 1 (Critical):**
-1. **Fix proporsi kolom tabel** - Implementasi lebar proporsional seperti di atas
-2. **Hapus inline styles** - Konsistensi CSS
-3. **Optimasi query database** - Tambah LIMIT dan WHERE clause
+**Cari kode ini:**
 
-**PRIORITAS 2 (High):**
-1. **CSS refactor** - Gabungkan duplikasi, kurangi !important
-2. **Zoom resilience** - Tambah media query khusus zoom
-3. **JavaScript debounce** - Optimasi resize handler
+```php
+  <div class="dropdown-btn <?= $ssett; ?>"><i class=" fa fa-gear"></i> <?= $_settings ?> 
+    <i class="fa fa-caret-down"></i> &nbsp;
+  </div>
+  <div class="dropdown-container <?= $settmenu; ?>">
+  <a href="./admin.php?id=settings&session=<?= $session; ?>" class="menu "> <i class="fa fa-gear "></i> <?= $_session_settings ?> </a>
+  ... (kode lainnya) ...
+  </div>
 
-**PRIORITAS 3 (Medium):**
-1. **Satuan konsisten** - Migrasi ke rem
-2. **Performance monitoring** - Log waktu load
-3. **Browser compatibility** - Test di Firefox, Safari, Chrome
+```
 
-**PRIORITAS 4 (Low):**
-1. **CSS custom properties** - Tambah variabel untuk spacing
-2. **Documentation** - Komentar untuk fungsi kompleks
-3. **Error logging** - Log database error ke file
+**Bungkus dengan Logika PHP:**
+
+```php
+  <?php if($_SESSION['mikhmon_level'] == 'superadmin') { ?>
+  <div class="dropdown-btn <?= $ssett; ?>"><i class=" fa fa-gear"></i> <?= $_settings ?> 
+    <i class="fa fa-caret-down"></i> &nbsp;
+  </div>
+  <div class="dropdown-container <?= $settmenu; ?>">
+  <a href="./admin.php?id=settings&session=<?= $session; ?>" class="menu "> <i class="fa fa-gear "></i> <?= $_session_settings ?> </a>
+  <a href="./admin.php?id=sessions" class="menu "> <i class="fa fa-gear "></i> <?= $_admin_settings ?> </a>
+  <a href="./?hotspot=uplogo&session=<?= $session; ?>" class="menu <?= $uplogo; ?>"> <i class="fa fa-upload "></i> <?= $_upload_logo ?> </a>
+  <a href="./?hotspot=template-editor&template=default&session=<?= $session; ?>" class="menu <?= $teditor; ?>"> <i class="fa fa-edit "></i> <?= $_template_editor ?> </a>          
+  </div>
+  <?php } ?>
+
+```
+
+**3. Sembunyikan Menu System (Reboot/Shutdown)**
+Lakukan hal yang sama untuk menu System jika Anda tidak ingin operator merestart router.
+
+```php
+  <?php if($_SESSION['mikhmon_level'] == 'superadmin') { ?>
+  <div class="dropdown-btn <?= $sysmenu; ?>"><i class=" fa fa-gear"></i> <?= $_system ?>
+    ...
+  </div>
+  ...
+  <?php } ?>
+
+```
+
+---
+
+### 3. Masukan Tambahan untuk `settings/sessions.php`
+
+Halaman `sessions.php` adalah halaman awal yang menampilkan kotak-kotak router (Session Cards). Di sana biasanya ada tombol kecil untuk "Settings" atau "Delete". Anda perlu mengedit file `settings/sessions.php` (file ini tidak Anda upload, tapi logika umumnya sama).
+
+Cari tombol yang mengarah ke `admin.php?id=settings...` atau `remove-session` di dalam file tersebut, dan bungkus dengan:
+
+```php
+<?php if($_SESSION['mikhmon_level'] == 'superadmin') { ?>
+   <a href="...">Settings</a>
+   <a href="...">Hapus</a>
+<?php } ?>
+
+```
+
+### Kesimpulan Analisa
+
+Implementasi ini **sangat aman** untuk kebutuhan WartelPas karena:
+
+1. **Level Session:** Keamanan berbasis session PHP di server side (`admin.php`), bukan hanya menyembunyikan tombol via CSS/JS.
+2. **Hard Block:** Meskipun Operator tahu link setting (misal `admin.php?id=settings&session=LapasBatulicin`), kode di Langkah C akan menolaknya.
+3. **Minimal Error:** Tidak merubah struktur database atau `config.php` inti Mikhmon, sehingga update script lain tidak akan terganggu.

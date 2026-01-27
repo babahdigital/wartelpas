@@ -1,4 +1,10 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../include/acl.php';
+requireLogin('../admin.php?id=login');
+requireSuperAdmin('../admin.php?id=sessions');
 // Cleanup duplicate sales records caused by relogin
 // Keeps the earliest row per (username, sale_date) in sales_history and live_sales
 
@@ -222,7 +228,7 @@ try {
     $db->exec("COMMIT");
 
     $summary_msg = '';
-    $helper = $root_dir . '/report/sales_summary_helper.php';
+    $helper = $root_dir . '/report/laporan/sales_summary_helper.php';
     if (file_exists($helper)) {
         require_once $helper;
         if (function_exists('rebuild_sales_summary')) {

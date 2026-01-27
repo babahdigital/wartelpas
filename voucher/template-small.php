@@ -3,6 +3,18 @@
 </style>
 
 <?php
+$root_dir = dirname(__DIR__);
+$env = [];
+$envFile = $root_dir . '/include/env.php';
+if (file_exists($envFile)) {
+  require $envFile;
+}
+$pricing = $env['pricing'] ?? [];
+$profiles_cfg = $env['profiles'] ?? [];
+$price10 = (int)($pricing['price_10'] ?? 0);
+$price30 = (int)($pricing['price_30'] ?? 0);
+$label10 = $profiles_cfg['label_10'] ?? '10 Menit';
+$label30 = $profiles_cfg['label_30'] ?? '30 Menit';
 // --- LOGIKA AMBIL KODE BLOK ---
 $lokasi_blok = ""; 
 if (stripos($comment, "blok-") !== false) {
@@ -24,6 +36,7 @@ $validity_display = str_replace("m", " Menit", $validity_display);
 $validity_display = str_replace("h", " Jam", $validity_display);
 $profile_display = isset($profile_name) ? preg_replace('/(\d+)([A-Za-z]+)/', '$1 $2', $profile_name) : '';
 $display_paket = trim($waktu_custom) !== "" ? ($waktu_custom . " / ") : (trim($profile_display) !== "" ? ($profile_display . " / ") : (trim($validity_display) !== "" ? ($validity_display . " / ") : ""));
+$display_paket = preg_replace('/\b(\d+)\s*Menit\b/i', '$1 Menit', $display_paket);
 
 // Fallback harga jika tidak terbaca dari profile on-login
 $price_display = $price ?? '';
@@ -31,9 +44,9 @@ $price_value = 0;
 $profile_hint = strtolower(trim((string)$profile_name . ' ' . (string)$timelimit . ' ' . (string)$validity . ' ' . (string)$comment));
 if (trim($price_display) === '') {
   if (preg_match('/\b30\s*(menit|m)\b|30menit|\b30m\b/i', $profile_hint)) {
-    $price_value = 20000;
+    $price_value = $price30;
   } elseif (preg_match('/\b10\s*(menit|m)\b|10menit|\b10m\b/i', $profile_hint)) {
-    $price_value = 5000;
+    $price_value = $price10;
   }
   if ($price_value > 0) {
     if (isset($currency) && isset($cekindo) && in_array($currency, $cekindo['indo'], true)) {
@@ -47,8 +60,8 @@ if (trim($price_display) === '') {
 }
 
 if (trim($display_paket) === '') {
-  if ($price_value === 20000) $display_paket = '30 Menit / ';
-  if ($price_value === 5000) $display_paket = '10 Menit / ';
+  if ($price_value === $price30) $display_paket = $label30 . ' / ';
+  if ($price_value === $price10) $display_paket = $label10 . ' / ';
 }
 ?>
 
@@ -79,7 +92,7 @@ if (trim($display_paket) === '') {
                       <?php echo $display_paket;?> <?php echo $price_display;?>
                         
                       <?php if($lokasi_blok != ""): ?>
-                        <div style="text-align: right; margin-top: 8px;">
+                        <div style="text-align: right; margin-top: 12px;">
                           <span style="font-size:14px; background:#eee; padding:0 5px; border-radius:3px;"><?php echo $lokasi_blok;?></span>
                         </div>
                       <?php endif; ?>

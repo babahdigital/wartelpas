@@ -18,9 +18,10 @@
 session_start();
 // hide all error
 error_reporting(0);
-if (!isset($_SESSION["mikhmon"])) {
-	header("Location:../admin.php?id=login");
-} else {
+require_once __DIR__ . '/../include/acl.php';
+requireLogin('../admin.php?id=login');
+requireSuperAdmin('../admin.php?id=sessions');
+
 
 	$getsch = $API->comm("/system/scheduler/print");
 	$TotalReg = count($getsch);
@@ -28,8 +29,6 @@ if (!isset($_SESSION["mikhmon"])) {
 	$countsch = $API->comm("/system/scheduler/print", array(
 		"count-only" => "",
 	));
-
-}
 ?>
 <div class="row">
 <div class="col-12">

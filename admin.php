@@ -19,6 +19,16 @@ session_start();
 // hide all error
 error_reporting(0);
 
+require_once __DIR__ . '/include/acl.php';
+
+$env = [];
+$envFile = __DIR__ . '/include/env.php';
+if (file_exists($envFile)) {
+  require $envFile;
+}
+$op_user = $env['auth']['operator_user'] ?? '';
+$op_pass = $env['auth']['operator_pass'] ?? '';
+
 ob_start("ob_gzhandler");
 
 // check url
@@ -26,6 +36,9 @@ $url = $_SERVER['REQUEST_URI'];
 
 // load session MikroTik
 $session = $_GET['session'];
+if (!empty($session) && strpos($session, '~') !== false) {
+  $session = explode('~', $session)[0];
+}
 $id = $_GET['id'];
 $c = $_GET['c'];
 $router = $_GET['router'];
@@ -65,6 +78,8 @@ include('./include/readcfg.php');
 
 include_once('./lib/routeros_api.class.php');
 include_once('./lib/formatbytesbites.php');
+
+ensureRole();
 ?>
     
 <?php
@@ -75,6 +90,7 @@ if ($id == "login" || substr($url, -1) == "p") {
     $pass = $_POST['pass'];
     if ($user == $useradm && $pass == decrypt($passadm)) {
       $_SESSION["mikhmon"] = $user;
+      $_SESSION["mikhmon_level"] = "superadmin";
 
       // MODIFIKASI: Deteksi Router Otomatis
       // Baca file config untuk mencari session router yang tersedia
@@ -104,6 +120,30 @@ if ($id == "login" || substr($url, -1) == "p") {
       }
       // AKHIR MODIFIKASI
     
+    } elseif ($op_user !== "" && $op_pass !== "" && $user == $op_user && $pass == $op_pass) {
+      $_SESSION["mikhmon"] = $user;
+      $_SESSION["mikhmon_level"] = "operator";
+
+      $lines = file('./include/config.php');
+      $first_session = "";
+      foreach ($lines as $line) {
+        if (strpos($line, '$data') !== false) {
+          $parts = explode("'", $line);
+          if (isset($parts[1])) {
+            $s_name = $parts[1];
+            if ($s_name != "mikhmon" && $s_name != "") {
+              $first_session = $s_name;
+              break;
+            }
+          }
+        }
+      }
+
+      if ($first_session != "") {
+        echo "<script>window.location='./?session=" . $first_session . "'</script>";
+      } else {
+        echo "<script>window.location='./error.php?code=403'</script>";
+      }
     } else {
       $error = '<div style="width: 100%; padding:5px 0px 5px 0px; border-radius:5px;" class="bg-danger"><i class="fa fa-ban"></i> Alert!<br>Invalid username or password.</div>';
     }
@@ -113,6 +153,15 @@ if ($id == "login" || substr($url, -1) == "p") {
   include_once('./include/login.php');
 } elseif (!isset($_SESSION["mikhmon"])) {
   echo "<script>window.location='./admin.php?id=login'</script>";
+} elseif (isOperator() && $id == "sessions") {
+  echo "<script>window.location='./error.php?code=403'</script>";
+  exit;
+} elseif (isOperator() && in_array($id, array("settings", "uplogo", "editor", "reboot", "shutdown", "remove-session", "remove-logo"), true)) {
+  echo "<script>window.location='./error.php?code=403'</script>";
+  exit;
+} elseif (isOperator() && !empty($router) && strpos($router, 'new') !== false) {
+  echo "<script>window.location='./error.php?code=403'</script>";
+  exit;
 } elseif (substr($url, -1) == "/" || substr($url, -4) == ".php") {
   echo "<script>window.location='./admin.php?id=sessions'</script>";
 

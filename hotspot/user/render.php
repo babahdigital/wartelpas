@@ -1,5 +1,5 @@
 
-  <link rel="stylesheet" href="./hotspot/user/css/users.css">
+  <link rel="stylesheet" href="./hotspot/user/css/users.css?v=<?= time() ?>">
 
 <div class="row">
   <div id="page-dim" class="page-dim" aria-hidden="true">
@@ -125,7 +125,7 @@
 
               <select name="status" class="custom-select-solid mid-el" onchange="this.form.submit()" style="flex: 0 0 220px;">
                 <option value="all" <?=($req_status=='all'?'selected':'')?>>Status: Semua</option>
-                <option value="ready" <?=($req_status=='ready'?'selected':'')?>>🟢 Hanya Ready</option>
+                <option value="ready" <?=($req_status=='ready'?'selected':'')?>>🟢 Voucher Baru</option>
                 <option value="online" <?=($req_status=='online'?'selected':'')?>>🔵 Sedang Online</option>
                 <option value="used" <?=($req_status=='used'?'selected':'')?>>⚪ Sudah Terpakai</option>
                 <option value="rusak" <?=($req_status=='rusak'?'selected':'')?>>🟠 Rusak / Error</option>
@@ -169,7 +169,7 @@
             </span>
           </div>
           <?php
-            $status_labels = ['used' => 'Terpakai', 'retur' => 'Retur', 'rusak' => 'Rusak'];
+            $status_labels = ['used' => 'Terpakai', 'retur' => 'Retur', 'rusak' => 'Rusak', 'ready' => 'Ready'];
             $can_delete_status = in_array($req_status, array_keys($status_labels)) && $req_show === 'semua' && empty($filter_date);
             $status_label = $status_labels[$req_status] ?? '';
             $can_print_block = ($req_comm != '' && $req_status === 'ready');
@@ -177,6 +177,9 @@
             $can_print_used = ($req_status === 'used');
             $can_print_online = ($req_status === 'online');
             $can_print_rusak = ($req_status === 'rusak');
+            $can_print_ready = ($req_status === 'ready');
+            $can_print_retur = ($req_status === 'retur');
+            $profile_param = ($req_prof != '' && $req_prof != 'all') ? '&profile=' . urlencode($req_prof) : '';
             $reset_params = $_GET;
             $reset_params['status'] = 'all';
             unset($reset_params['page']);
@@ -213,10 +216,15 @@
                   'session' => $session
                 ];
                 if ($req_comm != '') $usage_params['blok'] = $req_comm;
-                $usage_url = './report/print_rincian.php?' . http_build_query($usage_params);
+                if ($req_prof != '' && $req_prof != 'all') $usage_params['profile'] = $req_prof;
+                if ($req_show !== 'semua' && !empty($filter_date)) {
+                  $usage_params['show'] = $req_show;
+                  $usage_params['date'] = $filter_date;
+                }
+                $usage_url = './hotspot/print/print_list.php?' . http_build_query($usage_params);
               ?>
-              <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('<?= $usage_url ?>','_blank').print()">
-                <i class="fa fa-print"></i> Print Terpakai
+              <button type="button" class="btn btn-secondary" style="height:40px;" onclick="printCurrentView('used')">
+                <i class="fa fa-print"></i> Print List
               </button>
             <?php endif; ?>
             <?php if ($can_print_online): ?>
@@ -227,9 +235,14 @@
                   'session' => $session
                 ];
                 if ($req_comm != '') $usage_params['blok'] = $req_comm;
-                $usage_url = './report/print_rincian.php?' . http_build_query($usage_params);
+                if ($req_prof != '' && $req_prof != 'all') $usage_params['profile'] = $req_prof;
+                if ($req_show !== 'semua' && !empty($filter_date)) {
+                  $usage_params['show'] = $req_show;
+                  $usage_params['date'] = $filter_date;
+                }
+                $usage_url = './hotspot/print/print_list.php?' . http_build_query($usage_params);
               ?>
-              <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('<?= $usage_url ?>','_blank').print()">
+              <button type="button" class="btn btn-secondary" style="height:40px;" onclick="printCurrentView('online')">
                 <i class="fa fa-print"></i> Print Online
               </button>
             <?php endif; ?>
@@ -241,10 +254,53 @@
                   'session' => $session
                 ];
                 if ($req_comm != '') $usage_params['blok'] = $req_comm;
-                $usage_url = './report/print_rincian.php?' . http_build_query($usage_params);
+                if ($req_prof != '' && $req_prof != 'all') $usage_params['profile'] = $req_prof;
+                if ($req_show !== 'semua' && !empty($filter_date)) {
+                  $usage_params['show'] = $req_show;
+                  $usage_params['date'] = $filter_date;
+                }
+                $usage_url = './hotspot/print/print_list.php?' . http_build_query($usage_params);
               ?>
-              <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('<?= $usage_url ?>','_blank').print()">
-                <i class="fa fa-print"></i> Print Rusak
+              <button type="button" class="btn btn-secondary" style="height:40px;" onclick="printCurrentView('rusak')">
+                <i class="fa fa-print"></i> Print List
+              </button>
+            <?php endif; ?>
+            <?php if ($can_print_ready): ?>
+              <?php
+                $usage_params = [
+                  'mode' => 'usage',
+                  'status' => 'ready',
+                  'session' => $session
+                ];
+                if ($req_comm != '') $usage_params['blok'] = $req_comm;
+                if ($req_prof != '' && $req_prof != 'all') $usage_params['profile'] = $req_prof;
+                if ($req_show !== 'semua' && !empty($filter_date)) {
+                  $usage_params['show'] = $req_show;
+                  $usage_params['date'] = $filter_date;
+                }
+                $usage_url = './hotspot/print/print_list.php?' . http_build_query($usage_params);
+              ?>
+              <button type="button" class="btn btn-secondary" style="height:40px;" onclick="printCurrentView('ready')">
+                <i class="fa fa-print"></i> Print List
+              </button>
+            <?php endif; ?>
+            <?php if ($can_print_retur): ?>
+              <?php
+                $usage_params = [
+                  'mode' => 'usage',
+                  'status' => 'retur',
+                  'session' => $session
+                ];
+                if ($req_comm != '') $usage_params['blok'] = $req_comm;
+                if ($req_prof != '' && $req_prof != 'all') $usage_params['profile'] = $req_prof;
+                if ($req_show !== 'semua' && !empty($filter_date)) {
+                  $usage_params['show'] = $req_show;
+                  $usage_params['date'] = $filter_date;
+                }
+                $usage_url = './hotspot/print/print_list.php?' . http_build_query($usage_params);
+              ?>
+              <button type="button" class="btn btn-secondary" style="height:40px;" onclick="printCurrentView('retur')">
+                <i class="fa fa-print"></i> Print List
               </button>
             <?php endif; ?>
             <?php if ($req_comm == '' && $can_delete_status): ?>
@@ -254,12 +310,12 @@
             <?php endif; ?>
             <?php if ($req_comm != ''): ?>
               <?php if ($can_print_status): ?>
-                <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('./voucher/print.php?status=<?= $req_status ?>&blok=<?= urlencode($req_comm) ?>&small=yes&session=<?= $session ?>','_blank').print()">
-                  <i class="fa fa-print"></i> Print Status
+                <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('./voucher/print.php?status=<?= $req_status ?>&blok=<?= urlencode($req_comm) ?><?= $profile_param ?>&small=yes&session=<?= $session ?>','_blank').print()">
+                  <i class="fa fa-print"></i> Print Kode
                 </button>
               <?php elseif ($can_print_block): ?>
-                <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('./voucher/print.php?id=<?= urlencode($req_comm) ?>&small=yes&session=<?= $session ?>','_blank').print()">
-                  <i class="fa fa-print"></i> Print Blok
+                <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('./voucher/print.php?id=<?= urlencode($req_comm) ?><?= $profile_param ?>&small=yes&session=<?= $session ?>','_blank').print()">
+                  <i class="fa fa-print"></i> Print Kode
                 </button>
               <?php endif; ?>
               <?php
@@ -269,11 +325,16 @@
                   'session' => $session,
                   'blok' => $req_comm
                 ];
-                $print_all_url = './report/print_rincian.php?' . http_build_query($print_all_params);
+                if ($req_prof != '' && $req_prof != 'all') $print_all_params['profile'] = $req_prof;
+                if ($req_show !== 'semua' && !empty($filter_date)) {
+                  $print_all_params['show'] = $req_show;
+                  $print_all_params['date'] = $filter_date;
+                }
+                $print_all_url = './hotspot/print/print_list.php?' . http_build_query($print_all_params);
               ?>
               <?php if ($req_status === 'all'): ?>
-                <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('<?= $print_all_url ?>','_blank').print()">
-                  <i class="fa fa-print"></i> Print Bukti
+                <button type="button" class="btn btn-secondary" style="height:40px;" onclick="printCurrentView('all')">
+                  <i class="fa fa-print"></i> Print List
                 </button>
               <?php endif; ?>
               <?php if ($can_delete_status): ?>
@@ -353,12 +414,12 @@
                       </div>
                       <div style="font-size:11px; color:var(--txt-muted); max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:5px;" title="<?= htmlspecialchars($u['comment']) ?>">
                         <?php if (($u['status'] ?? '') === 'RETUR'): ?>
-                          Retur dari: <?= htmlspecialchars($u['retur_from'] ?? '-') ?>
+                          Retur dari: <?= htmlspecialchars($u['retur_ref_user'] ?? '-') ?>
                         <?php else: ?>
                           First login: <?= formatDateIndo($u['first_login'] ?? '-') ?>
                         <?php endif; ?>
                       </div>
-                      <?php if (!empty($u['retur_ref']) && ($u['status'] ?? '') !== 'RETUR'): ?>
+                      <?php if (!empty($u['retur_ref']) && empty($u['retur_ref_user'])): ?>
                         <div style="font-size:10px;color:#b2bec3;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<?= htmlspecialchars($u['retur_ref']) ?>">
                           Retur dari: <?= htmlspecialchars($u['retur_ref']) ?>
                         </div>
@@ -418,7 +479,7 @@
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.detail.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Rincian Rusak"><i class="fa fa-print"></i></button>
                         <?php elseif ($is_retur && in_array($req_status, ['all','retur'], true)): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.retur.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Voucher Retur"><i class="fa fa-print"></i></button>
-                          <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.retur.php?user=<?= urlencode($u['name']) ?>&download=1&img=1&session=<?= $session ?>','_blank')" title="Download Voucher (PNG)"><i class="fa fa-download"></i></button>
+                          <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.retur.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>&download=1&img=1','_blank')" title="Download Voucher Retur (PNG)"><i class="fa fa-download"></i></button>
                         <?php elseif ($is_ready && in_array($req_status, ['all','ready'], true)): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
                         <?php endif; ?>
@@ -489,7 +550,53 @@
   </div>
 </div>
 
+<?php
+  $low_stock_total = (int)$summary_ready_total;
+  $low_stock_label = 'total';
+  if (!empty($req_comm) && isset($summary_ready_by_blok[$req_comm])) {
+    $low_stock_total = (int)($summary_ready_by_blok[$req_comm]['total'] ?? 0);
+    $low_stock_label = $req_comm;
+  }
+?>
 <script>
   window.usersSession = "<?= htmlspecialchars($session, ENT_QUOTES) ?>";
+  window.lowStockInfo = {
+    total: <?= (int)$low_stock_total ?>,
+    label: "<?= htmlspecialchars($low_stock_label, ENT_QUOTES) ?>",
+    show: <?= ($low_stock_total < 100) ? 'true' : 'false' ?>
+  };
+
+  function printCurrentView(statusOverride) {
+    const form = document.getElementById('users-toolbar-form');
+    if (!form) return;
+
+    const sess = form.querySelector('input[name="session"]')?.value || '';
+    const st = statusOverride || form.querySelector('select[name="status"]')?.value || 'all';
+    const prof = form.querySelector('select[name="profile"]')?.value || '';
+    const blok = form.querySelector('select[name="comment"]')?.value || '';
+    const show = form.querySelector('select[name="show"]')?.value || 'harian';
+
+    let dateVal = '';
+    if (show === 'harian') {
+      const el = form.querySelector('input[type="date"]');
+      if (el) dateVal = el.value;
+    } else if (show === 'bulanan') {
+      const el = form.querySelector('input[type="month"]');
+      if (el) dateVal = el.value;
+    } else if (show === 'tahunan') {
+      const el = form.querySelector('input[type="number"]');
+      if (el) dateVal = el.value;
+    }
+
+    let url = './hotspot/print/print_list.php?mode=usage&auto_print=1';
+    if (sess) url += '&session=' + encodeURIComponent(sess);
+    if (st) url += '&status=' + encodeURIComponent(st);
+    if (prof && prof !== 'all') url += '&profile=' + encodeURIComponent(prof);
+    if (blok) url += '&blok=' + encodeURIComponent(blok);
+    url += '&show=' + encodeURIComponent(show);
+    if (dateVal) url += '&date=' + encodeURIComponent(dateVal);
+
+    window.open(url, '_blank');
+  }
 </script>
 <script src="./hotspot/user/js/users.js"></script>

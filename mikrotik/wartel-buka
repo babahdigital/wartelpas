@@ -1,0 +1,5 @@
+# BUKA GEMBOK PINTU MASUK
+# Mengaktifkan kembali login HTTP-CHAP dan Cookie di profil 'wartelpas'
+/ip hotspot profile set [find name="wartelpas"] login-by="http-chap,cookie";
+
+:log info "Wartelpas: Jam operasional dimulai. Login dibuka.";

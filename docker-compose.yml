@@ -25,6 +25,9 @@ services:
       - ./include/config.php:/var/www/html/include/config.php
       - ./include/env.php:/var/www/html/include/env.php
       - ./settings/settings.php:/var/www/html/settings/settings.php
+      - ./settings/sessions.php:/var/www/html/settings/sessions.php
+      - ./settings/uplogo.php:/var/www/html/settings/uplogo.php
+      - ./settings/vouchereditor.php:/var/www/html/settings/vouchereditor.php
       - ./include/readcfg.php:/var/www/html/include/readcfg.php
       - ./custom.ini:/usr/local/etc/php/conf.d/custom.ini
       - ./.htaccess:/var/www/html/.htaccess
@@ -33,6 +36,8 @@ services:
       # 3. MODUL UTAMA (MAPPING SATU FOLDER)
       # ==========================================
       - ./report:/var/www/html/report        # Semua laporan
+      - ./report/laporan/services:/var/www/html/report/laporan/services  # Service endpoint laporan
+      - ./report/print:/var/www/html/report/print  # Print laporan
       - ./voucher:/var/www/html/voucher      # Template & print
       - ./dashboard:/var/www/html/dashboard  # Dashboard home
       - ./dhcp:/var/www/html/dhcp            # Modul DHCP
@@ -50,9 +55,6 @@ services:
       - ./hotspot/hotspotactive.php:/var/www/html/hotspot/hotspotactive.php
       - ./hotspot/hosts.php:/var/www/html/hotspot/hosts.php
       - ./hotspot/cookies.php:/var/www/html/hotspot/cookies.php
-      - ./hotspot/save_logout_time.php:/var/www/html/hotspot/save_logout_time.php
-      - ./hotspot/print.detail.php:/var/www/html/hotspot/print.detail.php
-      - ./hotspot/print.used.php:/var/www/html/hotspot/print.used.php
       # Keamanan: Overwrite file asli dengan file custom
       - ./hotspot/adduser.php:/var/www/html/hotspot/adduser.php
       - ./hotspot/quickuser.php:/var/www/html/hotspot/quickuser.php
@@ -76,3 +78,5 @@ services:
       - ./include/menu.php:/var/www/html/include/menu.php
       - ./include/login.php:/var/www/html/include/login.php
       - ./include/headhtml.php:/var/www/html/include/headhtml.php
+      - ./include/acl.php:/var/www/html/include/acl.php
+      - ./system/scheduler.php:/var/www/html/system/scheduler.php

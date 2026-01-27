@@ -10,8 +10,8 @@
 // Matikan pelaporan error default PHP agar tidak bocor ke user
 error_reporting(0);
 
-// Ambil Status Code dari Server
-$status = isset($_SERVER['REDIRECT_STATUS']) ? $_SERVER['REDIRECT_STATUS'] : 404;
+// Ambil Status Code dari Server / Query
+$status = isset($_GET['code']) ? (int)$_GET['code'] : (isset($_SERVER['REDIRECT_STATUS']) ? (int)$_SERVER['REDIRECT_STATUS'] : 404);
 
 // Pastikan kode status dikirim ke header browser
 http_response_code($status);

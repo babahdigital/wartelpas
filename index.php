@@ -19,9 +19,15 @@ if (isset($_SERVER['HTTP_ACCEPT_ENCODING']) && substr_count($_SERVER['HTTP_ACCEP
 
 $url = $_SERVER['REQUEST_URI'];
 $session = isset($_GET['session']) ? $_GET['session'] : "";
+if (!empty($session) && strpos($session, '~') !== false) {
+  $session = explode('~', $session)[0];
+}
 
 // load config
 include('./include/config.php'); 
+
+require_once __DIR__ . '/include/acl.php';
+ensureRole();
 
 // === LOGIC REDIRECT & LOGIN ===
 if (!isset($_SESSION["mikhmon"])) {
@@ -134,6 +140,14 @@ if (!isset($_SESSION["mikhmon"])) {
   $report = isset($_GET['report']) ? $_GET['report'] : "";
   $removereport = isset($_GET['remove-report']) ? $_GET['remove-report'] : "";
   $minterface = isset($_GET['interface']) ? $_GET['interface'] : "";
+
+  if (isOperator()) {
+    $restricted_hotspot = array('template-editor', 'uplogo');
+    if (in_array($hotspot, $restricted_hotspot, true) || $sys !== "") {
+      echo "<script>alert('Akses ditolak. Hubungi Superadmin.'); window.location='./?session=" . $session . "';</script>";
+      exit;
+    }
+  }
 
   $pagehotspot = array('users','hosts','ipbinding','cookies','log','dhcp-leases');
   $pageppp = array('secrets','profiles','active',);

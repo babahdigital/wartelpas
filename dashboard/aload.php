@@ -234,9 +234,12 @@ if ($load == "live_data") {
                     if ((int)($r['is_invalid'] ?? 0) === 1) $status = 'invalid';
                     elseif ((int)($r['is_retur'] ?? 0) === 1) $status = 'retur';
                     elseif ((int)($r['is_rusak'] ?? 0) === 1) $status = 'rusak';
+                    elseif ($lh_status === 'invalid') $status = 'invalid';
+                    elseif ($lh_status === 'retur') $status = 'retur';
+                    elseif ($lh_status === 'rusak') $status = 'rusak';
                     elseif (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
                     elseif (strpos($cmt_low, 'retur') !== false) $status = 'retur';
-                    elseif (strpos($cmt_low, 'rusak') !== false || $lh_status === 'rusak') $status = 'rusak';
+                    elseif (strpos($cmt_low, 'rusak') !== false) $status = 'rusak';
                     else $status = 'normal';
                 }
 
@@ -246,7 +249,9 @@ if ($load == "live_data") {
                 $total_net_month += $net_add;
                 if ($sale_date === $today) {
                     $total_net_today += $net_add;
-                    $total_gross_today += $line_price;
+                    if (!in_array($status, ['retur', 'invalid'], true)) {
+                        $total_gross_today += $line_price;
+                    }
                 }
             }
 
@@ -357,9 +362,12 @@ if ($load == "live_data") {
                             if ((int)($r['is_invalid'] ?? 0) === 1) $status = 'invalid';
                             elseif ((int)($r['is_retur'] ?? 0) === 1) $status = 'retur';
                             elseif ((int)($r['is_rusak'] ?? 0) === 1) $status = 'rusak';
+                            elseif ($lh_status === 'invalid') $status = 'invalid';
+                            elseif ($lh_status === 'retur') $status = 'retur';
+                            elseif ($lh_status === 'rusak') $status = 'rusak';
                             elseif (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
                             elseif (strpos($cmt_low, 'retur') !== false) $status = 'retur';
-                            elseif (strpos($cmt_low, 'rusak') !== false || $lh_status === 'rusak') $status = 'rusak';
+                            elseif (strpos($cmt_low, 'rusak') !== false) $status = 'rusak';
                             else $status = 'normal';
                         }
 

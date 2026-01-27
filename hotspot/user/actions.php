@@ -1,6 +1,18 @@
 <?php
 // Action handler sederhana (invalid/retur/delete)
 if (isset($_GET['action']) || isset($_POST['action'])) {
+  $root_dir = dirname(__DIR__, 2);
+  $env = [];
+  $envFile = $root_dir . '/include/env.php';
+  if (file_exists($envFile)) {
+    require $envFile;
+  }
+  $pricing = $env['pricing'] ?? [];
+  $profiles_cfg = $env['profiles'] ?? [];
+  $price10 = isset($pricing['price_10']) ? (int)$pricing['price_10'] : (int)($price10 ?? 0);
+  $price30 = isset($pricing['price_30']) ? (int)$pricing['price_30'] : (int)($price30 ?? 0);
+  $label10 = $profiles_cfg['label_10'] ?? '10 Menit';
+  $label30 = $profiles_cfg['label_30'] ?? '30 Menit';
   $is_action_ajax = isset($_GET['ajax']) && $_GET['ajax'] == '1' && isset($_GET['action_ajax']);
   $act = $_POST['action'] ?? $_GET['action'];
   if ($act === 'login_events') {
@@ -73,6 +85,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     $action_error = '';
     $hist_action = null;
     $is_rusak_target = false;
+    $new_user = '';
     if ($name != '') {
       $hist_action = get_user_history($name);
       if ($hist_action && strtolower($hist_action['last_status'] ?? '') === 'rusak') {
@@ -507,9 +520,9 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $profile_label = (string)($urow['profile'] ?? '');
         $price_value = 0;
         if (preg_match('/\b30\s*(menit|m)\b|30menit/i', $profile_label)) {
-          $price_value = 20000;
+          $price_value = $price30;
         } else {
-          $price_value = 5000;
+          $price_value = $price10;
         }
         $API->write('/ip/hotspot/user/set', false);
         $API->write('=.id='.$uid, false);
@@ -693,16 +706,6 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             'status' => 'retur'
           ];
           save_user_history($name, $save_data);
-
-          // Kembalikan pendapatan yang sempat berkurang karena RUSAK
-          try {
-            $stmt = $db->prepare("UPDATE sales_history SET status='normal', is_rusak=0, is_retur=0, is_invalid=0 WHERE username = :u");
-            $stmt->execute([':u' => $name]);
-          } catch(Exception $e) {}
-          try {
-            $stmt = $db->prepare("UPDATE live_sales SET status='normal', is_rusak=0, is_retur=0, is_invalid=0 WHERE username = :u AND sync_status = 'pending'");
-            $stmt->execute([':u' => $name]);
-          } catch(Exception $e) {}
         }
 
         // Hapus voucher lama
@@ -715,15 +718,33 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
 
         // Generate voucher baru
         $gen = gen_user($prof ?: 'default', $comm ?: $name, $name);
+        $new_user = $gen['u'] ?? '';
+        $profile_kind = detect_profile_kind_unified($prof ?: ($uinfo['profile'] ?? ''), $cmt ?? '', $blok ?? '', $uptime ?? '');
+        $limit_uptime = '';
+        if ($profile_kind === '30') {
+          $limit_uptime = '30m';
+        } elseif ($profile_kind === '10') {
+          $limit_uptime = '10m';
+        } else {
+          $profile_label = (string)($prof ?: ($uinfo['profile'] ?? ''));
+          if (preg_match('/\b30\s*(menit|m)\b|30menit/i', $profile_label)) {
+            $limit_uptime = '30m';
+          } elseif (preg_match('/\b10\s*(menit|m)\b|10menit/i', $profile_label)) {
+            $limit_uptime = '10m';
+          }
+        }
         $API->write('/ip/hotspot/user/add', false);
         $API->write('=server='.$hotspot_server, false);
         $API->write('=name='.$gen['u'], false);
         $API->write('=password='.$gen['p'], false);
         $API->write('=profile='.($prof ?: 'default'), false);
+        if ($limit_uptime !== '') {
+          $API->write('=limit-uptime='.$limit_uptime, false);
+        }
         $API->write('=comment='.$gen['c']);
         $API->read();
 
-        // Simpan status retur untuk user baru
+        // Simpan status READY untuk user baru (hasil retur)
         if ($db) {
           $new_blok = extract_blok_name($gen['c']);
           $save_new = [
@@ -735,7 +756,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             'raw' => $gen['c'],
             'login_time_real' => null,
             'logout_time_real' => null,
-            'status' => 'retur'
+            'status' => 'ready'
           ];
           save_user_history($gen['u'], $save_new);
         }
@@ -747,14 +768,14 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $new_c = "Audit: RUSAK " . date("d/m/y") . " " . $base_comment;
       $profile_label = (string)($hist['validity'] ?? '');
       if ($profile_label === '') {
-        if (preg_match('/\b30\s*(menit|m)\b|30menit/i', $base_comment)) $profile_label = '30 Menit';
-        elseif (preg_match('/\b10\s*(menit|m)\b|10menit/i', $base_comment)) $profile_label = '10 Menit';
+        if (preg_match('/\b30\s*(menit|m)\b|30menit/i', $base_comment)) $profile_label = $label30;
+        elseif (preg_match('/\b10\s*(menit|m)\b|10menit/i', $base_comment)) $profile_label = $label10;
       }
       $price_value = 0;
       if (preg_match('/\b30\s*(menit|m)\b|30menit/i', $profile_label)) {
-        $price_value = 20000;
+        $price_value = $price30;
       } else {
-        $price_value = 5000;
+        $price_value = $price10;
       }
       $logout_time_real = $hist['logout_time_real'] ?? null;
       if (empty($logout_time_real)) {
@@ -820,7 +841,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     echo json_encode([
       'ok' => !$action_blocked,
       'message' => $action_blocked ? $action_error : 'Berhasil diproses.',
-      'redirect' => $action_blocked ? '' : $redir
+      'redirect' => $action_blocked ? '' : $redir,
+      'new_user' => (!$action_blocked && $act === 'retur' && $new_user !== '') ? $new_user : ''
     ]);
     exit();
   }

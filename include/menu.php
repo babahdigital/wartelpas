@@ -15,7 +15,17 @@ if (!isset($_SESSION["mikhmon"])) {
     exit;
 }
 
+require_once __DIR__ . '/acl.php';
+ensureRole();
+
 include('./include/version.php');
+
+$env = [];
+$envFile = __DIR__ . '/env.php';
+if (file_exists($envFile)) {
+    require $envFile;
+}
+$backupKey = $env['backup']['secret'] ?? '';
 
 $btnmenuactive = "font-weight: bold;background-color: #f9f9f9; color: #000000";
 if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?session") {
@@ -477,7 +487,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         <div class="mobile-toggle" onclick="toggleMenu()"><i class="fa fa-bars"></i></div>
 
         <ul class="nav-links" id="mainNav">
-            <?php if (($id == "settings" && $session == "new") || $id == "settings" || $id == "editor" || $id == "uplogo" || $id == "connect"): ?>
+            <?php if (isSuperAdmin() && (($id == "settings" && $session == "new") || $id == "settings" || $id == "editor" || $id == "uplogo" || $id == "connect")): ?>
                 <li class="nav-item">
                     <a class="nav-link connect <?= $shome; ?>" id="<?= $session; ?>&c=settings" href="javascript:void(0)">
                         <i class="fa fa-tachometer"></i> <?= $_dashboard ?> (<?= $session; ?>)
@@ -500,16 +510,20 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                 </li>
             <?php endif; ?>
 
-            <li class="nav-item">
-                <a class="nav-link <?= $ssesslist; ?>" href="./admin.php?id=sessions">
-                    <i class="fa fa-list"></i> <?= $_admin_settings ?>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <?= $snsettings; ?>" href="./admin.php?id=settings&router=new-<?= rand(1111,9999) ?>">
-                    <i class="fa fa-plus"></i> <?= $_add_router ?>
-                </a>
-            </li>
+            <?php if (isSuperAdmin()): ?>
+                <li class="nav-item">
+                    <a class="nav-link <?= $ssesslist; ?>" href="./admin.php?id=sessions">
+                        <i class="fa fa-list"></i> <?= $_admin_settings ?>
+                    </a>
+                </li>
+            <?php endif; ?>
+            <?php if (isSuperAdmin()): ?>
+                <li class="nav-item">
+                    <a class="nav-link <?= $snsettings; ?>" href="./admin.php?id=settings&router=new-<?= rand(1111,9999) ?>">
+                        <i class="fa fa-plus"></i> <?= $_add_router ?>
+                    </a>
+                </li>
+            <?php endif; ?>
         </ul>
 
         <div class="nav-right">
@@ -586,15 +600,31 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                     <i class="fa fa-whatsapp"></i> WhatsApp
                 </a>
             </li>
+            <?php if (isSuperAdmin()): ?>
+            <li class="nav-item">
+                <a class="nav-link" href="./admin.php?id=sessions">
+                    <i class="fa fa-gear"></i> <?= $_admin_settings ?>
+                </a>
+            </li>
+            <?php endif; ?>
         </ul>
 
         <div class="nav-right">
-            <a id="db-backup" class="db-tools" href="javascript:void(0)" title="Backup Database" onclick="runBackupAjax()">
-                <i class="fa fa-database"></i> Backup
-            </a>
-            <a id="db-restore" class="db-tools" href="javascript:void(0)" title="Restore Backup Terbaru" onclick="runRestoreAjax()">
-                <i class="fa fa-history"></i> Restore
-            </a>
+            <?php $is_superadmin = isSuperAdmin(); ?>
+            <?php if ($is_superadmin): ?>
+                <a id="db-backup" class="db-tools" href="javascript:void(0)" title="Backup Database" onclick="runBackupAjax()">
+                    <i class="fa fa-database"></i> Backup
+                </a>
+            <?php endif; ?>
+            <?php if ($is_superadmin): ?>
+                <a id="db-restore" class="db-tools" href="javascript:void(0)" title="Restore Backup Terbaru" onclick="runRestoreAjax()">
+                    <i class="fa fa-history"></i> Restore
+                </a>
+            <?php else: ?>
+                <a id="db-restore" class="db-tools" href="javascript:void(0)" title="Restore Backup Terbaru" onclick="runRestoreAjax()" style="display:none;">
+                    <i class="fa fa-history"></i> Restore
+                </a>
+            <?php endif; ?>
             <span class="timer-badge" title="Waktu Saat Ini">
                 <i class="fa fa-clock-o"></i> <span id="timer_val">--:--</span>
             </span>
@@ -659,11 +689,13 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         if (fallback) fallback.textContent = full;
     }
 
+    var isSuperAdminFlag = <?= json_encode($is_superadmin); ?>;
+
     function updateDbStatus() {
         var el = document.getElementById('db-status');
         var restoreBtn = document.getElementById('db-restore');
         if (!el) return;
-        fetch('./tools/db_check.php?key=' + encodeURIComponent(window.__backupKey || 'WartelpasSecureKey'))
+        fetch('./tools/db_check.php?key=' + encodeURIComponent(window.__backupKey || ''))
             .then(function(resp) {
                 if (!resp.ok) throw new Error('bad');
                 return resp.text();
@@ -673,21 +705,21 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                 var ok = low.indexOf('db error') === -1 && low.indexOf('not found') === -1 && low.indexOf('forbidden') === -1;
                 el.classList.remove('db-ok', 'db-error');
                 el.classList.add(ok ? 'db-ok' : 'db-error');
-                if (restoreBtn) {
+                if (restoreBtn && !isSuperAdminFlag) {
                     restoreBtn.style.display = ok ? 'none' : 'inline-flex';
                 }
             })
             .catch(function() {
                 el.classList.remove('db-ok');
                 el.classList.add('db-error');
-                if (restoreBtn) restoreBtn.style.display = 'inline-flex';
+                if (restoreBtn && !isSuperAdminFlag) restoreBtn.style.display = 'inline-flex';
             });
     }
 
     function updateBackupStatus() {
         var backupBtn = document.getElementById('db-backup');
         if (!backupBtn) return;
-        fetch('./tools/backup_status.php?key=' + encodeURIComponent(window.__backupKey || 'WartelpasSecureKey'))
+        fetch('./tools/backup_status.php?key=' + encodeURIComponent(window.__backupKey || ''))
             .then(function(resp) {
                 if (!resp.ok) throw new Error('bad');
                 return resp.json();
@@ -754,7 +786,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
     }
 
     document.addEventListener('DOMContentLoaded', function(){
-        window.__backupKey = 'WartelpasSecureKey';
+        window.__backupKey = <?= json_encode($backupKey) ?>;
         if (window.jQuery) {
             $(".connect").click(function(){
                 notify("<?= $_connecting ?>");
@@ -834,7 +866,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         btn.style.pointerEvents = 'none';
         btn.style.opacity = '0.6';
         notifyLocal('Proses backup...', 'info', true);
-        fetch('./tools/backup_db.php?ajax=1&key=' + encodeURIComponent(window.__backupKey || 'WartelpasSecureKey'), {
+        fetch('./tools/backup_db.php?ajax=1&key=' + encodeURIComponent(window.__backupKey || ''), {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(function(resp){ return resp.json(); })
@@ -862,7 +894,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         btn.style.pointerEvents = 'none';
         btn.style.opacity = '0.6';
         notifyLocal('Proses restore...', 'info', true);
-        fetch('./tools/restore_db.php?ajax=1&key=' + encodeURIComponent(window.__backupKey || 'WartelpasSecureKey'), {
+        fetch('./tools/restore_db.php?ajax=1&key=' + encodeURIComponent(window.__backupKey || ''), {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(function(resp){ return resp.json(); })

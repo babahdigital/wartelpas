@@ -34,13 +34,18 @@
 .period-group .custom-select-solid, .period-group .form-control { margin: 0; }
 .search-wrap { position: relative; display: flex; align-items: center; flex: 1 1 420px; min-width: 280px; }
 .search-wrap .form-control { padding-right: 36px; width: 100%; }
-.search-clear-btn { position: absolute; right: 8px; width: 22px; height: 22px; border-radius: 50%; border: none; background: #495057; color: #fff; font-size: 12px; line-height: 22px; display: none; }
+.search-clear-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; border-radius: 50%; border: none; background: #495057; color: #fff; font-size: 14px; line-height: 1; display: none; align-items: center; justify-content: center; z-index: 10; }
+.search-clear-btn.is-visible { display: inline-flex; }
 .search-clear-btn:hover { background: #6c757d; }
 .page-dim { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 9999; }
 .page-dim .spinner { color: #ecf0f1; font-size: 14px; display: flex; align-items: center; gap: 8px; }
 .action-banner { position: fixed; top: 0; left: 0; right: 0; display: none; align-items: center; justify-content: center; gap: 10px; padding: 12px 16px; z-index: 10000; font-weight: 600; }
 .action-banner.success { background: #16a34a; color: #fff; }
 .action-banner.error { background: #dc2626; color: #fff; }
+.low-stock-alert { position: fixed; bottom: 16px; left: 12px; right: 12px; z-index: 9998; background: #7f1d1d; color: #fef2f2; border: 1px solid #991b1b; border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; box-shadow: 0 6px 16px rgba(0,0,0,0.35); }
+.low-stock-text { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+.low-stock-close { background: transparent; border: none; color: #fef2f2; font-size: 20px; line-height: 1; cursor: pointer; opacity: 0.8; }
+.low-stock-close:hover { opacity: 1; }
 .confirm-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); z-index: 10001; }
 .confirm-card { background: #2c2c2c; color: #e0e0e0; border-radius: 8px; width: 420px; max-width: 92vw; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; }
 .confirm-header { background: #252525; border-bottom: 1px solid #3d3d3d; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; }
@@ -50,8 +55,8 @@
 .confirm-body { padding: 20px; color: #ccc; text-align: center; }
 .confirm-icon { font-size: 36px; color: #ff9800; margin-bottom: 10px; }
 .confirm-message { color: #ccc; font-size: 14px; }
-.confirm-footer { background: #252525; border-top: 1px solid #3d3d3d; padding: 12px 20px; display: flex; gap: 8px; justify-content: flex-end; }
-.confirm-btn { border: none; border-radius: 4px; padding: 8px 12px; font-weight: 600; cursor: pointer; }
+.confirm-footer { background: #252525; border-top: 1px solid #3d3d3d; padding: 12px 20px; display: flex; gap: 8px; justify-content: flex-end; position: relative; z-index: 2; }
+.confirm-btn { border: none; border-radius: 4px; padding: 8px 12px; font-weight: 600; cursor: pointer; pointer-events: auto; position: relative; z-index: 3; }
 .confirm-btn-secondary { background: #424242; color: #fff; border: 1px solid #555; }
 .confirm-btn-secondary:hover { background: #505050; }
 .confirm-btn-warning { background: #ff9800; color: #fff; }

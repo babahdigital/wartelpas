@@ -249,8 +249,8 @@ if (!empty($router_users)) {
     }
 
     $comment_rusak = preg_match('/\bAudit:\s*RUSAK\b/i', $comment) || preg_match('/^\s*RUSAK\b/i', $comment);
-    $is_rusak = $comment_rusak || (stripos($comment, 'RUSAK') !== false) || ($disabled === 'true');
     $is_retur = (stripos($comment, '(Retur)') !== false) || (stripos($comment, 'Retur Ref:') !== false) || preg_match('/\bRETUR\b/i', $comment);
+    $is_rusak = $comment_rusak || (stripos($comment, 'RUSAK') !== false) || ($disabled === 'true');
     if ($db && $name !== '') {
       $hist_sum = get_user_history($name);
       $hist_status = strtolower($hist_sum['last_status'] ?? '');
@@ -262,15 +262,15 @@ if (!empty($router_users)) {
         $is_retur = false;
       }
     }
-    if ($is_rusak) $is_retur = false;
+    if ($is_retur) $is_rusak = false;
 
     $is_used = (!$is_retur && !$is_rusak && $disabled !== 'true') &&
       ($is_active || $bytes > 50 || ($uptime !== '' && $uptime !== '0s') || (($cm['ip'] ?? '') !== ''));
 
     $status = 'READY';
     if ($is_active) $status = 'ONLINE';
-    elseif ($is_rusak) $status = 'RUSAK';
     elseif ($is_retur) $status = 'RETUR';
+    elseif ($is_rusak) $status = 'RUSAK';
     elseif ($is_used) $status = 'TERPAKAI';
 
     if ($status === 'READY') {
@@ -319,6 +319,7 @@ if ($db) {
 }
 
 $is_ajax = isset($_GET['ajax']) && $_GET['ajax'] == '1';
+$is_print = isset($_GET['print']) && $_GET['print'] == '1';
 
 $retur_ref_map = [];
 if ($db) {
@@ -346,7 +347,6 @@ if ($db) {
       foreach ($res->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $uname = $row['username'] ?? '';
         if ($uname === '' || isset($existing[$uname])) continue;
-        if (isset($retur_ref_map[strtolower($uname)])) continue;
         $comment = (string)($row['raw_comment'] ?? '');
         $uptime_hist = (string)($row['last_uptime'] ?? '');
         $hist_profile = resolve_profile_from_history($comment, $row['validity'] ?? '', $uptime_hist);
@@ -362,20 +362,15 @@ if ($db) {
         $mac_use = $mac_hist !== '' && $mac_hist !== '-' ? $mac_hist : ($cm['mac'] ?? '');
 
         $h_comment_rusak = preg_match('/\bAudit:\s*RUSAK\b/i', $comment) || preg_match('/^\s*RUSAK\b/i', $comment);
+        $h_has_retur_tag = (stripos($comment, '(Retur)') !== false) || (stripos($comment, 'Retur Ref:') !== false);
+        $h_is_retur = ($st === 'retur') || $h_has_retur_tag;
         $h_is_rusak = ($st === 'rusak') || $h_comment_rusak;
-        $h_is_retur = ($st === 'retur') || (stripos($comment, '(Retur)') !== false) || (stripos($comment, 'Retur Ref:') !== false);
         if (isset($retur_ref_map[strtolower($uname)])) {
           $h_is_retur = true;
           $h_is_rusak = false;
         }
-        if ($st === 'retur') {
-          $h_is_retur = true;
+        if ($h_is_retur) {
           $h_is_rusak = false;
-        } elseif ($st === 'rusak') {
-          $h_is_rusak = true;
-          $h_is_retur = false;
-        } elseif ($h_is_rusak) {
-          $h_is_retur = false;
         }
         $h_is_used = (!$h_is_rusak && !$h_is_retur) && (
           $bytes_hist > 50 ||
@@ -383,12 +378,13 @@ if ($db) {
           ($ip_use !== '' && $ip_use !== '-')
         );
         $h_status = 'READY';
-        if ($h_is_rusak) $h_status = 'RUSAK';
-        elseif ($h_is_retur) $h_status = 'RETUR';
+        if ($h_is_retur) $h_status = 'RETUR';
+        elseif ($h_is_rusak) $h_status = 'RUSAK';
         elseif ($h_is_used) $h_status = 'TERPAKAI';
 
         if ($h_status === 'READY') continue;
-        if ($req_status === 'used' && $h_status !== 'TERPAKAI') continue;
+        if (in_array($req_status, ['used','retur','all'], true) && isset($retur_ref_map[strtolower($uname)])) continue;
+        if ($req_status === 'used' && !in_array($h_status, ['TERPAKAI','RETUR','RUSAK'])) continue;
         if ($req_status === 'rusak' && $h_status !== 'RUSAK') continue;
         if ($req_status === 'retur' && $h_status !== 'RETUR') continue;
         $all_users[] = [
@@ -430,7 +426,8 @@ foreach($all_users as $u) {
     $comment = $u['comment'] ?? '';
     $disabled = $u['disabled'] ?? 'false';
     $is_active = isset($activeMap[$name]);
-    if ($name !== '' && isset($retur_ref_map[strtolower($name)])) {
+
+    if (in_array($req_status, ['used','terpakai','retur','all'], true) && isset($retur_ref_map[strtolower($name)])) {
       continue;
     }
 
@@ -487,9 +484,9 @@ foreach($all_users as $u) {
     }
 
     $comment_rusak = preg_match('/\bAudit:\s*RUSAK\b/i', $comment) || preg_match('/^\s*RUSAK\b/i', $comment);
-    $is_rusak = $comment_rusak;
     $is_invalid = false;
     $is_retur = stripos($comment, '(Retur)') !== false || stripos($comment, 'Retur Ref:') !== false;
+    $is_rusak = $comment_rusak;
     $hist_status = strtolower($hist['last_status'] ?? '');
     if (!$is_retur && $hist && $hist_status === 'retur') {
       $is_retur = true;
@@ -525,9 +522,9 @@ foreach($all_users as $u) {
 
     $status = 'READY';
     if ($is_active) $status = 'ONLINE';
+    elseif ($is_retur) $status = 'RETUR';
     elseif ($is_rusak) $status = 'RUSAK';
     elseif ($disabled == 'true') $status = 'RUSAK';
-    elseif ($is_retur) $status = 'RETUR';
     elseif ($is_used) $status = 'TERPAKAI';
 
     $is_ready_now = (!$is_active && !$is_rusak && !$is_retur && $disabled !== 'true' && $bytes <= 50 && ($uptime == '0s' || $uptime == ''));
@@ -722,6 +719,13 @@ foreach($all_users as $u) {
     }
 
     $profile_kind = detect_profile_kind_unified($u['profile'] ?? '', $comment, $f_blok, $uptime);
+    $profile_kind_filter = $profile_kind;
+    if ($req_status === 'ready') {
+      $profile_kind_filter = detect_profile_kind_summary($u['profile'] ?? '');
+      if ($profile_kind_filter === 'other') {
+        $profile_kind_filter = detect_profile_kind_from_comment($comment);
+      }
+    }
 
     // Filter blok
     if ($req_comm != '') {
@@ -730,7 +734,7 @@ foreach($all_users as $u) {
 
     // Filter profil (10/30)
     if ($req_prof !== 'all') {
-      if ($profile_kind !== $req_prof) continue;
+      if ($profile_kind_filter !== $req_prof) continue;
     }
 
     // Search
@@ -754,10 +758,6 @@ foreach($all_users as $u) {
       $logout_disp = '-';
     }
     if ($status === 'ONLINE') {
-      $logout_disp = '-';
-    }
-    if ($status === 'RETUR') {
-      $login_disp = '-';
       $logout_disp = '-';
     }
     if ($status === 'TERPAKAI' && $logout_disp !== '-' && substr($logout_disp, -8) === '00:00:00') {
@@ -815,9 +815,11 @@ foreach($all_users as $u) {
     // Filter tanggal (harian/bulanan/tahunan) memakai last_used (selalu aktif)
     if ($req_show !== 'semua' && !empty($filter_date)) {
       if ($status === 'READY') {
-        $is_today = ($filter_date === date('Y-m-d') && $req_show === 'harian');
-        if (!$is_today && $req_status === 'all') {
-          continue;
+        if (!$is_print) {
+          $is_today = ($filter_date === date('Y-m-d') && $req_show === 'harian');
+          if (!$is_today && $req_status === 'all') {
+            continue;
+          }
         }
       } else {
         $date_key = normalize_date_key($last_used_filter, $req_show);
@@ -834,7 +836,7 @@ foreach($all_users as $u) {
     if ($req_status == 'ready' && $status !== 'READY') continue;
     if ($req_status == 'all' && $status === 'READY') continue;
     if ($req_status == 'online' && $status !== 'ONLINE') continue;
-    if ($req_status == 'used' && $status !== 'TERPAKAI') continue;
+    if ($req_status == 'used' && !in_array($status, ['TERPAKAI','RETUR','RUSAK'])) continue;
     if ($req_status == 'rusak' && $status !== 'RUSAK') continue;
     if ($req_status == 'retur' && $status !== 'RETUR') continue;
     if ($req_status == 'invalid') continue;
@@ -853,6 +855,26 @@ foreach($all_users as $u) {
         'logout' => $logout_time_real
       ];
     }
+    $retur_ref_user = '';
+    if ($is_retur) {
+      $retur_ref_user = extract_retur_user_from_ref($comment);
+      if ($retur_ref_user === '' && $hist && !empty($hist['raw_comment'])) {
+        $retur_ref_user = extract_retur_user_from_ref($hist['raw_comment']);
+      }
+      if ($retur_ref_user === '') {
+        $retur_ref_raw = extract_retur_ref($comment);
+        if ($retur_ref_raw === '' && $hist && !empty($hist['raw_comment'])) {
+          $retur_ref_raw = extract_retur_ref($hist['raw_comment']);
+        }
+        if ($retur_ref_raw !== '') {
+          $retur_ref_user = trim(preg_replace('/^Retur\s*Ref\s*:/i', '', $retur_ref_raw));
+        }
+      }
+      if (stripos($retur_ref_user, 'vc-') === 0) {
+        $retur_ref_user = substr($retur_ref_user, 3);
+      }
+    }
+
     $display_data[] = [
       'uid' => $u['.id'] ?? '',
         'name' => $name,
@@ -866,7 +888,7 @@ foreach($all_users as $u) {
         'is_disabled' => ($disabled === 'true') ? 1 : 0,
         'first_login' => $first_login_disp,
         'retur_ref' => $is_retur ? extract_retur_ref($comment) : '',
-        'retur_from' => $retur_ref_user,
+        'retur_ref_user' => $is_retur ? ($retur_ref_user !== '' ? $retur_ref_user : '-') : '',
         'uptime' => $uptime,
         'bytes' => $bytes,
         'status' => $status,
@@ -963,17 +985,25 @@ if (!empty($display_data)) {
 
 // Pagination (after filtering)
 $total_items = count($display_data);
-$per_page = isset($_GET['per_page']) ? max(10, min(200, (int)$_GET['per_page'])) : 50;
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$total_pages = $per_page > 0 ? (int)ceil($total_items / $per_page) : 1;
-if ($page < 1) $page = 1;
-if ($total_pages > 0 && $page > $total_pages) $page = $total_pages;
-$offset = ($page - 1) * $per_page;
-$display_data = array_slice($display_data, $offset, $per_page);
+if (!$is_print) {
+  $per_page = isset($_GET['per_page']) ? max(10, min(200, (int)$_GET['per_page'])) : 50;
+  $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+  $total_pages = $per_page > 0 ? (int)ceil($total_items / $per_page) : 1;
+  if ($page < 1) $page = 1;
+  if ($total_pages > 0 && $page > $total_pages) $page = $total_pages;
+  $offset = ($page - 1) * $per_page;
+  $display_data = array_slice($display_data, $offset, $per_page);
 
-$pagination_params = $_GET;
-unset($pagination_params['page']);
-$pagination_base = './?' . http_build_query($pagination_params);
+  $pagination_params = $_GET;
+  unset($pagination_params['page']);
+  $pagination_base = './?' . http_build_query($pagination_params);
+} else {
+  $per_page = $total_items;
+  $page = 1;
+  $total_pages = $total_items > 0 ? 1 : 0;
+  $offset = 0;
+  $pagination_base = '';
+}
 
 if ($is_ajax) {
   ob_start();
@@ -994,12 +1024,12 @@ if ($is_ajax) {
           </div>
           <div style="font-size:11px; color:var(--txt-muted); max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:5px;" title="<?= htmlspecialchars($u['comment']) ?>">
             <?php if (($u['status'] ?? '') === 'RETUR'): ?>
-              Retur dari: <?= htmlspecialchars($u['retur_from'] ?? '-') ?>
+              Retur dari: <?= htmlspecialchars($u['retur_ref_user'] ?? '-') ?>
             <?php else: ?>
               First login: <?= formatDateIndo($u['first_login'] ?? '-') ?>
             <?php endif; ?>
           </div>
-          <?php if (!empty($u['retur_ref']) && ($u['status'] ?? '') !== 'RETUR'): ?>
+          <?php if (!empty($u['retur_ref']) && empty($u['retur_ref_user'])): ?>
             <div style="font-size:10px;color:#b2bec3;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<?= htmlspecialchars($u['retur_ref']) ?>">
               Retur dari: <?= htmlspecialchars($u['retur_ref']) ?>
             </div>
@@ -1051,7 +1081,7 @@ if ($is_ajax) {
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.detail.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Rincian Rusak"><i class="fa fa-print"></i></button>
             <?php elseif ($is_retur && in_array($req_status, ['all','retur'], true)): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.retur.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Voucher Retur"><i class="fa fa-print"></i></button>
-              <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.retur.php?user=<?= urlencode($u['name']) ?>&download=1&img=1&session=<?= $session ?>','_blank')" title="Download Voucher (PNG)"><i class="fa fa-download"></i></button>
+              <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.retur.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>&download=1&img=1','_blank')" title="Download Voucher Retur (PNG)"><i class="fa fa-download"></i></button>
             <?php elseif ($is_ready && in_array($req_status, ['all','ready'], true)): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
             <?php endif; ?>

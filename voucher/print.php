@@ -27,6 +27,7 @@ if (!isset($_SESSION["mikhmon"])) {
   $qr = $_GET['qr'] ?? '';
   $small = $_GET['small'] ?? '';
   $userp = $_GET['user'] ?? '';
+  $profile = isset($_GET['profile']) ? strtolower(trim((string)$_GET['profile'])) : '';
   $status = isset($_GET['status']) ? strtolower(trim((string)$_GET['status'])) : '';
   $mode = isset($_GET['mode']) ? strtolower(trim((string)$_GET['mode'])) : '';
   $blok = isset($_GET['blok']) ? trim((string)$_GET['blok']) : '';
@@ -50,6 +51,16 @@ if (!isset($_SESSION["mikhmon"])) {
   if ($id !== '' && !preg_match('/^[A-Za-z0-9._-]{1,40}$/', $id)) {
     $id = '';
   }
+  if ($profile !== '') {
+    if (preg_match('/(\d+)/', $profile, $m)) {
+      $profile = (string)((int)$m[1]);
+    } else {
+      $profile = '';
+    }
+  }
+  if (!in_array($profile, ['', '10', '30', 'all'], true)) {
+    $profile = '';
+  }
   $qr = ($qr === 'yes') ? 'yes' : (($qr === 'no') ? 'no' : $qr);
   $small = ($small === 'yes') ? 'yes' : (($small === 'no') ? 'no' : $small);
 
@@ -59,6 +70,21 @@ if (!isset($_SESSION["mikhmon"])) {
   $API->connect($iphost, $userhost, decrypt($passwdhost));
 
   // --- LOGIKA PENCARIAN & FILTER ---
+
+  $profile_filter = ($profile !== '' && $profile !== 'all') ? $profile : '';
+
+  function detect_profile_kind_voucher($profile_name, $comment, $limit_uptime) {
+    $p = strtolower((string)$profile_name);
+    if (preg_match('/\b30\s*(menit|m|min)\b|30menit/i', $p)) return '30';
+    if (preg_match('/\b10\s*(menit|m|min)\b|10menit/i', $p)) return '10';
+    $c = strtolower((string)$comment);
+    if (preg_match('/profile\s*:\s*30\b|\b30\s*(menit|m|min)\b|30menit/i', $c)) return '30';
+    if (preg_match('/profile\s*:\s*10\b|\b10\s*(menit|m|min)\b|10menit/i', $c)) return '10';
+    $lu = strtolower((string)$limit_uptime);
+    if (preg_match('/\b30m\b|\b30\s*min\b|\b00:30:00\b/', $lu)) return '30';
+    if (preg_match('/\b10m\b|\b10\s*min\b|\b00:10:00\b/', $lu)) return '10';
+    return 'other';
+  }
 
   $count_hidden = 0; // Menghitung voucher yang disembunyikan
 
@@ -168,6 +194,15 @@ if (!isset($_SESSION["mikhmon"])) {
     } catch (Exception $e) {
       $getuser = [];
     }
+    if ($profile_filter !== '') {
+      $filtered = [];
+      foreach ($getuser as $u) {
+        $kind = detect_profile_kind_voucher($u['profile'] ?? '', $u['comment'] ?? '', $u['limit-uptime'] ?? '');
+        if ($kind !== $profile_filter) continue;
+        $filtered[] = $u;
+      }
+      $getuser = $filtered;
+    }
     $TotalReg = count($getuser);
     $usermode = "vc";
 
@@ -212,6 +247,15 @@ if (!isset($_SESSION["mikhmon"])) {
       "?name" => "$user",
       ".proplist" => ".id,name,password,profile,comment,limit-uptime,limit-bytes-total,uptime,bytes-in,bytes-out"
     ));
+    if ($profile_filter !== '') {
+      $filtered = [];
+      foreach ($getuser as $u) {
+        $kind = detect_profile_kind_voucher($u['profile'] ?? '', $u['comment'] ?? '', $u['limit-uptime'] ?? '');
+        if ($kind !== $profile_filter) continue;
+        $filtered[] = $u;
+      }
+      $getuser = $filtered;
+    }
     $TotalReg = count($getuser);
 
     if ($TotalReg == 0) {
@@ -339,6 +383,15 @@ if (!isset($_SESSION["mikhmon"])) {
     } catch (Exception $e) {
       $getuser = [];
     }
+    if ($profile_filter !== '') {
+      $filtered = [];
+      foreach ($getuser as $u) {
+        $kind = detect_profile_kind_voucher($u['profile'] ?? '', $u['comment'] ?? '', $u['limit-uptime'] ?? '');
+        if ($kind !== $profile_filter) continue;
+        $filtered[] = $u;
+      }
+      $getuser = $filtered;
+    }
     $TotalReg = count($getuser);
     $usermode = "vc";
 
@@ -407,6 +460,15 @@ if (!isset($_SESSION["mikhmon"])) {
         }
     }
     
+    if ($profile_filter !== '') {
+      $filtered = [];
+      foreach ($getuser as $u) {
+        $kind = detect_profile_kind_voucher($u['profile'] ?? '', $u['comment'] ?? '', $u['limit-uptime'] ?? '');
+        if ($kind !== $profile_filter) continue;
+        $filtered[] = $u;
+      }
+      $getuser = $filtered;
+    }
     $TotalReg = count($getuser);
   }
   
@@ -427,6 +489,11 @@ if (!isset($_SESSION["mikhmon"])) {
       } else {
         $getprice = "0"; $getsprice = "0"; $getuprofile = "Unknown"; $validity = '';
       }
+
+  $profile_title = $getuprofile;
+  if ($profile_filter !== '') {
+    $profile_title = $profile_filter . ' Menit';
+  }
 
   // --- FORMAT HARGA ---
   if($getsprice == "0" && $getprice != "0"){
@@ -468,7 +535,7 @@ function extract_blok_from_comment($comment) {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Voucher-<?= $hotspotname . "-" . $getuprofile . "-" . $id; ?></title>
+    <title>Voucher-<?= $hotspotname . "-" . $profile_title . "-" . $id; ?></title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta http-equiv="pragma" content="no-cache" />
     <link rel="icon" href="../img/favicon.png" />

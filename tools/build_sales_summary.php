@@ -1,4 +1,10 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../include/acl.php';
+requireLogin('../admin.php?id=login');
+requireSuperAdmin('../admin.php?id=sessions');
 // FILE: tools/build_sales_summary.php
 // Build materialized sales summary tables (harian/bulanan/tahunan)
 
@@ -12,7 +18,7 @@ if (!file_exists($dbFile)) {
     die("Error: Database tidak ditemukan.\n");
 }
 
-require_once($root_dir . '/report/sales_summary_helper.php');
+require_once($root_dir . '/report/laporan/sales_summary_helper.php');
 
 try {
     $db = new PDO('sqlite:' . $dbFile);

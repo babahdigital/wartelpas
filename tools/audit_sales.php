@@ -1,10 +1,22 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../include/acl.php';
+requireLogin('../admin.php?id=login');
+requireSuperAdmin('../admin.php?id=sessions');
 // Audit sales duplication & relogin impact (protected)
 ini_set('display_errors', 0);
 error_reporting(0);
 header('Content-Type: text/html; charset=utf-8');
 
-$secret = 'WartelpasSecureKey';
+$root = dirname(__DIR__);
+$env = [];
+$envFile = $root . '/include/env.php';
+if (file_exists($envFile)) {
+    require $envFile;
+}
+$secret = $env['security']['tools']['token'] ?? ($env['backup']['secret'] ?? '');
 $key = $_GET['key'] ?? '';
 if ($key !== $secret) {
     http_response_code(403);
@@ -12,7 +24,6 @@ if ($key !== $secret) {
     exit;
 }
 
-$root = dirname(__DIR__);
 $dbFile = $root . '/db_data/mikhmon_stats.db';
 if (!file_exists($dbFile)) {
     echo 'DB not found';

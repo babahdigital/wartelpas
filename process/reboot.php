@@ -18,9 +18,9 @@
 session_start();
 // hide all error
 error_reporting(0);
-if (!isset($_SESSION["mikhmon"])) {
-  header("Location:../admin.php?id=login");
-} else {
+require_once __DIR__ . '/../include/acl.php';
+requireLogin('../admin.php?id=login');
+requireSuperAdmin('../admin.php?id=sessions');
 
   if (isset($_POST['submit'])) {
     $API = new RouterosAPI();
@@ -32,7 +32,6 @@ if (!isset($_SESSION["mikhmon"])) {
     session_destroy();
     echo "<script>window.location='./admin.php?id=login'</script>";
   }
-}
 ?>
 <div style="padding-top:10%;" class="register-box">
   <div class="card">
