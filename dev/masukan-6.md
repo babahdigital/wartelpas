@@ -107,5 +107,3 @@ Sistem ini **Sangat Layak Produksi**. Logika pertukaran data antara MikroTik dan
 
 **Satu-satunya tindakan perbaikan kode (Refactoring) yang saya sarankan sebelum finalisasi:**
 Memindahkan logika duplikat kalkulasi Audit ke `helpers.php`.
-
-Apakah Anda ingin saya buatkan update untuk **`helpers.php`** yang memuat fungsi kalkulasi audit tersebut, lalu mengupdate `audit.php` dan `print_audit.php` agar kode lebih bersih? Atau kita lanjut ke pengujian fitur lain?
