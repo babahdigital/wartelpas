@@ -211,7 +211,6 @@ function get_ghost_suspects(PDO $db, $audit_date, $audit_blok, array $reported_u
         if ($blok !== $audit_blok) continue;
 
         $status = strtolower((string)($row['last_status'] ?? ''));
-        if (in_array($status, ['ready','rusak','retur','invalid'], true)) continue;
 
         $bytes = (int)($row['last_bytes'] ?? 0);
         $uptime = (string)($row['last_uptime'] ?? '');

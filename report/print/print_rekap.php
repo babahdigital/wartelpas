@@ -1062,42 +1062,38 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $selisih_qty = $manual_display_qty - $expected_adj_qty;
                             $selisih_setoran = $manual_display_setoran - $expected_adj_setoran;
                             
-                            // === LOGIKA DETEKSI GHOST UNIT 10 VS 30 MENIT ===
-                            $db_selisih_qty = abs((int)$selisih_qty);
-                            // Ambil selisih uang secara absolut untuk hitungan.
-                            $db_selisih_rp = abs((int)$selisih_setoran); 
+                            // === LOGIKA DETEKSI GHOST HUNTER (PENYEMPURNAAN) ===
+                            $db_selisih_qty = (int)$selisih_qty;
+                            $db_selisih_rp  = (int)$selisih_setoran;
 
-                            // Qty yang hilang berdasarkan selisih database
-                            $ghost_qty = $db_selisih_qty;
-                            
                             $ghost_10 = 0;
                             $ghost_30 = 0;
 
-                            if ($ghost_qty > 0) {
-                                // Nilai uang yang harus dijelaskan oleh Ghost Unit
-                                $ghost_rp = $db_selisih_rp;
+                            if ($db_selisih_qty < 0) {
+                                $target_qty = abs($db_selisih_qty);
+                                $target_rp  = abs($db_selisih_rp);
 
-                                // Matematika 2 Variabel:
-                                // x + y = ghost_qty
-                                // (price10)x + (price30)y = ghost_rp
-                                // y = (ghost_rp - price10*ghost_qty) / (price30 - price10)
-                                if ($ghost_rp >= 0) {
-                                     $numerator = $ghost_rp - ($ghost_qty * $price10);
-                                     $divisor = $price30 - $price10; // 15000
-                                     
-                                     if ($divisor != 0 && $numerator % $divisor == 0) {
-                                         // Jika hasil bagi bulat, berarti kombinasi valid
-                                         $ghost_30 = $numerator / $divisor;
-                                         $ghost_10 = $ghost_qty - $ghost_30;
-                                     } else {
-                                         // Fallback logika jika nominal uang tidak pas (manual)
-                                         // Cek extreme case
-                                         if ($ghost_rp == $price30 * $ghost_qty) {
-                                             $ghost_30 = $ghost_qty;
-                                         } elseif ($ghost_rp == $price10 * $ghost_qty) {
-                                             $ghost_10 = $ghost_qty;
-                                         }
-                                     }
+                                if ($target_rp > 0) {
+                                    $numerator = $target_rp - ($target_qty * $price10);
+                                    $divisor = $price30 - $price10;
+
+                                    if ($divisor != 0) {
+                                        $y = $numerator / $divisor;
+                                        if ($y >= 0 && $y <= $target_qty && abs($y - round($y)) < 0.00001) {
+                                            $ghost_30 = (int)round($y);
+                                            $ghost_10 = $target_qty - $ghost_30;
+                                        } elseif ($numerator == 0) {
+                                            $ghost_10 = $target_qty;
+                                        }
+                                    }
+
+                                    if ($ghost_10 == 0 && $ghost_30 == 0) {
+                                        if ($target_rp == ($target_qty * $price30)) {
+                                            $ghost_30 = $target_qty;
+                                        } elseif ($target_rp == ($target_qty * $price10)) {
+                                            $ghost_10 = $target_qty;
+                                        }
+                                    }
                                 }
                             }
                             // ===============================================
@@ -1315,15 +1311,15 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     <?php endif; ?>
 
                                     <?php
-                                        $ghost_10_rem = max(0, (int)$rep['ghost_10'] - (int)($rep['unreported_10'] ?? 0));
-                                        $ghost_30_rem = max(0, (int)$rep['ghost_30'] - (int)($rep['unreported_30'] ?? 0));
+                                        $ghost_10_rem = (int)$rep['ghost_10'];
+                                        $ghost_30_rem = (int)$rep['ghost_30'];
                                         $ghost_parts = [];
                                         if ($ghost_10_rem > 0) $ghost_parts[] = $ghost_10_rem . ' unit (10m)';
                                         if ($ghost_30_rem > 0) $ghost_parts[] = $ghost_30_rem . ' unit (30m)';
                                     ?>
                                     <?php if (!empty($ghost_parts)): ?>
                                         <div style="color:#c2410c; font-size:11px; margin-top:2px; font-style:italic;">
-                                            <i class="fa fa-search"></i> <b>Indikasi Selisih Uang (Auto-Detect):</b>
+                                            <i class="fa fa-search"></i> <b>Indikasi Sisa Selisih (Auto-Detect):</b>
                                             <?= implode(', ', $ghost_parts) ?> hilang/belum input.
                                         </div>
                                     <?php endif; ?>
