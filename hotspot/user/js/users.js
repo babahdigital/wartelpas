@@ -275,17 +275,13 @@
     const isAdmin = !!window.isSuperAdmin;
     const firstMessage = `
       <div style="text-align:left;">
-        <div style="font-weight:600; font-size:15px; margin-bottom:10px; color:#fff;">
-          Blok Target: <span style="color:#f39c12">${blokLabel}</span>
+        <div style="font-weight:600; font-size:15px; margin-bottom:8px; color:#fff;">
+          Target Penghapusan: <span style="color:#f39c12; font-size:16px;">${blokLabel}</span>
         </div>
-        <div style="font-size:13px; color:#b8c7ce; margin-bottom:10px;">
-          Pilih metode penghapusan:
+        <div style="font-size:13px; color:#b8c7ce; margin-bottom:15px;">
+          Silakan pilih metode penghapusan di bawah ini:
         </div>
-        <ul class="popup-desc-list">
-          <li><strong>Hapus Router Saja:</strong> User hilang di MikroTik agar tidak bisa login lagi. Data laporan (uang/history) AMAN.</li>
-          <li><strong>Hapus Total:</strong> Hapus user di MikroTik DAN hapus semua jejak uang/history di database. <strong>Data hilang permanen.</strong></li>
-        </ul>
-        ${isAdmin ? '' : '<div class="popup-note"><i class="fa fa-lock"></i> Hapus Total hanya untuk Superadmin.</div>'}
+        ${isAdmin ? '' : '<div class="popup-note"><i class="fa fa-lock"></i> Hapus Total dikunci (Khusus Superadmin).</div>'}
       </div>`;
     const choice = await showOverlayChoice({
       title: 'Hapus Blok Voucher',
@@ -293,28 +289,46 @@
       type: 'warning',
       layout: 'vertical',
       buttons: [
-        {
-          label: '<i class="fa fa-server"></i> Hapus Router Saja (Aman)',
-          value: 'router',
-          className: 'overlay-btn-warning'
+        { 
+          label: `
+            <i class="fa fa-server"></i>
+            <div class="btn-rich-text">
+              <span class="btn-rich-title">Hapus Router Saja (Aman)</span>
+              <span class="btn-rich-desc">User offline, Laporan/Uang TETAP ADA.</span>
+            </div>`,
+          value: 'router', 
+          className: 'overlay-btn-warning' 
         },
-        {
-          label: '<i class="fa fa-trash"></i> Hapus Total (Router + DB)',
-          value: 'full',
-          className: 'overlay-btn-danger',
-          disabled: !isAdmin
+        { 
+          label: `
+            <i class="fa fa-trash"></i>
+            <div class="btn-rich-text">
+              <span class="btn-rich-title">Hapus Total (Router + DB)</span>
+              <span class="btn-rich-desc">Hapus user & HAPUS SEMUA JEJAK UANG.</span>
+            </div>`,
+          value: 'full', 
+          className: 'overlay-btn-danger', 
+          disabled: !isAdmin 
         },
-        { label: 'Batal', value: 'cancel', className: 'overlay-btn-muted' }
+        { 
+          label: `
+            <i class="fa fa-times"></i>
+            <div class="btn-rich-text">
+              <span class="btn-rich-title">Batal</span>
+            </div>`,
+          value: 'cancel', 
+          className: 'overlay-btn-muted' 
+        }
       ]
     });
     if (!choice || choice === 'cancel') return;
     if (choice === 'router') {
       const detail = `
         <div style="text-align:center;">
-          <div style="font-size:16px; margin-bottom:10px;">Konfirmasi Akhir</div>
-          <div style="color:#cbd5e1; margin-bottom:15px;">
-            Hapus user di Router untuk <strong>${blokLabel}</strong>?<br>
-            User online tidak akan terputus. Data penjualan tetap ada.
+          <div style="font-size:16px; margin-bottom:10px;">Konfirmasi Eksekusi</div>
+          <div style="color:#cbd5e1; margin-bottom:15px; font-size:13px;">
+            Anda yakin menghapus user <strong>Router</strong> untuk blok <strong>${blokLabel}</strong>?<br>
+            <span style="color:#34d399; font-size:12px;">(Laporan Keuangan Aman)</span>
           </div>
         </div>`;
       const ok = await showOverlayChoice({
@@ -323,7 +337,7 @@
         type: 'warning',
         buttons: [
           { label: 'Batal', value: false, className: 'overlay-btn-muted' },
-          { label: '<i class="fa fa-check"></i> Ya, Eksekusi', value: true, className: 'overlay-btn-warning' }
+          { label: 'Ya, Eksekusi', value: true, className: 'overlay-btn-warning' }
         ]
       });
       if (ok !== true) return;
@@ -334,14 +348,15 @@
     if (choice === 'full') {
       const detail = `
         <div style="text-align:center;">
-          <div style="font-size:18px; color:#ef4444; margin-bottom:10px; font-weight:bold;">PERINGATAN KERAS!</div>
+          <div style="font-size:18px; color:#ef4444; margin-bottom:10px; font-weight:bold;">PERINGATAN BAHAYA!</div>
           <div style="color:#e2e8f0; margin-bottom:15px; line-height:1.5;">
             Anda akan menghapus <strong>${blokLabel}</strong> secara PERMANEN.<br><br>
-            <span style="color:#fca5a5;">
-            • Semua History Login Hilang<br>
-            • Semua Data Penjualan Hilang<br>
-            • User di Router Hilang
-            </span>
+            <div style="background:rgba(220, 38, 38, 0.2); border:1px solid #dc2626; padding:10px; border-radius:6px; text-align:left; font-size:13px;">
+              <i class="fa fa-exclamation-triangle" style="color:#fca5a5"></i> <strong>Efek Hapus Total:</strong><br>
+              1. User hilang dari Router.<br>
+              2. History Login hilang dari Database.<br>
+              3. <strong>Data Penjualan/Uang HILANG.</strong>
+            </div>
           </div>
           <div style="font-size:12px; color:#cbd5e1;">Tindakan ini tidak bisa dibatalkan.</div>
         </div>`;
@@ -351,7 +366,7 @@
         type: 'danger',
         buttons: [
           { label: 'Batal', value: false, className: 'overlay-btn-muted' },
-          { label: '<i class="fa fa-bomb"></i> Ya, Hancurkan Data', value: true, className: 'overlay-btn-danger' }
+          { label: 'Ya, HAPUS PERMANEN', value: true, className: 'overlay-btn-danger' }
         ]
       });
       if (ok !== true) return;
