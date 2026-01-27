@@ -1,5 +1,4 @@
 <?php
-if (!function_exists('format_comment_display')) {
 // Helper: Format comment untuk display
 function format_comment_display($comment) {
   if (empty($comment)) return '-';
@@ -302,6 +301,4 @@ if (!function_exists('resolve_profile_from_history')) {
     }
     return '';
   }
-}
-
 }
