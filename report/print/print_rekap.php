@@ -756,7 +756,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         @media print { 
             .toolbar { display:none; } 
             .audit-summary-box { page-break-inside: avoid; }
-            .dul-gap { margin-bottom: 2% !important; }
+            .dul-gap { margin-bottom: 20% !important; }
             body { zoom: 0.9; }
         }
     </style>
