@@ -15,26 +15,28 @@ if (!function_exists('format_comment_display')) {
 }
 
 // Helper: Ekstrak nama blok dari comment
-function extract_blok_name($comment) {
-  if (empty($comment)) return '';
-  if (preg_match('/\bblok\s*[-_]*\s*([A-Za-z0-9]+)(?:\s*[-_]*\s*([0-9]+))?/i', $comment, $m)) {
-    $raw = strtoupper($m[1] . ($m[2] ?? ''));
-    $raw = strtoupper(preg_replace('/[^A-Z0-9]/', '', $raw));
-    $raw = preg_replace('/^BLOK/', '', $raw);
-    if (preg_match('/^([A-Z]+)/', $raw, $mx)) {
-      $raw = $mx[1];
+if (!function_exists('extract_blok_name')) {
+  function extract_blok_name($comment) {
+    if (empty($comment)) return '';
+    if (preg_match('/\bblok\s*[-_]*\s*([A-Za-z0-9]+)(?:\s*[-_]*\s*([0-9]+))?/i', $comment, $m)) {
+      $raw = strtoupper($m[1] . ($m[2] ?? ''));
+      $raw = strtoupper(preg_replace('/[^A-Z0-9]/', '', $raw));
+      $raw = preg_replace('/^BLOK/', '', $raw);
+      if (preg_match('/^([A-Z]+)/', $raw, $mx)) {
+        $raw = $mx[1];
+      }
+      if ($raw !== '') return 'BLOK-' . $raw;
     }
-    if ($raw !== '') return 'BLOK-' . $raw;
-  }
-  if (preg_match('/\b([A-Z](?:[-\s]?\d{1,2})?)\b/', $comment, $m)) {
-    $candidate = strtoupper(trim($m[1]));
-    if (strlen($candidate) <= 5) {
-      $candidate = preg_replace('/\s+/', '', $candidate);
-      $candidate = preg_replace('/^-+/', '', $candidate);
-      return 'BLOK-' . $candidate;
+    if (preg_match('/\b([A-Z](?:[-\s]?\d{1,2})?)\b/', $comment, $m)) {
+      $candidate = strtoupper(trim($m[1]));
+      if (strlen($candidate) <= 5) {
+        $candidate = preg_replace('/\s+/', '', $candidate);
+        $candidate = preg_replace('/^-+/', '', $candidate);
+        return 'BLOK-' . $candidate;
+      }
     }
+    return '';
   }
-  return '';
 }
 
 // Helper: Ekstrak IP/MAC dari comment (format: IP:... | MAC:...)
