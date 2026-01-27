@@ -336,8 +336,11 @@
                     <td>
                       <?php
                         $display_profile = $u['profile'] ?? '';
-                        if ($display_profile === '' && !empty($u['profile_kind']) && $u['profile_kind'] !== 'other') {
-                          $display_profile = $u['profile_kind'] . ' Menit';
+                        $display_profile_lower = strtolower($display_profile);
+                        if (($display_profile === '' || $display_profile_lower === 'default') && !empty($u['profile_kind']) && $u['profile_kind'] !== 'other') {
+                          $status_upper = strtoupper($u['status'] ?? '');
+                          $suffix = in_array($status_upper, ['RUSAK', 'RETUR'], true) ? ' Menit (Hist)' : ' Menit';
+                          $display_profile = $u['profile_kind'] . $suffix;
                         }
                       ?>
                       <span class="badge badge-dark border border-secondary p-1"><?= htmlspecialchars($display_profile) ?></span>

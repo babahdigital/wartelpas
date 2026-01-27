@@ -649,38 +649,43 @@ foreach($all_users as $u) {
         }
     }
 
-    $profile_source = $u['profile'] ?? '';
-    if (in_array($status, ['RUSAK','RETUR'], true) && !empty($hist['validity'])) {
-      $db_kind = detect_profile_kind_summary($hist['validity']);
-      if ($db_kind !== 'other') {
-        $profile_source = $hist['validity'];
+    $profile_source_raw = $u['profile'] ?? '';
+    $profile_kind_final = detect_profile_kind_unified($profile_source_raw, $comment, $f_blok, $uptime);
+
+    if (in_array($status, ['RUSAK','RETUR'], true)) {
+      $found_in_history = false;
+
+      if (!empty($hist['validity'])) {
+        $db_kind = detect_profile_kind_summary($hist['validity']);
+        if ($db_kind !== 'other') {
+          $profile_kind_final = $db_kind;
+          $found_in_history = true;
+        }
+      }
+
+      if (!$found_in_history) {
+        $check_comment = !empty($hist['raw_comment']) ? $hist['raw_comment'] : $comment;
+        $comm_kind = detect_profile_kind_from_comment($check_comment);
+        if ($comm_kind !== 'other') {
+          $profile_kind_final = $comm_kind;
+        } elseif (preg_match('/(10|30)/', (string)$f_blok, $m_blok)) {
+          $profile_kind_final = $m_blok[1];
+        }
+      }
+
+      if (($u['profile'] ?? '') === 'default' || empty($u['profile'])) {
+        if ($profile_kind_final !== 'other') {
+          $u['profile'] = $profile_kind_final . ' Menit (Hist)';
+        }
       }
     }
 
-    $profile_kind = detect_profile_kind_unified($profile_source, $comment, $f_blok, $uptime);
-    $profile_kind_filter = $profile_kind;
-    if ($req_status === 'ready') {
-      $profile_kind_filter = detect_profile_kind_summary($u['profile'] ?? '');
-      if ($profile_kind_filter === 'other') {
-        $profile_kind_filter = detect_profile_kind_from_comment($comment);
-      }
+    if ($status === 'READY' && $profile_kind_final === 'other') {
+      $profile_kind_final = detect_profile_kind_from_comment($comment);
     }
-    if ($profile_kind_filter === 'other' && in_array($status, ['RUSAK','RETUR'], true)) {
-      $hist_validity = (string)($hist['validity'] ?? '');
-      $profile_hint = resolve_profile_from_history($comment, $hist_validity, $uptime);
-      $fallback_kind = detect_profile_kind_summary($profile_hint);
-      if ($fallback_kind === 'other') {
-        $fallback_kind = detect_profile_kind_from_comment($profile_hint);
-      }
-      if ($fallback_kind === 'other') {
-        if (preg_match('/\b10\b/', (string)$comment) || preg_match('/\b10\b/', (string)$f_blok)) $fallback_kind = '10';
-        elseif (preg_match('/\b30\b/', (string)$comment) || preg_match('/\b30\b/', (string)$f_blok)) $fallback_kind = '30';
-      }
-      if ($fallback_kind !== 'other') {
-        $profile_kind_filter = $fallback_kind;
-        $profile_kind = $fallback_kind;
-      }
-    }
+
+    $profile_kind = $profile_kind_final;
+    $profile_kind_filter = $profile_kind_final;
 
     // Filter blok
     if ($req_comm != '') {
