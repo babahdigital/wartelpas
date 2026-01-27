@@ -449,14 +449,6 @@ foreach ($rows as $r) {
         $status = $status_db;
     }
 
-    if ($status === 'retur') {
-        $has_retur_marker = (strpos($cmt_low, 'retur') !== false);
-        $has_rusak_marker = (strpos($cmt_low, 'rusak') !== false) || ($lh_status === 'rusak') || ((int)($r['is_rusak'] ?? 0) === 1);
-        if (!$has_retur_marker && $has_rusak_marker) {
-            $status = 'rusak';
-        }
-    }
-
     if (in_array($status, ['rusak', 'retur', 'invalid'], true) && $username !== '') {
         $kind = detect_profile_minutes($profile);
         $inc_key = $username . '|' . $kind . '|' . $status;
@@ -885,8 +877,6 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $profile_qty = [];
                             $profile10_items = [];
                             $profile30_items = [];
-                            $profile10_display_items = [];
-                            $profile30_display_items = [];
                             $profile10_sum = 0;
                             $profile30_sum = 0;
                             $cnt_rusak_10 = 0;
@@ -901,14 +891,6 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $manual_users_map = [];
                             $audit_block_key = normalize_block_name($ar['blok_name'] ?? '', (string)($ar['comment'] ?? ''));
                             $system_incidents = $system_incidents_by_block[$audit_block_key] ?? [];
-                            $system_status_map = [];
-                            if (!empty($system_incidents)) {
-                                foreach ($system_incidents as $inc) {
-                                    $inc_user = trim((string)($inc['username'] ?? ''));
-                                    if ($inc_user === '') continue;
-                                    $system_status_map[strtolower($inc_user)] = normalize_status_value($inc['status'] ?? '');
-                                }
-                            }
 
                             if (!empty($ar['user_evidence'])) {
                                 $evidence = json_decode((string)$ar['user_evidence'], true);
@@ -929,10 +911,6 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             $kind = (string)($ud['profile_kind'] ?? '10');
                                             // Collecting data
                                             $u_status = normalize_status_value($ud['last_status'] ?? '');
-                                            $uname_key = strtolower($uname);
-                                            if (isset($system_status_map[$uname_key]) && $system_status_map[$uname_key] !== '') {
-                                                $u_status = $system_status_map[$uname_key];
-                                            }
                                             if (!in_array($u_status, ['rusak', 'retur', 'invalid'], true)) {
                                                 $u_status = 'anomaly';
                                             }
@@ -944,12 +922,11 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                                 'bytes' => $lb
                                             ];
 
-                                            $manual_users_map[$uname_key] = true;
+                                            $manual_users_map[strtolower($uname)] = true;
 
                                             if ($kind === '30') {
                                                 $profile30_sum += $price_val;
                                                 $profile30_items[] = $item;
-                                                $profile30_display_items[] = $item;
                                                 if ($u_status === 'rusak') $cnt_rusak_30++;
                                                 if ($u_status === 'retur') $cnt_retur_30++;
                                                 if ($u_status === 'invalid') $cnt_invalid_30++;
@@ -957,7 +934,6 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             } else {
                                                 $profile10_sum += $price_val;
                                                 $profile10_items[] = $item;
-                                                $profile10_display_items[] = $item;
                                                 if ($u_status === 'rusak') $cnt_rusak_10++;
                                                 if ($u_status === 'retur') $cnt_retur_10++;
                                                 if ($u_status === 'invalid') $cnt_invalid_10++;
@@ -1004,14 +980,12 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     if ($kind === '30') {
                                         $profile30_sum += $price_val;
                                         $profile30_items[] = $item;
-                                        $profile30_display_items[] = $item;
                                         if ($u_status === 'rusak') $cnt_rusak_30++;
                                         if ($u_status === 'retur') $cnt_retur_30++;
                                         if ($u_status === 'invalid') $cnt_invalid_30++;
                                     } else {
                                         $profile10_sum += $price_val;
                                         $profile10_items[] = $item;
-                                        $profile10_display_items[] = $item;
                                         if ($u_status === 'rusak') $cnt_rusak_10++;
                                         if ($u_status === 'retur') $cnt_retur_10++;
                                         if ($u_status === 'invalid') $cnt_invalid_10++;
@@ -1019,13 +993,13 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 }
                             }
                             // Generate HTML Tables using helper
-                            $p10_us = generate_audit_cell($profile10_display_items, 'label', 'center');
-                            $p10_up = generate_audit_cell($profile10_display_items, 'uptime', 'center');
-                            $p10_bt = generate_audit_cell($profile10_display_items, 'bytes', 'center');
+                            $p10_us = generate_audit_cell($profile10_items, 'label', 'center');
+                            $p10_up = generate_audit_cell($profile10_items, 'uptime', 'center');
+                            $p10_bt = generate_audit_cell($profile10_items, 'bytes', 'center');
                             
-                            $p30_us = generate_audit_cell($profile30_display_items, 'label', 'center');
-                            $p30_up = generate_audit_cell($profile30_display_items, 'uptime', 'center');
-                            $p30_bt = generate_audit_cell($profile30_display_items, 'bytes', 'center');
+                            $p30_us = generate_audit_cell($profile30_items, 'label', 'center');
+                            $p30_up = generate_audit_cell($profile30_items, 'uptime', 'center');
+                            $p30_bt = generate_audit_cell($profile30_items, 'bytes', 'center');
 
                             $p10_qty = (int)($profile_qty['qty_10'] ?? 0);
                             $p30_qty = (int)($profile_qty['qty_30'] ?? 0);
