@@ -250,7 +250,7 @@
                 $print_all_url = './hotspot/print/print_list.php?' . http_build_query($print_all_params);
               ?>
               <?php if ($can_print_list || $print_code_url !== ''): ?>
-                <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.openUnifiedPrintPopup && window.openUnifiedPrintPopup({ codeUrl: '<?= $print_code_url ?>', blok: '<?= htmlspecialchars($req_comm, ENT_QUOTES) ?>' })">
+                <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.openUnifiedPrintPopupWithCode && window.openUnifiedPrintPopupWithCode('<?= $print_code_url ?>','<?= htmlspecialchars($req_comm, ENT_QUOTES) ?>')">
                   <i class="fa fa-print"></i> Print
                 </button>
               <?php endif; ?>
@@ -264,6 +264,11 @@
                   <i class="fa fa-trash"></i> Hapus Blok
                 </button>
               <?php endif; ?>
+            <?php endif; ?>
+            <?php if ($req_comm == '' && $can_print_list): ?>
+              <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.openPrintPopup && window.openPrintPopup()">
+                <i class="fa fa-print"></i> Print
+              </button>
             <?php endif; ?>
           </div>
         </form>
@@ -532,5 +537,21 @@
     }
     if (listUrl) window.open(listUrl, '_blank');
   }
+
+  function openUnifiedPrintPopupWithCode(codeUrl, blokLabel) {
+    const listUrl = buildPrintListUrl();
+    if (window.openUnifiedPrintPopup) {
+      window.openUnifiedPrintPopup({
+        listUrl,
+        codeUrl: codeUrl || '',
+        blok: blokLabel || ''
+      });
+      return;
+    }
+    if (listUrl) window.open(listUrl, '_blank');
+  }
+
+  window.openPrintPopup = openPrintPopup;
+  window.openUnifiedPrintPopupWithCode = openUnifiedPrintPopupWithCode;
 </script>
 <script src="./hotspot/user/js/users.js"></script>
