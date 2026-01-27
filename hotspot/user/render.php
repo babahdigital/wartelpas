@@ -413,7 +413,8 @@
                         <?php endif; ?>
                       <?php endif; ?>
                       <?php if (!empty($is_superadmin)): ?>
-                        <button type="button" class="btn-act btn-act-delete" onclick="actionRequest('./?hotspot=users&action=delete_user_full&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Hapus total user <?= htmlspecialchars($u['name']) ?> (Router + DB)?')" title="Hapus Total"><i class="fa fa-trash"></i></button>
+                        <?php $retur_pair_flag = ($is_retur || !empty($u['retur_ref_user']) || !empty($u['retur_ref'])); ?>
+                        <button type="button" class="btn-act btn-act-delete" onclick="actionRequest('./?hotspot=users&action=delete_user_full&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Hapus total user <?= htmlspecialchars($u['name']) ?> (Router + DB)?<?= $retur_pair_flag ? ' [RETUR_PAIR]' : '' ?>')" title="Hapus Total"><i class="fa fa-trash"></i></button>
                       <?php endif; ?>
                     </td>
                   </tr>

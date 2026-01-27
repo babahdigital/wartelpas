@@ -563,6 +563,16 @@
       if (msgLower.includes('hapus total user')) {
         const match = confirmMsg.match(/user\s+([^\s]+)/i);
         const userName = match ? match[1] : 'Target';
+        const hasReturPair = confirmMsg.includes('[RETUR_PAIR]');
+        const returNote = hasReturPair ? `
+             <div class="popup-info-box purple" style="margin-top:12px;">
+               <i class="fa fa-exchange" style="font-size:18px; color:#a569bd; margin-top:2px;"></i>
+               <div>
+                 <strong>Terindikasi Retur:</strong><br>
+                 Sistem akan menghapus <strong>user lama</strong> dan <strong>user hasil retur</strong> sekaligus.
+               </div>
+             </div>
+        ` : '';
         const detailMsg = `
           <div style="text-align:left;">
              <div style="margin-bottom:10px; color:#cbd5e1;">Anda akan menghapus user:</div>
@@ -573,6 +583,7 @@
                <i class="fa fa-exclamation-triangle"></i> <strong>Peringatan:</strong><br>
                Tindakan ini akan menghapus user dari MikroTik DAN menghapus seluruh riwayat keuangan/login di database. Data tidak bisa dikembalikan.
              </div>
+             ${returNote}
           </div>
         `;
         const ok = await showOverlayChoice({
