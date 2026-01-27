@@ -794,8 +794,29 @@
             }
           }, 500);
         }
-        if (url.includes('action=batch_delete')) {
-          window.location.href = './?hotspot=users&session=' + encodeURIComponent(usersSession);
+        if (url.includes('action=batch_delete') || url.includes('action=delete_block_full')) {
+          const msg = data.message || 'Blok berhasil dihapus.';
+          await showOverlayChoice({
+            title: 'Sukses',
+            messageHtml: `
+              <div style="text-align:center;">
+                <div style="font-size:40px; color:#10b981; margin-bottom:10px;"><i class="fa fa-check-circle"></i></div>
+                <div style="font-size:16px; font-weight:bold; color:#fff; margin-bottom:8px;">Berhasil!</div>
+                <div style="color:#e2e8f0; margin-bottom:15px;">${msg}</div>
+              </div>`,
+            type: 'info',
+            buttons: [
+              {
+                label: 'Tutup & Reload',
+                value: true,
+                className: 'overlay-btn-success',
+                onClick: () => {
+                  window.location.href = './?hotspot=users&session=' + encodeURIComponent(usersSession);
+                }
+              }
+            ],
+            lockClose: true
+          });
           return;
         }
         if (url.includes('action=delete_status')) {
@@ -814,8 +835,29 @@
         fetchUsers(true, false);
       } else if (!data) {
         window.showActionPopup('success', 'Berhasil diproses.');
-        if (url.includes('action=batch_delete')) {
-          window.location.href = './?hotspot=users&session=' + encodeURIComponent(usersSession);
+        if (url.includes('action=batch_delete') || url.includes('action=delete_block_full')) {
+          const msg = 'Blok berhasil dihapus.';
+          await showOverlayChoice({
+            title: 'Sukses',
+            messageHtml: `
+              <div style="text-align:center;">
+                <div style="font-size:40px; color:#10b981; margin-bottom:10px;"><i class="fa fa-check-circle"></i></div>
+                <div style="font-size:16px; font-weight:bold; color:#fff; margin-bottom:8px;">Berhasil!</div>
+                <div style="color:#e2e8f0; margin-bottom:15px;">${msg}</div>
+              </div>`,
+            type: 'info',
+            buttons: [
+              {
+                label: 'Tutup & Reload',
+                value: true,
+                className: 'overlay-btn-success',
+                onClick: () => {
+                  window.location.href = './?hotspot=users&session=' + encodeURIComponent(usersSession);
+                }
+              }
+            ],
+            lockClose: true
+          });
           return;
         }
         if (url.includes('action=delete_status')) {
