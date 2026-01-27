@@ -320,11 +320,13 @@
             <?php endif; ?>
             <?php if ($req_comm != ''): ?>
               <?php if ($can_print_status): ?>
-                <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('./voucher/print.php?status=<?= $req_status ?>&blok=<?= urlencode($req_comm) ?><?= $profile_param ?>&small=yes&session=<?= $session ?>','_blank').print()">
+                <?php $print_code_url = './voucher/print.php?status=' . urlencode($req_status) . '&blok=' . urlencode($req_comm) . $profile_param . '&small=yes&session=' . urlencode($session); ?>
+                <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.openPrintCodePopup && window.openPrintCodePopup('<?= $print_code_url ?>','<?= htmlspecialchars($req_comm, ENT_QUOTES) ?>')">
                   <i class="fa fa-print"></i> Print Kode
                 </button>
               <?php elseif ($can_print_block): ?>
-                <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.open('./voucher/print.php?id=<?= urlencode($req_comm) ?><?= $profile_param ?>&small=yes&session=<?= $session ?>','_blank').print()">
+                <?php $print_code_url = './voucher/print.php?id=' . urlencode($req_comm) . $profile_param . '&small=yes&session=' . urlencode($session); ?>
+                <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.openPrintCodePopup && window.openPrintCodePopup('<?= $print_code_url ?>','<?= htmlspecialchars($req_comm, ENT_QUOTES) ?>')">
                   <i class="fa fa-print"></i> Print Kode
                 </button>
               <?php endif; ?>
@@ -611,6 +613,18 @@
     if (blok) url += '&blok=' + encodeURIComponent(blok);
     url += '&show=' + encodeURIComponent(show);
     if (dateVal) url += '&date=' + encodeURIComponent(dateVal);
+
+    if (window.openPrintListPopup) {
+      window.openPrintListPopup({
+        url,
+        status: st,
+        blok,
+        profile: prof,
+        show,
+        date: dateVal
+      });
+      return;
+    }
 
     window.open(url, '_blank');
   }
