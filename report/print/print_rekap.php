@@ -158,7 +158,7 @@ function calc_audit_adjusted_setoran(array $ar) {
     if (!empty($ar['user_evidence'])) {
         $evidence = json_decode((string)$ar['user_evidence'], true);
         if (is_array($evidence)) {
-            $has_manual_evidence = true;
+            $has_manual_evidence = !empty($evidence['users']) || !empty($evidence['profile_qty']);
             if (!empty($evidence['profile_qty']) && is_array($evidence['profile_qty'])) {
                 $p10_qty = (int)($evidence['profile_qty']['qty_10'] ?? 0);
                 $p30_qty = (int)($evidence['profile_qty']['qty_30'] ?? 0);
@@ -461,6 +461,7 @@ $total_bandwidth = 0;
 $seen_sales = [];
 $seen_user_day = [];
 $unique_laku_users = [];
+$system_incidents_by_block = [];
 
 foreach ($rows as $r) {
     $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
@@ -532,6 +533,22 @@ foreach ($rows as $r) {
         $status = 'rusak';
     } elseif (in_array($status_db, ['online', 'terpakai', 'ready'], true)) {
         $status = $status_db;
+    }
+
+    if (in_array($status, ['rusak', 'retur', 'invalid'], true) && $username !== '') {
+        $kind = detect_profile_minutes($profile);
+        $inc_key = $username . '|' . $kind . '|' . $status;
+        if (!isset($system_incidents_by_block[$block])) $system_incidents_by_block[$block] = [];
+        if (!isset($system_incidents_by_block[$block][$inc_key])) {
+            $system_incidents_by_block[$block][$inc_key] = [
+                'username' => $username,
+                'status' => $status,
+                'profile_kind' => $kind,
+                'last_uptime' => '-',
+                'last_bytes' => $bytes,
+                'price' => $price
+            ];
+        }
     }
 
     $gross_add = 0;
@@ -957,11 +974,13 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $cnt_invalid_10 = 0;
                             $cnt_invalid_30 = 0;
                             $has_manual_evidence = false;
+                            $audit_block_key = normalize_block_name($ar['blok_name'] ?? '', (string)($ar['comment'] ?? ''));
+                            $system_incidents = $system_incidents_by_block[$audit_block_key] ?? [];
 
                             if (!empty($ar['user_evidence'])) {
                                 $evidence = json_decode((string)$ar['user_evidence'], true);
                                 if (is_array($evidence)) {
-                                    $has_manual_evidence = true;
+                                    $has_manual_evidence = !empty($evidence['users']) || !empty($evidence['profile_qty']);
                                     if (!empty($evidence['profile_qty']) && is_array($evidence['profile_qty'])) {
                                         $profile_qty = $evidence['profile_qty'];
                                     }
@@ -1012,6 +1031,39 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                         $profile10['login'][] = $cnt . 'x';
                                         $profile10['total'][] = number_format($price_val,0,',','.');
                                         $profile10_sum += $price_val;
+                                    }
+                                }
+                            }
+
+                            if (!$has_manual_evidence && !empty($system_incidents)) {
+                                foreach ($system_incidents as $inc) {
+                                    $uname = (string)($inc['username'] ?? '-');
+                                    $u_status = normalize_status_value($inc['status'] ?? '');
+                                    $kind = (string)($inc['profile_kind'] ?? '10');
+                                    $upt = trim((string)($inc['last_uptime'] ?? ''));
+                                    $lb = format_bytes_short((int)($inc['last_bytes'] ?? 0));
+                                    $price_val = (int)($inc['price'] ?? 0);
+                                    $upt = $upt !== '' ? $upt : '-';
+                                    $bucket = ($kind === '30') ? $profile30 : $profile10;
+
+                                    $bucket['user'][] = ['label' => $uname, 'status' => $u_status];
+                                    $bucket['up'][] = $upt;
+                                    $bucket['byte'][] = $lb;
+                                    $bucket['login'][] = '-';
+                                    $bucket['total'][] = number_format($price_val,0,',','.');
+
+                                    if ($kind === '30') {
+                                        $profile30_sum += $price_val;
+                                        $profile30 = $bucket;
+                                        if ($u_status === 'rusak') $cnt_rusak_30++;
+                                        if ($u_status === 'retur') $cnt_retur_30++;
+                                        if ($u_status === 'invalid') $cnt_invalid_30++;
+                                    } else {
+                                        $profile10_sum += $price_val;
+                                        $profile10 = $bucket;
+                                        if ($u_status === 'rusak') $cnt_rusak_10++;
+                                        if ($u_status === 'retur') $cnt_retur_10++;
+                                        if ($u_status === 'invalid') $cnt_invalid_10++;
                                     }
                                 }
                             }
