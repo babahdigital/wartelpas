@@ -143,6 +143,12 @@
             border-color: #383838;
             cursor: default;
         }
+        .form-hint {
+            font-size: 11px;
+            color: #7b7b7b;
+            margin-top: 6px;
+        }
+        .form-hint strong { color: #ddd; }
 
         .form-grid {
             display: grid; 
@@ -346,14 +352,15 @@
                 <label class="form-label"><i class="fa fa-users"></i> Verifikasi User (Audit Manual)</label>
                 <div class="btn-user-select" id="btnTriggerSelect" onclick="openSelectModal()">
                     <div class="select-icon-wrapper">
-                        <i class="fa fa-search text-muted mr-2" style="font-size:14px;"></i> 
-                        <span id="selectLabel">Klik untuk memilih user...</span>
+                        <i class="fa fa-list-ul text-muted mr-2" style="font-size:14px;"></i> 
+                        <span id="selectLabel">Pilih user terpakai & retur...</span>
                     </div>
                     <i class="fa fa-chevron-right text-muted" style="font-size:10px;"></i>
                 </div>
                 <div style="font-size:11px; color:#666; margin-top:5px; padding-left:2px; display:flex; justify-content:space-between;">
                     <span id="summaryText">Belum ada user dipilih</span>
                 </div>
+                <div class="form-hint" id="unreportedInfo">Tidak dilaporkan: <strong>-</strong></div>
             </div>
 
             <!-- Box Fisik Voucher (Grouped) -->
@@ -364,13 +371,14 @@
                 <div class="form-grid">
                     <div>
                         <label class="form-label">10 Menit</label>
-                        <input type="number" id="mainQty10" class="form-control" value="0" readonly title="Dihitung otomatis dari pemilihan user">
+                        <input type="number" id="mainQty10" class="form-control" value="0" title="Dihitung otomatis dari pemilihan user">
                     </div>
                     <div>
                         <label class="form-label">30 Menit</label>
-                        <input type="number" id="mainQty30" class="form-control" value="0" readonly title="Dihitung otomatis dari pemilihan user">
+                        <input type="number" id="mainQty30" class="form-control" value="0" title="Dihitung otomatis dari pemilihan user">
                     </div>
                 </div>
+                <div class="form-hint" id="qtyLockHint">Qty otomatis dari user terpilih. Kosongkan pilihan user untuk edit manual.</div>
             </div>
 
             <!-- Box Total (Otomatis) -->
@@ -381,8 +389,12 @@
                 </div>
                 <div>
                     <label class="form-label text-orange">Total Setoran (Otomatis)</label>
-                    <input type="number" id="mainTotalSetoran" class="form-control" value="0" readonly>
+                    <input type="number" id="mainTotalSetoran" class="form-control" value="0">
                 </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Setoran Bersih (Setelah Pengeluaran)</label>
+                <input type="number" id="mainNetSetoran" class="form-control" value="0" readonly>
             </div>
 
             <!-- Box Pengeluaran (Merah/Opsional) -->
@@ -393,11 +405,11 @@
                 <div class="form-grid">
                     <div>
                         <label class="form-label">Nominal (Rp)</label>
-                        <input type="number" class="form-control" placeholder="0">
+                        <input type="number" id="expenseAmount" class="form-control" placeholder="0">
                     </div>
                     <div>
                         <label class="form-label">Keterangan</label>
-                        <input type="text" class="form-control" placeholder="Contoh: Beli Kertas Thermal">
+                        <input type="text" id="expenseDesc" class="form-control" placeholder="Contoh: Beli Kertas Thermal">
                     </div>
                 </div>
             </div>
@@ -448,16 +460,25 @@
     <script>
         // --- DUMMY DATA ---
         const dummyData = [
-            { id: 1, u: "user10_A", p: "10menit", price: 2000, st: "TERPAKAI", up: "10m" },
-            { id: 2, u: "user10_B", p: "10menit", price: 2000, st: "TERPAKAI", up: "12m" },
-            { id: 3, u: "user10_C", p: "10menit", price: 2000, st: "RETUR", up: "-" },
-            { id: 4, u: "user30_X", p: "30menit", price: 5000, st: "TERPAKAI", up: "28m" },
-            { id: 5, u: "user30_Y", p: "30menit", price: 5000, st: "RETUR", up: "5m" },
-            { id: 6, u: "user30_Z", p: "30menit", price: 5000, st: "TERPAKAI", up: "31m" }
+            { id: 1, u: "user10_A", p: "10menit", price: 2000, st: "TERPAKAI", up: "10m", bt: "120 KB" },
+            { id: 2, u: "user10_B", p: "10menit", price: 2000, st: "TERPAKAI", up: "12m", bt: "85 KB" },
+            { id: 3, u: "user10_C", p: "10menit", price: 2000, st: "RETUR", up: "-", bt: "0 B" },
+            { id: 4, u: "user10_R", p: "10menit", price: 2000, st: "RUSAK", up: "-", bt: "0 B" },
+            { id: 5, u: "user30_X", p: "30menit", price: 5000, st: "TERPAKAI", up: "28m", bt: "320 KB" },
+            { id: 6, u: "user30_Y", p: "30menit", price: 5000, st: "RETUR", up: "5m", bt: "40 KB" },
+            { id: 7, u: "user30_Z", p: "30menit", price: 5000, st: "TERPAKAI", up: "31m", bt: "410 KB" }
         ];
 
         let activeTab = "10menit";
         let selectedSet = new Set();
+        const qty10Input = document.getElementById('mainQty10');
+        const qty30Input = document.getElementById('mainQty30');
+        const totalQtyInput = document.getElementById('mainTotalQty');
+        const totalSetoranInput = document.getElementById('mainTotalSetoran');
+        const netSetoranInput = document.getElementById('mainNetSetoran');
+        const expenseAmountInput = document.getElementById('expenseAmount');
+        const unreportedInfo = document.getElementById('unreportedInfo');
+        const qtyLockHint = document.getElementById('qtyLockHint');
 
         // --- MODAL FUNCTIONS ---
         function openSelectModal() {
@@ -472,13 +493,29 @@
         }
 
         // --- RENDER LOGIC ---
+        function getProfileKeys() {
+            const keys = Array.from(new Set(dummyData.map(d => d.p)));
+            keys.sort();
+            return keys;
+        }
+
+        function getEligibleList() {
+            return dummyData.filter(d => d.st !== 'RUSAK');
+        }
+
         function renderTabs() {
-            const tabs = ["10menit", "30menit"];
+            const tabs = getProfileKeys();
             const container = document.getElementById('tabContainer');
+            if (tabs.length <= 1) {
+                container.style.display = 'none';
+                activeTab = tabs[0] || '';
+                return;
+            }
+            container.style.display = 'flex';
             let html = '';
             
             tabs.forEach(t => {
-                const count = dummyData.filter(d => d.p === t).length;
+                const count = getEligibleList().filter(d => d.p === t).length;
                 const isActive = t === activeTab ? 'active' : '';
                 html += `
                     <div class="tab-btn ${isActive}" onclick="switchTab('${t}')">
@@ -497,7 +534,7 @@
 
         function renderList() {
             const container = document.getElementById('listContainer');
-            const list = dummyData.filter(d => d.p === activeTab);
+            const list = getEligibleList().filter(d => d.p === activeTab || activeTab === '');
             
             let html = '';
             if (list.length === 0) {
@@ -517,7 +554,7 @@
                                     <span style="font-size:9px; background:${badgeColor}; padding:1px 5px; border-radius:3px;">${item.st}</span>
                                 </div>
                                 <div style="font-size:11px; color:#777; margin-top:2px;">
-                                    Uptime: ${item.up} | Rp ${item.price}
+                                    Uptime: ${item.up} | Byte: ${item.bt}
                                 </div>
                             </div>
                             <div class="check-circle">
@@ -541,6 +578,29 @@
             document.getElementById('popupSelectedCount').innerText = selectedSet.size;
         }
 
+        function updateNetSetoran() {
+            const totalVal = parseInt(totalSetoranInput.value || '0', 10) || 0;
+            const expVal = parseInt(expenseAmountInput.value || '0', 10) || 0;
+            const netVal = totalVal - expVal;
+            netSetoranInput.value = netVal >= 0 ? netVal : 0;
+        }
+
+        function updateManualQty() {
+            const q10 = parseInt(qty10Input.value || '0', 10) || 0;
+            const q30 = parseInt(qty30Input.value || '0', 10) || 0;
+            totalQtyInput.value = q10 + q30;
+        }
+
+        function toggleAuditLocks(isLocked) {
+            qty10Input.readOnly = isLocked;
+            qty30Input.readOnly = isLocked;
+            totalSetoranInput.readOnly = isLocked;
+            qtyLockHint.style.color = isLocked ? '#d1b06a' : '#7b7b7b';
+            qtyLockHint.innerHTML = isLocked
+                ? 'Qty terkunci karena user dipilih. Kosongkan pilihan user untuk edit manual.'
+                : 'Qty bisa diisi manual. Pilih user untuk kunci otomatis.';
+        }
+
         // --- APPLY LOGIC ---
         function applySelection() {
             let qty10 = 0, qty30 = 0, totalRp = 0;
@@ -555,15 +615,20 @@
             });
 
             // Update Main Form
-            document.getElementById('mainQty10').value = qty10;
-            document.getElementById('mainQty30').value = qty30;
-            document.getElementById('mainTotalQty').value = qty10 + qty30;
-            document.getElementById('mainTotalSetoran').value = totalRp;
+            qty10Input.value = qty10;
+            qty30Input.value = qty30;
+            totalQtyInput.value = qty10 + qty30;
+            totalSetoranInput.value = totalRp;
+            updateNetSetoran();
+            toggleAuditLocks(selectedSet.size > 0);
 
             // Update UI Trigger Button
             const btn = document.getElementById('btnTriggerSelect');
             const label = document.getElementById('selectLabel');
             const summary = document.getElementById('summaryText');
+            const eligibleCount = getEligibleList().length;
+            const unreported = Math.max(eligibleCount - selectedSet.size, 0);
+            unreportedInfo.innerHTML = `Tidak dilaporkan: <strong>${unreported}</strong>`;
             
             if (selectedSet.size > 0) {
                 btn.classList.add('has-value');
@@ -571,12 +636,25 @@
                 summary.innerHTML = `Total: <b>${selectedSet.size}</b> user | Rp <b>${totalRp}</b>`;
             } else {
                 btn.classList.remove('has-value');
-                label.innerText = "Klik untuk memilih user...";
+                label.innerText = "Pilih user terpakai & retur...";
                 summary.innerText = "Belum ada user dipilih";
+                unreportedInfo.innerHTML = 'Tidak dilaporkan: <strong>-</strong>';
             }
 
             closeSelectModal();
         }
+
+        function initFormBindings() {
+            qty10Input.addEventListener('input', updateManualQty);
+            qty30Input.addEventListener('input', updateManualQty);
+            totalSetoranInput.addEventListener('input', updateNetSetoran);
+            expenseAmountInput.addEventListener('input', updateNetSetoran);
+            toggleAuditLocks(false);
+            updateManualQty();
+            updateNetSetoran();
+        }
+
+        initFormBindings();
 
     </script>
 </body>
