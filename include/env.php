@@ -47,7 +47,11 @@ $env = [
     ],
     'pricing' => [
         'price_10' => 5000,
-        'price_30' => 20000
+        'price_30' => 20000,
+        'profile_prices' => [
+            '10menit' => 5000,
+            '30menit' => 20000
+        ]
     ],
     'profiles' => [
         'profile_10' => '10Menit',

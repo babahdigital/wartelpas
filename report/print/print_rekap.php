@@ -66,17 +66,6 @@ function detect_profile_minutes($profile) {
     return 'OTHER';
 }
 
-function extract_profile_from_comment($comment) {
-    if (empty($comment)) return '';
-    if (preg_match('/\bProfile\s*:\s*([^|]+)/i', $comment, $m)) {
-        return trim($m[1]);
-    }
-    if (preg_match('/\bProfil\s*:\s*([^|]+)/i', $comment, $m)) {
-        return trim($m[1]);
-    }
-    return '';
-}
-
 function format_date_ddmmyyyy($dateStr) {
     $ts = strtotime((string)$dateStr);
     if ($ts === false) return $dateStr;
