@@ -532,10 +532,12 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
 
 <?php if ($req_show === 'harian'): ?>
 <script>
-window.hpDefaults = <?= json_encode($hp_default_map ?? [], JSON_UNESCAPED_UNICODE); ?>;
-window.hpTodayMap = <?= json_encode($hp_today_map ?? [], JSON_UNESCAPED_UNICODE); ?>;
-window.hpDefaultDate = <?= json_encode($filter_date ?? ''); ?>;
+window.hpDefaultCache = <?= json_encode($hp_default_date !== '' ? [$filter_date => $hp_default_map] : [], JSON_UNESCAPED_UNICODE); ?>;
 window.hpDefaultSourceDate = <?= json_encode($hp_default_date ?? ''); ?>;
+window.hpTodayMapByDate = <?= json_encode(!empty($hp_today_map) ? [$filter_date => $hp_today_map] : [], JSON_UNESCAPED_UNICODE); ?>;
+window.hpDefaultDate = <?= json_encode($filter_date ?? ''); ?>;
+window.hpDefaultsUrl = <?= json_encode('report/laporan/services/hp_defaults.php'); ?>;
+window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
 </script>
 <?php if (!empty($hp_error)): ?>
     <div class="card-solid mb-3">
