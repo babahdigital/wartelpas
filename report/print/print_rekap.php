@@ -187,11 +187,11 @@ try {
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
         $res = $db->query("SELECT 
-                sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
-                sh.username, sh.profile, sh.profile_snapshot,
-                sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
-                sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
-                sh.full_raw_data, lh.last_status, lh.last_bytes, lh.last_uptime
+            sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
+            sh.username, sh.profile, sh.profile_snapshot,
+            sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
+            sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
+            sh.full_raw_data, lh.last_status, lh.last_bytes, lh.last_uptime, lh.raw_comment
             FROM sales_history sh
             LEFT JOIN login_history lh ON lh.username = sh.username
             UNION ALL
@@ -200,7 +200,7 @@ try {
                 ls.username, ls.profile, ls.profile_snapshot,
                 ls.price, ls.price_snapshot, ls.sprice_snapshot, ls.validity,
                 ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
-                ls.full_raw_data, lh2.last_status, lh2.last_bytes, lh2.last_uptime
+            ls.full_raw_data, lh2.last_status, lh2.last_bytes, lh2.last_uptime, lh2.raw_comment
             FROM live_sales ls
             LEFT JOIN login_history lh2 ON lh2.username = ls.username
             WHERE ls.sync_status = 'pending'
@@ -388,7 +388,7 @@ foreach ($rows as $r) {
     else $match = (strpos((string)$sale_date, $filter_date) === 0);
     if (!$match) continue;
 
-    $comment = (string)($r['comment'] ?? '');
+    $comment = (string)($r['comment'] ?? ($r['raw_comment'] ?? ''));
     $blok_row = (string)($r['blok_name'] ?? '');
     if ($blok_row === '' && !preg_match('/\bblok\s*[-_]?\s*[A-Za-z0-9]+/i', $comment)) {
         continue;
@@ -507,10 +507,10 @@ foreach ($rows as $r) {
     }
 
     if ($status !== 'invalid') {
-        if (strpos($cmt_low, 'rusak') !== false) {
-            $status = 'rusak';
-        } elseif (strpos($cmt_low, 'retur') !== false) {
+        if (strpos($cmt_low, 'retur') !== false) {
             $status = 'retur';
+        } elseif (strpos($cmt_low, 'rusak') !== false) {
+            $status = 'rusak';
         }
     }
 
