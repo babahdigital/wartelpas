@@ -941,6 +941,11 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                 $audit_summary_report = []; 
                 $price10 = (int)$price10;
                 $price30 = (int)$price30;
+                $profile_keys_ordered = array_values(array_unique($profile_order_keys));
+                $profile_key_1 = $profile_key_1 ?? ($profile_keys_ordered[0] ?? '');
+                $profile_key_2 = $profile_key_2 ?? ($profile_keys_ordered[1] ?? '');
+                $profile_label_1 = $profile_label_1 ?? ($profile_key_1 !== '' ? resolve_profile_label($profile_key_1) : 'Profil 1');
+                $profile_label_2 = $profile_label_2 ?? ($profile_key_2 !== '' ? resolve_profile_label($profile_key_2) : 'Profil 2');
             ?>
             <h2 style="margin-top:25px;">Rekap Audit Penjualan Lapangan</h2>
             <div class="meta">Periode: <?= htmlspecialchars($period_label) ?> | Tanggal: <?= htmlspecialchars(format_date_ddmmyyyy($filter_date)) ?></div>
@@ -948,13 +953,14 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             <table class="rekap-table" style="margin-top:15px;">
                 <thead>
                     <tr>
-                        <th colspan="11">Audit Manual Rekap Harian</th>
+                        <th colspan="15">Audit Manual Rekap Harian</th>
                     </tr>
                     <tr>
                         <th rowspan="2" style="width:90px;">Blok</th>
                         <th colspan="3">Voucher</th>
                         <th colspan="3">Setoran</th>
-                        <th colspan="4">Profil (Semua)</th>
+                        <th colspan="4">Profil <?= htmlspecialchars($profile_label_1) ?></th>
+                        <th colspan="4">Profil <?= htmlspecialchars($profile_label_2) ?></th>
                     </tr>
                     <tr>
                         <th style="width:70px;">Sistem</th>
@@ -967,11 +973,16 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <th style="width:70px;">Up</th>
                         <th style="width:70px;">Byte</th>
                         <th style="width:70px;">QTY</th>
+                        <th style="width:90px;">User</th>
+                        <th style="width:70px;">Up</th>
+                        <th style="width:70px;">Byte</th>
+                        <th style="width:70px;">QTY</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php
-                        $audit_total_profile_qty = 0;
+                        $audit_total_profile_qty_1 = 0;
+                        $audit_total_profile_qty_2 = 0;
                         $audit_total_expected_qty_adj = 0;
                         $audit_total_reported_qty_adj = 0;
                         $audit_total_selisih_qty_adj = 0;
@@ -985,6 +996,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $profile_qty = [];
                             $profile_items = [];
                             $profile_display_items = [];
+                            $profile_items_by_key = [];
+                            $profile_display_by_key = [];
                             $profile_qty_map = [];
                             $cnt_rusak = [];
                             $cnt_unreported = [];
@@ -1063,6 +1076,10 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
                                             $profile_items[] = $item;
                                             $profile_display_items[] = $item;
+                                            if (!isset($profile_items_by_key[$profile_key])) $profile_items_by_key[$profile_key] = [];
+                                            if (!isset($profile_display_by_key[$profile_key])) $profile_display_by_key[$profile_key] = [];
+                                            $profile_items_by_key[$profile_key][] = $item;
+                                            $profile_display_by_key[$profile_key][] = $item;
                                             if (!isset($profile_qty_map[$profile_key])) $profile_qty_map[$profile_key] = 0;
                                             $profile_qty_map[$profile_key]++;
                                             if ($u_status === 'rusak') {
@@ -1089,12 +1106,17 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                         $lb = format_bytes_short((int)($evidence['last_bytes'] ?? 0));
                                         $price_val = (int)($evidence['price'] ?? 0);
                                         $upt = $upt !== '' ? $upt : '-';
-                                        $profile_items[] = [
+                                        $item = [
                                             'label' => '-',
                                             'status' => 'normal',
                                             'uptime' => $upt,
                                             'bytes' => $lb
                                         ];
+                                        $profile_items[] = $item;
+                                        if (!isset($profile_items_by_key['other'])) $profile_items_by_key['other'] = [];
+                                        if (!isset($profile_display_by_key['other'])) $profile_display_by_key['other'] = [];
+                                        $profile_items_by_key['other'][] = $item;
+                                        $profile_display_by_key['other'][] = $item;
                                         if (!isset($profile_qty_map['other'])) $profile_qty_map['other'] = 0;
                                         $profile_qty_map['other']++;
                                     }
@@ -1130,6 +1152,10 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
                                     $profile_items[] = $item;
                                     $profile_display_items[] = $item;
+                                    if (!isset($profile_items_by_key[$profile_key])) $profile_items_by_key[$profile_key] = [];
+                                    if (!isset($profile_display_by_key[$profile_key])) $profile_display_by_key[$profile_key] = [];
+                                    $profile_items_by_key[$profile_key][] = $item;
+                                    $profile_display_by_key[$profile_key][] = $item;
                                     if (!isset($profile_qty_map[$profile_key])) $profile_qty_map[$profile_key] = 0;
                                     $profile_qty_map[$profile_key]++;
                                     if ($u_status === 'rusak') {
@@ -1146,10 +1172,15 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     }
                                 }
                             }
-                            // Generate HTML Tables using helper
-                            $p_us = generate_audit_cell($profile_display_items, 'label', 'center');
-                            $p_up = generate_audit_cell($profile_display_items, 'uptime', 'center');
-                            $p_bt = generate_audit_cell($profile_display_items, 'bytes', 'center');
+                            // Generate HTML Tables using helper (per profil)
+                            $p1_items = $profile_display_by_key[$profile_key_1] ?? [];
+                            $p2_items = $profile_display_by_key[$profile_key_2] ?? [];
+                            $p1_us = generate_audit_cell($p1_items, 'label', 'center');
+                            $p1_up = generate_audit_cell($p1_items, 'uptime', 'center');
+                            $p1_bt = generate_audit_cell($p1_items, 'bytes', 'center');
+                            $p2_us = generate_audit_cell($p2_items, 'label', 'center');
+                            $p2_up = generate_audit_cell($p2_items, 'uptime', 'center');
+                            $p2_bt = generate_audit_cell($p2_items, 'bytes', 'center');
 
                             $profile_qty_display = $profile_qty;
                             if ($has_manual_evidence && !empty($profile_qty_map)) {
@@ -1174,12 +1205,22 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 $manual_display_setoran = (int)($ar['actual_setoran'] ?? 0);
                             }
 
-                            $profile_qty_summary = !empty($profile_qty_display)
-                                ? format_profile_summary($profile_qty_display, $profile_order_keys)
-                                : '-';
-                            $profile_qty_summary_html = htmlspecialchars(str_replace(' | ', "\n", $profile_qty_summary));
-                            $profile_qty_summary_html = nl2br($profile_qty_summary_html);
-                            $audit_total_profile_qty += array_sum($profile_qty_display);
+                            $p1_qty = (int)($profile_qty_display[$profile_key_1] ?? 0);
+                            $p2_qty = (int)($profile_qty_display[$profile_key_2] ?? 0);
+                            if ($has_manual_evidence && !empty($p1_items)) {
+                                $p1_qty = count($profile_items_by_key[$profile_key_1] ?? $p1_items);
+                            } elseif ($p1_qty <= 0 && !empty($p1_items)) {
+                                $p1_qty = count($profile_items_by_key[$profile_key_1] ?? $p1_items);
+                            }
+                            if ($has_manual_evidence && !empty($p2_items)) {
+                                $p2_qty = count($profile_items_by_key[$profile_key_2] ?? $p2_items);
+                            } elseif ($p2_qty <= 0 && !empty($p2_items)) {
+                                $p2_qty = count($profile_items_by_key[$profile_key_2] ?? $p2_items);
+                            }
+                            $p1_qty_display = $p1_qty > 0 ? number_format($p1_qty,0,',','.') : '-';
+                            $p2_qty_display = $p2_qty > 0 ? number_format($p2_qty,0,',','.') : '-';
+                            $audit_total_profile_qty_1 += $p1_qty;
+                            $audit_total_profile_qty_2 += $p2_qty;
 
                             $expected_qty = (int)($ar['expected_qty'] ?? 0);
                             $expected_setoran = (int)($ar['expected_setoran'] ?? 0);
@@ -1272,12 +1313,14 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             <td style="text-align:right;"><?= number_format((int)$manual_display_setoran,0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)$selisih_setoran,0,',','.') ?></td>
                             
-                            <td style="padding:0; text-align: center;"><?= $p_us ?></td>
-                            <td style="padding:0; text-align: center;"><?= $p_up ?></td>
-                            <td style="padding:0; text-align: center;"><?= $p_bt ?></td>
-                            <td style="text-align: left; font-weight:bold; line-height:1.2; padding:6px;">
-                                <?= $profile_qty_summary_html ?>
-                            </td>
+                            <td style="padding:0; text-align: center;"><?= $p1_us ?></td>
+                            <td style="padding:0; text-align: center;"><?= $p1_up ?></td>
+                            <td style="padding:0; text-align: center;"><?= $p1_bt ?></td>
+                            <td style="text-align: center; font-weight:bold;"><?= $p1_qty_display ?></td>
+                            <td style="padding:0; text-align: center;"><?= $p2_us ?></td>
+                            <td style="padding:0; text-align: center;"><?= $p2_up ?></td>
+                            <td style="padding:0; text-align: center;"><?= $p2_bt ?></td>
+                            <td style="text-align: center; font-weight:bold;"><?= $p2_qty_display ?></td>
                         </tr>
                         <?php
                             $audit_total_expected_qty_adj += (int)$expected_adj_qty;
@@ -1297,7 +1340,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <td style="text-align:right;"><b><?= number_format($audit_total_actual_setoran_adj,0,',','.') ?></b></td>
                         <td style="text-align:right;"><b><?= number_format($audit_total_selisih_setoran_adj,0,',','.') ?></b></td>
                         <td colspan="3" style="background:#eee;"></td>
-                        <td style="text-align:center;"><b><?= number_format($audit_total_profile_qty,0,',','.') ?></b></td>
+                        <td style="text-align:center;"><b><?= number_format($audit_total_profile_qty_1,0,',','.') ?></b></td>
+                        <td colspan="3" style="background:#eee;"></td>
+                        <td style="text-align:center;"><b><?= number_format($audit_total_profile_qty_2,0,',','.') ?></b></td>
                     </tr>
                 </tbody>
             </table>
