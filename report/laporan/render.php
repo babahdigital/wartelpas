@@ -807,7 +807,11 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                                 }
                             }
                             $actual_setoran_row = (int)($ar['actual_setoran'] ?? 0);
-                            if ($manual_setoran_override || ($actual_setoran_row > 0 && $actual_setoran_row !== $manual_display_setoran)) {
+                            $manual_setoran_flag = $manual_setoran_override;
+                            if (!$manual_setoran_flag && $actual_setoran_row > 0 && $actual_setoran_row !== $manual_display_setoran) {
+                                $manual_setoran_flag = true;
+                            }
+                            if ($manual_setoran_flag) {
                                 $manual_display_setoran = $actual_setoran_row;
                             }
                             if (!$has_manual_evidence || $manual_display_qty === 0) {
@@ -853,7 +857,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                                     data-date="<?= htmlspecialchars($ar['report_date'] ?? $filter_date); ?>"
                                     data-qty="<?= (int)($ar['reported_qty'] ?? 0); ?>"
                                     data-setoran="<?= (int)($ar['actual_setoran'] ?? 0); ?>"
-                                    data-setoran-manual="<?= $manual_setoran_override ? 1 : 0; ?>"
+                                    data-setoran-manual="<?= $manual_setoran_flag ? 1 : 0; ?>"
                                     data-qty10="<?= (int)$profile_qty_10; ?>"
                                     data-qty30="<?= (int)$profile_qty_30; ?>"
                                     data-profile-qty="<?= $profile_qty_json; ?>">
