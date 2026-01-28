@@ -538,6 +538,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $raw_like2 = '%' . $sql_pattern_2 . '%';
       $raw_like3 = '%' . $sql_pattern_3 . '%';
       $raw_like4 = '%' . $blok_keyword . '%';
+      $delete_settlement = isset($_GET['delete_settlement']) && $_GET['delete_settlement'] === '1';
+      $delete_date = trim((string)($_GET['date'] ?? ''));
 
       $active_list = $API->comm('/ip/hotspot/active/print', [
         '?server' => $hotspot_server,
@@ -669,6 +671,24 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           }
         } catch (Exception $e) {}
 
+        if ($delete_settlement && $delete_date !== '') {
+          try {
+            $stmtChk = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='settlement_log' LIMIT 1");
+            if ($stmtChk && $stmtChk->fetchColumn()) {
+              $stmt = $db->prepare("DELETE FROM settlement_log WHERE report_date = :d");
+              $stmt->execute([':d' => $delete_date]);
+            }
+          } catch (Exception $e) {}
+        }
+
+        $summary_helper = $root_dir . '/report/laporan/sales_summary_helper.php';
+        if (file_exists($summary_helper)) {
+          require_once $summary_helper;
+          if (function_exists('rebuild_sales_summary')) {
+            rebuild_sales_summary($db);
+          }
+        }
+
         $db->commit();
         $db_deleted_count = count($db_delete_names);
       } catch (Exception $e) {
@@ -744,6 +764,37 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         }
       }
 
+      $script_deleted = 0;
+      try {
+        $scripts = $API->comm('/system/script/print', [
+          '?comment' => 'mikhmon',
+          '.proplist' => '.id,name,comment'
+        ]);
+        $patterns = [
+          strtolower($sql_pattern_1),
+          strtolower($sql_pattern_2),
+          strtolower($sql_pattern_3),
+          strtolower($blok_keyword)
+        ];
+        foreach ($scripts as $sc) {
+          $nm = strtolower((string)($sc['name'] ?? ''));
+          if ($nm === '') continue;
+          $matched = false;
+          foreach ($patterns as $pat) {
+            if ($pat !== '' && strpos($nm, strtolower($pat)) !== false) {
+              $matched = true;
+              break;
+            }
+          }
+          if ($matched && !empty($sc['.id'])) {
+            $API->write('/system/script/remove', false);
+            $API->write('=.id=' . $sc['.id']);
+            $API->read();
+            $script_deleted++;
+          }
+        }
+      } catch (Exception $e) {}
+
       $log_dir = $root_dir . '/logs';
       if (!is_dir($log_dir)) {
         @mkdir($log_dir, 0755, true);
@@ -752,7 +803,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $log_line = '[' . date('Y-m-d H:i:s') . '] ' . $admin_name . ' delete_block_full ' . $blok_upper . "\n";
       @file_put_contents($log_dir . '/admin_actions.log', $log_line, FILE_APPEND);
       $retur_note = !empty($retur_usernames) ? ' (termasuk retur: ' . count($retur_usernames) . ' user)' : '';
-      $action_message = 'Berhasil hapus total blok ' . $blok_upper . ' (Router: ' . $router_deleted . ' user, DB: ' . $db_deleted_count . ' user)' . $retur_note . '.';
+      $script_note = $script_deleted > 0 ? ' + script mikhmon: ' . $script_deleted : '';
+      $action_message = 'Berhasil hapus total blok ' . $blok_upper . ' (Router: ' . $router_deleted . ' user, DB: ' . $db_deleted_count . ' user)' . $retur_note . $script_note . '.';
     } elseif ($act == 'delete_status') {
       $status_map = [
         'used' => 'terpakai',
