@@ -51,6 +51,9 @@ $audit_expense = [];
 $total_expenses_month = 0;
 $daily_expense_logs = [];
 $notes_map = [];
+$settled_dates = [];
+$pending_dates = [];
+$has_settlement_rows = false;
 
 try {
     if (file_exists($dbFile)) {
@@ -142,6 +145,44 @@ try {
                 $notes_map[$rn['report_date']] = $rn['note'];
             }
         } catch (Exception $e) {}
+
+        if (table_exists($db, 'settlement_log')) {
+            try {
+                $stmtSet = $db->prepare("SELECT report_date, status FROM settlement_log WHERE report_date LIKE :m");
+                $stmtSet->execute([':m' => $filter_date . '%']);
+                foreach ($stmtSet->fetchAll(PDO::FETCH_ASSOC) as $sr) {
+                    $has_settlement_rows = true;
+                    $d = (string)($sr['report_date'] ?? '');
+                    if ($d === '') continue;
+                    if (strtolower((string)($sr['status'] ?? '')) === 'done') {
+                        $settled_dates[$d] = true;
+                    }
+                }
+            } catch (Exception $e) {}
+        }
+
+        if (table_exists($db, 'live_sales')) {
+            try {
+                $ym = $filter_date;
+                $year = substr($ym, 0, 4);
+                $month = substr($ym, 5, 2);
+                $monthShort = date('M', strtotime($ym . '-01'));
+                $stmtPend = $db->prepare("SELECT sale_date, raw_date FROM live_sales WHERE sync_status='pending' AND (sale_date LIKE :d OR raw_date LIKE :raw1 OR raw_date LIKE :raw2 OR raw_date LIKE :raw3)");
+                $stmtPend->execute([
+                    ':d' => $ym . '%',
+                    ':raw1' => $month . '/%/' . $year,
+                    ':raw2' => '%/' . $month . '/' . $year,
+                    ':raw3' => $monthShort . '/%/' . $year
+                ]);
+                foreach ($stmtPend->fetchAll(PDO::FETCH_ASSOC) as $pr) {
+                    $d = (string)($pr['sale_date'] ?? '');
+                    if ($d === '') $d = norm_date_from_raw_report($pr['raw_date'] ?? '');
+                    if ($d !== '' && strpos($d, $filter_date) === 0) {
+                        $pending_dates[$d] = true;
+                    }
+                }
+            } catch (Exception $e) {}
+        }
     }
 } catch (Exception $e) {
     $rows = [];
@@ -241,13 +282,24 @@ foreach ($rows as $r) {
     }
 }
 
-$all_dates = [];
+$data_dates = [];
 for ($d = 1; $d <= $days_in_month; $d++) {
     $date = $filter_date . '-' . str_pad((string)$d, 2, '0', STR_PAD_LEFT);
     if (isset($daily[$date]) || isset($phone[$date]) || isset($audit_net[$date])) {
-        $all_dates[] = $date;
+        $data_dates[$date] = true;
     }
 }
+
+$settled_filter_dates = $settled_dates;
+if (!$has_settlement_rows) {
+    $settled_filter_dates = $data_dates;
+}
+foreach ($pending_dates as $d => $_v) {
+    unset($settled_filter_dates[$d]);
+}
+$unsettled_dates = array_diff_key($data_dates, $settled_filter_dates);
+$all_dates = array_keys($settled_filter_dates);
+sort($all_dates);
 
 $total_gross = 0;
 $total_omzet_gross = 0;
@@ -323,6 +375,14 @@ $total_kerugian = $total_voucher_loss + $total_setoran_loss;
 
 $month_label = month_label_id($filter_date);
 $print_time = date('d-m-Y H:i:s');
+$unsettled_labels = [];
+if (!empty($unsettled_dates)) {
+    $uds = array_keys($unsettled_dates);
+    sort($uds);
+    foreach ($uds as $d) {
+        $unsettled_labels[] = esc(substr($d, 8, 2)) . ' ' . esc(month_label_id(substr($d, 5, 2)));
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -361,6 +421,12 @@ $print_time = date('d-m-Y H:i:s');
         <h2 style="margin:0;">Laporan Keuangan Bulanan</h2>
         <div class="meta">Periode: <?= esc($month_label) ?> | Dicetak: <?= esc($print_time) ?></div>
     </div>
+
+    <?php if (!empty($unsettled_labels)): ?>
+        <div style="margin:0 0 18px 0; padding:10px 12px; border:1px solid #f59e0b; background:#fff7ed; color:#92400e; font-size:12px; border-radius:6px;">
+            <strong>Belum Settlement:</strong> <?= implode(', ', $unsettled_labels) ?>.
+        </div>
+    <?php endif; ?>
 
     <div class="summary-grid" style="grid-template-columns: repeat(5, 1fr); gap:15px; margin-bottom:25px;">
         <div class="summary-card" style="border:1px solid #ddd; padding:15px; border-radius:4px; background:#fff;">

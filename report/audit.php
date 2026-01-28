@@ -224,7 +224,7 @@ if (file_exists($dbFile)) {
             $sales_summary['invalid'] = $invalid_rp;
             $sales_summary['rusak'] = $rusak_rp;
             $sales_summary['retur'] = $retur_rp;
-            $sales_summary['gross'] = $raw_gross - $invalid_rp - $retur_rp;
+            $sales_summary['gross'] = $raw_gross - $retur_rp;
             $sales_summary['total'] = (int)($sumRow['total_cnt'] ?? 0);
             $sales_summary['net'] = $raw_gross - $invalid_rp - $rusak_rp;
         }
@@ -276,7 +276,7 @@ if (file_exists($dbFile)) {
             $pending_summary['invalid'] = $invalid_rp;
             $pending_summary['rusak'] = $rusak_rp;
             $pending_summary['retur'] = $retur_rp;
-            $pending_summary['gross'] = $raw_gross - $invalid_rp - $retur_rp;
+            $pending_summary['gross'] = $raw_gross - $retur_rp;
             $pending_summary['total'] = (int)($p['total_cnt'] ?? 0);
             $pending_summary['net'] = $raw_gross - $invalid_rp - $rusak_rp;
 
@@ -508,7 +508,8 @@ if (file_exists($dbFile)) {
         <?php
             $stat_total = (int)$sales_summary['total'] + (int)$sales_summary['pending'];
             $stat_gross = (int)$sales_summary['gross'] + (int)$pending_summary['gross'];
-            $stat_rusak_system = (int)$sales_summary['rusak'] + (int)$pending_summary['rusak'];
+            $stat_rusak_system = (int)$sales_summary['rusak'] + (int)$sales_summary['invalid']
+                + (int)$pending_summary['rusak'] + (int)$pending_summary['invalid'];
             $stat_rusak_manual = (int)($audit_manual_summary['total_rusak_rp'] ?? 0);
             $total_loss_real = $stat_rusak_system + $stat_rusak_manual;
         ?>
@@ -523,7 +524,7 @@ if (file_exists($dbFile)) {
                 <div class="summary-value">Rp <?= number_format($stat_gross,0,',','.') ?></div>
             </div>
             <div class="summary-card" style="border-color:#fca5a5;">
-                <div class="summary-title" style="color:#c0392b;">Total Voucher Rusak</div>
+                <div class="summary-title" style="color:#c0392b;">Total Voucher Rusak/Invalid</div>
                 <div class="summary-value" style="color:#c0392b;">Rp <?= number_format($total_loss_real,0,',','.') ?></div>
                 <div style="font-size:10px;color:#b91c1c;">(Mengurangi Setoran)</div>
             </div>
