@@ -1073,6 +1073,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         $audit_user_list = implode(', ', $audit_users);
         $audit_qty = (int)($_POST['audit_qty'] ?? 0);
         $audit_setoran = (int)($_POST['audit_setoran'] ?? 0);
+        $audit_setoran_manual = (int)($_POST['audit_setoran_manual'] ?? 0);
         $audit_qty_10 = (int)($_POST['audit_qty_10'] ?? 0);
         $audit_qty_30 = (int)($_POST['audit_qty_30'] ?? 0);
         $audit_profile_qty = [];
@@ -1090,6 +1091,17 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         }
         if (!empty($audit_profile_qty)) {
             $audit_qty = array_sum($audit_profile_qty);
+        }
+        $audit_setoran_auto = 0;
+        if (!empty($audit_profile_qty)) {
+            foreach ($audit_profile_qty as $k => $v) {
+                $qty_val = (int)$v;
+                $price_val = isset($profile_price_map[$k]) ? (int)$profile_price_map[$k] : (int)resolve_price_from_profile($k);
+                $audit_setoran_auto += ($qty_val * $price_val);
+            }
+        }
+        if ($audit_setoran_manual !== 1 && $audit_setoran_auto > 0 && $audit_setoran !== $audit_setoran_auto) {
+            $audit_setoran_manual = 1;
         }
         $audit_exp_amt = (int)($_POST['audit_expense_amt'] ?? 0);
         $audit_exp_desc = trim($_POST['audit_expense_desc'] ?? '');
@@ -1142,6 +1154,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     'qty_10' => $audit_qty_10,
                     'qty_30' => $audit_qty_30
                 ],
+                'manual_setoran' => $audit_setoran_manual ? 1 : 0,
                 'users' => []
             ];
 

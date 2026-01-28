@@ -43,6 +43,7 @@ function calc_audit_adjusted_totals(array $ar) {
     $actual_setoran = (int)($ar['actual_setoran'] ?? 0);
     $expense_amt = (int)($ar['expenses_amt'] ?? 0);
     $has_manual_evidence = false;
+    $manual_setoran_override = false;
 
     $profile_qty_map = [];
     $status_count_map = [];
@@ -51,6 +52,7 @@ function calc_audit_adjusted_totals(array $ar) {
         $evidence = json_decode((string)$ar['user_evidence'], true);
         if (is_array($evidence)) {
             $has_manual_evidence = true;
+            $manual_setoran_override = !empty($evidence['manual_setoran']);
             if (!empty($evidence['profile_qty']) && is_array($evidence['profile_qty'])) {
                 $raw_map = $evidence['profile_qty'];
                 if (isset($raw_map['qty_10']) || isset($raw_map['qty_30'])) {
@@ -93,6 +95,9 @@ function calc_audit_adjusted_totals(array $ar) {
             $money_qty = max(0, $qty - (int)$counts['rusak'] - (int)$counts['invalid']);
             $price_val = isset($GLOBALS['profile_price_map'][$k]) ? (int)$GLOBALS['profile_price_map'][$k] : (int)resolve_price_from_profile($k);
             $manual_display_setoran += ($money_qty * $price_val);
+        }
+        if ($manual_setoran_override) {
+            $manual_display_setoran = $actual_setoran;
         }
         if ($manual_display_qty === 0) {
             $manual_display_qty = $reported_qty;

@@ -780,7 +780,9 @@ function openAuditModal(){
     if (!window.auditEditing) {
         var form = document.getElementById('auditForm');
         var setInput = form ? form.querySelector('input[name="audit_setoran"]') : null;
+        var setManualInput = form ? form.querySelector('input[name="audit_setoran_manual"]') : null;
         if (setInput) setInput.dataset.manual = '0';
+        if (setManualInput) setManualInput.value = '0';
     }
 }
 
@@ -800,6 +802,7 @@ window.openAuditEdit = function(btn){
     var user = btn.getAttribute('data-user') || '';
     var qty = btn.getAttribute('data-qty') || '0';
     var setoran = btn.getAttribute('data-setoran') || '0';
+    var setoranManual = btn.getAttribute('data-setoran-manual') || '0';
     var qty10 = btn.getAttribute('data-qty10') || '0';
     var qty30 = btn.getAttribute('data-qty30') || '0';
     var profileQtyRaw = btn.getAttribute('data-profile-qty') || '';
@@ -817,9 +820,13 @@ window.openAuditEdit = function(btn){
     var qtyInput = form.querySelector('input[name="audit_qty"]');
     if (qtyInput) qtyInput.value = qty;
     var setInput = form.querySelector('input[name="audit_setoran"]');
+    var setManualInput = form.querySelector('input[name="audit_setoran_manual"]');
     if (setInput) {
         setInput.value = setoran;
-        setInput.dataset.manual = '1';
+        setInput.dataset.manual = setoranManual === '1' ? '1' : '0';
+    }
+    if (setManualInput) {
+        setManualInput.value = setoranManual === '1' ? '1' : '0';
     }
     var qtyInputs = form.querySelectorAll('.audit-profile-qty');
     if (qtyInputs && qtyInputs.length) {
@@ -888,6 +895,7 @@ function openAuditLockModal(){
     var qtyInputs = form ? form.querySelectorAll('.audit-profile-qty') : [];
     var qtyTotal = form ? form.querySelector('input[name="audit_qty"]') : null;
     var setoranTotal = form ? form.querySelector('input[name="audit_setoran"]') : null;
+    var setoranManualInput = form ? form.querySelector('input[name="audit_setoran_manual"]') : null;
     var cfg = window.sellingConfig || {};
     var price10 = parseInt(cfg.price10 || 0, 10);
     var price30 = parseInt(cfg.price30 || 0, 10);
@@ -906,7 +914,10 @@ function openAuditLockModal(){
             });
         }
         if (qtyTotal) qtyTotal.value = sumQty;
-        if (setoranTotal && setoranTotal.dataset.manual !== '1') setoranTotal.value = sumRp;
+        if (setoranTotal && setoranTotal.dataset.manual !== '1') {
+            setoranTotal.value = sumRp;
+            if (setoranManualInput) setoranManualInput.value = '0';
+        }
     }
     if (qtyInputs && qtyInputs.length) {
         qtyInputs.forEach(function(el){
@@ -916,6 +927,7 @@ function openAuditLockModal(){
     if (setoranTotal) {
         setoranTotal.addEventListener('input', function(){
             setoranTotal.dataset.manual = '1';
+            if (setoranManualInput) setoranManualInput.value = '1';
         });
     }
     updateAuditTotals();
