@@ -556,6 +556,10 @@ foreach ($rows as $r) {
     $loss_rusak = 0;
     $loss_invalid = 0;
     $net_add = 0;
+    $rusak_recovered = false;
+    if ($status === 'rusak' && $username !== '' && isset($retur_ref_map[$block][strtolower($username)])) {
+        $rusak_recovered = true;
+    }
 
     if ($status === 'invalid') {
         $gross_add = 0;
@@ -565,7 +569,7 @@ foreach ($rows as $r) {
         $net_add = $line_price;
     } elseif ($status === 'rusak') {
         $gross_add = $line_price;
-        $loss_rusak = $line_price;
+        $loss_rusak = $rusak_recovered ? 0 : $line_price;
         $net_add = 0;
     } else {
         $gross_add = $line_price;
@@ -631,7 +635,7 @@ foreach ($rows as $r) {
             if ($is_laku || $status === 'retur') {
                 $block_summaries[$block]['amt_10'] += $net_line;
             }
-            if ($status === 'rusak') $block_summaries[$block]['rs_10'] += $qty_count;
+            if ($status === 'rusak' && !$rusak_recovered) $block_summaries[$block]['rs_10'] += $qty_count;
             if ($status === 'retur') $block_summaries[$block]['rt_10'] += $qty_count;
         }
         if ($bucket === '30') {
@@ -641,7 +645,7 @@ foreach ($rows as $r) {
             if ($is_laku || $status === 'retur') {
                 $block_summaries[$block]['amt_30'] += $net_line;
             }
-            if ($status === 'rusak') $block_summaries[$block]['rs_30'] += $qty_count;
+            if ($status === 'rusak' && !$rusak_recovered) $block_summaries[$block]['rs_30'] += $qty_count;
             if ($status === 'retur') $block_summaries[$block]['rt_30'] += $qty_count;
         }
         if ($status !== 'invalid' && $status !== 'retur') {
@@ -651,7 +655,7 @@ foreach ($rows as $r) {
         if ($is_laku || $status === 'retur') {
             $block_summaries[$block]['total_amount'] += $net_line;
         }
-        if ($status === 'rusak') $block_summaries[$block]['rs_total'] += $qty_count;
+        if ($status === 'rusak' && !$rusak_recovered) $block_summaries[$block]['rs_total'] += $qty_count;
         if ($status === 'retur') $block_summaries[$block]['rt_total'] += $qty_count;
     }
 
@@ -659,7 +663,7 @@ foreach ($rows as $r) {
     $laku_add = ($req_show === 'harian') ? ($qty_count ?? 1) : 1;
     if ($is_laku) $total_qty_laku += $laku_add;
     if ($status === 'retur') $total_qty_retur++;
-    if ($status === 'rusak') {
+    if ($status === 'rusak' && !$rusak_recovered) {
         $total_qty_rusak++;
         $p = strtolower((string)$profile);
         if (preg_match('/\b10\s*(menit|m)\b/i', $p)) $rusak_10m++;
