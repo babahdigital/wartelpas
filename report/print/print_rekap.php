@@ -28,7 +28,6 @@ $pricing = $env['pricing'] ?? [];
 $profiles_cfg = $env['profiles'] ?? [];
 $blok_cfg = $env['blok'] ?? [];
 $blok_names = $blok_cfg['names'] ?? [];
-$blok_profile_labels = $blok_cfg['profile_labels'] ?? [];
 $price10 = isset($pricing['price_10']) ? (int)$pricing['price_10'] : 0;
 $price30 = isset($pricing['price_30']) ? (int)$pricing['price_30'] : 0;
 $label10 = $profiles_cfg['label_10'] ?? '10 Menit';
@@ -48,17 +47,9 @@ if ($req_show === 'harian') {
     $filter_date = $filter_date ?: date('Y');
 }
 
-function get_block_label($block_name, $blok_names = [], $profile_labels = []) {
-    $raw = strtoupper(trim((string)$block_name));
-    if ($raw === '') return (string)$block_name;
-    $norm = preg_replace('/\s+/', '', $raw);
-    if (!preg_match('/^BLOK-/', $norm)) {
-        $norm = 'BLOK-' . preg_replace('/[^A-Z0-9]/', '', $norm);
-    }
-    if (isset($profile_labels[$norm]) && $profile_labels[$norm] !== '') {
-        return (string)$profile_labels[$norm];
-    }
-    if (preg_match('/^BLOK-([A-Z])/', $norm, $m)) {
+function get_block_label($block_name, $blok_names = []) {
+    $raw = strtoupper((string)$block_name);
+    if (preg_match('/^BLOK-([A-Z0-9]+)/', $raw, $m)) {
         $key = $m[1];
         if (isset($blok_names[$key]) && $blok_names[$key] !== '') {
             return (string)$blok_names[$key];

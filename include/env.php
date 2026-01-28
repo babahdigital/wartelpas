@@ -71,20 +71,6 @@ $env = [
             'D' => 'DINAYA',
             'E' => 'EDUKATORIS',
             'F' => 'FIDARSA'
-        ],
-        'profile_labels' => [
-            'BLOK-A10' => 'Blok A profile 10 Menit',
-            'BLOK-A30' => 'Blok A profile 30 Menit',
-            'BLOK-B10' => 'Blok B profile 10 Menit',
-            'BLOK-B30' => 'Blok B profile 30 Menit',
-            'BLOK-C10' => 'Blok C profile 10 Menit',
-            'BLOK-C30' => 'Blok C profile 30 Menit',
-            'BLOK-D10' => 'Blok D profile 10 Menit',
-            'BLOK-D30' => 'Blok D profile 30 Menit',
-            'BLOK-E10' => 'Blok E profile 10 Menit',
-            'BLOK-E30' => 'Blok E profile 30 Menit',
-            'BLOK-F10' => 'Blok F profile 10 Menit',
-            'BLOK-F30' => 'Blok F profile 30 Menit'
         ]
     ],
     'rclone' => [
