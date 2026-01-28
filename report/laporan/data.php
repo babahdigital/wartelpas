@@ -997,10 +997,12 @@ foreach ($rows as $r) {
     }
     $dt_display = $sale_dt !== '' ? format_date_dmy($sale_dt) : format_date_dmy($sale_date);
     $retur_user = extract_retur_user_from_ref($comment);
+    $profile_label = resolve_profile_label($profile);
+    if ($profile_label === '') $profile_label = $profile;
     $list[] = [
         'dt' => $dt_display,
         'user' => $r['username'] ?? '-',
-        'profile' => $profile,
+        'profile' => $profile_label,
         'blok' => $blok,
         'status' => strtoupper($status),
         'price' => $line_price,
