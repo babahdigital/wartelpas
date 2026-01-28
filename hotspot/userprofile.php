@@ -29,6 +29,13 @@ if (!isset($_SESSION["mikhmon"])) {
 </html>
 ';
 } else {
+	$session_id = $_GET['session'] ?? '';
+	$redirect = './?hotspot=users&profile=all';
+	if ($session_id !== '') {
+		$redirect .= '&session=' . urlencode($session_id);
+	}
+	header('Location: ' . $redirect);
+	exit;
 
 
 // get user profile
