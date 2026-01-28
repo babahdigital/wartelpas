@@ -503,6 +503,18 @@ function typeSettlementMessage(target, text, speed, done){
                 var data = null;
                 try { data = JSON.parse(text); } catch (e) {}
                 if (data && data.ok && data.redirect) {
+                    var snapshot = getHpFormSnapshot(form);
+                    if (snapshot && snapshot.blok) {
+                        window.hpTodayMap = window.hpTodayMap || {};
+                        window.hpTodayMap[snapshot.blok] = {
+                            wartel_units: parseInt(snapshot.wartel || '0', 10) || 0,
+                            kamtib_units: parseInt(snapshot.kamtib || '0', 10) || 0,
+                            total_units: parseInt(snapshot.total || '0', 10) || 0,
+                            rusak_units: parseInt(snapshot.rusak || '0', 10) || 0,
+                            spam_units: parseInt(snapshot.spam || '0', 10) || 0,
+                            notes: snapshot.notes || ''
+                        };
+                    }
                     window.location.replace(data.redirect);
                     return;
                 }
@@ -526,6 +538,7 @@ function openHpModal(){
     if (modal) modal.style.display = 'flex';
     window.sellingPauseReload = true;
     applyHpDefaults(true);
+    scheduleHpAutoSave(true);
 }
 
 function closeHpModal(){
@@ -576,6 +589,100 @@ function applyHpDefaults(force){
         if (rusakEl) rusakEl.dispatchEvent(evt);
         if (spamEl) spamEl.dispatchEvent(evt);
     }
+
+    scheduleHpAutoSave(true);
+}
+
+var hpAutoTimer = null;
+var hpAutoLastKey = '';
+
+function getHpFormSnapshot(form){
+    if (!form) return null;
+    var blok = (form.querySelector('select[name="blok_name"]') || {}).value || '';
+    var date = (form.querySelector('input[name="report_date"]') || {}).value || '';
+    var wartel = (form.querySelector('input[name="wartel_units"]') || {}).value || '0';
+    var kamtib = (form.querySelector('input[name="kamtib_units"]') || {}).value || '0';
+    var rusak = (form.querySelector('input[name="rusak_units"]') || {}).value || '0';
+    var spam = (form.querySelector('input[name="spam_units"]') || {}).value || '0';
+    var notes = (form.querySelector('input[name="notes"]') || {}).value || '';
+    var total = (form.querySelector('input[name="total_units"]') || {}).value || '0';
+    return {
+        blok: blok,
+        date: date,
+        wartel: wartel,
+        kamtib: kamtib,
+        rusak: rusak,
+        spam: spam,
+        notes: notes,
+        total: total
+    };
+}
+
+function scheduleHpAutoSave(force){
+    var form = document.getElementById('hpForm');
+    if (!form) return;
+    var snapshot = getHpFormSnapshot(form);
+    if (!snapshot || !snapshot.blok || !snapshot.date) return;
+    if (window.hpDefaultDate && snapshot.date !== window.hpDefaultDate) return;
+
+    var todayMap = window.hpTodayMap || {};
+    var hasToday = !!todayMap[snapshot.blok];
+    if (hasToday && force !== true) return;
+
+    var key = JSON.stringify(snapshot);
+    if (!force && key === hpAutoLastKey) return;
+    hpAutoLastKey = key;
+
+    if (hpAutoTimer) clearTimeout(hpAutoTimer);
+    hpAutoTimer = setTimeout(function(){
+        submitHpAutoSave(form, snapshot);
+    }, 800);
+}
+
+function submitHpAutoSave(form, snapshot){
+    var btn = document.getElementById('hpSubmitBtn');
+    var err = document.getElementById('hpClientError');
+    if (!form) return;
+    if (btn && btn.disabled) return;
+    var fd = new FormData(form);
+    fd.append('ajax', '1');
+    fd.append('auto', '1');
+    fetch(form.action, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function(r){ return r.text(); })
+        .then(function(text){
+            var data = null;
+            try { data = JSON.parse(text); } catch (e) {}
+            if (data && data.ok) {
+                window.hpTodayMap = window.hpTodayMap || {};
+                window.hpTodayMap[snapshot.blok] = {
+                    wartel_units: parseInt(snapshot.wartel || '0', 10) || 0,
+                    kamtib_units: parseInt(snapshot.kamtib || '0', 10) || 0,
+                    total_units: parseInt(snapshot.total || '0', 10) || 0,
+                    rusak_units: parseInt(snapshot.rusak || '0', 10) || 0,
+                    spam_units: parseInt(snapshot.spam || '0', 10) || 0,
+                    notes: snapshot.notes || ''
+                };
+                if (err) {
+                    err.textContent = 'Auto-save tersimpan.';
+                    err.style.display = 'block';
+                    err.style.color = '#86efac';
+                }
+                return;
+            }
+            var msg = (data && data.message) ? data.message : 'Auto-save gagal.';
+            if (err) {
+                err.textContent = msg;
+                err.style.display = 'block';
+                err.style.color = '#fca5a5';
+            }
+        })
+        .catch(function(){
+            if (err) {
+                err.textContent = 'Auto-save gagal. Coba lagi.';
+                err.style.display = 'block';
+                err.style.color = '#fca5a5';
+            }
+        });
 }
 
 window.openHpEdit = function(btn){
@@ -856,8 +963,14 @@ function addAuditUser(u){
     if (auditSelectedUsers.indexOf(u) !== -1) return;
     auditSelectedUsers.push(u);
     renderAuditSelected();
+            scheduleHpAutoSave(false);
 }
 
+    if (form.querySelector('input[name="notes"]')) {
+        form.querySelector('input[name="notes"]').addEventListener('input', function(){
+            scheduleHpAutoSave(false);
+        });
+    }
 function removeAuditUser(u){
     auditSelectedUsers = auditSelectedUsers.filter(function(x){ return x !== u; });
     renderAuditSelected();
