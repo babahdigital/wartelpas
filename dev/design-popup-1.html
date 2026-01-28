@@ -206,7 +206,11 @@
             color: var(--txt-secondary);
             padding: 0 4px;
         }
+        .status-left { max-width: 60%; }
+        .status-right { text-align: right; min-width: 120px; }
         .status-unreported { color: var(--c-orange); font-weight: 600; }
+        .form-hint { margin-top: 6px; font-size: 11px; color: #777; }
+        .form-hint strong { color: #ddd; }
 
         /* --- GROUP BOXES --- */
         .group-box {
@@ -224,6 +228,11 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
             font-weight: 600;
+        }
+        .group-desc {
+            font-size: 11px;
+            color: #6f6f6f;
+            margin-bottom: 10px;
         }
         .group-header i { font-size: 12px; }
 
@@ -340,7 +349,7 @@
             <!-- 1. BLOK & TANGGAL -->
             <div class="form-grid mb-3">
                 <div>
-                    <label class="form-label">Blok Area</label>
+                    <label class="form-label">Blok</label>
                     <select class="form-control">
                         <option>Pilih Blok</option>
                         <option selected>BLOK-A</option>
@@ -348,14 +357,14 @@
                     </select>
                 </div>
                 <div>
-                    <label class="form-label">Tanggal Laporan</label>
+                    <label class="form-label">Tanggal</label>
                     <input type="date" class="form-control" value="2026-01-29">
                 </div>
             </div>
 
             <!-- 2. TOMBOL VERIFIKASI USER (SEBELUM INPUT QTY) -->
             <div class="mb-4">
-                <label class="form-label"><i class="fa fa-shield"></i> Verifikasi Data User</label>
+                <label class="form-label"><i class="fa fa-shield"></i> Verifikasi User (Wajib)</label>
                 <div class="btn-action-trigger" id="btnTriggerSelect" onclick="openSelectModal()">
                     <div class="trigger-content">
                         <i class="fa fa-list-ul trigger-icon"></i> 
@@ -365,58 +374,58 @@
                 </div>
                 <!-- Status Bar Rapih -->
                 <div class="status-bar">
-                    <span id="summaryText">Belum ada user dipilih</span>
-                    <span id="unreportedText" class="text-muted">Tidak dilaporkan: -</span>
+                    <span id="summaryText" class="status-left">Belum ada user dipilih</span>
+                    <span id="unreportedText" class="status-right text-muted">Tidak dilaporkan: -</span>
                 </div>
+                <div class="form-hint" id="lockHint">Qty otomatis terkunci jika user dipilih. Kosongkan pilihan user untuk edit manual.</div>
             </div>
 
             <!-- 3. FISIK VOUCHER (GROUP) -->
             <div class="group-box">
                 <div class="group-header">
-                    <i class="fa fa-ticket"></i> Fisik Voucher (Lapangan)
+                    <i class="fa fa-ticket"></i> Fisik Voucher (Hasil verifikasi, bisa diedit)
                 </div>
+                <div class="group-desc">Jumlah voucher fisik hasil verifikasi user. Bisa disesuaikan bila tidak memakai checklist.</div>
                 <div class="form-grid">
                     <div>
                         <label class="form-label">Profil 10 Menit</label>
-                        <input type="number" id="mainQty10" class="form-control" value="0" readonly title="Dihitung otomatis dari verifikasi user">
+                        <input type="number" id="mainQty10" class="form-control" value="0" title="Dihitung otomatis dari verifikasi user">
                     </div>
                     <div>
                         <label class="form-label">Profil 30 Menit</label>
-                        <input type="number" id="mainQty30" class="form-control" value="0" readonly title="Dihitung otomatis dari verifikasi user">
+                        <input type="number" id="mainQty30" class="form-control" value="0" title="Dihitung otomatis dari verifikasi user">
                     </div>
                 </div>
             </div>
 
-            <!-- 4. TOTAL QTY & SETORAN -->
-            <div class="form-grid mb-3">
-                <div>
-                    <label class="form-label">Total Qty (System)</label>
-                    <input type="number" id="mainTotalQty" class="form-control" value="0" readonly>
-                </div>
-                <div>
-                    <label class="form-label text-orange">Total Setoran (Kotor)</label>
-                    <input type="number" id="mainTotalSetoran" class="form-control" value="0" readonly>
-                </div>
-            </div>
-
-            <!-- 5. PENGELUARAN (MERAH) -->
-            <div class="group-box expense">
+            <!-- 4. KALKULASI & PENGELUARAN -->
+            <div class="group-box">
                 <div class="group-header">
-                    <i class="fa fa-minus-circle"></i> Pengeluaran / Bon (Opsional)
+                    <i class="fa fa-calculator"></i> Kalkulasi & Pengeluaran (Keuangan)
+                </div>
+                <div class="form-grid mb-3">
+                    <div>
+                        <label class="form-label">Total Qty (Sistem)</label>
+                        <input type="number" id="mainTotalQty" class="form-control" value="0" readonly>
+                    </div>
+                    <div>
+                        <label class="form-label text-orange">Total Setoran (Kotor)</label>
+                        <input type="number" id="mainTotalSetoran" class="form-control" value="0" oninput="calculateNet()">
+                    </div>
                 </div>
                 <div class="form-grid">
                     <div>
-                        <label class="form-label">Nominal (Rp)</label>
+                        <label class="form-label">Pengeluaran (Rp)</label>
                         <input type="number" id="inputExpense" class="form-control" placeholder="0" oninput="calculateNet()">
                     </div>
                     <div>
-                        <label class="form-label">Keterangan</label>
+                        <label class="form-label">Keterangan Pengeluaran</label>
                         <input type="text" class="form-control" placeholder="Contoh: Beli Kertas Thermal">
                     </div>
                 </div>
             </div>
 
-            <!-- 6. SETORAN BERSIH (HASIL AKHIR) -->
+            <!-- 5. SETORAN BERSIH (HASIL AKHIR) -->
             <div class="net-deposit-box">
                 <span class="net-label">SETORAN BERSIH (NET)</span>
                 <span class="net-value" id="displayNet">Rp 0</span>
@@ -468,16 +477,16 @@
     <script>
         // --- DUMMY DATA ---
         const dummyData = [
-            { id: 1, u: "user10_A", p: "10menit", price: 2000, st: "TERPAKAI", up: "10m" },
-            { id: 2, u: "user10_B", p: "10menit", price: 2000, st: "TERPAKAI", up: "12m" },
-            { id: 3, u: "user10_C", p: "10menit", price: 2000, st: "RETUR", up: "-" },
-            { id: 4, u: "user10_D", p: "10menit", price: 2000, st: "TERPAKAI", up: "09m" },
-            { id: 5, u: "user30_X", p: "30menit", price: 5000, st: "TERPAKAI", up: "28m" },
-            { id: 6, u: "user30_Y", p: "30menit", price: 5000, st: "RETUR", up: "05m" },
-            { id: 7, u: "user30_Z", p: "30menit", price: 5000, st: "TERPAKAI", up: "31m" }
+            { id: 1, u: "user10_A", p: "10menit", price: 2000, st: "TERPAKAI", up: "10m", bt: "120 KB" },
+            { id: 2, u: "user10_B", p: "10menit", price: 2000, st: "TERPAKAI", up: "12m", bt: "85 KB" },
+            { id: 3, u: "user10_C", p: "10menit", price: 2000, st: "RETUR", up: "-", bt: "0 B" },
+            { id: 4, u: "user10_D", p: "10menit", price: 2000, st: "TERPAKAI", up: "09m", bt: "60 KB" },
+            { id: 5, u: "user30_X", p: "30menit", price: 5000, st: "TERPAKAI", up: "28m", bt: "320 KB" },
+            { id: 6, u: "user30_Y", p: "30menit", price: 5000, st: "RETUR", up: "05m", bt: "40 KB" },
+            { id: 7, u: "user30_Z", p: "30menit", price: 5000, st: "TERPAKAI", up: "31m", bt: "410 KB" }
         ];
 
-        let activeTab = "10menit";
+        let activeTab = "";
         let selectedSet = new Set();
 
         // --- MODAL FUNCTIONS ---
@@ -494,10 +503,15 @@
 
         // --- RENDER LOGIC ---
         function renderTabs() {
-            const tabs = ["10menit", "30menit"];
+            const tabs = Array.from(new Set(dummyData.map(d => d.p)));
             const container = document.getElementById('tabContainer');
             let html = '';
-            
+            if (tabs.length <= 1) {
+                container.style.display = 'none';
+                activeTab = tabs[0] || '';
+                return;
+            }
+            container.style.display = 'flex';
             tabs.forEach(t => {
                 const count = dummyData.filter(d => d.p === t).length;
                 const isActive = t === activeTab ? 'active' : '';
@@ -518,7 +532,7 @@
 
         function renderList() {
             const container = document.getElementById('listContainer');
-            const list = dummyData.filter(d => d.p === activeTab);
+            const list = activeTab ? dummyData.filter(d => d.p === activeTab) : dummyData;
             
             let html = '';
             if (list.length === 0) {
@@ -539,7 +553,7 @@
                                 </div>
                                 <div style="font-size:11px; color:#888; display:flex; gap:10px;">
                                     <span><i class="fa fa-clock-o"></i> ${item.up}</span>
-                                    <span><i class="fa fa-money"></i> Rp ${item.price}</span>
+                                    <span><i class="fa fa-exchange"></i> ${item.bt}</span>
                                 </div>
                             </div>
                             <div class="check-circle" style="margin-left:10px;">
@@ -609,6 +623,7 @@
                 unreported.innerHTML = `Tidak dilaporkan: <span class="text-muted">-</span>`;
             }
 
+            updateLockState();
             closeSelectModal();
         }
 
@@ -621,6 +636,38 @@
             const fmt = (val) => "Rp " + val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
             document.getElementById('displayNet').innerText = fmt(net);
         }
+
+        function updateLockState() {
+            const qty10 = document.getElementById('mainQty10');
+            const qty30 = document.getElementById('mainQty30');
+            const setoran = document.getElementById('mainTotalSetoran');
+            const hint = document.getElementById('lockHint');
+            const locked = selectedSet.size > 0;
+            qty10.readOnly = locked;
+            qty30.readOnly = locked;
+            setoran.readOnly = locked;
+            if (hint) {
+                hint.innerHTML = locked
+                    ? 'Qty terkunci karena user dipilih. Kosongkan pilihan user untuk edit manual.'
+                    : 'Qty bisa diedit manual. Pilih user untuk kunci otomatis.';
+            }
+        }
+
+        function initManualInputs() {
+            document.getElementById('mainQty10').addEventListener('input', function(){
+                const q10 = parseInt(this.value || '0') || 0;
+                const q30 = parseInt(document.getElementById('mainQty30').value || '0') || 0;
+                document.getElementById('mainTotalQty').value = q10 + q30;
+            });
+            document.getElementById('mainQty30').addEventListener('input', function(){
+                const q10 = parseInt(document.getElementById('mainQty10').value || '0') || 0;
+                const q30 = parseInt(this.value || '0') || 0;
+                document.getElementById('mainTotalQty').value = q10 + q30;
+            });
+        }
+
+        initManualInputs();
+        updateLockState();
 
     </script>
 </body>
