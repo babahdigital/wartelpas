@@ -902,6 +902,8 @@ function openAuditLockModal(){
     var qtyTotal = form ? form.querySelector('input[name="audit_qty"]') : null;
     var setoranTotal = form ? form.querySelector('input[name="audit_setoran"]') : null;
     var setoranManualInput = form ? form.querySelector('input[name="audit_setoran_manual"]') : null;
+    var netSetoranInput = document.getElementById('audit_setoran_net');
+    var expenseInput = form ? form.querySelector('input[name="audit_expense_amt"]') : null;
     var cfg = window.sellingConfig || {};
     var price10 = parseInt(cfg.price10 || 0, 10);
     var price30 = parseInt(cfg.price30 || 0, 10);
@@ -924,6 +926,14 @@ function openAuditLockModal(){
             setoranTotal.value = sumRp;
             if (setoranManualInput) setoranManualInput.value = '0';
         }
+        updateAuditNet();
+    }
+    function updateAuditNet(){
+        if (!netSetoranInput) return;
+        var setVal = setoranTotal ? (parseInt(setoranTotal.value || '0', 10) || 0) : 0;
+        var expVal = expenseInput ? (parseInt(expenseInput.value || '0', 10) || 0) : 0;
+        var netVal = setVal - expVal;
+        netSetoranInput.value = netVal >= 0 ? netVal : 0;
     }
     if (qtyInputs && qtyInputs.length) {
         qtyInputs.forEach(function(el){
@@ -934,7 +944,11 @@ function openAuditLockModal(){
         setoranTotal.addEventListener('input', function(){
             setoranTotal.dataset.manual = '1';
             if (setoranManualInput) setoranManualInput.value = '1';
+            updateAuditNet();
         });
+    }
+    if (expenseInput) {
+        expenseInput.addEventListener('input', updateAuditNet);
     }
     updateAuditTotals();
     if (!form) return;
@@ -1000,112 +1014,235 @@ function openAuditLockModal(){
     });
 })();
 
-function renderAuditSelected(){
-    var chipWrap = document.getElementById('audit-user-chips');
-    var hidden = document.getElementById('auditUsernameHidden');
-    if (!chipWrap || !hidden) return;
-    chipWrap.innerHTML = '';
-    var list = auditSelectedUsers.slice();
-    list.forEach(function(u){
-        var chip = document.createElement('span');
-        chip.className = 'audit-user-chip';
-        chip.textContent = u;
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.textContent = '×';
-        btn.onclick = function(){ removeAuditUser(u); };
-        chip.appendChild(btn);
-        chipWrap.appendChild(chip);
-    });
-    hidden.value = list.join(', ');
+function setAuditQtyLockState(locked){
+    var form = document.getElementById('auditForm');
+    if (!form) return;
+    var qtyInputs = form.querySelectorAll('.audit-profile-qty');
+    qtyInputs.forEach(function(el){ el.readOnly = !!locked; });
+    var setoranInput = form.querySelector('input[name="audit_setoran"]');
+    var setoranManualInput = form.querySelector('input[name="audit_setoran_manual"]');
+    if (setoranInput) {
+        setoranInput.readOnly = !!locked;
+        if (locked) {
+            setoranInput.dataset.manual = '0';
+            if (setoranManualInput) setoranManualInput.value = '0';
+        }
+    }
+    var hint = document.getElementById('auditQtyLockHint');
+    if (hint) {
+        hint.classList.toggle('locked', !!locked);
+        hint.textContent = locked
+            ? 'Qty terkunci karena user dipilih. Kosongkan pilihan user untuk edit manual.'
+            : 'Qty otomatis dari user terpilih. Kosongkan pilihan user untuk edit manual.';
+    }
 }
 
-function addAuditUser(u){
-    u = String(u || '').trim();
-    if (!u) return;
-    if (auditSelectedUsers.indexOf(u) !== -1) return;
-    auditSelectedUsers.push(u);
-    renderAuditSelected();
-}
-function removeAuditUser(u){
-    auditSelectedUsers = auditSelectedUsers.filter(function(x){ return x !== u; });
-    renderAuditSelected();
+function updateAuditUserSummary(){
+    var btn = document.getElementById('auditUserTrigger');
+    var label = document.getElementById('auditUserLabel');
+    var summary = document.getElementById('auditUserSummary');
+    var unreported = document.getElementById('auditUserUnreported');
+    var count = auditSelectedUsers.length;
+    if (btn) btn.classList.toggle('has-value', count > 0);
+    if (label) {
+        label.innerHTML = count > 0
+            ? '<i class="fa fa-check"></i> ' + count + ' user terpilih'
+            : '<i class="fa fa-list-ul"></i> Pilih user terpakai & retur...';
+    }
+    if (summary) {
+        summary.textContent = count > 0
+            ? 'Total: ' + count + ' user terpilih'
+            : 'Belum ada user dipilih';
+    }
+    if (unreported) {
+        if (auditUserEligibleCount > 0) {
+            var miss = Math.max(auditUserEligibleCount - count, 0);
+            unreported.textContent = 'Tidak dilaporkan: ' + miss;
+        } else {
+            unreported.textContent = 'Tidak dilaporkan: -';
+        }
+    }
+    var hidden = document.getElementById('auditUsernameHidden');
+    if (hidden) hidden.value = auditSelectedUsers.join(', ');
 }
 
 function setAuditUserPicker(raw){
-    auditSelectedUsers = [];
-    var arr = String(raw || '').split(',').map(function(s){ return s.trim(); }).filter(Boolean);
-    arr.forEach(addAuditUser);
-    renderAuditSelected();
+    auditSelectedSet = new Set();
+    String(raw || '').split(',').map(function(s){ return s.trim(); }).filter(Boolean).forEach(function(u){
+        auditSelectedSet.add(u);
+    });
+    auditSelectedUsers = Array.from(auditSelectedSet);
+    setAuditQtyLockState(auditSelectedUsers.length > 0);
+    updateAuditUserSummary();
 }
 
 function resetAuditUserPicker(){
+    auditSelectedSet = new Set();
     auditSelectedUsers = [];
-    renderAuditSelected();
-    var input = document.getElementById('audit-user-input');
-    if (input) input.value = '';
-    hideAuditSuggest();
+    updateAuditUserSummary();
+    setAuditQtyLockState(false);
 }
 
-function showAuditSuggest(items){
-    var box = document.getElementById('audit-user-suggest');
-    if (!box) return;
-    box.innerHTML = '';
-    if (!items || !items.length) {
-        box.style.display = 'none';
+function openAuditUserModal(){
+    var overlay = document.getElementById('auditUserOverlay');
+    if (!overlay) return;
+    overlay.style.display = 'flex';
+    loadAuditUserList();
+}
+
+function closeAuditUserModal(){
+    var overlay = document.getElementById('auditUserOverlay');
+    if (overlay) overlay.style.display = 'none';
+}
+
+function loadAuditUserList(){
+    var cfg = window.sellingConfig || {};
+    var form = document.getElementById('auditForm');
+    var blok = form ? (form.querySelector('select[name="audit_blok"]') || {}).value : '';
+    var date = form ? (form.querySelector('input[name="audit_date"]') || {}).value : '';
+    var listWrap = document.getElementById('auditUserList');
+    if (listWrap) listWrap.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">Memuat data...</div>';
+
+    var hidden = document.getElementById('auditUsernameHidden');
+    if (hidden && hidden.value) setAuditUserPicker(hidden.value);
+
+    if (!blok || !date) {
+        if (listWrap) listWrap.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">Pilih blok & tanggal terlebih dahulu.</div>';
         return;
     }
-    items.forEach(function(u){
-        var el = document.createElement('div');
-        el.className = 'item';
-        el.textContent = u;
-        el.onclick = function(){
-            addAuditUser(u);
-            var input = document.getElementById('audit-user-input');
-            if (input) input.value = '';
-            hideAuditSuggest();
-        };
-        box.appendChild(el);
-    });
-    box.style.display = 'block';
+
+    var url = new URL(cfg.auditUserUrl || 'report/laporan/services/audit_users.php', window.location.href);
+    url.searchParams.set('date', date);
+    url.searchParams.set('blok', blok);
+    if (cfg.sessionId) url.searchParams.set('session', cfg.sessionId);
+    fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if (!data || !data.ok) throw new Error((data && data.message) || 'Gagal memuat data user');
+            auditUserCache = Array.isArray(data.users) ? data.users : [];
+            auditUserEligibleCount = auditUserCache.length;
+            var keys = {};
+            auditUserCache.forEach(function(u){
+                var k = String(u.profile_key || '').toLowerCase();
+                if (k) keys[k] = true;
+            });
+            auditUserProfileKeys = Object.keys(keys);
+            auditUserProfileKeys.sort();
+            auditUserActiveKey = auditUserProfileKeys[0] || '';
+            renderAuditUserTabs();
+            renderAuditUserList();
+            updateAuditUserSummary();
+        })
+        .catch(function(){
+            if (listWrap) listWrap.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">Gagal memuat data.</div>';
+        });
 }
 
-function hideAuditSuggest(){
-    var box = document.getElementById('audit-user-suggest');
-    if (box) box.style.display = 'none';
+function renderAuditUserTabs(){
+    var tabs = document.getElementById('auditUserTabs');
+    if (!tabs) return;
+    if (auditUserProfileKeys.length <= 1) {
+        tabs.style.display = 'none';
+        return;
+    }
+    tabs.style.display = 'flex';
+    tabs.innerHTML = '';
+    auditUserProfileKeys.forEach(function(k){
+        var count = auditUserCache.filter(function(u){ return String(u.profile_key || '').toLowerCase() === k; }).length;
+        var btn = document.createElement('div');
+        btn.className = 'audit-user-tab' + (k === auditUserActiveKey ? ' active' : '');
+        btn.innerHTML = k.toUpperCase() + ' <span class="badge">' + count + '</span>';
+        btn.onclick = function(){ auditUserActiveKey = k; renderAuditUserTabs(); renderAuditUserList(); };
+        tabs.appendChild(btn);
+    });
 }
 
-(function(){
-    var input = document.getElementById('audit-user-input');
-    if (!input) return;
-    input.addEventListener('input', function(){
-        var q = String(input.value || '').toLowerCase().trim();
-        if (!q) return hideAuditSuggest();
-        var items = (auditUserOptions || []).filter(function(u){
-            return u.toLowerCase().indexOf(q) !== -1 && auditSelectedUsers.indexOf(u) === -1;
-        }).slice(0, 12);
-        showAuditSuggest(items);
+function renderAuditUserList(){
+    var wrap = document.getElementById('auditUserList');
+    if (!wrap) return;
+    var list = auditUserCache.filter(function(u){
+        if (!auditUserActiveKey || auditUserProfileKeys.length <= 1) return true;
+        return String(u.profile_key || '').toLowerCase() === auditUserActiveKey;
     });
-    input.addEventListener('keydown', function(e){
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            var q = String(input.value || '').trim();
-            if (!q) return;
-            var exact = (auditUserOptions || []).find(function(u){ return u.toLowerCase() === q.toLowerCase(); });
-            if (exact) {
-                addAuditUser(exact);
-                input.value = '';
-                hideAuditSuggest();
-            }
-        }
+    if (!list.length) {
+        wrap.innerHTML = '<div style="text-align:center; padding:20px; color:#555;">Tidak ada data</div>';
+        return;
+    }
+    wrap.innerHTML = '';
+    list.forEach(function(item){
+        var uname = String(item.username || '');
+        var isSel = auditSelectedSet.has(uname);
+        var st = String(item.status || '').toUpperCase();
+        var isRetur = st === 'RETUR';
+        var row = document.createElement('div');
+        row.className = 'audit-user-row' + (isSel ? ' selected' : '') + (isRetur ? ' is-retur' : '');
+        row.onclick = function(){ toggleAuditUserSelect(uname); };
+
+        var left = document.createElement('div');
+        var name = document.createElement('div');
+        name.className = 'audit-user-name';
+        var badgeClass = 'audit-user-badge' + (isRetur ? ' retur' : '');
+        name.innerHTML = uname + ' <span class="' + badgeClass + '">' + (isRetur ? 'RETUR' : 'TERPAKAI') + '</span>';
+        var meta = document.createElement('div');
+        meta.className = 'audit-user-meta';
+        meta.textContent = 'Uptime: ' + (item.uptime || '-') + ' | Byte: ' + (item.bytes || '0 B');
+        left.appendChild(name);
+        left.appendChild(meta);
+
+        var right = document.createElement('div');
+        right.className = 'audit-user-check';
+        right.innerHTML = '<i class="fa fa-check"></i>';
+        row.appendChild(left);
+        row.appendChild(right);
+        wrap.appendChild(row);
     });
-    document.addEventListener('click', function(e){
-        var box = document.getElementById('audit-user-suggest');
-        var wrap = document.querySelector('.audit-user-picker');
-        if (!box || !wrap) return;
-        if (!wrap.contains(e.target)) hideAuditSuggest();
+    var countEl = document.getElementById('auditUserSelectedCount');
+    if (countEl) countEl.textContent = String(auditSelectedSet.size);
+}
+
+function toggleAuditUserSelect(username){
+    if (auditSelectedSet.has(username)) auditSelectedSet.delete(username);
+    else auditSelectedSet.add(username);
+    auditSelectedUsers = Array.from(auditSelectedSet);
+    renderAuditUserList();
+}
+
+function applyAuditUserSelection(){
+    var form = document.getElementById('auditForm');
+    if (!form) return closeAuditUserModal();
+    var qtyInputs = form.querySelectorAll('.audit-profile-qty');
+    var setoranInput = form.querySelector('input[name="audit_setoran"]');
+    var setoranManualInput = form.querySelector('input[name="audit_setoran_manual"]');
+    var totalSetoran = 0;
+    var profileQty = {};
+    var mapByUser = {};
+    auditUserCache.forEach(function(u){ mapByUser[String(u.username || '')] = u; });
+    auditSelectedUsers = Array.from(auditSelectedSet);
+    auditSelectedUsers.forEach(function(u){
+        var item = mapByUser[u];
+        if (!item) return;
+        var key = String(item.profile_key || '').toLowerCase();
+        if (!key) key = 'other';
+        profileQty[key] = (profileQty[key] || 0) + 1;
+        totalSetoran += parseInt(item.price || '0', 10) || 0;
     });
-})();
+    if (qtyInputs && qtyInputs.length) {
+        qtyInputs.forEach(function(el){
+            var key = String(el.dataset.profileKey || '').toLowerCase();
+            el.value = profileQty[key] || 0;
+        });
+        var ev = new Event('input', { bubbles: true });
+        qtyInputs.forEach(function(el){ el.dispatchEvent(ev); });
+    }
+    if (setoranInput) {
+        setoranInput.value = totalSetoran;
+        setoranInput.dataset.manual = '0';
+    }
+    if (setoranManualInput) setoranManualInput.value = '0';
+    setAuditQtyLockState(auditSelectedUsers.length > 0);
+    updateAuditUserSummary();
+    closeAuditUserModal();
+}
 
 function softReloadSelling(){
     var content = document.getElementById('selling-content');
