@@ -561,6 +561,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $whereBlok = "UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) = :b_clean" . ($use_glob ? " OR UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) GLOB :bg" : "");
       $whereRaw = " OR UPPER(raw_comment) LIKE :rc1 OR UPPER(raw_comment) LIKE :rc2 OR UPPER(raw_comment) LIKE :rc3 OR UPPER(raw_comment) LIKE :rc4";
       $whereMatch = "(" . $whereBlok . $whereRaw . ")";
+      $whereSales = "(" . $whereBlok . " OR UPPER(comment) LIKE :rc1 OR UPPER(comment) LIKE :rc2 OR UPPER(comment) LIKE :rc3 OR UPPER(comment) LIKE :rc4)";
       $base_params = $use_glob ? [':b_clean' => $blok_upper, ':bg' => $glob_pattern, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4]
         : [':b_clean' => $blok_upper, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4];
 
@@ -622,6 +623,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
 
       $router_names = array_values(array_unique(array_merge($base_usernames, $retur_usernames, array_keys($delete_name_map))));
       $db_delete_names = array_values(array_unique($router_names));
+      $offline_ips = [];
       $db_deleted_count = 0;
       try {
         $db->beginTransaction();
@@ -639,6 +641,19 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           $userClause = " OR username IN (" . implode(',', $placeholders) . ")";
         }
 
+        if (!empty($db_delete_names)) {
+          try {
+            $stmtIp = $db->prepare("SELECT username, last_ip, ip_address FROM login_history WHERE $whereMatch$userClause");
+            $stmtIp->execute(array_merge($params, $userParams));
+            while ($row = $stmtIp->fetch(PDO::FETCH_ASSOC)) {
+              $ip1 = trim((string)($row['last_ip'] ?? ''));
+              $ip2 = trim((string)($row['ip_address'] ?? ''));
+              if ($ip1 !== '' && $ip1 !== '-') $offline_ips[$ip1] = true;
+              if ($ip2 !== '' && $ip2 !== '-') $offline_ips[$ip2] = true;
+            }
+          } catch (Exception $e) {}
+        }
+
         $stmt = $db->prepare("DELETE FROM login_history WHERE $whereMatch$userClause");
         $stmt->execute(array_merge($params, $userParams));
 
@@ -654,10 +669,10 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           $stmt->execute($userParams);
         }
 
-        $stmt = $db->prepare("DELETE FROM sales_history WHERE $whereMatch$userClause");
+        $stmt = $db->prepare("DELETE FROM sales_history WHERE $whereSales$userClause");
         $stmt->execute(array_merge($params, $userParams));
 
-        $stmt = $db->prepare("DELETE FROM live_sales WHERE $whereMatch$userClause");
+        $stmt = $db->prepare("DELETE FROM live_sales WHERE $whereSales$userClause");
         $stmt->execute(array_merge($params, $userParams));
 
         $blok_params = $use_glob ? [':b_clean' => $blok_upper, ':bg' => $glob_pattern] : [':b_clean' => $blok_upper];
@@ -801,6 +816,25 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           $API->write('=.id=' . $d['id']);
           $API->read();
           $router_deleted++;
+        }
+      }
+
+      if (!empty($offline_ips)) {
+        foreach (array_keys($offline_ips) as $ip) {
+          if ($ip === '' || $ip === '-') continue;
+          try {
+            $conn_list = $API->comm('/ip/firewall/connection/print', [
+              '?src-address' => $ip,
+              '.proplist' => '.id'
+            ]);
+            foreach ($conn_list as $conn) {
+              if (!empty($conn['.id'])) {
+                $API->comm('/ip/firewall/connection/remove', [
+                  '.id' => $conn['.id']
+                ]);
+              }
+            }
+          } catch (Exception $e) {}
         }
       }
 
