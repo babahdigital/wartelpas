@@ -19,6 +19,9 @@ if (file_exists($envFile)) {
     require $envFile;
 }
 require_once($root_dir . '/report/laporan/helpers.php');
+$blok_cfg = $env['blok'] ?? [];
+$blok_names = $blok_cfg['names'] ?? [];
+$blok_profile_labels = $blok_cfg['profile_labels'] ?? [];
 $system_cfg = $env['system'] ?? [];
 $db_rel = $system_cfg['db_file'] ?? 'db_data/mikhmon_stats.db';
 if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
@@ -255,6 +258,33 @@ function strip_blok_prefix($blok) {
     $raw = trim((string)$blok);
     if ($raw === '') return '-';
     return preg_replace('/^BLOK-?/i', '', $raw);
+}
+
+function get_block_group_label($block_key, $blok_names = []) {
+    $raw = strtoupper(trim((string)$block_key));
+    if ($raw === '') return '';
+    $raw = preg_replace('/^BLOK-?/i', '', $raw);
+    if (preg_match('/^([A-Z])/', $raw, $m)) {
+        $key = $m[1];
+        if (isset($blok_names[$key]) && $blok_names[$key] !== '') {
+            return (string)$blok_names[$key];
+        }
+    }
+    return strip_blok_prefix($block_key);
+}
+
+function get_block_display_label($block_name, $blok_names = [], $profile_labels = []) {
+    $norm = normalize_block_name_simple($block_name);
+    if ($norm !== '' && isset($profile_labels[$norm]) && $profile_labels[$norm] !== '') {
+        return (string)$profile_labels[$norm];
+    }
+    if (preg_match('/^BLOK-([A-Z])/', $norm, $m)) {
+        $key = $m[1];
+        if (isset($blok_names[$key]) && $blok_names[$key] !== '') {
+            return (string)$blok_names[$key];
+        }
+    }
+    return strip_blok_prefix($norm !== '' ? $norm : $block_name);
 }
 
 function normalize_blok_key($blok) {
@@ -592,6 +622,7 @@ if ($is_usage && file_exists($dbFile)) {
                 'username' => $name,
                 'profile' => $profile_label,
                 'blok' => (normalize_blok_key($f_blok) ?: '-'),
+                'blok_raw' => (normalize_block_name_simple($f_blok) ?: $f_blok),
                 'ip' => $f_ip,
                 'mac' => $f_mac,
                 'uptime' => $uptime_display,
@@ -693,6 +724,7 @@ if ($is_usage && file_exists($dbFile)) {
                 'username' => $uname,
                 'profile' => $profile_label,
                 'blok' => (normalize_blok_key($f_blok) ?: '-'),
+                'blok_raw' => (normalize_block_name_simple($f_blok) ?: $f_blok),
                 'ip' => $row['ip_address'] ?? '-',
                 'mac' => $row['mac_address'] ?? '-',
                 'uptime' => $uptime_display,
@@ -941,7 +973,7 @@ if ($is_usage) {
         <?php
             $header_blok = '';
             if ($filter_blok !== '') {
-                $header_blok = strip_blok_prefix($filter_blok);
+                $header_blok = get_block_group_label($filter_blok, $blok_names);
             }
             $header_profile = '';
             if ($filter_profile_kind !== '') {
@@ -992,7 +1024,7 @@ if ($is_usage) {
                       <?php endif; ?>
                       <td><?= esc($it['username']) ?></td>
                       <td><?= esc($it['profile'] ?? '-') ?></td>
-                      <td><?= esc(strip_blok_prefix($it['blok'])) ?></td>
+                      <td><?= esc(get_block_display_label($it['blok_raw'] ?? ($it['blok'] ?? ''), $blok_names, $blok_profile_labels)) ?></td>
                       <?php if (!$is_ready_view): ?>
                           <td><?= esc($it['ip']) ?></td>
                           <td><?= esc($it['mac']) ?></td>
@@ -1073,7 +1105,7 @@ if ($is_usage) {
                       <?php else: ?>
                           <?php foreach ($usage_block_totals as $blk => $val): ?>
                               <tr>
-                                  <td><?= esc(strip_blok_prefix($blk)) ?></td>
+                                  <td><?= esc(get_block_group_label($blk, $blok_names)) ?></td>
                                   <td><?= number_format((int)$val['ready'],0,',','.') ?></td>
                                   <td><?= number_format((int)$val['online'],0,',','.') ?></td>
                                   <td><?= number_format((int)$val['terpakai'],0,',','.') ?></td>
