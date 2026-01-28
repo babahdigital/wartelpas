@@ -25,6 +25,83 @@ function norm_date_from_raw_report($raw_date) {
     return '';
 }
 
+function env_get_value($path, $default = null) {
+    $cfg = $GLOBALS['env_config'] ?? [];
+    if (!is_array($cfg) || $path === '') return $default;
+    $parts = explode('.', (string)$path);
+    foreach ($parts as $p) {
+        if (!is_array($cfg) || !array_key_exists($p, $cfg)) return $default;
+        $cfg = $cfg[$p];
+    }
+    return $cfg;
+}
+
+function normalize_block_key($raw) {
+    $raw = strtoupper((string)$raw);
+    $raw = preg_replace('/^BLOK/i', '', $raw);
+    $raw = preg_replace('/[^A-Z0-9]/', '', $raw);
+    return $raw;
+}
+
+function resolve_block_alias($block_name) {
+    $aliases = env_get_value('blok.aliases', []);
+    if (!is_array($aliases) || empty($aliases)) return $block_name;
+    $key = normalize_block_key($block_name);
+    foreach ($aliases as $from => $to) {
+        if (normalize_block_key($from) === $key) {
+            return (string)$to;
+        }
+    }
+    return $block_name;
+}
+
+function resolve_profile_alias($profile) {
+    $aliases = env_get_value('pricing.profile_aliases', []);
+    if (!is_array($aliases) || empty($aliases)) return $profile;
+    $key = normalize_profile_key($profile);
+    foreach ($aliases as $from => $to) {
+        if (normalize_profile_key($from) === $key) {
+            return (string)$to;
+        }
+    }
+    return $profile;
+}
+
+function get_status_priority_list() {
+    $priority = env_get_value('report.status_priority', []);
+    if (!is_array($priority) || empty($priority)) {
+        $priority = ['retur', 'rusak', 'invalid', 'normal'];
+    }
+    $out = [];
+    foreach ($priority as $p) {
+        $p = strtolower(trim((string)$p));
+        if ($p === '') continue;
+        $out[] = $p;
+    }
+    if (!in_array('normal', $out, true)) $out[] = 'normal';
+    return $out;
+}
+
+function resolve_status_from_sources($status, $is_invalid, $is_retur, $is_rusak, $comment, $lh_status = '') {
+    $base = strtolower(trim((string)$status));
+    if ($base !== '' && $base !== 'normal') return $base;
+
+    $flags = [];
+    if ((int)$is_invalid === 1) $flags['invalid'] = true;
+    if ((int)$is_retur === 1) $flags['retur'] = true;
+    if ((int)$is_rusak === 1 || strtolower((string)$lh_status) === 'rusak') $flags['rusak'] = true;
+
+    $cmt_low = strtolower((string)$comment);
+    if (strpos($cmt_low, 'invalid') !== false) $flags['invalid'] = true;
+    if (strpos($cmt_low, 'retur') !== false) $flags['retur'] = true;
+    if (strpos($cmt_low, 'rusak') !== false) $flags['rusak'] = true;
+
+    foreach (get_status_priority_list() as $p) {
+        if (isset($flags[$p])) return $p;
+    }
+    return 'normal';
+}
+
 function normalize_block_name($blok_name, $comment = '') {
     $raw = strtoupper(trim((string)$blok_name));
     if ($raw === '' && $comment !== '') {
@@ -39,7 +116,13 @@ function normalize_block_name($blok_name, $comment = '') {
         $raw = $m[1];
     }
     if ($raw === '') return 'BLOK-LAIN';
-    return 'BLOK-' . $raw;
+    $final = 'BLOK-' . $raw;
+    $alias = resolve_block_alias($final);
+    if ($alias !== '' && $alias !== $final) {
+        $alias_key = normalize_block_key($alias);
+        if ($alias_key !== '') return 'BLOK-' . $alias_key;
+    }
+    return $final;
 }
 
 function sanitize_comment_short($comment) {
@@ -69,6 +152,7 @@ function normalize_profile_key($profile) {
 }
 
 function resolve_price_from_profile($profile) {
+    $profile = resolve_profile_alias($profile);
     $profile_key = normalize_profile_key($profile);
     $map = $GLOBALS['profile_price_map'] ?? [];
     if (!empty($map)) {
@@ -310,18 +394,14 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
         $blok = normalize_block_name($r['blok_name'] ?? '', $raw_comment);
         if ($blok !== $audit_blok) continue;
 
-        $status = strtolower((string)($r['status'] ?? ''));
-        $lh_status = strtolower((string)($r['last_status'] ?? ''));
-        $cmt_low = strtolower($raw_comment);
-        if ($status === '' || $status === 'normal') {
-            if ((int)($r['is_invalid'] ?? 0) === 1) $status = 'invalid';
-            elseif ((int)($r['is_retur'] ?? 0) === 1) $status = 'retur';
-            elseif ((int)($r['is_rusak'] ?? 0) === 1) $status = 'rusak';
-            elseif (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
-            elseif (strpos($cmt_low, 'retur') !== false) $status = 'retur';
-            elseif (strpos($cmt_low, 'rusak') !== false || $lh_status === 'rusak') $status = 'rusak';
-            else $status = 'normal';
-        }
+        $status = resolve_status_from_sources(
+            $r['status'] ?? '',
+            $r['is_invalid'] ?? 0,
+            $r['is_retur'] ?? 0,
+            $r['is_rusak'] ?? 0,
+            $raw_comment,
+            $r['last_status'] ?? ''
+        );
 
         if ($status === 'retur') {
             $ref_user = extract_retur_user_from_ref($raw_comment);
@@ -388,18 +468,14 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
         $blok = normalize_block_name($r['blok_name'] ?? '', $raw_comment);
         if ($blok !== $audit_blok) continue;
 
-        $status = strtolower((string)($r['status'] ?? ''));
-        $lh_status = strtolower((string)($r['last_status'] ?? ''));
-        $cmt_low = strtolower($raw_comment);
-        if ($status === '' || $status === 'normal') {
-            if ((int)($r['is_invalid'] ?? 0) === 1) $status = 'invalid';
-            elseif ((int)($r['is_retur'] ?? 0) === 1) $status = 'retur';
-            elseif ((int)($r['is_rusak'] ?? 0) === 1 || $lh_status === 'rusak') $status = 'rusak';
-            elseif (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
-            elseif (strpos($cmt_low, 'retur') !== false) $status = 'retur';
-            elseif (strpos($cmt_low, 'rusak') !== false) $status = 'rusak';
-            else $status = 'normal';
-        }
+        $status = resolve_status_from_sources(
+            $r['status'] ?? '',
+            $r['is_invalid'] ?? 0,
+            $r['is_retur'] ?? 0,
+            $r['is_rusak'] ?? 0,
+            $raw_comment,
+            $r['last_status'] ?? ''
+        );
 
         if ($status !== 'invalid') {
             if (strpos($cmt_low, 'retur') !== false) {
