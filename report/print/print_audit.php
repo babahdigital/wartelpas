@@ -43,10 +43,12 @@ function calc_audit_adjusted_totals(array $ar) {
   $profile_qty_map = [];
   $status_count_map = [];
 
+  $manual_setoran_override = false;
   if (!empty($ar['user_evidence'])) {
     $evidence = json_decode((string)$ar['user_evidence'], true);
     if (is_array($evidence)) {
       $has_manual_evidence = true;
+      $manual_setoran_override = !empty($evidence['manual_setoran']);
       if (!empty($evidence['profile_qty']) && is_array($evidence['profile_qty'])) {
         $raw_map = $evidence['profile_qty'];
         if (isset($raw_map['qty_10']) || isset($raw_map['qty_30'])) {
@@ -89,6 +91,9 @@ function calc_audit_adjusted_totals(array $ar) {
       $money_qty = max(0, $qty - (int)$counts['rusak'] - (int)$counts['invalid']);
       $price_val = isset($GLOBALS['profile_price_map'][$k]) ? (int)$GLOBALS['profile_price_map'][$k] : (int)resolve_price_from_profile($k);
       $manual_display_setoran += ($money_qty * $price_val);
+    }
+    if ($manual_setoran_override) {
+      $manual_display_setoran = $actual_setoran;
     }
     if ($manual_display_qty === 0) {
       $manual_display_qty = $reported_qty;
