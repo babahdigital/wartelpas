@@ -811,6 +811,8 @@ window.openAuditEdit = function(btn){
     var setoranManual = btn.getAttribute('data-setoran-manual') || '0';
     var qty10 = btn.getAttribute('data-qty10') || '0';
     var qty30 = btn.getAttribute('data-qty30') || '0';
+    var expenseAmt = btn.getAttribute('data-expense') || '0';
+    var expenseDesc = btn.getAttribute('data-expense-desc') || '';
     var profileQtyRaw = btn.getAttribute('data-profile-qty') || '';
     var profileQtyMap = {};
     if (profileQtyRaw) {
@@ -851,6 +853,10 @@ window.openAuditEdit = function(btn){
         var ev = new Event('input', { bubbles: true });
         qtyInputs.forEach(function(el){ el.dispatchEvent(ev); });
     }
+    var expInput = form.querySelector('input[name="audit_expense_amt"]');
+    var expDescInput = form.querySelector('input[name="audit_expense_desc"]');
+    if (expInput) expInput.value = expenseAmt;
+    if (expDescInput) expDescInput.value = expenseDesc;
     openAuditModal();
 };
 

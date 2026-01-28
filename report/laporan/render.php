@@ -885,6 +885,8 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                                     data-qty="<?= (int)($ar['reported_qty'] ?? 0); ?>"
                                     data-setoran="<?= (int)($ar['actual_setoran'] ?? 0); ?>"
                                     data-setoran-manual="<?= $manual_setoran_flag ? 1 : 0; ?>"
+                                    data-expense="<?= (int)($ar['expenses_amt'] ?? 0); ?>"
+                                    data-expense-desc="<?= htmlspecialchars($ar['expenses_desc'] ?? ''); ?>"
                                     data-qty10="<?= (int)$profile_qty_10; ?>"
                                     data-qty30="<?= (int)$profile_qty_30; ?>"
                                     data-profile-qty="<?= $profile_qty_json; ?>">
