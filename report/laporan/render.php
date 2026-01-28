@@ -393,7 +393,7 @@
         </div>
         <?php if (!empty($audit_ghost_hint)): ?>
             <div style="margin-top:8px;color:#fca5a5;">
-                Indikasi Anomali (Deteksi Otomatis): <b><?= htmlspecialchars($audit_ghost_hint) ?></b>
+                Indikasi Anomali: <b><?= htmlspecialchars($audit_ghost_hint) ?></b>
             </div>
         <?php endif; ?>
         <?php if ($req_show === 'harian'): ?>

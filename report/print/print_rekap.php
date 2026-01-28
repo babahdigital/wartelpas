@@ -1602,7 +1602,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     ?>
                                     <?php if (!empty($ghost_parts)): ?>
                                         <div style="color:#c2410c; font-size:11px; margin-top:2px; font-style:italic;">
-                                            <i class="fa fa-search"></i> <b>Indikasi Anomali (Deteksi Otomatis):</b>
+                                            <i class="fa fa-search"></i> <b>Indikasi Anomali:</b>
                                             <?= implode(', ', $ghost_parts) ?> hilang/belum input.
                                         </div>
                                     <?php endif; ?>
