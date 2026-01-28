@@ -388,7 +388,16 @@ foreach ($rows as $r) {
     else $match = (strpos((string)$sale_date, $filter_date) === 0);
     if (!$match) continue;
 
-    $comment = (string)($r['comment'] ?? ($r['raw_comment'] ?? ''));
+    $comment = (string)($r['comment'] ?? '');
+    $raw_comment = (string)($r['raw_comment'] ?? '');
+    if ($raw_comment !== '') {
+        $raw_low = strtolower($raw_comment);
+        $cmt_low = strtolower($comment);
+        if ((strpos($raw_low, 'retur') !== false || strpos($raw_low, 'rusak') !== false) &&
+            !(strpos($cmt_low, 'retur') !== false || strpos($cmt_low, 'rusak') !== false)) {
+            $comment = $raw_comment;
+        }
+    }
     $blok_row = (string)($r['blok_name'] ?? '');
     if ($blok_row === '' && !preg_match('/\bblok\s*[-_]?\s*[A-Za-z0-9]+/i', $comment)) {
         continue;
