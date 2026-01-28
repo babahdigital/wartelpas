@@ -65,6 +65,7 @@ $env = [
         ]
     ],
     'system' => [
+        'base_url' => 'http://wartelpas.sobigidul.net',
         'db_file' => 'db_data/mikhmon_stats.db',
         'log_dir' => 'logs',
         'hotspot_server' => 'wartel',
