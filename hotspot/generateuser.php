@@ -48,11 +48,51 @@ if (file_exists($envFile)) {
     require $envFile;
 }
 $profiles_cfg = $env['profiles'] ?? [];
+$pricing_cfg = $env['pricing'] ?? [];
 $blok_cfg = $env['blok'] ?? ($env['blocks'] ?? []);
-$profile10 = $profiles_cfg['profile_10'] ?? '10Menit';
-$profile30 = $profiles_cfg['profile_30'] ?? '30Menit';
-$profile_label10 = $profiles_cfg['label_10'] ?? '10 Menit';
-$profile_label30 = $profiles_cfg['label_30'] ?? '30 Menit';
+$profile_prices = $pricing_cfg['profile_prices'] ?? [];
+$profile_labels = $profiles_cfg['labels'] ?? [];
+$profile_name_map = [];
+foreach ($profiles_cfg as $k => $v) {
+    if (strpos($k, 'profile_') === 0 && trim((string)$v) !== '') {
+        $suffix = substr($k, 8);
+        $profile_name_map[$suffix] = (string)$v;
+    }
+}
+$profile_definitions = [];
+if (is_array($profile_prices) && !empty($profile_prices)) {
+    foreach ($profile_prices as $key => $price) {
+        $key_norm = strtolower(trim((string)$key));
+        $key_norm = preg_replace('/\s+/', '', $key_norm);
+        $minutes = '';
+        if (preg_match('/(\d+)/', $key_norm, $m)) {
+            $minutes = $m[1];
+        }
+        $profile_name = $minutes !== '' && isset($profile_name_map[$minutes])
+            ? $profile_name_map[$minutes]
+            : (isset($profiles_cfg['profile_' . $minutes]) ? $profiles_cfg['profile_' . $minutes] : (string)$key);
+        $label = $profile_labels[$key] ?? ($minutes !== '' ? ($minutes . ' Menit') : (string)$key);
+        $profile_definitions[] = [
+            'key' => $key_norm,
+            'name' => $profile_name,
+            'label' => $label,
+            'suffix' => $minutes
+        ];
+    }
+}
+if (empty($profile_definitions)) {
+    $profile_definitions = [
+        ['key' => '10menit', 'name' => ($profiles_cfg['profile_10'] ?? '10Menit'), 'label' => ($profiles_cfg['label_10'] ?? '10 Menit'), 'suffix' => '10'],
+        ['key' => '30menit', 'name' => ($profiles_cfg['profile_30'] ?? '30Menit'), 'label' => ($profiles_cfg['label_30'] ?? '30 Menit'), 'suffix' => '30']
+    ];
+}
+$profile_by_suffix = [];
+foreach ($profile_definitions as $def) {
+    if (!empty($def['suffix']) && !empty($def['name'])) {
+        $profile_by_suffix[(string)$def['suffix']] = (string)$def['name'];
+    }
+}
+$profile_default = $profile_definitions[0]['name'] ?? '10Menit';
 $block_letters_cfg = strtoupper(trim((string)($blok_cfg['letters'] ?? 'A-F')));
 $block_suffixes = $blok_cfg['suffixes'] ?? ['10', '30'];
 $block_suffixes = array_values(array_filter(array_map('strval', $block_suffixes)));
@@ -134,17 +174,30 @@ if (!isset($_SESSION["mikhmon"])) {
             $block_id = substr($block_id, 5);
         }
         if (!preg_match('/^[' . $block_letters_cfg . ']+(' . $block_suffix_pattern . ')$/', $block_id)) { $violation = true; }
-        $profile = $profile10;
+        $profile = $profile_default;
+        $selected_suffix = '';
         if (preg_match('/(' . $block_suffix_pattern . ')$/', $block_id, $m)) {
-            $suffix = $m[1];
-            $profile = ($suffix === ($block_suffixes[1] ?? '30')) ? $profile30 : $profile10;
+            $selected_suffix = $m[1];
+            if (isset($profile_by_suffix[$selected_suffix])) {
+                $profile = $profile_by_suffix[$selected_suffix];
+            }
         }
         $adcomment = 'Blok-' . $block_id;
-        $allowed_profiles = [$profile10, $profile30];
+        $allowed_profiles = array_values(array_unique(array_filter(array_map(function($d) {
+            return $d['name'] ?? '';
+        }, $profile_definitions))));
         if (!in_array($profile, $allowed_profiles)) { $violation = true; }
         if ($violation) { echo "<script>window.location.href='./error.php';</script>"; exit(); }
 
-        $timelimit = ($profile == $profile10) ? ($block_suffixes[0] . "m") : (($profile == $profile30) ? (($block_suffixes[1] ?? '30') . "m") : "0");
+        if ($selected_suffix === '') {
+            foreach ($profile_by_suffix as $suf => $pname) {
+                if ($pname === $profile) {
+                    $selected_suffix = (string)$suf;
+                    break;
+                }
+            }
+        }
+        $timelimit = $selected_suffix !== '' ? ($selected_suffix . "m") : "0";
         
         // Prepare Data
         $getprofile = $API->comm("/ip/hotspot/user/profile/print", array("?name" => "$profile"));
@@ -546,10 +599,11 @@ if (!isset($_SESSION["mikhmon"])) {
                             <div class="form-group">
                                 <label>Profil Paket</label>
                                 <select name="profile_display" id="uprof" class="form-control-mod locked-input" disabled>
-                                    <option value="<?= htmlspecialchars($profile10) ?>"><?= htmlspecialchars($profile10) ?></option>
-                                    <option value="<?= htmlspecialchars($profile30) ?>"><?= htmlspecialchars($profile30) ?></option>
+                                    <?php foreach ($profile_definitions as $def): ?>
+                                        <option value="<?= htmlspecialchars($def['name']) ?>"><?= htmlspecialchars($def['name']) ?></option>
+                                    <?php endforeach; ?>
                                 </select>
-                                <input type="hidden" name="profile" id="profileHidden" value="<?= htmlspecialchars($profile10) ?>">
+                                <input type="hidden" name="profile" id="profileHidden" value="<?= htmlspecialchars($profile_default) ?>">
                             </div>
                         </div>
 
@@ -640,10 +694,9 @@ if (!isset($_SESSION["mikhmon"])) {
 </div>
 
 <script>
-var profile10 = <?= json_encode($profile10) ?>;
-var profile30 = <?= json_encode($profile30) ?>;
-var suffix10 = <?= json_encode($block_suffixes[0] ?? '10') ?>;
-var suffix30 = <?= json_encode($block_suffixes[1] ?? '30') ?>;
+var profileBySuffix = <?= json_encode($profile_by_suffix) ?>;
+var blockSuffixes = <?= json_encode(array_values($block_suffixes)) ?>;
+var defaultProfile = <?= json_encode($profile_default) ?>;
 function GetVP(){
     var prof = document.getElementById('profileHidden').value || document.getElementById('uprof').value;
   // Reload div via AJAX
@@ -657,21 +710,26 @@ function GetVP(){
 function updateTimeLimit() {
         var prof = document.getElementById('profileHidden').value || document.getElementById('uprof').value;
     var timeField = document.getElementById('timelimit');
-    
-    if (prof === profile10) {
-        timeField.value = suffix10 + 'm';
-    } else if (prof === profile30) {
-        timeField.value = suffix30 + 'm';
-    } else {
-        timeField.value = '-';
-    }
+    var selectedSuffix = '';
+    Object.keys(profileBySuffix || {}).forEach(function(suf) {
+        if (profileBySuffix[suf] === prof) {
+            selectedSuffix = suf;
+        }
+    });
+    timeField.value = selectedSuffix ? (selectedSuffix + 'm') : '-';
 }
 
 function applyBlockProfile() {
     var blk = document.getElementById('blokId').value || '';
-    var prof = profile10;
-    if (suffix30 && blk.endsWith(suffix30)) {
-        prof = profile30;
+    var prof = defaultProfile;
+    if (Array.isArray(blockSuffixes)) {
+        for (var i = 0; i < blockSuffixes.length; i++) {
+            var suf = blockSuffixes[i];
+            if (suf && blk.endsWith(suf) && profileBySuffix[suf]) {
+                prof = profileBySuffix[suf];
+                break;
+            }
+        }
     }
     document.getElementById('uprof').value = prof;
     document.getElementById('profileHidden').value = prof;
