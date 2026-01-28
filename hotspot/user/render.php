@@ -139,7 +139,7 @@
                     $blok_letter = $blok_key !== '' ? substr($blok_key, 0, 1) : '';
                     $blok_names = env_get_value('blok.names', []);
                     if ($blok_letter !== '' && is_array($blok_names) && !empty($blok_names[$blok_letter])) {
-                      $label = $blok_names[$blok_letter] . ' (' . $label . ')';
+                      $label = $blok_names[$blok_letter];
                     }
                     $sel = (strcasecmp($req_comm, $b) == 0) ? 'selected' : '';
                     echo "<option value='$b' $sel>$label</option>";
