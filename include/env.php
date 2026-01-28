@@ -51,7 +51,8 @@ $env = [
         'profile_prices' => [
             '10menit' => 5000,
             '30menit' => 20000
-        ]
+        ],
+        'profile_aliases' => []
     ],
     'profiles' => [
         'profile_10' => '10Menit',
@@ -63,11 +64,13 @@ $env = [
         'db_file' => 'db_data/mikhmon_stats.db',
         'log_dir' => 'logs',
         'hotspot_server' => 'wartel',
-        'settlement_script' => 'CuciGudangManual'
+        'settlement_script' => 'CuciGudangManual',
+        'ghost_min_bytes' => 51200
     ],
     'blok' => [
         'letters' => 'A-F',
         'suffixes' => ['10', '30'],
+        'aliases' => [],
         'names' => [
             'A' => 'ANUGRAH',
             'B' => 'BERKAH',
@@ -76,6 +79,13 @@ $env = [
             'E' => 'EDUKATORIS',
             'F' => 'FIDARSA'
         ]
+    ],
+    'report' => [
+        'status_priority' => ['retur', 'rusak', 'invalid', 'normal']
+    ],
+    'audit' => [
+        'qty_mode' => 'raw',
+        'setoran_mode' => 'net'
     ],
     'rclone' => [
         'bin' => '/usr/bin/rclone',
@@ -92,3 +102,5 @@ $env = [
         'log_limit' => 50
     ]
 ];
+
+$GLOBALS['env_config'] = $env;
