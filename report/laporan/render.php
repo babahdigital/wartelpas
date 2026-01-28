@@ -576,7 +576,7 @@ window.hpDefaultSourceDate = <?= json_encode($hp_default_date ?? ''); ?>;
                                     $bw = $hp_breakdown[$bname]['WARTEL'] ?? 0;
                                     $bk = $hp_breakdown[$bname]['KAMTIB'] ?? 0;
                                 ?>
-                                <span class="unit-stack unit-wartel text-center" style="display:inline-block;"><?= (int)$bw; ?></span>
+                                <span class="unit-stack unit-wartel" style="display: block; text-align:center;"><?= (int)$bw; ?></span>
                             </td>
                             <td class="text-center">
                                 <span class="unit-stack unit-kamtib" style="display:inline-block;"><?= (int)$bk; ?></span>
