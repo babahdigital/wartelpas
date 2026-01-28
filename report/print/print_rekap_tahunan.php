@@ -47,6 +47,9 @@ $audit_net = [];
 $audit_selisih = [];
 $audit_system = [];
 $total_expenses_year = 0;
+$settled_dates = [];
+$pending_dates = [];
+$has_settlement_rows = false;
 
 try {
     if (file_exists($dbFile)) {
@@ -122,6 +125,38 @@ try {
             $audit_net[$d] = (int)($audit_net[$d] ?? 0) + $net_cash_audit;
             $audit_system[$d] = (int)($audit_system[$d] ?? 0) + (int)$expected_adj_setoran;
             $audit_selisih[$d] = (int)($audit_selisih[$d] ?? 0) + ((int)$manual_setoran - (int)$expected_adj_setoran);
+        }
+
+        if (table_exists($db, 'settlement_log')) {
+            try {
+                $stmtSet = $db->prepare("SELECT report_date, status FROM settlement_log WHERE report_date LIKE :y");
+                $stmtSet->execute([':y' => $filter_year . '%']);
+                foreach ($stmtSet->fetchAll(PDO::FETCH_ASSOC) as $sr) {
+                    $has_settlement_rows = true;
+                    $d = (string)($sr['report_date'] ?? '');
+                    if ($d === '') continue;
+                    if (strtolower((string)($sr['status'] ?? '')) === 'done') {
+                        $settled_dates[$d] = true;
+                    }
+                }
+            } catch (Exception $e) {}
+        }
+
+        if (table_exists($db, 'live_sales')) {
+            try {
+                $stmtPend = $db->prepare("SELECT sale_date, raw_date FROM live_sales WHERE sync_status='pending' AND (sale_date LIKE :d OR raw_date LIKE :raw1)");
+                $stmtPend->execute([
+                    ':d' => $filter_year . '%',
+                    ':raw1' => '%/' . $filter_year
+                ]);
+                foreach ($stmtPend->fetchAll(PDO::FETCH_ASSOC) as $pr) {
+                    $d = (string)($pr['sale_date'] ?? '');
+                    if ($d === '') $d = norm_date_from_raw_report($pr['raw_date'] ?? '');
+                    if ($d !== '' && strpos($d, $filter_year) === 0) {
+                        $pending_dates[$d] = true;
+                    }
+                }
+            } catch (Exception $e) {}
         }
     }
 } catch (Exception $e) {
@@ -222,6 +257,32 @@ foreach ($rows as $r) {
     }
 }
 
+$data_dates = [];
+foreach ($daily as $d => $_v) $data_dates[$d] = true;
+foreach ($phone as $d => $_v) $data_dates[$d] = true;
+foreach ($phone_units as $d => $_v) $data_dates[$d] = true;
+foreach ($audit_net as $d => $_v) $data_dates[$d] = true;
+
+$settled_filter_dates = $settled_dates;
+if (!$has_settlement_rows) {
+    $settled_filter_dates = $data_dates;
+}
+foreach ($pending_dates as $d => $_v) {
+    unset($settled_filter_dates[$d]);
+}
+$unsettled_dates = array_diff_key($data_dates, $settled_filter_dates);
+
+$unsettled_labels = [];
+if (!empty($unsettled_dates)) {
+    $uds = array_keys($unsettled_dates);
+    sort($uds);
+    foreach ($uds as $d) {
+        $mm = substr($d, 5, 2);
+        $day = substr($d, 8, 2);
+        $unsettled_labels[$mm][] = $day;
+    }
+}
+
 $months = [];
 for ($m = 1; $m <= 12; $m++) {
     $mm = str_pad((string)$m, 2, '0', STR_PAD_LEFT);
@@ -247,6 +308,7 @@ for ($m = 1; $m <= 12; $m++) {
 }
 
 foreach ($daily as $date => $val) {
+    if (!isset($settled_filter_dates[$date])) continue;
     $mm = substr($date, 5, 2);
     if (!isset($months[$mm])) continue;
     $qty = count($val['laku_users'] ?? []);
@@ -270,6 +332,7 @@ foreach ($daily as $date => $val) {
 }
 
 foreach ($audit_net as $date => $val) {
+    if (!isset($settled_filter_dates[$date])) continue;
     if (isset($audit_dates_in_daily[$date])) continue;
     $mm = substr($date, 5, 2);
     if (!isset($months[$mm])) continue;
@@ -282,6 +345,7 @@ foreach ($audit_net as $date => $val) {
 }
 
 foreach ($phone as $date => $val) {
+    if (!isset($settled_filter_dates[$date])) continue;
     $mm = substr($date, 5, 2);
     if (!isset($months[$mm])) continue;
     $months[$mm]['rs'] += (int)($val['rusak'] ?? 0);
@@ -291,6 +355,7 @@ foreach ($phone as $date => $val) {
 }
 
 foreach ($phone_units as $date => $val) {
+    if (!isset($settled_filter_dates[$date])) continue;
     $mm = substr($date, 5, 2);
     if (!isset($months[$mm])) continue;
     $months[$mm]['wr_sum'] += (int)($val['WARTEL'] ?? 0);
@@ -397,6 +462,21 @@ $print_time = date('d-m-Y H:i:s');
         <h2 style="margin:0;">Laporan Keuangan Tahunan</h2>
         <div class="meta">Tahun: <?= esc($filter_year) ?> | Dicetak: <?= esc($print_time) ?></div>
     </div>
+
+    <?php if (!empty($unsettled_labels)): ?>
+        <div style="margin:0 0 18px 0; padding:10px 12px; border:1px solid #f59e0b; background:#fff7ed; color:#92400e; font-size:12px; border-radius:6px;">
+            <strong>Belum Settlement:</strong>
+            <?php
+                $parts = [];
+                foreach ($unsettled_labels as $mm => $days) {
+                    $days = array_values(array_unique($days));
+                    sort($days);
+                    $parts[] = esc(month_label_id($mm)) . ' ' . esc(implode(',', $days));
+                }
+                echo implode(' | ', $parts);
+            ?>
+        </div>
+    <?php endif; ?>
 
     <table style="width:100%; border-collapse:collapse; font-size:12px; margin-top:20px;">
         <thead>
