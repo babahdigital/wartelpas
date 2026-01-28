@@ -1088,6 +1088,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $cnt_retur = [];
                             $cnt_invalid = [];
                             $has_manual_evidence = false;
+                            $manual_setoran_override = false;
                             $manual_users_map = [];
                             $audit_block_key = normalize_block_name($ar['blok_name'] ?? '', (string)($ar['comment'] ?? ''));
                             $system_incidents = $system_incidents_by_block[$audit_block_key] ?? [];
@@ -1103,6 +1104,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             if (!empty($ar['user_evidence'])) {
                                 $evidence = json_decode((string)$ar['user_evidence'], true);
                                 if (is_array($evidence)) {
+                                    $manual_setoran_override = !empty($evidence['manual_setoran']);
                                     if (!empty($evidence['profile_qty']) && is_array($evidence['profile_qty'])) {
                                         $profile_qty = [];
                                         foreach ($evidence['profile_qty'] as $k => $v) {
@@ -1284,6 +1286,10 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     $retur_val = (int)($cnt_retur[$pkey] ?? 0);
                                     $net_qty = max(0, $qty_val - $rusak_val - $invalid_val + $retur_val);
                                     $manual_display_setoran += ($net_qty * $price_val);
+                                }
+                                $actual_setoran_row = (int)($ar['actual_setoran'] ?? 0);
+                                if ($manual_setoran_override || ($actual_setoran_row > 0 && $actual_setoran_row !== $manual_display_setoran)) {
+                                    $manual_display_setoran = $actual_setoran_row;
                                 }
                             } else {
                                 $manual_display_setoran = (int)($ar['actual_setoran'] ?? 0);

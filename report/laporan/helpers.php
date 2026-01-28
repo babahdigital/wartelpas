@@ -675,7 +675,7 @@ function calc_audit_adjusted_setoran(array $ar) {
             $price_val = isset($GLOBALS['profile_price_map'][$k]) ? (int)$GLOBALS['profile_price_map'][$k] : (int)resolve_price_from_profile($k);
             $manual_display_setoran += ($money_qty * $price_val);
         }
-        if ($manual_setoran_override) {
+        if ($manual_setoran_override || ($actual_setoran_raw > 0 && $actual_setoran_raw !== $manual_display_setoran)) {
             $manual_display_setoran = $actual_setoran_raw;
         }
         $expected_adj_setoran = $expected_setoran;

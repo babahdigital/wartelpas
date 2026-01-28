@@ -806,8 +806,9 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                                     $profile_qty_summary[] = $label . ':' . $pqty;
                                 }
                             }
-                            if ($manual_setoran_override) {
-                                $manual_display_setoran = (int)($ar['actual_setoran'] ?? 0);
+                            $actual_setoran_row = (int)($ar['actual_setoran'] ?? 0);
+                            if ($manual_setoran_override || ($actual_setoran_row > 0 && $actual_setoran_row !== $manual_display_setoran)) {
+                                $manual_display_setoran = $actual_setoran_row;
                             }
                             if (!$has_manual_evidence || $manual_display_qty === 0) {
                                 $manual_display_qty = (int)($ar['reported_qty'] ?? 0);

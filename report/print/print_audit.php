@@ -92,7 +92,7 @@ function calc_audit_adjusted_totals(array $ar) {
       $price_val = isset($GLOBALS['profile_price_map'][$k]) ? (int)$GLOBALS['profile_price_map'][$k] : (int)resolve_price_from_profile($k);
       $manual_display_setoran += ($money_qty * $price_val);
     }
-    if ($manual_setoran_override) {
+    if ($manual_setoran_override || ($actual_setoran > 0 && $actual_setoran !== $manual_display_setoran)) {
       $manual_display_setoran = $actual_setoran;
     }
     if ($manual_display_qty === 0) {
