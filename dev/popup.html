@@ -1,0 +1,1599 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Wartelpas </title>
+		<meta charset="utf-8">
+		<meta http-equiv="cache-control" content="private" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<!-- Tell the browser to be responsive to screen width -->
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<!-- Theme color -->
+		<meta name="theme-color" content="#3a4149" />
+		<!-- Font Awesome -->
+		<link rel="stylesheet" type="text/css" href="css/font-awesome/css/font-awesome.min.css" />
+		<!-- Mikhmon UI -->
+		<link rel="stylesheet" href="css/mikhmon-ui.dark.min.css">
+		<!-- favicon -->
+		<link rel="icon" href="./img/favicon.png" />
+		<!-- jQuery -->
+		<script src="js/jquery.min.js"></script>
+		<!-- pace -->
+		<link href="css/pace.dark.css" rel="stylesheet" />
+		<link href="css/login.css" rel="stylesheet" />
+		<script src="js/pace.min.js"></script>
+
+		
+	</head>
+	<body>
+		<div class="wrapper">
+
+			
+
+<span style="display:none;" id="idto">disable</span>
+<span style="display:none;" id="timer"></span>
+
+<style>
+    :root {
+        --nav-bg: #1a2226;
+        --nav-hover: #222d32;
+        --nav-text: #9db2ba;
+        --nav-active: #ffffff;
+        --accent: #3c8dbc;
+        --accent-audit: #d81b60;
+        --header-shadow: 0 2px 10px rgba(0,0,0,0.4);
+    }
+
+    body { margin-top: 60px; }
+
+    .top-navbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background-color: var(--nav-bg);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 20px;
+        box-shadow: var(--header-shadow);
+        z-index: 1030;
+        font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .wartelpas-brand {
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+        margin-right: 30px;
+        height: 100%;
+    }
+
+    .brand-logo {
+        height: 50px;
+        width: auto;
+        object-fit: contain;
+    }
+
+    .nav-item { position: relative; }
+
+    .mobile-toggle { display: none; font-size: 24px; color: #fff; cursor: pointer; padding: 10px; }
+
+    .dropdown-item {
+        display: block;
+        padding: 12px 20px;
+        color: var(--nav-text);
+        text-decoration: none;
+        border-bottom: 1px solid #344248;
+        font-size: 13px;
+    }
+
+    .dropdown-item:last-child { border-bottom: none; }
+
+    .dropdown-item:hover {
+        background-color: #222d32;
+        color: #fff;
+        padding-left: 25px;
+        transition: 0.2s;
+    }
+
+    .dropdown-item.audit-item { color: #ffb6c1; }
+    .dropdown-item.audit-item:hover { color: #fff; }
+
+    .dropdown-item i { margin-right: 10px; width: 15px; text-align: center; }
+
+    .nav-right { display: flex; align-items: center; gap: 12px; padding-left: 20px; }
+    .timer-badge {
+        background: rgba(255,255,255,0.05);
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        color: var(--nav-text);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid rgba(255,255,255,0.1);
+        white-space: nowrap;
+    }
+    .db-tools {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        color: var(--nav-text);
+        font-size: 12px;
+        text-decoration: none;
+        transition: 0.2s;
+        white-space: nowrap;
+    }
+    .db-tools:hover {
+        background: rgba(255,255,255,0.08);
+        color: #fff;
+        transform: translateY(-1px);
+    }
+    .db-tools i { opacity: 0.8; }
+    .db-status {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: #8aa2ad;
+        font-size: 12px;
+        transition: 0.2s;
+    }
+    .db-status.db-ok { color: #2ecc71; border-color: rgba(46,204,113,0.6); background: rgba(46,204,113,0.15); }
+    .db-status.db-error { color: #e74c3c; border-color: rgba(231,76,60,0.6); background: rgba(231,76,60,0.15); }
+    .db-status.db-ok i { animation: dbPulse 1.2s ease-in-out infinite; }
+    @keyframes dbPulse {
+        0% { transform: scale(1); opacity: 0.9; }
+        50% { transform: scale(1.15); opacity: 1; }
+        100% { transform: scale(1); opacity: 0.9; }
+    }
+
+    .global-tooltip {
+        position: fixed;
+        background: rgba(15, 23, 28, 0.95);
+        color: #e6eef2;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        line-height: 1.2;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        transform: translateY(6px);
+        transition: opacity 0.15s ease, transform 0.15s ease;
+        border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+        z-index: 99999;
+    }
+    .global-tooltip.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    .logout-btn {
+        height: 36px;
+        width: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        color: var(--nav-text);
+        transition: 0.3s;
+        background: transparent;
+    }
+    .logout-btn:hover {
+        background: rgba(216, 27, 96, 0.15);
+        color: #ff4d4d;
+        transform: scale(1.05);
+    }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    #main { margin-left: 0; padding: 20px; }
+    .main-container-fluid { width: 100%; }
+
+    /* Override legacy sidebar layout */
+    #main { margin-left: 0 !important; margin-top: 60px !important; }
+    .sidenav { width: 0 !important; border-right: 0 !important; }
+    #openNav, #closeNav, #cpage { display: none !important; }
+
+    @media (max-width: 750px) {
+        #brand { display: flex !important; }
+    }
+
+    @media (min-width: 993px) {
+        .nav-links {
+            display: flex; gap: 0; flex-grow: 1; align-items: center;
+            list-style: none; margin: 0; padding: 0; height: 100%;
+        }
+        .nav-item { position: relative; height: 100%; }
+        .nav-link {
+            display: flex; align-items: center; gap: 8px;
+            color: var(--nav-text); text-decoration: none;
+            padding: 0 15px; height: 100%;
+            font-size: 13.5px; font-weight: 600;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+        }
+        .nav-link:hover { background-color: var(--nav-hover); color: var(--nav-active); }
+        .nav-link.active { color: var(--nav-active); background-color: var(--nav-hover); border-bottom-color: var(--accent); }
+        .nav-link.audit-link { color: #ffb6c1 !important; }
+        .nav-link.audit-link.active { border-bottom-color: var(--accent-audit); }
+
+        .dropdown-menu {
+            display: none; position: absolute; top: 60px; left: 0;
+            background-color: #2c3b41; min-width: 200px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            border-radius: 0 0 4px 4px; z-index: 1040;
+        }
+        .nav-item:hover .dropdown-menu { display: block; animation: fadeIn 0.2s; }
+    }
+
+    @media (max-width: 992px) {
+        .mobile-toggle { display: block; }
+        .wartelpas-brand { margin-right: auto; }
+        .nav-links {
+            display: none;
+            flex-direction: column;
+            position: absolute; top: 60px; left: 0; right: 0;
+            background-color: var(--nav-bg);
+            height: auto; padding-bottom: 10px;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.5);
+            list-style: none; margin: 0; padding: 0;
+        }
+        .nav-links.show { display: flex !important; }
+        .nav-link {
+            display: flex; align-items: center; gap: 8px;
+            color: var(--nav-text); text-decoration: none;
+            padding: 0 20px; height: 45px;
+            font-size: 14px; font-weight: 600;
+            border-left: 3px solid transparent;
+            width: 100%; box-sizing: border-box;
+        }
+        .nav-link.active { border-left-color: var(--accent); background: #1e282c; color: #fff; }
+        .nav-link.audit-link.active { border-left-color: var(--accent-audit); }
+
+        .dropdown-menu { display: none; position: static; background: #1a2226; box-shadow: none; width: 100%; }
+        .nav-item.active-mobile .dropdown-menu { display: block; }
+    }
+
+    /* --- Styles untuk Overlay Popup Modern --- */
+    .overlay-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 20000;
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(4px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .overlay-backdrop.show {
+        display: flex;
+        opacity: 1;
+    }
+
+    .overlay-modal {
+        background: #1e282c;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        width: 100%;
+        max-width: 380px;
+        padding: 25px;
+        text-align: center;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+        transform: scale(0.9);
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .overlay-backdrop.show .overlay-modal {
+        transform: scale(1);
+    }
+
+    .overlay-icon-box {
+        width: 70px;
+        height: 70px;
+        margin: 0 auto 15px auto;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        background: rgba(255, 255, 255, 0.05);
+        transition: all 0.3s;
+    }
+
+    .status-loading .overlay-icon-box { color: #3c8dbc; border: 2px solid rgba(60, 141, 188, 0.3); background: rgba(60, 141, 188, 0.1); }
+    .status-success .overlay-icon-box { color: #00a65a; border: 2px solid rgba(0, 166, 90, 0.3); background: rgba(0, 166, 90, 0.1); }
+    .status-error   .overlay-icon-box { color: #dd4b39; border: 2px solid rgba(221, 75, 57, 0.3); background: rgba(221, 75, 57, 0.1); }
+
+    .overlay-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #fff;
+        margin-bottom: 8px;
+        letter-spacing: 0.5px;
+    }
+
+    .overlay-message {
+        font-size: 14px;
+        color: #b8c7ce;
+        line-height: 1.5;
+        margin-bottom: 20px;
+    }
+
+    .overlay-btn {
+        background: #3c8dbc;
+        color: white;
+        border: none;
+        padding: 10px 25px;
+        border-radius: 50px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        outline: none;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+
+    .overlay-btn:hover {
+        background: #367fa9;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    }
+
+    .status-error .overlay-btn { background: #d73925; }
+    .status-error .overlay-btn:hover { background: #ac2925; }
+</style>
+
+    <nav class="top-navbar">
+        <div class="mobile-toggle" onclick="toggleMenu()"><i class="fa fa-bars"></i></div>
+
+        <a id="brand" class="wartelpas-brand" href="./?session=S3c7x9_LB">
+            <img src="img/logo.png" alt="MIKHMON" class="brand-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <span style="display:none; color:#fff; font-weight:bold; font-size:18px;">WARTELPAS</span>
+        </a>
+
+        <ul class="nav-links" id="mainNav">
+            <li class="nav-item">
+                <a class="nav-link " href="./?session=S3c7x9_LB">
+                    <i class="fa fa-dashboard"></i> Dashboard                </a>
+            </li>
+
+            <li class="nav-item" onclick="toggleMobileSub(this)">
+                <a class="nav-link " href="javascript:void(0)">
+                    <i class="fa fa-users"></i> Pengguna <i class="fa fa-caret-down" style="margin-left:auto;font-size:10px;"></i>
+                </a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="./?hotspot=users&profile=all&session=S3c7x9_LB"><i class="fa fa-list"></i> Daftar User</a>
+                    <a class="dropdown-item" href="./?hotspot-user=generate&session=S3c7x9_LB"><i class="fa fa-user-plus"></i> Generate</a>
+                </div>
+            </li>
+
+
+            <li class="nav-item" onclick="toggleMobileSub(this)">
+                <a class="nav-link " href="javascript:void(0)">
+                    <i class="fa fa-gear"></i> Perangkat <i class="fa fa-caret-down" style="margin-left:auto;font-size:10px;"></i>
+                </a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="./?hotspot=active&session=S3c7x9_LB"><i class="fa fa-gear"></i> User Aktif</a>
+                    <a class="dropdown-item" href="./?hotspot=hosts&session=S3c7x9_LB"><i class="fa fa-laptop"></i> Host Terhubung</a>
+                    <a class="dropdown-item" href="./?hotspot=cookies&session=S3c7x9_LB"><i class="fa fa-hourglass"></i> Cookies</a>
+                    <a class="dropdown-item" href="./?hotspot=dhcp-leases&session=S3c7x9_LB"><i class="fa fa-sitemap"></i> DHCP Leases</a>
+                </div>
+            </li>
+
+            <li class="nav-item" onclick="toggleMobileSub(this)">
+                <a class="nav-link active" href="javascript:void(0)">
+                    <i class="fa fa-money"></i> Laporan Penjualan <i class="fa fa-caret-down" style="margin-left:auto;font-size:10px;"></i>
+                </a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="./?report=selling&idbl=jan2026&session=S3c7x9_LB"><i class="fa fa-line-chart"></i> Laporan Penjualan</a>
+                    <a class="dropdown-item audit-item" href="./?report=audit_session&session=S3c7x9_LB"><i class="fa fa-check-square-o"></i> Audit Keuangan</a>
+                </div>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link " href="./?report=whatsapp&session=S3c7x9_LB">
+                    <i class="fa fa-whatsapp"></i> WhatsApp
+                </a>
+            </li>
+                        <li class="nav-item">
+                <a class="nav-link" href="./admin.php?id=sessions">
+                    <i class="fa fa-gear"></i> Pengaturan Admin                </a>
+            </li>
+                    </ul>
+
+        <div class="nav-right">
+                                        <a id="db-backup" class="db-tools" href="javascript:void(0)" title="Backup Database" onclick="runBackupAjax()">
+                    <i class="fa fa-database"></i> Backup
+                </a>
+                                        <a id="db-restore" class="db-tools" href="javascript:void(0)" title="Restore Backup Terbaru" onclick="runRestoreAjax()">
+                    <i class="fa fa-history"></i> Restore
+                </a>
+                        <span class="timer-badge" title="Waktu Saat Ini">
+                <i class="fa fa-clock-o"></i> <span id="timer_val">--:--</span>
+            </span>
+            <span id="db-status" class="db-status" title="Kesehatan Database">
+                <i class="fa fa-heart"></i>
+            </span>
+            <a id="logout" class="logout-btn" href="./?hotspot=logout&session=S3c7x9_LB" title="Keluar">
+                <i class="fa fa-sign-out fa-lg"></i>
+            </a>
+        </div>
+    </nav>
+
+    
+
+<div id="sidenav" style="display:none"></div>
+<a id="openNav" href="javascript:void(0)" style="display:none"></a>
+<a id="closeNav" href="javascript:void(0)" style="display:none"></a>
+<div id="overL" style="display:none"></div>
+
+<script>
+    function toggleMenu() {
+        var x = document.getElementById("mainNav");
+        if (x.className === "nav-links") {
+            x.className += " show";
+        } else {
+            x.className = "nav-links";
+        }
+    }
+
+    function toggleMobileSub(el) {
+        if (window.innerWidth <= 992) {
+            el.classList.toggle("active-mobile");
+        }
+    }
+
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 992) {
+            var x = document.getElementById("mainNav");
+            if (x) x.classList.remove("show");
+            var items = document.querySelectorAll('.nav-item.active-mobile');
+            items.forEach(function(item) {
+                item.classList.remove('active-mobile');
+            });
+        }
+    });
+
+    function updateRealTimeBadge() {
+        var el = document.getElementById('timer_val');
+        var fallback = document.getElementById('timer');
+        if (!el && !fallback) return;
+        var now = new Date();
+        var dateStr = now.toLocaleDateString('id-ID', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+        var timeStr = now.toLocaleTimeString('id-ID', { hour12: false });
+        var full = dateStr + ' ' + timeStr;
+        if (el) el.textContent = full;
+        if (fallback) fallback.textContent = full;
+    }
+
+    var isSuperAdminFlag = true;
+
+    function updateDbStatus() {
+        var el = document.getElementById('db-status');
+        var restoreBtn = document.getElementById('db-restore');
+        if (!el) return;
+        fetch('./tools/db_check.php?key=' + encodeURIComponent(window.__backupKey || ''))
+            .then(function(resp) {
+                if (!resp.ok) throw new Error('bad');
+                return resp.text();
+            })
+            .then(function(txt) {
+                var low = txt ? txt.toLowerCase() : '';
+                var ok = low.indexOf('db error') === -1 && low.indexOf('not found') === -1 && low.indexOf('forbidden') === -1;
+                el.classList.remove('db-ok', 'db-error');
+                el.classList.add(ok ? 'db-ok' : 'db-error');
+                if (restoreBtn && !isSuperAdminFlag) {
+                    restoreBtn.style.display = ok ? 'none' : 'inline-flex';
+                }
+            })
+            .catch(function() {
+                el.classList.remove('db-ok');
+                el.classList.add('db-error');
+                if (restoreBtn && !isSuperAdminFlag) restoreBtn.style.display = 'inline-flex';
+            });
+    }
+
+    function updateBackupStatus() {
+        var backupBtn = document.getElementById('db-backup');
+        if (!backupBtn) return;
+        fetch('./tools/backup_status.php?key=' + encodeURIComponent(window.__backupKey || ''))
+            .then(function(resp) {
+                if (!resp.ok) throw new Error('bad');
+                return resp.json();
+            })
+            .then(function(data) {
+                var validToday = data && data.valid_today === true;
+                backupBtn.style.display = validToday ? 'none' : 'inline-flex';
+            })
+            .catch(function() {
+                backupBtn.style.display = 'inline-flex';
+            });
+    }
+
+    function initGlobalTooltips() {
+        if (window.__tooltipInit) return;
+        window.__tooltipInit = true;
+
+        var tip = document.createElement('div');
+        tip.className = 'global-tooltip';
+        document.body.appendChild(tip);
+
+        function isChartArea(el) {
+            return el && (el.closest('.highcharts-container') || el.closest('.highcharts-tooltip') || el.closest('#chart_container'));
+        }
+
+        function positionTooltip(e) {
+            var pad = 8;
+            var x = e.clientX + 18;
+            var y = e.clientY - 18;
+            var rect = tip.getBoundingClientRect();
+            var maxX = window.innerWidth - rect.width - pad;
+            var maxY = window.innerHeight - rect.height - pad;
+            if (x > maxX) x = Math.max(pad, maxX);
+            if (y > maxY) y = Math.max(pad, maxY);
+            if (y < pad) y = pad;
+            tip.style.left = x + 'px';
+            tip.style.top = y + 'px';
+        }
+
+        document.addEventListener('mouseover', function(e) {
+            var el = e.target.closest('[title], [data-tooltip]');
+            if (!el || isChartArea(el)) return;
+            var title = el.getAttribute('data-tooltip') || el.getAttribute('title');
+            if (!title) return;
+            if (!el.getAttribute('data-tooltip')) {
+                el.setAttribute('data-tooltip', title);
+                el.removeAttribute('title');
+            }
+            tip.textContent = title;
+            tip.classList.add('show');
+            positionTooltip(e);
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!tip.classList.contains('show')) return;
+            positionTooltip(e);
+        });
+
+        document.addEventListener('mouseout', function(e) {
+            var el = e.target.closest('[data-tooltip]');
+            if (!el) return;
+            tip.classList.remove('show');
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function(){
+        window.__backupKey = "kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE=";
+        if (window.jQuery) {
+            $(".connect").click(function(){
+                notify("Menghubungkan...");
+                connect(this.id)
+            });
+            $(".slang").change(function(){
+                notify("Memuat...");
+                stheme(this.value)
+            });
+        }
+        updateRealTimeBadge();
+        setInterval(updateRealTimeBadge, 1000);
+        updateDbStatus();
+        setInterval(updateDbStatus, 30000);
+        updateBackupStatus();
+        setInterval(updateBackupStatus, 60000);
+        initGlobalTooltips();
+    });
+
+    function showOverlayNotice(msg, type, lockClose){
+        var overlay = document.getElementById('ajax-overlay');
+        var container = document.getElementById('ajax-modal-container');
+        var titleEl = document.getElementById('ajax-overlay-title');
+        var textEl = document.getElementById('ajax-overlay-text');
+        var icon = document.getElementById('ajax-overlay-icon');
+        var btn = document.getElementById('ajax-overlay-close');
+
+        if (!overlay || !container || !titleEl || !textEl || !icon || !btn) return;
+
+        container.classList.remove('status-loading', 'status-success', 'status-error');
+        var t = (type || 'info').toLowerCase();
+        if (t === 'error') {
+            container.classList.add('status-error');
+            icon.className = 'fa fa-times';
+            titleEl.textContent = 'Gagal!';
+        } else if (t === 'success') {
+            container.classList.add('status-success');
+            icon.className = 'fa fa-check';
+            titleEl.textContent = 'Berhasil!';
+        } else {
+            container.classList.add('status-loading');
+            icon.className = 'fa fa-circle-o-notch fa-spin';
+            titleEl.textContent = 'Memproses...';
+        }
+
+        textEl.textContent = msg || '';
+        if (lockClose) {
+            btn.style.display = 'none';
+        } else {
+            btn.style.display = 'inline-block';
+            setTimeout(function(){ btn.focus(); }, 100);
+        }
+
+        overlay.style.display = 'flex';
+        setTimeout(function(){
+            overlay.classList.add('show');
+        }, 10);
+    }
+
+    function hideOverlayNotice(){
+        var overlay = document.getElementById('ajax-overlay');
+        if (overlay) {
+            overlay.classList.remove('show');
+            setTimeout(function(){
+                overlay.style.display = 'none';
+            }, 300);
+        }
+    }
+
+    function notifyLocal(msg, type, lockClose){
+        showOverlayNotice(msg, type, !!lockClose);
+    }
+
+    function runBackupAjax(){
+        var btn = document.getElementById('db-backup');
+        if (!btn) return;
+        btn.style.pointerEvents = 'none';
+        btn.style.opacity = '0.6';
+        notifyLocal('Proses backup...', 'info', true);
+        fetch('./tools/backup_db.php?ajax=1&key=' + encodeURIComponent(window.__backupKey || ''), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(resp){ return resp.json(); })
+        .then(function(data){
+            if (data && data.ok) {
+                notifyLocal('Backup sukses: ' + (data.backup || '-') + 'Cloud: ' + (data.cloud || '-'), 'success', false);
+                updateBackupStatus();
+            } else {
+                notifyLocal('Backup gagal: ' + ((data && data.message) ? data.message : 'Unknown'), 'error', false);
+            }
+        })
+        .catch(function(){
+            notifyLocal('Backup gagal: koneksi.', 'error', false);
+        })
+        .finally(function(){
+            btn.style.pointerEvents = 'auto';
+            btn.style.opacity = '1';
+        });
+    }
+
+    function runRestoreAjax(){
+        if (!confirm('Restore backup terbaru? Data saat ini akan tertimpa.')) return;
+        var btn = document.getElementById('db-restore');
+        if (!btn) return;
+        btn.style.pointerEvents = 'none';
+        btn.style.opacity = '0.6';
+        notifyLocal('Proses restore...', 'info', true);
+        fetch('./tools/restore_db.php?ajax=1&key=' + encodeURIComponent(window.__backupKey || ''), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(resp){ return resp.json(); })
+        .then(function(data){
+            if (data && data.ok) {
+                notifyLocal('Restore sukses: ' + (data.file || '-') + ' <br> Sumber: ' + (data.source || '-'), 'success', false);
+                updateDbStatus();
+            } else {
+                notifyLocal('Restore gagal: ' + ((data && data.message) ? data.message : 'Unknown'), 'error', false);
+            }
+        })
+        .catch(function(){
+            notifyLocal('Restore gagal: koneksi.', 'error', false);
+        })
+        .finally(function(){
+            btn.style.pointerEvents = 'auto';
+            btn.style.opacity = '1';
+        });
+    }
+</script>
+
+<div id="notify"><div class="message"></div></div>
+<div id="temp"></div>
+
+<div id="ajax-overlay" class="overlay-backdrop">
+    <div class="overlay-modal" id="ajax-modal-container">
+        <div class="overlay-icon-box">
+            <i id="ajax-overlay-icon" class="fa fa-circle-o-notch fa-spin"></i>
+        </div>
+        <div class="overlay-title" id="ajax-overlay-title">Processing</div>
+        <div class="overlay-message" id="ajax-overlay-text">Mohon tunggu sebentar...</div>
+        <button id="ajax-overlay-close" type="button" class="overlay-btn" onclick="hideOverlayNotice()">
+            Tutup
+        </button>
+    </div>
+</div>
+
+
+<div id="main">
+<div id="loading" class="lds-dual-ring" ></div><div class="main-container main-container-fluid" style="display:none">
+
+<link rel="stylesheet" href="report/laporan/css/laporan.css">
+
+<div id="selling-config"
+    data-session-id="S3c7x9_LB"
+    data-session-qs="&amp;session=S3c7x9_LB"
+    data-filter-date="2026-01-29"
+    data-req-show="harian"
+    data-price10="5000"
+    data-price30="20000"
+    data-report-url="./?report=selling"
+    data-ghost-url="report/laporan/ghost.php"
+    data-audit-user-url="report/laporan/services/audit_users.php"
+    data-audit-locked="0"
+    data-audit-users="[&quot;4gvz45&quot;,&quot;4j8shs&quot;,&quot;24at2x&quot;,&quot;nerk5v&quot;]"
+    data-audit-profiles="[{&quot;key&quot;:&quot;10menit&quot;,&quot;label&quot;:&quot;10 Menit&quot;,&quot;price&quot;:5000,&quot;minutes&quot;:10},{&quot;key&quot;:&quot;30menit&quot;,&quot;label&quot;:&quot;30 Menit&quot;,&quot;price&quot;:20000,&quot;minutes&quot;:30}]">
+</div>
+
+<div id="hpModal" class="modal-backdrop" onclick="if(event.target===this){closeHpModal();}">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fa fa-mobile" style="color:#4ea8ff; margin-right:8px;"></i> Input Handphone Harian</div>
+            <button type="button" class="modal-close" onclick="closeHpModal()">&times;</button>
+        </div>
+        <form id="hpForm" method="post" action="report/laporan/services/hp_save.php">
+                            <input type="hidden" name="session" value="S3c7x9_LB">
+                        <input type="hidden" name="ajax" value="1">
+            <input type="hidden" name="show" value="harian">
+            <input type="hidden" name="date" value="2026-01-29">
+            <input type="hidden" name="report" value="selling">
+            
+            <input type="checkbox" name="unit_wartel" value="1" checked style="display:none;">
+            <input type="checkbox" name="unit_kamtib" value="1" checked style="display:none;">
+            <input type="hidden" name="active_units" value="0">
+
+            <div class="modal-body">
+                <div class="modal-info-banner">
+                    <div class="modal-info-icon"><i class="fa fa-info-circle"></i></div>
+                    <div class="modal-info-text">
+                            Jika data hari ini belum ada, form akan menampilkan nilai terakhir sebagai default. Data baru akan tersimpan untuk tanggal yang dipilih.
+                    </div>
+                </div>
+
+                <div class="form-grid-2">
+                    <div>
+                        <label class="label-icon"><i class="fa fa-th-large"></i> Blok</label>
+                        <select class="form-input" name="blok_name" required>
+                            <option value="" disabled selected>Pilih Blok</option>
+                                                            <option value="BLOK-A">BLOK-A</option>
+                                                            <option value="BLOK-B">BLOK-B</option>
+                                                            <option value="BLOK-C">BLOK-C</option>
+                                                            <option value="BLOK-D">BLOK-D</option>
+                                                            <option value="BLOK-E">BLOK-E</option>
+                                                            <option value="BLOK-F">BLOK-F</option>
+                                                    </select>
+                    </div>
+                    <div>
+                        <label class="label-icon"><i class="fa fa-calendar"></i> Tanggal</label>
+                        <input class="form-input" type="date" name="report_date" value="2026-01-29" required>
+                    </div>
+                </div>
+
+                <div class="form-group-box" style="margin-top:12px;">
+                    <div class="form-group-title"><i class="fa fa-cubes"></i> Sumber Unit (Fisik)</div>
+                    <div class="form-grid-2">
+                        <div>
+                            <label style="color:#7ee2a8;">Jumlah WARTEL</label>
+                            <input class="form-input" type="number" name="wartel_units" min="0" value="0" placeholder="0">
+                        </div>
+                        <div>
+                            <label style="color:#9cc7ff;">Jumlah KAMTIB</label>
+                            <input class="form-input" type="number" name="kamtib_units" min="0" value="0" placeholder="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group-box">
+                    <div class="form-group-title"><i class="fa fa-calculator"></i> Total & Kondisi</div>
+                    <div class="form-grid-2">
+                        <div style="grid-column: span 2;">
+                            <label class="label-icon" style="color:#f39c12;"><i class="fa fa-check-circle"></i> Total Unit (Otomatis)</label>
+                            <input class="form-input" type="number" name="total_units" min="0" value="0" readonly tabindex="-1">
+                        </div>
+                        <div>
+                            <label>Rusak</label>
+                            <input class="form-input" type="number" name="rusak_units" min="0" value="0">
+                        </div>
+                        <div>
+                            <label>Spam</label>
+                            <input class="form-input" type="number" name="spam_units" min="0" value="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="hpClientError" style="display:none; margin-bottom:10px; color:#fca5a5; font-size:12px; background:rgba(220,38,38,0.2); padding:8px; border-radius:4px;"></div>
+                
+                <div>
+                    <label class="label-icon"><i class="fa fa-pencil"></i> Catatan (Opsional)</label>
+                    <input class="form-input" name="notes" placeholder="Keterangan tambahan...">
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-print btn-default-dark" onclick="closeHpModal()">Batal</button>
+                <button type="submit" id="hpSubmitBtn" name="hp_submit" class="btn-print" style="background:#2ecc71;">Simpan Data</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="auditModal" class="modal-backdrop" onclick="if(event.target===this){closeAuditModal();}">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fa fa-check-square-o" style="color:#f39c12; margin-right:8px;"></i> Audit Manual Rekap</div>
+            <button type="button" class="modal-close" onclick="closeAuditModal()">&times;</button>
+        </div>
+        <form id="auditForm" method="post" action="report/selling.php">
+                            <input type="hidden" name="session" value="S3c7x9_LB">
+                        <input type="hidden" name="show" value="harian">
+            <input type="hidden" name="date" value="2026-01-29">
+            <input type="hidden" name="report" value="selling">
+            <input type="hidden" name="ajax" value="1">
+            <input type="hidden" name="audit_submit" value="1">
+            
+            <div class="modal-body">
+                
+                <div class="form-grid-2">
+                    <div>
+                        <label class="label-icon">Blok</label>
+                        <select class="form-input" name="audit_blok" required>
+                            <option value="" disabled selected>Pilih Blok</option>
+                                                            <option value="BLOK-A">BLOK-A</option>
+                                                            <option value="BLOK-B">BLOK-B</option>
+                                                            <option value="BLOK-C">BLOK-C</option>
+                                                            <option value="BLOK-D">BLOK-D</option>
+                                                            <option value="BLOK-E">BLOK-E</option>
+                                                            <option value="BLOK-F">BLOK-F</option>
+                                                    </select>
+                    </div>
+                    <div>
+                        <label class="label-icon">Tanggal</label>
+                        <input class="form-input" type="date" name="audit_date" value="2026-01-29" required>
+                    </div>
+                </div>
+
+                <div class="form-group-box" style="margin-top:12px;">
+                    <div class="form-group-title"><i class="fa fa-ticket"></i> Fisik Voucher (Lapangan)</div>
+                    <div class="form-grid-2">
+                                                                                                                    <div>
+                                    <label>10 Menit</label>
+                                    <input class="form-input audit-profile-qty" type="number"
+                                           id="audit_prof_10menit"
+                                           name="audit_profile_qty[10menit]"
+                                           data-profile-key="10menit"
+                                           data-profile-price="5000"
+                                           min="0" value="0" placeholder="0">
+                                </div>
+                                                                                            <div>
+                                    <label>30 Menit</label>
+                                    <input class="form-input audit-profile-qty" type="number"
+                                           id="audit_prof_30menit"
+                                           name="audit_profile_qty[30menit]"
+                                           data-profile-key="30menit"
+                                           data-profile-price="20000"
+                                           min="0" value="0" placeholder="0">
+                                </div>
+                                                                        </div>
+                </div>
+
+                <div class="form-grid-2">
+                    <div>
+                        <label class="label-icon" style="color:#ccc;">Total Qty (Otomatis)</label>
+                        <input class="form-input" type="number" name="audit_qty" min="0" value="0" readonly tabindex="-1">
+                    </div>
+                    <div>
+                        <label class="label-icon" style="color:#f39c12;">Total Setoran (Otomatis)</label>
+                        <input class="form-input" type="number" name="audit_setoran" min="0" value="0">
+                        <input type="hidden" name="audit_setoran_manual" id="audit_setoran_manual" value="0">
+                    </div>
+                </div>
+                <div class="form-grid-2" style="margin-top:10px;">
+                    <div>
+                        <label class="label-icon">Setoran Bersih (Setelah Pengeluaran)</label>
+                        <input class="form-input" type="number" id="audit_setoran_net" value="0" readonly tabindex="-1">
+                    </div>
+                </div>
+
+                <div class="form-group-box" style="margin-top:12px; border-color: rgba(231, 76, 60, 0.3);">
+                    <div class="form-group-title" style="color:#e74c3c;"><i class="fa fa-minus-circle"></i> Pengeluaran / Bon (Opsional)</div>
+                    <div class="form-grid-2">
+                        <div>
+                            <label>Nominal (Rp)</label>
+                            <input class="form-input" type="number" name="audit_expense_amt" min="0" value="0" placeholder="0">
+                        </div>
+                        <div>
+                            <label>Keterangan</label>
+                            <input class="form-input" type="text" name="audit_expense_desc" placeholder="Contoh: Beli Kertas Thermal">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top:10px;">
+                    <label class="label-icon"><i class="fa fa-users"></i> Verifikasi User (Audit Manual)</label>
+                    <input type="hidden" name="audit_username" id="auditUsernameHidden">
+                    <button type="button" class="audit-user-trigger" id="auditUserTrigger" onclick="openAuditUserModal()">
+                        <span id="auditUserLabel"><i class="fa fa-list-ul"></i> Pilih user terpakai & retur...</span>
+                        <i class="fa fa-chevron-right" style="font-size:10px; opacity:0.7;"></i>
+                    </button>
+                    <div class="audit-user-summary" id="auditUserSummary">Belum ada user dipilih</div>
+                    <div class="audit-user-unreported" id="auditUserUnreported">Tidak dilaporkan: -</div>
+                    <div class="audit-qty-hint" id="auditQtyLockHint">Qty otomatis dari user terpilih. Kosongkan pilihan user untuk edit manual.</div>
+                </div>
+                
+                <div id="auditClientError" style="display:none; margin-top:10px; color:#fca5a5; font-size:12px;"></div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn-print btn-default-dark" onclick="closeAuditModal()">Batal</button>
+                <button type="submit" id="auditSubmitBtn" name="audit_submit" class="btn-print" style="background:#f39c12;" >Simpan Audit</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="auditUserOverlay" class="audit-user-overlay" onclick="if(event.target===this){closeAuditUserModal();}">
+    <div class="audit-user-modal">
+        <div class="audit-user-header">
+            <div class="audit-user-title"><i class="fa fa-list-ul"></i> Pilih User Audit</div>
+            <button type="button" class="modal-close" onclick="closeAuditUserModal()">&times;</button>
+        </div>
+        <div class="audit-user-tabs" id="auditUserTabs"></div>
+        <div class="audit-user-list" id="auditUserList"></div>
+        <div class="audit-user-footer">
+            <div class="audit-user-footer-info">Terpilih: <b id="auditUserSelectedCount">0</b></div>
+            <div class="audit-user-footer-actions">
+                <button type="button" class="btn-print btn-default-dark" onclick="closeAuditUserModal()">Batal</button>
+                <button type="button" class="btn-print" style="background:#2ecc71;" onclick="applyAuditUserSelection()"><i class="fa fa-check"></i> Terapkan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="noteModal" class="modal-backdrop" onclick="if(event.target===this){closeNoteModal();}">
+    <div class="modal-card" style="width:500px;">
+        <div class="modal-header" style="background:#8e44ad;">
+            <div class="modal-title" style="color:#fff;"><i class="fa fa-pencil-square-o"></i> Catatan Harian (Laporan ke Owner)</div>
+            <button type="button" class="modal-close" onclick="closeNoteModal()">&times;</button>
+        </div>
+        <form method="post" action="">
+            <input type="hidden" name="save_daily_note" value="1">
+            <input type="hidden" name="note_date" value="2026-01-29">
+            <div class="modal-body">
+                <div style="background:#f3e5f5; color:#4a148c; padding:10px; border-radius:4px; font-size:12px; margin-bottom:15px;">
+                    <strong>Tips:</strong> Jelaskan alasan omzet hari ini naik/turun secara singkat.
+                    Contoh: <em>"Hujan deras seharian, sepi"</em> atau <em>"Listrik padam 4 jam"</em>.
+                </div>
+                <label style="color:#ccc;">Isi Catatan / Keterangan:</label>
+                <textarea name="note_text" rows="5" class="form-input" style="width:100%; margin-top:5px; line-height:1.5;" placeholder="Tulis keterangan di sini..." maxlength="500"></textarea>
+                <div class="modal-note">Maksimal 500 karakter. Kosongkan untuk menghapus catatan hari ini.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-print" onclick="closeNoteModal()">Batal</button>
+                <button type="submit" class="btn-print" style="background:#8e44ad;">Simpan Catatan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="selling-content">
+
+<div class="card-solid mb-3">
+    <div class="card-header-solid">
+        <h3 class="m-0"><i class="fa fa-line-chart mr-2"></i> Laporan Penjualan</h3>
+        <div class="filter-bar">
+            <form method="get" action="" class="filter-bar">
+                <input type="hidden" name="report" value="selling">
+                                    <input type="hidden" name="session" value="S3c7x9_LB">
+                                <select name="show" onchange="this.form.submit()">
+                    <option value="harian" selected>Harian</option>
+                    <option value="bulanan" >Bulanan</option>
+                    <option value="tahunan" >Tahunan</option>
+                </select>
+                                    <input type="date" name="date" value="2026-01-29" onchange="this.form.submit()">
+                            </form>
+                        <button class="btn-print" onclick="window.open('report/print/print_rekap.php?show=harian&date=2026-01-29&session=S3c7x9_LB','_blank')">Print Rekap</button>
+                            <button class="btn-print" onclick="window.open('report/print/print_rincian.php?date=2026-01-29&session=S3c7x9_LB','_blank')">Print Rincian</button>
+                        <button class="btn-print" type="button" onclick="openHpModal()">Input HP Blok</button>
+                            <button class="btn-print" type="button" onclick="openAuditModal()" >Audit Manual</button>
+                <button class="btn-print" type="button" onclick="openNoteModal()" style="background:#8e44ad; color:#fff;">
+                    <i class="fa fa-sticky-note-o"></i> Catatan / Insiden
+                </button>
+                                        <button class="btn-print" type="button" id="btn-settlement" onclick="manualSettlement()" >Settlement</button>
+                    </div>
+    </div>
+    <div class="card-body" style="padding:16px;">
+                        <div class="summary-grid">
+                        <div class="summary-card">
+                <div class="summary-title">Gross Income</div>
+                <div class="summary-value">Rp 10.000</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Kerugian</div>
+                <div class="summary-value" style="color:#c0392b;">
+                    Rp 10.000                </div>
+                <div style="font-size:12px;color:var(--txt-muted)">Voucher: Rp 5.000 | Setoran: Rp 5.000</div>
+            </div>
+            <div class="summary-card" style="border:1px solid var(--border-col);">
+                <div class="summary-title">Setoran Fisik (Cash)</div>
+                <div class="summary-value" style="color:#fff;">
+                    Rp 10.000                </div>
+                                    <div style="font-size:11px;color:#777; position:relative; top:3px;">Murni Tunai</div>
+                            </div>
+            <div class="summary-card">
+                <div class="summary-title">Total Device</div>
+                <div style="margin-top:7px; margin-bottom:10px;">
+                    <span class="summary-badge badge-wartel">WARTEL: 20</span>
+                    <span class="summary-badge badge-kamtib">KAMTIB: 22</span>
+                </div>
+                <div style="font-size:12px;color:var(--txt-muted);margin-top:6px;">
+                    Total: <span style="color:#f39c12;">42</span> | Aktif: <span class="text-green">40</span> | Rusak: 1 | Spam: 1                </div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Voucher Terjual</div>
+                <div class="summary-value">2</div>
+                <div style="font-size:12px;color:var(--txt-muted);margin-top: 1px;">Rusak: 1 | Retur: 1 | Bandwidth: 1,15 MB</div>
+            </div>
+        </div>
+                    <div style="margin-top:8px;color:#fca5a5;">
+                Indikasi Anomali: <b>Deteksi otomatis: 1 unit 10 menit.</b>
+            </div>
+                            <div style="margin-top:12px;border:1px solid #3a4046;border-radius:8px;padding:10px;background:#1f2327;">
+                <div style="font-size:11px;color:var(--txt-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Waterfall Pendapatan</div>
+                <div style="display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:10px;">
+                    <div>
+                        <div style="font-size:11px;color:var(--txt-muted);">Gross Total</div>
+                        <div style="font-weight:700;">Rp 10.000</div>
+                    </div>
+                    <div>
+                        <div style="font-size:11px;color:var(--txt-muted);">Technical Loss</div>
+                        <div style="font-weight:700;color:#c0392b;">Rp 5.000</div>
+                    </div>
+                    <div>
+                        <div style="font-size:11px;color:var(--txt-muted);">Target Setoran</div>
+                        <div style="font-weight:700;">Rp 10.000</div>
+                    </div>
+                    <div>
+                        <div style="font-size:11px;color:var(--txt-muted);">Actual Setoran</div>
+                        <div style="font-weight:700;">Rp 10.000</div>
+                    </div>
+                    <div>
+                        <div style="font-size:11px;color:var(--txt-muted);">Variance</div>
+                        <div style="font-weight:700;color:#2ecc71;">Rp 0</div>
+                    </div>
+                </div>
+            </div>
+                <div id="settlement-time" style="margin-top:12px;font-size:12px;color:var(--txt-muted);">
+            Settlement terakhir: -        </div>
+    </div>
+</div>
+
+
+<script>
+window.hpDefaultCache = [];
+window.hpDefaultSourceDate = "";
+window.hpTodayMapByDate = {"2026-01-29":{"BLOK-A":{"wartel_units":2,"kamtib_units":1,"total_units":3,"rusak_units":1,"spam_units":1,"notes":""},"BLOK-B":{"wartel_units":5,"kamtib_units":3,"total_units":8,"rusak_units":0,"spam_units":0,"notes":""},"BLOK-C":{"wartel_units":0,"kamtib_units":8,"total_units":8,"rusak_units":0,"spam_units":0,"notes":""},"BLOK-D":{"wartel_units":5,"kamtib_units":3,"total_units":8,"rusak_units":0,"spam_units":0,"notes":""},"BLOK-E":{"wartel_units":5,"kamtib_units":3,"total_units":8,"rusak_units":0,"spam_units":0,"notes":""},"BLOK-F":{"wartel_units":3,"kamtib_units":4,"total_units":7,"rusak_units":0,"spam_units":0,"notes":""}}};
+window.hpDefaultDate = "2026-01-29";
+window.hpDefaultsUrl = "report\/laporan\/services\/hp_defaults.php";
+window.hpSessionId = "S3c7x9_LB";
+</script>
+<div class="card-solid mb-3">
+    <div class="card-header-solid">
+        <h3 class="m-0"><i class="fa fa-mobile mr-2"></i> Data Handphone per Blok (Harian)</h3>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table-dark-solid text-nowrap audit-table">
+                <thead>
+                    <tr>
+                        <th>Blok</th>
+                        <th class="text-center">WARTEL</th>
+                        <th class="text-center">KAMTIB</th>
+                        <th class="text-center">Total</th>
+                        <th class="text-center">Aktif</th>
+                        <th class="text-center">Rusak</th>
+                        <th class="text-center">Spam</th>
+                        <th class="text-right">Catatan</th>
+                        <th class="text-right">Hapus</th>
+                    </tr>
+                </thead>
+                <tbody>
+                                            <tr>
+                            <td>BLOK-A</td>
+                            <td>
+                                                                <span class="unit-stack unit-wartel" style="display: block; text-align:center;">2</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="unit-stack unit-kamtib" style="display:inline-block;">1</span>
+                            </td>
+                            <td class="text-center">3</td>
+                              <td class="text-center">1</td>
+                              <td class="text-center">1</td>
+                              <td class="text-center">1</td>
+                            <td class="hp-notes"><small title=""></small></td>
+                            <td class="text-right">
+                                                                    <button type="button" class="btn-act" onclick="openHpEdit(this)"
+                                        data-blok="BLOK-A"
+                                        data-date="2026-01-29"
+                                        data-total="3"
+                                        data-rusak="1"
+                                        data-spam="1"
+                                        data-notes=""
+                                        data-wartel="2"
+                                        data-kamtib="1">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn-act btn-act-danger" onclick="openDeleteHpModal('./?report=selling&session=S3c7x9_LB&show=harian&date=2026-01-29&hp_delete=1&blok=BLOK-A&hp_date=2026-01-29','BLOK-A','2026-01-29')">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                                            </td>
+                        </tr>
+                                            <tr>
+                            <td>BLOK-B</td>
+                            <td>
+                                                                <span class="unit-stack unit-wartel" style="display: block; text-align:center;">5</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="unit-stack unit-kamtib" style="display:inline-block;">3</span>
+                            </td>
+                            <td class="text-center">8</td>
+                              <td class="text-center">8</td>
+                              <td class="text-center">0</td>
+                              <td class="text-center">0</td>
+                            <td class="hp-notes"><small title=""></small></td>
+                            <td class="text-right">
+                                                                    <button type="button" class="btn-act" onclick="openHpEdit(this)"
+                                        data-blok="BLOK-B"
+                                        data-date="2026-01-29"
+                                        data-total="8"
+                                        data-rusak="0"
+                                        data-spam="0"
+                                        data-notes=""
+                                        data-wartel="5"
+                                        data-kamtib="3">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn-act btn-act-danger" onclick="openDeleteHpModal('./?report=selling&session=S3c7x9_LB&show=harian&date=2026-01-29&hp_delete=1&blok=BLOK-B&hp_date=2026-01-29','BLOK-B','2026-01-29')">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                                            </td>
+                        </tr>
+                                            <tr>
+                            <td>BLOK-C</td>
+                            <td>
+                                                                <span class="unit-stack unit-wartel" style="display: block; text-align:center;">0</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="unit-stack unit-kamtib" style="display:inline-block;">8</span>
+                            </td>
+                            <td class="text-center">8</td>
+                              <td class="text-center">8</td>
+                              <td class="text-center">0</td>
+                              <td class="text-center">0</td>
+                            <td class="hp-notes"><small title=""></small></td>
+                            <td class="text-right">
+                                                                    <button type="button" class="btn-act" onclick="openHpEdit(this)"
+                                        data-blok="BLOK-C"
+                                        data-date="2026-01-29"
+                                        data-total="8"
+                                        data-rusak="0"
+                                        data-spam="0"
+                                        data-notes=""
+                                        data-wartel="0"
+                                        data-kamtib="8">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn-act btn-act-danger" onclick="openDeleteHpModal('./?report=selling&session=S3c7x9_LB&show=harian&date=2026-01-29&hp_delete=1&blok=BLOK-C&hp_date=2026-01-29','BLOK-C','2026-01-29')">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                                            </td>
+                        </tr>
+                                            <tr>
+                            <td>BLOK-D</td>
+                            <td>
+                                                                <span class="unit-stack unit-wartel" style="display: block; text-align:center;">5</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="unit-stack unit-kamtib" style="display:inline-block;">3</span>
+                            </td>
+                            <td class="text-center">8</td>
+                              <td class="text-center">8</td>
+                              <td class="text-center">0</td>
+                              <td class="text-center">0</td>
+                            <td class="hp-notes"><small title=""></small></td>
+                            <td class="text-right">
+                                                                    <button type="button" class="btn-act" onclick="openHpEdit(this)"
+                                        data-blok="BLOK-D"
+                                        data-date="2026-01-29"
+                                        data-total="8"
+                                        data-rusak="0"
+                                        data-spam="0"
+                                        data-notes=""
+                                        data-wartel="5"
+                                        data-kamtib="3">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn-act btn-act-danger" onclick="openDeleteHpModal('./?report=selling&session=S3c7x9_LB&show=harian&date=2026-01-29&hp_delete=1&blok=BLOK-D&hp_date=2026-01-29','BLOK-D','2026-01-29')">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                                            </td>
+                        </tr>
+                                            <tr>
+                            <td>BLOK-E</td>
+                            <td>
+                                                                <span class="unit-stack unit-wartel" style="display: block; text-align:center;">5</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="unit-stack unit-kamtib" style="display:inline-block;">3</span>
+                            </td>
+                            <td class="text-center">8</td>
+                              <td class="text-center">8</td>
+                              <td class="text-center">0</td>
+                              <td class="text-center">0</td>
+                            <td class="hp-notes"><small title=""></small></td>
+                            <td class="text-right">
+                                                                    <button type="button" class="btn-act" onclick="openHpEdit(this)"
+                                        data-blok="BLOK-E"
+                                        data-date="2026-01-29"
+                                        data-total="8"
+                                        data-rusak="0"
+                                        data-spam="0"
+                                        data-notes=""
+                                        data-wartel="5"
+                                        data-kamtib="3">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn-act btn-act-danger" onclick="openDeleteHpModal('./?report=selling&session=S3c7x9_LB&show=harian&date=2026-01-29&hp_delete=1&blok=BLOK-E&hp_date=2026-01-29','BLOK-E','2026-01-29')">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                                            </td>
+                        </tr>
+                                            <tr>
+                            <td>BLOK-F</td>
+                            <td>
+                                                                <span class="unit-stack unit-wartel" style="display: block; text-align:center;">3</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="unit-stack unit-kamtib" style="display:inline-block;">4</span>
+                            </td>
+                            <td class="text-center">7</td>
+                              <td class="text-center">7</td>
+                              <td class="text-center">0</td>
+                              <td class="text-center">0</td>
+                            <td class="hp-notes"><small title=""></small></td>
+                            <td class="text-right">
+                                                                    <button type="button" class="btn-act" onclick="openHpEdit(this)"
+                                        data-blok="BLOK-F"
+                                        data-date="2026-01-29"
+                                        data-total="7"
+                                        data-rusak="0"
+                                        data-spam="0"
+                                        data-notes=""
+                                        data-wartel="3"
+                                        data-kamtib="4">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn-act btn-act-danger" onclick="openDeleteHpModal('./?report=selling&session=S3c7x9_LB&show=harian&date=2026-01-29&hp_delete=1&blok=BLOK-F&hp_date=2026-01-29','BLOK-F','2026-01-29')">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                                            </td>
+                        </tr>
+                                    </tbody>
+            </table>
+        </div>
+        <div class="hp-total-bar">
+            <div>Total: <b>42</b></div>
+            <div>Aktif: <b>40</b></div>
+            <div>Rusak: <b>1</b></div>
+            <div>Spam: <b>1</b></div>
+        </div>
+    </div>
+</div>
+
+
+<div class="card-solid mb-3">
+    <div class="card-header-solid">
+        <h3 class="m-0"><i class="fa fa-check-square-o mr-2"></i> Audit Manual Rekap (Harian)</h3>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table-dark-solid text-nowrap">
+                <thead>
+                    <tr>
+                        <th>Blok</th>
+                        <th class="text-center">QTY</th>
+                        <th class="text-center">Selisih</th>
+                        <th class="text-right">Setoran</th>
+                        <th class="text-center">Selisih</th>
+                        <th class="text-center">Rusak</th>
+                        <th class="text-center">Retur</th>
+                        <th class="text-center">Voucher 10</th>
+                        <th class="text-center">Voucher 30</th>
+                        <th class="text-right">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                                                                    <tr>
+                            <td>BLOK-A</td>
+                            <td class="text-center">2</td>
+                            <td class="text-center"><span class="audit-neg">-1</span></td>
+                            <td class="text-right">10.000</td>
+                            <td class="text-center"><span class="audit-zero">0</span></td>
+                            <td class="text-center"><small>1</small></td>
+                            <td class="text-center"><small>0</small></td>
+                            <td class="text-center"><small>2</small></td>
+                            <td class="text-center"><small>0</small></td>
+                            <td class="text-right">
+                                                                    <button type="button" class="btn-act" title="Cek Anomali" style="background:#8e44ad;color:#fff;" onclick="openGhostModal('BLOK-A','2026-01-29',1)">
+                                        <i class="fa fa-search"></i>
+                                    </button>
+                                                                                                                                <button type="button" class="btn-act" onclick="openAuditEdit(this)"                                     data-blok="BLOK-A"
+                                    data-user=""
+                                    data-date="2026-01-29"
+                                    data-qty="2"
+                                    data-setoran="10000"
+                                    data-setoran-manual="1"
+                                    data-expense="0"
+                                    data-expense-desc=""
+                                    data-qty10="2"
+                                    data-qty30="0"
+                                    data-profile-qty="{&quot;10menit&quot;:2,&quot;30menit&quot;:0}">
+                                    <i class="fa fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn-act btn-act-danger" onclick="openDeleteAuditModal('./?report=selling&session=S3c7x9_LB&show=harian&date=2026-01-29&audit_delete=1&audit_blok=BLOK-A&audit_date=2026-01-29','BLOK-A','2026-01-29')"  >
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                                    </tbody>
+            </table>
+        </div>
+                <div class="hp-total-bar">
+            <div>Sistem Qty (Total): <b>3</b></div>
+            <div>Manual Qty: <b>2</b></div>
+            <div>Selisih Qty: <b>-1</b></div>
+            <div>Sistem Rp (Total): <b>10.000</b></div>
+            <div>Manual Rp: <b>10.000</b></div>
+            <div>Selisih Rp: <b>0</b></div>
+        </div>
+    </div>
+</div>
+
+
+<div class="card-solid mb-3">
+    <div class="card-header-solid">
+        <h3 class="m-0"><i class="fa fa-table mr-2"></i> Transaksi</h3>
+    </div>
+    <div class="card-body p-0">
+                <div class="table-responsive">
+            <table class="table-dark-solid text-nowrap">
+                <thead>
+                    <tr>
+                        <th style="text-align:center;">Tanggal</th>
+                        <th style="text-align:center;">User</th>
+                        <th style="text-align:center;">Profile</th>
+                        <th style="text-align:center;">Blok</th>
+                        <th style="text-align:center;">Status</th>
+                        <th style="text-align:right; padding-right:12px;">Harga</th>
+                        <th style="text-align:right; padding-right:12px;">Bandwidth</th>
+                    </tr>
+                </thead>
+                <tbody>
+                                            <tr>
+                            <td>29-01-2026 05:50</td>
+                            <td style="text-align:center">
+                                <div>24at2x</div>
+                                                            </td>
+                            <td style="text-align:center">10 Menit</td>
+                            <td style="text-align:center">BLOK-A</td>
+                            <td style="text-align:center">
+                                                                <span class="status-badge st-rusak">RUSAK</span>
+                            </td>
+                            <td class="text-right">5.000</td>
+                            <td class="text-right">28 KB</td>
+                        </tr>
+                                            <tr>
+                            <td>29-01-2026 05:57</td>
+                            <td style="text-align:center">
+                                <div>nerk5v</div>
+                                                            </td>
+                            <td style="text-align:center">10 Menit</td>
+                            <td style="text-align:center">BLOK-A</td>
+                            <td style="text-align:center">
+                                                                <span class="status-badge st-retur">RETUR (PENGGANTI)</span>
+                            </td>
+                            <td class="text-right">5.000</td>
+                            <td class="text-right">181 KB</td>
+                        </tr>
+                                            <tr>
+                            <td>29-01-2026 05:58</td>
+                            <td style="text-align:center">
+                                <div>4j8shs</div>
+                                                            </td>
+                            <td style="text-align:center">10 Menit</td>
+                            <td style="text-align:center">BLOK-A</td>
+                            <td style="text-align:center">
+                                                                <span class="status-badge st-normal">NORMAL</span>
+                            </td>
+                            <td class="text-right">5.000</td>
+                            <td class="text-right">972 KB</td>
+                        </tr>
+                                    </tbody>
+            </table>
+        </div>
+            </div>
+</div>
+
+</div>
+
+<div id="settlement-reset-modal" class="modal-backdrop" onclick="if(event.target===this){closeSettlementResetModal();}">
+    <div class="modal-card" style="width:440px;">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fa fa-refresh" style="color:#ff9800;margin-right:6px;"></i> Reset Settlement</div>
+            <button type="button" class="modal-close" onclick="closeSettlementResetModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div style="line-height:1.6;">Reset status settlement untuk tanggal ini agar tombol Settlement bisa dipakai lagi?</div>
+            <div class="modal-note">Tindakan ini hanya menghapus status selesai pada sistem, tidak mengubah data MikroTik.</div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-print btn-default-dark" onclick="closeSettlementResetModal()">Batal</button>
+            <button type="button" class="btn-print" style="background:#ff9800;color:#fff;" onclick="confirmSettlementReset()">Ya, Reset</button>
+        </div>
+    </div>
+</div>
+
+<div id="settlement-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:10050;">
+    <div style="background:#1f1f1f;color:#e5e5e5;border:1px solid #444;border-radius:8px;width:720px;max-width:94vw;box-shadow:0 10px 30px rgba(0,0,0,0.6);overflow:hidden;">
+        <div style="padding:14px 18px;border-bottom:1px solid #333;font-weight:600;display:flex;justify-content:space-between;align-items:center;">
+            <span><i class="fa fa-cog fa-spin" style="margin-right:6px;"></i> Settlement Manual</span>
+            <span id="settlement-status" style="font-size:12px;color:#9aa0a6;">Menunggu konfirmasi</span>
+        </div>
+        <div style="padding:16px 18px;">
+            <div id="settlement-confirm" style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:#111;border:1px solid #333;border-radius:6px;padding:12px;margin-bottom:12px;">
+                <div style="font-size:12px;color:#cbd5e1;">Jalankan settlement manual sekarang?</div>
+                <div style="display:flex;gap:8px;">
+                    <button id="settlement-start" type="button" class="btn-print">Mulai</button>
+                    <button id="settlement-cancel" type="button" class="btn-print" style="opacity:.8;">Batal</button>
+                </div>
+            </div>
+            <div id="settlement-log-wrap" style="display:none;">
+                <div style="font-size:12px;color:#9aa0a6;margin-bottom:8px;">Log settlement (MikroTik)</div>
+                <div id="settlement-log" class="terminal-window"></div>
+            </div>
+        </div>
+        <div id="settlement-footer" style="padding:10px 18px;border-top:1px solid #333;display:none;justify-content:space-between;gap:8px;align-items:center;">
+            <span id="processStatus" style="font-size:12px;color:#ff9800;"><i class="fa fa-refresh fa-spin"></i> Menunggu proses...</span>
+            <button id="settlement-close" type="button" class="btn-print" onclick="closeSettlementModal()" disabled style="opacity:.6;cursor:not-allowed;">Tutup</button>
+        </div>
+    </div>
+</div>
+
+<div id="hp-delete-modal" class="modal-backdrop" onclick="if(event.target===this){closeDeleteHpModal();}">
+    <div class="modal-card" style="width:440px;">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fa fa-exclamation-triangle" style="color:#ff9800;margin-right:6px;"></i> Konfirmasi Hapus</div>
+            <button type="button" id="hp-delete-close" onclick="closeDeleteHpModal()" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="hp-delete-text" style="text-align:left;line-height:1.6;">Hapus data ini?</div>
+            <div class="modal-note">Tindakan ini menghapus seluruh data untuk Blok terkait (TOTAL, WARTEL, KAMTIB) pada tanggal tersebut.</div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" id="hp-delete-cancel" onclick="closeDeleteHpModal()" class="btn-print btn-default-dark">Batal</button>
+            <button type="button" id="hp-delete-confirm" onclick="confirmDeleteHpModal()" class="btn-print" style="background:#ff9800;color:#fff;">Ya, Hapus</button>
+        </div>
+    </div>
+</div>
+
+<div id="audit-delete-modal" class="modal-backdrop" onclick="if(event.target===this){closeDeleteAuditModal();}">
+    <div class="modal-card" style="width:440px;">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fa fa-exclamation-triangle" style="color:#ff9800;margin-right:6px;"></i> Konfirmasi Hapus</div>
+            <button type="button" onclick="closeDeleteAuditModal()" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="audit-delete-text" style="text-align:left;line-height:1.6;">Hapus audit ini?</div>
+            <div class="modal-note">Tindakan ini hanya menghapus catatan audit manual untuk blok dan tanggal tersebut.</div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" onclick="closeDeleteAuditModal()" class="btn-print btn-default-dark">Batal</button>
+            <button type="button" onclick="confirmDeleteAuditModal()" class="btn-print" style="background:#ff9800;color:#fff;">Ya, Hapus</button>
+        </div>
+    </div>
+</div>
+
+<div id="audit-lock-modal" class="modal-backdrop" onclick="if(event.target===this){closeAuditLockModal();}">
+    <div class="modal-card" style="width:440px;">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fa fa-lock" style="color:#ff9800;margin-right:6px;"></i> Konfirmasi Kunci Audit</div>
+            <button type="button" onclick="closeAuditLockModal()" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="audit-lock-text" style="text-align:left;line-height:1.6;">Kunci audit ini?</div>
+            <div class="modal-note">Setelah dikunci, audit tidak bisa diedit kecuali oleh admin.</div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" onclick="closeAuditLockModal()" class="btn-print btn-default-dark">Batal</button>
+            <button type="button" onclick="confirmAuditLockModal()" class="btn-print" style="background:#ff9800;color:#fff;">Ya, Kunci</button>
+        </div>
+    </div>
+</div>
+
+<div id="ghost-modal" class="modal-backdrop" onclick="if(event.target===this){closeGhostModal();}">
+    <div class="modal-card" style="width:980px;max-width:96vw;">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fa fa-search" style="color:#8e44ad;margin-right:6px;"></i> Deteksi Anomali</div>
+            <button type="button" onclick="closeGhostModal()" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px; flex-wrap:wrap;">
+                <div id="ghost-meta" style="font-size:12px;color:var(--txt-muted);"></div>
+                <div style="flex:1;"></div>
+                <input id="ghost-search" type="text" placeholder="Cari user/ip/mac..." style="min-width:220px; max-width:320px; background:#22272b; color:#fff; border:1px solid #3a4046; height:30px; padding:0 10px; border-radius:4px;">
+            </div>
+            <div id="ghost-status" style="font-size:12px;color:#ccc;margin-bottom:10px;"></div>
+            <div class="table-responsive" style="max-height:360px;overflow:auto;">
+                <table class="table-dark-solid text-nowrap" id="ghost-table" style="font-size:12px; min-width:920px;">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th class="text-center">Profile</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center">Uptime</th>
+                            <th class="text-center">Usage</th>
+                            <th class="text-center">Login</th>
+                            <th class="text-center">Skor</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ghost-body">
+                        <tr><td colspan="7" style="text-align:center;color:var(--txt-muted);padding:20px;">Belum ada data.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" onclick="closeGhostModal()" class="btn-print btn-default-dark">Tutup</button>
+        </div>
+    </div>
+</div>
+
+
+<script src="report/laporan/js/laporan.js" defer></script>
+
+<!-- Pendapatan per Blok/Profile sementara disembunyikan sesuai permintaan -->
+</div>
+</div>
+</div>
+<script src="./js/highcharts/highcharts.js"></script>
+<script src="./js/highcharts/themes/hc.dark.js"></script>
+<script src="./js/mikhmon-ui.dark.min.js"></script>
+<script src="./js/mikhmon.js?t=2026-01-29_07:36:45"></script>
+
+<script> $(document).ready(function(){ makeAllSortable(); $("#filterTable").on("keyup", function() { var value = $(this).val().toLowerCase(); $("#dataTable tbody tr").filter(function() { $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1) }); }); }); </script></body>
+</html>
