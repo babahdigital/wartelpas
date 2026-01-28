@@ -3,9 +3,16 @@
 # Update: 2026-01-19 - PRESERVE BLOK INFO
 
 # Realtime report endpoint (sesuaikan)
-:local baseUrl "{{BASE_URL}}/report/laporan/services/live_ingest.php";
+:local baseUrl "{{BASE_URL}}";
 :local key "{{LIVE_KEY}}";
 :local session "{{SESSION}}";
+:local ingestOk true;
+:if ([:len $baseUrl] = 0 || [:find $baseUrl "{{"] != nil) do={ :set ingestOk false; }
+:if ([:len $key] = 0 || [:find $key "{{"] != nil) do={ :set ingestOk false; }
+:if ([:len $session] = 0 || [:find $session "{{"] != nil) do={ :set ingestOk false; }
+:if ($ingestOk = true) do={
+    :set baseUrl ($baseUrl . "/report/laporan/services/live_ingest.php");
+}
 
 # Helper URL-encode sederhana
 :local urlEncode do={
@@ -144,7 +151,9 @@
 
         # REALTIME REPORT (POST, tanpa url-encode)
         :do {
-            /tool fetch url=$baseUrl http-method=post http-data=("data=" . [$urlEncode $logComment] . "&key=" . [$urlEncode $key] . "&session=" . [$urlEncode $session]) keep-result=no;
+            :if ($ingestOk = true) do={
+                :do { /tool fetch url=$baseUrl http-method=post http-data=("data=" . [$urlEncode $logComment] . "&key=" . [$urlEncode $key] . "&session=" . [$urlEncode $session]) keep-result=no; } on-error={ :log warning "LOGIN: live_ingest fetch gagal"; }
+            }
         } on-error={ :log warning "LIVE_INGEST fetch gagal"; }
 
         # SET COMMENT BARU (DENGAN BLOK) - TANPA MENUMPUK
@@ -161,5 +170,7 @@
 
     # REALTIME USAGE (LOGIN) - kirim untuk semua login
     :local usageUrl ("{{BASE_URL}}/report/laporan/services/usage_ingest.php?key=" . [$urlEncode "{{USAGE_KEY}}"] . "&session=" . [$urlEncode $session] . "&event=login" . "&user=" . [$urlEncode $user] . "&date=" . [$urlEncode $date] . "&time=" . [$urlEncode $time] . "&ip=" . [$urlEncode $address] . "&mac=" . [$urlEncode $mac] . "&uptime=" . [$urlEncode $uptime]);
-    /tool fetch url=$usageUrl keep-result=no;
+    :if ($ingestOk = true) do={
+        :do { /tool fetch url=$usageUrl keep-result=no; } on-error={ :log warning "LOGIN: usage_ingest fetch gagal"; }
+    }
 }
