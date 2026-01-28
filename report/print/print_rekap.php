@@ -1217,6 +1217,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 'unreported_summary' => format_profile_summary($cnt_unreported, $profile_order_keys),
                                 'ghost_10' => (int)$ghost_10,
                                 'ghost_30' => (int)$ghost_30,
+                                'rusak_total' => (int)array_sum($cnt_rusak),
+                                'retur_total' => (int)array_sum($cnt_retur),
                                 'rusak_summary' => format_profile_summary($cnt_rusak, $profile_order_keys),
                                 'retur_summary' => format_profile_summary($cnt_retur, $profile_order_keys)
                             ];
