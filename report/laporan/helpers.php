@@ -348,11 +348,11 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
         $cmt_low = strtolower($raw_comment);
         if ($status === '' || $status === 'normal') {
             if ((int)($r['is_invalid'] ?? 0) === 1) $status = 'invalid';
-            elseif ((int)($r['is_rusak'] ?? 0) === 1 || $lh_status === 'rusak') $status = 'rusak';
             elseif ((int)($r['is_retur'] ?? 0) === 1) $status = 'retur';
+            elseif ((int)($r['is_rusak'] ?? 0) === 1 || $lh_status === 'rusak') $status = 'rusak';
             elseif (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
-            elseif (strpos($cmt_low, 'rusak') !== false) $status = 'rusak';
             elseif (strpos($cmt_low, 'retur') !== false) $status = 'retur';
+            elseif (strpos($cmt_low, 'rusak') !== false) $status = 'rusak';
             else $status = 'normal';
         }
 

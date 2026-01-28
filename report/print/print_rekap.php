@@ -725,9 +725,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         <button class="btn" onclick="shareReport()">Share</button>
     </div>
 
-    <?php $filter_blok_label = $filter_blok !== '' ? get_block_label($filter_blok, $blok_names, $blok_profile_labels) : 'Semua'; ?>
     <h2>Rekap Laporan Penjualan</h2>
-    <div class="meta">Periode: <?= htmlspecialchars($period_label) ?> | Tanggal: <?= htmlspecialchars(format_date_ddmmyyyy($filter_date)) ?> | Blok: <?= htmlspecialchars($filter_blok_label) ?> | Dicetak: <?= date('d-m-Y H:i:s') ?></div>
+    <div class="meta">Periode: <?= htmlspecialchars($period_label) ?> | Tanggal: <?= htmlspecialchars(format_date_ddmmyyyy($filter_date)) ?> | Blok: <?= htmlspecialchars($filter_blok !== '' ? strtoupper($filter_blok) : 'Semua') ?> | Dicetak: <?= date('d-m-Y H:i:s') ?></div>
 
     <div class="grid">
         <div class="card">
@@ -852,7 +851,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 <?php else: ?>
                                     <?php foreach ($block_summaries as $blk => $bdata): ?>
                                         <?php
-                                            $blk_label = get_block_label($blk, $blok_names, $blok_profile_labels);
+                                            $blk_label = get_block_label($blk, $blok_names);
                                             $hp_stat = $hp_stats_by_block[$blk] ?? ['total' => 0, 'active' => 0, 'rusak' => 0, 'spam' => 0];
                                         ?>
                                         <tr>
@@ -1183,7 +1182,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
                             // Capture data for summary
                             $audit_summary_report[] = [
-                                'blok' => get_block_label(normalize_block_name($ar['blok_name'] ?? '-', (string)($ar['comment'] ?? '')), $blok_names, $blok_profile_labels),
+                                'blok' => get_block_label(normalize_block_name($ar['blok_name'] ?? '-', (string)($ar['comment'] ?? '')), $blok_names),
                                 'selisih_setoran' => (int)$selisih_setoran,
                                 'p10_qty' => $p10_qty,
                                 'p10_sum' => $p10_sum_calc,
@@ -1200,7 +1199,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 'retur_30' => (int)$cnt_retur_30
                             ];
                         ?>
-                        <?php $audit_blk_label = get_block_label(normalize_block_name($ar['blok_name'] ?? '-', (string)($ar['comment'] ?? '')), $blok_names, $blok_profile_labels); ?>
+                        <?php $audit_blk_label = get_block_label(normalize_block_name($ar['blok_name'] ?? '-', (string)($ar['comment'] ?? '')), $blok_names); ?>
                         <tr>
                             <td style="text-align: left;"><?= htmlspecialchars($audit_blk_label) ?></td>
                             <td style="text-align:center;"><?= number_format((int)$expected_adj_qty,0,',','.') ?></td>
