@@ -210,9 +210,9 @@ try {
 
     $cmt_low = strtolower($comment);
     $status = 'normal';
-    if (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
+    if (strpos($cmt_low, 'retur') !== false) $status = 'retur';
     elseif (strpos($cmt_low, 'rusak') !== false) $status = 'rusak';
-    elseif (strpos($cmt_low, 'retur') !== false) $status = 'retur';
+    elseif (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
 
     if ($username !== '' && $sale_date !== '') {
         $dupStmt = $db->prepare("SELECT 1 FROM sales_history WHERE username = :u AND sale_date = :d LIMIT 1");

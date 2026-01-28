@@ -319,6 +319,7 @@ foreach ($all_users as $u) {
 
     $status = 'ready';
     if ($is_active) $status = 'online';
+    elseif (stripos($comment, 'RETUR') !== false) $status = 'retur';
     elseif ($disabled === 'true' || stripos($comment, 'Audit: RUSAK') === 0) $status = 'rusak';
     else {
         $is_used = ($bytes > 50 || ($uptime != '' && $uptime != '0s') || ($ip != '-' && $ip != ''));

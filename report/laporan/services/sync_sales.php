@@ -282,9 +282,9 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
 
             $cmt_low = strtolower($comment);
             $status = 'normal';
-            if (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
+            if (strpos($cmt_low, 'retur') !== false) $status = 'retur';
             elseif (strpos($cmt_low, 'rusak') !== false) $status = 'rusak';
-            elseif (strpos($cmt_low, 'retur') !== false) $status = 'retur';
+            elseif (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
 
             if ($username !== '' && $sale_date !== '') {
                 $dupStmt = $db->prepare("SELECT 1 FROM sales_history WHERE username = :u AND sale_date = :d LIMIT 1");
@@ -361,9 +361,9 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
                 $is_inv = (int)($r['is_invalid'] ?? 0);
 
                 if ($final_status === 'normal') {
-                    if (stripos($final_comment, 'invalid') !== false) { $final_status = 'invalid'; $is_inv = 1; }
+                    if (stripos($final_comment, 'retur') !== false) { $final_status = 'retur'; $is_rt = 1; }
                     elseif (stripos($final_comment, 'rusak') !== false) { $final_status = 'rusak'; $is_r = 1; }
-                    elseif (stripos($final_comment, 'retur') !== false) { $final_status = 'retur'; $is_rt = 1; }
+                    elseif (stripos($final_comment, 'invalid') !== false) { $final_status = 'invalid'; $is_inv = 1; }
                 }
 
                 $ins->execute([

@@ -222,10 +222,10 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
 
         if ($is_active) {
             $status = 'online';
-        } elseif ($disabled === 'true' || stripos($comment, 'RUSAK') !== false) {
-            $status = 'rusak';
         } elseif (stripos($comment, 'RETUR') !== false) {
             $status = 'retur';
+        } elseif ($disabled === 'true' || stripos($comment, 'RUSAK') !== false) {
+            $status = 'rusak';
         } else {
             $is_used = ($bytes > 50 || ($uptime != '' && $uptime != '0s') || ($ip != '-' && $ip != ''));
             if ($is_used) $status = 'terpakai';
