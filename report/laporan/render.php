@@ -833,8 +833,8 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                             <td class="text-center"><small><?= number_format((int)$profile_qty_10,0,',','.') ?></small></td>
                             <td class="text-center"><small><?= number_format((int)$profile_qty_30,0,',','.') ?></small></td>
                             <td class="text-right">
-                                <?php if ($sq < 0): ?>
-                                    <button type="button" class="btn-act" title="Cek Anomali" style="background:#8e44ad;color:#fff;" onclick="openGhostModal('<?= htmlspecialchars($audit_block_row); ?>','<?= htmlspecialchars($audit_date_row); ?>',<?= abs((int)$sq); ?>)">
+                                <?php if ($sq < 0 || $sys_rusak > 0 || $manual_rusak_10 > 0 || $manual_rusak_30 > 0 || $manual_invalid_10 > 0 || $manual_invalid_30 > 0): ?>
+                                    <button type="button" class="btn-act" title="Cek Anomali" style="background:#8e44ad;color:#fff;" onclick="openGhostModal('<?= htmlspecialchars($audit_block_row); ?>','<?= htmlspecialchars($audit_date_row); ?>',<?= max(0, abs((int)$sq), (int)$sys_rusak); ?>)">
                                         <i class="fa fa-search"></i>
                                     </button>
                                 <?php endif; ?>
