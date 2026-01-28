@@ -379,7 +379,9 @@ $unsettled_labels = [];
 if (!empty($unsettled_dates)) {
     $uds = array_keys($unsettled_dates);
     sort($uds);
+    $today = date('Y-m-d');
     foreach ($uds as $d) {
+        if ($d > $today) continue;
         $unsettled_labels[] = 'Tanggal ' . esc(substr($d, 8, 2)) . ' ' . esc(month_label_id(substr($d, 5, 2)));
     }
 }
