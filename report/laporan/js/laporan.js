@@ -15,6 +15,7 @@
         price30: parseInt(cfgEl.dataset.price30 || '0', 10),
         reportUrl: cfgEl.dataset.reportUrl || './?report=selling',
         ghostUrl: cfgEl.dataset.ghostUrl || 'report/laporan/ghost.php',
+        auditUserUrl: cfgEl.dataset.auditUserUrl || 'report/laporan/services/audit_users.php',
         auditLocked: cfgEl.dataset.auditLocked === '1',
         auditUsers: parseJson(cfgEl.dataset.auditUsers),
         auditProfiles: parseJson(cfgEl.dataset.auditProfiles)
@@ -27,6 +28,11 @@ var hpDeleteUrl = '';
 var settlementLastFetch = 0;
 var auditUserOptions = (window.sellingConfig && window.sellingConfig.auditUsers) ? window.sellingConfig.auditUsers : [];
 var auditSelectedUsers = [];
+var auditSelectedSet = new Set();
+var auditUserCache = [];
+var auditUserProfileKeys = [];
+var auditUserActiveKey = '';
+var auditUserEligibleCount = 0;
 window.auditEditing = false;
 
 function formatDateDMY(dateStr){
