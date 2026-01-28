@@ -30,6 +30,8 @@ $blok_cfg = $env['blok'] ?? [];
 $blok_names = $blok_cfg['names'] ?? [];
 $price10 = isset($pricing['price_10']) ? (int)$pricing['price_10'] : 0;
 $price30 = isset($pricing['price_30']) ? (int)$pricing['price_30'] : 0;
+$profile_price_map = $pricing['profile_prices'] ?? [];
+$GLOBALS['profile_price_map'] = $profile_price_map;
 $label10 = $profiles_cfg['label_10'] ?? '10 Menit';
 $label30 = $profiles_cfg['label_30'] ?? '30 Menit';
 $cur = isset($currency) ? $currency : 'Rp';
@@ -530,12 +532,7 @@ foreach ($rows as $r) {
     }
 
     if ($price <= 0) {
-        $kind = detect_profile_minutes($profile);
-        if ($kind === '10' && $price10 > 0) {
-            $price = (int)$price10;
-        } elseif ($kind === '30' && $price30 > 0) {
-            $price = (int)$price30;
-        }
+        $price = resolve_price_from_profile($profile);
         $line_price = $price * $qty;
     }
 

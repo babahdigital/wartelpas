@@ -61,6 +61,29 @@ function extract_profile_from_comment($comment) {
     return '';
 }
 
+function normalize_profile_key($profile) {
+    $raw = strtolower(trim((string)$profile));
+    if ($raw === '') return '';
+    $raw = preg_replace('/\s+/', '', $raw);
+    return $raw;
+}
+
+function resolve_price_from_profile($profile) {
+    $profile_key = normalize_profile_key($profile);
+    $map = $GLOBALS['profile_price_map'] ?? [];
+    if (!empty($map)) {
+        foreach ($map as $k => $v) {
+            if (normalize_profile_key($k) === $profile_key && (int)$v > 0) {
+                return (int)$v;
+            }
+        }
+    }
+    $p = strtolower((string)$profile);
+    if (preg_match('/\b10\s*(menit|m)\b/i', $p)) return (int)($GLOBALS['price10'] ?? 0);
+    if (preg_match('/\b30\s*(menit|m)\b/i', $p)) return (int)($GLOBALS['price30'] ?? 0);
+    return 0;
+}
+
 function format_first_login($dateStr) {
     if (empty($dateStr) || $dateStr === '-') return '-';
     $ts = strtotime($dateStr);
@@ -382,11 +405,7 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
             if ($profile === '' || $profile === '-') {
                 $profile = extract_profile_from_comment($raw_comment);
             }
-            $p = strtolower($profile);
-            if ($p !== '') {
-                if (preg_match('/\b10\s*(menit|m)\b/i', $p)) $price = (int)$GLOBALS['price10'];
-                elseif (preg_match('/\b30\s*(menit|m)\b/i', $p)) $price = (int)$GLOBALS['price30'];
-            }
+            $price = resolve_price_from_profile($profile);
         }
         $qty = (int)($r['qty'] ?? 0);
         if ($qty <= 0) $qty = 1;
