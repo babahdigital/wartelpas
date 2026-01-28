@@ -137,6 +137,9 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
 } elseif ($id == "settings" || $id == "connect") {
     $ssettings = "active";
     $mpage = $_session_settings;
+} elseif ($id == "mikrotik-scripts") {
+    $sscripts = "active";
+    $mpage = 'Script MikroTik';
 } elseif ($id == "about") {
     $sabout = "active";
     $mpage = $_about;
@@ -512,6 +515,13 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                 <li class="nav-item">
                     <a class="nav-link <?= $ssesslist; ?>" href="./admin.php?id=sessions">
                         <i class="fa fa-list"></i> <?= $_admin_settings ?>
+                    </a>
+                </li>
+            <?php endif; ?>
+            <?php if (isSuperAdmin()): ?>
+                <li class="nav-item">
+                    <a class="nav-link <?= $sscripts; ?>" href="./admin.php?id=mikrotik-scripts&session=<?= $session; ?>">
+                        <i class="fa fa-code"></i> Script MikroTik
                     </a>
                 </li>
             <?php endif; ?>
