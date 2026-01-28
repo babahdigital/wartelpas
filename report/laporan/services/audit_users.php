@@ -21,6 +21,14 @@ if (file_exists($envFile)) {
 }
 require_once $root_dir . '/report/laporan/helpers.php';
 
+$pricing = $env['pricing'] ?? [];
+$price10 = (int)($pricing['price_10'] ?? 0);
+$price30 = (int)($pricing['price_30'] ?? 0);
+$profile_price_map = $pricing['profile_prices'] ?? [];
+$GLOBALS['price10'] = $price10;
+$GLOBALS['price30'] = $price30;
+$GLOBALS['profile_price_map'] = $profile_price_map;
+
 $system_cfg = $env['system'] ?? [];
 $db_rel = $system_cfg['db_file'] ?? 'db_data/mikhmon_stats.db';
 if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
