@@ -522,8 +522,8 @@ if (file_exists($dbFile)) {
                 + (int)$pending_summary['rusak'] + (int)$pending_summary['invalid'];
             $stat_rusak_manual = (int)($audit_manual_summary['total_rusak_rp'] ?? 0);
             $stat_retur_system = (int)$sales_summary['retur'] + (int)$pending_summary['retur'];
-            $stat_net_system = (int)$sales_summary['net'] + (int)$pending_summary['net'];
-            $total_loss_real = max(0, $stat_gross + $stat_retur_system - $stat_net_system);
+            $expected_net = (int)($audit_manual_summary['expected_setoran'] ?? 0);
+            $total_loss_real = max(0, ($stat_gross + $stat_retur_system) - $expected_net);
             if ($total_loss_real <= 0) {
                 $total_loss_real = $stat_rusak_system > 0 ? $stat_rusak_system : $stat_rusak_manual;
             }
