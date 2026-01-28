@@ -981,7 +981,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         <?php endif; ?>
 
         <?php if ($req_show === 'harian' && !empty($daily_note_alert)): ?>
-            <div class="dul-gap" style="line-height: 25px; margin-top:2%; padding:10px; border:1px solid #ffcdd2; background:#ffebee; border-radius:4px; color:#b71c1c;">
+            <div style="line-height: 25px; margin-top:2%; padding:10px; border:1px solid #ffcdd2; background:#ffebee; border-radius:4px; color:#b71c1c;">
                 <strong style="margin-bottom: 15px;"><i class="fa fa-exclamation-circle"></i> CATATAN PENTING HARI INI:</strong><br>
                 <?= nl2br(htmlspecialchars($daily_note_alert)) ?>
             </div>
@@ -999,7 +999,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                 $profile_label_1 = $profile_label_1 ?? ($profile_key_1 !== '' ? resolve_profile_label($profile_key_1) : 'Profil 1');
                 $profile_label_2 = $profile_label_2 ?? ($profile_key_2 !== '' ? resolve_profile_label($profile_key_2) : 'Profil 2');
             ?>
-            <h2 style="margin-top:25px;">Rekap Audit Penjualan Lapangan</h2>
+            <h2 class="dul-gap" style="margin-top:25px;">Rekap Audit Penjualan Lapangan</h2>
             <div class="meta">Periode: <?= htmlspecialchars($period_label) ?> | Tanggal: <?= htmlspecialchars(format_date_ddmmyyyy($filter_date)) ?></div>
 
             <table class="rekap-table" style="margin-top:15px;">
