@@ -402,8 +402,16 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
             $net_add = $line_price;
         }
 
+        $rusak_recovered = false;
+        if ($status === 'rusak') {
+            $uname_key = strtolower((string)($username ?? ''));
+            if ($uname_key !== '' && isset($retur_ref_map[$uname_key])) {
+                $rusak_recovered = true;
+            }
+        }
+
         $qty_total += 1;
-        if ($status === 'rusak') $rusak_qty += 1;
+        if ($status === 'rusak' && !$rusak_recovered) $rusak_qty += 1;
         if ($status === 'retur') $retur_qty += 1;
         if ($status === 'invalid') $invalid_qty += 1;
         $net_total += $net_add;

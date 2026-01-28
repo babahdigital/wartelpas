@@ -1016,6 +1016,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             if (isset($system_status_map[$uname_key]) && $system_status_map[$uname_key] !== '') {
                                                 $u_status = $system_status_map[$uname_key];
                                             }
+                                            $is_recovered_rusak = ($u_status === 'rusak' && isset($retur_ref_map[$audit_block_key][$uname_key]));
                                             if (!in_array($u_status, ['rusak', 'retur', 'invalid'], true)) {
                                                 $u_status = 'anomaly';
                                             }
@@ -1033,7 +1034,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                                 $profile30_sum += $price_val;
                                                 $profile30_items[] = $item;
                                                 $profile30_display_items[] = $item;
-                                                if ($u_status === 'rusak') $cnt_rusak_30++;
+                                                if ($u_status === 'rusak' && !$is_recovered_rusak) $cnt_rusak_30++;
                                                 if ($u_status === 'retur') $cnt_retur_30++;
                                                 if ($u_status === 'invalid') $cnt_invalid_30++;
                                                 if ($is_unreported) $cnt_unreported_30++;
@@ -1041,7 +1042,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                                 $profile10_sum += $price_val;
                                                 $profile10_items[] = $item;
                                                 $profile10_display_items[] = $item;
-                                                if ($u_status === 'rusak') $cnt_rusak_10++;
+                                                if ($u_status === 'rusak' && !$is_recovered_rusak) $cnt_rusak_10++;
                                                 if ($u_status === 'retur') $cnt_retur_10++;
                                                 if ($u_status === 'invalid') $cnt_invalid_10++;
                                                 if ($is_unreported) $cnt_unreported_10++;
@@ -1077,6 +1078,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     $lb = format_bytes_short((int)($inc['last_bytes'] ?? 0));
                                     $price_val = (int)($inc['price'] ?? 0);
                                     $upt = $upt !== '' ? $upt : '-';
+                                    $uname_key = strtolower($uname);
+                                    $is_recovered_rusak = ($u_status === 'rusak' && isset($retur_ref_map[$audit_block_key][$uname_key]));
                                     $item = [
                                         'label' => $uname,
                                         'status' => $u_status,
@@ -1088,14 +1091,14 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                         $profile30_sum += $price_val;
                                         $profile30_items[] = $item;
                                         $profile30_display_items[] = $item;
-                                        if ($u_status === 'rusak') $cnt_rusak_30++;
+                                        if ($u_status === 'rusak' && !$is_recovered_rusak) $cnt_rusak_30++;
                                         if ($u_status === 'retur') $cnt_retur_30++;
                                         if ($u_status === 'invalid') $cnt_invalid_30++;
                                     } else {
                                         $profile10_sum += $price_val;
                                         $profile10_items[] = $item;
                                         $profile10_display_items[] = $item;
-                                        if ($u_status === 'rusak') $cnt_rusak_10++;
+                                        if ($u_status === 'rusak' && !$is_recovered_rusak) $cnt_rusak_10++;
                                         if ($u_status === 'retur') $cnt_retur_10++;
                                         if ($u_status === 'invalid') $cnt_invalid_10++;
                                     }
