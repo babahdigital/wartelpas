@@ -412,17 +412,10 @@ if (!empty($unsettled_dates)) {
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
     </style>
-    <style id="print-orientation-style">
-        @media print {
-            @page { size: A4 landscape; margin: 10mm; }
-        }
-    </style>
 </head>
 <body>
     <div class="toolbar">
         <button class="btn" onclick="window.print()">Print / PDF</button>
-        <button class="btn" type="button" onclick="setPrintOrientation('portrait')">Portrait</button>
-        <button class="btn" type="button" onclick="setPrintOrientation('landscape')">Landscape</button>
     </div>
 
     <div style="border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:20px;">
@@ -588,13 +581,6 @@ if (!empty($unsettled_dates)) {
     <?php endif; ?>
 
 <script>
-function setPrintOrientation(mode) {
-    var styleEl = document.getElementById('print-orientation-style');
-    if (!styleEl) return;
-    var size = (mode === 'portrait') ? 'A4 portrait' : 'A4 landscape';
-    styleEl.textContent = '@media print { @page { size: ' + size + '; margin: 10mm; } }';
-}
-
 function setUniquePrintTitle(){
     var now = new Date();
     var pad = function(n){ return String(n).padStart(2, '0'); };
