@@ -16,8 +16,37 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
   $profiles_cfg = $env['profiles'] ?? [];
   $price10 = isset($pricing['price_10']) ? (int)$pricing['price_10'] : (int)($price10 ?? 0);
   $price30 = isset($pricing['price_30']) ? (int)$pricing['price_30'] : (int)($price30 ?? 0);
-  $label10 = $profiles_cfg['label_10'] ?? '10 Menit';
-  $label30 = $profiles_cfg['label_30'] ?? '30 Menit';
+  $profile_prices = $pricing['profile_prices'] ?? [];
+  $profile_labels = $profiles_cfg['labels'] ?? [];
+  $resolve_profile_label = function($profile_key) use ($profile_labels) {
+    $profile_key = normalize_profile_key(resolve_profile_alias($profile_key));
+    if ($profile_key === '') return '';
+    if (is_array($profile_labels)) {
+      foreach ($profile_labels as $k => $v) {
+        if (normalize_profile_key($k) === $profile_key && trim((string)$v) !== '') {
+          return (string)$v;
+        }
+      }
+    }
+    if (preg_match('/(\d+)/', $profile_key, $m)) {
+      return $m[1] . ' Menit';
+    }
+    return $profile_key;
+  };
+  $resolve_price_from_profile = function($profile_key) use ($profile_prices, $price10, $price30) {
+    $profile_key = normalize_profile_key(resolve_profile_alias($profile_key));
+    if (is_array($profile_prices)) {
+      foreach ($profile_prices as $k => $v) {
+        if (normalize_profile_key($k) === $profile_key && (int)$v > 0) {
+          return (int)$v;
+        }
+      }
+    }
+    $p = strtolower((string)$profile_key);
+    if (preg_match('/\b10\s*(menit|m)\b/i', $p)) return (int)$price10;
+    if (preg_match('/\b30\s*(menit|m)\b/i', $p)) return (int)$price30;
+    return 0;
+  };
   $is_action_ajax = isset($_GET['ajax']) && $_GET['ajax'] == '1' && isset($_GET['action_ajax']);
   $act = $_POST['action'] ?? $_GET['action'];
   if ($act === 'login_events') {
@@ -983,13 +1012,9 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $action_message = 'Berhasil enable voucher ' . $name . '.';
       } elseif ($act == 'invalid') {
         $new_c = "Audit: RUSAK " . date("d/m/y") . " " . $comm;
-        $profile_label = (string)($urow['profile'] ?? '');
-        $price_value = 0;
-        if (preg_match('/\b30\s*(menit|m)\b|30menit/i', $profile_label)) {
-          $price_value = $price30;
-        } else {
-          $price_value = $price10;
-        }
+        $profile_key = (string)($urow['profile'] ?? '');
+        $profile_label = $resolve_profile_label($profile_key);
+        $price_value = $resolve_price_from_profile($profile_key !== '' ? $profile_key : $profile_label);
         $API->write('/ip/hotspot/user/set', false);
         $API->write('=.id='.$uid, false);
         $API->write('=disabled=yes', false);
@@ -1256,16 +1281,18 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $base_comment = $comm != '' ? $comm : ($hist['raw_comment'] ?? '');
       $new_c = "Audit: RUSAK " . date("d/m/y") . " " . $base_comment;
       $profile_label = (string)($hist['validity'] ?? '');
-      if ($profile_label === '') {
-        if (preg_match('/\b30\s*(menit|m)\b|30menit/i', $base_comment)) $profile_label = $label30;
-        elseif (preg_match('/\b10\s*(menit|m)\b|10menit/i', $base_comment)) $profile_label = $label10;
+      $profile_key = $profile_label;
+      if ($profile_key === '') {
+        if (preg_match('/\bProfil\s*:\s*([^|]+)/i', $base_comment, $m)) {
+          $profile_key = trim($m[1]);
+        } elseif (preg_match('/\bProfile\s*:\s*([^|]+)/i', $base_comment, $m)) {
+          $profile_key = trim($m[1]);
+        } elseif (preg_match('/(\d+)\s*(menit|m)\b/i', $base_comment, $m)) {
+          $profile_key = $m[1] . 'menit';
+        }
       }
-      $price_value = 0;
-      if (preg_match('/\b30\s*(menit|m)\b|30menit/i', $profile_label)) {
-        $price_value = $price30;
-      } else {
-        $price_value = $price10;
-      }
+      $profile_label = $resolve_profile_label($profile_key !== '' ? $profile_key : $profile_label);
+      $price_value = $resolve_price_from_profile($profile_key !== '' ? $profile_key : $profile_label);
       $logout_time_real = $hist['logout_time_real'] ?? null;
       if (empty($logout_time_real)) {
         $comment_dt = extract_datetime_from_comment($base_comment);
