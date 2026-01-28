@@ -776,7 +776,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         @media print { 
             .toolbar { display:none; } 
             .audit-summary-box { page-break-inside: avoid; }
-            .dul-gap { margin-bottom: 20% !important; }
+            .dul-gap { margin-top: 20% !important; }
             body { zoom: 0.9; }
         }
     </style>
@@ -999,7 +999,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                 $profile_label_1 = $profile_label_1 ?? ($profile_key_1 !== '' ? resolve_profile_label($profile_key_1) : 'Profil 1');
                 $profile_label_2 = $profile_label_2 ?? ($profile_key_2 !== '' ? resolve_profile_label($profile_key_2) : 'Profil 2');
             ?>
-            <h2 class="dul-gap" style="margin-top:25px;">Rekap Audit Penjualan Lapangan</h2>
+            <h2 class="dul-gap">Rekap Audit Penjualan Lapangan</h2>
             <div class="meta">Periode: <?= htmlspecialchars($period_label) ?> | Tanggal: <?= htmlspecialchars(format_date_ddmmyyyy($filter_date)) ?></div>
 
             <table class="rekap-table" style="margin-top:15px;">
