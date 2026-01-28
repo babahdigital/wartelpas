@@ -558,59 +558,57 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
 }
 
 function calc_audit_adjusted_setoran(array $ar) {
-    global $price10, $price30;
-    $price10 = (int)$price10;
-    $price30 = (int)$price30;
     $expected_setoran = (int)($ar['expected_setoran'] ?? 0);
     $actual_setoran_raw = (int)($ar['actual_setoran'] ?? 0);
-
-    $p10_qty = 0;
-    $p30_qty = 0;
-    $cnt_rusak_10 = 0;
-    $cnt_rusak_30 = 0;
-    $cnt_retur_10 = 0;
-    $cnt_retur_30 = 0;
-    $cnt_invalid_10 = 0;
-    $cnt_invalid_30 = 0;
-    $profile10_users = 0;
-    $profile30_users = 0;
     $has_manual_evidence = false;
+    $profile_qty_map = [];
+    $status_count_map = [];
 
     if (!empty($ar['user_evidence'])) {
         $evidence = json_decode((string)$ar['user_evidence'], true);
         if (is_array($evidence)) {
             $has_manual_evidence = true;
             if (!empty($evidence['profile_qty']) && is_array($evidence['profile_qty'])) {
-                $p10_qty = (int)($evidence['profile_qty']['qty_10'] ?? 0);
-                $p30_qty = (int)($evidence['profile_qty']['qty_30'] ?? 0);
+                $raw_map = $evidence['profile_qty'];
+                if (isset($raw_map['qty_10']) || isset($raw_map['qty_30'])) {
+                    $profile_qty_map['10menit'] = (int)($raw_map['qty_10'] ?? 0);
+                    $profile_qty_map['30menit'] = (int)($raw_map['qty_30'] ?? 0);
+                } else {
+                    foreach ($raw_map as $k => $v) {
+                        $key = strtolower(trim((string)$k));
+                        if ($key === '') continue;
+                        $profile_qty_map[$key] = (int)$v;
+                    }
+                }
             }
             if (!empty($evidence['users']) && is_array($evidence['users'])) {
                 foreach ($evidence['users'] as $ud) {
-                    $kind = (string)($ud['profile_kind'] ?? '10');
                     $status = strtolower((string)($ud['last_status'] ?? ''));
-                    if ($kind === '30') {
-                        $profile30_users++;
-                        if ($status === 'invalid') $cnt_invalid_30++;
-                        elseif ($status === 'retur') $cnt_retur_30++;
-                        elseif ($status === 'rusak') $cnt_rusak_30++;
-                    } else {
-                        $profile10_users++;
-                        if ($status === 'invalid') $cnt_invalid_10++;
-                        elseif ($status === 'retur') $cnt_retur_10++;
-                        elseif ($status === 'rusak') $cnt_rusak_10++;
+                    $kind = strtolower((string)($ud['profile_key'] ?? $ud['profile_kind'] ?? ''));
+                    if ($kind !== '' && preg_match('/^(\d+)$/', $kind, $m)) {
+                        $kind = $m[1] . 'menit';
                     }
+                    if ($kind === '') $kind = '10menit';
+                    if (!isset($status_count_map[$kind])) {
+                        $status_count_map[$kind] = ['invalid' => 0, 'retur' => 0, 'rusak' => 0];
+                    }
+                    if ($status === 'invalid') $status_count_map[$kind]['invalid']++;
+                    elseif ($status === 'retur') $status_count_map[$kind]['retur']++;
+                    elseif ($status === 'rusak') $status_count_map[$kind]['rusak']++;
                 }
             }
         }
     }
 
-    if ($p10_qty <= 0) $p10_qty = $profile10_users;
-    if ($p30_qty <= 0) $p30_qty = $profile30_users;
-
-    if ($has_manual_evidence) {
-        $manual_net_qty_10 = max(0, $p10_qty - $cnt_rusak_10 - $cnt_invalid_10);
-        $manual_net_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30);
-        $manual_display_setoran = ($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30);
+    if ($has_manual_evidence && !empty($profile_qty_map)) {
+        $manual_display_setoran = 0;
+        foreach ($profile_qty_map as $k => $qty) {
+            $qty = (int)$qty;
+            $counts = $status_count_map[$k] ?? ['invalid' => 0, 'retur' => 0, 'rusak' => 0];
+            $money_qty = max(0, $qty - (int)$counts['rusak'] - (int)$counts['invalid']);
+            $price_val = isset($GLOBALS['profile_price_map'][$k]) ? (int)$GLOBALS['profile_price_map'][$k] : (int)resolve_price_from_profile($k);
+            $manual_display_setoran += ($money_qty * $price_val);
+        }
         $expected_adj_setoran = $expected_setoran;
     } else {
         $manual_display_setoran = $actual_setoran_raw;
