@@ -217,7 +217,7 @@ if (file_exists($dbFile)) {
             $sales_summary['invalid'] = $invalid_rp;
             $sales_summary['rusak'] = $rusak_rp;
             $sales_summary['retur'] = $retur_rp;
-            $sales_summary['gross'] = $raw_gross - $invalid_rp - $retur_rp;
+            $sales_summary['gross'] = $raw_gross - $retur_rp;
             $sales_summary['total'] = (int)($sumRow['total_cnt'] ?? 0);
             $sales_summary['net'] = $raw_gross - $invalid_rp - $rusak_rp;
 
@@ -270,7 +270,7 @@ if (file_exists($dbFile)) {
             $pending_summary['invalid'] = $invalid_rp;
             $pending_summary['rusak'] = $rusak_rp;
             $pending_summary['retur'] = $retur_rp;
-            $pending_summary['gross'] = $raw_gross - $invalid_rp - $retur_rp;
+            $pending_summary['gross'] = $raw_gross - $retur_rp;
             $pending_summary['total'] = (int)($p['total_cnt'] ?? 0);
             $pending_summary['net'] = $raw_gross - $invalid_rp - $rusak_rp;
 
@@ -462,7 +462,8 @@ if (file_exists($dbFile)) {
     <?php
       $system_gross = (int)($sales_summary['gross'] ?? 0) + (int)($pending_summary['gross'] ?? 0);
       $system_net = (int)($sales_summary['net'] ?? 0) + (int)($pending_summary['net'] ?? 0);
-      $system_loss = (int)($sales_summary['rusak'] ?? 0) + (int)($pending_summary['rusak'] ?? 0);
+      $system_loss = (int)($sales_summary['rusak'] ?? 0) + (int)($sales_summary['invalid'] ?? 0)
+        + (int)($pending_summary['rusak'] ?? 0) + (int)($pending_summary['invalid'] ?? 0);
       $system_retur = (int)($sales_summary['retur'] ?? 0) + (int)($pending_summary['retur'] ?? 0);
       $actual_cash = (int)($audit_manual_summary['manual_setoran'] ?? 0);
       $actual_exp = (int)($audit_manual_summary['total_expenses'] ?? 0);
@@ -546,14 +547,15 @@ if (file_exists($dbFile)) {
     <?php
       $stat_total = (int)$sales_summary['total'] + (int)$sales_summary['pending'];
       $stat_gross = (int)$sales_summary['gross'] + (int)$pending_summary['gross'];
-      $stat_rusak_system = (int)$sales_summary['rusak'] + (int)$pending_summary['rusak'];
+      $stat_rusak_system = (int)$sales_summary['rusak'] + (int)$sales_summary['invalid']
+        + (int)$pending_summary['rusak'] + (int)$pending_summary['invalid'];
       $stat_rusak_manual = (int)($audit_manual_summary['total_rusak_rp'] ?? 0);
       $total_loss_real = $stat_rusak_system + $stat_rusak_manual;
     ?>
     <div class="summary-grid" style="grid-template-columns: repeat(3, 1fr);">
       <div class="summary-card"><div class="summary-title">Total Transaksi</div><div class="summary-value"><?= number_format($stat_total,0,',','.') ?></div><div style="font-size:10px;color:#888;">(Final + Live)</div></div>
       <div class="summary-card"><div class="summary-title">Pendapatan Kotor (Gross)</div><div class="summary-value">Rp <?= number_format($stat_gross,0,',','.') ?></div></div>
-      <div class="summary-card"><div class="summary-title" style="color:#c0392b;">Total Voucher Rusak</div><div class="summary-value" style="color:#c0392b;">Rp <?= number_format($total_loss_real,0,',','.') ?></div><div style="font-size:10px;color:#b91c1c;">(Mengurangi Setoran)</div></div>
+      <div class="summary-card"><div class="summary-title" style="color:#c0392b;">Total Voucher Rusak/Invalid</div><div class="summary-value" style="color:#c0392b;">Rp <?= number_format($total_loss_real,0,',','.') ?></div><div style="font-size:10px;color:#b91c1c;">(Mengurangi Setoran)</div></div>
     </div>
     <?php if ($sales_summary['pending'] > 0): ?>
         <?php $show_pending_date = ($req_show === 'harian' && $filter_date !== date('Y-m-d')); ?>
@@ -583,8 +585,8 @@ if (file_exists($dbFile)) {
 
   <div style="margin-top:10px; padding:10px; border:1px dashed #ccc; background:#f9f9f9; font-size:11px; color:#555;">
       <strong>Cara Membaca Rekonsiliasi:</strong><br>
-      1. <b>Omzet (Gross)</b>: Total nilai transaksi yang sempat terjadi (termasuk voucher Rusak).<br>
-      2. <b>(-) Potongan</b>: Nilai uang yang hilang karena voucher Rusak.<br>
+      1. <b>Omzet (Gross)</b>: Total nilai transaksi yang sempat terjadi (termasuk voucher Rusak/Invalid).<br>
+      2. <b>(-) Potongan</b>: Nilai uang yang hilang karena voucher Rusak/Invalid.<br>
       3. <b>(+) Pemulihan</b>: Nilai uang yang kembali sah karena diganti voucher Retur.<br>
       4. <b>(=) Net</b>: Uang yang wajib ada di laci.
   </div>
