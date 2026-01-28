@@ -989,9 +989,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                 <?php if ($today_label !== ''): ?>
                     (<?= htmlspecialchars($today_label) ?>)
                 <?php endif; ?>
-                <?php if ($prev_label !== ''): ?>
-                    dibanding <?= htmlspecialchars($prev_label) ?>
-                <?php endif; ?>:
+
             </div>
             <div style="margin-top:4px; font-size:11px;">
                 <?php foreach ($hp_change_rows as $chg): ?>
@@ -1338,7 +1336,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $selisih_qty = $manual_display_qty - $expected_adj_qty;
                             $selisih_setoran = $manual_display_setoran - $expected_adj_setoran;
                             
-                            // === LOGIKA DETEKSI GHOST HUNTER (PENYEMPURNAAN) ===
+                            // === LOGIKA DETEKSI ANOMALI (PENYEMPURNAAN) ===
                             $db_selisih_qty = (int)$selisih_qty;
                             $db_selisih_rp  = (int)$selisih_setoran;
 
@@ -1515,9 +1513,6 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             <?php if ($today_label !== ''): ?>
                                 (<?= htmlspecialchars($today_label) ?>)
                             <?php endif; ?>
-                            <?php if ($prev_label !== ''): ?>
-                                dibanding <?= htmlspecialchars($prev_label) ?>
-                            <?php endif; ?>
                         </div>
                         <?php foreach ($hp_change_rows as $chg): ?>
                             <?php
@@ -1607,7 +1602,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     ?>
                                     <?php if (!empty($ghost_parts)): ?>
                                         <div style="color:#c2410c; font-size:11px; margin-top:2px; font-style:italic;">
-                                            <i class="fa fa-search"></i> <b>Indikasi Sisa Selisih (Auto-Detect):</b>
+                                            <i class="fa fa-search"></i> <b>Indikasi Anomali (Deteksi Otomatis):</b>
                                             <?= implode(', ', $ghost_parts) ?> hilang/belum input.
                                         </div>
                                     <?php endif; ?>

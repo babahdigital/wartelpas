@@ -393,7 +393,7 @@
         </div>
         <?php if (!empty($audit_ghost_hint)): ?>
             <div style="margin-top:8px;color:#fca5a5;">
-                Ghost Hunter: <b><?= htmlspecialchars($audit_ghost_hint) ?></b>
+                Indikasi Anomali (Deteksi Otomatis): <b><?= htmlspecialchars($audit_ghost_hint) ?></b>
             </div>
         <?php endif; ?>
         <?php if ($req_show === 'harian'): ?>
@@ -834,7 +834,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                             <td class="text-center"><small><?= number_format((int)$profile_qty_30,0,',','.') ?></small></td>
                             <td class="text-right">
                                 <?php if ($sq < 0): ?>
-                                    <button type="button" class="btn-act" title="Cek Ghost" style="background:#8e44ad;color:#fff;" onclick="openGhostModal('<?= htmlspecialchars($audit_block_row); ?>','<?= htmlspecialchars($audit_date_row); ?>',<?= abs((int)$sq); ?>)">
+                                    <button type="button" class="btn-act" title="Cek Anomali" style="background:#8e44ad;color:#fff;" onclick="openGhostModal('<?= htmlspecialchars($audit_block_row); ?>','<?= htmlspecialchars($audit_date_row); ?>',<?= abs((int)$sq); ?>)">
                                         <i class="fa fa-search"></i>
                                     </button>
                                 <?php endif; ?>
@@ -1109,7 +1109,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
 <div id="ghost-modal" class="modal-backdrop" onclick="if(event.target===this){closeGhostModal();}">
     <div class="modal-card" style="width:760px;max-width:96vw;">
         <div class="modal-header">
-            <div class="modal-title"><i class="fa fa-search" style="color:#8e44ad;margin-right:6px;"></i> Ghost Hunter</div>
+            <div class="modal-title"><i class="fa fa-search" style="color:#8e44ad;margin-right:6px;"></i> Deteksi Anomali</div>
             <button type="button" onclick="closeGhostModal()" class="modal-close">&times;</button>
         </div>
         <div class="modal-body">

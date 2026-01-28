@@ -466,11 +466,11 @@ if (file_exists($dbFile)) {
           </tr>
       </table>
 
-      <?php if (!empty($ghost_hint)): ?>
+        <?php if (!empty($ghost_hint)): ?>
           <div style="margin-top:10px; padding-top:10px; border-top:1px dashed <?= $border_status ?>; font-size:12px; color:<?= $text_color ?>;">
-              <strong>Indikasi (Ghost Hunter):</strong> <?= htmlspecialchars($ghost_hint) ?>
+            <strong>Indikasi Anomali (Deteksi Otomatis):</strong> <?= htmlspecialchars($ghost_hint) ?>
           </div>
-      <?php endif; ?>
+        <?php endif; ?>
   </div>
 
     <?php

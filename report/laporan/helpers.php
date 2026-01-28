@@ -306,7 +306,7 @@ function build_ghost_hint($selisih_qty, $selisih_rp) {
     $parts = [];
     if ($ghost_10 > 0) $parts[] = number_format($ghost_10, 0, ',', '.') . ' unit 10 menit';
     if ($ghost_30 > 0) $parts[] = number_format($ghost_30, 0, ',', '.') . ' unit 30 menit';
-    return 'Kemungkinan: ' . implode(' + ', $parts) . '.';
+    return 'Deteksi otomatis: ' . implode(' + ', $parts) . '.';
 }
 
 function detect_profile_kind_from_label($label) {
