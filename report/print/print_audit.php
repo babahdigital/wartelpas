@@ -608,15 +608,15 @@ if (file_exists($dbFile)) {
     <div style="margin-top:30px; display:flex; justify-content:space-between; gap:16px;">
       <div style="width:30%; text-align:center;">
         Dibuat Oleh (Operator),
-        <div style="margin-top:50px; border-bottom:1px solid #000; margin-bottom:20px;"></div>
+        <div style="margin-top:120px; border-bottom:1px solid #000; margin-bottom:20px;"></div>
       </div>
       <div style="width:30%; text-align:center;">
         Diperiksa Oleh (Admin),
-        <div style="margin-top:50px; border-bottom:1px solid #000; margin-bottom:20px;"></div>
+        <div style="margin-top:120px; border-bottom:1px solid #000; margin-bottom:20px;"></div>
       </div>
       <div style="width:30%; text-align:center;">
         Mengetahui (Owner),
-        <div style="margin-top:50px; border-bottom:1px solid #000; margin-bottom:20px;"></div>
+        <div style="margin-top:120px; border-bottom:1px solid #000; margin-bottom:20px;"></div>
       </div>
     </div>
 
