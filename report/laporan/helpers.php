@@ -263,7 +263,7 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
     foreach ($rows as $r) {
         $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
         if ($sale_date !== $audit_date) continue;
-        $raw_comment = (string)($r['comment'] ?? '');
+        $raw_comment = (string)($r['comment'] ?? ($r['raw_comment'] ?? ''));
         $blok = normalize_block_name($r['blok_name'] ?? '', $raw_comment);
         if ($blok !== $audit_blok) continue;
 
@@ -348,10 +348,10 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
         }
 
         if ($status !== 'invalid') {
-            if (strpos($cmt_low, 'rusak') !== false) {
-                $status = 'rusak';
-            } elseif (strpos($cmt_low, 'retur') !== false) {
+            if (strpos($cmt_low, 'retur') !== false) {
                 $status = 'retur';
+            } elseif (strpos($cmt_low, 'rusak') !== false) {
+                $status = 'rusak';
             }
         }
 
