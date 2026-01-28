@@ -979,7 +979,16 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 $evidence = json_decode((string)$ar['user_evidence'], true);
                                 if (is_array($evidence)) {
                                     if (!empty($evidence['profile_qty']) && is_array($evidence['profile_qty'])) {
-                                        $profile_qty = $evidence['profile_qty'];
+                                        $profile_qty = [];
+                                        foreach ($evidence['profile_qty'] as $k => $v) {
+                                            $key_raw = (string)$k;
+                                            if (strpos($key_raw, 'qty_') === 0) {
+                                                $key_raw = substr($key_raw, 4);
+                                            }
+                                            $key_norm = normalize_profile_key($key_raw);
+                                            if ($key_norm === '') continue;
+                                            $profile_qty[$key_norm] = (int)$v;
+                                        }
                                     }
                                     if (!empty($evidence['users']) && is_array($evidence['users'])) {
                                         $has_manual_evidence = true;
@@ -991,7 +1000,11 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             $lb = format_bytes_short((int)($ud['last_bytes'] ?? 0));
                                             $price_val = (int)($ud['price'] ?? 0);
                                             $upt = $upt !== '' ? $upt : '-';
-                                            $kind = (string)($ud['profile_kind'] ?? '10');
+                                            $profile_key = normalize_profile_key($ud['profile_key'] ?? ($ud['profile_kind'] ?? ($ud['profile'] ?? '')));
+                                            if ($profile_key === '') $profile_key = 'other';
+                                            if ($price_val <= 0) {
+                                                $price_val = resolve_price_from_profile($profile_key);
+                                            }
                                             // Collecting data
                                             $u_status = normalize_status_value($ud['last_status'] ?? '');
                                             $uname_key = strtolower($uname);
@@ -1014,22 +1027,25 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
                                             $manual_users_map[$uname_key] = true;
 
-                                            if ($kind === '30') {
-                                                $profile30_sum += $price_val;
-                                                $profile30_items[] = $item;
-                                                $profile30_display_items[] = $item;
-                                                if ($u_status === 'rusak') $cnt_rusak_30++;
-                                                if ($u_status === 'retur') $cnt_retur_30++;
-                                                if ($u_status === 'invalid') $cnt_invalid_30++;
-                                                if ($is_unreported) $cnt_unreported_30++;
-                                            } else {
-                                                $profile10_sum += $price_val;
-                                                $profile10_items[] = $item;
-                                                $profile10_display_items[] = $item;
-                                                if ($u_status === 'rusak') $cnt_rusak_10++;
-                                                if ($u_status === 'retur') $cnt_retur_10++;
-                                                if ($u_status === 'invalid') $cnt_invalid_10++;
-                                                if ($is_unreported) $cnt_unreported_10++;
+                                            $profile_items[] = $item;
+                                            $profile_display_items[] = $item;
+                                            if (!isset($profile_qty_map[$profile_key])) $profile_qty_map[$profile_key] = 0;
+                                            $profile_qty_map[$profile_key]++;
+                                            if ($u_status === 'rusak') {
+                                                if (!isset($cnt_rusak[$profile_key])) $cnt_rusak[$profile_key] = 0;
+                                                $cnt_rusak[$profile_key]++;
+                                            }
+                                            if ($u_status === 'retur') {
+                                                if (!isset($cnt_retur[$profile_key])) $cnt_retur[$profile_key] = 0;
+                                                $cnt_retur[$profile_key]++;
+                                            }
+                                            if ($u_status === 'invalid') {
+                                                if (!isset($cnt_invalid[$profile_key])) $cnt_invalid[$profile_key] = 0;
+                                                $cnt_invalid[$profile_key]++;
+                                            }
+                                            if ($is_unreported) {
+                                                if (!isset($cnt_unreported[$profile_key])) $cnt_unreported[$profile_key] = 0;
+                                                $cnt_unreported[$profile_key]++;
                                             }
                                         }
                                     } elseif (!empty($evidence['events'])) {
@@ -1039,13 +1055,14 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                         $lb = format_bytes_short((int)($evidence['last_bytes'] ?? 0));
                                         $price_val = (int)($evidence['price'] ?? 0);
                                         $upt = $upt !== '' ? $upt : '-';
-                                        $profile10_items[] = [
+                                        $profile_items[] = [
                                             'label' => '-',
                                             'status' => 'normal',
                                             'uptime' => $upt,
                                             'bytes' => $lb
                                         ];
-                                        $profile10_sum += $price_val;
+                                        if (!isset($profile_qty_map['other'])) $profile_qty_map['other'] = 0;
+                                        $profile_qty_map['other']++;
                                     }
                                 }
                             }
@@ -1061,7 +1078,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     if ($u_status === 'rusak' && isset($retur_ref_map[$audit_block_key][$uname_key])) {
                                         continue;
                                     }
-                                    $kind = (string)($inc['profile_kind'] ?? '10');
+                                    $profile_key = normalize_profile_key($inc['profile_key'] ?? ($inc['profile_kind'] ?? ($inc['profile'] ?? '')));
+                                    if ($profile_key === '') $profile_key = 'other';
                                     $upt = trim((string)($inc['last_uptime'] ?? ''));
                                     $lb = format_bytes_short((int)($inc['last_bytes'] ?? 0));
                                     $price_val = (int)($inc['price'] ?? 0);
@@ -1073,55 +1091,56 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                         'bytes' => $lb
                                     ];
 
-                                    if ($kind === '30') {
-                                        $profile30_sum += $price_val;
-                                        $profile30_items[] = $item;
-                                        $profile30_display_items[] = $item;
-                                        if ($u_status === 'rusak') $cnt_rusak_30++;
-                                        if ($u_status === 'retur') $cnt_retur_30++;
-                                        if ($u_status === 'invalid') $cnt_invalid_30++;
-                                    } else {
-                                        $profile10_sum += $price_val;
-                                        $profile10_items[] = $item;
-                                        $profile10_display_items[] = $item;
-                                        if ($u_status === 'rusak') $cnt_rusak_10++;
-                                        if ($u_status === 'retur') $cnt_retur_10++;
-                                        if ($u_status === 'invalid') $cnt_invalid_10++;
+                                    $profile_items[] = $item;
+                                    $profile_display_items[] = $item;
+                                    if (!isset($profile_qty_map[$profile_key])) $profile_qty_map[$profile_key] = 0;
+                                    $profile_qty_map[$profile_key]++;
+                                    if ($u_status === 'rusak') {
+                                        if (!isset($cnt_rusak[$profile_key])) $cnt_rusak[$profile_key] = 0;
+                                        $cnt_rusak[$profile_key]++;
+                                    }
+                                    if ($u_status === 'retur') {
+                                        if (!isset($cnt_retur[$profile_key])) $cnt_retur[$profile_key] = 0;
+                                        $cnt_retur[$profile_key]++;
+                                    }
+                                    if ($u_status === 'invalid') {
+                                        if (!isset($cnt_invalid[$profile_key])) $cnt_invalid[$profile_key] = 0;
+                                        $cnt_invalid[$profile_key]++;
                                     }
                                 }
                             }
                             // Generate HTML Tables using helper
-                            $p10_us = generate_audit_cell($profile10_display_items, 'label', 'center');
-                            $p10_up = generate_audit_cell($profile10_display_items, 'uptime', 'center');
-                            $p10_bt = generate_audit_cell($profile10_display_items, 'bytes', 'center');
-                            
-                            $p30_us = generate_audit_cell($profile30_display_items, 'label', 'center');
-                            $p30_up = generate_audit_cell($profile30_display_items, 'uptime', 'center');
-                            $p30_bt = generate_audit_cell($profile30_display_items, 'bytes', 'center');
+                            $p_us = generate_audit_cell($profile_display_items, 'label', 'center');
+                            $p_up = generate_audit_cell($profile_display_items, 'uptime', 'center');
+                            $p_bt = generate_audit_cell($profile_display_items, 'bytes', 'center');
 
-                            $p10_qty = (int)($profile_qty['qty_10'] ?? 0);
-                            $p30_qty = (int)($profile_qty['qty_30'] ?? 0);
-                            if ($has_manual_evidence && !empty($profile10_items)) {
-                                $p10_qty = count($profile10_items);
-                            } elseif ($p10_qty <= 0 && !empty($profile10_items)) {
-                                $p10_qty = count($profile10_items);
+                            $profile_qty_display = $profile_qty;
+                            if ($has_manual_evidence && !empty($profile_qty_map)) {
+                                $profile_qty_display = $profile_qty_map;
+                            } elseif (empty($profile_qty_display) && !empty($profile_qty_map)) {
+                                $profile_qty_display = $profile_qty_map;
                             }
-                            if ($has_manual_evidence && !empty($profile30_items)) {
-                                $p30_qty = count($profile30_items);
-                            } elseif ($p30_qty <= 0 && !empty($profile30_items)) {
-                                $p30_qty = count($profile30_items);
-                            }
-                            $p10_tt = $p10_qty > 0 ? number_format($p10_qty,0,',','.') : '-';
-                            $p30_tt = $p30_qty > 0 ? number_format($p30_qty,0,',','.') : '-';
-                            $audit_total_profile_qty_10 += $p10_qty;
-                            $audit_total_profile_qty_30 += $p30_qty;
-                            $p10_sum_calc = $p10_qty * $price10;
-                            $p30_sum_calc = $p30_qty * $price30;
+                            $manual_display_qty = $has_manual_evidence ? array_sum($profile_qty_display) : (int)($ar['reported_qty'] ?? 0);
 
-                            $manual_net_qty_10 = max(0, $p10_qty - $cnt_rusak_10 - $cnt_invalid_10 + $cnt_retur_10);
-                            $manual_net_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30 + $cnt_retur_30);
-                            $manual_display_qty = $has_manual_evidence ? ($p10_qty + $p30_qty) : (int)($ar['reported_qty'] ?? 0);
-                            $manual_display_setoran = $has_manual_evidence ? (($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30)) : (int)($ar['actual_setoran'] ?? 0);
+                            $manual_display_setoran = 0;
+                            if ($has_manual_evidence) {
+                                foreach ($profile_qty_display as $pkey => $qty_val) {
+                                    $qty_val = (int)$qty_val;
+                                    $price_val = resolve_price_from_profile($pkey);
+                                    $rusak_val = (int)($cnt_rusak[$pkey] ?? 0);
+                                    $invalid_val = (int)($cnt_invalid[$pkey] ?? 0);
+                                    $retur_val = (int)($cnt_retur[$pkey] ?? 0);
+                                    $net_qty = max(0, $qty_val - $rusak_val - $invalid_val + $retur_val);
+                                    $manual_display_setoran += ($net_qty * $price_val);
+                                }
+                            } else {
+                                $manual_display_setoran = (int)($ar['actual_setoran'] ?? 0);
+                            }
+
+                            $profile_qty_summary = !empty($profile_qty_display)
+                                ? format_profile_summary($profile_qty_display, $profile_order_keys)
+                                : '-';
+                            $audit_total_profile_qty += $has_manual_evidence ? array_sum($profile_qty_display) : 0;
 
                             $expected_qty = (int)($ar['expected_qty'] ?? 0);
                             $expected_setoran = (int)($ar['expected_setoran'] ?? 0);
