@@ -1115,10 +1115,14 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
                             $p10_qty = (int)($profile_qty['qty_10'] ?? 0);
                             $p30_qty = (int)($profile_qty['qty_30'] ?? 0);
-                            if ($p10_qty <= 0 && !empty($profile10_items)) {
+                            if ($has_manual_evidence && !empty($profile10_items)) {
+                                $p10_qty = count($profile10_items);
+                            } elseif ($p10_qty <= 0 && !empty($profile10_items)) {
                                 $p10_qty = count($profile10_items);
                             }
-                            if ($p30_qty <= 0 && !empty($profile30_items)) {
+                            if ($has_manual_evidence && !empty($profile30_items)) {
+                                $p30_qty = count($profile30_items);
+                            } elseif ($p30_qty <= 0 && !empty($profile30_items)) {
                                 $p30_qty = count($profile30_items);
                             }
                             $p10_tt = $p10_qty > 0 ? number_format($p10_qty,0,',','.') : '-';
