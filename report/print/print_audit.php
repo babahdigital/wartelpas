@@ -399,13 +399,22 @@ if (file_exists($dbFile)) {
       <button class="btn" onclick="shareReport()">Share</button>
   </div>
 
-  <div style="border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
+    <div style="border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
       <h1 style="margin:0;">Laporan Audit Keuangan</h1>
       <div class="sub" style="margin-top:5px;">
-          Periode: <?= htmlspecialchars(format_date_dmy($filter_date)) ?> |
-          Mode: <?= strtoupper(htmlspecialchars($req_show)) ?>
+        <?php
+          $mode_label = strtoupper((string)$req_show);
+          if ($req_show === 'tahunan') {
+            $period_label = htmlspecialchars((string)$filter_date);
+          } elseif ($req_show === 'bulanan') {
+            $period_label = htmlspecialchars(month_label_id($filter_date) . ' ' . substr((string)$filter_date, 0, 4));
+          } else {
+            $period_label = htmlspecialchars(date('d-m-Y', strtotime((string)$filter_date)));
+          }
+        ?>
+        Periode: <?= $period_label ?> | Mode: <?= $mode_label ?>
       </div>
-  </div>
+    </div>
 
     <?php if (!empty($daily_note_audit)): ?>
       <div style="border: 1px solid #e0e0e0; background-color: #fff9c4; padding: 12px; margin-bottom: 20px; border-radius: 4px; font-size: 12px; color: #5d4037;">
