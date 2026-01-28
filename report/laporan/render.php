@@ -609,8 +609,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         <th class="text-center">Selisih</th>
                         <th class="text-center">Rusak</th>
                         <th class="text-center">Retur</th>
-                        <th class="text-center">V10</th>
-                        <th class="text-center">V30</th>
+                        <th class="text-center">Voucher 10</th>
+                        <th class="text-center">Voucher 30</th>
                         <th class="text-right">Aksi</th>
                     </tr>
                 </thead>
