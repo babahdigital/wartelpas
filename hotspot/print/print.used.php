@@ -113,6 +113,16 @@ if ($profile_label === '' || $profile_label === '-') {
         $profile_label = $m[1] . ' Menit';
     }
 }
+if ($profile_label === '' || $profile_label === '-') {
+    $profile_hint = resolve_profile_from_history($hist['raw_comment'] ?? $comment, '', $uptime);
+    $profile_label = normalize_profile_label($profile_hint);
+}
+if ($profile_label === '' || $profile_label === '-') {
+    $kind = detect_profile_kind_unified($profile, $comment, $blok, $uptime);
+    if (in_array($kind, ['10', '30'], true)) {
+        $profile_label = $kind . ' Menit';
+    }
+}
 
 $is_active = isset($arow['user']);
 

@@ -851,10 +851,19 @@ foreach($all_users as $u) {
       }
     }
 
+    $profile_label_display = normalize_profile_label($u['profile'] ?? '');
+    if ($profile_label_display === '') {
+      $profile_hist_fallback = resolve_profile_from_history($comment, $hist['validity'] ?? '', $uptime);
+      $profile_label_display = normalize_profile_label($profile_hist_fallback);
+    }
+    if ($profile_label_display === '' && in_array($profile_kind_final, ['10', '30'], true)) {
+      $profile_label_display = $profile_kind_final . ' Menit';
+    }
+
     $display_data[] = [
       'uid' => $u['.id'] ?? '',
         'name' => $name,
-        'profile' => $u['profile'] ?? '',
+        'profile' => $profile_label_display,
         'profile_kind' => $profile_kind,
         'blok' => $f_blok,
         'ip' => $f_ip,
