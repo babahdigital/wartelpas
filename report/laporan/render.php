@@ -716,12 +716,55 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             }
                             if ($profile_qty_10 <= 0) $profile_qty_10 = count($profile10['user'] ?? []);
                             if ($profile_qty_30 <= 0) $profile_qty_30 = count($profile30['user'] ?? []);
-                            $manual_net_qty_10 = max(0, $profile_qty_10 - $manual_rusak_10 - $manual_invalid_10 - $manual_retur_10);
-                            $manual_net_qty_30 = max(0, $profile_qty_30 - $manual_rusak_30 - $manual_invalid_30 - $manual_retur_30);
-                            $manual_money_qty_10 = max(0, $profile_qty_10 - $manual_rusak_10 - $manual_invalid_10);
-                            $manual_money_qty_30 = max(0, $profile_qty_30 - $manual_rusak_30 - $manual_invalid_30);
-                            $manual_display_qty = $has_manual_evidence ? ($profile_qty_10 + $profile_qty_30) : (int)($ar['reported_qty'] ?? 0);
-                            $manual_display_setoran = $has_manual_evidence ? (($manual_money_qty_10 * $price10) + ($manual_money_qty_30 * $price30)) : (int)($ar['actual_setoran'] ?? 0);
+
+                            $profile_qty_map = [];
+                            if (!empty($evidence['profile_qty']) && is_array($evidence['profile_qty'])) {
+                                $raw_map = $evidence['profile_qty'];
+                                if (isset($raw_map['qty_10']) || isset($raw_map['qty_30'])) {
+                                    $profile_qty_map['10menit'] = (int)($raw_map['qty_10'] ?? 0);
+                                    $profile_qty_map['30menit'] = (int)($raw_map['qty_30'] ?? 0);
+                                } else {
+                                    foreach ($raw_map as $k => $v) {
+                                        $key = strtolower(trim((string)$k));
+                                        if ($key === '') continue;
+                                        $profile_qty_map[$key] = (int)$v;
+                                    }
+                                }
+                            }
+                            if (empty($profile_qty_map)) {
+                                $profile_qty_map['10menit'] = (int)$profile_qty_10;
+                                $profile_qty_map['30menit'] = (int)$profile_qty_30;
+                            }
+
+                            $status_count_map = [
+                                '10menit' => ['rusak' => $manual_rusak_10, 'invalid' => $manual_invalid_10, 'retur' => $manual_retur_10],
+                                '30menit' => ['rusak' => $manual_rusak_30, 'invalid' => $manual_invalid_30, 'retur' => $manual_retur_30]
+                            ];
+
+                            $manual_display_qty = 0;
+                            $manual_display_setoran = 0;
+                            $profile_qty_summary = [];
+                            foreach ($profile_qty_map as $pkey => $pqty) {
+                                $pqty = (int)$pqty;
+                                $manual_display_qty += $pqty;
+                                $counts = $status_count_map[$pkey] ?? ['rusak' => 0, 'invalid' => 0, 'retur' => 0];
+                                $money_qty = max(0, $pqty - (int)$counts['rusak'] - (int)$counts['invalid']);
+                                $price_val = isset($profile_price_map[$pkey]) ? (int)$profile_price_map[$pkey] : (int)resolve_price_from_profile($pkey);
+                                $manual_display_setoran += ($money_qty * $price_val);
+                                if ($pqty > 0) {
+                                    $label = $pkey;
+                                    if (preg_match('/(\d+)/', $pkey, $m)) {
+                                        $label = (int)$m[1] . 'm';
+                                    }
+                                    $profile_qty_summary[] = $label . ':' . $pqty;
+                                }
+                            }
+                            if (!$has_manual_evidence) {
+                                $manual_display_qty = (int)($ar['reported_qty'] ?? 0);
+                                $manual_display_setoran = (int)($ar['actual_setoran'] ?? 0);
+                            }
+                            $profile_qty_10 = (int)($profile_qty_map['10menit'] ?? $profile_qty_10 ?? 0);
+                            $profile_qty_30 = (int)($profile_qty_map['30menit'] ?? $profile_qty_30 ?? 0);
                             $expected_adj_qty = $expected_qty;
                             $expected_adj_setoran = $expected_setoran;
                             $sq = $manual_display_qty - $expected_adj_qty;
@@ -743,8 +786,9 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             <td class="text-center"><span class="<?= $cls_s; ?>"><?= number_format($ss,0,',','.') ?></span></td>
                             <td class="text-center"><small><?= number_format($sys_rusak,0,',','.') ?></small></td>
                             <td class="text-center"><small><?= number_format($sys_retur,0,',','.') ?></small></td>
-                            <td class="text-center"><small><?= number_format($profile_qty_10,0,',','.') ?></small></td>
-                            <td class="text-center"><small><?= number_format($profile_qty_30,0,',','.') ?></small></td>
+                            <td class="text-center">
+                                <small><?= !empty($profile_qty_summary) ? htmlspecialchars(implode(' | ', $profile_qty_summary)) : '-' ?></small>
+                            </td>
                             <td class="text-right">
                                 <?php if ($sq < 0): ?>
                                     <button type="button" class="btn-act" title="Cek Ghost" style="background:#8e44ad;color:#fff;" onclick="openGhostModal('<?= htmlspecialchars($audit_block_row); ?>','<?= htmlspecialchars($audit_date_row); ?>',<?= abs((int)$sq); ?>)">
@@ -752,6 +796,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                     </button>
                                 <?php endif; ?>
                                 <?php $audit_btn_disabled = (!$is_superadmin || $is_locked_row) ? 'disabled style="opacity:.5;cursor:not-allowed;"' : ''; ?>
+                                <?php $profile_qty_json = htmlspecialchars(json_encode($profile_qty_map), ENT_QUOTES); ?>
                                 <button type="button" class="btn-act" onclick="openAuditEdit(this)" <?= $audit_btn_disabled ?>
                                     data-blok="<?= htmlspecialchars($ar['blok_name'] ?? ''); ?>"
                                     data-user="<?= htmlspecialchars($ar['audit_username'] ?? ''); ?>"
@@ -759,7 +804,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                     data-qty="<?= (int)($ar['reported_qty'] ?? 0); ?>"
                                     data-setoran="<?= (int)($ar['actual_setoran'] ?? 0); ?>"
                                     data-qty10="<?= (int)$profile_qty_10; ?>"
-                                    data-qty30="<?= (int)$profile_qty_30; ?>">
+                                    data-qty30="<?= (int)$profile_qty_30; ?>"
+                                    data-profile-qty="<?= $profile_qty_json; ?>">
                                     <i class="fa fa-edit"></i>
                                 </button>
                                 <button type="button" class="btn-act btn-act-danger" onclick="openDeleteAuditModal('<?= './?report=selling' . $session_qs . '&show=' . $req_show . '&date=' . urlencode($filter_date) . '&audit_delete=1&audit_blok=' . urlencode($ar['blok_name'] ?? '') . '&audit_date=' . urlencode($filter_date); ?>','<?= htmlspecialchars($ar['blok_name'] ?? '-'); ?>','<?= htmlspecialchars($filter_date); ?>')" <?= $audit_btn_disabled ?> >
