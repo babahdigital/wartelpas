@@ -10,6 +10,12 @@ if (!isset($_SESSION["mikhmon"]) || !isset($_GET['session'])) {
 require_once(__DIR__ . '/../../include/acl.php');
 $is_superadmin = isSuperAdmin();
 
+$env = [];
+$envFile = __DIR__ . '/../../include/env.php';
+if (file_exists($envFile)) {
+  require $envFile;
+}
+
 $session = $_GET['session'];
 
 $req_prof = isset($_GET['profile']) ? $_GET['profile'] : 'all';
@@ -91,9 +97,15 @@ if (!function_exists('decrypt')) {
 }
 
 // --- DATABASE ---
-$dbDir = __DIR__ . '/../../db_data';
+$system_cfg = $env['system'] ?? [];
+$db_rel = $system_cfg['db_file'] ?? 'db_data/mikhmon_stats.db';
+if (preg_match('/^[A-Za-z]:\\|^\//', $db_rel)) {
+  $dbFile = $db_rel;
+} else {
+  $dbFile = __DIR__ . '/../../' . ltrim($db_rel, '/');
+}
+$dbDir = dirname($dbFile);
 if (!is_dir($dbDir)) mkdir($dbDir, 0755, true);
-$dbFile = $dbDir . '/mikhmon_stats.db';
 
 $db = null;
 try {
