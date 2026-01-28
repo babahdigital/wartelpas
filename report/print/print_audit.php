@@ -484,6 +484,14 @@ if (file_exists($dbFile)) {
       $system_loss = (int)($sales_summary['rusak'] ?? 0) + (int)($sales_summary['invalid'] ?? 0)
         + (int)($pending_summary['rusak'] ?? 0) + (int)($pending_summary['invalid'] ?? 0);
       $system_retur = (int)($sales_summary['retur'] ?? 0) + (int)($pending_summary['retur'] ?? 0);
+      $system_net_display = (int)($audit_manual_summary['expected_setoran'] ?? 0);
+      if ($system_net_display <= 0) {
+        $system_net_display = $system_net;
+      }
+      $system_loss_display = $system_loss;
+      if ($system_net_display !== $system_net) {
+        $system_loss_display = max(0, $system_gross - $system_net_display + $system_retur);
+      }
       $actual_cash = (int)($audit_manual_summary['manual_setoran'] ?? 0);
       $actual_exp = (int)($audit_manual_summary['total_expenses'] ?? 0);
     ?>
@@ -505,7 +513,7 @@ if (file_exists($dbFile)) {
         </tr>
         <tr>
           <td>(-) Potongan (Rusak/Invalid)</td>
-          <td class="text-right text-red">(Rp <?= number_format($system_loss,0,',','.') ?>)</td>
+          <td class="text-right text-red">(Rp <?= number_format($system_loss_display,0,',','.') ?>)</td>
           <td class="text-center" style="background:#eee;">-</td>
         </tr>
         <?php if ($system_retur > 0): ?>
@@ -518,7 +526,7 @@ if (file_exists($dbFile)) {
 
         <tr class="bold" style="background:#f9f9f9;">
           <td>(=) Pendapatan Bersih (Net)</td>
-          <td class="text-right">Rp <?= number_format($system_net,0,',','.') ?></td>
+          <td class="text-right">Rp <?= number_format($system_net_display,0,',','.') ?></td>
           <td class="text-right" style="border:2px solid #000;">Rp <?= number_format($actual_cash,0,',','.') ?></td>
         </tr>
         <tr>
