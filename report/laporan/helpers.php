@@ -349,6 +349,17 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
         $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
         if ($sale_date !== $audit_date) continue;
 
+        $raw_date = trim((string)($r['raw_date'] ?? ''));
+        $raw_time = trim((string)($r['raw_time'] ?? ''));
+        $full_raw = trim((string)($r['full_raw_data'] ?? ''));
+        $price_snapshot = (int)($r['price_snapshot'] ?? 0);
+        $price_val = (int)($r['price'] ?? 0);
+        $sprice_val = (int)($r['sprice_snapshot'] ?? 0);
+        $is_login_history_row = ($raw_date === '' && $raw_time === '' && $full_raw === '' && $price_snapshot <= 0 && $price_val <= 0 && $sprice_val <= 0);
+        if ($is_login_history_row) {
+            continue;
+        }
+
         $username = $r['username'] ?? '';
         if ($username !== '' && $sale_date !== '') {
             $user_day_key = $username . '|' . $sale_date;
