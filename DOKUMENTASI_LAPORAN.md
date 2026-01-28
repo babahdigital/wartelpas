@@ -81,6 +81,8 @@ Jika terdeteksi lebih dari satu status, prioritas akhir mengikuti aturan **retur
 ### 6.1 Input Audit
 - Input manual per blok berisi total qty dan total setoran (manual), plus opsi pengeluaran.
 - **Selisih** dihitung dari perbandingan manual vs expected sistem.
+- **Setoran otomatis** tetap dihitung dari qty profil sebagai bantuan input.
+- Jika user **mengetik setoran manual**, sistem menghormati nilai tersebut (override).
 
 ### 6.2 Expected vs Manual
 - **Expected Qty** dihitung dari data transaksi (mengurangi rusak/invalid; retur tetap dihitung laku).
@@ -94,12 +96,18 @@ Jika terdeteksi lebih dari satu status, prioritas akhir mengikuti aturan **retur
 - Jika ada `user_evidence`, sistem menghitung setoran manual yang disesuaikan:
   - `manual_net_qty_10/30 = qty_profile - rusak - invalid`
   - Setoran manual dihitung ulang berdasarkan qty net tersebut.
+- Jika **manual override** aktif, setoran manual **mengikuti input user** (bukan hasil kalkulasi ulang).
 
 ## 7) Selisih (Variance)
 
 - **Selisih Qty** = `reported_qty - expected_qty`.
 - **Selisih Setoran** = `actual_setoran - expected_setoran`.
 - Tersedia **ghost hint** untuk memperkirakan kombinasi 10/30 menit yang menjelaskan selisih.
+
+### 7.1 Total Rusak/Invalid di Ringkasan Audit
+- Untuk konsistensi laporan, **loss** dihitung dari model pendapatan:
+   - $\text{Loss} = (\text{Gross} + \text{Retur}) - \text{Expected Net}$
+- Tujuan: mencegah **retur ikut terhitung rusak/invalid** dan menghindari double count.
 
 ## 8) Audit Dokumentasi (Penyesuaian Logika)
 

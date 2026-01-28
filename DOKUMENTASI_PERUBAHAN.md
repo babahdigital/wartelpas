@@ -718,6 +718,27 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **report/print_rekap_tahunan.php**:
   - Kolom pengeluaran per bulan dan catatan YTD.
 
+## 4.11 Update Terbaru (Audit Manual Konsisten & Setoran Manual) – 2026-01-29
+### 4.11.1 Override setoran manual (tetap ada auto kalkulasi)
+- **Tujuan**: Auto kalkulasi setoran tetap berjalan sebagai bantuan input, namun **nominal manual** yang diketik pengguna tetap dihormati.
+- **Perubahan**:
+  - Form audit menyimpan flag `audit_setoran_manual` untuk menandai input manual.
+  - Jika user mengetik setoran berbeda dari auto, sistem otomatis menganggap **manual override**.
+  - Auto kalkulasi tetap aktif jika user tidak mengetik setoran.
+
+### 4.11.2 Konsistensi target net (audit.php vs print audit)
+- **Masalah**: Target net pada print audit sempat berbeda dari audit.php.
+- **Solusi**:
+  - Print audit kini memakai **expected_setoran** yang sama dengan audit.php.
+  - Potongan rusak/invalid pada print audit diselaraskan dengan gross/retur/net.
+
+### 4.11.3 Total Rusak/Invalid tidak double count
+- **Masalah**: Ringkasan “Total Voucher Rusak/Invalid” sempat menjumlah **rusak sistem + rusak manual**, sehingga **retur ikut terhitung**.
+- **Solusi**:
+  - Loss kini dihitung berdasarkan model: **Loss = (Gross + Retur) − Expected Net**.
+  - Fallback memakai total rusak sistem jika data expected belum tersedia.
+  - Audit dan print audit kini konsisten.
+
 ### 4.9.5 Catatan Harian / Insiden (Supervisor → Owner)
 - Tabel baru: **daily_report_notes** (1 catatan per tanggal).
 - **report/selling.php**: tombol **Catatan/Insiden** di toolbar harian dan input via popup (edit/hapus tetap dari popup, tidak tampil di dashboard).
