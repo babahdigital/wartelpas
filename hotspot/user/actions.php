@@ -541,6 +541,27 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $delete_settlement = isset($_GET['delete_settlement']) && $_GET['delete_settlement'] === '1';
       $delete_date = trim((string)($_GET['date'] ?? ''));
 
+      $system_cfg = $env['system'] ?? [];
+      $fw_cfg = $system_cfg['firewall_cleanup'] ?? [];
+      $fw_enable = !isset($fw_cfg['enable']) || $fw_cfg['enable'] !== false;
+      $fw_include_offline = !isset($fw_cfg['include_offline']) || $fw_cfg['include_offline'] !== false;
+      $fw_max_ips = isset($fw_cfg['max_ips']) ? (int)$fw_cfg['max_ips'] : 200;
+      $fw_max_seconds = isset($fw_cfg['max_seconds']) ? (int)$fw_cfg['max_seconds'] : 20;
+      $wartel_subnet = trim((string)($system_cfg['wartel_subnet'] ?? ''));
+      $ipInCidr = function($ip, $cidr) {
+        $ip = trim((string)$ip);
+        $cidr = trim((string)$cidr);
+        if ($ip === '' || $cidr === '' || strpos($cidr, '/') === false) return false;
+        $parts = explode('/', $cidr, 2);
+        $net = $parts[0] ?? '';
+        $mask = isset($parts[1]) ? (int)$parts[1] : 0;
+        $ipLong = ip2long($ip);
+        $netLong = ip2long($net);
+        if ($ipLong === false || $netLong === false || $mask < 0 || $mask > 32) return false;
+        $maskLong = $mask == 0 ? 0 : (-1 << (32 - $mask));
+        return (($ipLong & $maskLong) === ($netLong & $maskLong));
+      };
+
       $active_list = $API->comm('/ip/hotspot/active/print', [
         '?server' => $hotspot_server,
         '.proplist' => '.id,user,address'
@@ -641,7 +662,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           $userClause = " OR username IN (" . implode(',', $placeholders) . ")";
         }
 
-        if (!empty($db_delete_names)) {
+        if (!empty($db_delete_names) && $fw_enable && $fw_include_offline) {
           try {
             $stmtIp = $db->prepare("SELECT username, last_ip, ip_address FROM login_history WHERE $whereMatch$userClause");
             $stmtIp->execute(array_merge($params, $userParams));
@@ -769,6 +790,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       }
 
       $router_deleted = 0;
+      $fw_start = microtime(true);
       foreach ($to_delete as $d) {
         $uname = $d['name'] ?? '';
         if ($uname !== '') {
@@ -789,7 +811,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           $active_info = $active_map[$uname] ?? null;
           $active_id = is_array($active_info) ? ($active_info['id'] ?? '') : '';
           $active_addr = is_array($active_info) ? ($active_info['address'] ?? '') : '';
-          if ($active_addr !== '') {
+          if ($fw_enable && $active_addr !== '' && ($wartel_subnet === '' || $ipInCidr($active_addr, $wartel_subnet))) {
             try {
               $conn_list = $API->comm('/ip/firewall/connection/print', [
                 '?src-address' => $active_addr,
@@ -819,9 +841,15 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         }
       }
 
-      if (!empty($offline_ips)) {
-        foreach (array_keys($offline_ips) as $ip) {
+      if ($fw_enable && $fw_include_offline && !empty($offline_ips)) {
+        $ips = array_keys($offline_ips);
+        if ($fw_max_ips > 0) {
+          $ips = array_slice($ips, 0, $fw_max_ips);
+        }
+        foreach ($ips as $ip) {
           if ($ip === '' || $ip === '-') continue;
+          if ($wartel_subnet !== '' && !$ipInCidr($ip, $wartel_subnet)) continue;
+          if ($fw_max_seconds > 0 && (microtime(true) - $fw_start) >= $fw_max_seconds) break;
           try {
             $conn_list = $API->comm('/ip/firewall/connection/print', [
               '?src-address' => $ip,
