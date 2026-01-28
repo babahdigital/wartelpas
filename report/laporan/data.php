@@ -27,9 +27,39 @@ $profiles_cfg = $env['profiles'] ?? [];
 $price10 = (int)($pricing['price_10'] ?? 0);
 $price30 = (int)($pricing['price_30'] ?? 0);
 $profile_price_map = $pricing['profile_prices'] ?? [];
+$profile_alias_map = $pricing['profile_aliases'] ?? [];
 $GLOBALS['profile_price_map'] = $profile_price_map;
 $label10 = $profiles_cfg['label_10'] ?? '10 Menit';
 $label30 = $profiles_cfg['label_30'] ?? '30 Menit';
+$audit_profiles = [];
+if (!empty($profile_price_map)) {
+    foreach ($profile_price_map as $k => $v) {
+        $key = strtolower(trim((string)$k));
+        if ($key === '') continue;
+        $num = null;
+        if (preg_match('/(\d+)/', $key, $m)) {
+            $num = (int)$m[1];
+        }
+        $label = $key;
+        if ($num !== null) {
+            $label = $num . ' Menit';
+        }
+        $audit_profiles[] = [
+            'key' => $key,
+            'label' => $label,
+            'price' => (int)$v,
+            'minutes' => $num
+        ];
+    }
+    usort($audit_profiles, function($a, $b){
+        $ma = $a['minutes'] ?? null;
+        $mb = $b['minutes'] ?? null;
+        if ($ma === null && $mb === null) return strcmp($a['key'], $b['key']);
+        if ($ma === null) return 1;
+        if ($mb === null) return -1;
+        return $ma <=> $mb;
+    });
+}
 $blok_cfg = $env['blok'] ?? ($env['blocks'] ?? []);
 $blok_letters_raw = (string)($blok_cfg['letters'] ?? 'A-F');
 $blok_letters_raw = trim($blok_letters_raw);
