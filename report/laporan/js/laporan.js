@@ -1008,14 +1008,7 @@ function addAuditUser(u){
     if (auditSelectedUsers.indexOf(u) !== -1) return;
     auditSelectedUsers.push(u);
     renderAuditSelected();
-            scheduleHpAutoSave(false);
 }
-
-    if (form.querySelector('input[name="notes"]')) {
-        form.querySelector('input[name="notes"]').addEventListener('input', function(){
-            scheduleHpAutoSave(false);
-        });
-    }
 function removeAuditUser(u){
     auditSelectedUsers = auditSelectedUsers.filter(function(x){ return x !== u; });
     renderAuditSelected();
