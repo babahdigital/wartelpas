@@ -409,6 +409,18 @@ function get_ghost_suspects(PDO $db, $audit_date, $audit_blok, array $reported_u
         if ($login_time !== '') $score += 10;
         if ($score > 100) $score = 100;
 
+        $raw_comment = (string)($row['raw_comment'] ?? '');
+        $ip = (string)($row['first_ip'] ?? $row['last_ip'] ?? '');
+        $mac = (string)($row['first_mac'] ?? $row['last_mac'] ?? '');
+        if (($ip === '' || $ip === '-') && preg_match('/\b(?:\d{1,3}\.){3}\d{1,3}\b/', $raw_comment, $mip)) {
+            $ip = (string)$mip[0];
+        }
+        if (($mac === '' || $mac === '-') && preg_match('/\b(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\b/', $raw_comment, $mm)) {
+            $mac = strtoupper((string)$mm[0]);
+        }
+        if ($ip === '') $ip = '-';
+        if ($mac === '') $mac = '-';
+
         $suspects[] = [
             'username' => $username,
             'profile' => $profile_label !== '' ? $profile_label : ($profile_kind === '30' ? '30 Menit' : '10 Menit'),
@@ -417,8 +429,8 @@ function get_ghost_suspects(PDO $db, $audit_date, $audit_blok, array $reported_u
             'uptime' => $uptime,
             'status' => strtoupper($status !== '' ? $status : 'TERPAKAI'),
             'login_time' => $login_time !== '' ? $login_time : (string)($row['updated_at'] ?? ''),
-            'ip' => (string)($row['first_ip'] ?? $row['last_ip'] ?? '-'),
-            'mac' => (string)($row['first_mac'] ?? $row['last_mac'] ?? '-'),
+            'ip' => $ip,
+            'mac' => $mac,
             'confidence' => $score,
             'blok' => $blok
         ];

@@ -1113,7 +1113,11 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
             <button type="button" onclick="closeGhostModal()" class="modal-close">&times;</button>
         </div>
         <div class="modal-body">
-            <div id="ghost-meta" style="font-size:12px;color:var(--txt-muted);margin-bottom:8px;"></div>
+            <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px; flex-wrap:wrap;">
+                <div id="ghost-meta" style="font-size:12px;color:var(--txt-muted);"></div>
+                <div style="flex:1;"></div>
+                <input id="ghost-search" type="text" placeholder="Cari user/ip/mac..." style="min-width:220px; max-width:320px; background:#22272b; color:#fff; border:1px solid #3a4046; height:30px; padding:0 10px; border-radius:4px;">
+            </div>
             <div id="ghost-status" style="font-size:12px;color:#ccc;margin-bottom:10px;"></div>
             <div class="table-responsive" style="max-height:360px;overflow:auto;">
                 <table class="table-dark-solid text-nowrap" id="ghost-table" style="font-size:12px; min-width:920px;">
