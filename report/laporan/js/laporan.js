@@ -600,7 +600,10 @@ window.openAuditEdit = function(btn){
     var qtyInput = form.querySelector('input[name="audit_qty"]');
     if (qtyInput) qtyInput.value = qty;
     var setInput = form.querySelector('input[name="audit_setoran"]');
-    if (setInput) setInput.value = setoran;
+    if (setInput) {
+        setInput.value = setoran;
+        setInput.dataset.manual = '1';
+    }
     var qty10Input = form.querySelector('input[name="audit_qty_10"]');
     if (qty10Input) qty10Input.value = qty10;
     var qty30Input = form.querySelector('input[name="audit_qty_30"]');
@@ -671,10 +674,15 @@ function openAuditLockModal(){
         var sumQty = v10 + v30;
         var sumRp = (v10 * price10) + (v30 * price30);
         if (qtyTotal) qtyTotal.value = sumQty;
-        if (setoranTotal) setoranTotal.value = sumRp;
+        if (setoranTotal && setoranTotal.dataset.manual !== '1') setoranTotal.value = sumRp;
     }
     if (qty10) qty10.addEventListener('input', updateAuditTotals);
     if (qty30) qty30.addEventListener('input', updateAuditTotals);
+    if (setoranTotal) {
+        setoranTotal.addEventListener('input', function(){
+            setoranTotal.dataset.manual = '1';
+        });
+    }
     updateAuditTotals();
     if (!form) return;
     form.addEventListener('submit', function(e){
