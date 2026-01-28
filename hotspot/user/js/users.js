@@ -394,7 +394,8 @@
               <i class="fa fa-exclamation-triangle" style="color:#fca5a5"></i> <strong>Efek Hapus Total:</strong><br>
               1. User hilang dari Router.<br>
               2. History Login hilang dari Database.<br>
-              3. <strong>Data Penjualan/Uang HILANG.</strong>
+              3. <strong>Data Penjualan/Uang HILANG.</strong><br>
+              4. Settlement log ikut dihapus (sesuai tanggal filter jika ada).
             </div>
           </div>
           <div style="font-size:12px; color:#cbd5e1;">Tindakan ini tidak bisa dibatalkan.</div>
@@ -412,7 +413,9 @@
         suspendAutoRefresh = false;
         return;
       }
-      const url = './?hotspot=users&action=delete_block_full&blok=' + encodeURIComponent(blokLabel) + '&session=' + encodeURIComponent(usersSession);
+      const dateValue = (dateInput && dateInput.value ? dateInput.value.trim() : '') || (baseParams.get('date') || '').trim();
+      let url = './?hotspot=users&action=delete_block_full&blok=' + encodeURIComponent(blokLabel) + '&session=' + encodeURIComponent(usersSession) + '&delete_settlement=1';
+      if (dateValue) url += '&date=' + encodeURIComponent(dateValue);
       actionRequest(url, null);
     }
   };
