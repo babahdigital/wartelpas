@@ -3,9 +3,6 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../../../include/acl.php';
-if (isset($_SESSION['mikhmon']) && isOperator()) {
-    requireSuperAdmin('../../../admin.php?id=sessions');
-}
 // FILE: report/laporan/services/hp_save.php
 // Simpan data handphone per blok (AJAX)
 

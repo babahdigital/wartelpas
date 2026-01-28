@@ -48,7 +48,7 @@
                 <div class="modal-info-banner">
                     <div class="modal-info-icon"><i class="fa fa-info-circle"></i></div>
                     <div class="modal-info-text">
-                        Data harian mengikuti data hari sebelumnya secara otomatis. Input hanya jika ada perubahan jumlah fisik HP.
+                            Jika data hari ini belum ada, form akan menampilkan nilai terakhir sebagai default. Data baru akan tersimpan untuk tanggal yang dipilih.
                     </div>
                 </div>
 
@@ -433,37 +433,48 @@
 $hp_rows = [];
 $hp_rows_total = [];
 $hp_summary = [];
+$hp_default_map = [];
+$hp_default_date = '';
+$hp_today_map = [];
 if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
     try {
-        // Auto-carry over data HP dari tanggal terakhir jika tanggal ini kosong
+        // Ambil data HP hari sebelumnya untuk default form (tanpa menyimpan otomatis)
         $stmtCount = $db->prepare("SELECT COUNT(*) FROM phone_block_daily WHERE report_date = :d");
         $stmtCount->execute([':d' => $filter_date]);
         $hasRows = (int)$stmtCount->fetchColumn();
         if ($hasRows === 0) {
             $stmtLast = $db->prepare("SELECT MAX(report_date) FROM phone_block_daily WHERE report_date < :d");
             $stmtLast->execute([':d' => $filter_date]);
-            $lastDate = $stmtLast->fetchColumn();
-            if ($lastDate) {
-                $db->beginTransaction();
+            $hp_default_date = (string)($stmtLast->fetchColumn() ?? '');
+            if ($hp_default_date !== '') {
                 $stmtSrc = $db->prepare("SELECT blok_name, unit_type, total_units, active_units, rusak_units, spam_units, notes
-                    FROM phone_block_daily WHERE report_date = :d");
-                $stmtSrc->execute([':d' => $lastDate]);
-                $stmtIns = $db->prepare("INSERT OR IGNORE INTO phone_block_daily
-                    (report_date, blok_name, unit_type, total_units, active_units, rusak_units, spam_units, notes, updated_at)
-                    VALUES (:rd, :bn, :ut, :t, :a, :r, :s, :n, CURRENT_TIMESTAMP)");
+                    FROM phone_block_daily WHERE report_date = :d AND unit_type IN ('TOTAL','WARTEL','KAMTIB')");
+                $stmtSrc->execute([':d' => $hp_default_date]);
                 while ($row = $stmtSrc->fetch(PDO::FETCH_ASSOC)) {
-                    $stmtIns->execute([
-                        ':rd' => $filter_date,
-                        ':bn' => $row['blok_name'],
-                        ':ut' => $row['unit_type'],
-                        ':t' => (int)($row['total_units'] ?? 0),
-                        ':a' => (int)($row['active_units'] ?? 0),
-                        ':r' => (int)($row['rusak_units'] ?? 0),
-                        ':s' => (int)($row['spam_units'] ?? 0),
-                        ':n' => (string)($row['notes'] ?? '')
-                    ]);
+                    $bname = (string)($row['blok_name'] ?? '');
+                    if ($bname === '') continue;
+                    if (!isset($hp_default_map[$bname])) {
+                        $hp_default_map[$bname] = [
+                            'wartel_units' => 0,
+                            'kamtib_units' => 0,
+                            'total_units' => 0,
+                            'rusak_units' => 0,
+                            'spam_units' => 0,
+                            'notes' => ''
+                        ];
+                    }
+                    $ut = strtoupper((string)($row['unit_type'] ?? ''));
+                    if ($ut === 'TOTAL') {
+                        $hp_default_map[$bname]['total_units'] = (int)($row['total_units'] ?? 0);
+                        $hp_default_map[$bname]['rusak_units'] = (int)($row['rusak_units'] ?? 0);
+                        $hp_default_map[$bname]['spam_units'] = (int)($row['spam_units'] ?? 0);
+                        $hp_default_map[$bname]['notes'] = (string)($row['notes'] ?? '');
+                    } elseif ($ut === 'WARTEL') {
+                        $hp_default_map[$bname]['wartel_units'] = (int)($row['total_units'] ?? 0);
+                    } elseif ($ut === 'KAMTIB') {
+                        $hp_default_map[$bname]['kamtib_units'] = (int)($row['total_units'] ?? 0);
+                    }
                 }
-                $db->commit();
             }
         }
 
@@ -485,6 +496,21 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             return strtoupper((string)($row['unit_type'] ?? '')) === 'TOTAL';
         }));
 
+        foreach ($hp_rows_total as $row) {
+            $bname = (string)($row['blok_name'] ?? '');
+            if ($bname === '') continue;
+            $bw = $hp_breakdown[$bname]['WARTEL'] ?? 0;
+            $bk = $hp_breakdown[$bname]['KAMTIB'] ?? 0;
+            $hp_today_map[$bname] = [
+                'wartel_units' => (int)$bw,
+                'kamtib_units' => (int)$bk,
+                'total_units' => (int)($row['total_units'] ?? 0),
+                'rusak_units' => (int)($row['rusak_units'] ?? 0),
+                'spam_units' => (int)($row['spam_units'] ?? 0),
+                'notes' => (string)($row['notes'] ?? '')
+            ];
+        }
+
         $stmt2 = $db->prepare("SELECT unit_type,
             SUM(total_units) AS total_units,
             SUM(active_units) AS active_units,
@@ -505,6 +531,12 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
 ?>
 
 <?php if ($req_show === 'harian'): ?>
+<script>
+window.hpDefaults = <?= json_encode($hp_default_map ?? [], JSON_UNESCAPED_UNICODE); ?>;
+window.hpTodayMap = <?= json_encode($hp_today_map ?? [], JSON_UNESCAPED_UNICODE); ?>;
+window.hpDefaultDate = <?= json_encode($filter_date ?? ''); ?>;
+window.hpDefaultSourceDate = <?= json_encode($hp_default_date ?? ''); ?>;
+</script>
 <?php if (!empty($hp_error)): ?>
     <div class="card-solid mb-3">
         <div class="card-body" style="padding:12px;color:#fca5a5;">
