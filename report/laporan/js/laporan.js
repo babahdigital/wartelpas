@@ -540,14 +540,17 @@ function openHpModal(){
     var modal = document.getElementById('hpModal');
     if (modal) modal.style.display = 'flex';
     window.sellingPauseReload = true;
-    applyHpDefaults(true);
-    scheduleHpAutoSave(true);
+    if (!window.hpEditing) {
+        applyHpDefaults(true);
+        scheduleHpAutoSave(true);
+    }
 }
 
 function closeHpModal(){
     var modal = document.getElementById('hpModal');
     if (modal) modal.style.display = 'none';
     window.sellingPauseReload = false;
+    window.hpEditing = false;
 }
 
 function applyHpDefaults(force){
@@ -729,6 +732,7 @@ function submitHpAutoSave(form, snapshot){
 window.openHpEdit = function(btn){
     var form = document.getElementById('hpForm');
     if (!form || !btn) return;
+    window.hpEditing = true;
     form.querySelector('select[name="blok_name"]').value = btn.getAttribute('data-blok') || '';
     form.querySelector('input[name="report_date"]').value = btn.getAttribute('data-date') || '';
     form.querySelector('input[name="rusak_units"]').value = btn.getAttribute('data-rusak') || '0';
