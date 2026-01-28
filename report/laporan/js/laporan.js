@@ -570,6 +570,11 @@ function openAuditModal(){
     if (!window.auditEditing && typeof resetAuditUserPicker === 'function') {
         resetAuditUserPicker();
     }
+    if (!window.auditEditing) {
+        var form = document.getElementById('auditForm');
+        var setInput = form ? form.querySelector('input[name="audit_setoran"]') : null;
+        if (setInput) setInput.dataset.manual = '0';
+    }
 }
 
 function closeAuditModal(){
