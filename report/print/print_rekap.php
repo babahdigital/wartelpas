@@ -65,13 +65,19 @@ function detect_profile_minutes($profile) {
     $profile = resolve_profile_alias($profile);
     $profile_key = normalize_profile_key($profile);
     if ($profile_key === '') return 'OTHER';
+    if (preg_match('/^\d+$/', $profile_key)) {
+        return $profile_key . 'menit';
+    }
     return $profile_key;
 }
 
 function format_profile_summary($map, $order_keys = []) {
     if (empty($map) || !is_array($map)) return '-';
     $parts = [];
-    $keys = !empty($order_keys) ? $order_keys : array_keys($map);
+    $keys = array_keys($map);
+    if (!empty($order_keys)) {
+        $keys = array_values(array_unique(array_merge($order_keys, $keys)));
+    }
     foreach ($keys as $key) {
         $norm = normalize_profile_key($key);
         $val = (int)($map[$norm] ?? ($map[$key] ?? 0));
@@ -986,6 +992,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                                 $key_raw = substr($key_raw, 4);
                                             }
                                             $key_norm = normalize_profile_key($key_raw);
+                                            if ($key_norm !== '' && preg_match('/^\d+$/', $key_norm)) {
+                                                $key_norm = $key_norm . 'menit';
+                                            }
                                             if ($key_norm === '') continue;
                                             $profile_qty[$key_norm] = (int)$v;
                                         }
@@ -1001,6 +1010,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             $price_val = (int)($ud['price'] ?? 0);
                                             $upt = $upt !== '' ? $upt : '-';
                                             $profile_key = normalize_profile_key($ud['profile_key'] ?? ($ud['profile_kind'] ?? ($ud['profile'] ?? '')));
+                                            if ($profile_key !== '' && preg_match('/^\d+$/', $profile_key)) {
+                                                $profile_key = $profile_key . 'menit';
+                                            }
                                             if ($profile_key === '') $profile_key = 'other';
                                             if ($price_val <= 0) {
                                                 $price_val = resolve_price_from_profile($profile_key);
@@ -1079,6 +1091,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                         continue;
                                     }
                                     $profile_key = normalize_profile_key($inc['profile_key'] ?? ($inc['profile_kind'] ?? ($inc['profile'] ?? '')));
+                                    if ($profile_key !== '' && preg_match('/^\d+$/', $profile_key)) {
+                                        $profile_key = $profile_key . 'menit';
+                                    }
                                     if ($profile_key === '') $profile_key = 'other';
                                     $upt = trim((string)($inc['last_uptime'] ?? ''));
                                     $lb = format_bytes_short((int)($inc['last_bytes'] ?? 0));
@@ -1386,12 +1401,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     <?php if (!empty($rep['unreported_total'])): ?>
                                         <div style="color:#b45309; font-size:11px; margin-bottom:2px;">
                                             <i class="fa fa-exclamation-triangle"></i> <b>User Aktif Tidak Terlapor:</b>
-                                            <?php
-                                                $unrep_parts = [];
-                                                if (!empty($rep['unreported_10'])) $unrep_parts[] = $rep['unreported_10'] . ' unit (10m)';
-                                                if (!empty($rep['unreported_30'])) $unrep_parts[] = $rep['unreported_30'] . ' unit (30m)';
-                                                echo implode(', ', $unrep_parts);
-                                            ?>
+                                            <?= htmlspecialchars($rep['unreported_summary'] ?? '-') ?>
                                         </div>
                                     <?php endif; ?>
 
