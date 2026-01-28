@@ -1068,6 +1068,15 @@ function updateAuditUserSummary(){
             unreported.textContent = 'Tidak dilaporkan: -';
         }
     }
+    var unreportedPopup = document.getElementById('auditUserUnreportedPopup');
+    if (unreportedPopup) {
+        if (auditUserEligibleCount > 0) {
+            var missPopup = Math.max(auditUserEligibleCount - count, 0);
+            unreportedPopup.textContent = 'Tidak dilaporkan: ' + missPopup;
+        } else {
+            unreportedPopup.textContent = 'Tidak dilaporkan: -';
+        }
+    }
     var hidden = document.getElementById('auditUsernameHidden');
     if (hidden) hidden.value = auditSelectedUsers.join(', ');
 }
@@ -1187,7 +1196,7 @@ function renderAuditUserList(){
         var left = document.createElement('div');
         var name = document.createElement('div');
         name.className = 'audit-user-name';
-        var badgeClass = 'audit-user-badge' + (isRetur ? ' retur' : '');
+        var badgeClass = 'audit-user-badge ' + (isRetur ? 'retur' : 'terpakai');
         name.innerHTML = uname + ' <span class="' + badgeClass + '">' + (isRetur ? 'RETUR' : 'TERPAKAI') + '</span>';
         var meta = document.createElement('div');
         meta.className = 'audit-user-meta';

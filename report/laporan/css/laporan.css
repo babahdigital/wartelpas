@@ -102,6 +102,7 @@ body { overflow-x: hidden; }
 .audit-user-name { font-weight: 600; color: #eee; font-size: 13px; display: flex; align-items: center; gap: 8px; }
 .audit-user-meta { font-size: 11px; color: #777; margin-top: 2px; }
 .audit-user-badge { font-size: 9px; background: #444; padding: 1px 5px; border-radius: 3px; }
+.audit-user-badge.terpakai { background: #2ecc71; color: #0b1220; }
 .audit-user-badge.retur { background: #9b59b6; }
 .audit-user-check { width: 20px; height: 20px; border: 2px solid #555; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 .audit-user-row.selected .audit-user-check { background: #2ecc71; border-color: #2ecc71; color: #fff; }
@@ -110,6 +111,7 @@ body { overflow-x: hidden; }
 .audit-user-footer { padding: 12px 16px; background: #252525; border-top: 1px solid #333; display: flex; align-items: center; justify-content: space-between; }
 .audit-user-footer-info { font-size: 12px; color: #aaa; }
 .audit-user-footer-info b { color: #2ecc71; }
+.audit-user-footer-miss { margin-left: 10px; color: #f1c40f; font-size: 11px; }
 .audit-user-footer-actions { display: flex; gap: 8px; }
 .audit-modal-desc { margin:6px 0 0; }
 .audit-profile-row { display:flex; gap:14px; align-items:center; flex-wrap:nowrap; }

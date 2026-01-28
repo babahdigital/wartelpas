@@ -260,7 +260,10 @@
         <div class="audit-user-tabs" id="auditUserTabs"></div>
         <div class="audit-user-list" id="auditUserList"></div>
         <div class="audit-user-footer">
-            <div class="audit-user-footer-info">Terpilih: <b id="auditUserSelectedCount">0</b></div>
+            <div class="audit-user-footer-info">
+                Terpilih: <b id="auditUserSelectedCount">0</b>
+                <span class="audit-user-footer-miss" id="auditUserUnreportedPopup">Tidak dilaporkan: -</span>
+            </div>
             <div class="audit-user-footer-actions">
                 <button type="button" class="btn-print btn-default-dark" onclick="closeAuditUserModal()">Batal</button>
                 <button type="button" class="btn-print" style="background:#2ecc71;" onclick="applyAuditUserSelection()"><i class="fa fa-check"></i> Terapkan</button>
