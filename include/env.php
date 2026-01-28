@@ -72,6 +72,12 @@ $env = [
         'hotspot_profile' => 'wartelpas',
         'dhcp_server' => 'Wartelpas',
         'wartel_subnet' => '172.16.12.1/24',
+        'firewall_cleanup' => [
+            'enable' => true,
+            'include_offline' => true,
+            'max_ips' => 200,
+            'max_seconds' => 20
+        ],
         'settlement_script' => 'CuciGudangManual',
         'ghost_min_bytes' => 51200
     ],
