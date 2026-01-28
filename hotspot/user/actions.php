@@ -793,6 +793,52 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         }
       }
 
+      // Fallback cleanup untuk audit_rekap_manual & phone_block_daily
+      if ($db) {
+        $blok_patterns = [];
+        $blok_patterns[] = $blok_upper . '%';
+        if ($blok_letter !== '') {
+          $blok_patterns[] = $blok_letter . '%';
+        }
+        if ($blok_name_with_prefix !== '') {
+          $blok_patterns[] = $blok_name_with_prefix . '%';
+        }
+        if ($blok_name_clean !== '') {
+          $blok_patterns[] = $blok_name_clean . '%';
+        }
+        $blok_patterns = array_values(array_unique(array_filter($blok_patterns)));
+        try {
+          $stmtChk = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='audit_rekap_manual' LIMIT 1");
+          if ($stmtChk && $stmtChk->fetchColumn()) {
+            foreach ($blok_patterns as $pat) {
+              $sql = "DELETE FROM audit_rekap_manual WHERE UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) LIKE :p";
+              $params = [':p' => $pat];
+              if ($delete_date !== '') {
+                $sql .= " AND report_date = :d";
+                $params[':d'] = $delete_date;
+              }
+              $stmt = $db->prepare($sql);
+              $stmt->execute($params);
+            }
+          }
+        } catch (Exception $e) {}
+        try {
+          $stmtChk = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='phone_block_daily' LIMIT 1");
+          if ($stmtChk && $stmtChk->fetchColumn()) {
+            foreach ($blok_patterns as $pat) {
+              $sql = "DELETE FROM phone_block_daily WHERE UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) LIKE :p";
+              $params = [':p' => $pat];
+              if ($delete_date !== '') {
+                $sql .= " AND report_date = :d";
+                $params[':d'] = $delete_date;
+              }
+              $stmt = $db->prepare($sql);
+              $stmt->execute($params);
+            }
+          }
+        } catch (Exception $e) {}
+      }
+
       $list = $API->comm('/ip/hotspot/user/print', [
         '?server' => $hotspot_server,
         '.proplist' => '.id,name,comment'
