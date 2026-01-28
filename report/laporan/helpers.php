@@ -339,19 +339,19 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
         $cmt_low = strtolower($raw_comment);
         if ($status === '' || $status === 'normal') {
             if ((int)($r['is_invalid'] ?? 0) === 1) $status = 'invalid';
+            elseif ((int)($r['is_rusak'] ?? 0) === 1 || $lh_status === 'rusak') $status = 'rusak';
             elseif ((int)($r['is_retur'] ?? 0) === 1) $status = 'retur';
-            elseif ((int)($r['is_rusak'] ?? 0) === 1) $status = 'rusak';
             elseif (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
+            elseif (strpos($cmt_low, 'rusak') !== false) $status = 'rusak';
             elseif (strpos($cmt_low, 'retur') !== false) $status = 'retur';
-            elseif (strpos($cmt_low, 'rusak') !== false || $lh_status === 'rusak') $status = 'rusak';
             else $status = 'normal';
         }
 
-        if ($status === 'retur') {
-            $has_retur_marker = (strpos($cmt_low, 'retur') !== false);
-            $has_rusak_marker = (strpos($cmt_low, 'rusak') !== false) || ($lh_status === 'rusak') || ((int)($r['is_rusak'] ?? 0) === 1);
-            if (!$has_retur_marker && $has_rusak_marker) {
+        if ($status !== 'invalid') {
+            if (strpos($cmt_low, 'rusak') !== false) {
                 $status = 'rusak';
+            } elseif (strpos($cmt_low, 'retur') !== false) {
+                $status = 'retur';
             }
         }
 

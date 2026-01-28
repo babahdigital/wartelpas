@@ -493,24 +493,24 @@ foreach ($rows as $r) {
     ) {
         $status = 'invalid';
     } elseif (
-        $status_db === 'retur' || $lh_status === 'retur' ||
-        strpos($cmt_low, 'retur') !== false || (int)($r['is_retur'] ?? 0) === 1
-    ) {
-        $status = 'retur';
-    } elseif (
         $status_db === 'rusak' || $lh_status === 'rusak' ||
-        strpos($cmt_low, 'rusak') !== false || (int)($r['is_rusak'] ?? 0) === 1
+        (int)($r['is_rusak'] ?? 0) === 1
     ) {
         $status = 'rusak';
+    } elseif (
+        $status_db === 'retur' || $lh_status === 'retur' ||
+        (int)($r['is_retur'] ?? 0) === 1
+    ) {
+        $status = 'retur';
     } elseif (in_array($status_db, ['online', 'terpakai', 'ready'], true)) {
         $status = $status_db;
     }
 
-    if ($status === 'retur') {
-        $has_retur_marker = (strpos($cmt_low, 'retur') !== false);
-        $has_rusak_marker = (strpos($cmt_low, 'rusak') !== false) || ($lh_status === 'rusak') || ((int)($r['is_rusak'] ?? 0) === 1);
-        if (!$has_retur_marker && $has_rusak_marker) {
+    if ($status !== 'invalid') {
+        if (strpos($cmt_low, 'rusak') !== false) {
             $status = 'rusak';
+        } elseif (strpos($cmt_low, 'retur') !== false) {
+            $status = 'retur';
         }
     }
 
