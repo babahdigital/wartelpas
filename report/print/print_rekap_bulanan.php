@@ -380,7 +380,7 @@ if (!empty($unsettled_dates)) {
     $uds = array_keys($unsettled_dates);
     sort($uds);
     foreach ($uds as $d) {
-        $unsettled_labels[] = esc(substr($d, 8, 2)) . ' ' . esc(month_label_id(substr($d, 5, 2)));
+        $unsettled_labels[] = 'Tanggal ' . esc(substr($d, 8, 2)) . ' ' . esc(month_label_id(substr($d, 5, 2)));
     }
 }
 ?>

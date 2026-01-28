@@ -471,7 +471,7 @@ $print_time = date('d-m-Y H:i:s');
                 foreach ($unsettled_labels as $mm => $days) {
                     $days = array_values(array_unique($days));
                     sort($days);
-                    $parts[] = esc(month_label_id($mm)) . ' ' . esc(implode(',', $days));
+                    $parts[] = esc(month_label_id($mm)) . ': Tanggal ' . esc(implode(',', $days));
                 }
                 echo implode(' | ', $parts);
             ?>

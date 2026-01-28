@@ -200,6 +200,7 @@ if (file_exists($dbFile)) {
                             WHEN COALESCE(is_rusak,0)=1
                                 OR LOWER(COALESCE(status,''))='rusak'
                                 OR LOWER(COALESCE(comment,'')) LIKE '%rusak%'
+                                OR LOWER(COALESCE(lh.last_status,''))='rusak'
                                 THEN 'rusak'
                             WHEN COALESCE(is_invalid,0)=1
                                 OR LOWER(COALESCE(status,''))='invalid'
@@ -209,7 +210,8 @@ if (file_exists($dbFile)) {
                         END AS eff_status,
                         COALESCE(price_snapshot, price, 0) AS eff_price,
                         COALESCE(qty,1) AS eff_qty
-                    FROM sales_history
+                    FROM sales_history sh
+                    LEFT JOIN login_history lh ON lh.username = sh.username
                     WHERE $dateFilter
                 ) t";
             $stmt = $db->prepare($sumSql);
@@ -252,6 +254,7 @@ if (file_exists($dbFile)) {
                             WHEN COALESCE(is_rusak,0)=1
                                 OR LOWER(COALESCE(status,''))='rusak'
                                 OR LOWER(COALESCE(comment,'')) LIKE '%rusak%'
+                                OR LOWER(COALESCE(lh2.last_status,''))='rusak'
                                 THEN 'rusak'
                             WHEN COALESCE(is_invalid,0)=1
                                 OR LOWER(COALESCE(status,''))='invalid'
@@ -261,7 +264,8 @@ if (file_exists($dbFile)) {
                         END AS eff_status,
                         COALESCE(price_snapshot, price, 0) AS eff_price,
                         COALESCE(qty,1) AS eff_qty
-                    FROM live_sales
+                    FROM live_sales ls
+                    LEFT JOIN login_history lh2 ON lh2.username = ls.username
                     WHERE sync_status='pending' AND $dateFilter
                 ) t";
             $stmt = $db->prepare($pendingSumSql);
