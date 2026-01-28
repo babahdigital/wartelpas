@@ -154,7 +154,7 @@
     }
 
     # REALTIME USAGE (LOGOUT)
-    :local usageUrl ("http://wartelpas.sobigidul.net/report/laporan/services/usage_ingest.php?key=WartelpasSecureKey&session=S3c7x9_LB&event=logout&user=" . [$urlEncode $username] . "&date=" . [$urlEncode $logoutDate] . "&time=" . [$urlEncode $logoutTime] . "&ip=" . [$urlEncode $userip] . "&mac=" . [$urlEncode $usermac] . "&uptime=" . [$urlEncode $userUptime]);
+    :local usageUrl ("{{BASE_URL}}/report/laporan/services/usage_ingest.php?key={{USAGE_KEY}}&session={{SESSION}}&event=logout&user=" . [$urlEncode $username] . "&date=" . [$urlEncode $logoutDate] . "&time=" . [$urlEncode $logoutTime] . "&ip=" . [$urlEncode $userip] . "&mac=" . [$urlEncode $usermac] . "&uptime=" . [$urlEncode $userUptime]);
     /tool fetch url=$usageUrl keep-result=no;
 
     # Hapus cookie + putus koneksi untuk user wartel saja (hindari user non-wartel)

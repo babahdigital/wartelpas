@@ -180,10 +180,12 @@ try {
     if ($comment && preg_match('/\bblok\s*[-_]?\s*([A-Za-z0-9]+)/i', $comment, $m)) {
         $blok_name = 'BLOK-' . strtoupper($m[1]);
     }
+    if ($blok_name === '' && $username !== '' && preg_match('/\bblok\s*[-_]?\s*([A-Za-z0-9]+)/i', $username, $m)) {
+        $blok_name = 'BLOK-' . strtoupper($m[1]);
+    }
     if ($blok_name === '') {
-        $logWrite(date('c') . " | blok empty | " . $raw . "\n");
-        echo "OK";
-        exit;
+        $blok_name = 'BLOK-UNKNOWN';
+        $logWrite(date('c') . " | blok empty | set UNKNOWN | " . $raw . "\n");
     }
 
     $sale_date = '';

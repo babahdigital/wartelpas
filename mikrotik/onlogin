@@ -3,9 +3,9 @@
 # Update: 2026-01-19 - PRESERVE BLOK INFO
 
 # Realtime report endpoint (sesuaikan)
-:local baseUrl "http://wartelpas.sobigidul.net/report/laporan/services/live_ingest.php";
-:local key "WartelpasSecureKey";
-:local session "S3c7x9_LB";
+:local baseUrl "{{BASE_URL}}/report/laporan/services/live_ingest.php";
+:local key "{{LIVE_KEY}}";
+:local session "{{SESSION}}";
 
 # Helper URL-encode sederhana
 :local urlEncode do={
@@ -160,6 +160,6 @@
     }
 
     # REALTIME USAGE (LOGIN) - kirim untuk semua login
-    :local usageUrl ("http://wartelpas.sobigidul.net/report/laporan/services/usage_ingest.php?key=" . [$urlEncode $key] . "&session=" . [$urlEncode $session] . "&event=login" . "&user=" . [$urlEncode $user] . "&date=" . [$urlEncode $date] . "&time=" . [$urlEncode $time] . "&ip=" . [$urlEncode $address] . "&mac=" . [$urlEncode $mac] . "&uptime=" . [$urlEncode $uptime]);
+    :local usageUrl ("{{BASE_URL}}/report/laporan/services/usage_ingest.php?key=" . [$urlEncode "{{USAGE_KEY}}"] . "&session=" . [$urlEncode $session] . "&event=login" . "&user=" . [$urlEncode $user] . "&date=" . [$urlEncode $date] . "&time=" . [$urlEncode $time] . "&ip=" . [$urlEncode $address] . "&mac=" . [$urlEncode $mac] . "&uptime=" . [$urlEncode $uptime]);
     /tool fetch url=$usageUrl keep-result=no;
 }
