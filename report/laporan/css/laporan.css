@@ -81,6 +81,8 @@ body { overflow-x: hidden; }
 .audit-user-trigger.has-value { border-color: #2ecc71; background: rgba(46, 204, 113, 0.08); }
 .audit-user-summary { margin-top: 6px; font-size: 11px; color: #9aa0a6; }
 .audit-user-unreported { margin-top: 4px; font-size: 11px; color: #f1c40f; }
+.audit-user-status { display: flex; justify-content: space-between; gap: 10px; font-size: 11px; margin-top: 6px; color: #9aa0a6; }
+.audit-group-desc { font-size: 11px; color: #7b7b7b; margin: 6px 0 8px; }
 .audit-qty-hint { margin-top: 6px; font-size: 11px; color: #9aa0a6; }
 .audit-qty-hint.locked { color: #f1c40f; }
 .audit-user-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 10005; }

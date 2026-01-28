@@ -156,8 +156,23 @@
                     </div>
                 </div>
 
+                <div style="margin-top:10px;">
+                    <label class="label-icon"><i class="fa fa-shield"></i> Verifikasi User (Wajib)</label>
+                    <input type="hidden" name="audit_username" id="auditUsernameHidden">
+                    <button type="button" class="audit-user-trigger" id="auditUserTrigger" onclick="openAuditUserModal()">
+                        <span id="auditUserLabel"><i class="fa fa-list-ul"></i> Pilih user terpakai & retur...</span>
+                        <i class="fa fa-chevron-right" style="font-size:10px; opacity:0.7;"></i>
+                    </button>
+                    <div class="audit-user-status">
+                        <span class="audit-user-summary" id="auditUserSummary">Belum ada user dipilih</span>
+                        <span class="audit-user-unreported" id="auditUserUnreported">Tidak dilaporkan: -</span>
+                    </div>
+                    <div class="audit-qty-hint" id="auditQtyLockHint">Qty otomatis terkunci jika user dipilih. Kosongkan pilihan user untuk edit manual.</div>
+                </div>
+
                 <div class="form-group-box" style="margin-top:12px;">
-                    <div class="form-group-title"><i class="fa fa-ticket"></i> Fisik Voucher (Lapangan)</div>
+                    <div class="form-group-title"><i class="fa fa-ticket"></i> Fisik Voucher (Hasil verifikasi, bisa diedit)</div>
+                    <div class="audit-group-desc">Jumlah voucher fisik hasil verifikasi user. Bisa disesuaikan bila tidak memakai checklist.</div>
                     <div class="form-grid-2">
                         <?php if (!empty($audit_profiles)): ?>
                             <?php foreach ($audit_profiles as $prof): ?>
@@ -190,48 +205,39 @@
                     </div>
                 </div>
 
-                <div class="form-grid-2">
-                    <div>
-                        <label class="label-icon" style="color:#ccc;">Total Qty (Otomatis)</label>
-                        <input class="form-input" type="number" name="audit_qty" min="0" value="0" readonly tabindex="-1">
+                <div class="form-group-box" style="margin-top:12px;">
+                    <div class="form-group-title"><i class="fa fa-calculator"></i> Kalkulasi & Pengeluaran (Keuangan)</div>
+                    <div class="form-grid-2" style="margin-bottom:10px;">
+                        <div>
+                            <label class="label-icon" style="color:#ccc;">Total Qty (Sistem)</label>
+                            <input class="form-input" type="number" name="audit_qty" min="0" value="0" readonly tabindex="-1">
+                        </div>
+                        <div>
+                            <label class="label-icon" style="color:#f39c12;">Total Setoran (Kotor)</label>
+                            <input class="form-input" type="number" name="audit_setoran" min="0" value="0">
+                            <input type="hidden" name="audit_setoran_manual" id="audit_setoran_manual" value="0">
+                        </div>
                     </div>
-                    <div>
-                        <label class="label-icon" style="color:#f39c12;">Total Setoran (Otomatis)</label>
-                        <input class="form-input" type="number" name="audit_setoran" min="0" value="0">
-                        <input type="hidden" name="audit_setoran_manual" id="audit_setoran_manual" value="0">
-                    </div>
-                </div>
-                <div class="form-grid-2" style="margin-top:10px;">
-                    <div>
-                        <label class="label-icon">Setoran Bersih (Setelah Pengeluaran)</label>
-                        <input class="form-input" type="number" id="audit_setoran_net" value="0" readonly tabindex="-1">
-                    </div>
-                </div>
-
-                <div class="form-group-box" style="margin-top:12px; border-color: rgba(231, 76, 60, 0.3);">
-                    <div class="form-group-title" style="color:#e74c3c;"><i class="fa fa-minus-circle"></i> Pengeluaran / Bon (Opsional)</div>
                     <div class="form-grid-2">
                         <div>
-                            <label>Nominal (Rp)</label>
+                            <label>Pengeluaran (Rp)</label>
                             <input class="form-input" type="number" name="audit_expense_amt" min="0" value="0" placeholder="0">
                         </div>
                         <div>
-                            <label>Keterangan</label>
+                            <label>Keterangan Pengeluaran</label>
                             <input class="form-input" type="text" name="audit_expense_desc" placeholder="Contoh: Beli Kertas Thermal">
                         </div>
                     </div>
                 </div>
 
-                <div style="margin-top:10px;">
-                    <label class="label-icon"><i class="fa fa-users"></i> Verifikasi User (Audit Manual)</label>
-                    <input type="hidden" name="audit_username" id="auditUsernameHidden">
-                    <button type="button" class="audit-user-trigger" id="auditUserTrigger" onclick="openAuditUserModal()">
-                        <span id="auditUserLabel"><i class="fa fa-list-ul"></i> Pilih user terpakai & retur...</span>
-                        <i class="fa fa-chevron-right" style="font-size:10px; opacity:0.7;"></i>
-                    </button>
-                    <div class="audit-user-summary" id="auditUserSummary">Belum ada user dipilih</div>
-                    <div class="audit-user-unreported" id="auditUserUnreported">Tidak dilaporkan: -</div>
-                    <div class="audit-qty-hint" id="auditQtyLockHint">Qty otomatis dari user terpilih. Kosongkan pilihan user untuk edit manual.</div>
+                <div class="form-group-box" style="margin-top:12px; border-color: rgba(46, 204, 113, 0.35);">
+                    <div class="form-group-title" style="color:#2ecc71;"><i class="fa fa-check"></i> Setoran Bersih (Hasil Akhir)</div>
+                    <div class="form-grid-2">
+                        <div>
+                            <label class="label-icon">Setoran Bersih (Setelah Pengeluaran)</label>
+                            <input class="form-input" type="number" id="audit_setoran_net" value="0" readonly tabindex="-1">
+                        </div>
+                    </div>
                 </div>
                 
                 <div id="auditClientError" style="display:none; margin-top:10px; color:#fca5a5; font-size:12px;"></div>
