@@ -27,6 +27,7 @@ Status transaksi ditentukan berurutan:
 4. `last_status` dari `login_history` jika status rusak.
 
 Status default dianggap **normal** jika tidak terdeteksi rusak/retur/invalid.
+Jika terdeteksi lebih dari satu status, prioritas akhir mengikuti aturan **retur > rusak > invalid**.
 
 ## 3) Definisi Pendapatan
 
@@ -158,11 +159,12 @@ Catatan implementasi penting:
 
 ### 11.1 sync_stats.php
 - Deteksi status **rusak/retur** lebih fleksibel dari komentar (kata kunci di mana saja).
-- Status prioritas: `online` → `rusak` → `retur` → `terpakai` → `ready`.
+- Status prioritas: `online` → `retur` → `rusak` → `terpakai` → `ready`.
 
 ### 11.2 sync_sales.php
 - Saat settlement, status dan flag (`is_rusak/is_retur/is_invalid`) **divalidasi ulang** berdasarkan komentar terkini.
 - Mencegah status salah jika komentar MikroTik diedit setelah live ingest.
+ - Prioritas status transaksi: **retur > rusak > invalid** bila komentar mengandung beberapa label.
 
 ## 11.3 Audit Retur (Masukan-34)
 

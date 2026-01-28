@@ -268,6 +268,17 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **Harga per profil** dipusatkan di `env.php` (`pricing.profile_prices`) dan dipakai sebagai fallback jika harga transaksi kosong.
 - **User rusak yang sudah diretur** disembunyikan dari list audit agar tidak membingungkan.
 
+### 2.31 Penyelarasan Audit Summary & Prioritas Status (2026-01-28)
+- **report/audit.php** dan **report/print/print_audit.php** kini menghitung:
+  - **Qty manual = raw** (total voucher),
+  - **Setoran manual = net** (rusak/invalid mengurangi; retur tidak mengurangi).
+- Agregasi SQL untuk **gross/net/retur/rusak/invalid** memakai prioritas status **retur > rusak > invalid** agar tidak double-count.
+- Layanan ingest/sync berikut memakai prioritas status yang sama:
+  - `report/laporan/services/sync_sales.php`
+  - `report/laporan/services/live_ingest.php`
+  - `report/laporan/services/sync_stats.php`
+  - `report/laporan/services/sync_usage.php`
+
 ## 3) Masalah Khusus dan Fix Terkait
 ### 3.1 Waktu/Bytes/Uptime kosong saat RUSAK
 - Parsing comment diperluas untuk format:
