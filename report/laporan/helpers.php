@@ -168,6 +168,23 @@ function resolve_price_from_profile($profile) {
     return 0;
 }
 
+function resolve_profile_label($profile_key) {
+    $profile_key = normalize_profile_key(resolve_profile_alias($profile_key));
+    if ($profile_key === '') return '';
+    $labels = env_get_value('profiles.labels', []);
+    if (is_array($labels)) {
+        foreach ($labels as $k => $v) {
+            if (normalize_profile_key($k) === $profile_key && trim((string)$v) !== '') {
+                return (string)$v;
+            }
+        }
+    }
+    if (preg_match('/(\d+)/', $profile_key, $m)) {
+        return (int)$m[1] . ' Menit';
+    }
+    return $profile_key;
+}
+
 function format_first_login($dateStr) {
     if (empty($dateStr) || $dateStr === '-') return '-';
     $ts = strtotime($dateStr);

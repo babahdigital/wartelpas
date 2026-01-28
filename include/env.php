@@ -58,7 +58,11 @@ $env = [
         'profile_10' => '10Menit',
         'profile_30' => '30Menit',
         'label_10' => '10 Menit',
-        'label_30' => '30 Menit'
+        'label_30' => '30 Menit',
+        'labels' => [
+            '10menit' => '10 Menit',
+            '30menit' => '30 Menit'
+        ]
     ],
     'system' => [
         'db_file' => 'db_data/mikhmon_stats.db',

@@ -718,6 +718,15 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             if ($profile_qty_30 <= 0) $profile_qty_30 = count($profile30['user'] ?? []);
 
                             $profile_qty_map = [];
+                            $audit_profile_label_map = [];
+                            if (!empty($audit_profiles)) {
+                                foreach ($audit_profiles as $ap) {
+                                    $k = strtolower((string)($ap['key'] ?? ''));
+                                    if ($k !== '') {
+                                        $audit_profile_label_map[$k] = (string)($ap['label'] ?? $k);
+                                    }
+                                }
+                            }
                             if (!empty($evidence['profile_qty']) && is_array($evidence['profile_qty'])) {
                                 $raw_map = $evidence['profile_qty'];
                                 if (isset($raw_map['qty_10']) || isset($raw_map['qty_30'])) {
@@ -752,10 +761,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                 $price_val = isset($profile_price_map[$pkey]) ? (int)$profile_price_map[$pkey] : (int)resolve_price_from_profile($pkey);
                                 $manual_display_setoran += ($money_qty * $price_val);
                                 if ($pqty > 0) {
-                                    $label = $pkey;
-                                    if (preg_match('/(\d+)/', $pkey, $m)) {
-                                        $label = (int)$m[1] . 'm';
-                                    }
+                                    $label = $audit_profile_label_map[$pkey] ?? $pkey;
                                     $profile_qty_summary[] = $label . ':' . $pqty;
                                 }
                             }

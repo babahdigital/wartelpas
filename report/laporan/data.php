@@ -28,6 +28,7 @@ $price10 = (int)($pricing['price_10'] ?? 0);
 $price30 = (int)($pricing['price_30'] ?? 0);
 $profile_price_map = $pricing['profile_prices'] ?? [];
 $profile_alias_map = $pricing['profile_aliases'] ?? [];
+$profile_labels_map = $profiles_cfg['labels'] ?? [];
 $GLOBALS['profile_price_map'] = $profile_price_map;
 $label10 = $profiles_cfg['label_10'] ?? '10 Menit';
 $label30 = $profiles_cfg['label_30'] ?? '30 Menit';
@@ -40,9 +41,9 @@ if (!empty($profile_price_map)) {
         if (preg_match('/(\d+)/', $key, $m)) {
             $num = (int)$m[1];
         }
-        $label = $key;
-        if ($num !== null) {
-            $label = $num . ' Menit';
+        $label = $profile_labels_map[$key] ?? '';
+        if ($label === '') {
+            $label = $num !== null ? ($num . ' Menit') : $key;
         }
         $audit_profiles[] = [
             'key' => $key,
@@ -1133,6 +1134,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 $audit_setoran = $audit_setoran + $audit_exp_amt;
             }
 
+            $default_profile_key = !empty($audit_profiles) ? (string)($audit_profiles[0]['key'] ?? '10menit') : '10menit';
             $audit_evidence = [
                 'profile_qty' => !empty($audit_profile_qty) ? $audit_profile_qty : [
                     'qty_10' => $audit_qty_10,
@@ -1144,7 +1146,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             if (!empty($audit_users)) {
                 foreach ($audit_users as $u) {
                     $audit_evidence['users'][$u] = [
-                        'profile_kind' => detect_profile_kind_from_label($label10),
+                        'profile_key' => $default_profile_key,
                         'last_status' => 'unknown'
                     ];
                 }
