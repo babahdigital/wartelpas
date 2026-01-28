@@ -533,6 +533,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       if (preg_match('/^[A-Z]/', $blok_keyword, $m)) {
         $blok_letter = $m[0];
       }
+      $blok_letter_prefix = $blok_letter !== '' ? ($blok_letter . '%') : '';
       $blok_names_cfg = env_get_value('blok.names', []);
       $blok_name_label = '';
       if ($blok_letter !== '' && is_array($blok_names_cfg) && !empty($blok_names_cfg[$blok_letter])) {
@@ -596,6 +597,10 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $delete_name_map = [];
       $whereBlok = "UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) = :b_clean" . ($use_glob ? " OR UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) GLOB :bg" : "");
       $whereBlok .= " OR UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) LIKE :b_prefix";
+      if ($blok_letter !== '') {
+        $whereBlok .= " OR UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) = :b_letter";
+        $whereBlok .= " OR UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) LIKE :b_letter_prefix";
+      }
       if ($blok_name_clean !== '') {
         $whereBlok .= " OR UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) = :b_name_clean";
         $whereBlok .= " OR UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) = :b_name_only";
@@ -613,6 +618,10 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $whereSales .= ")";
       $base_params = $use_glob ? [':b_clean' => $blok_upper, ':bg' => $glob_pattern, ':b_prefix' => $blok_prefix, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4]
         : [':b_clean' => $blok_upper, ':b_prefix' => $blok_prefix, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4];
+      if ($blok_letter !== '') {
+        $base_params[':b_letter'] = $blok_letter;
+        $base_params[':b_letter_prefix'] = $blok_letter_prefix;
+      }
       if ($blok_name_label !== '') {
         $base_params[':rc5'] = $raw_like5;
         $base_params[':rc6'] = $raw_like6;
@@ -734,6 +743,10 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $stmt->execute(array_merge($params, $userParams));
 
         $blok_params = $use_glob ? [':b_clean' => $blok_upper, ':bg' => $glob_pattern, ':b_prefix' => $blok_prefix] : [':b_clean' => $blok_upper, ':b_prefix' => $blok_prefix];
+        if ($blok_letter !== '') {
+          $blok_params[':b_letter'] = $blok_letter;
+          $blok_params[':b_letter_prefix'] = $blok_letter_prefix;
+        }
         if ($blok_name_clean !== '') {
           $blok_params[':b_name_clean'] = $blok_name_with_prefix;
           $blok_params[':b_name_only'] = $blok_name_clean;
