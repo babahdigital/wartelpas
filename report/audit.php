@@ -521,7 +521,7 @@ if (file_exists($dbFile)) {
             $stat_rusak_system = (int)$sales_summary['rusak'] + (int)$sales_summary['invalid']
                 + (int)$pending_summary['rusak'] + (int)$pending_summary['invalid'];
             $stat_rusak_manual = (int)($audit_manual_summary['total_rusak_rp'] ?? 0);
-            $total_loss_real = $stat_rusak_system + $stat_rusak_manual;
+            $total_loss_real = $stat_rusak_system > 0 ? $stat_rusak_system : $stat_rusak_manual;
         ?>
         <div class="summary-grid">
             <div class="summary-card">
