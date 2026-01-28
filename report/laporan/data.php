@@ -1072,6 +1072,22 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         $audit_setoran = (int)($_POST['audit_setoran'] ?? 0);
         $audit_qty_10 = (int)($_POST['audit_qty_10'] ?? 0);
         $audit_qty_30 = (int)($_POST['audit_qty_30'] ?? 0);
+        $audit_profile_qty = [];
+        if (!empty($_POST['audit_profile_qty']) && is_array($_POST['audit_profile_qty'])) {
+            foreach ($_POST['audit_profile_qty'] as $k => $v) {
+                $key = strtolower(trim((string)$k));
+                if ($key === '') continue;
+                $audit_profile_qty[$key] = (int)$v;
+            }
+        } elseif ($audit_qty_10 > 0 || $audit_qty_30 > 0) {
+            $audit_profile_qty = [
+                '10menit' => $audit_qty_10,
+                '30menit' => $audit_qty_30
+            ];
+        }
+        if (!empty($audit_profile_qty)) {
+            $audit_qty = array_sum($audit_profile_qty);
+        }
         $audit_exp_amt = (int)($_POST['audit_expense_amt'] ?? 0);
         $audit_exp_desc = trim($_POST['audit_expense_desc'] ?? '');
         $audit_note = '';
@@ -1118,7 +1134,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             }
 
             $audit_evidence = [
-                'profile_qty' => [
+                'profile_qty' => !empty($audit_profile_qty) ? $audit_profile_qty : [
                     'qty_10' => $audit_qty_10,
                     'qty_30' => $audit_qty_30
                 ],
