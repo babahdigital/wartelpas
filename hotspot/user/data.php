@@ -705,7 +705,13 @@ foreach($all_users as $u) {
 
     // Filter blok
     if ($req_comm != '') {
-      if (strcasecmp($f_blok, $req_comm) != 0) continue;
+      $req_key = normalize_block_key($req_comm);
+      $f_key = normalize_block_key($f_blok);
+      if ($req_key !== '') {
+        if ($f_key === '' || strpos($f_key, $req_key) !== 0) continue;
+      } else {
+        if (strcasecmp($f_blok, $req_comm) != 0) continue;
+      }
     }
 
     // Filter profil (10/30)

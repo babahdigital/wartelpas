@@ -191,7 +191,11 @@ if ($id == "login" || substr($url, -1) == "p") {
     </script>';
 } elseif ($id == "mikrotik-scripts" && !empty($session)) {
   include_once('./include/menu.php');
-  include_once('./settings/mikrotik_scripts.php');
+  if (file_exists('./settings/mikrotik_scripts.php')) {
+    include_once('./settings/mikrotik_scripts.php');
+  } else {
+    echo "<div class='alert alert-danger'>File settings/mikrotik_scripts.php tidak ditemukan.</div>";
+  }
 } elseif ($id == "connect"  && !empty($session)) {
   ini_set("max_execution_time",5);  
   include_once('./include/menu.php');

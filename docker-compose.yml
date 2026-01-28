@@ -28,6 +28,7 @@ services:
       - ./settings/settings.php:/var/www/html/settings/settings.php
       - ./settings/sessions.php:/var/www/html/settings/sessions.php
       - ./settings/uplogo.php:/var/www/html/settings/uplogo.php
+      - ./settings/mikrotik_scripts.php:/var/www/html/settings/mikrotik_scripts.php
       - ./include/readcfg.php:/var/www/html/include/readcfg.php
       - ./custom.ini:/usr/local/etc/php/conf.d/custom.ini
       - ./.htaccess:/var/www/html/.htaccess
