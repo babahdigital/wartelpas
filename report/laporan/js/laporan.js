@@ -1124,6 +1124,16 @@ function formatBytesShortJS(bytes){
     return n.toFixed(dec) + ' ' + units[i];
 }
 
+function formatLoginTimeShort(val){
+    if (!val) return '-';
+    var s = String(val);
+    if (s.indexOf(' ') !== -1) {
+        var parts = s.split(' ');
+        return parts[1] || parts[0];
+    }
+    return s;
+}
+
 window.openGhostModal = function(blok, date, diff){
     var cfg = window.sellingConfig || {};
     var modal = document.getElementById('ghost-modal');
@@ -1141,6 +1151,9 @@ window.openGhostModal = function(blok, date, diff){
     url.searchParams.set('date', date || '');
     url.searchParams.set('blok', blok || '');
 
+    var searchInput = document.getElementById('ghost-search');
+    if (searchInput) searchInput.value = '';
+
     fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
         .then(function(r){ return r.json(); })
         .then(function(data){
@@ -1154,21 +1167,42 @@ window.openGhostModal = function(blok, date, diff){
                 if (body) body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--txt-muted);padding:20px;">Tidak ada kandidat anomali.</td></tr>';
                 return;
             }
-            var rows = '';
-            data.ghosts.forEach(function(g){
-                var score = parseInt(g.confidence || 0, 10);
-                var scoreColor = score >= 80 ? '#e74c3c' : (score >= 60 ? '#f39c12' : '#3498db');
-                rows += '<tr>' +
-                    '<td>' + String(g.username || '-') + '<br><span style="color:#8aa0b4;font-size:11px;">' + String(g.ip || '-') + ' | ' + String(g.mac || '-') + '</span></td>' +
-                    '<td class="text-center">' + String(g.profile || '-') + '</td>' +
-                    '<td class="text-center">' + String(g.status || '-') + '</td>' +
-                    '<td class="text-center">' + String(g.uptime || '-') + '</td>' +
-                    '<td class="text-center">' + formatBytesShortJS(g.bytes) + '</td>' +
-                    '<td class="text-center">' + String(g.login_time || '-') + '</td>' +
-                    '<td class="text-center"><span style="color:' + scoreColor + ';font-weight:600;">' + score + '%</span></td>' +
-                    '</tr>';
-            });
-            if (body) body.innerHTML = rows;
+            var allRows = data.ghosts.slice();
+            var renderRows = function(list){
+                var rows = '';
+                list.forEach(function(g){
+                    var score = parseInt(g.confidence || 0, 10);
+                    var scoreColor = score >= 80 ? '#e74c3c' : (score >= 60 ? '#f39c12' : '#3498db');
+                    var loginShort = formatLoginTimeShort(g.login_time || '-');
+                    rows += '<tr>' +
+                        '<td>' + String(g.username || '-') + '<br><span style="color:#8aa0b4;font-size:11px;">' + String(g.ip || '-') + ' | ' + String(g.mac || '-') + '</span></td>' +
+                        '<td class="text-center">' + String(g.profile || '-') + '</td>' +
+                        '<td class="text-center">' + String(g.status || '-') + '</td>' +
+                        '<td class="text-center">' + String(g.uptime || '-') + '</td>' +
+                        '<td class="text-center">' + formatBytesShortJS(g.bytes) + '</td>' +
+                        '<td class="text-center">' + loginShort + '</td>' +
+                        '<td class="text-center"><span style="color:' + scoreColor + ';font-weight:600;">' + score + '%</span></td>' +
+                        '</tr>';
+                });
+                if (body) body.innerHTML = rows;
+            };
+
+            var applyFilter = function(){
+                var q = searchInput ? String(searchInput.value || '').trim().toLowerCase() : '';
+                if (!q) return renderRows(allRows);
+                var filtered = allRows.filter(function(g){
+                    var hay = [
+                        g.username, g.ip, g.mac, g.profile, g.status, g.uptime, g.login_time
+                    ].map(function(x){ return String(x || '').toLowerCase(); }).join(' | ');
+                    return hay.indexOf(q) !== -1;
+                });
+                renderRows(filtered);
+            };
+
+            if (searchInput) {
+                searchInput.oninput = applyFilter;
+            }
+            renderRows(allRows);
         })
         .catch(function(){
             if (status) status.textContent = 'Gagal mengambil data ghost.';
