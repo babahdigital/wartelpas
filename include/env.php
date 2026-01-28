@@ -5,7 +5,7 @@ if (substr($_SERVER["REQUEST_URI"], -7) == "env.php") { header("Location:./"); e
 // KONFIGURASI TERPUSAT BACKUP/RESTORE + RCLONE
 $env = [
     'backup' => [
-        'secret' => 'WartelpasSecureKey',
+        'secret' => 'kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE=',
         'allowed_ips' => ['127.0.0.1', '::1', '10.10.83.1', '172.19.0.1'],
         'rate_window' => 300,
         'rate_limit' => 1,
@@ -23,26 +23,26 @@ $env = [
             'allowlist' => []
         ],
         'usage_ingest' => [
-            'token' => 'WartelpasSecureKey',
+            'token' => 'kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE=',
             'allowlist' => []
         ],
         'live_ingest' => [
-            'token' => 'WartelpasSecureKey',
+            'token' => 'kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE=',
             'allowlist' => []
         ],
         'sync_sales' => [
-            'token' => 'WartelpasSecureKey',
+            'token' => 'kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE=',
             'allowlist' => []
         ],
         'sync_stats' => [
-            'token' => 'WartelpasSecureKey',
+            'token' => 'kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE=',
             'allowlist' => []
         ],
         'tools' => [
-            'token' => 'WartelpasSecureKey'
+            'token' => 'kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE='
         ],
         'settlement_log' => [
-            'token' => 'WartelpasSecureKey'
+            'token' => 'kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE='
         ]
     ],
     'pricing' => [
