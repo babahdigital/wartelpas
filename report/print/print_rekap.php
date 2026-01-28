@@ -1109,18 +1109,10 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $p10_qty = (int)($profile_qty['qty_10'] ?? 0);
                             $p30_qty = (int)($profile_qty['qty_30'] ?? 0);
                             if ($p10_qty <= 0 && !empty($profile10_items)) {
-                                $p10_qty = 0;
-                                foreach ($profile10_items as $itm) {
-                                    $st = normalize_status_value($itm['status'] ?? '');
-                                    if ($st !== 'rusak') $p10_qty++;
-                                }
+                                $p10_qty = count($profile10_items);
                             }
                             if ($p30_qty <= 0 && !empty($profile30_items)) {
-                                $p30_qty = 0;
-                                foreach ($profile30_items as $itm) {
-                                    $st = normalize_status_value($itm['status'] ?? '');
-                                    if ($st !== 'rusak') $p30_qty++;
-                                }
+                                $p30_qty = count($profile30_items);
                             }
                             $p10_tt = $p10_qty > 0 ? number_format($p10_qty,0,',','.') : '-';
                             $p30_tt = $p30_qty > 0 ? number_format($p30_qty,0,',','.') : '-';
@@ -1131,7 +1123,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
 
                             $manual_net_qty_10 = max(0, $p10_qty - $cnt_rusak_10 - $cnt_invalid_10 + $cnt_retur_10);
                             $manual_net_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30 + $cnt_retur_30);
-                            $manual_display_qty = $has_manual_evidence ? ($manual_net_qty_10 + $manual_net_qty_30) : (int)($ar['reported_qty'] ?? 0);
+                            $manual_display_qty = $has_manual_evidence ? ($p10_qty + $p30_qty) : (int)($ar['reported_qty'] ?? 0);
                             $manual_display_setoran = $has_manual_evidence ? (($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30)) : (int)($ar['actual_setoran'] ?? 0);
 
                             $expected_qty = (int)($ar['expected_qty'] ?? 0);
@@ -1139,14 +1131,14 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             if (!empty($rows)) {
                                 $expected_calc = calc_expected_for_block($rows, $filter_date, $audit_block_key);
                                 if (!empty($expected_calc)) {
-                                    $expected_qty = (int)($expected_calc['qty'] ?? $expected_qty);
+                                    $expected_qty = (int)($expected_calc['raw_qty'] ?? $expected_qty);
                                     $expected_setoran = (int)($expected_calc['net'] ?? $expected_setoran);
                                 }
                             }
                             $expected_adj_qty = $expected_qty;
                             $expected_adj_setoran = $expected_setoran;
                             if ($has_manual_evidence) {
-                                $expected_adj_qty = max(0, $expected_qty - $cnt_rusak_10 - $cnt_rusak_30 - $cnt_invalid_10 - $cnt_invalid_30 + $cnt_retur_10 + $cnt_retur_30);
+                                $expected_adj_qty = $expected_qty;
                                 $expected_adj_setoran = max(0, $expected_setoran
                                     - (($cnt_rusak_10 + $cnt_invalid_10) * $price10)
                                     - (($cnt_rusak_30 + $cnt_invalid_30) * $price30)
