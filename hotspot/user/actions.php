@@ -839,6 +839,58 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         } catch (Exception $e) {}
       }
 
+      // Final cleanup: parse blok dari raw_comment/blok_name (tangkap user rusak hasil retur)
+      if ($db) {
+        $target_key = normalize_block_key($blok_upper);
+        if ($target_key !== '') {
+          $stale_users = [];
+          try {
+            $stmt = $db->query("SELECT username, raw_comment, blok_name FROM login_history WHERE username IS NOT NULL AND username != ''");
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+              $uname = (string)($row['username'] ?? '');
+              if ($uname === '') continue;
+              $raw_comment = (string)($row['raw_comment'] ?? '');
+              $blok_name = (string)($row['blok_name'] ?? '');
+              $blok_guess = extract_blok_name($raw_comment);
+              if ($blok_guess === '') {
+                $blok_guess = extract_blok_name($blok_name) ?: $blok_name;
+              }
+              $guess_key = normalize_block_key($blok_guess);
+              if ($guess_key !== '' && strpos($guess_key, $target_key) === 0) {
+                $stale_users[strtolower($uname)] = $uname;
+              }
+            }
+          } catch (Exception $e) {}
+
+          if (!empty($stale_users)) {
+            $names = array_values($stale_users);
+            $placeholders = [];
+            $params = [];
+            foreach ($names as $i => $uname) {
+              $key = ':s' . $i;
+              $placeholders[] = $key;
+              $params[$key] = $uname;
+            }
+            try {
+              $db->beginTransaction();
+              $stmt = $db->prepare("DELETE FROM login_history WHERE username IN (" . implode(',', $placeholders) . ")");
+              $stmt->execute($params);
+              $stmt = $db->prepare("DELETE FROM login_events WHERE username IN (" . implode(',', $placeholders) . ")");
+              $stmt->execute($params);
+              $stmt = $db->prepare("DELETE FROM sales_history WHERE username IN (" . implode(',', $placeholders) . ")");
+              $stmt->execute($params);
+              $stmt = $db->prepare("DELETE FROM live_sales WHERE username IN (" . implode(',', $placeholders) . ")");
+              $stmt->execute($params);
+              $db->commit();
+            } catch (Exception $e) {
+              if ($db->inTransaction()) {
+                $db->rollBack();
+              }
+            }
+          }
+        }
+      }
+
       $list = $API->comm('/ip/hotspot/user/print', [
         '?server' => $hotspot_server,
         '.proplist' => '.id,name,comment'
