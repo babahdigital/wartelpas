@@ -200,6 +200,9 @@ $daily_note_alert = '';
 $hp_active_by_block = [];
 $hp_stats_by_block = [];
 $hp_units_by_block = [];
+$hp_prev_units_by_block = [];
+$hp_change_rows = [];
+$hp_prev_date = '';
 $block_summaries = [];
 $valid_blocks = [];
 
@@ -355,6 +358,34 @@ try {
                 $ut = strtoupper((string)($hr['unit_type'] ?? ''));
                 if ($ut === 'WARTEL') $hp_wartel_units = (int)($hr['total_units'] ?? 0);
                 if ($ut === 'KAMTIB') $hp_kamtib_units = (int)($hr['total_units'] ?? 0);
+            }
+
+            $stmtPrev = $db->prepare("SELECT MAX(report_date) FROM phone_block_daily WHERE report_date < :d");
+            $stmtPrev->execute([':d' => $filter_date]);
+            $hp_prev_date = (string)($stmtPrev->fetchColumn() ?? '');
+            if ($hp_prev_date !== '') {
+                $stmtPrevBlocks = $db->prepare("SELECT blok_name, SUM(total_units) AS total_units
+                    FROM phone_block_daily
+                    WHERE report_date = :d AND unit_type = 'TOTAL'
+                    GROUP BY blok_name");
+                $stmtPrevBlocks->execute([':d' => $hp_prev_date]);
+                foreach ($stmtPrevBlocks->fetchAll(PDO::FETCH_ASSOC) as $pb) {
+                    $blk = normalize_block_name($pb['blok_name'] ?? '');
+                    if ($blk === '') continue;
+                    $hp_prev_units_by_block[$blk] = (int)($pb['total_units'] ?? 0);
+                }
+            }
+
+            $all_blocks = array_unique(array_merge(array_keys($hp_stats_by_block), array_keys($hp_prev_units_by_block)));
+            foreach ($all_blocks as $blk) {
+                $cur_total = (int)($hp_stats_by_block[$blk]['total'] ?? 0);
+                $prev_total = (int)($hp_prev_units_by_block[$blk] ?? 0);
+                $diff = $cur_total - $prev_total;
+                if ($diff === 0) continue;
+                $hp_change_rows[] = [
+                    'blok' => $blk,
+                    'diff' => $diff
+                ];
             }
 
             $stmtAudit = $db->prepare("SELECT * FROM audit_rekap_manual WHERE report_date = :d ORDER BY blok_name");
@@ -927,6 +958,27 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         <div class="dul-gap" style="margin-top:4px; font-size:11px; color:#444;">
             Catatan: Data rekap adalah acuan resmi untuk keuangan karena berasal dari transaksi.
         </div> 
+        <?php if ($req_show === 'harian' && !empty($hp_change_rows)): ?>
+            <div style="margin-top:6px; font-size:11px; color:#333;">
+                <strong>Perubahan device hari ini</strong>
+                <?php if ($hp_prev_date !== ''): ?>
+                    (dibanding <?= htmlspecialchars(format_date_ddmmyyyy($hp_prev_date)) ?>)
+                <?php endif; ?>:
+            </div>
+            <div style="margin-top:4px; font-size:11px;">
+                <?php foreach ($hp_change_rows as $chg): ?>
+                    <?php
+                        $blk_label = get_block_label($chg['blok'], $blok_names);
+                        $diff = (int)$chg['diff'];
+                        $color = $diff < 0 ? '#c0392b' : '#1e8e3e';
+                        $sign = $diff > 0 ? '+' : '';
+                    ?>
+                    <div style="color:<?= $color; ?>; margin-bottom:2px;">
+                        <?= htmlspecialchars($blk_label) ?> <?= $sign . number_format($diff,0,',','.') ?> unit
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
 
         <?php if ($req_show === 'harian' && !empty($daily_note_alert)): ?>
             <div style="line-height: 25px; margin-top:2%; padding:10px; border:1px solid #ffcdd2; background:#ffebee; border-radius:4px; color:#b71c1c;">
