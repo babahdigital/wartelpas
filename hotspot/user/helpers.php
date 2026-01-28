@@ -73,6 +73,33 @@ if (!function_exists('resolve_profile_alias')) {
   }
 }
 
+if (!function_exists('get_status_priority_list')) {
+  function get_status_priority_list() {
+    $priority = env_get_value('report.status_priority', []);
+    if (!is_array($priority) || empty($priority)) {
+      $priority = ['retur', 'rusak', 'invalid', 'normal'];
+    }
+    $out = [];
+    foreach ($priority as $p) {
+      $p = strtolower(trim((string)$p));
+      if ($p === '') continue;
+      $out[] = $p;
+    }
+    if (!in_array('normal', $out, true)) $out[] = 'normal';
+    return $out;
+  }
+}
+
+if (!function_exists('resolve_status_priority')) {
+  function resolve_status_priority($flags, $fallback = 'READY') {
+    $flags = is_array($flags) ? $flags : [];
+    foreach (get_status_priority_list() as $p) {
+      if (!empty($flags[$p])) return strtoupper($p);
+    }
+    return $fallback;
+  }
+}
+
 // Helper: Ekstrak nama blok dari comment
 if (!function_exists('extract_blok_name')) {
   function extract_blok_name($comment) {

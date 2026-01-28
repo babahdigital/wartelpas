@@ -187,21 +187,37 @@ if (!empty($router_users)) {
       $hist_status = strtolower($hist_sum['last_status'] ?? '');
       if ($hist_status === 'retur') {
         $is_retur = true;
-        $is_rusak = false;
       } elseif ($hist_status === 'rusak') {
         $is_rusak = true;
-        $is_retur = false;
+      } elseif ($hist_status === 'invalid') {
+        $is_invalid = true;
       }
     }
-    if ($is_retur) $is_rusak = false;
+
+    $flags_priority = [
+      'retur' => $is_retur,
+      'rusak' => $is_rusak,
+      'invalid' => $is_invalid ?? false
+    ];
+    $priority_status = resolve_status_priority($flags_priority, 'READY');
+    if ($priority_status === 'RETUR') {
+      $is_retur = true;
+      $is_rusak = false;
+    } elseif ($priority_status === 'RUSAK') {
+      $is_rusak = true;
+      $is_retur = false;
+    } elseif ($priority_status === 'INVALID') {
+      $is_invalid = true;
+      $is_rusak = false;
+      $is_retur = false;
+    }
 
     $is_used = (!$is_retur && !$is_rusak && $disabled !== 'true') &&
       ($is_active || $bytes > 50 || ($uptime !== '' && $uptime !== '0s') || (($cm['ip'] ?? '') !== ''));
 
     $status = 'READY';
     if ($is_active) $status = 'ONLINE';
-    elseif ($is_retur) $status = 'RETUR';
-    elseif ($is_rusak) $status = 'RUSAK';
+    elseif ($priority_status !== 'READY') $status = $priority_status;
     elseif ($is_used) $status = 'TERPAKAI';
 
     if ($status === 'READY') {
