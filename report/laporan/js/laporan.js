@@ -555,13 +555,25 @@ function applyHpDefaults(force){
     var blok = blokEl ? blokEl.value : '';
     var date = dateEl ? dateEl.value : '';
     if (!blok || !date) return;
-    if (window.hpDefaultDate && date !== window.hpDefaultDate) return;
 
-    var todayMap = window.hpTodayMap || {};
-    var defaults = window.hpDefaults || {};
+    var todayMapByDate = window.hpTodayMapByDate || {};
+    var todayMap = todayMapByDate[date] || {};
+    var defaultsCache = window.hpDefaultCache || {};
+    var defaults = defaultsCache[date] || {};
     var src = todayMap[blok] || defaults[blok];
-    if (!src) return;
+    if (!src) {
+        fetchHpDefaults(date, function(){
+            var cache = window.hpDefaultCache || {};
+            var after = (cache[date] || {});
+            var s2 = (todayMapByDate[date] || {})[blok] || after[blok];
+            if (s2) fillHpForm(form, s2, force);
+        });
+        return;
+    }
+    fillHpForm(form, src, force);
+}
 
+function fillHpForm(form, src, force){
     var wartelEl = form.querySelector('input[name="wartel_units"]');
     var kamtibEl = form.querySelector('input[name="kamtib_units"]');
     var rusakEl = form.querySelector('input[name="rusak_units"]');
@@ -591,6 +603,33 @@ function applyHpDefaults(force){
     }
 
     scheduleHpAutoSave(true);
+}
+
+var hpDefaultsFetchLock = {};
+function fetchHpDefaults(date, cb){
+    if (!window.hpDefaultsUrl || !date) return;
+    if (hpDefaultsFetchLock[date]) return;
+    hpDefaultsFetchLock[date] = true;
+    var url = window.hpDefaultsUrl + '?date=' + encodeURIComponent(date);
+    if (window.hpSessionId) {
+        url += '&session=' + encodeURIComponent(window.hpSessionId);
+    }
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if (data && data.ok) {
+                window.hpDefaultCache = window.hpDefaultCache || {};
+                window.hpDefaultCache[date] = data.data || {};
+                window.hpDefaultSourceDate = data.source_date || '';
+            }
+            if (typeof cb === 'function') cb();
+        })
+        .catch(function(){
+            if (typeof cb === 'function') cb();
+        })
+        .finally(function(){
+            hpDefaultsFetchLock[date] = false;
+        });
 }
 
 var hpAutoTimer = null;
@@ -625,10 +664,6 @@ function scheduleHpAutoSave(force){
     var snapshot = getHpFormSnapshot(form);
     if (!snapshot || !snapshot.blok || !snapshot.date) return;
 
-    var todayMap = window.hpTodayMap || {};
-    var hasToday = !!todayMap[snapshot.blok];
-    if (hasToday && force !== true) return;
-
     var key = JSON.stringify(snapshot);
     if (!force && key === hpAutoLastKey) return;
     hpAutoLastKey = key;
@@ -653,8 +688,11 @@ function submitHpAutoSave(form, snapshot){
             var data = null;
             try { data = JSON.parse(text); } catch (e) {}
             if (data && data.ok) {
-                window.hpTodayMap = window.hpTodayMap || {};
-                window.hpTodayMap[snapshot.blok] = {
+                window.hpTodayMapByDate = window.hpTodayMapByDate || {};
+                if (!window.hpTodayMapByDate[snapshot.date]) {
+                    window.hpTodayMapByDate[snapshot.date] = {};
+                }
+                window.hpTodayMapByDate[snapshot.date][snapshot.blok] = {
                     wartel_units: parseInt(snapshot.wartel || '0', 10) || 0,
                     kamtib_units: parseInt(snapshot.kamtib || '0', 10) || 0,
                     total_units: parseInt(snapshot.total || '0', 10) || 0,
