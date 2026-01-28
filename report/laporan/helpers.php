@@ -199,6 +199,40 @@ function format_date_dmy($dateStr) {
     return date('d-m-Y H:i', $ts);
 }
 
+function month_label_id($val) {
+    $val = trim((string)$val);
+    if ($val === '') return '';
+    $mm = '';
+    if (preg_match('/^\d{4}-(\d{2})/', $val, $m)) {
+        $mm = $m[1];
+    } elseif (preg_match('/^\d{2}$/', $val)) {
+        $mm = $val;
+    } elseif (preg_match('/^\d{1}$/', $val)) {
+        $mm = str_pad($val, 2, '0', STR_PAD_LEFT);
+    } elseif (preg_match('/-\s*(\d{2})\s*-/', $val, $m)) {
+        $mm = $m[1];
+    } elseif (preg_match('/^\d{4}$/', $val)) {
+        return $val;
+    }
+
+    $map = [
+        '01' => 'Januari',
+        '02' => 'Februari',
+        '03' => 'Maret',
+        '04' => 'April',
+        '05' => 'Mei',
+        '06' => 'Juni',
+        '07' => 'Juli',
+        '08' => 'Agustus',
+        '09' => 'September',
+        '10' => 'Oktober',
+        '11' => 'November',
+        '12' => 'Desember'
+    ];
+
+    return $map[$mm] ?? $val;
+}
+
 function format_blok_label($blok) {
     $blok = (string)$blok;
     if ($blok === '') return '';
