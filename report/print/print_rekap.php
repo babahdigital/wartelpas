@@ -835,6 +835,11 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                 }
             }
             ksort($block_summaries);
+            $profile_keys_ordered = array_values(array_unique($profile_order_keys));
+            $profile_key_1 = $profile_keys_ordered[0] ?? '';
+            $profile_key_2 = $profile_keys_ordered[1] ?? '';
+            $profile_label_1 = $profile_key_1 !== '' ? resolve_profile_label($profile_key_1) : 'Profil 1';
+            $profile_label_2 = $profile_key_2 !== '' ? resolve_profile_label($profile_key_2) : 'Profil 2';
         ?>
         <table class="rekap-table">
             <thead>
@@ -851,16 +856,21 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             <thead>
                                 <tr>
                                     <th rowspan="2" style="width:140px;">BLOK</th>
-                                    <th colspan="3" style="width:260px;">Voucher (Profil)</th>
-                                    <th colspan="2" style="width:220px;">Pendapatan</th>
+                                    <th colspan="3" style="width:210px;">Voucher <?= htmlspecialchars($profile_label_1) ?></th>
+                                    <th colspan="3" style="width:210px;">Voucher <?= htmlspecialchars($profile_label_2) ?></th>
+                                    <th colspan="3" style="width:210px;">Pendapatan</th>
                                     <th colspan="3" style="width:210px;">Device</th>
                                     <th rowspan="2" style="width:70px;">Aktif</th>
                                 </tr>
                                 <tr>
-                                    <th style="width:90px;">Qty</th>
-                                    <th style="width:90px;">Rusak</th>
-                                    <th style="width:90px;">Retur</th>
-                                    <th style="width:110px;">Profil</th>
+                                    <th style="width:70px;">Total</th>
+                                    <th style="width:70px;">Rusak</th>
+                                    <th style="width:70px;">Retur</th>
+                                    <th style="width:70px;">Total</th>
+                                    <th style="width:70px;">Rusak</th>
+                                    <th style="width:70px;">Retur</th>
+                                    <th style="width:80px;">V1</th>
+                                    <th style="width:80px;">V2</th>
                                     <th style="width:80px;">Total</th>
                                     <th style="width:70px;">Total</th>
                                     <th style="width:70px;">RS</th>
@@ -869,19 +879,31 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             </thead>
                             <tbody>
                                 <?php if (empty($block_summaries)): ?>
-                                    <tr><td colspan="10" style="text-align:center;">Tidak ada data</td></tr>
+                                    <tr><td colspan="14" style="text-align:center;">Tidak ada data</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($block_summaries as $blk => $bdata): ?>
                                         <?php
                                             $blk_label = get_block_label($blk, $blok_names);
                                             $hp_stat = $hp_stats_by_block[$blk] ?? ['total' => 0, 'active' => 0, 'rusak' => 0, 'spam' => 0];
+                                            $p1_qty = (int)($bdata['profile_qty'][$profile_key_1] ?? 0);
+                                            $p1_rs = (int)($bdata['profile_rs'][$profile_key_1] ?? 0);
+                                            $p1_rt = (int)($bdata['profile_rt'][$profile_key_1] ?? 0);
+                                            $p1_amt = (int)($bdata['profile_amt'][$profile_key_1] ?? 0);
+                                            $p2_qty = (int)($bdata['profile_qty'][$profile_key_2] ?? 0);
+                                            $p2_rs = (int)($bdata['profile_rs'][$profile_key_2] ?? 0);
+                                            $p2_rt = (int)($bdata['profile_rt'][$profile_key_2] ?? 0);
+                                            $p2_amt = (int)($bdata['profile_amt'][$profile_key_2] ?? 0);
                                         ?>
                                         <tr>
                                             <td><?= htmlspecialchars($blk_label) ?></td>
-                                            <td style="text-align:left; font-size:11px;"><?= htmlspecialchars(format_profile_summary($bdata['profile_qty'] ?? [], $profile_order_keys)) ?></td>
-                                            <td style="text-align:left; font-size:11px;"><?= htmlspecialchars(format_profile_summary($bdata['profile_rs'] ?? [], $profile_order_keys)) ?></td>
-                                            <td style="text-align:left; font-size:11px;"><?= htmlspecialchars(format_profile_summary($bdata['profile_rt'] ?? [], $profile_order_keys)) ?></td>
-                                            <td style="text-align:left; font-size:11px;"><?= htmlspecialchars(format_profile_summary($bdata['profile_amt'] ?? [], $profile_order_keys)) ?></td>
+                                            <td style="text-align:center;"><?= number_format($p1_qty,0,',','.') ?></td>
+                                            <td style="text-align:center;"><?= number_format($p1_rs,0,',','.') ?></td>
+                                            <td style="text-align:center;"><?= number_format($p1_rt,0,',','.') ?></td>
+                                            <td style="text-align:center;"><?= number_format($p2_qty,0,',','.') ?></td>
+                                            <td style="text-align:center;"><?= number_format($p2_rs,0,',','.') ?></td>
+                                            <td style="text-align:center;"><?= number_format($p2_rt,0,',','.') ?></td>
+                                            <td style="text-align:right;"><?= number_format($p1_amt,0,',','.') ?></td>
+                                            <td style="text-align:right;"><?= number_format($p2_amt,0,',','.') ?></td>
                                             <td style="text-align:right;"><?= number_format((int)$bdata['total_amount'],0,',','.') ?></td>
                                             <td style="text-align:center;"><?= number_format((int)$hp_stat['total'],0,',','.') ?></td>
                                             <td style="text-align:center;"><?= number_format((int)$hp_stat['rusak'],0,',','.') ?></td>
