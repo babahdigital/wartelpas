@@ -869,8 +869,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     <th style="width:70px;">Total</th>
                                     <th style="width:70px;">Rusak</th>
                                     <th style="width:70px;">Retur</th>
-                                    <th style="width:80px;">V1</th>
-                                    <th style="width:80px;">V2</th>
+                                    <th style="width:80px;">V10</th>
+                                    <th style="width:80px;">V30</th>
                                     <th style="width:80px;">Total</th>
                                     <th style="width:70px;">Total</th>
                                     <th style="width:70px;">RS</th>
