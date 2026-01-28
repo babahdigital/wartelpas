@@ -258,6 +258,16 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - Semua endpoint membaca konfigurasi dari **env.php** terlebih dahulu, lalu fallback ke `getenv()` atau default.
  - Token untuk tools maintenance dan backup UI juga dipusatkan di **env.php** (dipakai oleh tools dan menu backup/restore).
 
+### 2.30 Penyempurnaan Akuntansi & Audit Harian (2026-01-28)
+- **Retur** menambah **net** tetapi **tidak menambah qty** pada rincian penjualan harian.
+- **Rusak yang sudah diretur** dianggap **0** di kolom rusak (agar tidak double loss).
+- **Audit Sistem** tidak menghitung baris dari `login_history` sebagai transaksi (hindari dobel).
+- **Voucher Aktual** di audit mengikuti **jumlah user manual (raw)**.
+- **Setoran Sistem** dihitung dari **net**.
+- **Setoran Aktual** kini **bisa diedit manual** (input tidak di-override oleh profil 10/30).
+- **Harga per profil** dipusatkan di `env.php` (`pricing.profile_prices`) dan dipakai sebagai fallback jika harga transaksi kosong.
+- **User rusak yang sudah diretur** disembunyikan dari list audit agar tidak membingungkan.
+
 ## 3) Masalah Khusus dan Fix Terkait
 ### 3.1 Waktu/Bytes/Uptime kosong saat RUSAK
 - Parsing comment diperluas untuk format:

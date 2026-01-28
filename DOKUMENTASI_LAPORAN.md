@@ -226,3 +226,39 @@ Audit: RUSAK 26/01/26 vc-316-01.26.26-Blok-A10 | Blok-A10 | IP:172.16.12.146 | M
 ### 14.5 Print Standalone Menggunakan Helper Terpusat
 - **hotspot/print/print.detail.php** dan **hotspot/print/print.used.php** kini memakai helper terpusat agar logika uptime/bytes, blok, profil, dan format tanggal konsisten.
 - Helper DB untuk print standalone memakai nama khusus (`get_user_history_from_db`, `get_cumulative_uptime_from_events_db`, `get_relogin_events_db`) agar tidak bentrok dengan fungsi di `hotspot/user/data.php`.
+
+## 15) Pembaruan Logika Finance & Audit Harian (2026-01-28)
+
+### 15.1 Prinsip Qty vs Setoran
+- **Qty (Voucher) = jumlah fisik voucher** yang ditemukan di lapangan (raw count), **tidak dikurangi** rusak/retur.
+- **Setoran (Net)** = nilai uang bersih:
+   - Terpakai/Normal: +harga
+   - Retur: +harga
+   - Rusak: 0
+   - Invalid: 0
+
+### 15.2 Rekap Rincian Penjualan (Harian)
+- Retur **menambah net** tetapi **tidak menambah qty** (untuk menghindari dobel hitung unit).
+- Rusak yang **sudah diretur** dianggap **0** pada kolom rusak (agar tidak membingungkan).
+- Dengan contoh 3 voucher 10 menit (1 terpakai, 1 rusak, 1 retur):
+   - **Net = Rp 10.000** (terpakai + retur).
+   - **Kerugian sistem = Rp 5.000** (1 rusak yang tidak diretur).
+
+### 15.3 Audit Manual (Rekap Lapangan)
+- **Voucher Sistem** diambil dari transaksi (raw), **login_history tidak dihitung sebagai transaksi** agar tidak dobel.
+- **Voucher Aktual** mengikuti jumlah user manual (raw), bukan net.
+- **Setoran Sistem** tetap berdasarkan **net**.
+- **Setoran Aktual** dapat **diedit manual** (tidak lagi terkunci oleh kalkulasi profil 10/30).
+- Rusak yang sudah diretur **tidak ditampilkan** pada daftar user audit.
+
+### 15.4 Harga per Profil (env)
+- Harga ditentukan dari `env.php` pada:
+   - `pricing.price_10`, `pricing.price_30`
+   - `pricing.profile_prices` (mapping profil ke harga).
+- Jika harga di transaksi kosong, sistem **fallback ke profil** (dari komentar / validity / mapping).
+
+### 15.5 Ringkasan Keuangan (Audit)
+- **Selisih Setoran = Aktual - Sistem**.
+- Jika Aktual = Sistem → **Setoran Sesuai**.
+- Jika Aktual > Sistem → **Lebih Setor**.
+- Jika Aktual < Sistem → **Kurang Setor**.
