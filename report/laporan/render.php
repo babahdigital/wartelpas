@@ -18,6 +18,7 @@
     data-price30="<?= (int)$price30; ?>"
     data-report-url="<?= htmlspecialchars('./?report=selling', ENT_QUOTES); ?>"
     data-ghost-url="<?= htmlspecialchars('report/laporan/ghost.php', ENT_QUOTES); ?>"
+    data-audit-user-url="<?= htmlspecialchars('report/laporan/services/audit_users.php', ENT_QUOTES); ?>"
     data-audit-locked="<?= $audit_locked_today ? '1' : '0'; ?>"
     data-audit-users="<?= htmlspecialchars(json_encode($audit_user_options ?? []), ENT_QUOTES); ?>"
     data-audit-profiles="<?= htmlspecialchars(json_encode($audit_profiles ?? []), ENT_QUOTES); ?>">
@@ -200,6 +201,12 @@
                         <input type="hidden" name="audit_setoran_manual" id="audit_setoran_manual" value="0">
                     </div>
                 </div>
+                <div class="form-grid-2" style="margin-top:10px;">
+                    <div>
+                        <label class="label-icon">Setoran Bersih (Setelah Pengeluaran)</label>
+                        <input class="form-input" type="number" id="audit_setoran_net" value="0" readonly tabindex="-1">
+                    </div>
+                </div>
 
                 <div class="form-group-box" style="margin-top:12px; border-color: rgba(231, 76, 60, 0.3);">
                     <div class="form-group-title" style="color:#e74c3c;"><i class="fa fa-minus-circle"></i> Pengeluaran / Bon (Opsional)</div>
@@ -216,13 +223,15 @@
                 </div>
 
                 <div style="margin-top:10px;">
-                    <label class="label-icon"><i class="fa fa-user-times"></i> Username Tak Terlapor (Retur/Rusak System)</label>
+                    <label class="label-icon"><i class="fa fa-users"></i> Verifikasi User (Audit Manual)</label>
                     <input type="hidden" name="audit_username" id="auditUsernameHidden">
-                    <div class="audit-user-picker">
-                        <div id="audit-user-chips" class="audit-user-chips"></div>
-                        <input class="form-input" type="text" id="audit-user-input" placeholder="Ketik username...">
-                        <div id="audit-user-suggest" class="audit-user-suggest"></div>
-                    </div>
+                    <button type="button" class="audit-user-trigger" id="auditUserTrigger" onclick="openAuditUserModal()">
+                        <span id="auditUserLabel"><i class="fa fa-list-ul"></i> Pilih user terpakai & retur...</span>
+                        <i class="fa fa-chevron-right" style="font-size:10px; opacity:0.7;"></i>
+                    </button>
+                    <div class="audit-user-summary" id="auditUserSummary">Belum ada user dipilih</div>
+                    <div class="audit-user-unreported" id="auditUserUnreported">Tidak dilaporkan: -</div>
+                    <div class="audit-qty-hint" id="auditQtyLockHint">Qty otomatis dari user terpilih. Kosongkan pilihan user untuk edit manual.</div>
                 </div>
                 
                 <div id="auditClientError" style="display:none; margin-top:10px; color:#fca5a5; font-size:12px;"></div>
@@ -233,6 +242,24 @@
                 <button type="submit" id="auditSubmitBtn" name="audit_submit" class="btn-print" style="background:#f39c12;" <?= $audit_locked_today ? 'disabled' : '' ?>>Simpan Audit</button>
             </div>
         </form>
+    </div>
+</div>
+
+<div id="auditUserOverlay" class="audit-user-overlay" onclick="if(event.target===this){closeAuditUserModal();}">
+    <div class="audit-user-modal">
+        <div class="audit-user-header">
+            <div class="audit-user-title"><i class="fa fa-list-ul"></i> Pilih User Audit</div>
+            <button type="button" class="modal-close" onclick="closeAuditUserModal()">&times;</button>
+        </div>
+        <div class="audit-user-tabs" id="auditUserTabs"></div>
+        <div class="audit-user-list" id="auditUserList"></div>
+        <div class="audit-user-footer">
+            <div class="audit-user-footer-info">Terpilih: <b id="auditUserSelectedCount">0</b></div>
+            <div class="audit-user-footer-actions">
+                <button type="button" class="btn-print btn-default-dark" onclick="closeAuditUserModal()">Batal</button>
+                <button type="button" class="btn-print" style="background:#2ecc71;" onclick="applyAuditUserSelection()"><i class="fa fa-check"></i> Terapkan</button>
+            </div>
+        </div>
     </div>
 </div>
 
