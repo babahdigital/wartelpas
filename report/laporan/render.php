@@ -759,7 +759,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                     $profile_qty_summary[] = $label . ':' . $pqty;
                                 }
                             }
-                            if (!$has_manual_evidence) {
+                            if (!$has_manual_evidence || $manual_display_qty === 0) {
                                 $manual_display_qty = (int)($ar['reported_qty'] ?? 0);
                                 $manual_display_setoran = (int)($ar['actual_setoran'] ?? 0);
                             }
