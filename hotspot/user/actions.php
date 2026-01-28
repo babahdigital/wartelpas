@@ -540,6 +540,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       }
       $blok_name_clean = $blok_name_label !== '' ? preg_replace('/[^A-Za-z0-9]/', '', $blok_name_label) : '';
       $blok_name_with_prefix = $blok_name_clean !== '' ? ('BLOK' . $blok_name_clean) : '';
+      $blok_prefix = $blok_upper . '%';
+      $blok_name_prefix = $blok_name_with_prefix !== '' ? ($blok_name_with_prefix . '%') : '';
       $use_glob = !preg_match('/\d$/', $blok_upper);
       $glob_pattern = $use_glob ? ($blok_upper . '[0-9]*') : '';
       $sql_pattern_1 = 'BLOK-' . $blok_keyword;
@@ -593,9 +595,11 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $retur_usernames = [];
       $delete_name_map = [];
       $whereBlok = "UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) = :b_clean" . ($use_glob ? " OR UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) GLOB :bg" : "");
+      $whereBlok .= " OR UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) LIKE :b_prefix";
       if ($blok_name_clean !== '') {
         $whereBlok .= " OR UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) = :b_name_clean";
         $whereBlok .= " OR UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) = :b_name_only";
+        $whereBlok .= " OR UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) LIKE :b_name_prefix";
       }
       $whereRaw = " OR UPPER(raw_comment) LIKE :rc1 OR UPPER(raw_comment) LIKE :rc2 OR UPPER(raw_comment) LIKE :rc3 OR UPPER(raw_comment) LIKE :rc4";
       if ($blok_name_label !== '') {
@@ -607,8 +611,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $whereSales .= " OR UPPER(comment) LIKE :rc5 OR UPPER(comment) LIKE :rc6";
       }
       $whereSales .= ")";
-      $base_params = $use_glob ? [':b_clean' => $blok_upper, ':bg' => $glob_pattern, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4]
-        : [':b_clean' => $blok_upper, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4];
+      $base_params = $use_glob ? [':b_clean' => $blok_upper, ':bg' => $glob_pattern, ':b_prefix' => $blok_prefix, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4]
+        : [':b_clean' => $blok_upper, ':b_prefix' => $blok_prefix, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4];
       if ($blok_name_label !== '') {
         $base_params[':rc5'] = $raw_like5;
         $base_params[':rc6'] = $raw_like6;
@@ -616,6 +620,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       if ($blok_name_clean !== '') {
         $base_params[':b_name_clean'] = $blok_name_with_prefix;
         $base_params[':b_name_only'] = $blok_name_clean;
+        $base_params[':b_name_prefix'] = $blok_name_prefix;
       }
 
       try {
@@ -728,10 +733,11 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $stmt = $db->prepare("DELETE FROM live_sales WHERE $whereSales$userClause");
         $stmt->execute(array_merge($params, $userParams));
 
-        $blok_params = $use_glob ? [':b_clean' => $blok_upper, ':bg' => $glob_pattern] : [':b_clean' => $blok_upper];
+        $blok_params = $use_glob ? [':b_clean' => $blok_upper, ':bg' => $glob_pattern, ':b_prefix' => $blok_prefix] : [':b_clean' => $blok_upper, ':b_prefix' => $blok_prefix];
         if ($blok_name_clean !== '') {
           $blok_params[':b_name_clean'] = $blok_name_with_prefix;
           $blok_params[':b_name_only'] = $blok_name_clean;
+          $blok_params[':b_name_prefix'] = $blok_name_prefix;
         }
         try {
           $stmtChk = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='audit_rekap_manual' LIMIT 1");
