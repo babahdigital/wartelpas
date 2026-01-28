@@ -1107,7 +1107,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
 
 <?php if (!$is_ajax): ?>
 <div id="ghost-modal" class="modal-backdrop" onclick="if(event.target===this){closeGhostModal();}">
-    <div class="modal-card" style="width:760px;max-width:96vw;">
+    <div class="modal-card" style="width:980px;max-width:96vw;">
         <div class="modal-header">
             <div class="modal-title"><i class="fa fa-search" style="color:#8e44ad;margin-right:6px;"></i> Deteksi Anomali</div>
             <button type="button" onclick="closeGhostModal()" class="modal-close">&times;</button>
@@ -1116,7 +1116,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
             <div id="ghost-meta" style="font-size:12px;color:var(--txt-muted);margin-bottom:8px;"></div>
             <div id="ghost-status" style="font-size:12px;color:#ccc;margin-bottom:10px;"></div>
             <div class="table-responsive" style="max-height:360px;overflow:auto;">
-                <table class="table-dark-solid text-nowrap" id="ghost-table" style="font-size:12px;">
+                <table class="table-dark-solid text-nowrap" id="ghost-table" style="font-size:12px; min-width:920px;">
                     <thead>
                         <tr>
                             <th>User</th>

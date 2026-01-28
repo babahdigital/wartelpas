@@ -368,12 +368,13 @@ function get_ghost_suspects(PDO $db, $audit_date, $audit_blok, array $reported_u
         $reported_map[strtolower((string)$u)] = true;
     }
     $suspects = [];
-    $stmt = $db->prepare("SELECT username, blok_name, raw_comment, validity, last_status, last_bytes, last_uptime, login_time_real, last_login_real, logout_time_real, updated_at, first_ip, first_mac, last_ip, last_mac
+    $stmt = $db->prepare("SELECT username, blok_name, raw_comment, validity, last_status, last_bytes, last_uptime, login_time_real, last_login_real, logout_time_real, first_login_real, updated_at, first_ip, first_mac, last_ip, last_mac
         FROM login_history
         WHERE username != '' AND (
             substr(login_time_real,1,10) = :d OR
             substr(last_login_real,1,10) = :d OR
             substr(logout_time_real,1,10) = :d OR
+            substr(first_login_real,1,10) = :d OR
             substr(updated_at,1,10) = :d OR
             login_date = :d
         )");
@@ -389,7 +390,7 @@ function get_ghost_suspects(PDO $db, $audit_date, $audit_blok, array $reported_u
 
         $bytes = (int)($row['last_bytes'] ?? 0);
         $uptime = (string)($row['last_uptime'] ?? '');
-        $has_login_time = !empty($row['login_time_real']) || !empty($row['last_login_real']) || !empty($row['logout_time_real']);
+        $has_login_time = !empty($row['login_time_real']) || !empty($row['last_login_real']) || !empty($row['logout_time_real']) || !empty($row['first_login_real']);
         $has_usage = $bytes > 0 || ($uptime !== '' && $uptime !== '0s') || $has_login_time;
         if (!$has_usage) continue;
 
@@ -404,7 +405,7 @@ function get_ghost_suspects(PDO $db, $audit_date, $audit_blok, array $reported_u
         if ($status === 'online') $score += 30;
         elseif ($status === 'terpakai') $score += 20;
         else $score += 10;
-        $login_time = (string)($row['login_time_real'] ?? $row['last_login_real'] ?? '');
+        $login_time = (string)($row['login_time_real'] ?? $row['last_login_real'] ?? $row['first_login_real'] ?? '');
         if ($login_time !== '') $score += 10;
         if ($score > 100) $score = 100;
 
