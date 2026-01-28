@@ -200,6 +200,7 @@ $daily_note_alert = '';
 $hp_active_by_block = [];
 $hp_stats_by_block = [];
 $hp_units_by_block = [];
+$hp_units_prev_by_block = [];
 $hp_prev_units_by_block = [];
 $hp_change_rows = [];
 $hp_prev_date = '';
@@ -374,6 +375,19 @@ try {
                     if ($blk === '') continue;
                     $hp_prev_units_by_block[$blk] = (int)($pb['total_units'] ?? 0);
                 }
+                $stmtPrevUnits = $db->prepare("SELECT blok_name, unit_type, SUM(total_units) AS total_units
+                    FROM phone_block_daily
+                    WHERE report_date = :d AND unit_type IN ('WARTEL','KAMTIB')
+                    GROUP BY blok_name, unit_type");
+                $stmtPrevUnits->execute([':d' => $hp_prev_date]);
+                foreach ($stmtPrevUnits->fetchAll(PDO::FETCH_ASSOC) as $pu) {
+                    $blk = normalize_block_name($pu['blok_name'] ?? '');
+                    if ($blk === '') continue;
+                    if (!isset($hp_units_prev_by_block[$blk])) $hp_units_prev_by_block[$blk] = ['WARTEL' => 0, 'KAMTIB' => 0];
+                    $ut = strtoupper((string)($pu['unit_type'] ?? ''));
+                    if ($ut === 'WARTEL') $hp_units_prev_by_block[$blk]['WARTEL'] = (int)($pu['total_units'] ?? 0);
+                    if ($ut === 'KAMTIB') $hp_units_prev_by_block[$blk]['KAMTIB'] = (int)($pu['total_units'] ?? 0);
+                }
             }
 
             $all_blocks = array_unique(array_merge(array_keys($hp_stats_by_block), array_keys($hp_prev_units_by_block)));
@@ -382,9 +396,15 @@ try {
                 $prev_total = (int)($hp_prev_units_by_block[$blk] ?? 0);
                 $diff = $cur_total - $prev_total;
                 if ($diff === 0) continue;
+                $cur_units = $hp_units_by_block[$blk] ?? ['WARTEL' => 0, 'KAMTIB' => 0];
+                $prev_units = $hp_units_prev_by_block[$blk] ?? ['WARTEL' => 0, 'KAMTIB' => 0];
+                $diff_wartel = (int)($cur_units['WARTEL'] ?? 0) - (int)($prev_units['WARTEL'] ?? 0);
+                $diff_kamtib = (int)($cur_units['KAMTIB'] ?? 0) - (int)($prev_units['KAMTIB'] ?? 0);
                 $hp_change_rows[] = [
                     'blok' => $blk,
-                    'diff' => $diff
+                    'diff' => $diff,
+                    'wartel' => $diff_wartel,
+                    'kamtib' => $diff_kamtib
                 ];
             }
 
@@ -960,9 +980,17 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         </div> 
         <?php if ($req_show === 'harian' && !empty($hp_change_rows)): ?>
             <div style="margin-top:6px; font-size:11px; color:#333;">
+                <?php
+                    $days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+                    $today_label = $filter_date !== '' ? ($days[(int)date('w', strtotime($filter_date))] . ', ' . format_date_ddmmyyyy($filter_date)) : '';
+                    $prev_label = $hp_prev_date !== '' ? ($days[(int)date('w', strtotime($hp_prev_date))] . ', ' . format_date_ddmmyyyy($hp_prev_date)) : '';
+                ?>
                 <strong>Perubahan device hari ini</strong>
-                <?php if ($hp_prev_date !== ''): ?>
-                    (dibanding <?= htmlspecialchars(format_date_ddmmyyyy($hp_prev_date)) ?>)
+                <?php if ($today_label !== ''): ?>
+                    (<?= htmlspecialchars($today_label) ?>)
+                <?php endif; ?>
+                <?php if ($prev_label !== ''): ?>
+                    dibanding <?= htmlspecialchars($prev_label) ?>
                 <?php endif; ?>:
             </div>
             <div style="margin-top:4px; font-size:11px;">
@@ -972,9 +1000,15 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         $diff = (int)$chg['diff'];
                         $color = $diff < 0 ? '#c0392b' : '#1e8e3e';
                         $sign = $diff > 0 ? '+' : '';
+                        $dw = (int)($chg['wartel'] ?? 0);
+                        $dk = (int)($chg['kamtib'] ?? 0);
+                        $unit_parts = [];
+                        if ($dw !== 0) $unit_parts[] = 'WR ' . ($dw > 0 ? '+' : '') . number_format($dw,0,',','.');
+                        if ($dk !== 0) $unit_parts[] = 'KM ' . ($dk > 0 ? '+' : '') . number_format($dk,0,',','.');
+                        $unit_text = !empty($unit_parts) ? ' (' . implode(' | ', $unit_parts) . ')' : '';
                     ?>
                     <div style="color:<?= $color; ?>; margin-bottom:2px;">
-                        <?= htmlspecialchars($blk_label) ?> <?= $sign . number_format($diff,0,',','.') ?> unit
+                        <?= htmlspecialchars($blk_label) ?> <?= $sign . number_format($diff,0,',','.') ?> unit<?= htmlspecialchars($unit_text) ?>
                     </div>
                 <?php endforeach; ?>
             </div>
