@@ -1003,12 +1003,12 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         $dw = (int)($chg['wartel'] ?? 0);
                         $dk = (int)($chg['kamtib'] ?? 0);
                         $unit_parts = [];
-                        if ($dw !== 0) $unit_parts[] = 'WR ' . ($dw > 0 ? '+' : '') . number_format($dw,0,',','.');
-                        if ($dk !== 0) $unit_parts[] = 'KM ' . ($dk > 0 ? '+' : '') . number_format($dk,0,',','.');
-                        $unit_text = !empty($unit_parts) ? ' (' . implode(' | ', $unit_parts) . ')' : '';
+                        if ($dk !== 0) $unit_parts[] = 'Unit dari Kamtib ' . ($dk > 0 ? '+' : '') . number_format($dk,0,',','.');
+                        if ($dw !== 0) $unit_parts[] = 'Unit dari Wartel ' . ($dw > 0 ? '+' : '') . number_format($dw,0,',','.');
+                        $unit_text = !empty($unit_parts) ? ', ' . implode(', ', $unit_parts) : '';
                     ?>
                     <div style="color:<?= $color; ?>; margin-bottom:2px;">
-                        <?= htmlspecialchars($blk_label) ?> <?= $sign . number_format($diff,0,',','.') ?> unit<?= htmlspecialchars($unit_text) ?>
+                        <?= htmlspecialchars($blk_label) ?> Device <?= $sign . number_format($diff,0,',','.') ?><?= htmlspecialchars($unit_text) ?>
                     </div>
                 <?php endforeach; ?>
             </div>
