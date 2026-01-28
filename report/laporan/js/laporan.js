@@ -1138,7 +1138,7 @@ window.openGhostModal = function(blok, date, diff){
     var status = document.getElementById('ghost-status');
     var meta = document.getElementById('ghost-meta');
     if (body) body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--txt-muted);padding:20px;">Memuat data...</td></tr>';
-    if (status) status.textContent = 'Memindai kandidat ghost...';
+    if (status) status.textContent = 'Memindai kandidat anomali...';
     if (meta) meta.textContent = 'Blok: ' + (blok || '-') + ' | Tanggal: ' + (date || '-') + ' | Selisih: ' + (diff || 0) + ' unit';
     if (modal) modal.style.display = 'flex';
     window.sellingPauseReload = true;
@@ -1152,13 +1152,13 @@ window.openGhostModal = function(blok, date, diff){
         .then(function(r){ return r.json(); })
         .then(function(data){
             if (!data || !data.ok) {
-                if (status) status.textContent = (data && data.message) ? data.message : 'Gagal mengambil data ghost.';
+                if (status) status.textContent = (data && data.message) ? data.message : 'Gagal mengambil data anomali.';
                 if (body) body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#fca5a5;padding:20px;">Tidak ada data.</td></tr>';
                 return;
             }
             if (status) status.textContent = 'Ditemukan ' + data.count + ' kandidat.';
             if (!data.ghosts || data.ghosts.length === 0) {
-                if (body) body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--txt-muted);padding:20px;">Tidak ada kandidat ghost.</td></tr>';
+                if (body) body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--txt-muted);padding:20px;">Tidak ada kandidat anomali.</td></tr>';
                 return;
             }
             var rows = '';
