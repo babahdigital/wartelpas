@@ -12,6 +12,8 @@ require_once($root_dir . '/report/laporan/helpers.php');
 $pricing = $env['pricing'] ?? [];
 $price10 = (int)($pricing['price_10'] ?? 0);
 $price30 = (int)($pricing['price_30'] ?? 0);
+$profile_price_map = $pricing['profile_prices'] ?? [];
+$GLOBALS['profile_price_map'] = $profile_price_map;
 
 $dbFile = dirname(__DIR__) . '/db_data/mikhmon_stats.db';
 $session_id = $_GET['session'] ?? '';
