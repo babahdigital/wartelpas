@@ -762,7 +762,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         <div class="card">
             <div class="label">Rusak</div>
             <div class="value"><?= number_format($total_qty_rusak,0,',','.') ?></div>
-            <div class="small">10 Menit: <?= number_format($rusak_10m,0,',','.') ?> | 30 Menit: <?= number_format($rusak_30m,0,',','.') ?></div>
+            <div class="small"><?= htmlspecialchars(format_profile_summary($rusak_by_profile, $profile_order_keys)) ?></div>
         </div>
         <?php if ($req_show === 'harian'): ?>
         <div class="card">
@@ -816,15 +816,11 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         <?php
             if (!empty($block_summaries)) {
                 foreach ($block_summaries as $blk => $bdata) {
+                    $has_profile = !empty($bdata['profile_qty']) || !empty($bdata['profile_rs']) || !empty($bdata['profile_rt']) || !empty($bdata['profile_amt']);
                     $has_data = ((int)($bdata['total_qty'] ?? 0) > 0)
                         || ((int)($bdata['total_amount'] ?? 0) > 0)
                         || ((int)($bdata['total_bw'] ?? 0) > 0)
-                        || ((int)($bdata['qty_10'] ?? 0) > 0)
-                        || ((int)($bdata['qty_30'] ?? 0) > 0)
-                        || ((int)($bdata['rs_10'] ?? 0) > 0)
-                        || ((int)($bdata['rs_30'] ?? 0) > 0)
-                        || ((int)($bdata['rt_10'] ?? 0) > 0)
-                        || ((int)($bdata['rt_30'] ?? 0) > 0)
+                        || $has_profile
                         || ((int)($bdata['rs_total'] ?? 0) > 0)
                         || ((int)($bdata['rt_total'] ?? 0) > 0);
                     if (!$has_data) {
@@ -849,21 +845,16 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             <thead>
                                 <tr>
                                     <th rowspan="2" style="width:140px;">BLOK</th>
-                                    <th colspan="3" style="width:210px;">Voucher 10</th>
-                                    <th colspan="3" style="width:210px;">Voucher 30</th>
-                                    <th colspan="3" style="width:210px;">Pendapatan</th>
+                                    <th colspan="3" style="width:260px;">Voucher (Profil)</th>
+                                    <th colspan="2" style="width:220px;">Pendapatan</th>
                                     <th colspan="3" style="width:210px;">Device</th>
                                     <th rowspan="2" style="width:70px;">Aktif</th>
                                 </tr>
                                 <tr>
-                                    <th style="width:70px;">Total</th>
-                                    <th style="width:70px;">Rusak</th>
-                                    <th style="width:70px;">Retur</th>
-                                    <th style="width:70px;">Total</th>
-                                    <th style="width:70px;">Rusak</th>
-                                    <th style="width:70px;">Retur</th>
-                                    <th style="width:80px;">V10</th>
-                                    <th style="width:80px;">V30</th>
+                                    <th style="width:90px;">Qty</th>
+                                    <th style="width:90px;">Rusak</th>
+                                    <th style="width:90px;">Retur</th>
+                                    <th style="width:110px;">Profil</th>
                                     <th style="width:80px;">Total</th>
                                     <th style="width:70px;">Total</th>
                                     <th style="width:70px;">RS</th>
@@ -872,7 +863,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             </thead>
                             <tbody>
                                 <?php if (empty($block_summaries)): ?>
-                                    <tr><td colspan="14" style="text-align:center;">Tidak ada data</td></tr>
+                                    <tr><td colspan="10" style="text-align:center;">Tidak ada data</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($block_summaries as $blk => $bdata): ?>
                                         <?php
@@ -881,14 +872,10 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                         ?>
                                         <tr>
                                             <td><?= htmlspecialchars($blk_label) ?></td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['qty_10'],0,',','.') ?></td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['rs_10'],0,',','.') ?></td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['rt_10'],0,',','.') ?></td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['qty_30'],0,',','.') ?></td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['rs_30'],0,',','.') ?></td>
-                                            <td style="text-align:center;"><?= number_format((int)$bdata['rt_30'],0,',','.') ?></td>
-                                            <td style="text-align:right;"><?= number_format((int)$bdata['amt_10'],0,',','.') ?></td>
-                                            <td style="text-align:right;"><?= number_format((int)$bdata['amt_30'],0,',','.') ?></td>
+                                            <td style="text-align:left; font-size:11px;"><?= htmlspecialchars(format_profile_summary($bdata['profile_qty'] ?? [], $profile_order_keys)) ?></td>
+                                            <td style="text-align:left; font-size:11px;"><?= htmlspecialchars(format_profile_summary($bdata['profile_rs'] ?? [], $profile_order_keys)) ?></td>
+                                            <td style="text-align:left; font-size:11px;"><?= htmlspecialchars(format_profile_summary($bdata['profile_rt'] ?? [], $profile_order_keys)) ?></td>
+                                            <td style="text-align:left; font-size:11px;"><?= htmlspecialchars(format_profile_summary($bdata['profile_amt'] ?? [], $profile_order_keys)) ?></td>
                                             <td style="text-align:right;"><?= number_format((int)$bdata['total_amount'],0,',','.') ?></td>
                                             <td style="text-align:center;"><?= number_format((int)$hp_stat['total'],0,',','.') ?></td>
                                             <td style="text-align:center;"><?= number_format((int)$hp_stat['rusak'],0,',','.') ?></td>
@@ -933,14 +920,13 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
             <table class="rekap-table" style="margin-top:15px;">
                 <thead>
                     <tr>
-                        <th colspan="15">Audit Manual Rekap Harian</th>
+                        <th colspan="11">Audit Manual Rekap Harian</th>
                     </tr>
                     <tr>
                         <th rowspan="2" style="width:90px;">Blok</th>
                         <th colspan="3">Voucher</th>
                         <th colspan="3">Setoran</th>
-                        <th colspan="4">Profil 10 Menit</th>
-                        <th colspan="4">Profil 30 Menit</th>
+                        <th colspan="4">Profil (Semua)</th>
                     </tr>
                     <tr>
                         <th style="width:70px;">Sistem</th>
@@ -953,16 +939,11 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <th style="width:70px;">Up</th>
                         <th style="width:70px;">Byte</th>
                         <th style="width:70px;">QTY</th>
-                        <th style="width:90px;">User</th>
-                        <th style="width:70px;">Up</th>
-                        <th style="width:70px;">Byte</th>
-                        <th style="width:70px;">QTY</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php
-                        $audit_total_profile_qty_10 = 0;
-                        $audit_total_profile_qty_30 = 0;
+                        $audit_total_profile_qty = 0;
                         $audit_total_expected_qty_adj = 0;
                         $audit_total_reported_qty_adj = 0;
                         $audit_total_selisih_qty_adj = 0;
@@ -974,20 +955,13 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <?php
                             $evidence = [];
                             $profile_qty = [];
-                            $profile10_items = [];
-                            $profile30_items = [];
-                            $profile10_display_items = [];
-                            $profile30_display_items = [];
-                            $profile10_sum = 0;
-                            $profile30_sum = 0;
-                            $cnt_rusak_10 = 0;
-                            $cnt_rusak_30 = 0;
-                            $cnt_unreported_10 = 0;
-                            $cnt_unreported_30 = 0;
-                            $cnt_retur_10 = 0;
-                            $cnt_retur_30 = 0;
-                            $cnt_invalid_10 = 0;
-                            $cnt_invalid_30 = 0;
+                            $profile_items = [];
+                            $profile_display_items = [];
+                            $profile_qty_map = [];
+                            $cnt_rusak = [];
+                            $cnt_unreported = [];
+                            $cnt_retur = [];
+                            $cnt_invalid = [];
                             $has_manual_evidence = false;
                             $manual_users_map = [];
                             $audit_block_key = normalize_block_name($ar['blok_name'] ?? '', (string)($ar['comment'] ?? ''));
