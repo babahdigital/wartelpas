@@ -1177,6 +1177,8 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $profile_qty_summary = !empty($profile_qty_display)
                                 ? format_profile_summary($profile_qty_display, $profile_order_keys)
                                 : '-';
+                            $profile_qty_summary_html = htmlspecialchars(str_replace(' | ', "\n", $profile_qty_summary));
+                            $profile_qty_summary_html = nl2br($profile_qty_summary_html);
                             $audit_total_profile_qty += array_sum($profile_qty_display);
 
                             $expected_qty = (int)($ar['expected_qty'] ?? 0);
@@ -1273,7 +1275,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             <td style="padding:0; text-align: center;"><?= $p_us ?></td>
                             <td style="padding:0; text-align: center;"><?= $p_up ?></td>
                             <td style="padding:0; text-align: center;"><?= $p_bt ?></td>
-                            <td style="text-align: center; font-weight:bold;"><?= htmlspecialchars($profile_qty_summary) ?></td>
+                            <td style="text-align: left; font-weight:bold; line-height:1.2; padding:6px;">
+                                <?= $profile_qty_summary_html ?>
+                            </td>
                         </tr>
                         <?php
                             $audit_total_expected_qty_adj += (int)$expected_adj_qty;
