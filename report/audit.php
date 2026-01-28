@@ -194,23 +194,23 @@ if (file_exists($dbFile)) {
                 FROM (
                     SELECT
                         CASE
-                            WHEN COALESCE(is_retur,0)=1
-                                OR LOWER(COALESCE(status,''))='retur'
-                                OR LOWER(COALESCE(comment,'')) LIKE '%retur%'
+                            WHEN COALESCE(sh.is_retur,0)=1
+                                OR LOWER(COALESCE(sh.status,''))='retur'
+                                OR LOWER(COALESCE(sh.comment,'')) LIKE '%retur%'
                                 THEN 'retur'
-                            WHEN COALESCE(is_rusak,0)=1
-                                OR LOWER(COALESCE(status,''))='rusak'
-                                OR LOWER(COALESCE(comment,'')) LIKE '%rusak%'
+                            WHEN COALESCE(sh.is_rusak,0)=1
+                                OR LOWER(COALESCE(sh.status,''))='rusak'
+                                OR LOWER(COALESCE(sh.comment,'')) LIKE '%rusak%'
                                 OR LOWER(COALESCE(lh.last_status,''))='rusak'
                                 THEN 'rusak'
-                            WHEN COALESCE(is_invalid,0)=1
-                                OR LOWER(COALESCE(status,''))='invalid'
-                                OR LOWER(COALESCE(comment,'')) LIKE '%invalid%'
+                            WHEN COALESCE(sh.is_invalid,0)=1
+                                OR LOWER(COALESCE(sh.status,''))='invalid'
+                                OR LOWER(COALESCE(sh.comment,'')) LIKE '%invalid%'
                                 THEN 'invalid'
                             ELSE 'normal'
                         END AS eff_status,
-                        COALESCE(price_snapshot, price, 0) AS eff_price,
-                        COALESCE(qty,1) AS eff_qty
+                        COALESCE(sh.price_snapshot, sh.price, 0) AS eff_price,
+                        COALESCE(sh.qty,1) AS eff_qty
                     FROM sales_history sh
                     LEFT JOIN login_history lh ON lh.username = sh.username
                     WHERE $dateFilter
@@ -248,26 +248,26 @@ if (file_exists($dbFile)) {
                 FROM (
                     SELECT
                         CASE
-                            WHEN COALESCE(is_retur,0)=1
-                                OR LOWER(COALESCE(status,''))='retur'
-                                OR LOWER(COALESCE(comment,'')) LIKE '%retur%'
+                            WHEN COALESCE(ls.is_retur,0)=1
+                                OR LOWER(COALESCE(ls.status,''))='retur'
+                                OR LOWER(COALESCE(ls.comment,'')) LIKE '%retur%'
                                 THEN 'retur'
-                            WHEN COALESCE(is_rusak,0)=1
-                                OR LOWER(COALESCE(status,''))='rusak'
-                                OR LOWER(COALESCE(comment,'')) LIKE '%rusak%'
+                            WHEN COALESCE(ls.is_rusak,0)=1
+                                OR LOWER(COALESCE(ls.status,''))='rusak'
+                                OR LOWER(COALESCE(ls.comment,'')) LIKE '%rusak%'
                                 OR LOWER(COALESCE(lh2.last_status,''))='rusak'
                                 THEN 'rusak'
-                            WHEN COALESCE(is_invalid,0)=1
-                                OR LOWER(COALESCE(status,''))='invalid'
-                                OR LOWER(COALESCE(comment,'')) LIKE '%invalid%'
+                            WHEN COALESCE(ls.is_invalid,0)=1
+                                OR LOWER(COALESCE(ls.status,''))='invalid'
+                                OR LOWER(COALESCE(ls.comment,'')) LIKE '%invalid%'
                                 THEN 'invalid'
                             ELSE 'normal'
                         END AS eff_status,
-                        COALESCE(price_snapshot, price, 0) AS eff_price,
-                        COALESCE(qty,1) AS eff_qty
+                        COALESCE(ls.price_snapshot, ls.price, 0) AS eff_price,
+                        COALESCE(ls.qty,1) AS eff_qty
                     FROM live_sales ls
                     LEFT JOIN login_history lh2 ON lh2.username = ls.username
-                    WHERE sync_status='pending' AND $dateFilter
+                    WHERE ls.sync_status='pending' AND $dateFilter
                 ) t";
             $stmt = $db->prepare($pendingSumSql);
             foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
