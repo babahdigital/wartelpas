@@ -420,6 +420,22 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $delete_map[strtolower($ref_user)] = $ref_user;
       }
 
+      if ($ref_user != '') {
+        $list = $API->comm('/ip/hotspot/user/print', [
+          '?server' => $hotspot_server,
+          '.proplist' => '.id,name,comment'
+        ]);
+        foreach ($list as $usr) {
+          $cmt = $usr['comment'] ?? '';
+          $uname = $usr['name'] ?? '';
+          if ($uname !== '' && $cmt !== '') {
+            if (stripos($cmt, $ref_user) !== false || stripos($cmt, 'vc-' . $ref_user) !== false) {
+              $delete_map[strtolower($uname)] = $uname;
+            }
+          }
+        }
+      }
+
       $target_ref = 'Retur Ref:vc-' . $name;
       $target_ref_alt = 'Retur Ref:' . $name;
       $list = $API->comm('/ip/hotspot/user/print', [
@@ -450,6 +466,21 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             }
           }
         } catch (Exception $e) {}
+        if ($ref_user != '') {
+          try {
+            $stmt = $db->prepare("SELECT DISTINCT username FROM login_history WHERE raw_comment LIKE :a OR raw_comment LIKE :b");
+            $stmt->execute([
+              ':a' => '%vc-' . $ref_user . '%',
+              ':b' => '%' . $ref_user . '%'
+            ]);
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+              $uname = $row['username'] ?? '';
+              if ($uname != '') {
+                $delete_map[strtolower($uname)] = $uname;
+              }
+            }
+          } catch (Exception $e) {}
+        }
       }
 
       $delete_names = array_values($delete_map);
