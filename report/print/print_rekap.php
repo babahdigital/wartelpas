@@ -66,6 +66,17 @@ function detect_profile_minutes($profile) {
     return 'OTHER';
 }
 
+function extract_profile_from_comment($comment) {
+    if (empty($comment)) return '';
+    if (preg_match('/\bProfile\s*:\s*([^|]+)/i', $comment, $m)) {
+        return trim($m[1]);
+    }
+    if (preg_match('/\bProfil\s*:\s*([^|]+)/i', $comment, $m)) {
+        return trim($m[1]);
+    }
+    return '';
+}
+
 function format_date_ddmmyyyy($dateStr) {
     $ts = strtotime((string)$dateStr);
     if ($ts === false) return $dateStr;
@@ -491,6 +502,12 @@ foreach ($rows as $r) {
     $status_db = normalize_status_value($r['status'] ?? '');
     $lh_status = normalize_status_value($r['last_status'] ?? '');
     $profile = $r['profile_snapshot'] ?? ($r['profile'] ?? '-');
+    if ($profile === '' || $profile === '-') {
+        $profile_from_comment = extract_profile_from_comment($comment);
+        if ($profile_from_comment !== '') {
+            $profile = $profile_from_comment;
+        }
+    }
     $cmt_low = strtolower($comment);
     $bytes = (int)($r['last_bytes'] ?? 0);
     if ($bytes < 0) $bytes = 0;
@@ -502,15 +519,15 @@ foreach ($rows as $r) {
     ) {
         $status = 'invalid';
     } elseif (
-        $status_db === 'rusak' || $lh_status === 'rusak' ||
-        (int)($r['is_rusak'] ?? 0) === 1
-    ) {
-        $status = 'rusak';
-    } elseif (
         $status_db === 'retur' || $lh_status === 'retur' ||
         (int)($r['is_retur'] ?? 0) === 1
     ) {
         $status = 'retur';
+    } elseif (
+        $status_db === 'rusak' || $lh_status === 'rusak' ||
+        (int)($r['is_rusak'] ?? 0) === 1
+    ) {
+        $status = 'rusak';
     } elseif (in_array($status_db, ['online', 'terpakai', 'ready'], true)) {
         $status = $status_db;
     }
@@ -521,6 +538,16 @@ foreach ($rows as $r) {
         } elseif (strpos($cmt_low, 'rusak') !== false) {
             $status = 'rusak';
         }
+    }
+
+    if ($price <= 0) {
+        $kind = detect_profile_minutes($profile);
+        if ($kind === '10' && $price10 > 0) {
+            $price = (int)$price10;
+        } elseif ($kind === '30' && $price30 > 0) {
+            $price = (int)$price30;
+        }
+        $line_price = $price * $qty;
     }
 
     if (in_array($status, ['rusak', 'retur', 'invalid'], true) && $username !== '') {
