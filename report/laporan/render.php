@@ -175,7 +175,7 @@
                     </div>
                     <div>
                         <label class="label-icon" style="color:#f39c12;">Total Setoran (Otomatis)</label>
-                        <input class="form-input" type="number" name="audit_setoran" min="0" value="0" readonly tabindex="-1">
+                        <input class="form-input" type="number" name="audit_setoran" min="0" value="0">
                     </div>
                 </div>
 
