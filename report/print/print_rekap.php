@@ -1012,6 +1012,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             if (isset($system_status_map[$uname_key]) && $system_status_map[$uname_key] !== '') {
                                                 $u_status = $system_status_map[$uname_key];
                                             }
+                                            if ($u_status === 'rusak' && isset($retur_ref_map[$audit_block_key][$uname_key])) {
+                                                $u_status = 'normal';
+                                            }
                                             if (!in_array($u_status, ['rusak', 'retur', 'invalid'], true)) {
                                                 $u_status = 'anomaly';
                                             }
@@ -1068,6 +1071,10 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     if (isset($manual_users_map[strtolower($uname)])) continue;
 
                                     $u_status = normalize_status_value($inc['status'] ?? '');
+                                    $uname_key = strtolower($uname);
+                                    if ($u_status === 'rusak' && isset($retur_ref_map[$audit_block_key][$uname_key])) {
+                                        $u_status = 'normal';
+                                    }
                                     $kind = (string)($inc['profile_kind'] ?? '10');
                                     $upt = trim((string)($inc['last_uptime'] ?? ''));
                                     $lb = format_bytes_short((int)($inc['last_bytes'] ?? 0));
