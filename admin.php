@@ -48,6 +48,7 @@ $ids = array(
   "editor",
   "uplogo",
   "settings",
+  "mikrotik-scripts",
 );
 
 // lang
@@ -156,7 +157,7 @@ if ($id == "login" || substr($url, -1) == "p") {
 } elseif (isOperator() && $id == "sessions") {
   echo "<script>window.location='./error.php?code=403'</script>";
   exit;
-} elseif (isOperator() && in_array($id, array("settings", "uplogo", "editor", "reboot", "shutdown", "remove-session", "remove-logo"), true)) {
+} elseif (isOperator() && in_array($id, array("settings", "uplogo", "editor", "reboot", "shutdown", "remove-session", "remove-logo", "mikrotik-scripts"), true)) {
   echo "<script>window.location='./error.php?code=403'</script>";
   exit;
 } elseif (isOperator() && !empty($router) && strpos($router, 'new') !== false) {
@@ -188,6 +189,9 @@ if ($id == "login" || substr($url, -1) == "p") {
         return false;
     };
     </script>';
+} elseif ($id == "mikrotik-scripts" && !empty($session)) {
+  include_once('./include/menu.php');
+  include_once('./settings/mikrotik_scripts.php');
 } elseif ($id == "connect"  && !empty($session)) {
   ini_set("max_execution_time",5);  
   include_once('./include/menu.php');
