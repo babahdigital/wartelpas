@@ -609,13 +609,14 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         <th class="text-center">Selisih</th>
                         <th class="text-center">Rusak</th>
                         <th class="text-center">Retur</th>
-                        <th class="text-center">Profil Qty</th>
+                        <th class="text-center">V10</th>
+                        <th class="text-center">V30</th>
                         <th class="text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($audit_rows)): ?>
-                        <tr><td colspan="9" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
+                        <tr><td colspan="10" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
                     <?php else: 
                         $price10 = (int)$price10;
                         $price30 = (int)$price30;
@@ -792,9 +793,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             <td class="text-center"><span class="<?= $cls_s; ?>"><?= number_format($ss,0,',','.') ?></span></td>
                             <td class="text-center"><small><?= number_format($sys_rusak,0,',','.') ?></small></td>
                             <td class="text-center"><small><?= number_format($sys_retur,0,',','.') ?></small></td>
-                            <td class="text-center">
-                                <small><?= !empty($profile_qty_summary) ? htmlspecialchars(implode(' | ', $profile_qty_summary)) : '-' ?></small>
-                            </td>
+                            <td class="text-center"><small><?= number_format((int)$profile_qty_10,0,',','.') ?></small></td>
+                            <td class="text-center"><small><?= number_format((int)$profile_qty_30,0,',','.') ?></small></td>
                             <td class="text-right">
                                 <?php if ($sq < 0): ?>
                                     <button type="button" class="btn-act" title="Cek Ghost" style="background:#8e44ad;color:#fff;" onclick="openGhostModal('<?= htmlspecialchars($audit_block_row); ?>','<?= htmlspecialchars($audit_date_row); ?>',<?= abs((int)$sq); ?>)">
