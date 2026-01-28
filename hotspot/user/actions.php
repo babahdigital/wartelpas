@@ -543,11 +543,16 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
 
       $active_list = $API->comm('/ip/hotspot/active/print', [
         '?server' => $hotspot_server,
-        '.proplist' => '.id,user'
+        '.proplist' => '.id,user,address'
       ]);
       $active_map = [];
       foreach ($active_list as $a) {
-        if (!empty($a['user'])) $active_map[$a['user']] = $a['.id'] ?? '';
+        if (!empty($a['user'])) {
+          $active_map[$a['user']] = [
+            'id' => $a['.id'] ?? '',
+            'address' => $a['address'] ?? ''
+          ];
+        }
       }
 
       $base_usernames = [];
@@ -751,10 +756,45 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $router_deleted = 0;
       foreach ($to_delete as $d) {
         $uname = $d['name'] ?? '';
-        if ($uname !== '' && !empty($active_map[$uname])) {
-          $API->write('/ip/hotspot/active/remove', false);
-          $API->write('=.id=' . $active_map[$uname]);
-          $API->read();
+        if ($uname !== '') {
+          try {
+            $cookies = $API->comm('/ip/hotspot/cookie/print', [
+              '?user' => $uname,
+              '.proplist' => '.id'
+            ]);
+            foreach ($cookies as $ck) {
+              if (!empty($ck['.id'])) {
+                $API->comm('/ip/hotspot/cookie/remove', [
+                  '.id' => $ck['.id']
+                ]);
+              }
+            }
+          } catch (Exception $e) {}
+
+          $active_info = $active_map[$uname] ?? null;
+          $active_id = is_array($active_info) ? ($active_info['id'] ?? '') : '';
+          $active_addr = is_array($active_info) ? ($active_info['address'] ?? '') : '';
+          if ($active_addr !== '') {
+            try {
+              $conn_list = $API->comm('/ip/firewall/connection/print', [
+                '?src-address' => $active_addr,
+                '.proplist' => '.id'
+              ]);
+              foreach ($conn_list as $conn) {
+                if (!empty($conn['.id'])) {
+                  $API->comm('/ip/firewall/connection/remove', [
+                    '.id' => $conn['.id']
+                  ]);
+                }
+              }
+            } catch (Exception $e) {}
+          }
+
+          if ($active_id !== '') {
+            $API->write('/ip/hotspot/active/remove', false);
+            $API->write('=.id=' . $active_id);
+            $API->read();
+          }
         }
         if (!empty($d['id'])) {
           $API->write('/ip/hotspot/user/remove', false);
