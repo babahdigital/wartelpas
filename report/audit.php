@@ -34,23 +34,6 @@ if ($req_show === 'harian') {
 }
 
 
-function infer_profile_from_blok($blok) {
-    $blok = strtoupper((string)$blok);
-    if (preg_match('/(10|30)\b/', $blok, $m)) {
-        return $m[1] . ' Menit';
-    }
-    return '';
-}
-
-function extract_profile_from_comment($comment) {
-    $comment = (string)$comment;
-    if (preg_match('/\bProfile\s*:\s*([^|]+)/i', $comment, $m)) {
-        return trim($m[1]);
-    }
-    return '';
-}
-
-
 function calc_audit_adjusted_totals(array $ar) {
     global $price10, $price30;
     $expected_qty = (int)($ar['expected_qty'] ?? 0);
