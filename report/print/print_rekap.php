@@ -535,36 +535,16 @@ foreach ($rows as $r) {
     $loss_invalid = 0;
     $net_add = 0;
 
-    $rusak_recovered = false;
-    if ($status === 'rusak' && $username !== '') {
-        if (isset($retur_ref_map[$block][strtolower($username)])) {
-            $rusak_recovered = true;
-        }
-    }
-    $retur_ref_user = '';
-    if ($status === 'retur') {
-        $retur_ref_user = extract_retur_user_from_ref($comment);
-    }
-
     if ($status === 'invalid') {
         $gross_add = 0;
         $net_add = 0;
     } elseif ($status === 'retur') {
         $gross_add = 0;
-        if ($retur_ref_user !== '' && isset($rusak_user_map[$block][strtolower($retur_ref_user)])) {
-            $net_add = 0;
-        } else {
-            $net_add = $line_price;
-        }
+        $net_add = $line_price;
     } elseif ($status === 'rusak') {
         $gross_add = $line_price;
-        if ($rusak_recovered) {
-            $loss_rusak = 0;
-            $net_add = $line_price;
-        } else {
-            $loss_rusak = $line_price;
-            $net_add = 0;
-        }
+        $loss_rusak = $line_price;
+        $net_add = 0;
     } else {
         $gross_add = $line_price;
         $net_add = $line_price;
@@ -589,20 +569,16 @@ foreach ($rows as $r) {
             $net_line = 0;
         } elseif ($status === 'retur') {
             $gross_line = 0;
-            if ($retur_ref_user !== '' && isset($rusak_user_map[$block][strtolower($retur_ref_user)])) {
-                $net_line = 0;
-            } else {
-                $net_line = $line_price;
-            }
+            $net_line = $line_price;
         } elseif ($status === 'rusak') {
             $gross_line = $line_price;
-            $net_line = $rusak_recovered ? $line_price : 0;
+            $net_line = 0;
         } else {
             $gross_line = $line_price;
             $net_line = $line_price;
         }
 
-        if ($is_laku) {
+        if ($status !== 'invalid') {
             $total_qty_units += $qty_count;
         }
         $total_net_units += $net_line;
@@ -627,33 +603,33 @@ foreach ($rows as $r) {
         }
         $bw_line = $bytes;
         if ($bucket === '10') {
-            if ($is_laku) {
+            if ($status !== 'invalid') {
                 $block_summaries[$block]['qty_10'] += $qty_count;
             }
-            if ($is_laku || $status === 'retur' || $rusak_recovered) {
+            if ($is_laku || $status === 'retur') {
                 $block_summaries[$block]['amt_10'] += $net_line;
             }
-            if ($status === 'rusak' && !$rusak_recovered) $block_summaries[$block]['rs_10'] += $qty_count;
+            if ($status === 'rusak') $block_summaries[$block]['rs_10'] += $qty_count;
             if ($status === 'retur') $block_summaries[$block]['rt_10'] += $qty_count;
         }
         if ($bucket === '30') {
-            if ($is_laku) {
+            if ($status !== 'invalid') {
                 $block_summaries[$block]['qty_30'] += $qty_count;
             }
-            if ($is_laku || $status === 'retur' || $rusak_recovered) {
+            if ($is_laku || $status === 'retur') {
                 $block_summaries[$block]['amt_30'] += $net_line;
             }
-            if ($status === 'rusak' && !$rusak_recovered) $block_summaries[$block]['rs_30'] += $qty_count;
+            if ($status === 'rusak') $block_summaries[$block]['rs_30'] += $qty_count;
             if ($status === 'retur') $block_summaries[$block]['rt_30'] += $qty_count;
         }
-        if ($is_laku) {
+        if ($status !== 'invalid') {
             $block_summaries[$block]['total_qty'] += $qty_count;
             $block_summaries[$block]['total_bw'] += $bw_line;
         }
-        if ($is_laku || $status === 'retur' || $rusak_recovered) {
+        if ($is_laku || $status === 'retur') {
             $block_summaries[$block]['total_amount'] += $net_line;
         }
-        if ($status === 'rusak' && !$rusak_recovered) $block_summaries[$block]['rs_total'] += $qty_count;
+        if ($status === 'rusak') $block_summaries[$block]['rs_total'] += $qty_count;
         if ($status === 'retur') $block_summaries[$block]['rt_total'] += $qty_count;
     }
 
@@ -662,12 +638,10 @@ foreach ($rows as $r) {
     if ($is_laku) $total_qty_laku += $laku_add;
     if ($status === 'retur') $total_qty_retur++;
     if ($status === 'rusak') {
-        if (!$rusak_recovered) {
-            $total_qty_rusak++;
-            $p = strtolower((string)$profile);
-            if (preg_match('/\b10\s*(menit|m)\b/i', $p)) $rusak_10m++;
-            elseif (preg_match('/\b30\s*(menit|m)\b/i', $p)) $rusak_30m++;
-        }
+        $total_qty_rusak++;
+        $p = strtolower((string)$profile);
+        if (preg_match('/\b10\s*(menit|m)\b/i', $p)) $rusak_10m++;
+        elseif (preg_match('/\b30\s*(menit|m)\b/i', $p)) $rusak_30m++;
     }
     if ($status === 'invalid') $total_qty_invalid++;
 
@@ -892,7 +866,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             </tbody>
                         </table>
                     </td>
-                    <td style="text-align:center; font-weight:700; font-size:11px;"><?= number_format((int)$total_qty_laku,0,',','.') ?></td>
+                    <td style="text-align:center; font-weight:700; font-size:11px;"><?= number_format((int)$total_qty_units,0,',','.') ?></td>
                     <td style="text-align:right; font-weight:700; font-size:11px;"><?= number_format((int)$total_net_units,0,',','.') ?></td>
                 </tr>
             </tbody>
@@ -1016,7 +990,6 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             if (isset($system_status_map[$uname_key]) && $system_status_map[$uname_key] !== '') {
                                                 $u_status = $system_status_map[$uname_key];
                                             }
-                                            $is_recovered_rusak = ($u_status === 'rusak' && isset($retur_ref_map[$audit_block_key][$uname_key]));
                                             if (!in_array($u_status, ['rusak', 'retur', 'invalid'], true)) {
                                                 $u_status = 'anomaly';
                                             }
@@ -1034,7 +1007,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                                 $profile30_sum += $price_val;
                                                 $profile30_items[] = $item;
                                                 $profile30_display_items[] = $item;
-                                                if ($u_status === 'rusak' && !$is_recovered_rusak) $cnt_rusak_30++;
+                                                if ($u_status === 'rusak') $cnt_rusak_30++;
                                                 if ($u_status === 'retur') $cnt_retur_30++;
                                                 if ($u_status === 'invalid') $cnt_invalid_30++;
                                                 if ($is_unreported) $cnt_unreported_30++;
@@ -1042,7 +1015,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                                 $profile10_sum += $price_val;
                                                 $profile10_items[] = $item;
                                                 $profile10_display_items[] = $item;
-                                                if ($u_status === 'rusak' && !$is_recovered_rusak) $cnt_rusak_10++;
+                                                if ($u_status === 'rusak') $cnt_rusak_10++;
                                                 if ($u_status === 'retur') $cnt_retur_10++;
                                                 if ($u_status === 'invalid') $cnt_invalid_10++;
                                                 if ($is_unreported) $cnt_unreported_10++;
@@ -1078,8 +1051,6 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     $lb = format_bytes_short((int)($inc['last_bytes'] ?? 0));
                                     $price_val = (int)($inc['price'] ?? 0);
                                     $upt = $upt !== '' ? $upt : '-';
-                                    $uname_key = strtolower($uname);
-                                    $is_recovered_rusak = ($u_status === 'rusak' && isset($retur_ref_map[$audit_block_key][$uname_key]));
                                     $item = [
                                         'label' => $uname,
                                         'status' => $u_status,
@@ -1091,14 +1062,14 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                         $profile30_sum += $price_val;
                                         $profile30_items[] = $item;
                                         $profile30_display_items[] = $item;
-                                        if ($u_status === 'rusak' && !$is_recovered_rusak) $cnt_rusak_30++;
+                                        if ($u_status === 'rusak') $cnt_rusak_30++;
                                         if ($u_status === 'retur') $cnt_retur_30++;
                                         if ($u_status === 'invalid') $cnt_invalid_30++;
                                     } else {
                                         $profile10_sum += $price_val;
                                         $profile10_items[] = $item;
                                         $profile10_display_items[] = $item;
-                                        if ($u_status === 'rusak' && !$is_recovered_rusak) $cnt_rusak_10++;
+                                        if ($u_status === 'rusak') $cnt_rusak_10++;
                                         if ($u_status === 'retur') $cnt_retur_10++;
                                         if ($u_status === 'invalid') $cnt_invalid_10++;
                                     }
