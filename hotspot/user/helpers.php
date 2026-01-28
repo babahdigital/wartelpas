@@ -14,6 +14,65 @@ if (!function_exists('format_comment_display')) {
   }
 }
 
+if (!function_exists('env_get_value')) {
+  function env_get_value($path, $default = null) {
+    $cfg = $GLOBALS['env_config'] ?? [];
+    if (!is_array($cfg) || $path === '') return $default;
+    $parts = explode('.', (string)$path);
+    foreach ($parts as $p) {
+      if (!is_array($cfg) || !array_key_exists($p, $cfg)) return $default;
+      $cfg = $cfg[$p];
+    }
+    return $cfg;
+  }
+}
+
+if (!function_exists('normalize_block_key')) {
+  function normalize_block_key($raw) {
+    $raw = strtoupper((string)$raw);
+    $raw = preg_replace('/^BLOK/i', '', $raw);
+    $raw = preg_replace('/[^A-Z0-9]/', '', $raw);
+    return $raw;
+  }
+}
+
+if (!function_exists('resolve_block_alias')) {
+  function resolve_block_alias($block_name) {
+    $aliases = env_get_value('blok.aliases', []);
+    if (!is_array($aliases) || empty($aliases)) return $block_name;
+    $key = normalize_block_key($block_name);
+    foreach ($aliases as $from => $to) {
+      if (normalize_block_key($from) === $key) {
+        return (string)$to;
+      }
+    }
+    return $block_name;
+  }
+}
+
+if (!function_exists('normalize_profile_key')) {
+  function normalize_profile_key($profile) {
+    $raw = strtolower(trim((string)$profile));
+    if ($raw === '') return '';
+    $raw = preg_replace('/\s+/', '', $raw);
+    return $raw;
+  }
+}
+
+if (!function_exists('resolve_profile_alias')) {
+  function resolve_profile_alias($profile) {
+    $aliases = env_get_value('pricing.profile_aliases', []);
+    if (!is_array($aliases) || empty($aliases)) return $profile;
+    $key = normalize_profile_key($profile);
+    foreach ($aliases as $from => $to) {
+      if (normalize_profile_key($from) === $key) {
+        return (string)$to;
+      }
+    }
+    return $profile;
+  }
+}
+
 // Helper: Ekstrak nama blok dari comment
 if (!function_exists('extract_blok_name')) {
   function extract_blok_name($comment) {
@@ -25,14 +84,24 @@ if (!function_exists('extract_blok_name')) {
       if (preg_match('/^([A-Z]+)/', $raw, $mx)) {
         $raw = $mx[1];
       }
-      if ($raw !== '') return 'BLOK-' . $raw;
+      if ($raw !== '') {
+        $final = 'BLOK-' . $raw;
+        $alias = resolve_block_alias($final);
+        $alias_key = normalize_block_key($alias);
+        if ($alias_key !== '') return 'BLOK-' . $alias_key;
+        return $final;
+      }
     }
     if (preg_match('/\b([A-Z](?:[-\s]?\d{1,2})?)\b/', $comment, $m)) {
       $candidate = strtoupper(trim($m[1]));
       if (strlen($candidate) <= 5) {
         $candidate = preg_replace('/\s+/', '', $candidate);
         $candidate = preg_replace('/^-+/', '', $candidate);
-        return 'BLOK-' . $candidate;
+        $final = 'BLOK-' . $candidate;
+        $alias = resolve_block_alias($final);
+        $alias_key = normalize_block_key($alias);
+        if ($alias_key !== '') return 'BLOK-' . $alias_key;
+        return $final;
       }
     }
     return '';
@@ -56,6 +125,7 @@ if (!function_exists('normalize_blok_label')) {
 // Helper: Normalisasi label profile
 if (!function_exists('normalize_profile_label')) {
   function normalize_profile_label($profile) {
+    $profile = resolve_profile_alias($profile);
     $p = trim((string)$profile);
     if ($p === '') return '';
     if (preg_match('/\b(10|30)\s*(menit|m)\b/i', $p, $m)) {
@@ -385,6 +455,7 @@ if (!function_exists('is_wartel_client')) {
 
 if (!function_exists('detect_profile_kind_summary')) {
   function detect_profile_kind_summary($profile) {
+    $profile = resolve_profile_alias($profile);
     $p = strtolower((string)$profile);
     if (preg_match('/(\d+)\s*(menit|m|min)\b/i', $p, $m)) {
       return (string)((int)$m[1]);
