@@ -1140,7 +1140,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $profile_qty_summary = !empty($profile_qty_display)
                                 ? format_profile_summary($profile_qty_display, $profile_order_keys)
                                 : '-';
-                            $audit_total_profile_qty += $has_manual_evidence ? array_sum($profile_qty_display) : 0;
+                            $audit_total_profile_qty += array_sum($profile_qty_display);
 
                             $expected_qty = (int)($ar['expected_qty'] ?? 0);
                             $expected_setoran = (int)($ar['expected_setoran'] ?? 0);
@@ -1155,11 +1155,18 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $expected_adj_setoran = $expected_setoran;
                             if ($has_manual_evidence) {
                                 $expected_adj_qty = $expected_qty;
-                                $expected_adj_setoran = max(0, $expected_setoran
-                                    - (($cnt_rusak_10 + $cnt_invalid_10) * $price10)
-                                    - (($cnt_rusak_30 + $cnt_invalid_30) * $price30)
-                                    + ($cnt_retur_10 * $price10)
-                                    + ($cnt_retur_30 * $price30));
+                                $adjustment = 0;
+                                $all_keys = array_unique(array_merge(
+                                    array_keys($cnt_rusak),
+                                    array_keys($cnt_invalid),
+                                    array_keys($cnt_retur)
+                                ));
+                                foreach ($all_keys as $pkey) {
+                                    $price_val = resolve_price_from_profile($pkey);
+                                    $adjustment -= ((int)($cnt_rusak[$pkey] ?? 0) + (int)($cnt_invalid[$pkey] ?? 0)) * $price_val;
+                                    $adjustment += ((int)($cnt_retur[$pkey] ?? 0)) * $price_val;
+                                }
+                                $expected_adj_setoran = max(0, $expected_setoran + $adjustment);
                             }
 
                             $selisih_qty = $manual_display_qty - $expected_adj_qty;
@@ -1205,19 +1212,13 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             $audit_summary_report[] = [
                                 'blok' => get_block_label(normalize_block_name($ar['blok_name'] ?? '-', (string)($ar['comment'] ?? '')), $blok_names),
                                 'selisih_setoran' => (int)$selisih_setoran,
-                                'p10_qty' => $p10_qty,
-                                'p10_sum' => $p10_sum_calc,
-                                'p30_qty' => $p30_qty,
-                                'p30_sum' => $p30_sum_calc,
-                                'unreported_total' => (int)($cnt_unreported_10 + $cnt_unreported_30),
-                                'unreported_10' => (int)$cnt_unreported_10,
-                                'unreported_30' => (int)$cnt_unreported_30,
+                                'profile_summary' => $profile_qty_summary,
+                                'unreported_total' => (int)array_sum($cnt_unreported),
+                                'unreported_summary' => format_profile_summary($cnt_unreported, $profile_order_keys),
                                 'ghost_10' => (int)$ghost_10,
                                 'ghost_30' => (int)$ghost_30,
-                                'rusak_10' => $cnt_rusak_10,
-                                'rusak_30' => $cnt_rusak_30,
-                                'retur_10' => (int)$cnt_retur_10,
-                                'retur_30' => (int)$cnt_retur_30
+                                'rusak_summary' => format_profile_summary($cnt_rusak, $profile_order_keys),
+                                'retur_summary' => format_profile_summary($cnt_retur, $profile_order_keys)
                             ];
                         ?>
                         <?php $audit_blk_label = get_block_label(normalize_block_name($ar['blok_name'] ?? '-', (string)($ar['comment'] ?? '')), $blok_names); ?>
@@ -1230,15 +1231,10 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             <td style="text-align:right;"><?= number_format((int)$manual_display_setoran,0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)$selisih_setoran,0,',','.') ?></td>
                             
-                            <td style="padding:0; text-align: center;"><?= $p10_us ?></td>
-                            <td style="padding:0; text-align: center;"><?= $p10_up ?></td>
-                            <td style="padding:0; text-align: center;"><?= $p10_bt ?></td>
-                            <td style="text-align: center; font-weight:bold;"><?= $p10_tt ?></td>
-                            
-                            <td style="padding:0; text-align: center;"><?= $p30_us ?></td>
-                            <td style="padding:0; text-align: center;"><?= $p30_up ?></td>
-                            <td style="padding:0; text-align: center;"><?= $p30_bt ?></td>
-                            <td style="text-align: center; font-weight:bold;"><?= $p30_tt ?></td>
+                            <td style="padding:0; text-align: center;"><?= $p_us ?></td>
+                            <td style="padding:0; text-align: center;"><?= $p_up ?></td>
+                            <td style="padding:0; text-align: center;"><?= $p_bt ?></td>
+                            <td style="text-align: center; font-weight:bold;"><?= htmlspecialchars($profile_qty_summary) ?></td>
                         </tr>
                         <?php
                             $audit_total_expected_qty_adj += (int)$expected_adj_qty;
@@ -1258,9 +1254,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         <td style="text-align:right;"><b><?= number_format($audit_total_actual_setoran_adj,0,',','.') ?></b></td>
                         <td style="text-align:right;"><b><?= number_format($audit_total_selisih_setoran_adj,0,',','.') ?></b></td>
                         <td colspan="3" style="background:#eee;"></td>
-                        <td style="text-align:center;"><b><?= number_format($audit_total_profile_qty_10,0,',','.') ?></b></td>
-                        <td colspan="3" style="background:#eee;"></td>
-                        <td style="text-align:center;"><b><?= number_format($audit_total_profile_qty_30,0,',','.') ?></b></td>
+                        <td style="text-align:center;"><b><?= number_format($audit_total_profile_qty,0,',','.') ?></b></td>
                     </tr>
                 </tbody>
             </table>
