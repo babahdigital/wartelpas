@@ -327,9 +327,15 @@ if (file_exists($dbFile)) {
               if (is_array($ev) && !empty($ev['users'])) {
                 foreach ($ev['users'] as $u) {
                   $st = strtolower((string)($u['last_status'] ?? ''));
-                  $k = (string)($u['profile_kind'] ?? '10');
+                  $k = strtolower((string)($u['profile_key'] ?? $u['profile_kind'] ?? ''));
+                  if ($k !== '' && preg_match('/^(\d+)$/', $k, $m)) {
+                    $k = $m[1] . 'menit';
+                  }
+                  if ($k === '') $k = '10menit';
                   if ($st === 'rusak' || $st === 'invalid') {
-                    $price = ($k === '30') ? $price30 : $price10;
+                    $price = isset($GLOBALS['profile_price_map'][$k])
+                      ? (int)$GLOBALS['profile_price_map'][$k]
+                      : (int)resolve_price_from_profile($k);
                     $curr_rusak_rp += $price;
                   }
                 }
