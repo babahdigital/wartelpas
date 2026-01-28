@@ -1342,8 +1342,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                 </div>
                                 <div style="font-size:12px; font-weight:bold;">
                                     <?php 
-                                        $rusak_total = (int)($rep['rusak_10'] ?? 0) + (int)($rep['rusak_30'] ?? 0);
-                                        $rusak_rp = ((int)($rep['rusak_10'] ?? 0) * $price10) + ((int)($rep['rusak_30'] ?? 0) * $price30);
+                                        $rusak_total = (int)($rep['rusak_total'] ?? 0);
                                         $unreported_total = (int)($rep['unreported_total'] ?? 0);
                                         
                                         // LOGIKA STATUS
@@ -1361,39 +1360,26 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                             </div>
 
                             <div style="margin-left:15px; font-size:11px; color:#444; line-height:1.4;">
-                                <?php if ($rep['p10_qty'] > 0): ?>
-                                    <div>• Penjualan 10 Menit: <b><?= $rep['p10_qty'] ?></b> Lembar (Rp <?= number_format($rep['p10_sum'], 0, ',', '.') ?>)</div>
-                                <?php endif; ?>
-                                <?php if ($rep['p30_qty'] > 0): ?>
-                                    <div>• Penjualan 30 Menit: <b><?= $rep['p30_qty'] ?></b> Lembar (Rp <?= number_format($rep['p30_sum'], 0, ',', '.') ?>)</div>
+                                <?php if (!empty($rep['profile_summary'])): ?>
+                                    <div>• Profil: <b><?= htmlspecialchars($rep['profile_summary']) ?></b></div>
                                 <?php endif; ?>
                             </div>
 
-                            <?php if ($rusak_total > 0 || !empty($rep['retur_10']) || !empty($rep['retur_30']) || !empty($rep['unreported_total']) || !empty($rep['ghost_10']) || !empty($rep['ghost_30'])): ?>
+                            <?php if ($rusak_total > 0 || !empty($rep['retur_total']) || !empty($rep['unreported_total']) || !empty($rep['ghost_10']) || !empty($rep['ghost_30'])): ?>
                                 <div style="margin-top:8px; margin-left:15px; background:#fff; border:1px solid #ddd; border-left: 3px solid #ccc; border-radius:2px; padding:6px 8px;">
                                     <div style="font-size:10px; font-weight:bold; color:#555; margin-bottom:4px; text-transform:uppercase; border-bottom:1px solid #eee; padding-bottom:2px;">Rincian Masalah / Insiden:</div>
                                     
-                                    <?php if ($rep['rusak_10'] > 0 || $rep['rusak_30'] > 0): ?>
+                                    <?php if ($rusak_total > 0): ?>
                                         <div style="color:#b91c1c; font-size:11px; margin-bottom:2px;">
                                             <i class="fa fa-times-circle"></i> <b>Voucher Rusak (Kerugian):</b>
-                                            <?php 
-                                                $rusak_parts = [];
-                                                if($rep['rusak_10'] > 0) $rusak_parts[] = $rep['rusak_10'] . ' unit (10m)';
-                                                if($rep['rusak_30'] > 0) $rusak_parts[] = $rep['rusak_30'] . ' unit (30m)';
-                                                echo implode(', ', $rusak_parts);
-                                            ?>
+                                            <?= htmlspecialchars($rep['rusak_summary'] ?? '-') ?>
                                         </div>
                                     <?php endif; ?>
 
-                                    <?php if (!empty($rep['retur_10']) || !empty($rep['retur_30'])): ?>
+                                    <?php if (!empty($rep['retur_total'])): ?>
                                         <div style="color:#15803d; font-size:11px; margin-bottom:2px;">
                                             <i class="fa fa-refresh"></i> <b>Voucher Retur (Diganti Baru):</b>
-                                            <?php 
-                                                $retur_parts = [];
-                                                if(!empty($rep['retur_10'])) $retur_parts[] = $rep['retur_10'] . ' unit (10m)';
-                                                if(!empty($rep['retur_30'])) $retur_parts[] = $rep['retur_30'] . ' unit (30m)';
-                                                echo implode(', ', $retur_parts);
-                                            ?>
+                                            <?= htmlspecialchars($rep['retur_summary'] ?? '-') ?>
                                         </div>
                                     <?php endif; ?>
 
