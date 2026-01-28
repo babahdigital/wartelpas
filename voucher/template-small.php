@@ -13,8 +13,45 @@ $pricing = $env['pricing'] ?? [];
 $profiles_cfg = $env['profiles'] ?? [];
 $price10 = (int)($pricing['price_10'] ?? 0);
 $price30 = (int)($pricing['price_30'] ?? 0);
-$label10 = $profiles_cfg['label_10'] ?? '10 Menit';
-$label30 = $profiles_cfg['label_30'] ?? '30 Menit';
+$profile_prices = $pricing['profile_prices'] ?? [];
+$profile_labels = $profiles_cfg['labels'] ?? [];
+if (!function_exists('normalize_profile_key')) {
+  function normalize_profile_key($profile) {
+    $raw = strtolower(trim((string)$profile));
+    if ($raw === '') return '';
+    $raw = preg_replace('/\s+/', '', $raw);
+    return $raw;
+  }
+}
+$resolve_profile_label = function($profile_key) use ($profile_labels) {
+  $profile_key = normalize_profile_key($profile_key);
+  if ($profile_key === '') return '';
+  if (is_array($profile_labels)) {
+    foreach ($profile_labels as $k => $v) {
+      if (normalize_profile_key($k) === $profile_key && trim((string)$v) !== '') {
+        return (string)$v;
+      }
+    }
+  }
+  if (preg_match('/(\d+)/', $profile_key, $m)) {
+    return $m[1] . ' Menit';
+  }
+  return $profile_key;
+};
+$resolve_price_from_profile = function($profile_key) use ($profile_prices, $price10, $price30) {
+  $profile_key = normalize_profile_key($profile_key);
+  if (is_array($profile_prices)) {
+    foreach ($profile_prices as $k => $v) {
+      if (normalize_profile_key($k) === $profile_key && (int)$v > 0) {
+        return (int)$v;
+      }
+    }
+  }
+  $p = strtolower((string)$profile_key);
+  if (preg_match('/\b10\s*(menit|m)\b/i', $p)) return (int)$price10;
+  if (preg_match('/\b30\s*(menit|m)\b/i', $p)) return (int)$price30;
+  return 0;
+};
 // --- LOGIKA AMBIL KODE BLOK ---
 $lokasi_blok = ""; 
 if (stripos($comment, "blok-") !== false) {
@@ -43,10 +80,28 @@ $price_display = $price ?? '';
 $price_value = 0;
 $profile_hint = strtolower(trim((string)$profile_name . ' ' . (string)$timelimit . ' ' . (string)$validity . ' ' . (string)$comment));
 if (trim($price_display) === '') {
-  if (preg_match('/\b30\s*(menit|m)\b|30menit|\b30m\b/i', $profile_hint)) {
-    $price_value = $price30;
-  } elseif (preg_match('/\b10\s*(menit|m)\b|10menit|\b10m\b/i', $profile_hint)) {
-    $price_value = $price10;
+  $profile_key = normalize_profile_key($profile_name);
+  if ($profile_key !== '') {
+    $price_value = $resolve_price_from_profile($profile_key);
+  }
+  if ($price_value <= 0) {
+    $hint_key = normalize_profile_key($profile_hint);
+    if (is_array($profile_prices)) {
+      foreach ($profile_prices as $k => $v) {
+        $k_norm = normalize_profile_key($k);
+        if ($k_norm !== '' && strpos($hint_key, $k_norm) !== false) {
+          $price_value = (int)$v;
+          break;
+        }
+      }
+    }
+  }
+  if ($price_value <= 0) {
+    if (preg_match('/\b30\s*(menit|m)\b|30menit|\b30m\b/i', $profile_hint)) {
+      $price_value = $price30;
+    } elseif (preg_match('/\b10\s*(menit|m)\b|10menit|\b10m\b/i', $profile_hint)) {
+      $price_value = $price10;
+    }
   }
   if ($price_value > 0) {
     if (isset($currency) && isset($cekindo) && in_array($currency, $cekindo['indo'], true)) {
@@ -60,8 +115,19 @@ if (trim($price_display) === '') {
 }
 
 if (trim($display_paket) === '') {
-  if ($price_value === $price30) $display_paket = $label30 . ' / ';
-  if ($price_value === $price10) $display_paket = $label10 . ' / ';
+  $label_fallback = '';
+  if (!empty($profile_name)) {
+    $label_fallback = $resolve_profile_label($profile_name);
+  }
+  if ($label_fallback === '' && $price_value > 0 && is_array($profile_prices)) {
+    foreach ($profile_prices as $k => $v) {
+      if ((int)$v === (int)$price_value) {
+        $label_fallback = $resolve_profile_label($k);
+        break;
+      }
+    }
+  }
+  if ($label_fallback !== '') $display_paket = $label_fallback . ' / ';
 }
 ?>
 

@@ -31,9 +31,9 @@ $blok_names = $blok_cfg['names'] ?? [];
 $price10 = isset($pricing['price_10']) ? (int)$pricing['price_10'] : 0;
 $price30 = isset($pricing['price_30']) ? (int)$pricing['price_30'] : 0;
 $profile_price_map = $pricing['profile_prices'] ?? [];
+$profile_labels_map = $profiles_cfg['labels'] ?? [];
+$profile_order_keys = is_array($profile_price_map) ? array_keys($profile_price_map) : [];
 $GLOBALS['profile_price_map'] = $profile_price_map;
-$label10 = $profiles_cfg['label_10'] ?? '10 Menit';
-$label30 = $profiles_cfg['label_30'] ?? '30 Menit';
 $cur = isset($currency) ? $currency : 'Rp';
 $session_id = $_GET['session'] ?? '';
 $filter_blok = trim((string)($_GET['blok'] ?? ''));
@@ -62,10 +62,24 @@ function get_block_label($block_name, $blok_names = []) {
 
 
 function detect_profile_minutes($profile) {
-    $p = strtolower((string)$profile);
-    if (preg_match('/\b10\s*(menit|m)\b/i', $p)) return '10';
-    if (preg_match('/\b30\s*(menit|m)\b/i', $p)) return '30';
-    return 'OTHER';
+    $profile = resolve_profile_alias($profile);
+    $profile_key = normalize_profile_key($profile);
+    if ($profile_key === '') return 'OTHER';
+    return $profile_key;
+}
+
+function format_profile_summary($map, $order_keys = []) {
+    if (empty($map) || !is_array($map)) return '-';
+    $parts = [];
+    $keys = !empty($order_keys) ? $order_keys : array_keys($map);
+    foreach ($keys as $key) {
+        $norm = normalize_profile_key($key);
+        $val = (int)($map[$norm] ?? ($map[$key] ?? 0));
+        if ($val <= 0) continue;
+        $label = resolve_profile_label($norm !== '' ? $norm : $key);
+        $parts[] = $label . ': ' . number_format($val, 0, ',', '.');
+    }
+    return !empty($parts) ? implode(' | ', $parts) : '-';
 }
 
 function format_date_ddmmyyyy($dateStr) {
@@ -368,8 +382,7 @@ $total_qty_retur = 0;
 $total_qty_rusak = 0;
 $total_qty_invalid = 0;
 $total_qty_laku = 0;
-$rusak_10m = 0;
-$rusak_30m = 0;
+$rusak_by_profile = [];
 $total_qty_units = 0;
 $total_net_units = 0;
 $total_bandwidth = 0;
@@ -615,38 +628,32 @@ foreach ($rows as $r) {
                 'total_qty' => 0,
                 'total_amount' => 0,
                 'total_bw' => 0,
-                'qty_10' => 0,
-                'qty_30' => 0,
-                'amt_10' => 0,
-                'amt_30' => 0,
-                'rs_10' => 0,
-                'rt_10' => 0,
-                'rs_30' => 0,
-                'rt_30' => 0,
+                'profile_qty' => [],
+                'profile_amt' => [],
+                'profile_rs' => [],
+                'profile_rt' => [],
                 'rs_total' => 0,
                 'rt_total' => 0
             ];
         }
         $bw_line = $bytes;
-        if ($bucket === '10') {
-            if ($status !== 'invalid' && $status !== 'retur') {
-                $block_summaries[$block]['qty_10'] += $qty_count;
-            }
-            if ($is_laku || $status === 'retur') {
-                $block_summaries[$block]['amt_10'] += $net_line;
-            }
-            if ($status === 'rusak' && !$rusak_recovered) $block_summaries[$block]['rs_10'] += $qty_count;
-            if ($status === 'retur') $block_summaries[$block]['rt_10'] += $qty_count;
+        $bucket_key = normalize_profile_key($bucket);
+        if ($bucket_key === '') $bucket_key = 'other';
+        if ($status !== 'invalid' && $status !== 'retur') {
+            if (!isset($block_summaries[$block]['profile_qty'][$bucket_key])) $block_summaries[$block]['profile_qty'][$bucket_key] = 0;
+            $block_summaries[$block]['profile_qty'][$bucket_key] += $qty_count;
         }
-        if ($bucket === '30') {
-            if ($status !== 'invalid' && $status !== 'retur') {
-                $block_summaries[$block]['qty_30'] += $qty_count;
-            }
-            if ($is_laku || $status === 'retur') {
-                $block_summaries[$block]['amt_30'] += $net_line;
-            }
-            if ($status === 'rusak' && !$rusak_recovered) $block_summaries[$block]['rs_30'] += $qty_count;
-            if ($status === 'retur') $block_summaries[$block]['rt_30'] += $qty_count;
+        if ($is_laku || $status === 'retur') {
+            if (!isset($block_summaries[$block]['profile_amt'][$bucket_key])) $block_summaries[$block]['profile_amt'][$bucket_key] = 0;
+            $block_summaries[$block]['profile_amt'][$bucket_key] += $net_line;
+        }
+        if ($status === 'rusak' && !$rusak_recovered) {
+            if (!isset($block_summaries[$block]['profile_rs'][$bucket_key])) $block_summaries[$block]['profile_rs'][$bucket_key] = 0;
+            $block_summaries[$block]['profile_rs'][$bucket_key] += $qty_count;
+        }
+        if ($status === 'retur') {
+            if (!isset($block_summaries[$block]['profile_rt'][$bucket_key])) $block_summaries[$block]['profile_rt'][$bucket_key] = 0;
+            $block_summaries[$block]['profile_rt'][$bucket_key] += $qty_count;
         }
         if ($status !== 'invalid' && $status !== 'retur') {
             $block_summaries[$block]['total_qty'] += $qty_count;
@@ -665,9 +672,10 @@ foreach ($rows as $r) {
     if ($status === 'retur') $total_qty_retur++;
     if ($status === 'rusak' && !$rusak_recovered) {
         $total_qty_rusak++;
-        $p = strtolower((string)$profile);
-        if (preg_match('/\b10\s*(menit|m)\b/i', $p)) $rusak_10m++;
-        elseif (preg_match('/\b30\s*(menit|m)\b/i', $p)) $rusak_30m++;
+        $rusak_key = normalize_profile_key(detect_profile_minutes($profile));
+        if ($rusak_key === '') $rusak_key = 'other';
+        if (!isset($rusak_by_profile[$rusak_key])) $rusak_by_profile[$rusak_key] = 0;
+        $rusak_by_profile[$rusak_key]++;
     }
     if ($status === 'invalid') $total_qty_invalid++;
 
