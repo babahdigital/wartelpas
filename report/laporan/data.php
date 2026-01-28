@@ -1158,11 +1158,52 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 'users' => []
             ];
 
+            $audit_user_stmt = null;
+            if (!empty($audit_users) && isset($db) && $db instanceof PDO) {
+                try {
+                    $audit_user_stmt = $db->prepare("SELECT last_uptime, last_bytes, last_status, validity, raw_comment FROM login_history WHERE username = :u LIMIT 1");
+                } catch (Exception $e) {
+                    $audit_user_stmt = null;
+                }
+            }
+
             if (!empty($audit_users)) {
                 foreach ($audit_users as $u) {
+                    $u = trim((string)$u);
+                    if ($u === '') continue;
+                    $profile_key = $default_profile_key;
+                    $last_uptime = '';
+                    $last_bytes = 0;
+                    $last_status = 'unknown';
+                    $price_val = 0;
+                    if ($audit_user_stmt) {
+                        try {
+                            $audit_user_stmt->execute([':u' => $u]);
+                            $hist = $audit_user_stmt->fetch(PDO::FETCH_ASSOC);
+                            if (!empty($hist)) {
+                                $last_uptime = trim((string)($hist['last_uptime'] ?? ''));
+                                $last_bytes = (int)($hist['last_bytes'] ?? 0);
+                                $last_status = strtolower((string)($hist['last_status'] ?? 'unknown'));
+                                $profile_src = (string)($hist['validity'] ?? '');
+                                if ($profile_src === '') {
+                                    $profile_src = extract_profile_from_comment((string)($hist['raw_comment'] ?? ''));
+                                }
+                                $pk = normalize_profile_key($profile_src);
+                                if ($pk !== '') $profile_key = $pk;
+                            }
+                        } catch (Exception $e) {}
+                    }
+                    if ($profile_key !== '' && preg_match('/^\d+$/', $profile_key)) {
+                        $profile_key = $profile_key . 'menit';
+                    }
+                    if ($profile_key === '') $profile_key = $default_profile_key;
+                    $price_val = resolve_price_from_profile($profile_key);
                     $audit_evidence['users'][$u] = [
-                        'profile_key' => $default_profile_key,
-                        'last_status' => 'unknown'
+                        'profile_key' => $profile_key,
+                        'last_status' => $last_status,
+                        'last_uptime' => $last_uptime,
+                        'last_bytes' => $last_bytes,
+                        'price' => $price_val
                     ];
                 }
             }
