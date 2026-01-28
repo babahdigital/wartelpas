@@ -505,8 +505,11 @@ function typeSettlementMessage(target, text, speed, done){
                 if (data && data.ok && data.redirect) {
                     var snapshot = getHpFormSnapshot(form);
                     if (snapshot && snapshot.blok) {
-                        window.hpTodayMap = window.hpTodayMap || {};
-                        window.hpTodayMap[snapshot.blok] = {
+                        window.hpTodayMapByDate = window.hpTodayMapByDate || {};
+                        if (!window.hpTodayMapByDate[snapshot.date]) {
+                            window.hpTodayMapByDate[snapshot.date] = {};
+                        }
+                        window.hpTodayMapByDate[snapshot.date][snapshot.blok] = {
                             wartel_units: parseInt(snapshot.wartel || '0', 10) || 0,
                             kamtib_units: parseInt(snapshot.kamtib || '0', 10) || 0,
                             total_units: parseInt(snapshot.total || '0', 10) || 0,
