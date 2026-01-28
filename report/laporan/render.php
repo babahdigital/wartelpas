@@ -620,7 +620,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                                 $rows_src = !empty($rows) ? $rows : (isset($db) && $db instanceof PDO ? fetch_rows_for_audit($db, $audit_date_row) : []);
                                 if (!empty($rows_src)) {
                                     $expected = calc_expected_for_block($rows_src, $audit_date_row, $audit_block_row);
-                                    $expected_qty = (int)($expected['qty'] ?? 0);
+                                    $expected_qty = (int)($expected['raw_qty'] ?? 0);
                                     $expected_setoran = (int)($expected['net'] ?? 0);
                                     $sys_rusak = (int)($expected['rusak_qty'] ?? $sys_rusak);
                                     $sys_retur = (int)($expected['retur_qty'] ?? $sys_retur);
@@ -700,7 +700,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             $manual_net_qty_30 = max(0, $profile_qty_30 - $manual_rusak_30 - $manual_invalid_30 - $manual_retur_30);
                             $manual_money_qty_10 = max(0, $profile_qty_10 - $manual_rusak_10 - $manual_invalid_10);
                             $manual_money_qty_30 = max(0, $profile_qty_30 - $manual_rusak_30 - $manual_invalid_30);
-                            $manual_display_qty = $has_manual_evidence ? ($manual_net_qty_10 + $manual_net_qty_30) : (int)($ar['reported_qty'] ?? 0);
+                            $manual_display_qty = $has_manual_evidence ? ($profile_qty_10 + $profile_qty_30) : (int)($ar['reported_qty'] ?? 0);
                             $manual_display_setoran = $has_manual_evidence ? (($manual_money_qty_10 * $price10) + ($manual_money_qty_30 * $price30)) : (int)($ar['actual_setoran'] ?? 0);
                             $expected_adj_qty = $expected_qty;
                             $expected_adj_setoran = $expected_setoran;

@@ -464,7 +464,7 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
         }
 
         $qty_total += 1;
-        if ($status === 'rusak') $rusak_qty += 1;
+        if ($status === 'rusak' && !$rusak_recovered) $rusak_qty += 1;
         if ($status === 'retur') $retur_qty += 1;
         if ($status === 'invalid') $invalid_qty += 1;
         $net_total += $net_add;
