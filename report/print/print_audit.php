@@ -147,12 +147,13 @@ if (file_exists($dbFile)) {
         $auditDateFilter = '';
         $auditDateParam = [];
         if ($req_show === 'harian') {
-          $dateFilter = '(sale_date = :d OR raw_date LIKE :raw1 OR raw_date LIKE :raw2 OR raw_date LIKE :raw3 OR raw_date LIKE :raw4)';
+          $dateFilter = '(sale_date = :d OR raw_date LIKE :raw1 OR raw_date LIKE :raw2 OR raw_date LIKE :raw3 OR raw_date LIKE :raw4 OR raw_date LIKE :raw5)';
           $dateParam[':d'] = $filter_date;
           $dateParam[':raw1'] = $filter_date . '%';
           $dateParam[':raw2'] = date('m/d/Y', strtotime($filter_date)) . '%';
           $dateParam[':raw3'] = date('d/m/Y', strtotime($filter_date)) . '%';
           $dateParam[':raw4'] = date('M/d/Y', strtotime($filter_date)) . '%';
+          $dateParam[':raw5'] = substr($filter_date, 0, 10) . '%';
           $auditDateFilter = 'report_date = :d';
           $auditDateParam[':d'] = $filter_date;
         } elseif ($req_show === 'bulanan') {
