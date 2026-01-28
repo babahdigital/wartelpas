@@ -1177,21 +1177,37 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     $last_status = 'unknown';
                     $price_val = 0;
                     if ($audit_user_stmt) {
-                        try {
-                            $audit_user_stmt->execute([':u' => $u]);
-                            $hist = $audit_user_stmt->fetch(PDO::FETCH_ASSOC);
-                            if (!empty($hist)) {
-                                $last_uptime = trim((string)($hist['last_uptime'] ?? ''));
-                                $last_bytes = (int)($hist['last_bytes'] ?? 0);
-                                $last_status = strtolower((string)($hist['last_status'] ?? 'unknown'));
-                                $profile_src = (string)($hist['validity'] ?? '');
-                                if ($profile_src === '') {
-                                    $profile_src = extract_profile_from_comment((string)($hist['raw_comment'] ?? ''));
+                        $variants = [$u];
+                        if (stripos($u, 'vc-') === 0) {
+                            $variants[] = substr($u, 3);
+                        } else {
+                            $variants[] = 'vc-' . $u;
+                        }
+                        $found = false;
+                        foreach ($variants as $vu) {
+                            $vu = trim((string)$vu);
+                            if ($vu === '') continue;
+                            try {
+                                $audit_user_stmt->execute([':u' => $vu]);
+                                $hist = $audit_user_stmt->fetch(PDO::FETCH_ASSOC);
+                                if (!empty($hist)) {
+                                    $last_uptime = trim((string)($hist['last_uptime'] ?? ''));
+                                    $last_bytes = (int)($hist['last_bytes'] ?? 0);
+                                    $last_status = strtolower((string)($hist['last_status'] ?? 'unknown'));
+                                    $profile_src = (string)($hist['validity'] ?? '');
+                                    if ($profile_src === '') {
+                                        $profile_src = extract_profile_from_comment((string)($hist['raw_comment'] ?? ''));
+                                    }
+                                    $pk = normalize_profile_key($profile_src);
+                                    if ($pk !== '') $profile_key = $pk;
+                                    $found = true;
+                                    break;
                                 }
-                                $pk = normalize_profile_key($profile_src);
-                                if ($pk !== '') $profile_key = $pk;
-                            }
-                        } catch (Exception $e) {}
+                            } catch (Exception $e) {}
+                        }
+                        if (!$found) {
+                            $last_uptime = $last_uptime !== '' ? $last_uptime : '';
+                        }
                     }
                     if ($profile_key !== '' && preg_match('/^\d+$/', $profile_key)) {
                         $profile_key = $profile_key . 'menit';
