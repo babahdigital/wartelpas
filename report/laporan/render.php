@@ -19,7 +19,8 @@
     data-report-url="<?= htmlspecialchars('./?report=selling', ENT_QUOTES); ?>"
     data-ghost-url="<?= htmlspecialchars('report/laporan/ghost.php', ENT_QUOTES); ?>"
     data-audit-locked="<?= $audit_locked_today ? '1' : '0'; ?>"
-    data-audit-users="<?= htmlspecialchars(json_encode($audit_user_options ?? []), ENT_QUOTES); ?>">
+    data-audit-users="<?= htmlspecialchars(json_encode($audit_user_options ?? []), ENT_QUOTES); ?>"
+    data-audit-profiles="<?= htmlspecialchars(json_encode($audit_profiles ?? []), ENT_QUOTES); ?>">
 </div>
 <?php endif; ?>
 
@@ -157,14 +158,34 @@
                 <div class="form-group-box" style="margin-top:12px;">
                     <div class="form-group-title"><i class="fa fa-ticket"></i> Fisik Voucher (Lapangan)</div>
                     <div class="form-grid-2">
-                        <div>
-                            <label>Profil 10 Menit</label>
-                            <input class="form-input" type="number" id="audit_prof10_qty" name="audit_qty_10" min="0" value="0" required placeholder="0">
-                        </div>
-                        <div>
-                            <label>Profil 30 Menit</label>
-                            <input class="form-input" type="number" id="audit_prof30_qty" name="audit_qty_30" min="0" value="0" required placeholder="0">
-                        </div>
+                        <?php if (!empty($audit_profiles)): ?>
+                            <?php foreach ($audit_profiles as $prof): ?>
+                                <?php
+                                    $pkey = (string)($prof['key'] ?? '');
+                                    $plabel = (string)($prof['label'] ?? $pkey);
+                                    $pprice = (int)($prof['price'] ?? 0);
+                                    $pid = 'audit_prof_' . preg_replace('/[^a-z0-9_]+/i', '_', $pkey);
+                                ?>
+                                <div>
+                                    <label><?= htmlspecialchars($plabel); ?></label>
+                                    <input class="form-input audit-profile-qty" type="number"
+                                           id="<?= htmlspecialchars($pid); ?>"
+                                           name="audit_profile_qty[<?= htmlspecialchars($pkey); ?>]"
+                                           data-profile-key="<?= htmlspecialchars($pkey); ?>"
+                                           data-profile-price="<?= (int)$pprice; ?>"
+                                           min="0" value="0" placeholder="0">
+                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div>
+                                <label>Profil 10 Menit</label>
+                                <input class="form-input audit-profile-qty" type="number" id="audit_prof10_qty" name="audit_qty_10" min="0" value="0" required placeholder="0" data-profile-key="10menit" data-profile-price="<?= (int)$price10; ?>">
+                            </div>
+                            <div>
+                                <label>Profil 30 Menit</label>
+                                <input class="form-input audit-profile-qty" type="number" id="audit_prof30_qty" name="audit_qty_30" min="0" value="0" required placeholder="0" data-profile-key="30menit" data-profile-price="<?= (int)$price30; ?>">
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -588,14 +609,13 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         <th class="text-center">Selisih</th>
                         <th class="text-center">Rusak</th>
                         <th class="text-center">Retur</th>
-                        <th class="text-center">QTY 10</th>
-                        <th class="text-center">QTY 30</th>
+                        <th class="text-center">Profil Qty</th>
                         <th class="text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($audit_rows)): ?>
-                        <tr><td colspan="10" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
+                        <tr><td colspan="9" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
                     <?php else: 
                         $price10 = (int)$price10;
                         $price30 = (int)$price30;
