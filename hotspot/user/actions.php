@@ -529,6 +529,17 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $blok_clean = preg_replace('/[^A-Za-z0-9]/i', '', (string)$target_norm);
       $blok_keyword = preg_replace('/^BLOK/i', '', strtoupper($blok_clean));
       $blok_upper = 'BLOK' . $blok_keyword;
+      $blok_letter = '';
+      if (preg_match('/^[A-Z]/', $blok_keyword, $m)) {
+        $blok_letter = $m[0];
+      }
+      $blok_names_cfg = env_get_value('blok.names', []);
+      $blok_name_label = '';
+      if ($blok_letter !== '' && is_array($blok_names_cfg) && !empty($blok_names_cfg[$blok_letter])) {
+        $blok_name_label = strtoupper(trim((string)$blok_names_cfg[$blok_letter]));
+      }
+      $blok_name_clean = $blok_name_label !== '' ? preg_replace('/[^A-Za-z0-9]/', '', $blok_name_label) : '';
+      $blok_name_with_prefix = $blok_name_clean !== '' ? ('BLOK' . $blok_name_clean) : '';
       $use_glob = !preg_match('/\d$/', $blok_upper);
       $glob_pattern = $use_glob ? ($blok_upper . '[0-9]*') : '';
       $sql_pattern_1 = 'BLOK-' . $blok_keyword;
@@ -538,6 +549,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $raw_like2 = '%' . $sql_pattern_2 . '%';
       $raw_like3 = '%' . $sql_pattern_3 . '%';
       $raw_like4 = '%' . $blok_keyword . '%';
+      $raw_like5 = $blok_name_label !== '' ? ('%' . $blok_name_label . '%') : '';
+      $raw_like6 = $blok_name_with_prefix !== '' ? ('%' . $blok_name_with_prefix . '%') : '';
       $delete_settlement = isset($_GET['delete_settlement']) && $_GET['delete_settlement'] === '1';
       $delete_date = trim((string)($_GET['date'] ?? ''));
 
@@ -580,11 +593,30 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $retur_usernames = [];
       $delete_name_map = [];
       $whereBlok = "UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) = :b_clean" . ($use_glob ? " OR UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) GLOB :bg" : "");
+      if ($blok_name_clean !== '') {
+        $whereBlok .= " OR UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) = :b_name_clean";
+        $whereBlok .= " OR UPPER(REPLACE(REPLACE(blok_name, '-', ''), ' ', '')) = :b_name_only";
+      }
       $whereRaw = " OR UPPER(raw_comment) LIKE :rc1 OR UPPER(raw_comment) LIKE :rc2 OR UPPER(raw_comment) LIKE :rc3 OR UPPER(raw_comment) LIKE :rc4";
+      if ($blok_name_label !== '') {
+        $whereRaw .= " OR UPPER(raw_comment) LIKE :rc5 OR UPPER(raw_comment) LIKE :rc6";
+      }
       $whereMatch = "(" . $whereBlok . $whereRaw . ")";
-      $whereSales = "(" . $whereBlok . " OR UPPER(comment) LIKE :rc1 OR UPPER(comment) LIKE :rc2 OR UPPER(comment) LIKE :rc3 OR UPPER(comment) LIKE :rc4)";
+      $whereSales = "(" . $whereBlok . " OR UPPER(comment) LIKE :rc1 OR UPPER(comment) LIKE :rc2 OR UPPER(comment) LIKE :rc3 OR UPPER(comment) LIKE :rc4";
+      if ($blok_name_label !== '') {
+        $whereSales .= " OR UPPER(comment) LIKE :rc5 OR UPPER(comment) LIKE :rc6";
+      }
+      $whereSales .= ")";
       $base_params = $use_glob ? [':b_clean' => $blok_upper, ':bg' => $glob_pattern, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4]
         : [':b_clean' => $blok_upper, ':rc1' => $raw_like1, ':rc2' => $raw_like2, ':rc3' => $raw_like3, ':rc4' => $raw_like4];
+      if ($blok_name_label !== '') {
+        $base_params[':rc5'] = $raw_like5;
+        $base_params[':rc6'] = $raw_like6;
+      }
+      if ($blok_name_clean !== '') {
+        $base_params[':b_name_clean'] = $blok_name_with_prefix;
+        $base_params[':b_name_only'] = $blok_name_clean;
+      }
 
       try {
         $stmt = $db->prepare("SELECT username FROM login_history WHERE $whereMatch");
@@ -697,6 +729,10 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $stmt->execute(array_merge($params, $userParams));
 
         $blok_params = $use_glob ? [':b_clean' => $blok_upper, ':bg' => $glob_pattern] : [':b_clean' => $blok_upper];
+        if ($blok_name_clean !== '') {
+          $blok_params[':b_name_clean'] = $blok_name_with_prefix;
+          $blok_params[':b_name_only'] = $blok_name_clean;
+        }
         try {
           $stmtChk = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='audit_rekap_manual' LIMIT 1");
           if ($stmtChk && $stmtChk->fetchColumn()) {

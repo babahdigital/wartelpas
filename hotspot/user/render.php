@@ -135,6 +135,12 @@
                 <option value="">Semua Blok</option>
                   <?php foreach($list_blok as $b) {
                     $label = preg_replace('/^BLOK-/i', 'BLOK ', $b);
+                    $blok_key = normalize_block_key($b);
+                    $blok_letter = $blok_key !== '' ? substr($blok_key, 0, 1) : '';
+                    $blok_names = env_get_value('blok.names', []);
+                    if ($blok_letter !== '' && is_array($blok_names) && !empty($blok_names[$blok_letter])) {
+                      $label = $blok_names[$blok_letter] . ' (' . $label . ')';
+                    }
                     $sel = (strcasecmp($req_comm, $b) == 0) ? 'selected' : '';
                     echo "<option value='$b' $sel>$label</option>";
                 } ?>
