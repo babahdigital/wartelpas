@@ -633,7 +633,7 @@ foreach ($rows as $r) {
             if ($is_laku || $status === 'retur' || $rusak_recovered) {
                 $block_summaries[$block]['amt_10'] += $net_line;
             }
-            if ($status === 'rusak') $block_summaries[$block]['rs_10'] += $qty_count;
+            if ($status === 'rusak' && !$rusak_recovered) $block_summaries[$block]['rs_10'] += $qty_count;
             if ($status === 'retur') $block_summaries[$block]['rt_10'] += $qty_count;
         }
         if ($bucket === '30') {
@@ -643,7 +643,7 @@ foreach ($rows as $r) {
             if ($is_laku || $status === 'retur' || $rusak_recovered) {
                 $block_summaries[$block]['amt_30'] += $net_line;
             }
-            if ($status === 'rusak') $block_summaries[$block]['rs_30'] += $qty_count;
+            if ($status === 'rusak' && !$rusak_recovered) $block_summaries[$block]['rs_30'] += $qty_count;
             if ($status === 'retur') $block_summaries[$block]['rt_30'] += $qty_count;
         }
         if ($is_laku) {
@@ -653,7 +653,7 @@ foreach ($rows as $r) {
         if ($is_laku || $status === 'retur' || $rusak_recovered) {
             $block_summaries[$block]['total_amount'] += $net_line;
         }
-        if ($status === 'rusak') $block_summaries[$block]['rs_total'] += $qty_count;
+        if ($status === 'rusak' && !$rusak_recovered) $block_summaries[$block]['rs_total'] += $qty_count;
         if ($status === 'retur') $block_summaries[$block]['rt_total'] += $qty_count;
     }
 
@@ -662,10 +662,12 @@ foreach ($rows as $r) {
     if ($is_laku) $total_qty_laku += $laku_add;
     if ($status === 'retur') $total_qty_retur++;
     if ($status === 'rusak') {
-        $total_qty_rusak++;
-        $p = strtolower((string)$profile);
-        if (preg_match('/\b10\s*(menit|m)\b/i', $p)) $rusak_10m++;
-        elseif (preg_match('/\b30\s*(menit|m)\b/i', $p)) $rusak_30m++;
+        if (!$rusak_recovered) {
+            $total_qty_rusak++;
+            $p = strtolower((string)$profile);
+            if (preg_match('/\b10\s*(menit|m)\b/i', $p)) $rusak_10m++;
+            elseif (preg_match('/\b30\s*(menit|m)\b/i', $p)) $rusak_30m++;
+        }
     }
     if ($status === 'invalid') $total_qty_invalid++;
 
