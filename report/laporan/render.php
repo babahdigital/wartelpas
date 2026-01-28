@@ -197,6 +197,7 @@
                     <div>
                         <label class="label-icon" style="color:#f39c12;">Total Setoran (Otomatis)</label>
                         <input class="form-input" type="number" name="audit_setoran" min="0" value="0">
+                        <input type="hidden" name="audit_setoran_manual" id="audit_setoran_manual" value="0">
                     </div>
                 </div>
 
@@ -700,10 +701,12 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                             $manual_invalid_10 = 0;
                             $manual_invalid_30 = 0;
                             $has_manual_evidence = false;
+                            $manual_setoran_override = false;
                             if (!empty($ar['user_evidence'])) {
                                 $evidence = json_decode((string)$ar['user_evidence'], true);
                                 if (is_array($evidence)) {
                                     $has_manual_evidence = true;
+                                    $manual_setoran_override = !empty($evidence['manual_setoran']);
                                     if (!empty($evidence['profile_qty']) && is_array($evidence['profile_qty'])) {
                                         $profile_qty_10 = (int)($evidence['profile_qty']['qty_10'] ?? 0);
                                         $profile_qty_30 = (int)($evidence['profile_qty']['qty_30'] ?? 0);
@@ -803,6 +806,9 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                                     $profile_qty_summary[] = $label . ':' . $pqty;
                                 }
                             }
+                            if ($manual_setoran_override) {
+                                $manual_display_setoran = (int)($ar['actual_setoran'] ?? 0);
+                            }
                             if (!$has_manual_evidence || $manual_display_qty === 0) {
                                 $manual_display_qty = (int)($ar['reported_qty'] ?? 0);
                                 $manual_display_setoran = (int)($ar['actual_setoran'] ?? 0);
@@ -846,6 +852,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                                     data-date="<?= htmlspecialchars($ar['report_date'] ?? $filter_date); ?>"
                                     data-qty="<?= (int)($ar['reported_qty'] ?? 0); ?>"
                                     data-setoran="<?= (int)($ar['actual_setoran'] ?? 0); ?>"
+                                    data-setoran-manual="<?= $manual_setoran_override ? 1 : 0; ?>"
                                     data-qty10="<?= (int)$profile_qty_10; ?>"
                                     data-qty30="<?= (int)$profile_qty_30; ?>"
                                     data-profile-qty="<?= $profile_qty_json; ?>">
