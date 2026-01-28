@@ -955,7 +955,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         <div style="margin-top:8px; font-size:11px; color:#444;">
             Keterangan: RS = Rusak, RT = Retur, SP = Spam, WR = Wartel, KM = Kamtib.
         </div>
-        <div class="dul-gap" style="margin-top:4px; font-size:11px; color:#444;">
+        <div style="margin-top:4px; font-size:11px; color:#444;">
             Catatan: Data rekap adalah acuan resmi untuk keuangan karena berasal dari transaksi.
         </div> 
         <?php if ($req_show === 'harian' && !empty($hp_change_rows)): ?>
@@ -981,7 +981,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
         <?php endif; ?>
 
         <?php if ($req_show === 'harian' && !empty($daily_note_alert)): ?>
-            <div style="line-height: 25px; margin-top:2%; padding:10px; border:1px solid #ffcdd2; background:#ffebee; border-radius:4px; color:#b71c1c;">
+            <div class="dul-gap" style="line-height: 25px; margin-top:2%; padding:10px; border:1px solid #ffcdd2; background:#ffebee; border-radius:4px; color:#b71c1c;">
                 <strong style="margin-bottom: 15px;"><i class="fa fa-exclamation-circle"></i> CATATAN PENTING HARI INI:</strong><br>
                 <?= nl2br(htmlspecialchars($daily_note_alert)) ?>
             </div>
