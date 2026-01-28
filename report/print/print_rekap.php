@@ -600,7 +600,7 @@ foreach ($rows as $r) {
             $net_line = $line_price;
         }
 
-        if ($status !== 'invalid') {
+        if ($status !== 'invalid' && $status !== 'retur') {
             $total_qty_units += $qty_count;
         }
         $total_net_units += $net_line;
@@ -625,7 +625,7 @@ foreach ($rows as $r) {
         }
         $bw_line = $bytes;
         if ($bucket === '10') {
-            if ($status !== 'invalid') {
+            if ($status !== 'invalid' && $status !== 'retur') {
                 $block_summaries[$block]['qty_10'] += $qty_count;
             }
             if ($is_laku || $status === 'retur') {
@@ -635,7 +635,7 @@ foreach ($rows as $r) {
             if ($status === 'retur') $block_summaries[$block]['rt_10'] += $qty_count;
         }
         if ($bucket === '30') {
-            if ($status !== 'invalid') {
+            if ($status !== 'invalid' && $status !== 'retur') {
                 $block_summaries[$block]['qty_30'] += $qty_count;
             }
             if ($is_laku || $status === 'retur') {
@@ -644,7 +644,7 @@ foreach ($rows as $r) {
             if ($status === 'rusak') $block_summaries[$block]['rs_30'] += $qty_count;
             if ($status === 'retur') $block_summaries[$block]['rt_30'] += $qty_count;
         }
-        if ($status !== 'invalid') {
+        if ($status !== 'invalid' && $status !== 'retur') {
             $block_summaries[$block]['total_qty'] += $qty_count;
             $block_summaries[$block]['total_bw'] += $bw_line;
         }
