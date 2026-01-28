@@ -69,6 +69,9 @@ $env = [
         'db_file' => 'db_data/mikhmon_stats.db',
         'log_dir' => 'logs',
         'hotspot_server' => 'wartel',
+        'hotspot_profile' => 'wartelpas',
+        'dhcp_server' => 'Wartelpas',
+        'wartel_subnet' => '172.16.12.1/24',
         'settlement_script' => 'CuciGudangManual',
         'ghost_min_bytes' => 51200
     ],

@@ -23,6 +23,12 @@ error_reporting(0);
 if (substr($_SERVER["REQUEST_URI"], -11) == "readcfg.php") {
     header("Location:./");
 };
+// env config (opsional)
+$env = [];
+$envFile = __DIR__ . '/env.php';
+if (file_exists($envFile)) {
+    require $envFile;
+}
 // read config
 
 $iphost = explode('!', $data[$session][1])[1];
@@ -42,6 +48,9 @@ $livereport = explode('@!@', $data[$session][11])[1];
 $hotspot_server = isset($data[$session][12]) ? explode('~', $data[$session][12])[1] : 'wartel';
 if (empty($hotspot_server)) {
     $hotspot_server = 'wartel';
+}
+if (!empty($env['system']['hotspot_server'])) {
+    $hotspot_server = (string)$env['system']['hotspot_server'];
 }
 
 $cekindo['indo'] = array(

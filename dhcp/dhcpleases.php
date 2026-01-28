@@ -18,6 +18,11 @@ if (!isset($_SESSION["mikhmon"])) {
     // load config
     include('../include/config.php');
     include('../include/readcfg.php');
+    $env = [];
+    $envFile = dirname(__DIR__) . '/include/env.php';
+    if (file_exists($envFile)) {
+        require $envFile;
+    }
 
     // lang
     include('../include/lang.php');
@@ -34,14 +39,51 @@ if (!isset($_SESSION["mikhmon"])) {
         // 1. Tarik SEMUA data lease dulu
         $getlease = $API->comm("/ip/dhcp-server/lease/print");
 
-        // 2. Filter berdasarkan server DHCP wartelpas (case-insensitive)
-        $allowed_servers = array('wartelpas');
+        // 2. Filter berdasarkan server DHCP dari env (case-insensitive)
+        $system_cfg = $env['system'] ?? [];
+        $allowed_servers_cfg = $system_cfg['dhcp_server'] ?? 'wartelpas';
+        $allowed_servers = [];
+        if (is_array($allowed_servers_cfg)) {
+            foreach ($allowed_servers_cfg as $srv) {
+                $srv = strtolower(trim((string)$srv));
+                if ($srv !== '') $allowed_servers[] = $srv;
+            }
+        } else {
+            $parts = explode(',', (string)$allowed_servers_cfg);
+            foreach ($parts as $srv) {
+                $srv = strtolower(trim($srv));
+                if ($srv !== '') $allowed_servers[] = $srv;
+            }
+        }
+        $allowed_servers = array_values(array_unique($allowed_servers));
+        $wartel_subnet = trim((string)($system_cfg['wartel_subnet'] ?? ''));
+        $wartel_subnet = $wartel_subnet !== '' ? $wartel_subnet : '';
+
+        $ipInCidr = function($ip, $cidr) {
+            $ip = trim((string)$ip);
+            $cidr = trim((string)$cidr);
+            if ($ip === '' || $cidr === '' || strpos($cidr, '/') === false) return false;
+            $parts = explode('/', $cidr, 2);
+            $net = $parts[0] ?? '';
+            $mask = isset($parts[1]) ? (int)$parts[1] : 0;
+            $ipLong = ip2long($ip);
+            $netLong = ip2long($net);
+            if ($ipLong === false || $netLong === false || $mask < 0 || $mask > 32) return false;
+            $maskLong = $mask == 0 ? 0 : (-1 << (32 - $mask));
+            return (($ipLong & $maskLong) === ($netLong & $maskLong));
+        };
         $filtered_leases = array();
         foreach ($getlease as $lease) {
             $server = isset($lease['server']) ? strtolower((string)$lease['server']) : '';
-            if (in_array($server, $allowed_servers, true)) {
-                $filtered_leases[] = $lease;
+            if (!empty($allowed_servers) && !in_array($server, $allowed_servers, true)) continue;
+            if ($wartel_subnet !== '') {
+                $addr = isset($lease['address']) ? (string)$lease['address'] : '';
+                $active_addr = isset($lease['active-address']) ? (string)$lease['active-address'] : '';
+                $addr_ok = $addr !== '' && $ipInCidr($addr, $wartel_subnet);
+                $active_ok = $active_addr !== '' && $ipInCidr($active_addr, $wartel_subnet);
+                if (!$addr_ok && !$active_ok) continue;
             }
+            $filtered_leases[] = $lease;
         }
 
         $TotalReg = count($filtered_leases);
