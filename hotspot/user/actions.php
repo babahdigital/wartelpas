@@ -764,6 +764,47 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         }
       }
 
+      $extra_db_names = [];
+      foreach ($to_delete as $d) {
+        $uname = $d['name'] ?? '';
+        if ($uname !== '') $extra_db_names[] = $uname;
+      }
+      $extra_db_names = array_values(array_unique($extra_db_names));
+      if (!empty($extra_db_names)) {
+        $extra_user_params = [];
+        $extra_placeholders = [];
+        foreach ($extra_db_names as $i => $uname) {
+          $key = ':x' . $i;
+          $extra_placeholders[] = $key;
+          $extra_user_params[$key] = $uname;
+        }
+        try {
+          $db->beginTransaction();
+          $stmt = $db->prepare("DELETE FROM login_history WHERE username IN (" . implode(',', $extra_placeholders) . ")");
+          $stmt->execute($extra_user_params);
+          $stmt = $db->prepare("DELETE FROM login_events WHERE username IN (" . implode(',', $extra_placeholders) . ")");
+          $stmt->execute($extra_user_params);
+          $stmt = $db->prepare("DELETE FROM sales_history WHERE username IN (" . implode(',', $extra_placeholders) . ")");
+          $stmt->execute($extra_user_params);
+          $stmt = $db->prepare("DELETE FROM live_sales WHERE username IN (" . implode(',', $extra_placeholders) . ")");
+          $stmt->execute($extra_user_params);
+          $db->commit();
+          $db_deleted_count += count($extra_db_names);
+        } catch (Exception $e) {
+          if ($db->inTransaction()) {
+            $db->rollBack();
+          }
+        }
+
+        $summary_helper = $root_dir . '/report/laporan/sales_summary_helper.php';
+        if (file_exists($summary_helper)) {
+          require_once $summary_helper;
+          if (function_exists('rebuild_sales_summary')) {
+            rebuild_sales_summary($db);
+          }
+        }
+      }
+
       $script_deleted = 0;
       try {
         $scripts = $API->comm('/system/script/print', [
