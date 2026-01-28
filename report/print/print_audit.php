@@ -99,10 +99,10 @@ function calc_audit_adjusted_totals(array $ar) {
   if ($p30_qty <= 0) $p30_qty = $profile30_users;
 
   if ($has_manual_evidence) {
-    $manual_net_qty_10 = max(0, $p10_qty - $cnt_rusak_10 - $cnt_invalid_10);
-    $manual_net_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30);
-    $manual_display_qty = $manual_net_qty_10 + $manual_net_qty_30;
-    $manual_display_setoran = ($manual_net_qty_10 * $price10) + ($manual_net_qty_30 * $price30);
+    $manual_money_qty_10 = max(0, $p10_qty - $cnt_rusak_10 - $cnt_invalid_10);
+    $manual_money_qty_30 = max(0, $p30_qty - $cnt_rusak_30 - $cnt_invalid_30);
+    $manual_display_qty = $p10_qty + $p30_qty;
+    $manual_display_setoran = ($manual_money_qty_10 * $price10) + ($manual_money_qty_30 * $price30);
     $expected_adj_qty = $expected_qty;
     $expected_adj_setoran = $expected_setoran;
   } else {
@@ -187,22 +187,33 @@ if (file_exists($dbFile)) {
 
         if (table_exists($db, 'sales_history')) {
             $sumSql = "SELECT
-              SUM(CASE WHEN COALESCE(is_invalid,0)=1
-                OR LOWER(COALESCE(status,''))='invalid'
-                OR (COALESCE(status,'')='' AND LOWER(COALESCE(comment,'')) LIKE '%invalid%')
-              THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS invalid_sum,
-              SUM(CASE WHEN COALESCE(is_rusak,0)=1
-                OR LOWER(COALESCE(status,''))='rusak'
-                OR (COALESCE(status,'')='' AND LOWER(COALESCE(comment,'')) LIKE '%rusak%')
-              THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS rusak_sum,
-              SUM(CASE WHEN COALESCE(is_retur,0)=1
-                OR LOWER(COALESCE(status,''))='retur'
-                OR (COALESCE(status,'')='' AND LOWER(COALESCE(comment,'')) LIKE '%retur%')
-              THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS retur_sum,
-              SUM(COALESCE(price_snapshot, price, 0) * COALESCE(qty,1)) AS gross_sum,
+              SUM(CASE WHEN eff_status='invalid' THEN eff_price * eff_qty ELSE 0 END) AS invalid_sum,
+              SUM(CASE WHEN eff_status='rusak' THEN eff_price * eff_qty ELSE 0 END) AS rusak_sum,
+              SUM(CASE WHEN eff_status='retur' THEN eff_price * eff_qty ELSE 0 END) AS retur_sum,
+              SUM(eff_price * eff_qty) AS gross_sum,
               COUNT(1) AS total_cnt
-              FROM sales_history
-              WHERE $dateFilter";
+              FROM (
+                SELECT
+                  CASE
+                    WHEN COALESCE(is_retur,0)=1
+                      OR LOWER(COALESCE(status,''))='retur'
+                      OR LOWER(COALESCE(comment,'')) LIKE '%retur%'
+                      THEN 'retur'
+                    WHEN COALESCE(is_rusak,0)=1
+                      OR LOWER(COALESCE(status,''))='rusak'
+                      OR LOWER(COALESCE(comment,'')) LIKE '%rusak%'
+                      THEN 'rusak'
+                    WHEN COALESCE(is_invalid,0)=1
+                      OR LOWER(COALESCE(status,''))='invalid'
+                      OR LOWER(COALESCE(comment,'')) LIKE '%invalid%'
+                      THEN 'invalid'
+                    ELSE 'normal'
+                  END AS eff_status,
+                  COALESCE(price_snapshot, price, 0) AS eff_price,
+                  COALESCE(qty,1) AS eff_qty
+                FROM sales_history
+                WHERE $dateFilter
+              ) t";
             $stmt = $db->prepare($sumSql);
             foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
             $stmt->execute();
@@ -229,22 +240,33 @@ if (file_exists($dbFile)) {
             $sales_summary['pending'] = (int)($stmt->fetchColumn() ?: 0);
 
             $pendingSumSql = "SELECT
-              SUM(CASE WHEN COALESCE(is_invalid,0)=1
-                OR LOWER(COALESCE(status,''))='invalid'
-                OR (COALESCE(status,'')='' AND LOWER(COALESCE(comment,'')) LIKE '%invalid%')
-              THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS invalid_sum,
-              SUM(CASE WHEN COALESCE(is_rusak,0)=1
-                OR LOWER(COALESCE(status,''))='rusak'
-                OR (COALESCE(status,'')='' AND LOWER(COALESCE(comment,'')) LIKE '%rusak%')
-              THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS rusak_sum,
-              SUM(CASE WHEN COALESCE(is_retur,0)=1
-                OR LOWER(COALESCE(status,''))='retur'
-                OR (COALESCE(status,'')='' AND LOWER(COALESCE(comment,'')) LIKE '%retur%')
-              THEN COALESCE(price_snapshot, price, 0) * COALESCE(qty,1) ELSE 0 END) AS retur_sum,
-              SUM(COALESCE(price_snapshot, price, 0) * COALESCE(qty,1)) AS gross_sum,
+              SUM(CASE WHEN eff_status='invalid' THEN eff_price * eff_qty ELSE 0 END) AS invalid_sum,
+              SUM(CASE WHEN eff_status='rusak' THEN eff_price * eff_qty ELSE 0 END) AS rusak_sum,
+              SUM(CASE WHEN eff_status='retur' THEN eff_price * eff_qty ELSE 0 END) AS retur_sum,
+              SUM(eff_price * eff_qty) AS gross_sum,
               COUNT(1) AS total_cnt
-              FROM live_sales
-              WHERE sync_status='pending' AND $dateFilter";
+              FROM (
+                SELECT
+                  CASE
+                    WHEN COALESCE(is_retur,0)=1
+                      OR LOWER(COALESCE(status,''))='retur'
+                      OR LOWER(COALESCE(comment,'')) LIKE '%retur%'
+                      THEN 'retur'
+                    WHEN COALESCE(is_rusak,0)=1
+                      OR LOWER(COALESCE(status,''))='rusak'
+                      OR LOWER(COALESCE(comment,'')) LIKE '%rusak%'
+                      THEN 'rusak'
+                    WHEN COALESCE(is_invalid,0)=1
+                      OR LOWER(COALESCE(status,''))='invalid'
+                      OR LOWER(COALESCE(comment,'')) LIKE '%invalid%'
+                      THEN 'invalid'
+                    ELSE 'normal'
+                  END AS eff_status,
+                  COALESCE(price_snapshot, price, 0) AS eff_price,
+                  COALESCE(qty,1) AS eff_qty
+                FROM live_sales
+                WHERE sync_status='pending' AND $dateFilter
+              ) t";
             $stmt = $db->prepare($pendingSumSql);
             foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
             $stmt->execute();
