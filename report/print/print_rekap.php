@@ -1502,6 +1502,42 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                         *Data berdasarkan input manual lapangan
                     </div>
                 </div>
+
+                <?php if ($req_show === 'harian' && !empty($hp_change_rows)): ?>
+                    <?php
+                        $days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+                        $today_label = $filter_date !== '' ? ($days[(int)date('w', strtotime($filter_date))] . ', ' . format_date_ddmmyyyy($filter_date)) : '';
+                        $prev_label = $hp_prev_date !== '' ? ($days[(int)date('w', strtotime($hp_prev_date))] . ', ' . format_date_ddmmyyyy($hp_prev_date)) : '';
+                    ?>
+                    <div style="background:#fff; padding:8px 10px; border-radius:4px; margin-bottom:12px; font-size:11px; border:1px solid #e2e8f0;">
+                        <div style="font-weight:bold; margin-bottom:6px;">
+                            Perubahan Device
+                            <?php if ($today_label !== ''): ?>
+                                (<?= htmlspecialchars($today_label) ?>)
+                            <?php endif; ?>
+                            <?php if ($prev_label !== ''): ?>
+                                dibanding <?= htmlspecialchars($prev_label) ?>
+                            <?php endif; ?>
+                        </div>
+                        <?php foreach ($hp_change_rows as $chg): ?>
+                            <?php
+                                $blk_label = get_block_label($chg['blok'], $blok_names);
+                                $diff = (int)$chg['diff'];
+                                $color = $diff < 0 ? '#c0392b' : '#1e8e3e';
+                                $sign = $diff > 0 ? '+' : '';
+                                $dw = (int)($chg['wartel'] ?? 0);
+                                $dk = (int)($chg['kamtib'] ?? 0);
+                                $unit_parts = [];
+                                if ($dk !== 0) $unit_parts[] = 'Unit dari Kamtib ' . ($dk > 0 ? '+' : '') . number_format($dk,0,',','.');
+                                if ($dw !== 0) $unit_parts[] = 'Unit dari Wartel ' . ($dw > 0 ? '+' : '') . number_format($dw,0,',','.');
+                                $unit_text = !empty($unit_parts) ? ', ' . implode(', ', $unit_parts) : '';
+                            ?>
+                            <div style="color:<?= $color; ?>; margin-bottom:2px;">
+                                <?= htmlspecialchars($blk_label) ?> Device <?= $sign . number_format($diff,0,',','.') ?><?= htmlspecialchars($unit_text) ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
                 
                 <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
 
