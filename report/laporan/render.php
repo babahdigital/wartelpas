@@ -554,7 +554,8 @@ window.hpDefaultSourceDate = <?= json_encode($hp_default_date ?? ''); ?>;
                 <thead>
                     <tr>
                         <th>Blok</th>
-                        <th>Unit</th>
+                        <th class="text-center">WARTEL</th>
+                        <th class="text-center">KAMTIB</th>
                         <th class="text-center">Total</th>
                         <th class="text-center">Aktif</th>
                         <th class="text-center">Rusak</th>
@@ -565,7 +566,7 @@ window.hpDefaultSourceDate = <?= json_encode($hp_default_date ?? ''); ?>;
                 </thead>
                 <tbody>
                     <?php if (empty($hp_rows_total)): ?>
-                        <tr><td colspan="8" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada input.</td></tr>
+                        <tr><td colspan="9" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada input.</td></tr>
                     <?php else: foreach ($hp_rows_total as $r): ?>
                         <tr>
                             <td><?= htmlspecialchars($r['blok_name'] ?? '-') ?></td>
@@ -575,8 +576,10 @@ window.hpDefaultSourceDate = <?= json_encode($hp_default_date ?? ''); ?>;
                                     $bw = $hp_breakdown[$bname]['WARTEL'] ?? 0;
                                     $bk = $hp_breakdown[$bname]['KAMTIB'] ?? 0;
                                 ?>
-                                <div class="unit-stack unit-wartel">WARTEL: <?= (int)$bw; ?></div>
-                                <div class="unit-stack unit-kamtib">KAMTIB: <?= (int)$bk; ?></div>
+                                <span class="unit-stack unit-wartel" style="display:inline-block;"><?= (int)$bw; ?></span>
+                            </td>
+                            <td class="text-center">
+                                <span class="unit-stack unit-kamtib" style="display:inline-block;"><?= (int)$bk; ?></span>
                             </td>
                             <td class="text-center"><?= (int)($r['total_units'] ?? 0) ?></td>
                               <td class="text-center"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['active_units'] ?? 0) : '-' ?></td>

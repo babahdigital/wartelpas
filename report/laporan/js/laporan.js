@@ -606,6 +606,7 @@ function getHpFormSnapshot(form){
     var spam = (form.querySelector('input[name="spam_units"]') || {}).value || '0';
     var notes = (form.querySelector('input[name="notes"]') || {}).value || '';
     var total = (form.querySelector('input[name="total_units"]') || {}).value || '0';
+    if (!date) return null;
     return {
         blok: blok,
         date: date,
@@ -623,7 +624,6 @@ function scheduleHpAutoSave(force){
     if (!form) return;
     var snapshot = getHpFormSnapshot(form);
     if (!snapshot || !snapshot.blok || !snapshot.date) return;
-    if (window.hpDefaultDate && snapshot.date !== window.hpDefaultDate) return;
 
     var todayMap = window.hpTodayMap || {};
     var hasToday = !!todayMap[snapshot.blok];
