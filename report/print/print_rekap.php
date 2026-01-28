@@ -411,6 +411,88 @@ try {
             $stmtAudit = $db->prepare("SELECT * FROM audit_rekap_manual WHERE report_date = :d ORDER BY blok_name");
             $stmtAudit->execute([':d' => $filter_date]);
             $audit_rows = $stmtAudit->fetchAll(PDO::FETCH_ASSOC);
+            $audit_user_stmt = null;
+            try {
+                $audit_user_stmt = $db->prepare("SELECT last_uptime, last_bytes, last_status, validity, raw_comment FROM login_history WHERE username = :u ORDER BY id DESC LIMIT 1");
+            } catch (Exception $e) {
+                $audit_user_stmt = null;
+            }
+            if ($audit_user_stmt) {
+                foreach ($audit_rows as $i => $ar) {
+                    if (empty($ar['user_evidence'])) {
+                        continue;
+                    }
+                    $evidence = json_decode((string)$ar['user_evidence'], true);
+                    if (!is_array($evidence) || empty($evidence['users']) || !is_array($evidence['users'])) {
+                        continue;
+                    }
+                    $updated = false;
+                    foreach ($evidence['users'] as $uname => $ud) {
+                        $uname = trim((string)$uname);
+                        if ($uname === '') continue;
+                        $ud = is_array($ud) ? $ud : [];
+                        $uptime = trim((string)($ud['last_uptime'] ?? ''));
+                        $bytes = isset($ud['last_bytes']) ? (int)$ud['last_bytes'] : 0;
+                        $status = trim((string)($ud['last_status'] ?? ''));
+                        $profile_key = trim((string)($ud['profile_key'] ?? ''));
+                        $price_val = (int)($ud['price'] ?? 0);
+
+                        if ($uptime === '' || $bytes <= 0 || $status === '' || $profile_key === '' || $price_val <= 0) {
+                            $variants = [$uname];
+                            if (stripos($uname, 'vc-') === 0) {
+                                $variants[] = substr($uname, 3);
+                            } else {
+                                $variants[] = 'vc-' . $uname;
+                            }
+                            foreach ($variants as $vu) {
+                                $vu = trim((string)$vu);
+                                if ($vu === '') continue;
+                                try {
+                                    $audit_user_stmt->execute([':u' => $vu]);
+                                    $hist = $audit_user_stmt->fetch(PDO::FETCH_ASSOC);
+                                    if (!empty($hist)) {
+                                        if ($uptime === '') {
+                                            $uptime = trim((string)($hist['last_uptime'] ?? ''));
+                                        }
+                                        if ($bytes <= 0) {
+                                            $bytes = (int)($hist['last_bytes'] ?? 0);
+                                        }
+                                        if ($status === '') {
+                                            $status = trim((string)($hist['last_status'] ?? ''));
+                                        }
+                                        if ($profile_key === '') {
+                                            $profile_src = (string)($hist['validity'] ?? '');
+                                            if ($profile_src === '') {
+                                                $profile_src = extract_profile_from_comment((string)($hist['raw_comment'] ?? ''));
+                                            }
+                                            $pk = normalize_profile_key($profile_src);
+                                            if ($pk !== '' && preg_match('/^\d+$/', $pk)) {
+                                                $pk = $pk . 'menit';
+                                            }
+                                            if ($pk !== '') $profile_key = $pk;
+                                        }
+                                        if ($price_val <= 0 && $profile_key !== '') {
+                                            $price_val = resolve_price_from_profile($profile_key);
+                                        }
+                                        $updated = true;
+                                        break;
+                                    }
+                                } catch (Exception $e) {}
+                            }
+                        }
+
+                        if ($uptime !== '') $ud['last_uptime'] = $uptime;
+                        $ud['last_bytes'] = $bytes;
+                        if ($status !== '') $ud['last_status'] = $status;
+                        if ($profile_key !== '') $ud['profile_key'] = $profile_key;
+                        if ($price_val > 0) $ud['price'] = $price_val;
+                        $evidence['users'][$uname] = $ud;
+                    }
+                    if ($updated) {
+                        $audit_rows[$i]['user_evidence'] = json_encode($evidence);
+                    }
+                }
+            }
             foreach ($audit_rows as $ar) {
                 $audit_total_expected_qty += (int)($ar['expected_qty'] ?? 0);
                 $audit_total_reported_qty += (int)($ar['reported_qty'] ?? 0);
