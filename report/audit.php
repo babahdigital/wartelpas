@@ -595,10 +595,7 @@ if (file_exists($dbFile)) {
             $stat_rusak_manual = (int)($audit_manual_summary['total_rusak_rp'] ?? 0);
             $stat_retur_system = (int)$sales_summary['retur'] + (int)$pending_summary['retur'];
             $expected_net = (int)($audit_manual_summary['expected_setoran'] ?? 0);
-            $total_loss_real = max(0, ($stat_gross + $stat_retur_system) - $expected_net);
-            if ($total_loss_real <= 0) {
-                $total_loss_real = $stat_rusak_system > 0 ? $stat_rusak_system : $stat_rusak_manual;
-            }
+            $total_loss_real = $stat_rusak_system > 0 ? $stat_rusak_system : $stat_rusak_manual;
         ?>
         <div class="summary-grid">
             <div class="summary-card">
