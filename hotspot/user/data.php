@@ -525,7 +525,7 @@ foreach($all_users as $u) {
       $status = 'VIP';
     }
 
-    $is_ready_now = (!$is_active && !$is_rusak && !$is_retur && $disabled !== 'true' && $bytes <= 50 && ($uptime == '0s' || $uptime == ''));
+    $is_ready_now = (!$is_active && !$is_rusak && !$is_retur && $disabled !== 'true' && $bytes <= 50 && ($uptime == '0s' || $uptime == '') && !$is_vip_tag);
     if ($req_status == 'ready' && $is_ready_now) {
       $status = 'READY';
     }
