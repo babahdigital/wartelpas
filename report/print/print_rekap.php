@@ -71,6 +71,20 @@ function detect_profile_minutes($profile) {
     return $profile_key;
 }
 
+function infer_profile_from_comment($comment) {
+    $comment = strtolower((string)$comment);
+    if (preg_match('/\b(10|30)\s*(menit|m)\b/', $comment, $m)) {
+        return $m[1] . 'menit';
+    }
+    if (preg_match('/\bblok\s*[-_]?[a-z0-9]+\s*(10|30)\b/', $comment, $m)) {
+        return $m[1] . 'menit';
+    }
+    if (preg_match('/\bblok\s*[-_]?[a-z0-9]+(10|30)\b/', $comment, $m)) {
+        return $m[1] . 'menit';
+    }
+    return '';
+}
+
 function format_profile_summary($map, $order_keys = []) {
     if (empty($map) || !is_array($map)) return '-';
     $parts = [];
@@ -281,6 +295,18 @@ try {
                                 )");
             $stmtLh->execute([':d' => $filter_date]);
             $lhRows = $stmtLh->fetchAll(PDO::FETCH_ASSOC);
+            if (!empty($lhRows)) {
+                foreach ($lhRows as $i => $lr) {
+                    $profile_val = trim((string)($lr['profile'] ?? ''));
+                    if ($profile_val === '' || $profile_val === '-' || normalize_profile_key($profile_val) === 'other') {
+                        $guess = infer_profile_from_comment($lr['comment'] ?? ($lr['raw_comment'] ?? ''));
+                        if ($guess !== '') {
+                            $lhRows[$i]['profile'] = $guess;
+                            $lhRows[$i]['profile_snapshot'] = $guess;
+                        }
+                    }
+                }
+            }
             if (!empty($lhRows)) {
                 $rows = array_merge($lhRows, $rows);
             }
