@@ -102,7 +102,7 @@ $env = [
         'setoran_mode' => 'net'
     ],
     'maintenance' => [
-        'enabled' => true
+        'enabled' => false
     ],
     'rclone' => [
         'bin' => '/usr/bin/rclone',
