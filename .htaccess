@@ -96,6 +96,9 @@ Require all denied
 <If "%{REQUEST_URI} == '/'">
     Require all granted
 </If>
+<If "%{REQUEST_URI} =~ m#^/\?#">
+    Require all granted
+</If>
 
 # DB check endpoint (protected by key)
 <If "%{REQUEST_URI} =~ m#^/tools/db_check\.php$#">

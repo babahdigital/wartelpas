@@ -22,7 +22,6 @@ $session = isset($_GET['session']) ? $_GET['session'] : "";
 if (!empty($session) && strpos($session, '~') !== false) {
   $session = explode('~', $session)[0];
 }
-$hotspot = isset($_GET['hotspot']) ? $_GET['hotspot'] : "";
 
 // load config
 include('./include/config.php'); 
@@ -36,20 +35,8 @@ if (!isset($_SESSION["mikhmon"])) {
   exit();
 
 } elseif (isOperator() && isMaintenanceEnabled()) {
-  $allowed_session = getMaintenanceAllowedSession();
-  $allowed_hotspot = array('', 'dashboard');
-  if (empty($allowed_session)) {
-    aclRedirect(getMaintenanceUrl());
-    exit();
-  }
-  if (empty($session)) {
-    aclRedirect(getMaintenanceHomeUrl());
-    exit();
-  }
-  if ($session !== $allowed_session || !in_array($hotspot, $allowed_hotspot, true)) {
-    aclRedirect(getMaintenanceUrl());
-    exit();
-  }
+  aclRedirect(getMaintenanceUrl());
+  exit();
 
 } elseif (empty($session)) {
   $target_session = "";

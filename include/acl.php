@@ -53,28 +53,7 @@ function getMaintenanceUrl()
     if (!empty($env['maintenance']['redirect_url'])) {
         return (string)$env['maintenance']['redirect_url'];
     }
-    return './maintenance.html';
-}
-
-function getMaintenanceAllowedSession()
-{
-    $env = getEnvConfig();
-    if (!empty($env['maintenance']['allowed_session'])) {
-        return (string)$env['maintenance']['allowed_session'];
-    }
-    return '';
-}
-
-function getMaintenanceHomeUrl()
-{
-    $env = getEnvConfig();
-    if (!empty($env['maintenance']['home_url'])) {
-        return (string)$env['maintenance']['home_url'];
-    }
-    if (!empty($env['system']['base_url']) && !empty($env['maintenance']['allowed_session'])) {
-        return rtrim((string)$env['system']['base_url'], '/') . '/?session=' . $env['maintenance']['allowed_session'];
-    }
-    return './';
+    return './dev/maintenance.html';
 }
 
 function isSuperAdmin()
