@@ -156,6 +156,15 @@ try {
     $db->exec("CREATE INDEX IF NOT EXISTS idx_login_events_user_date_seq ON login_events(username, date_key, seq)");
     $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_login_events_unique_login ON login_events(username, date_key, login_time)");
     $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_login_events_unique_logout ON login_events(username, date_key, logout_time)");
+
+    $db->exec("CREATE TABLE IF NOT EXISTS vip_actions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT,
+        date_key TEXT,
+        created_at DATETIME
+      )");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_vip_actions_date ON vip_actions(date_key)");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_vip_actions_user_date ON vip_actions(username, date_key)");
     $requiredCols = [
       'ip_address' => 'TEXT',
       'mac_address' => 'TEXT',
