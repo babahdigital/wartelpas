@@ -746,6 +746,14 @@ foreach($all_users as $u) {
       $profile_kind_final = detect_profile_kind_from_comment($comment);
     }
 
+    if (($u['profile'] ?? '') === '' || strtolower((string)($u['profile'] ?? '')) === 'default') {
+      if ($profile_kind_final !== 'other') {
+        $u['profile'] = $profile_kind_final . ' Menit';
+      } else {
+        $u['profile'] = 'Lainnya';
+      }
+    }
+
     $profile_kind = $profile_kind_final;
     $profile_kind_filter = $profile_kind_final;
 

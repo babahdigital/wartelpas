@@ -348,6 +348,9 @@
                           $suffix = in_array($status_upper, ['RUSAK', 'RETUR'], true) ? ' Menit (Hist)' : ' Menit';
                           $display_profile = $u['profile_kind'] . $suffix;
                         }
+                        if ($display_profile === '' || strtolower($display_profile) === 'default') {
+                          $display_profile = 'Lainnya';
+                        }
                       ?>
                       <span class="badge badge-dark border border-secondary p-1"><?= htmlspecialchars($display_profile) ?></span>
                     </td>

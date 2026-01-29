@@ -551,7 +551,7 @@ if ($action === 'logs') {
             $done = true;
             $forced_done = true;
             $status = 'done';
-            $warn = 'SETTLE: Selesai dipaksa (log sukses tidak ditemukan).';
+            $warn = 'SETTLE: Log lengkap belum tersedia. Proses dianggap selesai.';
             append_settlement_log($logFile, 'system,warning', $warn);
             $logs[] = [
                 'time' => date('H:i:s'),
@@ -593,10 +593,10 @@ if ($action === 'logs') {
 
     $info_message = '';
     if ($elapsed > 120 && !$done && !$fail) {
-        $info_message = 'Proses settlement berjalan. Jika lama, cek log MikroTik.';
+        $info_message = 'Mohon tunggu, log settlement sedang disiapkan.';
     }
     if ($forced_done) {
-        $info_message = $info_message !== '' ? ($info_message . ' Status dipaksa selesai.') : 'Status dipaksa selesai.';
+        $info_message = $info_message !== '' ? ($info_message . ' Status disetel selesai agar proses dapat dilanjutkan.') : 'Status disetel selesai agar proses dapat dilanjutkan.';
     }
     if ($log_hint !== '') {
         $info_message = $info_message !== '' ? ($info_message . ' ' . $log_hint) : $log_hint;
