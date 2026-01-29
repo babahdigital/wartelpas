@@ -165,6 +165,7 @@ try {
     )");
     try { $db->exec("ALTER TABLE settlement_log ADD COLUMN completed_at DATETIME"); } catch (Exception $e) {}
     try { $db->exec("ALTER TABLE settlement_log ADD COLUMN auto_rusak_at DATETIME"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN auto_rusak INTEGER DEFAULT 0"); } catch (Exception $e) {}
 } catch (Exception $e) {
     append_settlement_debug($debugFile, 'db_error=' . $e->getMessage());
     echo json_encode(['ok' => false, 'message' => 'DB error.']);
