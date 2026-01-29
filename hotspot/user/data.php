@@ -552,6 +552,18 @@ foreach($all_users as $u) {
 
     $is_ready_now = ($is_ready_current && !$is_vip_tag);
 
+    if ($req_status == 'ready' && $is_ready_now) {
+      $status = 'READY';
+    }
+
+    if ($req_status === 'vip' && ($vip_tag_comment || $vip_tag_hist)) {
+      $logDir = __DIR__ . '/../../logs';
+      if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
+      $logFile = $logDir . '/vip_trace.log';
+      $logLine = date('Y-m-d H:i:s') . " | {$name} | active=" . ($is_active ? '1' : '0') . " disabled=" . ($disabled === 'true' ? '1' : '0') . " bytes={$bytes} uptime={$uptime} | vip_tag=" . ($is_vip_tag ? '1' : '0') . " status={$status} | comment=" . str_replace("\n", ' ', $comment) . "\n";
+      @file_put_contents($logFile, $logLine, FILE_APPEND);
+    }
+
     // Simpan waktu login/logout dan status ke DB (back-calculation)
     $now = date('Y-m-d H:i:s');
     $login_time_real = $hist['login_time_real'] ?? null;
