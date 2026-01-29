@@ -1454,11 +1454,26 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             }
           }
 
+          if ($uid == '' && !$action_blocked) {
+            $action_blocked = true;
+            $action_error = 'Gagal: UID user tidak ditemukan di router.';
+          }
           if ($uid != '' && !$action_blocked) {
             $API->write('/ip/hotspot/user/set', false);
             $API->write('=.id='.$uid, false);
             $API->write('=comment='.$new_comment);
             $API->read();
+
+            $verify = $api_print('/ip/hotspot/user/print', [
+              '?.id' => $uid,
+              '.proplist' => 'comment'
+            ]);
+            $verify_comment = $verify[0]['comment'] ?? $new_comment;
+            if ($act === 'vip' && !is_vip_comment($verify_comment)) {
+              $action_blocked = true;
+              $action_error = 'Gagal: komentar VIP tidak tersimpan di router.';
+            }
+
             if ($db && $name != '') {
               $save_data = [
                 'raw' => $new_comment,
