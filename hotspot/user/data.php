@@ -530,8 +530,9 @@ foreach($all_users as $u) {
       elseif ($is_used) $status = 'TERPAKAI';
 
       $is_vip_tag = is_vip_comment($comment) || ($hist && is_vip_comment($hist['raw_comment'] ?? ''));
-      $is_ready_current = (!$is_active && !$is_rusak && !$is_retur && $disabled !== 'true' && $bytes <= 50 && ($uptime == '0s' || $uptime == ''));
-      if ($is_vip_tag && $is_ready_current) {
+      $vip_eligible = (!$is_active && !$is_rusak && !$is_retur && $disabled !== 'true');
+      $is_ready_current = ($vip_eligible && $bytes <= 50 && ($uptime == '0s' || $uptime == ''));
+      if ($is_vip_tag && $vip_eligible) {
         $status = 'VIP';
       }
 
