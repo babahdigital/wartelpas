@@ -900,13 +900,52 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
     }
 
     function runRestoreAjax(){
-        if (!confirm('Restore backup terbaru? Data saat ini akan tertimpa.')) return;
+        if (document.getElementById('restore-confirm-modal')) {
+            openRestoreModal();
+            return;
+        }
         var btn = document.getElementById('db-restore');
         if (!btn) return;
         btn.style.pointerEvents = 'none';
         btn.style.opacity = '0.6';
         notifyLocal('Proses restore...', 'info', true);
-        fetch('./tools/restore_db.php?ajax=1&key=' + encodeURIComponent(window.__backupKey || ''), {
+        fetch('./tools/restore_db.php?ajax=1&nolimit=1&key=' + encodeURIComponent(window.__backupKey || ''), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(resp){ return resp.json(); })
+        .then(function(data){
+            if (data && data.ok) {
+                notifyLocal('Restore sukses: ' + (data.file || '-') + ' <br> Sumber: ' + (data.source || '-'), 'success', false);
+                updateDbStatus();
+            } else {
+                notifyLocal('Restore gagal: ' + ((data && data.message) ? data.message : 'Unknown'), 'error', false);
+            }
+        })
+        .catch(function(){
+            notifyLocal('Restore gagal: koneksi.', 'error', false);
+        })
+        .finally(function(){
+            btn.style.pointerEvents = 'auto';
+            btn.style.opacity = '1';
+        });
+    }
+
+    function openRestoreModal(){
+        var modal = document.getElementById('restore-confirm-modal');
+        if (modal) modal.style.display = 'flex';
+    }
+    function closeRestoreModal(){
+        var modal = document.getElementById('restore-confirm-modal');
+        if (modal) modal.style.display = 'none';
+    }
+    function confirmRestoreModal(){
+        closeRestoreModal();
+        var btn = document.getElementById('db-restore');
+        if (!btn) return;
+        btn.style.pointerEvents = 'none';
+        btn.style.opacity = '0.6';
+        notifyLocal('Proses restore...', 'info', true);
+        fetch('./tools/restore_db.php?ajax=1&nolimit=1&key=' + encodeURIComponent(window.__backupKey || ''), {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(function(resp){ return resp.json(); })
@@ -941,6 +980,27 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         <button id="ajax-overlay-close" type="button" class="overlay-btn" onclick="hideOverlayNotice()">
             Tutup
         </button>
+    </div>
+</div>
+
+<div id="restore-confirm-modal" class="modal-backdrop" onclick="if(event.target===this){closeRestoreModal();}" style="display:none;">
+    <div class="modal-card" style="max-width:420px;">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fa fa-database" style="color:#ff9800; margin-right:8px;"></i> Konfirmasi Restore</div>
+            <button type="button" class="modal-close" onclick="closeRestoreModal()">&times;</button>
+        </div>
+        <div class="modal-body" style="padding:16px;">
+            <div class="modal-info-banner" style="display:flex; gap:10px; align-items:flex-start;">
+                <div class="modal-info-icon"><i class="fa fa-exclamation-triangle"></i></div>
+                <div class="modal-info-text">
+                    Restore akan menimpa database saat ini. Lanjutkan?
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" style="display:flex; gap:8px; justify-content:flex-end; padding:12px 16px;">
+            <button type="button" class="btn-print btn-default-dark" onclick="closeRestoreModal()">Batal</button>
+            <button type="button" class="btn-print" style="background:#ff9800;color:#fff;" onclick="confirmRestoreModal()">Restore</button>
+        </div>
     </div>
 </div>
 
