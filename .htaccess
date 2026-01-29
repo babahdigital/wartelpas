@@ -155,6 +155,11 @@ Require all denied
     Require all granted
 </If>
 
+# Cleanup deleted users endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/cleanup_deleted_users\.php$#">
+    Require all granted
+</If>
+
 # Clear block endpoint (protected)
 <If "%{REQUEST_URI} =~ m#^/tools/clear_block\.php$#">
     Require all granted
