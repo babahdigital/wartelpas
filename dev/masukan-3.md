@@ -87,7 +87,7 @@ Setiap kali script Mikrotik mencetak log (misal `log info "SETTLE:..."`), tambah
 ```
 
 **Kenapa ini penting?**
-Agar file `settlement_xxxxx.log` di server terisi secara *real-time*. Jika file ini terisi, `settlement_manual.php` tidak perlu lagi melakukan login ulang ke Router (yang berat) untuk mengambil log, dan user bisa melihat progress bar berjalan mulus tanpa "Selesai Dipaksa".
+Agar file `settlement_xxxxx.log` di server terisi secara *real-time*. Jika file ini terisi, `settlement_manual.php` tidak perlu lagi melakukan login ulang ke Router (yang berat) untuk mengambil log, dan user bisa melihat progress bar berjalan mulus tanpa pesan yang membingungkan.
 
 #### Masalah 3: Timezone & Timestamp
 
@@ -101,15 +101,15 @@ Halo Mas Abdullah. Berdasarkan log dan kode yang Anda unggah, berikut adalah pes
 
 ### 1. Pesan Status yang Lebih Manusiawi (User Friendly)
 
-Pesan-pesan teknis seperti `SETTLE: Selesai dipaksa` atau `Log router dipakai...` seringkali membuat pengguna bingung. Berikut adalah draft kalimat pengganti yang lebih tenang dan jelas:
+Pesan-pesan teknis seperti `SETTLE: Log lengkap belum tersedia...` atau `Log diambil langsung dari router...` seringkali membuat pengguna bingung. Berikut adalah draft kalimat pengganti yang lebih tenang dan jelas:
 
 **Saat Proses Berjalan:**
 
-> "Sistem sedang menghubungi Router untuk memulai proses 'Cuci Gudang'. Mohon tunggu sebentar..."
+> "Mohon tunggu, sistem sedang memulai proses cuci gudang."
 
-**Saat Terjadi 'Forced Done' (Selesai Dipaksa):**
+**Saat Log Belum Lengkap (Status Diselesaikan):**
 
-> "Router sudah menerima perintah, namun tidak mengirimkan laporan balik tepat waktu. Sistem akan mengambil alih pengecekan secara manual untuk memastikan semuanya aman."
+> "Laporan lengkap belum diterima tepat waktu. Sistem menutup proses secara aman agar laporan tetap bisa dilanjutkan."
 
 **Saat Auto Rusak Berjalan:**
 
@@ -127,7 +127,7 @@ Berdasarkan bedah kode `settlement_manual.php` dan `settlement_log_ingest.php`, 
 
 #### A. Masalah Utama: "Silent Router" (Komunikasi Satu Arah)
 
-Pada log tertulis: `SETTLE: Selesai dipaksa (log sukses tidak ditemukan)` dan `Log router dipakai karena file lokal minim`.
+Pada log tertulis: `SETTLE: Log lengkap belum tersedia. Proses dianggap selesai demi kelancaran laporan.` dan `Log diambil langsung dari router agar informasi tetap lengkap.`
 
 **Analisa:**
 Sistem PHP Anda menggunakan mekanisme dua jalur:
@@ -135,7 +135,7 @@ Sistem PHP Anda menggunakan mekanisme dua jalur:
 1. **PHP ke Router:** PHP memerintahkan Router menjalankan script `CuciGudangManual`. (Ini **Berhasil**).
 2. **Router ke PHP:** Seharusnya, script di dalam Mikrotik mengirim laporan balik via `/tool fetch` ke `settlement_log_ingest.php`. (Ini **Gagal/Tidak Terjadi**).
 
-Karena `settlement_log_ingest.php` tidak menerima data dari router, file log lokal tetap kosong. Akibatnya, logika pada `settlement_manual.php` (baris 530-550) menganggap proses macet (stuck) setelah 120 detik, lalu memaksa status menjadi `done`.
+Karena `settlement_log_ingest.php` tidak menerima data dari router, file log lokal tetap kosong. Akibatnya, logika pada `settlement_manual.php` (baris 530-550) menutup proses secara aman setelah 120 detik agar laporan tetap bisa dilanjutkan.
 
 #### B. Fitur Backup Berjalan Baik
 
