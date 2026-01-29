@@ -117,11 +117,17 @@ try {
         if ($profile_key !== '' && preg_match('/^\d+$/', $profile_key)) {
             $profile_key = $profile_key . 'menit';
         }
+        if ($profile_key === '') {
+            $profile_key = $price10 > 0 ? '10menit' : 'other';
+        }
 
         $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
         if ($price <= 0) $price = (int)($r['sprice_snapshot'] ?? 0);
         if ($price <= 0 && $profile_key !== '') {
             $price = (int)resolve_price_from_profile($profile_key);
+        }
+        if ($price <= 0 && $profile_key === '10menit') {
+            $price = $price10;
         }
 
         $uptime = trim((string)($lh['last_uptime'] ?? ''));
