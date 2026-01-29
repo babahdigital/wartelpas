@@ -88,7 +88,7 @@ Require all denied
 # B. WHITELIST: AKSES PUBLIK (Login & Assets)
 # Izinkan file login dan folder assets (css, js, fonts, img)
 # Agar tampilan login tidak rusak saat diakses publik (jika diinginkan)
-<FilesMatch "^(index\.php|admin\.php|login\.php|cekip\.php)$">
+<FilesMatch "^(index\.php|admin\.php|login\.php|cekip\.php|maintenance\.html)$">
     Require all granted
 </FilesMatch>
 
