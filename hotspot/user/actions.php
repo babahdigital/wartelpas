@@ -151,6 +151,15 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $uid = $uget[0]['.id'];
       }
     }
+    if ($uid == '' && $name != '' && in_array($act, ['invalid','retur','rollback','delete','delete_user_full','disable','enable','vip','unvip'], true)) {
+      $uget = $api_print('/ip/hotspot/user/print', [
+        '?name' => $name,
+        '.proplist' => '.id'
+      ]);
+      if (isset($uget[0]['.id'])) {
+        $uid = $uget[0]['.id'];
+      }
+    }
 
     $urow = [];
     $arow = [];
@@ -399,6 +408,11 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $action_blocked = true;
         $action_error = 'Gagal: user sedang online.';
       }
+    }
+
+    if (!$action_blocked && in_array($act, ['vip','unvip'], true) && $name != '' && $uid == '') {
+      $action_blocked = true;
+      $action_error = 'Gagal: user tidak ditemukan di router.';
     }
 
     if ($action_blocked) {
@@ -1395,8 +1409,15 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $has_vip = is_vip_comment($comment_raw) || ($hist_vip && is_vip_comment($hist_vip['raw_comment'] ?? ''));
 
         if ($act === 'vip' && !$is_ready_now) {
+          $reasons = [];
+          if ($is_active) $reasons[] = 'masih online';
+          if ($disabled === 'true') $reasons[] = 'disabled';
+          if ($bytes > 50) $reasons[] = 'bytes > 50';
+          if ($uptime !== '' && $uptime !== '0s') $reasons[] = 'uptime terisi';
+          if ($hist_used) $reasons[] = 'riwayat terpakai';
+          $reason_text = !empty($reasons) ? (' (' . implode(', ', $reasons) . ')') : '';
           $action_blocked = true;
-          $action_error = 'Gagal: VIP hanya untuk user READY (tidak online/terpakai).';
+          $action_error = 'Gagal: VIP hanya untuk user READY (tidak online/terpakai).' . $reason_text;
         } else {
           $new_comment = $comment_raw;
           if ($act === 'vip') {
