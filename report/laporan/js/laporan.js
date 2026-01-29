@@ -1077,6 +1077,8 @@ function updateAuditUserSummary(){
             unreportedPopup.textContent = 'Tidak dilaporkan: -';
         }
     }
+    var selCount = document.getElementById('auditUserSelectedCount');
+    if (selCount) selCount.textContent = String(count);
     var hidden = document.getElementById('auditUsernameHidden');
     if (hidden) hidden.value = auditSelectedUsers.join(', ');
 }

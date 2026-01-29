@@ -100,9 +100,15 @@ try {
     foreach ($user_latest as $uname => $r) {
         $lh = $login_map[$uname] ?? [];
         $comment = (string)($r['comment'] ?? '');
-        $lh_status = $lh['last_status'] ?? '';
+        $lh_status = strtolower(trim((string)($lh['last_status'] ?? '')));
         $status = resolve_status_from_sources($r['status'] ?? '', $r['is_invalid'] ?? 0, $r['is_retur'] ?? 0, $r['is_rusak'] ?? 0, $comment, $lh_status);
+        if ($lh_status !== '' && $lh_status !== 'normal') {
+            $status = $lh_status;
+        }
         if (in_array($status, ['rusak', 'invalid'], true)) continue;
+        if (!in_array($status, ['terpakai', 'retur', 'online', 'normal'], true)) {
+            $status = 'terpakai';
+        }
 
         $profile_src = (string)($r['profile_snapshot'] ?? $r['profile'] ?? $r['validity'] ?? '');
         if ($profile_src === '') $profile_src = (string)($lh['validity'] ?? '');
