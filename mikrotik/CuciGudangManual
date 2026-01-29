@@ -126,7 +126,7 @@
 # LOGIKA UTAMA CLEANUP
 # ==========================================
 :do {
-    $logSettle "info" "SETTLE: Cuci gudang dimulai. Mohon tunggu.";
+    $logSettle "info" "SETTLE: Settlement dimulai. Mohon tunggu.";
 
     :global syncStatsOk;
     :global syncSalesOk;
@@ -270,7 +270,7 @@
     # Buka Kunci
     :set isCleaning false;
     :set cleaningSince 0;
-    $logSettle "info" "SETTLE: SUKSES: Cuci Gudang Selesai.";
+    $logSettle "info" "SETTLE: SUKSES: Settlement Selesai.";
 
 } on-error={
     :global isCleaning;
