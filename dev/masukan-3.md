@@ -154,7 +154,7 @@ Fungsi `apply_auto_rusak_settlement` (baris 284) berjalan efektif.
 
 ### 3. Rekomendasi Perbaikan Script
 
-Agar error "Selesai dipaksa" tidak muncul lagi dan alur lebih mulus, lakukan perbaikan berikut:
+Agar pesan "log belum lengkap" tidak sering muncul dan alur lebih mulus, lakukan perbaikan berikut:
 
 **1. Periksa Script di Sisi Mikrotik (`CuciGudangManual`)**
 Masalah kemungkinan besar bukan di PHP, tapi di script Mikrotik. Pastikan di akhir script Mikrotik tersebut ada perintah kirim log balik.
