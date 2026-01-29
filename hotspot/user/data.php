@@ -522,19 +522,20 @@ foreach($all_users as $u) {
 
     $is_vip_tag = is_vip_comment($comment) || ($hist && is_vip_comment($hist['raw_comment'] ?? ''));
     if ($status === 'READY' && $is_vip_tag) {
-      $status = 'VIP';
-    }
-
-    $is_ready_now = (!$is_active && !$is_rusak && !$is_retur && $disabled !== 'true' && $bytes <= 50 && ($uptime == '0s' || $uptime == '') && !$is_vip_tag);
-    if ($req_status == 'ready' && $is_ready_now) {
       $status = 'READY';
-    }
+      if ($is_active) $status = 'ONLINE';
+      elseif ($is_retur) $status = 'RETUR';
+      elseif ($is_rusak) $status = 'RUSAK';
+      elseif ($disabled == 'true') $status = 'RUSAK';
+      elseif ($is_used) $status = 'TERPAKAI';
 
-    // Pastikan data usage tampil saat RUSAK
-    if ($status === 'RUSAK' && $hist) {
-      if ($bytes == 0 && (int)($hist['last_bytes'] ?? 0) > 0) {
-        $bytes = (int)$hist['last_bytes'];
+      $is_vip_tag = is_vip_comment($comment) || ($hist && is_vip_comment($hist['raw_comment'] ?? ''));
+      $is_ready_current = (!$is_active && !$is_rusak && !$is_retur && $disabled !== 'true' && $bytes <= 50 && ($uptime == '0s' || $uptime == ''));
+      if ($is_vip_tag && $is_ready_current) {
+        $status = 'VIP';
       }
+
+      $is_ready_now = ($is_ready_current && !$is_vip_tag);
       if (($uptime == '0s' || $uptime == '') && !empty($hist['last_uptime'])) {
         $uptime = $hist['last_uptime'];
       }
