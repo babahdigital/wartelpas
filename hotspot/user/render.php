@@ -119,6 +119,7 @@
               <select name="status" class="custom-select-solid mid-el" onchange="this.form.submit()" style="flex: 0 0 220px;">
                 <option value="all" <?=($req_status=='all'?'selected':'')?>>Status: Semua</option>
                 <option value="ready" <?=($req_status=='ready'?'selected':'')?>>🟢 Voucher Baru</option>
+                <option value="vip" <?=($req_status=='vip'?'selected':'')?>>🟡 Pengelola (VIP)</option>
                 <option value="online" <?=($req_status=='online'?'selected':'')?>>🔵 Sedang Online</option>
                 <option value="used" <?=($req_status=='used'?'selected':'')?>>⚪ Sudah Terpakai</option>
                 <option value="rusak" <?=($req_status=='rusak'?'selected':'')?>>🟠 Rusak / Error</option>
@@ -168,7 +169,7 @@
             </span>
           </div>
           <?php
-            $status_labels = ['used' => 'Terpakai', 'retur' => 'Retur', 'rusak' => 'Rusak', 'ready' => 'Ready'];
+            $status_labels = ['used' => 'Terpakai', 'retur' => 'Retur', 'rusak' => 'Rusak', 'ready' => 'Ready', 'vip' => 'Pengelola'];
             $can_delete_status = in_array($req_status, array_keys($status_labels)) && $req_show === 'semua' && empty($filter_date);
             $status_label = $status_labels[$req_status] ?? '';
             $can_print_block = ($req_comm != '' && $req_status === 'ready');
@@ -369,17 +370,19 @@
                     </td>
                     <td class="text-center">
                       <?php if($u['status'] === 'ONLINE'): ?><span class="status-badge st-online">ONLINE</span>
-                      <?php elseif($u['status'] === 'RUSAK'): ?><span class="status-badge st-rusak">RUSAK</span>
-                      <?php elseif($u['status'] === 'INVALID'): ?><span class="status-badge st-invalid">INVALID</span>
-                      <?php elseif($u['status'] === 'RETUR'): ?><span class="status-badge st-retur">RETUR</span>
-                      <?php elseif($u['status'] === 'TERPAKAI'): ?><span class="status-badge st-used">TERPAKAI</span>
-                      <?php else: ?><span class="status-badge st-ready">READY</span>
-                      <?php endif; ?>
+                        <?php elseif($u['status'] === 'RUSAK'): ?><span class="status-badge st-rusak">RUSAK</span>
+                        <?php elseif($u['status'] === 'INVALID'): ?><span class="status-badge st-invalid">INVALID</span>
+                        <?php elseif($u['status'] === 'RETUR'): ?><span class="status-badge st-retur">RETUR</span>
+                        <?php elseif($u['status'] === 'TERPAKAI'): ?><span class="status-badge st-used">TERPAKAI</span>
+                        <?php elseif($u['status'] === 'VIP'): ?><span class="status-badge st-vip">PENGELOLA</span>
+                        <?php else: ?><span class="status-badge st-ready">READY</span>
+                        <?php endif; ?>
                     </td>
                     <td class="text-center">
                       <?php
                         $status_upper = strtoupper($u['status'] ?? '');
                         $is_ready = ($status_upper === 'READY');
+                        $is_vip = ($status_upper === 'VIP');
                         $is_online = ($status_upper === 'ONLINE');
                         $is_used = ($status_upper === 'TERPAKAI');
                         $is_rusak = ($status_upper === 'RUSAK');
@@ -390,7 +393,7 @@
                         $can_enable = false;
                         $can_mark_rusak = $is_used && !$is_online;
                       ?>
-                      <?php if (in_array($req_status, ['all','ready','used','rusak','online','retur'], true)): ?>
+                      <?php if (in_array($req_status, ['all','ready','vip','used','rusak','online','retur'], true)): ?>
                         <?php if ($is_used && in_array($req_status, ['all','used'], true)): ?>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.used.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
                         <?php elseif ($is_online && in_array($req_status, ['all','online'], true)): ?>
@@ -404,7 +407,7 @@
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
                         <?php endif; ?>
                       <?php endif; ?>
-                      <?php if($u['uid'] || $can_mark_rusak || $is_rusak): ?>
+                      <?php if($u['uid'] || $can_mark_rusak || $is_rusak || $is_vip): ?>
                         <?php
                           $keep_params = '&profile=' . urlencode($req_prof) .
                             '&comment=' . urlencode($req_comm) .
@@ -419,7 +422,10 @@
                           <?php if ($can_enable): ?>
                           <?php endif; ?>
                         <?php elseif ($is_ready): ?>
+                          <button type="button" class="btn-act btn-act-info" onclick="actionRequest('./?hotspot=users&action=vip&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Tetapkan <?= htmlspecialchars($u['name']) ?> sebagai Pengelola (VIP)?')" title="Jadikan Pengelola"><i class="fa fa-star"></i></button>
                           <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=disable&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Disable Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Disable"><i class="fa fa-ban"></i></button>
+                        <?php elseif ($is_vip): ?>
+                          <button type="button" class="btn-act btn-act-warning" onclick="actionRequest('./?hotspot=users&action=unvip&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Keluarkan <?= htmlspecialchars($u['name']) ?> dari Pengelola (VIP)?')" title="Batalkan Pengelola"><i class="fa fa-star-o"></i></button>
                         <?php elseif ($can_mark_rusak): ?>
                           <button type="button" class="btn-act btn-act-invalid" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'], ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'], ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'], ENT_QUOTES) ?>" data-login="<?= htmlspecialchars($u['login_time'], ENT_QUOTES) ?>" data-logout="<?= htmlspecialchars($u['logout_time'], ENT_QUOTES) ?>" data-bytes="<?= (int)$u['bytes'] ?>" data-uptime="<?= htmlspecialchars($u['uptime'], ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'], ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" onclick="actionRequestRusak(this,'./?hotspot=users&action=invalid&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','SET RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rusak"><i class="fa fa-ban"></i></button>
                         <?php endif; ?>
