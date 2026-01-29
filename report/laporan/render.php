@@ -384,7 +384,7 @@
             <?php endif; ?>
             <button class="btn-print" type="button" id="btn-settlement" onclick="manualSettlement()" <?= (!empty($settled_today) ? 'disabled style="opacity:.6;cursor:not-allowed;"' : '') ?>>Settlement</button>
             <?php if (!empty($settled_today)): ?>
-                <button class="btn-print" type="button" id="btn-settlement-reset" onclick="openSettlementResetModal()" style="background:#ff9800;color:#fff; display:none;">Reset</button>
+                <button class="btn-print" type="button" id="btn-settlement-reset" onclick="openSettlementResetModal()" style="background:#ff9800;color:#fff;">Reset</button>
             <?php endif; ?>
         </div>
     </div>

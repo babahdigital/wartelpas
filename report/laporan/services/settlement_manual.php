@@ -28,6 +28,93 @@ function append_settlement_debug($file, $message) {
     @file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
 }
 
+function append_settlement_log($file, $topic, $message) {
+    $time = date('H:i:s');
+    $line = $time . "\t" . $topic . "\t" . $message . "\n";
+    @file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
+}
+
+function uptime_to_seconds_manual($uptime) {
+    if (empty($uptime) || $uptime === '0s') return 0;
+    $total = 0;
+    if (preg_match_all('/(\d+)(w|d|h|m|s)/i', $uptime, $m, PREG_SET_ORDER)) {
+        foreach ($m as $part) {
+            $val = (int)$part[1];
+            switch (strtolower($part[2])) {
+                case 'w': $total += $val * 7 * 24 * 3600; break;
+                case 'd': $total += $val * 24 * 3600; break;
+                case 'h': $total += $val * 3600; break;
+                case 'm': $total += $val * 60; break;
+                case 's': $total += $val; break;
+            }
+        }
+    }
+    return $total;
+}
+
+function detect_profile_minutes_manual($validity, $raw_comment) {
+    $src = strtolower(trim((string)$validity));
+    $cmt = strtolower(trim((string)$raw_comment));
+    $val = 0;
+    if (preg_match('/\b(\d{1,2})\s*(menit|m)\b/', $src, $m)) {
+        $val = (int)$m[1];
+    } elseif (preg_match('/\b(10|30)\b/', $src, $m)) {
+        $val = (int)$m[1];
+    } elseif (preg_match('/\b(10|30)\s*(menit|m)\b/', $cmt, $m)) {
+        $val = (int)$m[1];
+    }
+    if (!in_array($val, [10, 30], true)) return 0;
+    return $val;
+}
+
+function apply_auto_rusak_settlement($db, $date, $logFile) {
+    if (!$db || $date === '') return 0;
+    $bytes_threshold_full = 5 * 1024 * 1024;
+    $bytes_threshold_short = 3 * 1024 * 1024;
+    $short_uptime_limit = 5 * 60;
+    $dateClause = " AND (login_date = :d OR substr(first_login_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR substr(login_time_real,1,10) = :d OR substr(logout_time_real,1,10) = :d OR substr(updated_at,1,10) = :d)";
+    $params = [':d' => $date];
+    $rows = [];
+    try {
+        $stmt = $db->prepare("SELECT username, last_uptime, last_bytes, last_status, validity, raw_comment FROM login_history WHERE last_status NOT IN ('rusak','retur','invalid','online') AND last_uptime IS NOT NULL AND last_uptime != '' " . $dateClause);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        return 0;
+    }
+
+    $updated = 0;
+    foreach ($rows as $row) {
+        $uname = trim((string)($row['username'] ?? ''));
+        if ($uname === '') continue;
+        $profile_minutes = detect_profile_minutes_manual($row['validity'] ?? '', $row['raw_comment'] ?? '');
+        if ($profile_minutes <= 0) continue;
+        $uptime = (string)($row['last_uptime'] ?? '');
+        $uptime_sec = uptime_to_seconds_manual($uptime);
+        $bytes = (int)($row['last_bytes'] ?? 0);
+        $is_full_uptime = $uptime_sec >= ($profile_minutes * 60);
+        $is_short_use = ($uptime_sec > 0 && $uptime_sec <= $short_uptime_limit);
+        if (($is_full_uptime && $bytes < $bytes_threshold_full) || ($is_short_use && $bytes < $bytes_threshold_short)) {
+            try {
+                $stmtU = $db->prepare("UPDATE login_history SET last_status='rusak', updated_at=CURRENT_TIMESTAMP WHERE username = :u");
+                $stmtU->execute([':u' => $uname]);
+                $stmtS = $db->prepare("UPDATE sales_history SET status='rusak', is_rusak=1, is_retur=0, is_invalid=0 WHERE username = :u AND sale_date = :d");
+                $stmtS->execute([':u' => $uname, ':d' => $date]);
+                $stmtL = $db->prepare("UPDATE live_sales SET status='rusak', is_rusak=1, is_retur=0, is_invalid=0 WHERE username = :u AND sale_date = :d");
+                $stmtL->execute([':u' => $uname, ':d' => $date]);
+                $updated++;
+            } catch (Exception $e) {
+            }
+        }
+    }
+    if ($updated > 0) {
+        append_settlement_log($logFile, 'system,info', 'AUTO RUSAK: ' . $updated . ' user diperbarui (profil 10/30, bytes kecil).');
+    } else {
+        append_settlement_log($logFile, 'system,info', 'AUTO RUSAK: tidak ada user yang memenuhi kriteria.');
+    }
+    return $updated;
+}
+
 $root_dir = dirname(__DIR__, 3);
 $env = [];
 $envFile = $root_dir . '/include/env.php';
@@ -71,6 +158,7 @@ try {
         message TEXT
     )");
     try { $db->exec("ALTER TABLE settlement_log ADD COLUMN completed_at DATETIME"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE settlement_log ADD COLUMN auto_rusak_at DATETIME"); } catch (Exception $e) {}
 } catch (Exception $e) {
     append_settlement_debug($debugFile, 'db_error=' . $e->getMessage());
     echo json_encode(['ok' => false, 'message' => 'DB error.']);
@@ -295,6 +383,22 @@ if ($action === 'logs') {
         $status = 'done';
     } elseif ($fail) {
         $status = 'failed';
+    }
+
+    if ($status === 'done') {
+        try {
+            $stmtAR = $db->prepare("SELECT auto_rusak_at FROM settlement_log WHERE report_date = :d LIMIT 1");
+            $stmtAR->execute([':d' => $date]);
+            $autoRan = (string)($stmtAR->fetchColumn() ?: '');
+            if ($autoRan === '') {
+                $autoCount = apply_auto_rusak_settlement($db, $date, $logFile);
+                $stmtARU = $db->prepare("UPDATE settlement_log SET auto_rusak_at = CURRENT_TIMESTAMP, message = :m WHERE report_date = :d");
+                $stmtARU->execute([
+                    ':m' => 'AUTO RUSAK: ' . $autoCount . ' user',
+                    ':d' => $date
+                ]);
+            }
+        } catch (Exception $e) {}
     }
 
     if ($status !== 'running') {
