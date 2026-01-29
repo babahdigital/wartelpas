@@ -235,12 +235,19 @@ Require all denied
 
 # C. WHITELIST: TAMU VIP (Dashboard Full Akses)
 # IP VIP boleh akses file AJAX (dashboard/, hotspot/, dll)
-<RequireAny>
-    Require env TAMU_VIP
-    Require ip 10.0.0.6
-    Require ip 127.0.0.1
-    Require ip ::1
-</RequireAny>
+<If "%{REQUEST_URI} =~ m#^/(dashboard|hotspot|dhcp|ppp|status|traffic|voucher|report|tools|system|settings|process)/#">
+    <RequireAny>
+        Require env TAMU_VIP
+        Require ip 10.0.0.6
+        Require ip 127.0.0.1
+        Require ip ::1
+    </RequireAny>
+</If>
+
+# Allow maintenance alias path
+<If "%{REQUEST_URI} =~ m#^/maintenance$#">
+    Require all granted
+</If>
 
 # ====================================================
 # 6. PINTU KHUSUS MIKROTIK (SYNC)
