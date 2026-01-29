@@ -278,6 +278,31 @@ if ($action === 'logs') {
                 }
             }
         } else {
+            $debugLines = [];
+            if (is_file($debugFile)) {
+                $debugLines = @file($debugFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                if (is_array($debugLines) && count($debugLines) > 200) {
+                    $debugLines = array_slice($debugLines, -200);
+                }
+            }
+            if (!empty($debugLines)) {
+                foreach ($debugLines as $dl) {
+                    $parts = explode("\t", $dl, 2);
+                    $time = '';
+                    $msg = $dl;
+                    if (count($parts) === 2) {
+                        $time = trim($parts[0]);
+                        $msg = trim($parts[1]);
+                    }
+                    $logs[] = [
+                        'time' => $time,
+                        'topic' => 'system,debug',
+                        'type' => 'system',
+                        'message' => $msg
+                    ];
+                }
+            }
+            $rawLogs = [];
             $API = new RouterosAPI();
             $API->debug = false;
             $API->timeout = 5;
@@ -302,6 +327,14 @@ if ($action === 'logs') {
                 $rawLogs = [];
             }
             $API->disconnect();
+            } else {
+                $logs[] = [
+                    'time' => date('H:i:s'),
+                    'topic' => 'system,error',
+                    'type' => 'error',
+                    'message' => 'Gagal konek ke MikroTik untuk mengambil log.'
+                ];
+            }
             $rawLogs = is_array($rawLogs) ? array_slice($rawLogs, -1000) : [];
             if (is_array($rawLogs)) {
                 $seq = 0;
@@ -373,7 +406,6 @@ if ($action === 'logs') {
                         $fail = true;
                     }
                 }
-            }
             }
         }
     } catch (Exception $e) {
@@ -451,6 +483,7 @@ if ($action === 'start') {
         @file_put_contents($logFile, "");
         append_settlement_debug($debugFile, 'truncate_log=' . basename($logFile));
     }
+    append_settlement_log($logFile, 'system,info', 'SETTLE: START manual settlement.');
     try {
         $stmtI = $db->prepare("INSERT OR IGNORE INTO settlement_log (report_date, status, triggered_at, source, message) VALUES (:d, 'running', CURRENT_TIMESTAMP, 'manual', '')");
         $stmtI->execute([':d' => $date]);
@@ -495,6 +528,7 @@ if ($action === 'start') {
             }
             if (!is_array($scriptRows) || count($scriptRows) === 0) {
                 append_settlement_debug($debugFile, 'script_not_found=' . $script_name);
+                append_settlement_log($logFile, 'system,error', 'SETTLE: Script tidak ditemukan: ' . $script_name);
                 $API->disconnect();
                 echo json_encode(['ok' => false, 'message' => 'Script tidak ditemukan di MikroTik: ' . $script_name]);
                 exit;
@@ -502,16 +536,19 @@ if ($action === 'start') {
             $API->comm($cmd, $params);
             $API->disconnect();
             append_settlement_debug($debugFile, 'script_run=' . $script_name);
+            append_settlement_log($logFile, 'system,info', 'SETTLE: Script dijalankan: ' . $script_name);
         }
     } catch (Exception $e) {
         $errMsg = $e->getMessage();
         append_settlement_debug($debugFile, 'api_error=' . $errMsg);
+        append_settlement_log($logFile, 'system,error', 'SETTLE: API error ' . $errMsg);
     }
 
     if (!$connected) {
         if ($errMsg !== '') {
             append_settlement_debug($debugFile, 'connect_error=' . $errMsg);
         }
+        append_settlement_log($logFile, 'system,error', 'SETTLE: Gagal konek ke MikroTik.');
         echo json_encode(['ok' => false, 'message' => 'Gagal konek ke MikroTik.']);
         exit;
     }
