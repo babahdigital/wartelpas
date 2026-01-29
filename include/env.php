@@ -101,6 +101,9 @@ $env = [
         'qty_mode' => 'raw',
         'setoran_mode' => 'net'
     ],
+    'maintenance' => [
+        'enabled' => false
+    ],
     'rclone' => [
         'bin' => '/usr/bin/rclone',
         'remote' => 'Wartelpas:Wartelpas',

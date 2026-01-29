@@ -21,6 +21,41 @@ function ensureRole()
     }
 }
 
+function getEnvConfig()
+{
+    if (isset($GLOBALS['env_config']) && is_array($GLOBALS['env_config'])) {
+        return $GLOBALS['env_config'];
+    }
+
+    $env = [];
+    $envFile = __DIR__ . '/env.php';
+    if (file_exists($envFile)) {
+        require $envFile;
+    }
+    if (isset($env) && is_array($env)) {
+        $GLOBALS['env_config'] = $env;
+    } else {
+        $GLOBALS['env_config'] = [];
+    }
+
+    return $GLOBALS['env_config'];
+}
+
+function isMaintenanceEnabled()
+{
+    $env = getEnvConfig();
+    return !empty($env['maintenance']['enabled']);
+}
+
+function getMaintenanceUrl()
+{
+    $env = getEnvConfig();
+    if (!empty($env['maintenance']['redirect_url'])) {
+        return (string)$env['maintenance']['redirect_url'];
+    }
+    return './dev/maintenance.html';
+}
+
 function isSuperAdmin()
 {
     ensureRole();
