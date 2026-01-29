@@ -93,6 +93,10 @@ Require all denied
     Require all granted
 </FilesMatch>
 
+<If "%{REQUEST_URI} == '/'">
+    Require all granted
+</If>
+
 # DB check endpoint (protected by key)
 <If "%{REQUEST_URI} =~ m#^/tools/db_check\.php$#">
     Require all granted
