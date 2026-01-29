@@ -38,6 +38,12 @@ if (!isset($_SESSION["mikhmon"])) {
   include_once('../lib/formatbytesbites.php');
   $API = new RouterosAPI();
   $API->debug = false;
+	$API->timeout = 5;
+	$API->attempts = 1;
+	$api_connect = function() use ($API, $iphost, $userhost, $passwdhost) {
+		if ($API->connected) return true;
+		return $API->connect($iphost, $userhost, decrypt($passwdhost));
+	};
 
 	$idhr = $_GET['idhr'];
 	$idbl = $_GET['idbl'];
@@ -61,13 +67,17 @@ if (!isset($_SESSION["mikhmon"])) {
 		$fcomment = explode("!!",$prefix)[1];
 	}else{$fcomment = $fcomment;}
 
-	$gettimezone = $API->comm("/system/clock/print");
-	$timezone = $gettimezone[0]['time-zone-name'];
-	date_default_timezone_set($timezone);
+	if ($api_connect()) {
+		$gettimezone = $API->comm("/system/clock/print");
+		$timezone = $gettimezone[0]['time-zone-name'] ?? '';
+		if ($timezone !== '') {
+			date_default_timezone_set($timezone);
+		}
+	}
 
 	if (isset($remdata)) {
 		if (strlen($idhr) > "0") {
-			if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
+			if ($api_connect()) {
 				$API->write('/system/script/print', false);
 				$API->write('?source=' . $idhr . '', false);
 				$API->write('=.proplist=.id');
@@ -80,7 +90,7 @@ if (!isset($_SESSION["mikhmon"])) {
 				}
 			}
 		} elseif (strlen($idbl) > "0") {
-			if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
+			if ($api_connect()) {
 				$API->write('/system/script/print', false);
 				$API->write('?owner=' . $idbl . '', false);
 				$API->write('=.proplist=.id');
@@ -105,7 +115,7 @@ if (!isset($_SESSION["mikhmon"])) {
 		$fprefix = "";
 	}
 	if (strlen($idhr) > "0") {
-		if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
+		if ($api_connect()) {
 			$getData = $API->comm("/system/script/print", array(
 				"?source" => "$idhr",
 			));
@@ -115,7 +125,7 @@ if (!isset($_SESSION["mikhmon"])) {
 		$shf = "hidden";
 		$shd = "inline-block";
 	} elseif (strlen($idbl) > "0") {
-		if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
+		if ($api_connect()) {
 			$getData = $API->comm("/system/script/print", array(
 				"?owner" => "$idbl",
 			));
@@ -125,7 +135,7 @@ if (!isset($_SESSION["mikhmon"])) {
 		$shf = "hidden";
 		$shd = "inline-block";
 	} elseif ($idhr == "" || $idbl == "") {
-		if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
+		if ($api_connect()) {
 			$getData = $API->comm("/system/script/print", array(
 				"?comment" => "mikhmon",
 			));
@@ -135,7 +145,7 @@ if (!isset($_SESSION["mikhmon"])) {
 		$shf = "text";
 		$shd = "none";
 	} elseif (strlen($idbl) > "0" ) {
-		if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
+		if ($api_connect()) {
 			$getData = $API->comm("/system/script/print", array(
 				"?owner" => "$idbl",
 			));

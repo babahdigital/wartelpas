@@ -127,6 +127,9 @@ function generate_nested_table_user($items, $align = 'left') {
     foreach ($items as $i => $item) {
         $label = is_array($item) ? ($item['label'] ?? '-') : (string)$item;
         $status = is_array($item) ? normalize_status_value($item['status'] ?? '') : '';
+        if (in_array($status, ['online', 'terpakai', 'ready', 'normal'], true)) {
+            $status = 'normal';
+        }
         
         // Logika Warna:
         // Merah = Rusak
@@ -157,6 +160,9 @@ function generate_audit_cell($items, $key = 'label', $align = 'left') {
     foreach ($items as $i => $item) {
         $text = is_array($item) ? (string)($item[$key] ?? '-') : (string)$item;
         $status = normalize_status_value(is_array($item) ? ($item['status'] ?? '') : '');
+        if (in_array($status, ['online', 'terpakai', 'ready', 'normal'], true)) {
+            $status = 'normal';
+        }
         if ($status !== '' && !in_array($status, ['rusak', 'retur', 'invalid', 'normal'], true)) {
             $status = 'anomaly';
         }
@@ -688,7 +694,7 @@ foreach ($rows as $r) {
         $line_price = $price * $qty;
     }
 
-    if (in_array($status, ['rusak', 'retur', 'invalid'], true) && $username !== '') {
+    if (in_array($status, ['rusak', 'retur', 'invalid', 'normal', 'online', 'terpakai'], true) && $username !== '') {
         $kind = detect_profile_minutes($profile);
         $inc_key = $username . '|' . $kind . '|' . $status;
         if (!isset($system_incidents_by_block[$block])) $system_incidents_by_block[$block] = [];
@@ -1229,10 +1235,13 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             if ($u_status === 'rusak' && isset($retur_ref_map[$audit_block_key][$uname_key])) {
                                                 continue;
                                             }
-                                            if (!in_array($u_status, ['rusak', 'retur', 'invalid'], true)) {
+                                            if (in_array($u_status, ['online', 'terpakai', 'ready', 'normal'], true) || $u_status === '') {
+                                                $u_status = 'normal';
+                                            } elseif (!in_array($u_status, ['rusak', 'retur', 'invalid'], true)) {
                                                 $u_status = 'anomaly';
                                             }
                                             $is_unreported = ($u_status === 'anomaly');
+                                            $show_item = in_array($u_status, ['rusak', 'invalid', 'retur', 'anomaly'], true);
                                             $item = [
                                                 'label' => $uname,
                                                 'status' => $u_status,
@@ -1243,11 +1252,15 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                             $manual_users_map[$uname_key] = true;
 
                                             $profile_items[] = $item;
-                                            $profile_display_items[] = $item;
+                                            if ($show_item) {
+                                                $profile_display_items[] = $item;
+                                            }
                                             if (!isset($profile_items_by_key[$profile_key])) $profile_items_by_key[$profile_key] = [];
                                             if (!isset($profile_display_by_key[$profile_key])) $profile_display_by_key[$profile_key] = [];
                                             $profile_items_by_key[$profile_key][] = $item;
-                                            $profile_display_by_key[$profile_key][] = $item;
+                                            if ($show_item) {
+                                                $profile_display_by_key[$profile_key][] = $item;
+                                            }
                                             if (!isset($profile_qty_map[$profile_key])) $profile_qty_map[$profile_key] = 0;
                                             $profile_qty_map[$profile_key]++;
                                             if ($u_status === 'rusak') {
@@ -1302,6 +1315,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     if ($u_status === 'rusak' && isset($retur_ref_map[$audit_block_key][$uname_key])) {
                                         continue;
                                     }
+                                    if (in_array($u_status, ['online', 'terpakai', 'normal'], true) || $u_status === '') {
+                                        $u_status = 'anomaly';
+                                    }
                                     $profile_key = normalize_profile_key($inc['profile_key'] ?? ($inc['profile_kind'] ?? ($inc['profile'] ?? '')));
                                     if ($profile_key !== '' && preg_match('/^\d+$/', $profile_key)) {
                                         $profile_key = $profile_key . 'menit';
@@ -1311,6 +1327,7 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     $lb = format_bytes_short((int)($inc['last_bytes'] ?? 0));
                                     $price_val = (int)($inc['price'] ?? 0);
                                     $upt = $upt !== '' ? $upt : '-';
+                                    $show_item = in_array($u_status, ['rusak', 'invalid', 'retur', 'anomaly'], true);
                                     $item = [
                                         'label' => $uname,
                                         'status' => $u_status,
@@ -1319,11 +1336,15 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                     ];
 
                                     $profile_items[] = $item;
-                                    $profile_display_items[] = $item;
+                                    if ($show_item) {
+                                        $profile_display_items[] = $item;
+                                    }
                                     if (!isset($profile_items_by_key[$profile_key])) $profile_items_by_key[$profile_key] = [];
                                     if (!isset($profile_display_by_key[$profile_key])) $profile_display_by_key[$profile_key] = [];
                                     $profile_items_by_key[$profile_key][] = $item;
-                                    $profile_display_by_key[$profile_key][] = $item;
+                                    if ($show_item) {
+                                        $profile_display_by_key[$profile_key][] = $item;
+                                    }
                                     if (!isset($profile_qty_map[$profile_key])) $profile_qty_map[$profile_key] = 0;
                                     $profile_qty_map[$profile_key]++;
                                     if ($u_status === 'rusak') {

@@ -549,4 +549,4 @@
   window.openPrintPopup = openPrintPopup;
   window.openUnifiedPrintPopupWithCode = openUnifiedPrintPopupWithCode;
 </script>
-<script src="./hotspot/user/js/users.js"></script>
+<script src="./hotspot/user/js/user.min.js"></script>

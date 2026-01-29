@@ -26,9 +26,13 @@ if (!isset($_SESSION["mikhmon"])) {
 
     $API = new RouterosAPI();
     $API->debug = false;
+    $API->timeout = 5;
+    $API->attempts = 1;
 
     if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-        $getcookies = $API->comm("/ip/hotspot/cookie/print");
+        $getcookies = $API->comm("/ip/hotspot/cookie/print", array(
+            ".proplist" => ".id,user,mac-address,domain,expires-in,server"
+        ));
 
         $allowed_servers = array('wartel');
         $username_wartel_pattern = '/^[a-z0-9]{6}$/';
@@ -48,6 +52,8 @@ if (!isset($_SESSION["mikhmon"])) {
         $getcookies = $filtered_cookies;
         $TotalReg = count($getcookies);
         $countcookies = $TotalReg;
+
+        $API->disconnect();
     } else {
         $getcookies = array();
         $TotalReg = 0;

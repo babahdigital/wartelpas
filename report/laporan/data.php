@@ -517,6 +517,9 @@ if (isset($db) && $db instanceof PDO && isset($_POST['hp_submit'])) {
     $spam_units = (int)($_POST['spam_units'] ?? 0);
     $active_units = max(0, $total_units - $rusak_units - $spam_units);
     $notes = trim($_POST['notes'] ?? '');
+    if ($notes !== '') {
+        $notes = mb_substr($notes, 0, 60);
+    }
 
     $use_wartel = isset($_POST['unit_wartel']) ? 1 : 0;
     $use_kamtib = isset($_POST['unit_kamtib']) ? 1 : 0;
@@ -1073,6 +1076,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         $audit_user_list = implode(', ', $audit_users);
         $audit_qty = (int)($_POST['audit_qty'] ?? 0);
         $audit_setoran = (int)($_POST['audit_setoran'] ?? 0);
+        $audit_retur_total = (int)($_POST['audit_retur_total'] ?? 0);
+        if ($audit_retur_total < 0) $audit_retur_total = 0;
         $audit_setoran_manual = (int)($_POST['audit_setoran_manual'] ?? 0);
         $audit_qty_10 = (int)($_POST['audit_qty_10'] ?? 0);
         $audit_qty_30 = (int)($_POST['audit_qty_30'] ?? 0);
@@ -1100,11 +1105,17 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 $audit_setoran_auto += ($qty_val * $price_val);
             }
         }
+        if ($audit_retur_total > 0) {
+            $audit_setoran_auto += $audit_retur_total;
+        }
         if ($audit_setoran_manual !== 1 && $audit_setoran_auto > 0 && $audit_setoran !== $audit_setoran_auto) {
             $audit_setoran_manual = 1;
         }
         $audit_exp_amt = (int)($_POST['audit_expense_amt'] ?? 0);
         $audit_exp_desc = trim($_POST['audit_expense_desc'] ?? '');
+        if ($audit_exp_desc !== '') {
+            $audit_exp_desc = mb_substr($audit_exp_desc, 0, 60);
+        }
         $audit_note = '';
         $audit_status = 'OPEN';
 

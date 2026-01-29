@@ -21,12 +21,13 @@
     data-audit-user-url="<?= htmlspecialchars('report/laporan/services/audit_users.php', ENT_QUOTES); ?>"
     data-audit-locked="<?= $audit_locked_today ? '1' : '0'; ?>"
     data-audit-users="<?= htmlspecialchars(json_encode($audit_user_options ?? []), ENT_QUOTES); ?>"
-    data-audit-profiles="<?= htmlspecialchars(json_encode($audit_profiles ?? []), ENT_QUOTES); ?>">
+    data-audit-profiles="<?= htmlspecialchars(json_encode($audit_profiles ?? []), ENT_QUOTES); ?>"
+    data-profile-labels="<?= htmlspecialchars(json_encode($env['profiles']['labels'] ?? []), ENT_QUOTES); ?>">
 </div>
 <?php endif; ?>
 
 <?php if (!$is_ajax): ?>
-<div id="hpModal" class="modal-backdrop" onclick="if(event.target===this){closeHpModal();}">
+<div id="hpModal" class="modal-backdrop">
     <div class="modal-card">
         <div class="modal-header">
             <div class="modal-title"><i class="fa fa-mobile" style="color:#4ea8ff; margin-right:8px;"></i> Input Handphone Harian</div>
@@ -105,7 +106,8 @@
                 
                 <div>
                     <label class="label-icon"><i class="fa fa-pencil"></i> Catatan (Opsional)</label>
-                    <input class="form-input" name="notes" placeholder="Keterangan tambahan...">
+                    <input class="form-input" id="hpNotesInput" name="notes" placeholder="Keterangan tambahan..." maxlength="60">
+                    <div class="modal-note">Sisa <span class="char-remaining" data-max="60" data-target="hpNotesInput">60</span> karakter.</div>
                 </div>
             </div>
 
@@ -117,7 +119,7 @@
     </div>
 </div>
 
-<div id="auditModal" class="modal-backdrop" onclick="if(event.target===this){closeAuditModal();}">
+<div id="auditModal" class="modal-backdrop">
     <div class="modal-card">
         <div class="modal-header">
             <div class="modal-title"><i class="fa fa-check-square-o" style="color:#f39c12; margin-right:8px;"></i> Audit Manual Rekap</div>
@@ -133,6 +135,7 @@
             <input type="hidden" name="ajax" value="1">
             <input type="hidden" name="audit_submit" value="1">
             <input type="hidden" name="audit_date" value="<?= htmlspecialchars($filter_date); ?>">
+            <input type="hidden" name="audit_retur_total" id="auditReturTotal" value="0">
             
             <div class="modal-body">
                 <?php if ($audit_locked_today): ?>
@@ -141,14 +144,39 @@
                     </div>
                 <?php endif; ?>
 
-                <div class="form-grid-2">
+                <div class="form-grid-2 form-grid-1">
                     <div>
                         <label class="label-icon">Blok</label>
                         <select class="form-input" name="audit_blok" required>
-                            <option value="" disabled selected>Pilih Blok</option>
-                            <?php foreach ($blok_letters as $b): ?>
-                                <option value="BLOK-<?= $b ?>">BLOK-<?= $b ?></option>
-                            <?php endforeach; ?>
+                            <?php
+                                $audited_blocks = [];
+                                if (!empty($audit_rows) && $req_show === 'harian') {
+                                    foreach ($audit_rows as $ar) {
+                                        $bname = normalize_block_name($ar['blok_name'] ?? '');
+                                        if ($bname !== '' && $bname !== 'BLOK-LAIN') $audited_blocks[$bname] = true;
+                                    }
+                                }
+                                $candidate_blocks = [];
+                                if (!empty($by_block)) {
+                                    foreach (array_keys($by_block) as $bname) {
+                                        $blk = normalize_block_name($bname);
+                                        if ($blk !== '' && $blk !== 'BLOK-LAIN') $candidate_blocks[$blk] = true;
+                                    }
+                                }
+                                $available_blocks = [];
+                                foreach (array_keys($candidate_blocks) as $blk) {
+                                    if (!isset($audited_blocks[$blk])) $available_blocks[] = $blk;
+                                }
+                                natcasesort($available_blocks);
+                            ?>
+                            <?php if (empty($available_blocks)): ?>
+                                <option value="" disabled selected>Tidak ada blok tersedia</option>
+                            <?php else: ?>
+                                <option value="" disabled selected>Pilih Blok</option>
+                                <?php foreach ($available_blocks as $blk): ?>
+                                    <option value="<?= htmlspecialchars($blk); ?>"><?= htmlspecialchars($blk); ?></option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </select>
                     </div>
                 </div>
@@ -157,7 +185,7 @@
                     <label class="label-icon"><i class="fa fa-shield"></i> Verifikasi User (Wajib)</label>
                     <input type="hidden" name="audit_username" id="auditUsernameHidden">
                     <button type="button" class="audit-user-trigger" id="auditUserTrigger" onclick="openAuditUserModal()">
-                        <span id="auditUserLabel"><i class="fa fa-list-ul"></i> Pilih user terpakai & retur...</span>
+                        <span id="auditUserLabel"><i class="fa fa-list-ul"></i> Pilih user terpakai...</span>
                         <i class="fa fa-chevron-right" style="font-size:10px; opacity:0.7;"></i>
                     </button>
                     <div class="audit-user-status">
@@ -222,14 +250,15 @@
                         </div>
                         <div>
                             <label>Keterangan Pengeluaran</label>
-                            <input class="form-input" type="text" name="audit_expense_desc" placeholder="Contoh: Beli Kertas Thermal">
+                            <input class="form-input" type="text" id="auditExpenseDesc" name="audit_expense_desc" placeholder="Contoh: Beli Kertas Thermal" maxlength="60">
+                            <div class="modal-note">Sisa <span class="char-remaining" data-max="60" data-target="auditExpenseDesc">60</span> karakter.</div>
                         </div>
                     </div>
                 </div>
 
-                <div class="form-group-box" style="margin-top:12px; border-color: rgba(46, 204, 113, 0.35);">
+                <div class="form-group-box" id="setoran-bersih-box" style="margin-top:12px;">
                     <div class="form-group-title" style="color:#2ecc71;"><i class="fa fa-check"></i> Setoran Bersih (Hasil Akhir)</div>
-                    <div class="form-grid-2">
+                    <div class="form-grid-2 form-grid-1">
                         <div>
                             <label class="label-icon">Setoran Bersih (Setelah Pengeluaran)</label>
                             <input class="form-input" type="number" id="audit_setoran_net" value="0" readonly tabindex="-1">
@@ -248,11 +277,17 @@
     </div>
 </div>
 
-<div id="auditUserOverlay" class="audit-user-overlay" onclick="if(event.target===this){closeAuditUserModal();}">
+<div id="auditUserOverlay" class="audit-user-overlay">
     <div class="audit-user-modal">
         <div class="audit-user-header">
             <div class="audit-user-title"><i class="fa fa-list-ul"></i> Pilih User Audit</div>
             <button type="button" class="modal-close" onclick="closeAuditUserModal()">&times;</button>
+        </div>
+        <div style="padding:10px 14px 0;">
+            <div style="display:flex; gap:8px; align-items:center; margin-bottom: 20px;">
+                <input id="auditUserSearch" type="text" class="form-input" placeholder="Cari user (pisah dengan koma)..." style="flex:1;">
+                <button type="button" id="auditUserSearchClear" class="btn-print btn-default-dark" title="Bersihkan">&times;</button>
+            </div>
         </div>
         <div class="audit-user-tabs" id="auditUserTabs"></div>
         <div class="audit-user-list" id="auditUserList"></div>
@@ -621,7 +656,18 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                               <td class="text-center"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['active_units'] ?? 0) : '-' ?></td>
                               <td class="text-center"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['rusak_units'] ?? 0) : '-' ?></td>
                               <td class="text-center"><?= ($r['unit_type'] ?? '') === 'TOTAL' ? (int)($r['spam_units'] ?? 0) : '-' ?></td>
-                            <td class="hp-notes"><small title="<?= htmlspecialchars($r['notes'] ?? '') ?>"><?= htmlspecialchars($r['notes'] ?? '') ?></small></td>
+                            <?php
+                                $note_raw = (string)($r['notes'] ?? '');
+                                $note_trim = trim($note_raw);
+                                $note_short = $note_trim;
+                                $note_max = 40;
+                                if (function_exists('mb_strlen') && mb_strlen($note_trim) > $note_max) {
+                                    $note_short = mb_substr($note_trim, 0, $note_max) . '…';
+                                } elseif (strlen($note_trim) > $note_max) {
+                                    $note_short = substr($note_trim, 0, $note_max) . '…';
+                                }
+                            ?>
+                            <td class="hp-notes"><small title="<?= htmlspecialchars($note_trim) ?>"><?= htmlspecialchars($note_short) ?></small></td>
                             <td class="text-right">
                                 <?php if (($r['unit_type'] ?? '') === 'TOTAL'): ?>
                                     <button type="button" class="btn-act" onclick="openHpEdit(this)"
@@ -1195,7 +1241,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
 <?php if ($is_ajax) { echo ob_get_clean(); exit; } ?>
 
 <?php if (!$is_ajax): ?>
-<script src="report/laporan/js/laporan.js" defer></script>
+<script src="report/laporan/js/laporan.min.js" defer></script>
 <?php endif; ?>
 
 <!-- Pendapatan per Blok/Profile sementara disembunyikan sesuai permintaan -->

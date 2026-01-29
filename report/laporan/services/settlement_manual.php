@@ -121,8 +121,6 @@ if ($action === 'logs') {
     }
     clearstatcache(true, $effectiveLogFile);
     $useFileLogs = is_file($effectiveLogFile) && filesize($effectiveLogFile) > 0;
-    $API = new RouterosAPI();
-    $API->debug = false;
     try {
         if ($useFileLogs) {
             $lines = @file($effectiveLogFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -191,7 +189,12 @@ if ($action === 'logs') {
                     }
                 }
             }
-        } elseif ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
+        } else {
+            $API = new RouterosAPI();
+            $API->debug = false;
+            $API->timeout = 5;
+            $API->attempts = 1;
+            if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
             $logging = $API->comm('/system/logging/print', [
                 '?prefix' => 'SETTLE'
             ]);
@@ -283,6 +286,7 @@ if ($action === 'logs') {
                     }
                 }
             }
+            }
         }
     } catch (Exception $e) {
     }
@@ -362,6 +366,8 @@ if ($action === 'start') {
     ];
     $API = new RouterosAPI();
     $API->debug = false;
+    $API->timeout = 5;
+    $API->attempts = 1;
     $connected = false;
     $errMsg = '';
     try {

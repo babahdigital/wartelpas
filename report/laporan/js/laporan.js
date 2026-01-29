@@ -18,7 +18,8 @@
         auditUserUrl: cfgEl.dataset.auditUserUrl || 'report/laporan/services/audit_users.php',
         auditLocked: cfgEl.dataset.auditLocked === '1',
         auditUsers: parseJson(cfgEl.dataset.auditUsers),
-        auditProfiles: parseJson(cfgEl.dataset.auditProfiles)
+        auditProfiles: parseJson(cfgEl.dataset.auditProfiles),
+        profileLabels: parseJson(cfgEl.dataset.profileLabels)
     };
     window.sellingConfig = cfg;
 })();
@@ -33,7 +34,42 @@ var auditUserCache = [];
 var auditUserProfileKeys = [];
 var auditUserActiveKey = '';
 var auditUserEligibleCount = 0;
+var auditReturTotal = 0;
 window.auditEditing = false;
+
+function updateCharRemainingForInput(input){
+    if (!input || !input.getAttribute) return;
+    var id = input.getAttribute('id');
+    if (!id) return;
+    var spans = document.querySelectorAll('.char-remaining[data-target="' + id + '"]');
+    if (!spans || !spans.length) return;
+    var value = (input.value || '').toString();
+    spans.forEach(function(span){
+        var maxVal = parseInt(span.dataset.max || input.maxLength || '0', 10);
+        if (!maxVal || maxVal < 0) maxVal = 0;
+        var remaining = maxVal - value.length;
+        if (remaining < 0) remaining = 0;
+        span.textContent = remaining;
+    });
+}
+
+function initCharRemaining(){
+    var spans = document.querySelectorAll('.char-remaining[data-target]');
+    if (!spans || !spans.length) return;
+    spans.forEach(function(span){
+        var targetId = span.dataset.target || '';
+        if (!targetId) return;
+        var input = document.getElementById(targetId);
+        if (!input) return;
+        if (!input.dataset.charRemainingBound) {
+            input.addEventListener('input', function(){
+                updateCharRemainingForInput(input);
+            });
+            input.dataset.charRemainingBound = '1';
+        }
+        updateCharRemainingForInput(input);
+    });
+}
 
 function formatDateDMY(dateStr){
     if (!dateStr) return '-';
@@ -605,6 +641,7 @@ function fillHpForm(form, src, force){
     if (rusakEl) rusakEl.value = src.rusak_units || 0;
     if (spamEl) spamEl.value = src.spam_units || 0;
     if (notesEl) notesEl.value = src.notes || '';
+    if (notesEl) updateCharRemainingForInput(notesEl);
 
     if (typeof window.dispatchEvent === 'function') {
         var evt = new Event('input', { bubbles: true });
@@ -743,7 +780,11 @@ window.openHpEdit = function(btn){
     form.querySelector('input[name="report_date"]').value = btn.getAttribute('data-date') || '';
     form.querySelector('input[name="rusak_units"]').value = btn.getAttribute('data-rusak') || '0';
     form.querySelector('input[name="spam_units"]').value = btn.getAttribute('data-spam') || '0';
-    form.querySelector('input[name="notes"]').value = btn.getAttribute('data-notes') || '';
+    var notesInput = form.querySelector('input[name="notes"]');
+    if (notesInput) {
+        notesInput.value = btn.getAttribute('data-notes') || '';
+        updateCharRemainingForInput(notesInput);
+    }
 
     var wartel = parseInt(btn.getAttribute('data-wartel') || '0', 10);
     var kamtib = parseInt(btn.getAttribute('data-kamtib') || '0', 10);
@@ -797,6 +838,13 @@ function closeAuditModal(){
     if (modal) modal.style.display = 'none';
     window.sellingPauseReload = false;
     window.auditEditing = false;
+    var form = document.getElementById('auditForm');
+    if (form) {
+        var blokSelect = form.querySelector('select[name="audit_blok"]');
+        if (blokSelect) blokSelect.disabled = false;
+        var hiddenBlok = form.querySelector('input[name="audit_blok"][data-locked="1"]');
+        if (hiddenBlok) hiddenBlok.remove();
+    }
 }
 
 window.openAuditEdit = function(btn){
@@ -819,7 +867,32 @@ window.openAuditEdit = function(btn){
         try { profileQtyMap = JSON.parse(profileQtyRaw); } catch (e) { profileQtyMap = {}; }
     }
     var blokSelect = form.querySelector('select[name="audit_blok"]');
-    if (blokSelect) blokSelect.value = blok;
+    if (blokSelect) {
+        var hasOption = false;
+        for (var i = 0; i < blokSelect.options.length; i++) {
+            if (blokSelect.options[i].value === blok) {
+                hasOption = true;
+                break;
+            }
+        }
+        if (!hasOption && blok) {
+            var opt = document.createElement('option');
+            opt.value = blok;
+            opt.textContent = blok;
+            blokSelect.appendChild(opt);
+        }
+        blokSelect.value = blok;
+        blokSelect.disabled = true;
+        var hiddenBlok = form.querySelector('input[name="audit_blok"][data-locked="1"]');
+        if (!hiddenBlok) {
+            hiddenBlok = document.createElement('input');
+            hiddenBlok.type = 'hidden';
+            hiddenBlok.name = 'audit_blok';
+            hiddenBlok.setAttribute('data-locked', '1');
+            form.appendChild(hiddenBlok);
+        }
+        hiddenBlok.value = blok;
+    }
     var dateInput = form.querySelector('input[name="audit_date"]');
     if (dateInput) dateInput.value = date;
     if (typeof setAuditUserPicker === 'function') {
@@ -856,7 +929,10 @@ window.openAuditEdit = function(btn){
     var expInput = form.querySelector('input[name="audit_expense_amt"]');
     var expDescInput = form.querySelector('input[name="audit_expense_desc"]');
     if (expInput) expInput.value = expenseAmt;
-    if (expDescInput) expDescInput.value = expenseDesc;
+    if (expDescInput) {
+        expDescInput.value = expenseDesc;
+        updateCharRemainingForInput(expDescInput);
+    }
     openAuditModal();
 };
 
@@ -1102,12 +1178,39 @@ function openAuditUserModal(){
     var overlay = document.getElementById('auditUserOverlay');
     if (!overlay) return;
     overlay.style.display = 'flex';
+    initAuditUserSearch();
     loadAuditUserList();
 }
 
 function closeAuditUserModal(){
     var overlay = document.getElementById('auditUserOverlay');
     if (overlay) overlay.style.display = 'none';
+}
+
+function initAuditUserSearch(){
+    var input = document.getElementById('auditUserSearch');
+    if (!input || input.dataset.bound === '1') return;
+    input.dataset.bound = '1';
+    input.addEventListener('input', function(){
+        renderAuditUserList();
+    });
+    var clearBtn = document.getElementById('auditUserSearchClear');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function(){
+            input.value = '';
+            renderAuditUserList();
+            input.focus();
+        });
+    }
+}
+
+function getAuditSearchTerms(){
+    var input = document.getElementById('auditUserSearch');
+    if (!input) return [];
+    return String(input.value || '')
+        .split(',')
+        .map(function(s){ return s.trim().toLowerCase(); })
+        .filter(Boolean);
 }
 
 function loadAuditUserList(){
@@ -1136,6 +1239,9 @@ function loadAuditUserList(){
             if (!data || !data.ok) throw new Error((data && data.message) || 'Gagal memuat data user');
             auditUserCache = Array.isArray(data.users) ? data.users : [];
             auditUserEligibleCount = auditUserCache.length;
+            auditReturTotal = parseInt((data.retur_total || 0), 10) || 0;
+            var returHidden = document.getElementById('auditReturTotal');
+            if (returHidden) returHidden.value = String(auditReturTotal || 0);
             var keys = {};
             auditUserCache.forEach(function(u){
                 var k = String(u.profile_key || '').toLowerCase();
@@ -1162,11 +1268,14 @@ function renderAuditUserTabs(){
     }
     tabs.style.display = 'flex';
     tabs.innerHTML = '';
+    var cfg = window.sellingConfig || {};
+    var labelMap = cfg.profileLabels || {};
     auditUserProfileKeys.forEach(function(k){
         var count = auditUserCache.filter(function(u){ return String(u.profile_key || '').toLowerCase() === k; }).length;
         var btn = document.createElement('div');
         btn.className = 'audit-user-tab' + (k === auditUserActiveKey ? ' active' : '');
-        btn.innerHTML = k.toUpperCase() + ' <span class="badge">' + count + '</span>';
+        var label = labelMap[k] || k.toUpperCase();
+        btn.innerHTML = label + ' <span class="badge">' + count + '</span>';
         btn.onclick = function(){ auditUserActiveKey = k; renderAuditUserTabs(); renderAuditUserList(); };
         tabs.appendChild(btn);
     });
@@ -1175,10 +1284,18 @@ function renderAuditUserTabs(){
 function renderAuditUserList(){
     var wrap = document.getElementById('auditUserList');
     if (!wrap) return;
+    var terms = getAuditSearchTerms();
     var list = auditUserCache.filter(function(u){
         if (!auditUserActiveKey || auditUserProfileKeys.length <= 1) return true;
         return String(u.profile_key || '').toLowerCase() === auditUserActiveKey;
     });
+    if (terms.length) {
+        list = list.filter(function(u){
+            var uname = String(u.username || '').toLowerCase();
+            if (!uname) return false;
+            return terms.some(function(t){ return uname.indexOf(t) !== -1; });
+        });
+    }
     if (!list.length) {
         wrap.innerHTML = '<div style="text-align:center; padding:20px; color:#555;">Tidak ada data</div>';
         return;
@@ -1241,6 +1358,9 @@ function applyAuditUserSelection(){
         profileQty[key] = (profileQty[key] || 0) + 1;
         totalSetoran += parseInt(item.price || '0', 10) || 0;
     });
+    if (auditReturTotal > 0) {
+        totalSetoran += auditReturTotal;
+    }
     if (qtyInputs && qtyInputs.length) {
         qtyInputs.forEach(function(el){
             var key = String(el.dataset.profileKey || '').toLowerCase();
@@ -1385,3 +1505,64 @@ window.closeGhostModal = function(){
     if (modal) modal.style.display = 'none';
     window.sellingPauseReload = false;
 };
+
+function initScrollIndicators(){
+    var modalBodies = document.querySelectorAll('.modal-body');
+    modalBodies.forEach(function(body){
+        body.addEventListener('scroll', function(){
+            var isScrolled = this.scrollTop > 10;
+            this.classList.toggle('scrolled', isScrolled);
+        });
+        if (body.scrollTop > 10) {
+            body.classList.add('scrolled');
+        }
+    });
+}
+
+function scrollToElementInModal(modalId, elementSelector){
+    var modal = document.getElementById(modalId);
+    if (!modal) return;
+    var element = modal.querySelector(elementSelector);
+    if (element) {
+        element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+        });
+    }
+}
+
+function scrollToAuditField(fieldName){
+    var field = document.querySelector('[name="' + fieldName + '"]');
+    if (field) {
+        var modalBody = field.closest('.modal-body');
+        if (modalBody) {
+            var offset = field.offsetTop - modalBody.offsetTop - 20;
+            modalBody.scrollTo({
+                top: offset,
+                behavior: 'smooth'
+            });
+        }
+    }
+}
+
+function initScrollPadding(){
+    var modals = document.querySelectorAll('.modal-body, .audit-user-list');
+    modals.forEach(function(el){
+        if (el.scrollHeight > el.clientHeight) {
+            el.style.paddingRight = '8px';
+        }
+    });
+}
+
+(function(){
+    var run = function(){
+        initScrollIndicators();
+        initScrollPadding();
+        initCharRemaining();
+    };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', run);
+    } else {
+        run();
+    }
+})();

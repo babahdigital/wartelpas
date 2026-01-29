@@ -29,12 +29,17 @@ if (!isset($_SESSION["mikhmon"])) {
 	
 	$API = new RouterosAPI();
 	$API->debug = false;
+	$API->timeout = 5;
+	$API->attempts = 1;
 	
     if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
 
         // --- LOGIC: FILTER BY SERVER & PROFILE ---
         // 1. Tarik SEMUA user active
-        $gethotspotactive = $API->comm("/ip/hotspot/active/print");
+        $gethotspotactive = $API->comm("/ip/hotspot/active/print", array(
+            "?server" => "wartel",
+            ".proplist" => ".id,server,user,address,mac-address,uptime,session-time-left,bytes-in,bytes-out,login-by,comment"
+        ));
 
         // 2. Filter Array di PHP (hanya server wartel)
         $allowed_servers = array('wartel');
@@ -47,6 +52,8 @@ if (!isset($_SESSION["mikhmon"])) {
         }
 
         $TotalReg = count($filtered_active);
+
+                $API->disconnect();
 
     } else {
 		$TotalReg = 0;

@@ -123,8 +123,6 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 ### 2.15 Maintenance & Debug Tools
 - **tools/db_check.php**: cek schema, row, path DB, dan status writable.
 - **tools/clear_logs.php**: bersihkan log ingest.
-- **tools/clear_block.php**: hapus data blok lintas tabel.
-- **tools/delete_user.php**: hapus data user spesifik dari DB (login_history/login_events/sales_history/live_sales).
 - **.htaccess**: whitelist endpoint maintenance dan ingest.
 
 ### 2.16 Stabilitas Sync Usage
@@ -154,11 +152,6 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 ### 2.19 Perbaikan Schema & Migrasi Otomatis Penjualan
 - Auto‑create/alter kolom **sales_history** dan **live_sales** saat runtime jika belum ada.
 - Backfill data historis agar rekap tidak nol setelah migrasi.
-
-### 2.19.1 Tool Pembersih Data
-- **tools/cleanup_duplicate_sales.php**: dedup penjualan berdasarkan `username + sale_date`, rebuild summary.
-- **tools/cleanup_non_wartel_login_history.php**: bersihkan `login_history` tanpa BLOK.
-- **tools/cleanup_ready_login_history.php**: hapus entry `READY` di `login_history`.
 
 ### 2.20 Settlement Manual + Log Terkunci
 - Tambah **settlement manual** di **report/selling.php** untuk menjalankan scheduler MikroTik.
@@ -191,12 +184,6 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **Mikrotik-CleanWartel.rsc**:
   - Semua log diberi prefix **SETTLE** agar terfilter rapi.
   - Delay disetel ulang agar urutan log terbaca stabil.
-- **tools/clear_block.php**:
-  - Hapus data blok lintas tabel (login_history, sales_history, live_sales).
-  - Support hapus varian **BLOK-X10/BLOK-X30** saat input BLOK-X.
-  - Data HP **tidak dihapus** default (opsional `delete_hp=1`).
-- **tools/check_block.php** (baru):
-  - Endpoint audit untuk mengecek keberadaan blok pada semua tabel.
 - **report/laporan/services/live_ingest.php**:
 ### 2.24 Sentralisasi Helper & Code Hygiene (2026-01-28)
 - **report/laporan/helpers.php** menjadi *single source of truth* untuk helper audit/rekap.
@@ -411,7 +398,7 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **Solusi**:
   - `report/selling.php` dan `report/print_rekap.php` kini mengenali `YYYY-MM-DD` + jam.
   - `report/laporan/services/sync_sales.php` disesuaikan agar `sale_date` terisi untuk format `YYYY-MM-DD`.
-  - Tool baru **tools/fix_sales_dates.php** untuk backfill `sale_date` dari `raw_date`.
+  - Backfill `sale_date` dari `raw_date` dilakukan via perbaikan runtime di sync.
 
 ### 4.2 Penyelarasan logika “voucher laku”
 - **Masalah**: Nilai “Total Voucher Laku” membingungkan karena menghitung transaksi per baris.
@@ -477,7 +464,6 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - `report/selling.php`: parsing tanggal, logika unik voucher, perbaikan filter harian, ringkasan disesuaikan.
 - `report/print_rekap.php`: logika unik voucher, label tabel disesuaikan, parsing tanggal.
 - `report/laporan/services/sync_sales.php`: dukungan format `YYYY-MM-DD`.
-- `tools/fix_sales_dates.php`: tool backfill `sale_date`.
 - `hotspot/users.php`: filter tanggal lebih akurat (timestamp mentah).
 
 ## 4.7 Update Terbaru (Settlement Log & Perbaikan Real-time 2026-01-23)
@@ -818,13 +804,6 @@ File diagnostik & migrasi sementara yang sudah tidak diperlukan:
 - report/selling.php
 - report/laporan/services/settlement_manual.php
 - report/laporan/services/settlement_log_ingest.php
-- tools/cleanup_duplicate_sales.php
-- tools/cleanup_non_wartel_login_history.php
-- tools/cleanup_ready_login_history.php
-- tools/check_block.php
-- tools/clear_all.php
-- tools/build_sales_summary.php
-- tools/migrate_sales_reporting.php
 - report/laporan/services/hp_save.php
 - report/print_rekap.php
 - report/print_rincian.php
@@ -832,8 +811,6 @@ File diagnostik & migrasi sementara yang sudah tidak diperlukan:
 - report/laporan/services/sync_usage.php
 - report/laporan/services/live_ingest.php
 - tools/clear_logs.php
-- tools/clear_block.php
-- tools/delete_user.php
 - tools/db_check.php
 - .htaccess
 - Mikrotik-CleanWartel.rsc

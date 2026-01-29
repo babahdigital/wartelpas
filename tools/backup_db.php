@@ -3,8 +3,6 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../include/acl.php';
-requireLogin('../admin.php?id=login');
-requireSuperAdmin('../admin.php?id=sessions');
 // Simple DB backup endpoint (protected)
 ini_set('display_errors', 0);
 error_reporting(0);
@@ -43,7 +41,22 @@ if ($key === '' && isset($_POST['key'])) {
 if ($key === '' && isset($_SERVER['HTTP_X_BACKUP_KEY'])) {
     $key = (string)$_SERVER['HTTP_X_BACKUP_KEY'];
 }
-if (!hash_equals($secret, (string)$key)) {
+if ($key === '' && isset($_SERVER['HTTP_X_TOOLS_KEY'])) {
+    $key = (string)$_SERVER['HTTP_X_TOOLS_KEY'];
+}
+$is_valid_key = $secret !== '' && hash_equals($secret, (string)$key);
+
+if (!$is_valid_key) {
+    requireLogin('../admin.php?id=login');
+    requireSuperAdmin('../admin.php?id=sessions');
+} else {
+    if (!isset($_SESSION['mikhmon'])) {
+        $_SESSION['mikhmon'] = 'tools';
+        $_SESSION['mikhmon_level'] = 'superadmin';
+    }
+}
+
+if (!$is_valid_key) {
     respond_backup(false, 'Forbidden', [], 403);
 }
 
@@ -57,9 +70,12 @@ if (!empty($_SERVER['REMOTE_ADDR']) && !empty($allowedIpList)) {
     }
 }
 
-$rateFile = sys_get_temp_dir() . '/backup_db.rate';
+$clientIp = !empty($_SERVER['REMOTE_ADDR']) ? (string)$_SERVER['REMOTE_ADDR'] : '';
+$rateKey = $clientIp . '|' . (string)$key;
+$rateFile = sys_get_temp_dir() . '/backup_db.rate.' . md5($rateKey);
 $rateWindow = isset($env['backup']['rate_window']) ? (int)$env['backup']['rate_window'] : 300;
 $rateLimit = isset($env['backup']['rate_limit']) ? (int)$env['backup']['rate_limit'] : 1;
+$forceRate = isset($_GET['force']) && $_GET['force'] === '1';
 $now = time();
 $hits = [];
 if (is_file($rateFile)) {
@@ -72,7 +88,7 @@ if (is_file($rateFile)) {
 $hits = array_values(array_filter($hits, function($t) use ($now, $rateWindow) {
     return is_int($t) && ($now - $t) <= $rateWindow;
 }));
-if (count($hits) >= $rateLimit) {
+if (!$forceRate && count($hits) >= $rateLimit) {
     respond_backup(false, 'Rate limited', [], 429);
 }
 $hits[] = $now;
@@ -159,10 +175,21 @@ $rcloneEnable = isset($env['rclone']['enable']) ? (bool)$env['rclone']['enable']
 $rcloneUpload = isset($env['rclone']['upload']) ? (bool)$env['rclone']['upload'] : false;
 $rcloneBin = isset($env['rclone']['bin']) ? (string)$env['rclone']['bin'] : '';
 $rcloneRemote = isset($env['rclone']['remote']) ? (string)$env['rclone']['remote'] : '';
-if ($rcloneEnable && $rcloneUpload && $rcloneBin !== '' && $rcloneRemote !== '' && file_exists($rcloneBin)) {
-    $cmd = sprintf('%s copyto "%s" "%s/%s" 2>&1', $rcloneBin, $backupFile, $rcloneRemote, basename($backupFile));
-    exec($cmd, $output, $returnVar);
-    $cloudStatus = ($returnVar === 0) ? 'Uploaded to Drive' : 'Upload Failed';
+$cloudParam = $_GET['cloud'] ?? '';
+$asyncParam = $_GET['async'] ?? '';
+$cloudEnabled = ($cloudParam === '' || $cloudParam === '1');
+$cloudAsync = ($asyncParam === '1') || (!empty($env['backup']['rclone_async']));
+if ($rcloneEnable && $rcloneUpload && $cloudEnabled && $rcloneBin !== '' && $rcloneRemote !== '' && file_exists($rcloneBin)) {
+    $dest = $rcloneRemote . '/' . basename($backupFile);
+    if ($cloudAsync) {
+        $cmd = sprintf('%s copyto "%s" "%s" >/dev/null 2>&1 &', $rcloneBin, $backupFile, $dest);
+        exec($cmd);
+        $cloudStatus = 'Queued';
+    } else {
+        $cmd = sprintf('%s copyto "%s" "%s" 2>&1', $rcloneBin, $backupFile, $dest);
+        exec($cmd, $output, $returnVar);
+        $cloudStatus = ($returnVar === 0) ? 'Uploaded to Drive' : 'Upload Failed';
+    }
 }
 
 $logFile = $root . '/logs/backup_db.log';

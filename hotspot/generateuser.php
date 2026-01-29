@@ -111,6 +111,27 @@ if (empty($block_letters_range)) {
     $block_letters_range = range('A', 'F');
 }
 
+include_once($root_dir . '/lib/routeros_api.class.php');
+$api_owned = false;
+if (!isset($API) || !($API instanceof RouterosAPI)) {
+    $API = new RouterosAPI();
+    $API->debug = false;
+    $API->timeout = 5;
+    $API->attempts = 1;
+    $api_owned = true;
+}
+$api_connect = function() use ($API, $iphost, $userhost, $passwdhost) {
+    if ($API->connected) return true;
+    return $API->connect($iphost, $userhost, decrypt($passwdhost));
+};
+if ($api_owned) {
+    register_shutdown_function(function() use ($API) {
+        if ($API->connected) {
+            $API->disconnect();
+        }
+    });
+}
+
 $session = isset($_GET['session']) ? $_GET['session'] : '';
 
 if (!isset($_SESSION["mikhmon"])) {
@@ -122,30 +143,37 @@ if (!isset($_SESSION["mikhmon"])) {
 
     // --- LOGIC DETAIL PROFIL ---
     if ($genprof != "") {
-        $getprofile = $API->comm("/ip/hotspot/user/profile/print", array("?name" => "$genprof"));
-        if (isset($getprofile[0])) {
-            $ponlogin = $getprofile[0]['on-login'];
-            $getprice = explode(",", $ponlogin)[2];
-            $getprice = ($getprice == "0") ? "" : $getprice;
-            $getvalid = explode(",", $ponlogin)[3];
-            $getlocku = explode(",", $ponlogin)[6];
-            $getlocku = ($getlocku == "") ? "Disable" : $getlocku;
+        if ($api_connect()) {
+            $getprofile = $API->comm("/ip/hotspot/user/profile/print", array(
+                "?name" => "$genprof",
+                ".proplist" => "name,on-login"
+            ));
+            if (isset($getprofile[0])) {
+                $ponlogin = $getprofile[0]['on-login'];
+                $getprice = explode(",", $ponlogin)[2];
+                $getprice = ($getprice == "0") ? "" : $getprice;
+                $getvalid = explode(",", $ponlogin)[3];
+                $getlocku = explode(",", $ponlogin)[6];
+                $getlocku = ($getlocku == "") ? "Disable" : $getlocku;
 
-            if ($currency == in_array($currency, $cekindo['indo'])) {
-                $getprice = $currency . " " . number_format((float)$getprice, 0, ",", ".");
-            } else {
-                $getprice = $currency . " " . number_format((float)$getprice);
+                if ($currency == in_array($currency, $cekindo['indo'])) {
+                    $getprice = $currency . " " . number_format((float)$getprice, 0, ",", ".");
+                } else {
+                    $getprice = $currency . " " . number_format((float)$getprice);
+                }
+                // Disimpan dalam variabel untuk ditampilkan di bawah
+                $ValidPriceInfo = [
+                    'valid' => $getvalid,
+                    'price' => $getprice,
+                    'lock'  => $getlocku
+                ];
             }
-            // Disimpan dalam variabel untuk ditampilkan di bawah
-            $ValidPriceInfo = [
-                'valid' => $getvalid,
-                'price' => $getprice,
-                'lock'  => $getlocku
-            ];
         }
     }
 
-    $getprofile_list = $API->comm("/ip/hotspot/user/profile/print");
+    $getprofile_list = $api_connect() ? $API->comm("/ip/hotspot/user/profile/print", array(
+        ".proplist" => "name,on-login"
+    )) : [];
 
     // --- PROSES GENERATE USER ---
     if (isset($_POST['qty'])) {
@@ -200,7 +228,13 @@ if (!isset($_SESSION["mikhmon"])) {
         $timelimit = $selected_suffix !== '' ? ($selected_suffix . "m") : "0";
         
         // Prepare Data
-        $getprofile = $API->comm("/ip/hotspot/user/profile/print", array("?name" => "$profile"));
+        if (!$api_connect()) {
+            echo "<script>window.location.href='./error.php';</script>"; exit();
+        }
+        $getprofile = $API->comm("/ip/hotspot/user/profile/print", array(
+            "?name" => "$profile",
+            ".proplist" => "name,on-login"
+        ));
         $ponlogin = $getprofile[0]['on-login'];
         $getvalid = explode(",", $ponlogin)[3];
         $getprice = explode(",", $ponlogin)[2];
@@ -248,11 +282,17 @@ if (!isset($_SESSION["mikhmon"])) {
     $summary_seen_users = [];
     $history_status_map = [];
 
-    $active_list = $API->comm('/ip/hotspot/active/print', ['?server' => ($hotspot_server ?? 'wartel'), '.proplist' => 'user']);
+        $active_list = $api_connect() ? $API->comm('/ip/hotspot/active/print', [
+            '?server' => ($hotspot_server ?? 'wartel'),
+            '.proplist' => 'user'
+        ]) : [];
     $activeMap = [];
     foreach ($active_list as $a) { if (isset($a['user'])) $activeMap[$a['user']] = true; }
 
-    $all_users = $API->comm('/ip/hotspot/user/print', ['?server' => ($hotspot_server ?? 'wartel'), '.proplist' => 'name,comment,disabled,bytes-in,bytes-out,uptime']);
+    $all_users = $api_connect() ? $API->comm('/ip/hotspot/user/print', [
+        '?server' => ($hotspot_server ?? 'wartel'),
+        '.proplist' => 'name,comment,disabled,bytes-in,bytes-out,uptime'
+    ]) : [];
 
     $dbFile = dirname(__DIR__) . '/db_data/mikhmon_stats.db';
     if (file_exists($dbFile)) {

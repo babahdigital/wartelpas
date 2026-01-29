@@ -48,6 +48,9 @@ $rusak_units = (int)($_POST['rusak_units'] ?? 0);
 $spam_units = (int)($_POST['spam_units'] ?? 0);
 $active_units = max(0, $total_units - $rusak_units - $spam_units);
 $notes = trim($_POST['notes'] ?? '');
+if ($notes !== '') {
+    $notes = mb_substr($notes, 0, 60);
+}
 
 $use_wartel = isset($_POST['unit_wartel']) ? 1 : 0;
 $use_kamtib = isset($_POST['unit_kamtib']) ? 1 : 0;

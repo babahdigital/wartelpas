@@ -67,7 +67,25 @@ if (!isset($_SESSION["mikhmon"])) {
   require('../lib/routeros_api.class.php');
   $API = new RouterosAPI();
   $API->debug = false;
-  $API->connect($iphost, $userhost, decrypt($passwdhost));
+  $API->timeout = 5;
+  $API->attempts = 1;
+  $api_connected = $API->connect($iphost, $userhost, decrypt($passwdhost));
+  $router_user_map = null;
+  $getRouterUserMap = function() use (&$router_user_map, $API, $api_connected) {
+    if (!$api_connected) return [];
+    if ($router_user_map !== null) return $router_user_map;
+    $rows = $API->comm('/ip/hotspot/user/print', [
+      '.proplist' => '.id,name,password,profile,comment,limit-uptime,limit-bytes-total,uptime,bytes-in,bytes-out,server'
+    ]);
+    $map = [];
+    if (is_array($rows)) {
+      foreach ($rows as $r) {
+        if (!empty($r['name'])) $map[$r['name']] = $r;
+      }
+    }
+    $router_user_map = $map;
+    return $router_user_map;
+  };
 
   // --- LOGIKA PENCARIAN & FILTER ---
 
@@ -103,6 +121,7 @@ if (!isset($_SESSION["mikhmon"])) {
       }
     }
     $getuser = [];
+    $routerMap = $getRouterUserMap();
     try {
       $db = new PDO('sqlite:../db_data/mikhmon_stats.db');
       $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -120,16 +139,13 @@ if (!isset($_SESSION["mikhmon"])) {
           if (!$match) continue;
           if ($target_status === 'retur' && !$is_retur_comment) continue;
           if ($target_status === 'rusak' && $is_retur_comment) continue;
-          $u = $API->comm('/ip/hotspot/user/print', [
-            '?name' => $r['username'],
-            '.proplist' => '.id,name,password,profile,comment,limit-uptime,limit-bytes-total,uptime,bytes-in,bytes-out'
-          ]);
-          if (isset($u[0])) {
-            $router_comment = $u[0]['comment'] ?? '';
+          $u = isset($routerMap[$r['username']]) ? $routerMap[$r['username']] : null;
+          if (!empty($u)) {
+            $router_comment = $u['comment'] ?? '';
             $router_is_retur = (stripos($router_comment, '(Retur)') !== false) || (stripos($router_comment, 'Retur Ref:') !== false);
             if ($target_status === 'retur' && !$router_is_retur) continue;
             if ($target_status === 'rusak' && $router_is_retur) continue;
-            $getuser[] = $u[0];
+            $getuser[] = $u;
           } else {
             $profile_name = '';
             if (preg_match('/Profile:([^|]+)/i', $raw_comment, $m)) {
@@ -157,16 +173,13 @@ if (!isset($_SESSION["mikhmon"])) {
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($rows as $r) {
           if ($filter_user !== '' && $r['username'] !== $filter_user) continue;
-          $u = $API->comm('/ip/hotspot/user/print', [
-            '?name' => $r['username'],
-            '.proplist' => '.id,name,password,profile,comment,limit-uptime,limit-bytes-total,uptime,bytes-in,bytes-out'
-          ]);
-          if (isset($u[0])) {
-            $router_comment = $u[0]['comment'] ?? '';
+          $u = isset($routerMap[$r['username']]) ? $routerMap[$r['username']] : null;
+          if (!empty($u)) {
+            $router_comment = $u['comment'] ?? '';
             $router_is_retur = (stripos($router_comment, '(Retur)') !== false) || (stripos($router_comment, 'Retur Ref:') !== false);
             if ($target_status === 'retur' && !$router_is_retur) continue;
             if ($target_status === 'rusak' && $router_is_retur) continue;
-            $getuser[] = $u[0];
+            $getuser[] = $u;
           } else {
             $raw_comment = $r['raw_comment'] ?? '';
             $is_retur_comment = (stripos($raw_comment, '(Retur)') !== false) || (stripos($raw_comment, 'Retur Ref:') !== false);
@@ -208,9 +221,7 @@ if (!isset($_SESSION["mikhmon"])) {
 
     if ($TotalReg == 0 && in_array($target_status, ['retur','rusak'])) {
       $key = $target_status === 'retur' ? 'Retur' : 'RUSAK';
-      $raw_users = $API->comm('/ip/hotspot/user/print', array(
-        ".proplist" => ".id,name,password,profile,comment,limit-uptime,limit-bytes-total,uptime,bytes-in,bytes-out"
-      ));
+      $raw_users = array_values($routerMap);
       foreach ($raw_users as $u) {
         if ($filter_user !== '' && ($u['name'] ?? '') !== $filter_user) continue;
         $u_comment = $u['comment'] ?? '';
@@ -294,6 +305,7 @@ if (!isset($_SESSION["mikhmon"])) {
     // C. PRINT BERDASARKAN STATUS (DB)
     $target_status = strtolower($status);
     $getuser = [];
+    $routerMap = $getRouterUserMap();
     try {
       $db = new PDO('sqlite:../db_data/mikhmon_stats.db');
       $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -310,16 +322,13 @@ if (!isset($_SESSION["mikhmon"])) {
           if (!$match) continue;
           if ($target_status === 'retur' && !$is_retur_comment) continue;
           if ($target_status === 'rusak' && $is_retur_comment) continue;
-          $u = $API->comm('/ip/hotspot/user/print', [
-            '?name' => $r['username'],
-            '.proplist' => '.id,name,password,profile,comment,limit-uptime,limit-bytes-total,uptime,bytes-in,bytes-out'
-          ]);
-          if (isset($u[0])) {
-            $router_comment = $u[0]['comment'] ?? '';
+          $u = isset($routerMap[$r['username']]) ? $routerMap[$r['username']] : null;
+          if (!empty($u)) {
+            $router_comment = $u['comment'] ?? '';
             $router_is_retur = (stripos($router_comment, '(Retur)') !== false) || (stripos($router_comment, 'Retur Ref:') !== false);
             if ($target_status === 'retur' && !$router_is_retur) continue;
             if ($target_status === 'rusak' && $router_is_retur) continue;
-            $getuser[] = $u[0];
+            $getuser[] = $u;
           } else {
             $profile_name = '';
             if (preg_match('/Profile:([^|]+)/i', $raw_comment, $m)) {
@@ -346,16 +355,13 @@ if (!isset($_SESSION["mikhmon"])) {
         $stmt->execute([':st' => $target_status]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($rows as $r) {
-          $u = $API->comm('/ip/hotspot/user/print', [
-            '?name' => $r['username'],
-            '.proplist' => '.id,name,password,profile,comment,limit-uptime,limit-bytes-total,uptime,bytes-in,bytes-out'
-          ]);
-          if (isset($u[0])) {
-            $router_comment = $u[0]['comment'] ?? '';
+          $u = isset($routerMap[$r['username']]) ? $routerMap[$r['username']] : null;
+          if (!empty($u)) {
+            $router_comment = $u['comment'] ?? '';
             $router_is_retur = (stripos($router_comment, '(Retur)') !== false) || (stripos($router_comment, 'Retur Ref:') !== false);
             if ($target_status === 'retur' && !$router_is_retur) continue;
             if ($target_status === 'rusak' && $router_is_retur) continue;
-            $getuser[] = $u[0];
+            $getuser[] = $u;
           } else {
             $raw_comment = $r['raw_comment'] ?? '';
             $is_retur_comment = (stripos($raw_comment, '(Retur)') !== false) || (stripos($raw_comment, 'Retur Ref:') !== false);
@@ -398,9 +404,7 @@ if (!isset($_SESSION["mikhmon"])) {
     // Fallback: jika DB kosong, cari langsung di router dari comment
     if ($TotalReg == 0 && in_array($target_status, ['retur','rusak'])) {
       $key = $target_status === 'retur' ? 'Retur' : 'RUSAK';
-      $raw_users = $API->comm('/ip/hotspot/user/print', array(
-        ".proplist" => ".id,name,password,profile,comment,limit-uptime,limit-bytes-total,uptime,bytes-in,bytes-out"
-      ));
+      $raw_users = array_values($routerMap);
       foreach ($raw_users as $u) {
         $u_comment = $u['comment'] ?? '';
         $is_retur_comment = (stripos($u_comment, '(Retur)') !== false) || (stripos($u_comment, 'Retur Ref:') !== false);
@@ -421,22 +425,24 @@ if (!isset($_SESSION["mikhmon"])) {
     $usermode = "vc"; 
 
     // 1. Ambil Data Mentah (Cari Persis Dulu)
-    $raw_users = $API->comm('/ip/hotspot/user/print', array(
-      "?comment" => "$id",
-      ".proplist" => ".id,name,password,profile,comment,limit-uptime,limit-bytes-total,uptime,bytes-in,bytes-out"
-    ));
+    $raw_users = [];
+    $all_users = array_values($getRouterUserMap());
+    foreach ($all_users as $u) {
+      if (!isset($u['comment'])) continue;
+      if ($u['comment'] === $id) {
+        if (isset($u['server']) && strtolower((string)$u['server']) !== 'wartel') continue;
+        $raw_users[] = $u;
+      }
+    }
     
     // 2. Jika Kosong, Cari Partial Match (yg mengandung kata)
     if (count($raw_users) == 0) {
-        $all_users = $API->comm('/ip/hotspot/user/print', array(
-          "?server" => "wartel",
-          ".proplist" => ".id,name,password,profile,comment,limit-uptime,limit-bytes-total,uptime,bytes-in,bytes-out"
-        ));
-        foreach ($all_users as $u) {
-            if (isset($u['comment']) && stripos($u['comment'], $id) !== false) {
-                $raw_users[] = $u;
-            }
+      foreach ($all_users as $u) {
+        if (isset($u['server']) && strtolower((string)$u['server']) !== 'wartel') continue;
+        if (isset($u['comment']) && stripos($u['comment'], $id) !== false) {
+          $raw_users[] = $u;
         }
+      }
     }
     
     // 3. --- [FILTER PENTING] --- HAPUS VOUCHER BEKAS (Valid: / Exp)
@@ -474,8 +480,11 @@ if (!isset($_SESSION["mikhmon"])) {
   
   // --- AMBIL PROFILE ---
     if ($TotalReg > 0) {
-        $getuprofile = $getuser[0]['profile'];
-        $getprofile = $API->comm("/ip/hotspot/user/profile/print", array("?name" => "$getuprofile"));
+      $getuprofile = $getuser[0]['profile'];
+      $getprofile = $api_connected ? $API->comm("/ip/hotspot/user/profile/print", array(
+        "?name" => "$getuprofile",
+        ".proplist" => "name,on-login"
+      )) : [];
 
         if (count($getprofile) > 0) {
           $ponlogin = isset($getprofile[0]['on-login']) ? $getprofile[0]['on-login'] : '';

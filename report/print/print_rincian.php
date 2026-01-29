@@ -351,18 +351,18 @@ if (isset($db) && $db instanceof PDO) {
 }
 
 // Lengkapi referensi retur dari RouterOS agar voucher asal bisa disembunyikan
+$API = null;
 if (!$is_usage) {
     try {
-        $API = new RouterosAPI();
+        $API = $API ?? new RouterosAPI();
         $API->debug = false;
         $API->timeout = 5;
         $API->attempts = 1;
-        if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
+        if (!$API->connected && $API->connect($iphost, $userhost, decrypt($passwdhost))) {
             $router_users = $API->comm("/ip/hotspot/user/print", array(
                 "?server" => $hotspot_server,
                 ".proplist" => "comment"
             ));
-            $API->disconnect();
             if (is_array($router_users)) {
                 foreach ($router_users as $u_src) {
                     $ref_u = extract_retur_user_from_ref($u_src['comment'] ?? '');
@@ -373,6 +373,9 @@ if (!$is_usage) {
             }
         }
     } catch (Exception $e) {}
+    if ($API instanceof RouterosAPI && $API->connected) {
+        $API->disconnect();
+    }
 }
 
 if ($is_usage && file_exists($dbFile)) {
@@ -398,14 +401,16 @@ if ($is_usage && file_exists($dbFile)) {
         $histMap = [];
     }
 
-    $API = new RouterosAPI();
+    $API = $API ?? new RouterosAPI();
     $API->debug = false;
     $API->timeout = 5;
     $API->attempts = 1;
     $system_cfg = $env['system'] ?? [];
     $expected_hotspot = $system_cfg['hotspot_server'] ?? 'wartel';
     $hotspot_server = $hotspot_server ?? $expected_hotspot;
-    $connected = $API->connect($iphost, $userhost, decrypt($passwdhost));
+    $connected = $API->connected ? true : $API->connect($iphost, $userhost, decrypt($passwdhost));
+    $all_users = [];
+    $active = [];
     if ($connected) {
         $all_users = $API->comm("/ip/hotspot/user/print", array(
             "?server" => $hotspot_server,
@@ -416,14 +421,27 @@ if ($is_usage && file_exists($dbFile)) {
             ".proplist" => "user,uptime,address,mac-address,bytes-in,bytes-out"
         ));
         $API->disconnect();
-
-        $activeMap = [];
-        foreach ($active as $a) {
-            if (isset($a['user'])) $activeMap[$a['user']] = $a;
+    } else {
+        foreach ($histMap as $uname => $row) {
+            $all_users[] = [
+                'name' => $uname,
+                'comment' => (string)($row['raw_comment'] ?? ''),
+                'profile' => (string)($row['validity'] ?? ''),
+                'disabled' => (strtolower((string)($row['last_status'] ?? '')) === 'rusak') ? 'true' : 'false',
+                'bytes-in' => 0,
+                'bytes-out' => 0,
+                'uptime' => (string)($row['last_uptime'] ?? '0s')
+            ];
         }
+    }
 
-        $seen_users = [];
-        foreach ($all_users as $u) {
+    $activeMap = [];
+    foreach ($active as $a) {
+        if (isset($a['user'])) $activeMap[$a['user']] = $a;
+    }
+
+    $seen_users = [];
+    foreach ($all_users as $u) {
             $name = $u['name'] ?? '';
             if ($name === '') continue;
             if ($filter_user !== '' && $name !== $filter_user) continue;
@@ -704,7 +722,6 @@ if ($is_usage && file_exists($dbFile)) {
             ];
         }
     }
-}
 
 if ($is_usage && $req_show !== 'semua' && !empty($filter_date)) {
     $usage_list = array_values(array_filter($usage_list, function($it) use ($filter_date, $req_show, $req_status) {

@@ -66,9 +66,6 @@ try {
     foreach ($rows as $r) {
         $uname = trim((string)($r['username'] ?? ''));
         if ($uname === '') continue;
-        $comment = (string)($r['comment'] ?? '');
-        $blok = normalize_block_name($r['blok_name'] ?? '', $comment);
-        if ($blok !== $blok_norm) continue;
         $dt = (string)($r['sale_datetime'] ?? '');
         if ($dt === '') {
             $sd = (string)($r['sale_date'] ?? $date);
@@ -96,17 +93,75 @@ try {
         }
     }
 
+    if (table_exists($db, 'login_history')) {
+        $stmtLH = $db->prepare("SELECT username, last_uptime, last_bytes, last_status, validity, raw_comment,
+            COALESCE(NULLIF(login_time_real,''), NULLIF(last_login_real,''), NULLIF(logout_time_real,''), NULLIF(updated_at,'')) AS dt
+            FROM login_history
+            WHERE username != ''
+                AND (
+                    substr(login_time_real,1,10) = :d OR
+                    substr(last_login_real,1,10) = :d OR
+                    substr(logout_time_real,1,10) = :d OR
+                    substr(updated_at,1,10) = :d OR
+                    login_date = :d
+                )
+                AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'");
+        $stmtLH->execute([':d' => $date]);
+        foreach ($stmtLH->fetchAll(PDO::FETCH_ASSOC) as $lh) {
+            $uname = trim((string)($lh['username'] ?? ''));
+            if ($uname === '') continue;
+            $lh_comment = (string)($lh['raw_comment'] ?? '');
+            $blok = normalize_block_name('', $lh_comment);
+            if ($blok !== $blok_norm) continue;
+            if (isset($user_latest[$uname])) continue;
+            $dt = (string)($lh['dt'] ?? '');
+            $ts = strtotime($dt);
+            $user_latest[$uname] = [
+                'username' => $uname,
+                'comment' => $lh_comment,
+                'blok_name' => $blok_norm,
+                'status' => (string)($lh['last_status'] ?? ''),
+                'is_invalid' => 0,
+                'is_retur' => 0,
+                'is_rusak' => 0,
+                'sale_date' => $date,
+                'sale_time' => $dt !== '' ? substr($dt, 11, 8) : '',
+                'sale_datetime' => $dt,
+                '_ts' => $ts ?: 0,
+                'profile' => (string)($lh['validity'] ?? ''),
+                'profile_snapshot' => (string)($lh['validity'] ?? ''),
+                'validity' => (string)($lh['validity'] ?? ''),
+                'price' => 0,
+                'price_snapshot' => 0,
+                'sprice_snapshot' => 0
+            ];
+            if (!isset($login_map[$uname])) {
+                $login_map[$uname] = $lh;
+            }
+        }
+    }
+
     $users = [];
+    $retur_total = 0;
+    $retur_count = 0;
+    $retur_users = [];
     foreach ($user_latest as $uname => $r) {
         $lh = $login_map[$uname] ?? [];
         $comment = (string)($r['comment'] ?? '');
+        $lh_comment = (string)($lh['raw_comment'] ?? '');
+        $blok = normalize_block_name($r['blok_name'] ?? '', $comment);
+        if ($blok !== $blok_norm && $lh_comment !== '') {
+            $blok = normalize_block_name($r['blok_name'] ?? '', $lh_comment);
+        }
+        if ($blok !== $blok_norm) continue;
+
         $lh_status = $lh['last_status'] ?? '';
-        $status = resolve_status_from_sources($r['status'] ?? '', $r['is_invalid'] ?? 0, $r['is_retur'] ?? 0, $r['is_rusak'] ?? 0, $comment, $lh_status);
+        $status = resolve_status_from_sources($r['status'] ?? '', $r['is_invalid'] ?? 0, $r['is_retur'] ?? 0, $r['is_rusak'] ?? 0, ($comment !== '' ? $comment : $lh_comment), $lh_status);
         if (in_array($status, ['rusak', 'invalid'], true)) continue;
 
         $profile_src = (string)($r['profile_snapshot'] ?? $r['profile'] ?? $r['validity'] ?? '');
         if ($profile_src === '') $profile_src = (string)($lh['validity'] ?? '');
-        if ($profile_src === '') $profile_src = extract_profile_from_comment((string)($lh['raw_comment'] ?? $comment));
+        if ($profile_src === '') $profile_src = extract_profile_from_comment(($lh_comment !== '' ? $lh_comment : $comment));
         $profile_key = normalize_profile_key($profile_src);
         if ($profile_key !== '' && preg_match('/^\d+$/', $profile_key)) {
             $profile_key = $profile_key . 'menit';
@@ -121,6 +176,15 @@ try {
         $uptime = trim((string)($lh['last_uptime'] ?? ''));
         $bytes = (int)($lh['last_bytes'] ?? 0);
 
+        if ($status === 'retur') {
+            if (!isset($retur_users[$uname])) {
+                $retur_users[$uname] = true;
+                $retur_total += $price;
+                $retur_count += 1;
+            }
+            continue;
+        }
+
         $users[] = [
             'username' => $uname,
             'profile_key' => $profile_key,
@@ -131,7 +195,7 @@ try {
         ];
     }
 
-    echo json_encode(['ok' => true, 'users' => $users]);
+    echo json_encode(['ok' => true, 'users' => $users, 'retur_total' => $retur_total, 'retur_count' => $retur_count]);
     exit;
 } catch (Exception $e) {
     echo json_encode(['ok' => false, 'message' => 'Gagal membaca data.']);

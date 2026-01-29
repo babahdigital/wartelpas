@@ -50,6 +50,7 @@ body { overflow-x: hidden; }
 .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
 .form-input { width: 100%; background: #343a40; border: 1px solid var(--border-col); color: #fff; padding: 8px 10px; border-radius: 6px; }
 .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-grid-1 { display: block; }
 .btn-act { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 4px; border: none; color: #fff; background: #3a4046; cursor: pointer; }
 .btn-act-danger { background: #e74c3c; }
 .audit-neg { color:#ff6b6b; font-weight:700; }
@@ -89,7 +90,7 @@ body { overflow-x: hidden; }
 .audit-user-modal { width: 640px; max-width: 95vw; height: 85vh; background: #252525; border: 1px solid #444; border-radius: 8px; display: flex; flex-direction: column; box-shadow: 0 25px 50px rgba(0,0,0,0.7); }
 .audit-user-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #333; }
 .audit-user-title { font-size: 14px; font-weight: 600; color: #fff; display: flex; align-items: center; gap: 8px; }
-.audit-user-tabs { display: flex; background: #1f1f1f; border-bottom: 1px solid #333; padding: 0 10px; }
+.audit-user-tabs { display: flex; background: #1f1f1f; border-bottom: 1px solid #333; padding: 0 10px; margin-bottom: 10px; }
 .audit-user-tab { padding: 12px 14px; font-size: 12px; font-weight: 600; color: #888; cursor: pointer; border-bottom: 2px solid transparent; }
 .audit-user-tab.active { color: #4ea8ff; border-bottom-color: #4ea8ff; }
 .audit-user-tab .badge { background: #333; color: #aaa; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-left: 6px; }
@@ -170,6 +171,44 @@ body { overflow-x: hidden; }
 	gap: 6px;
 }
 
+/* Setoran Bersih (Hasil Akhir) - styling khusus */
+#setoran-bersih-box {
+	border: 2px solid #2ecc71;
+	background: linear-gradient(135deg, rgba(46, 204, 113, 0.08), rgba(39, 174, 96, 0.05));
+	box-shadow: none;
+}
+
+#setoran-bersih-box .form-group-title {
+	color: #2ecc71;
+	font-weight: 700;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+#setoran-bersih-box .form-input {
+	background: rgba(0, 0, 0, 0.2);
+	border: 1px solid rgba(46, 204, 113, 0.3);
+	color: #2ecc71;
+	font-weight: 700;
+	font-size: 1.1rem;
+	text-align: left;
+}
+
+#setoran-bersih-box:hover {
+	border-color: #27ae60;
+	box-shadow: none;
+	transform: translateY(-1px);
+	transition: all 0.3s ease;
+}
+
+@media (max-width: 768px) {
+	#setoran-bersih-box {
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+	}
+	#setoran-bersih-box .form-input {
+		font-size: 1rem;
+	}
+}
+
 /* Info Banner di dalam modal */
 .modal-info-banner {
 	display: flex;
@@ -202,4 +241,170 @@ body { overflow-x: hidden; }
 	margin-bottom: 4px;
 	font-size: 12px;
 	color: #ccc;
+}
+
+.modal-close {
+	display: contents;
+}
+
+/* --- Pretty Scrollbar untuk Modal dan Komponen Panjang --- */
+.modal-body {
+	scrollbar-width: thin;
+	scrollbar-color: var(--border-col) transparent;
+	max-height: 70vh;
+	overflow-y: auto;
+}
+
+.modal-body::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+	background: rgba(255, 255, 255, 0.05);
+	border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+	background: var(--border-col);
+	border-radius: 4px;
+	border: 2px solid transparent;
+	background-clip: content-box;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+	background: #6c757d;
+	background-clip: content-box;
+}
+
+.audit-user-list {
+	scrollbar-width: thin;
+	scrollbar-color: var(--border-col) #1a1a1a;
+}
+
+.audit-user-list::-webkit-scrollbar {
+	width: 8px;
+}
+
+.audit-user-list::-webkit-scrollbar-track {
+	background: #1a1a1a;
+	border-radius: 4px;
+}
+
+.audit-user-list::-webkit-scrollbar-thumb {
+	background: var(--border-col);
+	border-radius: 4px;
+}
+
+.audit-user-list::-webkit-scrollbar-thumb:hover {
+	background: #6c757d;
+}
+
+.audit-user-suggest {
+	scrollbar-width: thin;
+	scrollbar-color: var(--border-col) #1f2328;
+}
+
+.audit-user-suggest::-webkit-scrollbar {
+	width: 6px;
+}
+
+.audit-user-suggest::-webkit-scrollbar-track {
+	background: #1f2328;
+	border-radius: 3px;
+}
+
+.audit-user-suggest::-webkit-scrollbar-thumb {
+	background: var(--border-col);
+	border-radius: 3px;
+}
+
+#ghost-modal .modal-body .table-responsive {
+	scrollbar-width: thin;
+	scrollbar-color: var(--border-col) #1a1a1a;
+}
+
+#ghost-modal .modal-body .table-responsive::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+#ghost-modal .modal-body .table-responsive::-webkit-scrollbar-track {
+	background: #1a1a1a;
+	border-radius: 4px;
+}
+
+#ghost-modal .modal-body .table-responsive::-webkit-scrollbar-thumb {
+	background: var(--border-col);
+	border-radius: 4px;
+}
+
+#ghost-modal .modal-body .table-responsive::-webkit-scrollbar-thumb:hover {
+	background: #6c757d;
+}
+
+#settlement-log {
+	scrollbar-width: thin;
+	scrollbar-color: #444 #111;
+}
+
+#settlement-log::-webkit-scrollbar {
+	width: 10px;
+}
+
+#settlement-log::-webkit-scrollbar-track {
+	background: #111;
+}
+
+#settlement-log::-webkit-scrollbar-thumb {
+	background: #444;
+	border-radius: 4px;
+}
+
+#settlement-log::-webkit-scrollbar-thumb:hover {
+	background: #666;
+}
+
+.modal-body,
+.audit-user-list,
+.audit-user-suggest,
+#ghost-modal .modal-body .table-responsive {
+	scroll-behavior: smooth;
+}
+
+.audit-user-list .audit-user-row:hover {
+	background: #353535;
+	transition: background 0.2s ease;
+}
+
+@media (max-width: 768px) {
+	.modal-body::-webkit-scrollbar {
+		width: 6px;
+	}
+
+	.audit-user-list::-webkit-scrollbar {
+		width: 5px;
+	}
+
+	.modal-body {
+		scrollbar-width: thin;
+		padding-right: 4px;
+	}
+}
+
+.modal-body:after {
+	content: '';
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	height: 20px;
+	background: linear-gradient(to bottom, transparent, rgba(30, 34, 38, 0.8));
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 0.3s;
+}
+
+.modal-body.scrolled:after {
+	opacity: 1;
 }

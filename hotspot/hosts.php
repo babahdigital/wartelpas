@@ -30,6 +30,8 @@ if (!isset($_SESSION["mikhmon"])) {
 	
 	$API = new RouterosAPI();
 	$API->debug = false;
+    $API->timeout = 5;
+    $API->attempts = 1;
 	
 	if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
 
@@ -37,12 +39,21 @@ if (!isset($_SESSION["mikhmon"])) {
 		
 		// 1. Tarik data (bisa bypassed atau all, lalu filter IP)
 		if ($hotspot == "hostp") {
-			$raw_hosts = $API->comm("/ip/hotspot/host/print", array("?bypassed" => "yes"));
+            $raw_hosts = $API->comm("/ip/hotspot/host/print", array(
+                "?bypassed" => "yes",
+                "?server" => "wartel",
+                ".proplist" => ".id,mac-address,address,to-address,server,comment,authorized,bypassed,DHCP"
+            ));
 			$titlename = "Bypassed Hosts (172.16.2.x)";
 		} else {
-			$raw_hosts = $API->comm("/ip/hotspot/host/print");
+            $raw_hosts = $API->comm("/ip/hotspot/host/print", array(
+                "?server" => "wartel",
+                ".proplist" => ".id,mac-address,address,to-address,server,comment,authorized,bypassed,DHCP"
+            ));
 			$titlename = "Host List";
 		}
+
+        $API->disconnect();
 
         // 2. Filter Array di PHP (hanya server wartel)
         $allowed_servers = array('wartel');

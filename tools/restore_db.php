@@ -3,7 +3,6 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../include/acl.php';
-requireLogin('../admin.php?id=login');
 // Restore SQLite DB from backup (protected)
 ini_set('display_errors', 0);
 error_reporting(0);
@@ -42,7 +41,21 @@ if ($key === '' && isset($_POST['key'])) {
 if ($key === '' && isset($_SERVER['HTTP_X_BACKUP_KEY'])) {
     $key = (string)$_SERVER['HTTP_X_BACKUP_KEY'];
 }
-if (!hash_equals($secret, (string)$key)) {
+if ($key === '' && isset($_SERVER['HTTP_X_TOOLS_KEY'])) {
+    $key = (string)$_SERVER['HTTP_X_TOOLS_KEY'];
+}
+$is_valid_key = $secret !== '' && hash_equals($secret, (string)$key);
+
+if (!$is_valid_key) {
+    requireLogin('../admin.php?id=login');
+} else {
+    if (!isset($_SESSION['mikhmon'])) {
+        $_SESSION['mikhmon'] = 'tools';
+        $_SESSION['mikhmon_level'] = 'superadmin';
+    }
+}
+
+if (!$is_valid_key) {
     respond_restore(false, 'Forbidden', [], 403);
 }
 
@@ -56,9 +69,12 @@ if (!empty($_SERVER['REMOTE_ADDR']) && !empty($allowedIpList)) {
     }
 }
 
-$rateFile = sys_get_temp_dir() . '/restore_db.rate';
+$clientIp = !empty($_SERVER['REMOTE_ADDR']) ? (string)$_SERVER['REMOTE_ADDR'] : '';
+$rateKey = $clientIp . '|' . (string)$key;
+$rateFile = sys_get_temp_dir() . '/restore_db.rate.' . md5($rateKey);
 $rateWindow = isset($env['backup']['rate_window']) ? (int)$env['backup']['rate_window'] : 300;
 $rateLimit = isset($env['backup']['rate_limit']) ? (int)$env['backup']['rate_limit'] : 1;
+$forceRate = isset($_GET['force']) && $_GET['force'] === '1';
 $now = time();
 $hits = [];
 if (is_file($rateFile)) {
@@ -71,7 +87,7 @@ if (is_file($rateFile)) {
 $hits = array_values(array_filter($hits, function($t) use ($now, $rateWindow) {
     return is_int($t) && ($now - $t) <= $rateWindow;
 }));
-if (count($hits) >= $rateLimit) {
+if (!$forceRate && count($hits) >= $rateLimit) {
     respond_restore(false, 'Rate limited', [], 429);
 }
 $hits[] = $now;

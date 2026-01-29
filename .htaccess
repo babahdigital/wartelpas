@@ -7,7 +7,6 @@ Options -Indexes
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-    RewriteRule ^maintenance$ /maintenance.html [L]
 </IfModule>
 
 # Hardening PHP
@@ -32,9 +31,6 @@ ErrorDocument 403 /error.php
 ErrorDocument 404 /error.php
 ErrorDocument 500 /error.php
 
-<Files "error.php">
-    Require all granted
-</Files>
 
 # ====================================================
 # 3. PROTEKSI FILE & FOLDER (DISESUAIKAN DENGAN TREE)
@@ -89,16 +85,9 @@ Require all denied
 # B. WHITELIST: AKSES PUBLIK (Login & Assets)
 # Izinkan file login dan folder assets (css, js, fonts, img)
 # Agar tampilan login tidak rusak saat diakses publik (jika diinginkan)
-<FilesMatch "^(index\.php|admin\.php|login\.php|cekip\.php|maintenance\.html|error\.php)$">
+<FilesMatch "^(index\.php|admin\.php|login\.php|cekip\.php)$">
     Require all granted
 </FilesMatch>
-
-<If "%{REQUEST_URI} == '/'">
-    Require all granted
-</If>
-<If "%{REQUEST_URI} =~ m#^/\?#">
-    Require all granted
-</If>
 
 # DB check endpoint (protected by key)
 <If "%{REQUEST_URI} =~ m#^/tools/db_check\.php$#">
@@ -141,28 +130,8 @@ Require all denied
     Require all granted
 </If>
 
-# Clear-all endpoint (manual maintenance)
-<If "%{REQUEST_URI} =~ m#^/tools/clear_all\.php$#">
-    Require all granted
-</If>
-
-# Clear logs endpoint
-<If "%{REQUEST_URI} =~ m#^/tools/clear_logs\.php$#">
-    Require all granted
-</If>
-
 # Settlement log ingest endpoint
 <If "%{REQUEST_URI} =~ m#^/report/laporan/services/settlement_log_ingest\.php$#">
-    Require all granted
-</If>
-
-# Clear block endpoint
-<If "%{REQUEST_URI} =~ m#^/tools/clear_block\.php$#">
-    Require all granted
-</If>
-
-# Delete user endpoint (manual maintenance)
-<If "%{REQUEST_URI} =~ m#^/tools/delete_user\.php$#">
     Require all granted
 </If>
 
@@ -181,10 +150,6 @@ Require all denied
     Require all granted
 </If>
 
-# Sales audit endpoint (protected)
-<If "%{REQUEST_URI} =~ m#^/tools/audit_sales\.php$#">
-    Require all granted
-</If>
 
 # Print report endpoints
 <If "%{REQUEST_URI} =~ m#^/report/print/print_rekap\.php$#">
@@ -200,20 +165,6 @@ Require all denied
     Require all granted
 </If>
 
-# Sales cleanup endpoint
-<If "%{REQUEST_URI} =~ m#^/tools/cleanup_sales_today\.php$#">
-    Require all granted
-</If>
-
-# Users cleanup endpoint
-<If "%{REQUEST_URI} =~ m#^/tools/cleanup_users_today\.php$#">
-    Require all granted
-</If>
-
-# Login events cleanup endpoint
-<If "%{REQUEST_URI} =~ m#^/tools/cleanup_login_events\.php$#">
-    Require all granted
-</If>
 <If "%{REQUEST_URI} =~ m#^/report/print/print_rincian\.php$#">
     Require all granted
 </If>
@@ -242,24 +193,12 @@ Require all denied
 
 # C. WHITELIST: TAMU VIP (Dashboard Full Akses)
 # IP VIP boleh akses file AJAX (dashboard/, hotspot/, dll)
-<If "%{REQUEST_URI} =~ m#^/(hotspot|dhcp|ppp|status|traffic|voucher|report|tools|system|settings|process)/#">
-    <RequireAny>
-        Require env TAMU_VIP
-        Require ip 10.0.0.6
-        Require ip 127.0.0.1
-        Require ip ::1
-    </RequireAny>
-</If>
-
-# Allow dashboard access (auth tetap dicek di PHP)
-<If "%{REQUEST_URI} =~ m#^/dashboard/#">
-    Require all granted
-</If>
-
-# Allow maintenance alias path
-<If "%{REQUEST_URI} =~ m#^/maintenance$#">
-    Require all granted
-</If>
+<RequireAny>
+    Require env TAMU_VIP
+    Require ip 10.0.0.6
+    Require ip 127.0.0.1
+    Require ip ::1
+</RequireAny>
 
 # ====================================================
 # 6. PINTU KHUSUS MIKROTIK (SYNC)

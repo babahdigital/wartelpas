@@ -84,9 +84,8 @@ function get_status_priority_list() {
 
 function resolve_status_from_sources($status, $is_invalid, $is_retur, $is_rusak, $comment, $lh_status = '') {
     $base = strtolower(trim((string)$status));
-    if ($base !== '' && $base !== 'normal') return $base;
-
     $flags = [];
+    if ($base !== '' && $base !== 'normal') $flags[$base] = true;
     if ((int)$is_invalid === 1) $flags['invalid'] = true;
     if ((int)$is_retur === 1) $flags['retur'] = true;
     if ((int)$is_rusak === 1 || strtolower((string)$lh_status) === 'rusak') $flags['rusak'] = true;
