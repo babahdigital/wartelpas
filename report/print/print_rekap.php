@@ -830,52 +830,6 @@ foreach ($rows as $r) {
     $total_net += $net_add;
 }
 
-// Tambahkan rusak/retur/invalid dari login_history agar tampil di rekap audit lapangan
-if ($db) {
-    try {
-        $stmtHist = $db->prepare("SELECT username, blok_name, raw_comment, last_status, last_uptime, last_bytes, validity, login_date, login_time_real, logout_time_real, updated_at FROM login_history WHERE last_status IN ('rusak','retur','invalid') AND (login_date = :d OR substr(login_time_real,1,10) = :d OR substr(logout_time_real,1,10) = :d OR substr(updated_at,1,10) = :d)");
-        $stmtHist->execute([':d' => $filter_date]);
-        $histRows = $stmtHist->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($histRows as $hr) {
-            $uname = trim((string)($hr['username'] ?? ''));
-            if ($uname === '') continue;
-            $raw_comment = (string)($hr['raw_comment'] ?? '');
-            $blok_name = (string)($hr['blok_name'] ?? '');
-            $block = normalize_block_name($blok_name, $raw_comment);
-            if ($block === '') continue;
-            $status = normalize_status_value($hr['last_status'] ?? '');
-            if (!in_array($status, ['rusak', 'retur', 'invalid'], true)) {
-                if (stripos($raw_comment, 'RETUR') !== false) $status = 'retur';
-                elseif (stripos($raw_comment, 'RUSAK') !== false) $status = 'rusak';
-                else continue;
-            }
-            $uname_key = strtolower($uname);
-            if ($status === 'rusak' && isset($retur_ref_map[$block][$uname_key])) {
-                continue;
-            }
-            $profile_src = (string)($hr['validity'] ?? '');
-            if ($profile_src === '') {
-                $profile_src = extract_profile_from_comment($raw_comment);
-            }
-            if ($profile_src === '' && preg_match('/\bblok[-\s]?[a-z]+(10|30)\b/i', $raw_comment, $m)) {
-                $profile_src = $m[1] . 'menit';
-            }
-            $kind = detect_profile_minutes($profile_src);
-            $inc_key = $uname . '|' . $kind . '|' . $status;
-            if (!isset($system_incidents_by_block[$block])) $system_incidents_by_block[$block] = [];
-            if (isset($system_incidents_by_block[$block][$inc_key])) continue;
-            $system_incidents_by_block[$block][$inc_key] = [
-                'username' => $uname,
-                'status' => $status,
-                'profile_kind' => $kind,
-                'last_uptime' => trim((string)($hr['last_uptime'] ?? '')),
-                'last_bytes' => (int)($hr['last_bytes'] ?? 0),
-                'price' => resolve_price_from_profile($profile_src)
-            ];
-        }
-    } catch (Exception $e) {}
-}
-
 $total_qty_laku = count($unique_laku_users);
 $net_system_display = (int)$total_net;
 $voucher_loss_display = (int)$total_rusak + (int)$total_invalid;
