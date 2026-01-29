@@ -1316,6 +1316,9 @@ $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? '
                                         continue;
                                     }
                                     if (in_array($u_status, ['online', 'terpakai', 'normal'], true) || $u_status === '') {
+                                        if (!$has_manual_evidence) {
+                                            continue;
+                                        }
                                         $u_status = 'anomaly';
                                     }
                                     $profile_key = normalize_profile_key($inc['profile_key'] ?? ($inc['profile_kind'] ?? ($inc['profile'] ?? '')));
