@@ -150,6 +150,11 @@ Require all denied
     Require all granted
 </If>
 
+# Restore auto rusak endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/restore_auto_rusak\.php$#">
+    Require all granted
+</If>
+
 # Clear block endpoint (protected)
 <If "%{REQUEST_URI} =~ m#^/tools/clear_block\.php$#">
     Require all granted
