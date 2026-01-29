@@ -196,7 +196,7 @@ function manualSettlement(){
             if (cfg.sessionId) params.set('session', cfg.sessionId);
             params.set('date', cfg.filterDate || '');
             params.set('action', 'start');
-            params.set('cleanup', '1');
+            // Cleanup default dimatikan agar tidak menghapus history penjualan.
             pollSettlementLogs();
             fetch('report/laporan/services/settlement_manual.php?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(function(r){ return r.json(); })

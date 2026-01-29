@@ -136,9 +136,7 @@ function cleanup_history_by_router($db, $date, $router_rows, $logFile) {
                 return [0, 0, 0];
         }
 
-        $deleted_sales = 0;
         $deleted_live = 0;
-        $updated_login = 0;
 
         try {
                 $db->exec("DROP TABLE IF EXISTS temp_router_users");
@@ -148,50 +146,19 @@ function cleanup_history_by_router($db, $date, $router_rows, $logFile) {
                         $stmtIns->execute([':n' => $n]);
                 }
 
-                $stmtDelSales = $db->prepare("DELETE FROM sales_history
-                        WHERE (sale_date = :d OR raw_date LIKE :dlike)
-                            AND username NOT IN (SELECT name FROM temp_router_users)
-                            AND (
-                                lower(COALESCE(status,'')) IN ('rusak','retur','invalid')
-                                OR COALESCE(is_rusak,0)=1 OR COALESCE(is_retur,0)=1 OR COALESCE(is_invalid,0)=1
-                                OR lower(COALESCE(comment,'')) LIKE '%rusak%'
-                                OR lower(COALESCE(comment,'')) LIKE '%retur%'
-                                OR lower(COALESCE(comment,'')) LIKE '%invalid%'
-                            )");
-                $stmtDelSales->execute([':d' => $date, ':dlike' => $date . '%']);
-                $deleted_sales = $stmtDelSales->rowCount();
-
                 $stmtDelLive = $db->prepare("DELETE FROM live_sales
                         WHERE sync_status='pending'
                             AND (sale_date = :d OR raw_date LIKE :dlike)
                             AND username NOT IN (SELECT name FROM temp_router_users)");
                 $stmtDelLive->execute([':d' => $date, ':dlike' => $date . '%']);
                 $deleted_live = $stmtDelLive->rowCount();
-
-                $stmtUpdLogin = $db->prepare("UPDATE login_history
-                        SET last_status = 'archived', updated_at = CURRENT_TIMESTAMP
-                        WHERE username NOT IN (SELECT name FROM temp_router_users)
-                            AND (
-                                instr(lower(COALESCE(NULLIF(last_status,''), '')), 'rusak') > 0
-                                OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'retur') > 0
-                                OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'invalid') > 0
-                            )
-                            AND (
-                                login_date = :d
-                                OR substr(login_time_real,1,10) = :d
-                                OR substr(last_login_real,1,10) = :d
-                                OR substr(logout_time_real,1,10) = :d
-                                OR substr(updated_at,1,10) = :d
-                            )");
-                $stmtUpdLogin->execute([':d' => $date]);
-                $updated_login = $stmtUpdLogin->rowCount();
         } catch (Exception $e) {
                 append_settlement_log($logFile, 'system,error', 'SETTLE: CLEANUP gagal: ' . $e->getMessage());
                 return [0, 0, 0];
         }
 
-        append_settlement_log($logFile, 'system,info', 'SETTLE: CLEANUP selesai. sales_history=' . $deleted_sales . ', live_sales=' . $deleted_live . ', login_history=' . $updated_login . '.');
-        return [$deleted_sales, $deleted_live, $updated_login];
+        append_settlement_log($logFile, 'system,info', 'SETTLE: CLEANUP selesai. live_sales=' . $deleted_live . '.');
+        return [0, $deleted_live, 0];
 }
 
 $root_dir = dirname(__DIR__, 3);
