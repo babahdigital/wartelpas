@@ -7,6 +7,7 @@ Options -Indexes
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+    RewriteRule ^maintenance$ /maintenance.html [L]
 </IfModule>
 
 # Hardening PHP
@@ -88,7 +89,7 @@ Require all denied
 # B. WHITELIST: AKSES PUBLIK (Login & Assets)
 # Izinkan file login dan folder assets (css, js, fonts, img)
 # Agar tampilan login tidak rusak saat diakses publik (jika diinginkan)
-<FilesMatch "^(index\.php|admin\.php|login\.php|cekip\.php|maintenance\.html)$">
+<FilesMatch "^(index\.php|admin\.php|login\.php|cekip\.php|maintenance\.html|error\.php)$">
     Require all granted
 </FilesMatch>
 
