@@ -135,7 +135,14 @@ if (trim($display_paket) === '') {
 }
 
 if (!empty($is_vip)) {
-  $display_paket = 'Pengelola';
+  $vip_hint = strtolower(trim((string)$profile_name . ' ' . (string)$timelimit . ' ' . (string)$validity . ' ' . (string)$comment));
+  $vip_duration = '';
+  if (preg_match('/\b30\s*(menit|m|min)\b|30menit|\b30m\b/i', $vip_hint)) {
+    $vip_duration = '30 Menit';
+  } elseif (preg_match('/\b10\s*(menit|m|min)\b|10menit|\b10m\b/i', $vip_hint)) {
+    $vip_duration = '10 Menit';
+  }
+  $display_paket = $vip_duration !== '' ? ('Pengelola / ' . $vip_duration) : 'Pengelola';
   $price_display = '';
 }
 ?>
