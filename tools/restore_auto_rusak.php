@@ -57,12 +57,23 @@ if (!file_exists($dbFile)) {
     die("DB not found");
 }
 
+$log_dir = $root_dir . '/logs';
+if (!is_dir($log_dir)) {
+    @mkdir($log_dir, 0755, true);
+}
+$log_file = $log_dir . '/restore_auto_rusak.log';
+function restore_log($file, $message) {
+    $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
+    @file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
+}
+
 try {
     $db = new PDO('sqlite:' . $dbFile);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $db->exec("PRAGMA journal_mode=WAL;");
     $db->exec("PRAGMA synchronous=NORMAL;");
     $db->exec("PRAGMA busy_timeout=5000;");
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN auto_rusak INTEGER DEFAULT 0"); } catch (Exception $e) {}
 
     $dateClause = " AND (login_date = :d OR substr(first_login_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR substr(login_time_real,1,10) = :d OR substr(logout_time_real,1,10) = :d OR substr(updated_at,1,10) = :d)";
     $params = [':d' => $date];
@@ -116,8 +127,10 @@ try {
         } catch (Exception $e) {}
     }
 
+    restore_log($log_file, 'ok restore=' . $updated . ' date=' . $date . ' blok=' . $blok);
     echo "OK restore=" . $updated;
 } catch (Exception $e) {
     http_response_code(500);
+    restore_log($log_file, 'error=' . $e->getMessage());
     echo "Error";
 }
