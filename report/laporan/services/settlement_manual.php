@@ -62,6 +62,8 @@ function detect_profile_minutes_manual($validity, $raw_comment) {
         $val = (int)$m[1];
     } elseif (preg_match('/\b(10|30)\s*(menit|m)\b/', $cmt, $m)) {
         $val = (int)$m[1];
+    } elseif (preg_match('/\bblok[-\s]?[a-z]+(10|30)\b/i', $raw_comment, $m)) {
+        $val = (int)$m[1];
     }
     if (!in_array($val, [10, 30], true)) return 0;
     return $val;
