@@ -869,6 +869,11 @@ foreach($all_users as $u) {
       }
     }
 
+    if ($status === 'VIP') {
+      $login_disp = '-';
+      $logout_disp = '-';
+    }
+
     $relogin_flag = ((int)($hist['login_count'] ?? 0) > 1);
     $relogin_count = (int)($hist['login_count'] ?? 0);
     $first_login_disp = $first_login_real ?? ($hist['first_login_real'] ?? '-');
@@ -879,6 +884,10 @@ foreach($all_users as $u) {
     $last_used_filter = $hist['last_login_real'] ?? ($hist['logout_time_real'] ?? ($hist['login_time_real'] ?? ($hist['first_login_real'] ?? '-')));
     if ($status === 'ONLINE' && !empty($hist['login_time_real'])) {
       $last_used_filter = $hist['login_time_real'];
+    }
+    if ($status === 'VIP') {
+      $last_used_disp = '-';
+      $last_used_filter = '-';
     }
 
     // Filter tanggal (harian/bulanan/tahunan) memakai last_used (selalu aktif)
