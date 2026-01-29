@@ -1474,6 +1474,11 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
                   $stmt = $db->prepare("INSERT OR IGNORE INTO vip_actions (username, date_key, created_at) VALUES (:u, :d, CURRENT_TIMESTAMP)");
                   $stmt->execute([':u' => $name, ':d' => $vip_date_key]);
                 } catch(Exception $e) {}
+              } elseif ($act === 'unvip') {
+                try {
+                  $stmt = $db->prepare("DELETE FROM vip_actions WHERE username = :u AND date_key = :d");
+                  $stmt->execute([':u' => $name, ':d' => $vip_date_key]);
+                } catch(Exception $e) {}
               }
             }
           }
