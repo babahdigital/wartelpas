@@ -185,18 +185,18 @@
 
     # :delay 1s;
 
-    # 4b. CLEAR SCRIPT LOG (Babah Digital Script)
-    :log info "SETTLE: MAINT: Merapikan script Babah Digital...";
-    $sendSettleLog "SETTLE: MAINT: Merapikan script Babah Digital..." "info";
+    # 4b. CLEAR SCRIPT LOG (settlement Script)
+    :log info "SETTLE: MAINT: Merapikan script settlement...";
+    $sendSettleLog "SETTLE: MAINT: Merapikan script settlement..." "info";
     :do {
-        :local scr [/system script find where comment="Babah Digital"];
+        :local scr [/system script find where comment="settlement"];
         :if ([:len $scr] > 0) do={
             /system script remove $scr;
-            $logSettle "info" ("SETTLE: MAINT: Script Babah Digital dibersihkan " . [:len $scr] . ".");
+            $logSettle "info" ("SETTLE: MAINT: Script settlement dibersihkan " . [:len $scr] . ".");
         } else={
-            $logSettle "info" "SETTLE: MAINT: Tidak ada script Babah Digital.";
+            $logSettle "info" "SETTLE: MAINT: Tidak ada script settlement.";
         }
-    } on-error={ $logSettle "warning" "SETTLE: MAINT: Perapian script Babah Digital gagal."; }
+    } on-error={ $logSettle "warning" "SETTLE: MAINT: Perapian script settlement gagal."; }
 
     :delay 1s;
 
