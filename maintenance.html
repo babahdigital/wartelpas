@@ -2,6 +2,12 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" href="./img/favicon.png" />
+    <!-- Meta No-Cache (PENTING: Mencegah browser menyimpan halaman maintenance) -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>System Maintenance</title>
     <style>
@@ -78,7 +84,8 @@
             <span class="cmd">_ <span class="cursor"></span></span>
         </div>
 
-        <a href="http://wartelpas.sobigidul.net" class="btn-retry">[ REFRESH SYSTEM ]</a>
+        <!-- Menggunakan replace('/') agar redirect bersih ke halaman utama -->
+        <a href="javascript:window.location.replace('/')" class="btn-retry">[ REFRESH SYSTEM ]</a>
     </div>
 </body>
 </html>
