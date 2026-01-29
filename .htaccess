@@ -160,6 +160,11 @@ Require all denied
     Require all granted
 </If>
 
+# Sync rusak audit endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/sync_rusak_audit\.php$#">
+    Require all granted
+</If>
+
 # Clear block endpoint (protected)
 <If "%{REQUEST_URI} =~ m#^/tools/clear_block\.php$#">
     Require all granted
