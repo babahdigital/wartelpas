@@ -262,7 +262,7 @@
             }
         }
         $logSettle "info" ("SETTLE: " . $removed . " voucher terhapus (10/30 menit).");
-        $logSettle "info" ("SETTLE: Voucher siap tidak diubah: " . $skippedReady . ".");
+        $logSettle "info" ("SETTLE: Voucher yang ready: " . $skippedReady . ".");
     } on-error={ $logSettle "warning" "SETTLE: Pembersihan voucher gagal."; }
 
     :delay 1s;
