@@ -1430,6 +1430,27 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             $uptime_final = $uptime_user != '' ? $uptime_user : ($uptime_hist != '' ? $uptime_hist : '0s');
           }
           $comment_src = $urow['comment'] ?? $comm;
+          $profile_kind_manual = detect_profile_kind_unified($profile_label, $comment_src, extract_blok_name($comm), $uptime_final);
+          $uptime_sec = uptime_to_seconds($uptime_final);
+          $bytes_final = (int)$bytes_final;
+
+          if ($profile_kind_manual === '30') {
+            $min_bytes = 7 * 1024 * 1024;
+            if ($bytes_final >= $min_bytes) {
+              $action_blocked = true;
+              $action_error = 'Syarat manual RUSAK tidak terpenuhi: profil 30 menit harus < 7MB.';
+            }
+          } elseif ($profile_kind_manual === '10') {
+            $max_uptime = 5 * 60;
+            if ($uptime_sec > $max_uptime) {
+              $action_blocked = true;
+              $action_error = 'Syarat manual RUSAK tidak terpenuhi: profil 10 menit harus uptime <= 5 menit.';
+            }
+          }
+
+          if ($action_blocked) {
+            // stop manual rusak if validation failed
+          } else {
           $cm = extract_ip_mac_from_comment($comment_src);
           $ip_final = $arow['address'] ?? ($cm['ip'] ?? ($hist['last_ip'] ?? ($hist['ip_address'] ?? '-')));
           $mac_final = $arow['mac-address'] ?? ($urow['mac-address'] ?? ($cm['mac'] ?? ($hist['last_mac'] ?? ($hist['mac_address'] ?? '-'))));
@@ -1463,7 +1484,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
 
           if ($db && $name != '') {
             try {
-              $stmt = $db->prepare("UPDATE login_history SET updated_at=CURRENT_TIMESTAMP,
+              $stmt = $db->prepare("UPDATE login_history SET auto_rusak=0, updated_at=CURRENT_TIMESTAMP,
                 login_time_real=COALESCE(NULLIF(login_time_real,''), CURRENT_TIMESTAMP),
                 last_login_real=COALESCE(NULLIF(last_login_real,''), CURRENT_TIMESTAMP)
                 WHERE username = :u");
@@ -1481,6 +1502,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
               $stmt = $db->prepare("UPDATE live_sales SET status='rusak', is_rusak=1, is_retur=0, is_invalid=0 WHERE username = :u AND sync_status = 'pending'");
               $stmt->execute([':u' => $name]);
             } catch(Exception $e) {}
+          }
           }
         }
         $action_message = 'Berhasil set RUSAK untuk ' . $name . '.';

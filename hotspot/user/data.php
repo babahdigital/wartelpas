@@ -911,6 +911,9 @@ foreach($all_users as $u) {
     if ($profile_label_display === '' && in_array($profile_kind_final, ['10', '30'], true)) {
       $profile_label_display = $profile_kind_final . ' Menit';
     }
+    if ($profile_label_display === '') {
+      $profile_label_display = 'Lainnya';
+    }
 
     $display_data[] = [
       'uid' => $u['.id'] ?? '',

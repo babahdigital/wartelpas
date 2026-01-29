@@ -18,6 +18,7 @@ session_write_close();
 $session = $_GET['session'] ?? '';
 $date = $_GET['date'] ?? '';
 $action = $_GET['action'] ?? 'start';
+$force = isset($_GET['force']) && $_GET['force'] === '1';
 $cleanup = isset($_GET['cleanup']) && $_GET['cleanup'] === '1';
 if ($session === '' || $date === '') {
     echo json_encode(['ok' => false, 'message' => 'Parameter tidak valid.']);
@@ -100,7 +101,7 @@ function apply_auto_rusak_settlement($db, $date, $logFile) {
         }
         $is_full_uptime = $uptime_sec >= ($profile_minutes * 60);
         $is_short_use = ($uptime_sec > 0 && $uptime_sec <= $short_uptime_limit);
-        $bytes_threshold_full = ($profile_minutes === 10) ? (3 * 1024 * 1024) : (5 * 1024 * 1024);
+        $bytes_threshold_full = ($profile_minutes === 10) ? (3 * 1024 * 1024) : (7 * 1024 * 1024);
         if (($is_full_uptime && $bytes < $bytes_threshold_full) || ($is_short_use && $bytes < $bytes_threshold_short)) {
             try {
             $stmtU = $db->prepare("UPDATE login_history SET last_status='rusak', auto_rusak=1, updated_at=CURRENT_TIMESTAMP WHERE username = :u");
@@ -218,7 +219,7 @@ try {
     $stmt = $db->prepare("SELECT status FROM settlement_log WHERE report_date = :d LIMIT 1");
     $stmt->execute([':d' => $date]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ($action === 'start' && $row && strtolower((string)$row['status']) === 'done') {
+    if ($action === 'start' && $row && strtolower((string)$row['status']) === 'done' && !$force) {
         echo json_encode(['ok' => true, 'message' => 'Sudah settlement.']);
         exit;
     }
