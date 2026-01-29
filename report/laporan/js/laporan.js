@@ -1038,8 +1038,8 @@ function setAuditQtyLockState(locked){
     if (hint) {
         hint.classList.toggle('locked', !!locked);
         hint.textContent = locked
-            ? 'Qty terkunci karena user dipilih. Kosongkan pilihan user untuk edit manual.'
-            : 'Qty otomatis dari user terpilih. Kosongkan pilihan user untuk edit manual.';
+            ? 'Qty terkunci karena user dipilih.'
+            : 'Qty otomatis dari user terpilih.';
     }
 }
 
@@ -1057,7 +1057,7 @@ function updateAuditUserSummary(){
     }
     if (summary) {
         summary.textContent = count > 0
-            ? 'Total: ' + count + ' user terpilih'
+            ? 'Terpilih: ' + count + ' user'
             : 'Belum ada user dipilih';
     }
     if (unreported) {

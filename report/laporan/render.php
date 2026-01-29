@@ -132,6 +132,7 @@
             <input type="hidden" name="report" value="selling">
             <input type="hidden" name="ajax" value="1">
             <input type="hidden" name="audit_submit" value="1">
+            <input type="hidden" name="audit_date" value="<?= htmlspecialchars($filter_date); ?>">
             
             <div class="modal-body">
                 <?php if ($audit_locked_today): ?>
@@ -150,10 +151,6 @@
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div>
-                        <label class="label-icon">Tanggal</label>
-                        <input class="form-input" type="date" name="audit_date" value="<?= htmlspecialchars($filter_date); ?>" required>
-                    </div>
                 </div>
 
                 <div style="margin-top:10px;">
@@ -167,7 +164,7 @@
                         <span class="audit-user-summary" id="auditUserSummary">Belum ada user dipilih</span>
                         <span class="audit-user-unreported" id="auditUserUnreported">Tidak dilaporkan: -</span>
                     </div>
-                    <div class="audit-qty-hint" id="auditQtyLockHint">Qty otomatis terkunci jika user dipilih. Kosongkan pilihan user untuk edit manual.</div>
+                    <div class="audit-qty-hint" id="auditQtyLockHint">Qty terkunci karena user dipilih.</div>
                 </div>
 
                 <div class="form-group-box" style="margin-top:12px;">
