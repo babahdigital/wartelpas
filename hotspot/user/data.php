@@ -152,6 +152,22 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
   return;
 }
 
+$vip_cfg = $env['vip'] ?? [];
+$vip_daily_limit = isset($vip_cfg['daily_limit']) ? (int)$vip_cfg['daily_limit'] : 0;
+$vip_today_count = 0;
+$vip_limit_reached = false;
+if ($db && $vip_daily_limit > 0) {
+  try {
+    $stmt = $db->prepare("SELECT COUNT(*) FROM vip_actions WHERE date_key = :d");
+    $stmt->execute([':d' => date('Y-m-d')]);
+    $vip_today_count = (int)$stmt->fetchColumn();
+    $vip_limit_reached = ($vip_today_count >= $vip_daily_limit);
+  } catch (Exception $e) {
+    $vip_today_count = 0;
+    $vip_limit_reached = false;
+  }
+}
+
 $all_users = $API->comm("/ip/hotspot/user/print", array(
     "?server" => $hotspot_server,
   ".proplist" => ".id,name,comment,profile,disabled,bytes-in,bytes-out,uptime"
