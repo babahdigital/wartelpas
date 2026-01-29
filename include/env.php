@@ -104,7 +104,8 @@ $env = [
     'maintenance' => [
         'enabled' => true,
         'allowed_session' => 'S3c7x9_LB',
-        'home_url' => 'http://wartelpas.sobigidul.net/?session=S3c7x9_LB'
+        'home_url' => 'http://wartelpas.sobigidul.net/?session=S3c7x9_LB',
+        'redirect_url' => './maintenance'
     ],
     'rclone' => [
         'bin' => '/usr/bin/rclone',

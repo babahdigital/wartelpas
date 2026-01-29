@@ -53,7 +53,7 @@ function getMaintenanceUrl()
     if (!empty($env['maintenance']['redirect_url'])) {
         return (string)$env['maintenance']['redirect_url'];
     }
-    return './maintenance.html';
+    return './maintenance';
 }
 
 function getMaintenanceAllowedSession()
