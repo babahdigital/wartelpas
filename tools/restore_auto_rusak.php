@@ -3,8 +3,6 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../include/acl.php';
-requireLogin('../admin.php?id=login');
-requireSuperAdmin('../admin.php?id=sessions');
 ini_set('display_errors', 0);
 error_reporting(0);
 header('Content-Type: text/plain');
@@ -21,9 +19,11 @@ if ($key === '' && isset($_SERVER['HTTP_X_WARTELPAS_KEY'])) {
     $key = $_SERVER['HTTP_X_WARTELPAS_KEY'];
 }
 $key = trim((string)$key);
-if ($key === '' || !hash_equals($secret_token, $key)) {
-    http_response_code(403);
-    die("Error: Token Salah.");
+$has_valid_key = ($key !== '' && $secret_token !== '' && hash_equals($secret_token, $key));
+
+if (!$has_valid_key) {
+    requireLogin('../admin.php?id=login');
+    requireSuperAdmin('../admin.php?id=sessions');
 }
 
 $session = $_GET['session'] ?? '';
