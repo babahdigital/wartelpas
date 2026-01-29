@@ -101,6 +101,12 @@ function resolve_status_from_sources($status, $is_invalid, $is_retur, $is_rusak,
     return 'normal';
 }
 
+function is_vip_comment($comment) {
+    $c = trim((string)$comment);
+    if ($c === '') return false;
+    return (bool)preg_match('/\bvip\b|\bpengelola\b/i', $c);
+}
+
 function normalize_block_name($blok_name, $comment = '') {
     $raw = strtoupper(trim((string)$blok_name));
     if ($raw === '' && $comment !== '') {

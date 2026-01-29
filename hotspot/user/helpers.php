@@ -165,6 +165,14 @@ if (!function_exists('normalize_profile_label')) {
   }
 }
 
+if (!function_exists('is_vip_comment')) {
+  function is_vip_comment($comment) {
+    $c = trim((string)$comment);
+    if ($c === '') return false;
+    return (bool)preg_match('/\bvip\b|\bpengelola\b/i', $c);
+  }
+}
+
 // Helper: Ekstrak IP/MAC dari comment (format: IP:... | MAC:...)
 if (!function_exists('extract_ip_mac_from_comment')) {
   function extract_ip_mac_from_comment($comment) {
