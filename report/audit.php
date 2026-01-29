@@ -217,9 +217,11 @@ if (file_exists($dbFile)) {
                         END AS eff_status,
                         COALESCE(sh.price_snapshot, sh.price, 0) AS eff_price,
                         COALESCE(sh.qty,1) AS eff_qty
-                    FROM sales_history sh
-                    LEFT JOIN login_history lh ON lh.username = sh.username
-                    WHERE $dateFilter
+                                        FROM sales_history sh
+                                        LEFT JOIN login_history lh ON lh.username = sh.username
+                                        WHERE $dateFilter
+                                            AND instr(lower(COALESCE(sh.comment,'')), 'vip') = 0
+                                            AND instr(lower(COALESCE(lh.raw_comment,'')), 'vip') = 0
                 ) t";
             $stmt = $db->prepare($sumSql);
             foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
@@ -256,6 +258,7 @@ if (file_exists($dbFile)) {
                     FROM login_history lh
                     WHERE username != ''
                         AND $lhWhere
+                        AND instr(lower(COALESCE(raw_comment,'')), 'vip') = 0
                         AND (
                             instr(lower(COALESCE(NULLIF(last_status,''), '')), 'rusak') > 0
                             OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'retur') > 0
@@ -342,9 +345,11 @@ if (file_exists($dbFile)) {
                         END AS eff_status,
                         COALESCE(ls.price_snapshot, ls.price, 0) AS eff_price,
                         COALESCE(ls.qty,1) AS eff_qty
-                    FROM live_sales ls
-                    LEFT JOIN login_history lh2 ON lh2.username = ls.username
-                    WHERE ls.sync_status='pending' AND $dateFilter
+                                        FROM live_sales ls
+                                        LEFT JOIN login_history lh2 ON lh2.username = ls.username
+                                        WHERE ls.sync_status='pending' AND $dateFilter
+                                            AND instr(lower(COALESCE(ls.comment,'')), 'vip') = 0
+                                            AND instr(lower(COALESCE(lh2.raw_comment,'')), 'vip') = 0
                 ) t";
             $stmt = $db->prepare($pendingSumSql);
             foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);

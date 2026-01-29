@@ -213,6 +213,8 @@ if (file_exists($dbFile)) {
                 FROM sales_history sh
                 LEFT JOIN login_history lh ON lh.username = sh.username
                 WHERE $dateFilter
+                  AND instr(lower(COALESCE(sh.comment,'')), 'vip') = 0
+                  AND instr(lower(COALESCE(lh.raw_comment,'')), 'vip') = 0
               ) t";
             $stmt = $db->prepare($sumSql);
             foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
@@ -250,6 +252,7 @@ if (file_exists($dbFile)) {
               FROM login_history lh
               WHERE username != ''
                 AND $lhWhere
+                AND instr(lower(COALESCE(raw_comment,'')), 'vip') = 0
                 AND (
                   instr(lower(COALESCE(NULLIF(last_status,''), '')), 'rusak') > 0
                   OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'retur') > 0
