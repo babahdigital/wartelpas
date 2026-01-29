@@ -106,7 +106,7 @@
         /tool fetch url=("http://wartelpas.sobigidul.net/report/laporan/services/settlement_log_ingest.php?key=kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE=&session=S3c7x9_LB&date=" . $encDt . "&time=" . $encTm . "&topic=" . $encTp . "&msg=" . $encMsg) keep-result=no;
         
     } on-error={
-        :log warning "SETTLE: LOG: Gagal kirim log ke server (koneksi/url error).";
+        :log warning "SETTLE: Log belum terkirim (koneksi/url error).";
     }
 };
 
@@ -126,7 +126,7 @@
 # LOGIKA UTAMA CLEANUP
 # ==========================================
 :do {
-    $logSettle "info" "SETTLE: CLEANUP: Mulai proses cuci gudang.";
+    $logSettle "info" "SETTLE: Cuci gudang dimulai. Mohon tunggu.";
 
     :global syncStatsOk;
     :global syncSalesOk;
@@ -134,26 +134,26 @@
     :set syncSalesOk true;
 
     # 2. SYNC STATISTIK (Wajib Jalan)
-    :log info "SETTLE: SYNC: Mengirim data statistik ke Mikhmon...";
-    $sendSettleLog "SETTLE: SYNC: Mengirim data statistik ke Mikhmon..." "info";
+    :log info "SETTLE: Mengirim data statistik...";
+    $sendSettleLog "SETTLE: Mengirim data statistik..." "info";
     :do {
         /tool fetch url="http://wartelpas.sobigidul.net/report/laporan/services/sync_stats.php?key=kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE=&session=S3c7x9_LB" keep-result=no;
-        $logSettle "info" "SETTLE: SYNC STATS: Berhasil.";
+        $logSettle "info" "SETTLE: Statistik terkirim.";
     } on-error={ 
-        $logSettle "error" "SETTLE: SYNC STATS: GAGAL KONEKSI! Cek IP Server/Jaringan."; 
+        $logSettle "error" "SETTLE: Statistik gagal dikirim. Periksa koneksi."; 
         :set syncStatsOk false; 
     }
 
     :delay 2s;
 
     # 3. SYNC SALES (Laporan Keuangan)
-    :log info "SETTLE: SYNC: Mengirim laporan penjualan...";
-    $sendSettleLog "SETTLE: SYNC: Mengirim laporan penjualan..." "info";
+    :log info "SETTLE: Mengirim data penjualan...";
+    $sendSettleLog "SETTLE: Mengirim data penjualan..." "info";
     :do {
         /tool fetch url="http://wartelpas.sobigidul.net/report/laporan/services/sync_sales.php?key=kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE=&session=S3c7x9_LB" keep-result=no;
-        $logSettle "info" "SETTLE: SYNC SALES: Berhasil terkirim.";
+        $logSettle "info" "SETTLE: Data penjualan tersimpan.";
     } on-error={ 
-        $logSettle "error" "SETTLE: SYNC SALES: GAGAL KONEKSI! Data penjualan tidak masuk DB.";
+        $logSettle "error" "SETTLE: Data penjualan gagal dikirim. Coba lagi.";
         :set syncSalesOk false; 
     }
 
@@ -161,18 +161,18 @@
 
     # Jika sync gagal, batal cleanup agar data tidak hilang
     :if (($syncStatsOk = false) || ($syncSalesOk = false)) do={
-        $logSettle "warning" "SETTLE: CLEANUP: Dibatalkan karena sync gagal. Data MikroTik dipertahankan.";
+        $logSettle "warning" "SETTLE: Sinkronisasi belum lengkap. Pembersihan dibatalkan demi keamanan data.";
         :set isCleaning false;
         :return;
     }
 
     # 4. SYNC USAGE
-    :log info "SETTLE: SYNC: Mengirim data pemakaian (usage) ...";
-    $sendSettleLog "SETTLE: SYNC: Mengirim data pemakaian (usage) ..." "info";
+    :log info "SETTLE: Mengirim data pemakaian...";
+    $sendSettleLog "SETTLE: Mengirim data pemakaian..." "info";
     :do {
         /tool fetch url="http://wartelpas.sobigidul.net/report/laporan/services/sync_usage.php?key=kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE=&session=S3c7x9_LB" keep-result=no;
-        $logSettle "info" "SETTLE: SYNC USAGE: Berhasil.";
-    } on-error={ $logSettle "warning" "SETTLE: SYNC USAGE: Gagal koneksi."; }
+        $logSettle "info" "SETTLE: Data pemakaian tersimpan.";
+    } on-error={ $logSettle "warning" "SETTLE: Data pemakaian belum terkirim."; }
 
     :delay 2s;
 
@@ -186,22 +186,22 @@
     # :delay 1s;
 
     # 4b. CLEAR SCRIPT LOG (Mikhmon Script)
-    :log info "SETTLE: MAINT: Hapus script mikhmon...";
-    $sendSettleLog "SETTLE: MAINT: Hapus script mikhmon..." "info";
+    :log info "SETTLE: MAINT: Merapikan script mikhmon...";
+    $sendSettleLog "SETTLE: MAINT: Merapikan script mikhmon..." "info";
     :do {
         :local scr [/system script find where comment="mikhmon"];
         :if ([:len $scr] > 0) do={
             /system script remove $scr;
-            $logSettle "info" ("SETTLE: MAINT: Script mikhmon terhapus " . [:len $scr] . ".");
+            $logSettle "info" ("SETTLE: MAINT: Script mikhmon dibersihkan " . [:len $scr] . ".");
         } else={
             $logSettle "info" "SETTLE: MAINT: Tidak ada script mikhmon.";
         }
-    } on-error={ $logSettle "warning" "SETTLE: MAINT: Gagal hapus script mikhmon."; }
+    } on-error={ $logSettle "warning" "SETTLE: MAINT: Perapian script mikhmon gagal."; }
 
     :delay 1s;
 
     # 5. HAPUS USER NON-READY
-    $logSettle "info" "SETTLE: CLEANUP: Hapus user terpakai (bytes/uptime/disabled)...";
+    $logSettle "info" "SETTLE: Membersihkan voucher terpakai...";
     :local removed 0;
     :local skippedReady 0;
 
@@ -261,9 +261,9 @@
                 }
             }
         }
-        $logSettle "info" ("SETTLE: CLEANUP: Terhapus " . $removed . " user (10/30Menit) terpakai.");
-        $logSettle "info" ("SETTLE: CLEANUP: Skip READY " . $skippedReady . " user.");
-    } on-error={ $logSettle "warning" "SETTLE: CLEANUP: Gagal hapus user terpakai."; }
+        $logSettle "info" ("SETTLE: " . $removed . " voucher terhapus (10/30 menit).");
+        $logSettle "info" ("SETTLE: Voucher siap tidak diubah: " . $skippedReady . ".");
+    } on-error={ $logSettle "warning" "SETTLE: Pembersihan voucher gagal."; }
 
     :delay 1s;
 
@@ -275,7 +275,7 @@
 } on-error={
     :global isCleaning;
     :global cleaningSince;
-    :log error "SETTLE: ERROR: Terjadi kesalahan fatal pada script utama.";
+    :log error "SETTLE: ERROR: Terjadi kendala pada proses utama.";
     :set isCleaning false;
     :set cleaningSince 0;
 }
