@@ -156,6 +156,27 @@ $all_users = $API->comm("/ip/hotspot/user/print", array(
     "?server" => $hotspot_server,
   ".proplist" => ".id,name,comment,profile,disabled,bytes-in,bytes-out,uptime"
 ));
+$all_users = is_array($all_users) ? $all_users : [];
+if ($req_status === 'vip') {
+  $all_any = $API->comm("/ip/hotspot/user/print", array(
+    ".proplist" => ".id,name,comment,profile,disabled,bytes-in,bytes-out,uptime"
+  ));
+  if (is_array($all_any) && !empty($all_any)) {
+    $seen = [];
+    foreach ($all_users as $u) {
+      $n = $u['name'] ?? '';
+      if ($n !== '') $seen[$n] = true;
+    }
+    foreach ($all_any as $u) {
+      $n = $u['name'] ?? '';
+      if ($n === '' || isset($seen[$n])) continue;
+      $c = (string)($u['comment'] ?? '');
+      if (!is_vip_comment($c)) continue;
+      $all_users[] = $u;
+      $seen[$n] = true;
+    }
+  }
+}
 $router_users = $all_users;
 $active = $API->comm("/ip/hotspot/active/print", array(
   "?server" => $hotspot_server,
