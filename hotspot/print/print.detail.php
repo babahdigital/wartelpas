@@ -46,23 +46,24 @@ $API = new RouterosAPI();
 $API->debug = false;
 $API->timeout = 5;
 $API->attempts = 1;
-if (!$API->connect($iphost, $userhost, decrypt($passwdhost))) {
-    echo "Tidak bisa konek ke router.";
-    exit;
-}
+$api_connected = $API->connect($iphost, $userhost, decrypt($passwdhost));
 
 $hotspot_server = $hotspot_server ?? 'wartel';
 
-$uinfo = $API->comm('/ip/hotspot/user/print', [
-    '?server' => $hotspot_server,
-    '?name' => $user,
-    '.proplist' => 'name,comment,profile,disabled,bytes-in,bytes-out,uptime'
-]);
-$ainfo = $API->comm('/ip/hotspot/active/print', [
-    '?server' => $hotspot_server,
-    '?user' => $user,
-    '.proplist' => 'user,uptime,bytes-in,bytes-out'
-]);
+$uinfo = [];
+$ainfo = [];
+if ($api_connected) {
+    $uinfo = $API->comm('/ip/hotspot/user/print', [
+        '?server' => $hotspot_server,
+        '?name' => $user,
+        '.proplist' => 'name,comment,profile,disabled,bytes-in,bytes-out,uptime'
+    ]);
+    $ainfo = $API->comm('/ip/hotspot/active/print', [
+        '?server' => $hotspot_server,
+        '?user' => $user,
+        '.proplist' => 'user,uptime,bytes-in,bytes-out'
+    ]);
+}
 
 $urow = $uinfo[0] ?? [];
 $arow = $ainfo[0] ?? [];
@@ -182,7 +183,9 @@ $criteria_rows = [
     ['Pernah login (first login ada)', $criteria['first_login_ok'], $first_login_real ? format_dmy($first_login_real) : '-']
 ];
 
-$API->disconnect();
+if ($api_connected) {
+    $API->disconnect();
+}
 ?>
 <!DOCTYPE html>
 <html>

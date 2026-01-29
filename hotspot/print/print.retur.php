@@ -39,15 +39,15 @@ $API = new RouterosAPI();
 $API->debug = false;
 $API->timeout = 5;
 $API->attempts = 1;
-if (!$API->connect($iphost, $userhost, decrypt($passwdhost))) {
-    echo "Tidak bisa konek ke router.";
-    exit;
-}
+$api_connected = $API->connect($iphost, $userhost, decrypt($passwdhost));
 
-$uinfo = $API->comm('/ip/hotspot/user/print', [
-    '?name' => $user,
-    '.proplist' => '.id,name,password,profile,comment,limit-uptime,limit-bytes-total'
-]);
+$uinfo = [];
+if ($api_connected) {
+    $uinfo = $API->comm('/ip/hotspot/user/print', [
+        '?name' => $user,
+        '.proplist' => '.id,name,password,profile,comment,limit-uptime,limit-bytes-total'
+    ]);
+}
 
 $urow = $uinfo[0] ?? [];
 $username = $urow['name'] ?? $user;
@@ -91,8 +91,8 @@ $validity = '';
 $getprice = '0';
 $getsprice = '0';
 
-if ($profile_name !== '') {
-    $getprofile = $API->comm('/ip/hotspot/user/profile/print', ['?name' => $profile_name]);
+if ($profile_name !== '' && $api_connected) {
+    $getprofile = $API->comm('/ip/hotspot/user/profile/print', ['?name' => $profile_name, '.proplist' => 'name,on-login']);
     if (!empty($getprofile[0]['on-login'])) {
         $ponlogin = $getprofile[0]['on-login'];
         $parts = array_map('trim', explode(',', $ponlogin));
@@ -129,7 +129,11 @@ $logo .= "?t=" . time();
 
 $usermode = 'vc';
 $num = 1;
-$API->disconnect();
+$username = $username ?: $user;
+$password = $password ?: $username;
+if ($api_connected) {
+    $API->disconnect();
+}
 
 if ($download && !$img) {
     header('Content-Type: text/html');
