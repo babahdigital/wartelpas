@@ -243,6 +243,7 @@ try {
         'login_time_real' => 'DATETIME',
         'logout_time_real' => 'DATETIME',
         'last_status' => "TEXT DEFAULT 'ready'",
+        'auto_rusak' => 'INTEGER DEFAULT 0',
         'updated_at' => 'DATETIME',
         'login_count' => 'INTEGER DEFAULT 0'
     ];
