@@ -53,7 +53,7 @@ function getMaintenanceUrl()
     if (!empty($env['maintenance']['redirect_url'])) {
         return (string)$env['maintenance']['redirect_url'];
     }
-    return './dev/maintenance.html';
+    return './maintenance.html';
 }
 
 function isSuperAdmin()
