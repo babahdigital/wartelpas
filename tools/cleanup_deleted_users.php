@@ -52,6 +52,8 @@ if (!in_array($status, ['rusak', 'retur', 'invalid', 'all'], true)) {
     $status = 'rusak';
 }
 $profile = strtolower(trim((string)($_GET['profile'] ?? '')));
+$users_param = trim((string)($_GET['users'] ?? ''));
+$force = isset($_GET['force']) && $_GET['force'] === '1';
 $run = isset($_GET['run']) && $_GET['run'] === '1';
 
 $dbFile = $root_dir . '/db_data/mikhmon_stats.db';
@@ -89,26 +91,32 @@ function infer_profile_kind($validity, $raw_comment) {
 }
 
 require_once($root_dir . '/lib/routeros_api.class.php');
-$API = new RouterosAPI();
-$API->debug = false;
-$API->timeout = 5;
-$API->attempts = 1;
-
-if (!$API->connect($iphost, $userhost, decrypt($passwdhost))) {
-    http_response_code(500);
-    die("Error: Gagal konek ke MikroTik.");
-}
-$router_rows = $API->comm('/ip/hotspot/user/print', [
-    '?server' => $hotspot_server,
-    '.proplist' => 'name'
-]);
-$API->disconnect();
-
 $router_map = [];
-if (is_array($router_rows)) {
-    foreach ($router_rows as $r) {
-        $name = trim((string)($r['name'] ?? ''));
-        if ($name !== '') $router_map[strtolower($name)] = true;
+$has_router_data = false;
+if ($users_param === '') {
+    $API = new RouterosAPI();
+    $API->debug = false;
+    $API->timeout = 5;
+    $API->attempts = 1;
+
+    if (!$API->connect($iphost, $userhost, decrypt($passwdhost))) {
+        http_response_code(500);
+        die("Error: Gagal konek ke MikroTik.");
+    }
+    $router_rows = $API->comm('/ip/hotspot/user/print', [
+        '?server' => $hotspot_server,
+        '.proplist' => 'name'
+    ]);
+    $API->disconnect();
+
+    if (is_array($router_rows)) {
+        foreach ($router_rows as $r) {
+            $name = trim((string)($r['name'] ?? ''));
+            if ($name !== '') {
+                $router_map[strtolower($name)] = true;
+                $has_router_data = true;
+            }
+        }
     }
 }
 
@@ -139,10 +147,30 @@ $stmt->execute($params);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $targets = [];
+$manual_list = [];
+if ($users_param !== '') {
+    $parts = preg_split('/[\s,]+/', $users_param);
+    foreach ($parts as $p) {
+        $p = trim($p);
+        if ($p !== '') $manual_list[strtolower($p)] = $p;
+    }
+}
+
+if (empty($manual_list) && !$has_router_data && !$force) {
+    http_response_code(400);
+    echo "Error: Data router kosong. Gunakan param users=... untuk manual cleanup atau force=1.\n";
+    exit;
+}
+
 foreach ($rows as $row) {
     $uname = trim((string)($row['username'] ?? ''));
     if ($uname === '') continue;
-    if (isset($router_map[strtolower($uname)])) continue;
+
+    if (!empty($manual_list)) {
+        if (!isset($manual_list[strtolower($uname)])) continue;
+    } else {
+        if (isset($router_map[strtolower($uname)])) continue;
+    }
 
     $kind = infer_profile_kind($row['validity'] ?? '', $row['raw_comment'] ?? '');
     if ($profile !== '' && $profile !== $kind) {
