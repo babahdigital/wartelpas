@@ -739,6 +739,30 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
   - Fallback memakai total rusak sistem jika data expected belum tersedia.
   - Audit dan print audit kini konsisten.
 
+## 4.12 Update Terbaru (Audit Manual User Checklist & UI) – 2026-01-29
+### 4.12.1 Popup audit disederhanakan dan berurutan
+- Urutan form: **Blok → Verifikasi User → Fisik Voucher → Kalkulasi/Pengeluaran → Setoran Bersih**.
+- Input **tanggal** disembunyikan (mengikuti tanggal yang dipilih di dashboard).
+
+### 4.12.2 Verifikasi user berbasis checklist
+- Tombol verifikasi membuka popup daftar user **terpakai + retur**.
+- **Rusak/invalid tidak ditampilkan** (dianggap loss).
+- Item menampilkan **uptime & bytes**.
+- Status badge jelas (TERPAKAI/RETUR) + ringkasan **Tidak dilaporkan** di footer.
+
+### 4.12.3 Qty otomatis terkunci saat checklist aktif
+- Jika user dipilih, **qty terkunci** mengikuti jumlah user terpilih.
+- Jika tidak ada user dipilih, qty per profil **dapat diinput manual**.
+
+### 4.12.4 Setoran bersih dari pengeluaran
+- Setoran kotor tetap dihitung dari qty (auto), namun dapat di-edit manual.
+- **Setoran bersih** dihitung: kotor − pengeluaran.
+
+### 4.12.5 Endpoint data audit user
+- Endpoint baru: **report/laporan/services/audit_users.php**.
+- Menggabungkan **sales_history + live_sales (pending)** untuk tanggal terpilih.
+- Menarik status, profil, uptime/bytes dari `login_history` bila ada.
+
 ### 4.9.5 Catatan Harian / Insiden (Supervisor → Owner)
 - Tabel baru: **daily_report_notes** (1 catatan per tanggal).
 - **report/selling.php**: tombol **Catatan/Insiden** di toolbar harian dan input via popup (edit/hapus tetap dari popup, tidak tampil di dashboard).

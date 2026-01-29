@@ -79,24 +79,35 @@ Jika terdeteksi lebih dari satu status, prioritas akhir mengikuti aturan **retur
 ## 6) Audit Manual
 
 ### 6.1 Input Audit
-- Input manual per blok berisi total qty dan total setoran (manual), plus opsi pengeluaran.
+- Audit manual **berbasis tanggal yang dipilih di dashboard** (input tanggal di popup disembunyikan).
+- Input per blok berisi verifikasi user, qty per profil, total setoran, dan pengeluaran.
+- **Verifikasi user** memakai daftar checklist (terpakai + retur) dan **rusak/invalid disaring**.
+- Saat user dipilih, **Qty otomatis terkunci** mengikuti jumlah user terpilih.
+- Jika **tanpa user dipilih**, qty per profil **boleh diinput manual**.
+- **Setoran otomatis** tetap dihitung dari qty profil sebagai bantuan input, namun **setoran manual** tetap dihormati jika diubah.
 - **Selisih** dihitung dari perbandingan manual vs expected sistem.
-- **Setoran otomatis** tetap dihitung dari qty profil sebagai bantuan input.
-- Jika user **mengetik setoran manual**, sistem menghormati nilai tersebut (override).
 
 ### 6.2 Expected vs Manual
 - **Expected Qty** dihitung dari data transaksi (mengurangi rusak/invalid; retur tetap dihitung laku).
 - **Expected Setoran** mengikuti aturan status (retur menambah net, rusak net 0, invalid 0).
 
 ### 6.3 Pengeluaran Operasional
-- Jika ada pengeluaran, **audit_setoran ditambah** nilai pengeluaran.
-- **Selisih yang tersimpan** tetap berdasarkan perhitungan sebelum penambahan pengeluaran.
+- Jika ada pengeluaran, **setoran bersih = setoran kotor − pengeluaran**.
+- Pengeluaran **tidak mengubah expected**, hanya mempengaruhi kas fisik.
+- **Selisih yang tersimpan** tetap berdasarkan perbandingan manual vs expected sistem.
 
 ### 6.4 Adjusted Setoran (Audit)
 - Jika ada `user_evidence`, sistem menghitung setoran manual yang disesuaikan:
   - `manual_net_qty_10/30 = qty_profile - rusak - invalid`
   - Setoran manual dihitung ulang berdasarkan qty net tersebut.
 - Jika **manual override** aktif, setoran manual **mengikuti input user** (bukan hasil kalkulasi ulang).
+
+### 6.5 Verifikasi User (Checklist)
+- Sumber list diambil dari transaksi **sales_history + live_sales (pending)** pada tanggal terpilih.
+- Status dihitung dari `status/is_*` + komentar + `login_history` (last_status) jika tersedia.
+- **Rusak/invalid tidak ditampilkan**, retur tetap ditampilkan sebagai user valid.
+- Item menampilkan **uptime & bytes** terakhir dari `login_history`.
+- Total **“Tidak dilaporkan”** = (jumlah user eligible) − (user terpilih).
 
 ## 7) Selisih (Variance)
 
