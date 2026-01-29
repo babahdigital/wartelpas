@@ -71,18 +71,20 @@ function detect_profile_minutes($profile) {
     return $profile_key;
 }
 
-function infer_profile_from_comment($comment) {
-    $comment = strtolower((string)$comment);
-    if (preg_match('/\b(10|30)\s*(menit|m)\b/', $comment, $m)) {
-        return $m[1] . 'menit';
+if (!function_exists('infer_profile_from_comment')) {
+    function infer_profile_from_comment($comment) {
+        $comment = strtolower((string)$comment);
+        if (preg_match('/\b(10|30)\s*(menit|m)\b/', $comment, $m)) {
+            return $m[1] . 'menit';
+        }
+        if (preg_match('/\bblok\s*[-_]?[a-z0-9]+\s*(10|30)\b/', $comment, $m)) {
+            return $m[1] . 'menit';
+        }
+        if (preg_match('/\bblok\s*[-_]?[a-z0-9]+(10|30)\b/', $comment, $m)) {
+            return $m[1] . 'menit';
+        }
+        return '';
     }
-    if (preg_match('/\bblok\s*[-_]?[a-z0-9]+\s*(10|30)\b/', $comment, $m)) {
-        return $m[1] . 'menit';
-    }
-    if (preg_match('/\bblok\s*[-_]?[a-z0-9]+(10|30)\b/', $comment, $m)) {
-        return $m[1] . 'menit';
-    }
-    return '';
 }
 
 function format_profile_summary($map, $order_keys = []) {
