@@ -73,7 +73,6 @@ function detect_profile_minutes_manual($validity, $raw_comment) {
 
 function apply_auto_rusak_settlement($db, $date, $logFile) {
     if (!$db || $date === '') return 0;
-    $bytes_threshold_short = 3 * 1024 * 1024;
     $short_uptime_limit = 5 * 60;
     $dateClause = " AND (login_date = :d OR substr(first_login_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR substr(login_time_real,1,10) = :d OR substr(logout_time_real,1,10) = :d OR substr(updated_at,1,10) = :d)";
     $params = [':d' => $date];
@@ -101,7 +100,8 @@ function apply_auto_rusak_settlement($db, $date, $logFile) {
         }
         $is_full_uptime = $uptime_sec >= ($profile_minutes * 60);
         $is_short_use = ($uptime_sec > 0 && $uptime_sec <= $short_uptime_limit);
-        $bytes_threshold_full = ($profile_minutes === 10) ? (3 * 1024 * 1024) : (7 * 1024 * 1024);
+        $bytes_threshold_full = ($profile_minutes === 10) ? (2 * 1024 * 1024) : (3 * 1024 * 1024);
+        $bytes_threshold_short = $bytes_threshold_full;
         if (($is_full_uptime && $bytes < $bytes_threshold_full) || ($is_short_use && $bytes < $bytes_threshold_short)) {
             try {
             $stmtU = $db->prepare("UPDATE login_history SET last_status='rusak', auto_rusak=1, updated_at=CURRENT_TIMESTAMP WHERE username = :u");

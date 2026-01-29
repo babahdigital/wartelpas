@@ -1431,7 +1431,6 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           }
           $comment_src = $urow['comment'] ?? $comm;
           $profile_kind_manual = detect_profile_kind_unified($profile_label, $comment_src, extract_blok_name($comm), $uptime_final);
-          $uptime_sec = uptime_to_seconds($uptime_final);
           $bytes_final = (int)$bytes_final;
 
           if ($profile_kind_manual === '30') {
@@ -1441,10 +1440,10 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
               $action_error = 'Syarat manual RUSAK tidak terpenuhi: profil 30 menit harus < 7MB.';
             }
           } elseif ($profile_kind_manual === '10') {
-            $max_uptime = 5 * 60;
-            if ($uptime_sec > $max_uptime) {
+            $max_bytes = 5 * 1024 * 1024;
+            if ($bytes_final >= $max_bytes) {
               $action_blocked = true;
-              $action_error = 'Syarat manual RUSAK tidak terpenuhi: profil 10 menit harus uptime <= 5 menit.';
+              $action_error = 'Syarat manual RUSAK tidak terpenuhi: profil 10 menit harus < 5MB.';
             }
           }
 
