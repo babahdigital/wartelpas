@@ -165,6 +165,7 @@ try {
       )");
     $db->exec("CREATE INDEX IF NOT EXISTS idx_vip_actions_date ON vip_actions(date_key)");
     $db->exec("CREATE INDEX IF NOT EXISTS idx_vip_actions_user_date ON vip_actions(username, date_key)");
+    $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_vip_actions_unique ON vip_actions(username, date_key)");
     $requiredCols = [
       'ip_address' => 'TEXT',
       'mac_address' => 'TEXT',

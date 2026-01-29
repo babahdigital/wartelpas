@@ -158,7 +158,7 @@ $vip_today_count = 0;
 $vip_limit_reached = false;
 if ($db && $vip_daily_limit > 0) {
   try {
-    $stmt = $db->prepare("SELECT COUNT(*) FROM vip_actions WHERE date_key = :d");
+    $stmt = $db->prepare("SELECT COUNT(DISTINCT username) FROM vip_actions WHERE date_key = :d");
     $stmt->execute([':d' => date('Y-m-d')]);
     $vip_today_count = (int)$stmt->fetchColumn();
     $vip_limit_reached = ($vip_today_count >= $vip_daily_limit);

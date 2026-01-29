@@ -1404,7 +1404,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             $action_error = 'Gagal: database belum siap untuk batas Pengelola harian.';
           } else {
             try {
-              $stmt = $db->prepare("SELECT COUNT(*) FROM vip_actions WHERE date_key = :d");
+              $stmt = $db->prepare("SELECT COUNT(DISTINCT username) FROM vip_actions WHERE date_key = :d");
               $stmt->execute([':d' => $vip_date_key]);
               $vip_today_count = (int)$stmt->fetchColumn();
               if ($vip_today_count >= $vip_daily_limit) {
@@ -1465,7 +1465,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
               } catch(Exception $e) {}
               if ($act === 'vip' && !$has_vip) {
                 try {
-                  $stmt = $db->prepare("INSERT INTO vip_actions (username, date_key, created_at) VALUES (:u, :d, CURRENT_TIMESTAMP)");
+                  $stmt = $db->prepare("INSERT OR IGNORE INTO vip_actions (username, date_key, created_at) VALUES (:u, :d, CURRENT_TIMESTAMP)");
                   $stmt->execute([':u' => $name, ':d' => $vip_date_key]);
                 } catch(Exception $e) {}
               }
