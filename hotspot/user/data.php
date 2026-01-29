@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/helpers.php';
+$history_cache = null;
 function save_user_history($name, $data) {
     global $db;
     if(!$db || empty($name)) return false;
@@ -62,11 +63,22 @@ function save_user_history($name, $data) {
 
 function get_user_history($name) {
     global $db;
+  global $history_cache;
     if(!$db) return null;
+  if (is_array($history_cache)) {
+    $key = strtolower((string)$name);
+    if ($key !== '' && array_key_exists($key, $history_cache)) {
+      return $history_cache[$key];
+    }
+  }
     try {
-  $stmt = $db->prepare("SELECT username, login_time_real, logout_time_real, blok_name, ip_address, mac_address, last_uptime, last_bytes, last_status, first_ip, first_mac, last_ip, last_mac, first_login_real, last_login_real, updated_at, login_count FROM login_history WHERE username = :u LIMIT 1");
+  $stmt = $db->prepare("SELECT username, login_time_real, logout_time_real, blok_name, ip_address, mac_address, last_uptime, last_bytes, last_status, first_ip, first_mac, last_ip, last_mac, first_login_real, last_login_real, updated_at, login_count, raw_comment, validity FROM login_history WHERE username = :u LIMIT 1");
         $stmt->execute([':u' => $name]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (is_array($history_cache) && $name !== '') {
+      $history_cache[strtolower((string)$name)] = $row ?: null;
+    }
+    return $row;
     } catch(Exception $e){
         return null;
     }
@@ -153,6 +165,40 @@ $active = $API->comm("/ip/hotspot/active/print", array(
 $activeMap = [];
 foreach($active as $a) {
     if(isset($a['user'])) $activeMap[$a['user']] = $a;
+}
+
+if ($db && !empty($all_users)) {
+  $history_cache = [];
+  $names = [];
+  foreach ($all_users as $u) {
+    $uname = $u['name'] ?? '';
+    if ($uname !== '') {
+      $names[strtolower($uname)] = $uname;
+    }
+  }
+  $name_list = array_values($names);
+  $chunk_size = 400;
+  for ($i = 0; $i < count($name_list); $i += $chunk_size) {
+    $chunk = array_slice($name_list, $i, $chunk_size);
+    if (empty($chunk)) continue;
+    $placeholders = [];
+    $params = [];
+    foreach ($chunk as $j => $uname) {
+      $ph = ':u' . $i . '_' . $j;
+      $placeholders[] = $ph;
+      $params[$ph] = $uname;
+    }
+    try {
+      $stmt = $db->prepare("SELECT username, login_time_real, logout_time_real, blok_name, ip_address, mac_address, last_uptime, last_bytes, last_status, first_ip, first_mac, last_ip, last_mac, first_login_real, last_login_real, updated_at, login_count, raw_comment, validity FROM login_history WHERE username IN (" . implode(',', $placeholders) . ")");
+      $stmt->execute($params);
+      while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $uname = strtolower((string)($row['username'] ?? ''));
+        if ($uname !== '') {
+          $history_cache[$uname] = $row;
+        }
+      }
+    } catch (Exception $e) {}
+  }
 }
 
 $summary_ready_by_blok = [];
