@@ -100,15 +100,9 @@ try {
     foreach ($user_latest as $uname => $r) {
         $lh = $login_map[$uname] ?? [];
         $comment = (string)($r['comment'] ?? '');
-        $lh_status = strtolower(trim((string)($lh['last_status'] ?? '')));
-        $status = resolve_status_from_sources($r['status'] ?? '', $r['is_invalid'] ?? 0, $r['is_retur'] ?? 0, $r['is_rusak'] ?? 0, $comment, '');
-        if ($status === 'normal' && in_array($lh_status, ['terpakai', 'retur', 'online'], true)) {
-            $status = $lh_status;
-        }
+        $lh_status = $lh['last_status'] ?? '';
+        $status = resolve_status_from_sources($r['status'] ?? '', $r['is_invalid'] ?? 0, $r['is_retur'] ?? 0, $r['is_rusak'] ?? 0, $comment, $lh_status);
         if (in_array($status, ['rusak', 'invalid'], true)) continue;
-        if (!in_array($status, ['terpakai', 'retur', 'online', 'normal'], true)) {
-            $status = 'terpakai';
-        }
 
         $profile_src = (string)($r['profile_snapshot'] ?? $r['profile'] ?? $r['validity'] ?? '');
         if ($profile_src === '') $profile_src = (string)($lh['validity'] ?? '');
@@ -117,17 +111,11 @@ try {
         if ($profile_key !== '' && preg_match('/^\d+$/', $profile_key)) {
             $profile_key = $profile_key . 'menit';
         }
-        if ($profile_key === '') {
-            $profile_key = $price10 > 0 ? '10menit' : 'other';
-        }
 
         $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
         if ($price <= 0) $price = (int)($r['sprice_snapshot'] ?? 0);
         if ($price <= 0 && $profile_key !== '') {
             $price = (int)resolve_price_from_profile($profile_key);
-        }
-        if ($price <= 0 && $profile_key === '10menit') {
-            $price = $price10;
         }
 
         $uptime = trim((string)($lh['last_uptime'] ?? ''));

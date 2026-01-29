@@ -1077,8 +1077,6 @@ function updateAuditUserSummary(){
             unreportedPopup.textContent = 'Tidak dilaporkan: -';
         }
     }
-    var selCount = document.getElementById('auditUserSelectedCount');
-    if (selCount) selCount.textContent = String(count);
     var hidden = document.getElementById('auditUsernameHidden');
     if (hidden) hidden.value = auditSelectedUsers.join(', ');
 }
@@ -1124,7 +1122,7 @@ function loadAuditUserList(){
     if (hidden && hidden.value) setAuditUserPicker(hidden.value);
 
     if (!blok || !date) {
-        if (listWrap) listWrap.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">Pilih blok terlebih dahulu.</div>';
+        if (listWrap) listWrap.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">Pilih blok & tanggal terlebih dahulu.</div>';
         return;
     }
 
