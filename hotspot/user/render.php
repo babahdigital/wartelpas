@@ -514,7 +514,7 @@
     const sess = form.querySelector('input[name="session"]')?.value || '';
     const st = statusOverride || form.querySelector('select[name="status"]')?.value || 'all';
     const prof = form.querySelector('select[name="profile"]')?.value || '';
-    const blok = form.querySelector('select[name="comment"]')?.value || '';
+    let blok = form.querySelector('select[name="comment"]')?.value || '';
     const show = form.querySelector('select[name="show"]')?.value || 'harian';
 
     let dateVal = '';
