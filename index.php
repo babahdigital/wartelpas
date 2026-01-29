@@ -34,6 +34,10 @@ if (!isset($_SESSION["mikhmon"])) {
   header("Location:./admin.php?id=login");
   exit();
 
+} elseif (isOperator() && isMaintenanceEnabled()) {
+  aclRedirect(getMaintenanceUrl());
+  exit();
+
 } elseif (empty($session)) {
   $target_session = "";
   foreach ($data as $key => $value) {

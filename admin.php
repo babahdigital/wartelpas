@@ -154,6 +154,8 @@ if ($id == "login" || substr($url, -1) == "p") {
   include_once('./include/login.php');
 } elseif (!isset($_SESSION["mikhmon"])) {
   echo "<script>window.location='./admin.php?id=login'</script>";
+} elseif (isOperator() && isMaintenanceEnabled()) {
+  aclRedirect(getMaintenanceUrl());
 } elseif (isOperator() && $id == "sessions") {
   echo "<script>window.location='./error.php?code=403'</script>";
   exit;
