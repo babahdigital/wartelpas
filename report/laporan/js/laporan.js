@@ -196,6 +196,13 @@ function manualSettlement(){
             if (cfg.sessionId) params.set('session', cfg.sessionId);
             params.set('date', cfg.filterDate || '');
             params.set('action', 'start');
+            if (cfg.filterDate) {
+                var today = new Date();
+                var todayStr = today.toISOString().slice(0, 10);
+                if (cfg.filterDate !== todayStr) {
+                    params.set('force', '1');
+                }
+            }
             // Cleanup default dimatikan agar tidak menghapus history penjualan.
             pollSettlementLogs();
             fetch('report/laporan/services/settlement_manual.php?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
