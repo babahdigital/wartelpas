@@ -791,7 +791,7 @@ foreach($all_users as $u) {
     $profile_kind_filter = $profile_kind_final;
 
     // Filter blok
-    if ($req_comm != '') {
+    if ($status !== 'VIP' && $req_comm != '') {
       $req_key = normalize_block_key($req_comm);
       $f_key = normalize_block_key($f_blok);
       if ($req_key !== '') {

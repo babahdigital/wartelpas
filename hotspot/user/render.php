@@ -116,7 +116,7 @@
                 <button type="button" class="search-clear-btn" id="search-clear" title="Clear">×</button>
               </div>
 
-              <select name="status" class="custom-select-solid mid-el" onchange="this.form.submit()" style="flex: 0 0 220px;">
+              <select name="status" id="status-filter" class="custom-select-solid mid-el" onchange="this.form.submit()" style="flex: 0 0 220px;">
                 <option value="all" <?=($req_status=='all'?'selected':'')?>>Status: Semua</option>
                 <option value="ready" <?=($req_status=='ready'?'selected':'')?>>🟢 Voucher</option>
                 <option value="vip" <?=($req_status=='vip'?'selected':'')?>>🟡 Pengelola</option>
@@ -132,8 +132,9 @@
                 <option value="30" <?=($req_prof=='30'?'selected':'')?>>30 Menit</option>
               </select>
 
-              <select name="comment" class="custom-select-solid last-el" onchange="this.form.submit()" style="flex: 0 0 220px;">
-                <option value="">Semua Blok</option>
+              <?php $disable_blok = ($req_status === 'vip'); ?>
+              <select name="comment" id="blok-filter" class="custom-select-solid last-el" onchange="this.form.submit()" style="flex: 0 0 220px;" <?= $disable_blok ? 'disabled' : '' ?>>
+                <option value=""><?= $disable_blok ? 'Blok tidak dipakai (Pengelola)' : 'Semua Blok' ?></option>
                   <?php foreach($list_blok as $b) {
                     $label = preg_replace('/^BLOK-/i', 'BLOK ', $b);
                     $blok_key = normalize_block_key($b);
