@@ -185,18 +185,18 @@
 
     # :delay 1s;
 
-    # 4b. CLEAR SCRIPT LOG (Mikhmon Script)
-    :log info "SETTLE: MAINT: Merapikan script mikhmon...";
-    $sendSettleLog "SETTLE: MAINT: Merapikan script mikhmon..." "info";
+    # 4b. CLEAR SCRIPT LOG (Babah Digital Script)
+    :log info "SETTLE: MAINT: Merapikan script Babah Digital...";
+    $sendSettleLog "SETTLE: MAINT: Merapikan script Babah Digital..." "info";
     :do {
-        :local scr [/system script find where comment="mikhmon"];
+        :local scr [/system script find where comment="Babah Digital"];
         :if ([:len $scr] > 0) do={
             /system script remove $scr;
-            $logSettle "info" ("SETTLE: MAINT: Script mikhmon dibersihkan " . [:len $scr] . ".");
+            $logSettle "info" ("SETTLE: MAINT: Script Babah Digital dibersihkan " . [:len $scr] . ".");
         } else={
-            $logSettle "info" "SETTLE: MAINT: Tidak ada script mikhmon.";
+            $logSettle "info" "SETTLE: MAINT: Tidak ada script Babah Digital.";
         }
-    } on-error={ $logSettle "warning" "SETTLE: MAINT: Perapian script mikhmon gagal."; }
+    } on-error={ $logSettle "warning" "SETTLE: MAINT: Perapian script Babah Digital gagal."; }
 
     :delay 1s;
 
