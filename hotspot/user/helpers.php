@@ -155,6 +155,8 @@ if (!function_exists('normalize_profile_label')) {
     $profile = resolve_profile_alias($profile);
     $p = trim((string)$profile);
     if ($p === '') return '';
+    $pl = strtolower($p);
+    if ($pl === 'lainnya' || $pl === 'other' || $pl === 'default' || $pl === '-') return '';
     if (preg_match('/\b(10|30)\s*(menit|m)\b/i', $p, $m)) {
       return $m[1] . ' Menit';
     }

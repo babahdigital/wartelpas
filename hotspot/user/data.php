@@ -688,6 +688,16 @@ foreach($all_users as $u) {
           }
         }
         if ($should_save) {
+          $profile_guess_raw = (string)($u['profile'] ?? '');
+          $profile_guess_kind = detect_profile_kind_unified($profile_guess_raw, $comment, $f_blok, $uptime);
+          $validity_label = normalize_profile_label($profile_guess_raw);
+          if ($validity_label === '') {
+            $validity_fallback = resolve_profile_from_history($comment, $hist['validity'] ?? '', $uptime);
+            $validity_label = normalize_profile_label($validity_fallback);
+          }
+          if ($validity_label === '' && in_array($profile_guess_kind, ['10', '30'], true)) {
+            $validity_label = $profile_guess_kind . ' Menit';
+          }
           $save_data = [
               'ip' => $f_ip,
               'mac' => $f_mac,
@@ -699,6 +709,7 @@ foreach($all_users as $u) {
               'last_mac' => $last_mac,
               'first_login_real' => $first_login_real,
               'last_login_real' => $last_login_real,
+              'validity' => $validity_label,
               'blok' => $f_blok,
               'raw' => $comment,
               'login_time_real' => $login_time_real,
@@ -735,7 +746,9 @@ foreach($all_users as $u) {
         }
       }
 
-      if (($u['profile'] ?? '') === 'default' || empty($u['profile'])) {
+      $profile_raw = (string)($u['profile'] ?? '');
+      $profile_lower = strtolower(trim($profile_raw));
+      if ($profile_raw === '' || $profile_lower === 'default' || $profile_lower === 'lainnya' || $profile_lower === 'other' || $profile_lower === '-') {
         if ($profile_kind_final !== 'other') {
           $u['profile'] = $profile_kind_final . ' Menit (Hist)';
         }
@@ -746,7 +759,9 @@ foreach($all_users as $u) {
       $profile_kind_final = detect_profile_kind_from_comment($comment);
     }
 
-    if (($u['profile'] ?? '') === '' || strtolower((string)($u['profile'] ?? '')) === 'default') {
+    $profile_raw = (string)($u['profile'] ?? '');
+    $profile_lower = strtolower(trim($profile_raw));
+    if ($profile_raw === '' || $profile_lower === 'default' || $profile_lower === 'lainnya' || $profile_lower === 'other' || $profile_lower === '-') {
       if ($profile_kind_final !== 'other') {
         $u['profile'] = $profile_kind_final . ' Menit';
       } else {
