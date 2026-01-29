@@ -1031,3 +1031,30 @@ Jika ada tambahan perubahan atau aturan bisnis baru, dokumentasi ini akan diperb
 **File terkait:**
 - [report/print/print_rincian.php](report/print/print_rincian.php)
 - [hotspot/user/render.php](hotspot/user/render.php)
+
+### 7.14 Penyempurnaan Settlement, Audit, dan Sinkronisasi Rusak (2026-01-30)
+- **Settlement manual (log & status):**
+  - Log hanya membaca **tanggal yang dipilih** (tidak otomatis memakai log tanggal lain).
+  - Menyimpan **tanggal aktif settlement per session** agar log router selalu masuk ke tanggal yang benar.
+  - Pesan log dibuat lebih **sopan & manusiawi** (tanpa kata “dipaksa”).
+  - Fallback log router tetap ada jika file lokal minim.
+- **Ingest log router:**
+  - Tanggal log **dikunci** ke tanggal settlement aktif (atau `force_date`), bukan tanggal router.
+- **Auto rusak settlement:**
+  - Auto rusak berjalan setelah status selesai, tanpa menggantung pada log router yang terlambat.
+- **Audit & Print Audit:**
+  - **Potongan (Rusak/Invalid)** selalu konsisten dengan **Total Voucher Rusak/Invalid** (nilai sistem).
+  - Net/ Potongan tidak lagi mengambil nilai manual yang dapat membuat potongan menjadi 0.
+- **Sinkronisasi rusak bulanan/tahunan:**
+  - Tool baru untuk menyelaraskan **login_history → sales_history/live_sales** agar angka bulanan/tahunan akurat.
+- **UI & popup restore:**
+  - Popup restore dibuat **modal dengan dim overlay** dan gaya disamakan dengan popup backup.
+
+**File terkait:**
+- [report/laporan/services/settlement_manual.php](report/laporan/services/settlement_manual.php)
+- [report/laporan/services/settlement_log_ingest.php](report/laporan/services/settlement_log_ingest.php)
+- [report/laporan/js/laporan.js](report/laporan/js/laporan.js)
+- [report/audit.php](report/audit.php)
+- [report/print/print_audit.php](report/print/print_audit.php)
+- [tools/sync_rusak_audit.php](tools/sync_rusak_audit.php)
+- [include/menu.php](include/menu.php)
