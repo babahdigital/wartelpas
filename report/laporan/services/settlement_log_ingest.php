@@ -61,6 +61,7 @@ $key = $_GET['key'] ?? '';
 $session = $_GET['session'] ?? '';
 $raw_date = $_GET['date'] ?? '';
 $raw_time = $_GET['time'] ?? '';
+$force_date = $_GET['force_date'] ?? '';
 $topic = $_GET['topic'] ?? 'script,info';
 $msg = $_GET['msg'] ?? '';
 
@@ -116,7 +117,30 @@ function norm_date_from_router($raw) {
     return date('Y-m-d');
 }
 
-$date = norm_date_from_router($raw_date);
+function get_active_settlement_date($logDir, $session) {
+    $safe_session = preg_replace('/[^A-Za-z0-9_-]/', '', $session);
+    if ($safe_session === '') return '';
+    $file = $logDir . '/settlement_active_' . $safe_session . '.txt';
+    if (!is_file($file)) return '';
+    $age = time() - (int)@filemtime($file);
+    if ($age > 21600) return '';
+    $raw = trim((string)@file_get_contents($file));
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw)) return $raw;
+    return '';
+}
+
+$date = '';
+$force_date = trim((string)$force_date);
+if ($force_date !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $force_date)) {
+    $date = $force_date;
+} else {
+    $active_date = get_active_settlement_date($logDir, $session);
+    if ($active_date !== '') {
+        $date = $active_date;
+    } else {
+        $date = norm_date_from_router($raw_date);
+    }
+}
 $time = trim((string)$raw_time);
 if ($time === '' || !preg_match('/^\d{2}:\d{2}:\d{2}$/', $time)) {
     $time = date('H:i:s');

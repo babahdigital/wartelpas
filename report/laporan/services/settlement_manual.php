@@ -328,6 +328,7 @@ $safe_session = preg_replace('/[^A-Za-z0-9_-]/', '', $session);
 $safe_date = preg_replace('/[^0-9-]/', '', $date);
 $logFile = $logDir . '/settlement_' . $safe_session . '_' . $safe_date . '.log';
 $cacheFile = $logDir . '/settlement_router_cache_' . $safe_session . '_' . $safe_date . '.json';
+$activeDateFile = $logDir . '/settlement_active_' . $safe_session . '.txt';
 
 try {
     $db = new PDO('sqlite:' . $dbFile);
@@ -626,6 +627,9 @@ if ($action === 'start') {
     if (is_file($logFile)) {
         @file_put_contents($logFile, "");
         append_settlement_debug($debugFile, 'truncate_log=' . basename($logFile));
+    }
+    if ($safe_date !== '') {
+        @file_put_contents($activeDateFile, $safe_date, LOCK_EX);
     }
     append_settlement_log($logFile, 'system,info', 'SETTLE: START manual settlement.');
     try {
