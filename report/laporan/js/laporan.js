@@ -1388,11 +1388,16 @@ function softReloadSelling(){
     if (modal && modal.style.display === 'flex') return;
     var auditModal = document.getElementById('auditModal');
     if (auditModal && auditModal.style.display === 'flex') return;
+    var cfg = window.sellingConfig || {};
     var current = new URL(window.location.href);
     var url = new URL('report/aload_selling.php', window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/'));
     current.searchParams.forEach(function(v, k){
         if (k !== 'ajax') url.searchParams.set(k, v);
     });
+    if (cfg.sessionId) url.searchParams.set('session', cfg.sessionId);
+    if (cfg.reqShow) url.searchParams.set('show', cfg.reqShow);
+    if (cfg.filterDate) url.searchParams.set('date', cfg.filterDate);
+    url.searchParams.set('report', 'selling');
     fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
         .then(function(r){ return r.text(); })
         .then(function(html){ content.innerHTML = html; })
