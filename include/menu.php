@@ -658,6 +658,31 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
 <a id="closeNav" href="javascript:void(0)" style="display:none"></a>
 <div id="overL" style="display:none"></div>
 
+<style>
+    .overlay-backdrop { position: fixed; inset: 0; background: rgba(10, 10, 10, 0.7); display: none; align-items: center; justify-content: center; z-index: 10050; }
+    .overlay-backdrop.show { display: flex; }
+    .overlay-modal { background: #2b2f33; color: #e8edf3; border: 1px solid #3b4248; border-radius: 10px; width: 420px; max-width: 92vw; box-shadow: 0 12px 30px rgba(0,0,0,0.45); padding: 18px; text-align: center; }
+    .overlay-icon-box { width: 56px; height: 56px; border-radius: 50%; background: #1f2428; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 10px; border: 1px solid #3b4248; }
+    .overlay-icon-box i { font-size: 22px; }
+    .overlay-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .overlay-message { font-size: 13px; color: #c5ccd6; margin-bottom: 12px; }
+    .overlay-btn { background: #4f8ef7; color: #fff; border: none; padding: 7px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .overlay-btn:hover { background: #3d7be2; }
+
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(10, 10, 10, 0.7); display: none; align-items: center; justify-content: center; z-index: 10060; }
+    .modal-card { background: #2b2f33; color: #e8edf3; border-radius: 10px; width: 420px; max-width: 92vw; border: 1px solid #3b4248; box-shadow: 0 12px 30px rgba(0,0,0,0.45); overflow: hidden; }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #3b4248; background: #262a2e; }
+    .modal-title { font-size: 14px; font-weight: 700; }
+    .modal-close { background: transparent; border: none; color: #c9d1d9; font-size: 18px; cursor: pointer; }
+    .modal-body { padding: 16px; }
+    .modal-info-banner { background: #1f2428; border: 1px solid #3b4248; border-radius: 8px; padding: 10px; }
+    .modal-info-icon { width: 28px; height: 28px; border-radius: 6px; background: rgba(255,152,0,0.15); color: #ff9800; display: inline-flex; align-items: center; justify-content: center; }
+    .modal-info-text { font-size: 13px; color: #d7dde6; line-height: 1.5; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid #3b4248; background: #262a2e; }
+    .btn-print.btn-default-dark { background:#343a40; color:#fff; border:1px solid #4b5259; }
+    .btn-print.btn-default-dark:hover { background:#3d434a; color:#fff; }
+</style>
+
 <script>
     function toggleMenu() {
         var x = document.getElementById("mainNav");
