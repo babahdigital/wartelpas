@@ -118,7 +118,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       exit();
     }
   }
-  if ($act == 'invalid' || $act == 'retur' || $act == 'rollback' || $act == 'delete' || $act == 'delete_user_full' || $act == 'delete_block_full' || $act == 'batch_delete' || $act == 'delete_status' || $act == 'check_rusak' || $act == 'disable' || $act == 'enable') {
+  if ($act == 'invalid' || $act == 'retur' || $act == 'rollback' || $act == 'delete' || $act == 'delete_user_full' || $act == 'delete_block_full' || $act == 'batch_delete' || $act == 'delete_status' || $act == 'check_rusak' || $act == 'disable') {
     $uid = $_GET['uid'] ?? '';
     $name = $_GET['name'] ?? '';
     $comm = $_GET['c'] ?? '';
@@ -1392,18 +1392,6 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         if (!$action_blocked) {
           $action_message = 'Berhasil disable voucher ' . $name . '.';
         }
-      } elseif ($act == 'enable') {
-        $API->write('/ip/hotspot/user/set', false);
-        $API->write('=.id='.$uid, false);
-        $API->write('=disabled=no');
-        $API->read();
-        if ($db && $name != '') {
-          try {
-            $stmt = $db->prepare("UPDATE login_history SET last_status='ready', updated_at=CURRENT_TIMESTAMP WHERE username = :u");
-            $stmt->execute([':u' => $name]);
-          } catch(Exception $e) {}
-        }
-        $action_message = 'Berhasil enable voucher ' . $name . '.';
       } elseif ($act == 'invalid') {
         $new_c = "Audit: RUSAK " . date("d/m/y") . " " . $comm;
         $profile_key = (string)($urow['profile'] ?? '');
