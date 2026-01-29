@@ -101,6 +101,18 @@
     setTimeout(() => { actionBanner.style.display = 'none'; }, delay);
   };
 
+  window.showVipLimitPopup = function(message) {
+    const msg = message || 'Batas Pengelola harian tercapai. Reset otomatis 00:00.';
+    showOverlayChoice({
+      title: 'Batas Pengelola',
+      messageHtml: `<div style="text-align:left; font-size:14px; color:#e5e7eb;">${msg}</div>`,
+      type: 'warning',
+      buttons: [
+        { label: 'Tutup', value: true, className: 'overlay-btn-muted' }
+      ]
+    });
+  };
+
   function showOverlayChoice(options) {
     return new Promise((resolve) => {
       if (!overlayBackdrop || !overlayContainer || !overlayTitle || !overlayText || !overlayIcon || !overlayActions) {

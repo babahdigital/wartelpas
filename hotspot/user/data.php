@@ -1217,7 +1217,14 @@ if ($is_ajax) {
                 <button type="button" class="btn-act btn-act-enable" onclick="actionRequest('./?hotspot=users&action=enable&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Enable Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Enable"><i class="fa fa-check"></i></button>
               <?php endif; ?>
             <?php elseif ($is_ready): ?>
-              <button type="button" class="btn-act btn-act-info" onclick="actionRequest('./?hotspot=users&action=vip&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Tetapkan <?= htmlspecialchars($u['name']) ?> sebagai Pengelola?')" title="Jadikan Pengelola"><i class="fa fa-star"></i></button>
+              <?php
+                $vip_limit_msg = 'Batas Pengelola harian tercapai' . ($vip_daily_limit > 0 ? ' (' . $vip_today_count . '/' . $vip_daily_limit . ')' : '') . '. Reset otomatis 00:00.';
+              ?>
+              <?php if (!empty($vip_limit_reached)): ?>
+                <button type="button" class="btn-act btn-act-info btn-act-disabled" onclick="showVipLimitPopup('<?= htmlspecialchars($vip_limit_msg, ENT_QUOTES) ?>')" title="<?= htmlspecialchars($vip_limit_msg) ?>"><i class="fa fa-star"></i></button>
+              <?php else: ?>
+                <button type="button" class="btn-act btn-act-info" onclick="actionRequest('./?hotspot=users&action=vip&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Tetapkan <?= htmlspecialchars($u['name']) ?> sebagai Pengelola?')" title="Jadikan Pengelola"><i class="fa fa-star"></i></button>
+              <?php endif; ?>
               <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=disable&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Disable Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Disable"><i class="fa fa-ban"></i></button>
             <?php elseif ($is_vip): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
