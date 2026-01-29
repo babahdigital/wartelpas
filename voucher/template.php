@@ -29,7 +29,7 @@ if (stripos($timelimit, "Paket") === false) {
 }
 
 if (!empty($is_vip)) {
-  $timelimit = 'Pengelola / VIP';
+  $timelimit = 'Pengelola';
   $price = '';
 }
 ?>

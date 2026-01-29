@@ -135,7 +135,7 @@ if (trim($display_paket) === '') {
 }
 
 if (!empty($is_vip)) {
-  $display_paket = 'Pengelola / VIP';
+  $display_paket = 'Pengelola';
   $price_display = '';
 }
 ?>
