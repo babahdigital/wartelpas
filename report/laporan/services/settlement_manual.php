@@ -3,9 +3,9 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../../../include/acl.php';
-session_start();
 ini_set('display_errors', 0);
 error_reporting(0);
+ob_start();
 header('Content-Type: application/json');
 
 if (!isset($_SESSION["mikhmon"]) || !isset($_GET['session'])) {
@@ -21,7 +21,16 @@ $action = $_GET['action'] ?? 'start';
 $force = isset($_GET['force']) && $_GET['force'] === '1';
 $cleanup = isset($_GET['cleanup']) && $_GET['cleanup'] === '1';
 if ($session === '' || $date === '') {
+    if (ob_get_length()) ob_clean();
     echo json_encode(['ok' => false, 'message' => 'Parameter tidak valid.']);
+    exit;
+}
+
+function respond_json($payload) {
+    if (ob_get_length()) {
+        ob_clean();
+    }
+    echo json_encode($payload);
     exit;
 }
 
@@ -126,8 +135,11 @@ function append_parsed_router_logs($rawLogs, $date, $triggeredTs, &$logs, &$done
 
         if ($triggeredTs > 0 && $time !== '') {
             $logTs = normalize_log_timestamp($time, $date);
-            if ($logTs !== 0 && $logTs < ($triggeredTs - 5)) {
-                continue;
+            if ($logTs !== 0) {
+                $diff = abs($triggeredTs - $logTs);
+                if ($diff <= 21600 && $logTs < ($triggeredTs - 5)) {
+                    continue;
+                }
             }
         }
 
@@ -347,8 +359,7 @@ try {
     $stmt->execute([':d' => $date]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($action === 'start' && $row && strtolower((string)$row['status']) === 'done' && !$force) {
-        echo json_encode(['ok' => true, 'message' => 'Sudah settlement.']);
-        exit;
+        respond_json(['ok' => true, 'message' => 'Sudah settlement.']);
     }
 } catch (Exception $e) {}
 
@@ -416,8 +427,11 @@ if ($action === 'logs') {
 
                     if ($triggeredTs > 0 && $time !== '') {
                         $logTs = normalize_log_timestamp($time, $effectiveDate);
-                        if ($logTs !== 0 && $logTs < ($triggeredTs - 5)) {
-                            continue;
+                        if ($logTs !== 0) {
+                            $diff = abs($triggeredTs - $logTs);
+                            if ($diff <= 21600 && $logTs < ($triggeredTs - 5)) {
+                                continue;
+                            }
                         }
                     }
 
@@ -558,14 +572,13 @@ if ($action === 'logs') {
         $info_message = $info_message !== '' ? ($info_message . ' ' . $log_hint) : $log_hint;
     }
 
-    echo json_encode([
+    respond_json([
         'ok' => true,
         'status' => $status,
         'logs' => $logs,
         'elapsed' => $elapsed,
         'info_message' => $info_message
     ]);
-    exit;
 }
 
 if ($action === 'reset') {
@@ -573,8 +586,7 @@ if ($action === 'reset') {
         $stmtR = $db->prepare("DELETE FROM settlement_log WHERE report_date = :d");
         $stmtR->execute([':d' => $date]);
     } catch (Exception $e) {}
-    echo json_encode(['ok' => true, 'message' => 'Reset berhasil.']);
-    exit;
+    respond_json(['ok' => true, 'message' => 'Reset berhasil.']);
 }
 
 if ($action === 'start') {
@@ -641,8 +653,7 @@ if ($action === 'start') {
                 append_settlement_debug($debugFile, 'script_not_found=' . $script_name);
                 append_settlement_log($logFile, 'system,error', 'SETTLE: Script tidak ditemukan: ' . $script_name);
                 $API->disconnect();
-                echo json_encode(['ok' => false, 'message' => 'Script tidak ditemukan di MikroTik: ' . $script_name]);
-                exit;
+                respond_json(['ok' => false, 'message' => 'Script tidak ditemukan di MikroTik: ' . $script_name]);
             }
             $API->comm($cmd, $params);
             if ($cleanup) {
@@ -666,8 +677,7 @@ if ($action === 'start') {
             append_settlement_debug($debugFile, 'connect_error=' . $errMsg);
         }
         append_settlement_log($logFile, 'system,error', 'SETTLE: Gagal konek ke MikroTik.');
-        echo json_encode(['ok' => false, 'message' => 'Gagal konek ke MikroTik.']);
-        exit;
+        respond_json(['ok' => false, 'message' => 'Gagal konek ke MikroTik.']);
     }
 
     if ($cleanup) {
@@ -675,8 +685,7 @@ if ($action === 'start') {
         cleanup_history_by_router($db, $date, $router_rows, $logFile);
     }
 
-    echo json_encode(['ok' => true, 'message' => 'Settlement dijalankan.']);
-    exit;
+    respond_json(['ok' => true, 'message' => 'Settlement dijalankan.']);
 }
 
-echo json_encode(['ok' => false, 'message' => 'Aksi tidak valid.']);
+respond_json(['ok' => false, 'message' => 'Aksi tidak valid.']);
