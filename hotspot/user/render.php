@@ -175,6 +175,7 @@
             $status_label = $status_labels[$req_status] ?? '';
             $can_print_block = ($req_comm != '' && $req_status === 'ready');
             $can_print_status = ($req_comm != '' && $req_status === 'retur');
+            $can_print_vip_code = ($req_status === 'vip');
             $can_print_used = ($req_status === 'used');
             $can_print_online = ($req_status === 'online');
             $can_print_rusak = ($req_status === 'rusak');
@@ -256,8 +257,14 @@
                 </button>
               <?php endif; ?>
             <?php endif; ?>
-            <?php if ($req_comm == '' && $can_print_list): ?>
-              <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.openPrintPopup && window.openPrintPopup()">
+            <?php if ($req_comm == '' && ($can_print_list || $can_print_vip_code)): ?>
+              <?php
+                $vip_code_url = '';
+                if ($can_print_vip_code) {
+                  $vip_code_url = './voucher/print.php?status=vip' . $profile_param . '&small=yes&session=' . urlencode($session);
+                }
+              ?>
+              <button type="button" class="btn btn-secondary" style="height:40px;" onclick="<?= $can_print_vip_code ? "window.openUnifiedPrintPopupWithCode && window.openUnifiedPrintPopupWithCode('" . $vip_code_url . "','-')" : "window.openPrintPopup && window.openPrintPopup()" ?>">
                 <i class="fa fa-print"></i> Print
               </button>
             <?php endif; ?>
