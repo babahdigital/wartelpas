@@ -156,15 +156,21 @@ $vip_cfg = $env['vip'] ?? [];
 $vip_daily_limit = isset($vip_cfg['daily_limit']) ? (int)$vip_cfg['daily_limit'] : 0;
 $vip_today_count = 0;
 $vip_limit_reached = false;
+$vip_table_ready = false;
 if ($db && $vip_daily_limit > 0) {
   try {
-    $stmt = $db->prepare("SELECT COUNT(DISTINCT username) FROM vip_actions WHERE date_key = :d");
-    $stmt->execute([':d' => date('Y-m-d')]);
-    $vip_today_count = (int)$stmt->fetchColumn();
-    $vip_limit_reached = ($vip_today_count >= $vip_daily_limit);
+    $chk = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='vip_actions'");
+    $vip_table_ready = ($chk && $chk->fetchColumn());
+    if ($vip_table_ready) {
+      $stmt = $db->prepare("SELECT COUNT(DISTINCT username) FROM vip_actions WHERE date_key = :d");
+      $stmt->execute([':d' => date('Y-m-d')]);
+      $vip_today_count = (int)$stmt->fetchColumn();
+      $vip_limit_reached = ($vip_today_count >= $vip_daily_limit);
+    }
   } catch (Exception $e) {
     $vip_today_count = 0;
     $vip_limit_reached = false;
+    $vip_table_ready = false;
   }
 }
 

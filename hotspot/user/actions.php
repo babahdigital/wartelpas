@@ -1404,12 +1404,18 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             $action_error = 'Gagal: database belum siap untuk batas Pengelola harian.';
           } else {
             try {
-              $stmt = $db->prepare("SELECT COUNT(DISTINCT username) FROM vip_actions WHERE date_key = :d");
-              $stmt->execute([':d' => $vip_date_key]);
-              $vip_today_count = (int)$stmt->fetchColumn();
-              if ($vip_today_count >= $vip_daily_limit) {
-                $action_blocked = true;
-                $action_error = 'Batas Pengelola harian tercapai (' . $vip_daily_limit . '). Reset otomatis 00:00.';
+              $chk = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='vip_actions'");
+              $vip_table_ready = ($chk && $chk->fetchColumn());
+              if (!$vip_table_ready) {
+                $vip_today_count = 0;
+              } else {
+                $stmt = $db->prepare("SELECT COUNT(DISTINCT username) FROM vip_actions WHERE date_key = :d");
+                $stmt->execute([':d' => $vip_date_key]);
+                $vip_today_count = (int)$stmt->fetchColumn();
+                if ($vip_today_count >= $vip_daily_limit) {
+                  $action_blocked = true;
+                  $action_error = 'Batas Pengelola harian tercapai (' . $vip_daily_limit . '). Reset otomatis 00:00.';
+                }
               }
             } catch (Exception $e) {
               $action_blocked = true;
