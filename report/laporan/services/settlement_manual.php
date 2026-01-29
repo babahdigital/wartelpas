@@ -36,6 +36,132 @@ function append_settlement_log($file, $topic, $message) {
     @file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
 }
 
+function normalize_log_timestamp($time, $date) {
+    $time = trim((string)$time);
+    $date = trim((string)$date);
+    if ($time === '') return 0;
+    if (preg_match('/^\d{2}:\d{2}:\d{2}$/', $time)) {
+        $ts = strtotime($date . ' ' . $time);
+        return $ts === false ? 0 : $ts;
+    }
+    $ts = strtotime($time);
+    return $ts === false ? 0 : $ts;
+}
+
+function get_cached_router_logs($cacheFile, $ttlSeconds) {
+    if (!is_file($cacheFile)) return null;
+    $raw = @file_get_contents($cacheFile);
+    if ($raw === false || $raw === '') return null;
+    $data = json_decode($raw, true);
+    if (!is_array($data) || !isset($data['fetched_at']) || !isset($data['logs'])) return null;
+    if (!is_array($data['logs'])) return null;
+    $age = time() - (int)$data['fetched_at'];
+    if ($age > $ttlSeconds) return null;
+    return $data['logs'];
+}
+
+function set_cached_router_logs($cacheFile, $logs) {
+    $payload = [
+        'fetched_at' => time(),
+        'logs' => $logs
+    ];
+    @file_put_contents($cacheFile, json_encode($payload), LOCK_EX);
+}
+
+function fetch_router_settlement_logs($iphost, $userhost, $passwdhost, $date, $debugFile) {
+    $API = new RouterosAPI();
+    $API->debug = false;
+    $API->timeout = 5;
+    $API->attempts = 1;
+    if (!$API->connect($iphost, $userhost, decrypt($passwdhost))) {
+        append_settlement_debug($debugFile, 'router_log_connect_failed');
+        return ['ok' => false, 'error' => 'Gagal konek ke MikroTik untuk mengambil log.'];
+    }
+
+    $logging = $API->comm('/system/logging/print', [
+        '?prefix' => 'SETTLE'
+    ]);
+    if (!is_array($logging) || count($logging) === 0) {
+        $API->comm('/system/logging/add', [
+            'action' => 'memory',
+            'prefix' => 'SETTLE',
+            'topics' => 'script'
+        ]);
+    }
+
+    $rawLogs = $API->comm('/log/print', [
+        '.proplist' => 'time,topics,message',
+        '?message~' => 'SETTLE'
+    ]);
+    $API->disconnect();
+
+    if (!is_array($rawLogs)) $rawLogs = [];
+    return ['ok' => true, 'logs' => $rawLogs, 'date' => $date];
+}
+
+function append_parsed_router_logs($rawLogs, $date, $triggeredTs, &$logs, &$done, &$fail) {
+    if (!is_array($rawLogs)) return;
+    $rawLogs = array_slice($rawLogs, -1000);
+    $seq = 0;
+    $logItems = [];
+    foreach ($rawLogs as $row) {
+        $seq++;
+        $t = trim((string)($row['time'] ?? ''));
+        $sortKey = normalize_log_timestamp($t, $date);
+        $logItems[] = ['row' => $row, 'sort' => $sortKey, 'seq' => $seq];
+    }
+    usort($logItems, function($a, $b){
+        if ($a['sort'] === $b['sort']) return $a['seq'] <=> $b['seq'];
+        if ($a['sort'] === 0) return 1;
+        if ($b['sort'] === 0) return -1;
+        return $a['sort'] <=> $b['sort'];
+    });
+    $sorted = array_map(function($i){ return $i['row']; }, $logItems);
+
+    foreach ($sorted as $l) {
+        $time = trim((string)($l['time'] ?? ''));
+        $topics = trim((string)($l['topics'] ?? 'system,info'));
+        $msg = trim((string)($l['message'] ?? ''));
+        if ($msg === '' && $time === '') continue;
+
+        if ($triggeredTs > 0 && $time !== '') {
+            $logTs = normalize_log_timestamp($time, $date);
+            if ($logTs !== 0 && $logTs < ($triggeredTs - 5)) {
+                continue;
+            }
+        }
+
+        $type = 'info';
+        $topicsLower = strtolower($topics);
+        $msgUpper = strtoupper($msg);
+        if (strpos($topicsLower, 'error') !== false) $type = 'error';
+        elseif (strpos($topicsLower, 'warning') !== false) $type = 'warning';
+        elseif (strpos($topicsLower, 'system') !== false || strpos($topicsLower, 'script') !== false) $type = 'system';
+        if (strpos($msgUpper, 'SUKSES') !== false || strpos($msgUpper, 'BERHASIL') !== false) $type = 'success';
+        elseif (strpos($msgUpper, 'GAGAL') !== false || strpos($msgUpper, 'ERROR') !== false || strpos($msgUpper, 'DIBATALKAN') !== false) $type = 'error';
+        elseif (strpos($msgUpper, 'WARNING') !== false || strpos($msgUpper, 'WARN') !== false) $type = 'warning';
+        elseif (strpos($msgUpper, 'SYNC') !== false || strpos($msgUpper, 'CLEANUP') !== false || strpos($msgUpper, 'MAINT') !== false) $type = 'system';
+
+        $logs[] = [
+            'time' => $time,
+            'topic' => $topics,
+            'type' => $type,
+            'message' => $msg
+        ];
+
+        if (strpos($msg, 'SUKSES: Cuci Gudang Selesai') !== false) {
+            $done = true;
+        }
+        if (strpos($msg, 'CLEANUP: Dibatalkan') !== false || strpos($msgUpper, 'ERROR') !== false) {
+            $fail = true;
+        } elseif (strpos($msgUpper, 'GAGAL') !== false) {
+            if (stripos($msg, 'SYNC USAGE: Gagal koneksi') === false) {
+                $fail = true;
+            }
+        }
+    }
+}
+
 function uptime_to_seconds_manual($uptime) {
     if (empty($uptime) || $uptime === '0s') return 0;
     $total = 0;
@@ -189,6 +315,7 @@ require_once($root_dir . '/include/readcfg.php');
 $safe_session = preg_replace('/[^A-Za-z0-9_-]/', '', $session);
 $safe_date = preg_replace('/[^0-9-]/', '', $date);
 $logFile = $logDir . '/settlement_' . $safe_session . '_' . $safe_date . '.log';
+$cacheFile = $logDir . '/settlement_router_cache_' . $safe_session . '_' . $safe_date . '.json';
 
 try {
     $db = new PDO('sqlite:' . $dbFile);
@@ -288,8 +415,8 @@ if ($action === 'logs') {
                     if ($msg === '') continue;
 
                     if ($triggeredTs > 0 && $time !== '') {
-                        $logTs = strtotime($effectiveDate . ' ' . $time);
-                        if ($logTs !== false && $logTs < ($triggeredTs - 5)) {
+                        $logTs = normalize_log_timestamp($time, $effectiveDate);
+                        if ($logTs !== 0 && $logTs < ($triggeredTs - 5)) {
                             continue;
                         }
                     }
@@ -325,6 +452,30 @@ if ($action === 'logs') {
                     }
                 }
             }
+
+            $lineCount = is_array($lines) ? count($lines) : 0;
+            $needRouterLogs = (!$done && !$fail && ($lineCount <= 2 || $elapsed > 30));
+            if ($needRouterLogs) {
+                $cached = get_cached_router_logs($cacheFile, 8);
+                if ($cached === null) {
+                    $res = fetch_router_settlement_logs($iphost, $userhost, $passwdhost, $date, $debugFile);
+                    if ($res['ok']) {
+                        $cached = $res['logs'];
+                        set_cached_router_logs($cacheFile, $cached);
+                    } else {
+                        $logs[] = [
+                            'time' => date('H:i:s'),
+                            'topic' => 'system,error',
+                            'type' => 'error',
+                            'message' => $res['error']
+                        ];
+                    }
+                }
+                if (is_array($cached)) {
+                    $log_hint = $log_hint !== '' ? $log_hint : 'Log router dipakai karena file lokal minim.';
+                    append_parsed_router_logs($cached, $date, $triggeredTs, $logs, $done, $fail);
+                }
+            }
         } else {
             $debugLines = [];
             if (is_file($debugFile)) {
@@ -350,111 +501,22 @@ if ($action === 'logs') {
                     ];
                 }
             }
-            $rawLogs = [];
-            $API = new RouterosAPI();
-            $API->debug = false;
-            $API->timeout = 5;
-            $API->attempts = 1;
-            if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-            $logging = $API->comm('/system/logging/print', [
-                '?prefix' => 'SETTLE'
-            ]);
-            if (!is_array($logging) || count($logging) === 0) {
-                $API->comm('/system/logging/add', [
-                    'action' => 'memory',
-                    'prefix' => 'SETTLE',
-                    'topics' => 'script'
-                ]);
-            }
-
-            $rawLogs = $API->comm('/log/print', [
-                '.proplist' => 'time,topics,message',
-                '?message~' => 'SETTLE'
-            ]);
-            if (!is_array($rawLogs) || count($rawLogs) === 0) {
-                $rawLogs = [];
-            }
-            $API->disconnect();
-            } else {
-                $logs[] = [
-                    'time' => date('H:i:s'),
-                    'topic' => 'system,error',
-                    'type' => 'error',
-                    'message' => 'Gagal konek ke MikroTik untuk mengambil log.'
-                ];
-            }
-            $rawLogs = is_array($rawLogs) ? array_slice($rawLogs, -1000) : [];
-            if (is_array($rawLogs)) {
-                $seq = 0;
-                $logItems = [];
-                foreach ($rawLogs as $row) {
-                    $seq++;
-                    $t = trim((string)($row['time'] ?? ''));
-                    $sortKey = 0;
-                    if ($t !== '') {
-                        $ts = strtotime($t);
-                        if ($ts === false && preg_match('/\d{2}:\d{2}:\d{2}/', $t)) {
-                            $ts = strtotime($date . ' ' . $t);
-                        }
-                        if ($ts !== false) {
-                            $sortKey = $ts;
-                        }
-                    }
-                    $logItems[] = ['row' => $row, 'sort' => $sortKey, 'seq' => $seq];
-                }
-                usort($logItems, function($a, $b){
-                    if ($a['sort'] === $b['sort']) return $a['seq'] <=> $b['seq'];
-                    if ($a['sort'] === 0) return 1;
-                    if ($b['sort'] === 0) return -1;
-                    return $a['sort'] <=> $b['sort'];
-                });
-                $rawLogs = array_map(function($i){ return $i['row']; }, $logItems);
-            }
-            foreach ($rawLogs as $l) {
-                $time = trim((string)($l['time'] ?? ''));
-                $topics = trim((string)($l['topics'] ?? 'system,info'));
-                $msg = trim((string)($l['message'] ?? ''));
-                if ($msg === '' && $time === '') continue;
-
-                if ($triggeredTs > 0 && $time !== '') {
-                    $logTs = strtotime($time);
-                    if ($logTs === false && preg_match('/\d{2}:\d{2}:\d{2}/', $time)) {
-                        $logTs = strtotime($date . ' ' . $time);
-                    }
-                    if ($logTs !== false && $logTs < ($triggeredTs - 5)) {
-                        continue;
-                    }
-                }
-
-                $type = 'info';
-                $topicsLower = strtolower($topics);
-                $msgUpper = strtoupper($msg);
-                if (strpos($topicsLower, 'error') !== false) $type = 'error';
-                elseif (strpos($topicsLower, 'warning') !== false) $type = 'warning';
-                elseif (strpos($topicsLower, 'system') !== false || strpos($topicsLower, 'script') !== false) $type = 'system';
-                if (strpos($msgUpper, 'SUKSES') !== false || strpos($msgUpper, 'BERHASIL') !== false) $type = 'success';
-                elseif (strpos($msgUpper, 'GAGAL') !== false || strpos($msgUpper, 'ERROR') !== false || strpos($msgUpper, 'DIBATALKAN') !== false) $type = 'error';
-                elseif (strpos($msgUpper, 'WARNING') !== false || strpos($msgUpper, 'WARN') !== false) $type = 'warning';
-                elseif (strpos($msgUpper, 'SYNC') !== false || strpos($msgUpper, 'CLEANUP') !== false || strpos($msgUpper, 'MAINT') !== false) $type = 'system';
-
-                $logs[] = [
-                    'time' => $time,
-                    'topic' => $topics,
-                    'type' => $type,
-                    'message' => $msg
-                ];
-
-                if (strpos($msg, 'SUKSES: Cuci Gudang Selesai') !== false) {
-                    $done = true;
-                }
-                if (strpos($msg, 'CLEANUP: Dibatalkan') !== false || strpos($msgUpper, 'ERROR') !== false) {
-                    $fail = true;
-                } elseif (strpos($msgUpper, 'GAGAL') !== false) {
-                    if (stripos($msg, 'SYNC USAGE: Gagal koneksi') === false) {
-                        $fail = true;
-                    }
+            $cached = get_cached_router_logs($cacheFile, 8);
+            if ($cached === null) {
+                $res = fetch_router_settlement_logs($iphost, $userhost, $passwdhost, $date, $debugFile);
+                if ($res['ok']) {
+                    $cached = $res['logs'];
+                    set_cached_router_logs($cacheFile, $cached);
+                } else {
+                    $logs[] = [
+                        'time' => date('H:i:s'),
+                        'topic' => 'system,error',
+                        'type' => 'error',
+                        'message' => $res['error']
+                    ];
                 }
             }
+            append_parsed_router_logs($cached, $date, $triggeredTs, $logs, $done, $fail);
         }
     } catch (Exception $e) {
     }
