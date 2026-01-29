@@ -102,7 +102,9 @@ $env = [
         'setoran_mode' => 'net'
     ],
     'maintenance' => [
-        'enabled' => true
+        'enabled' => true,
+        'allowed_session' => 'S3c7x9_LB',
+        'home_url' => 'http://wartelpas.sobigidul.net/?session=S3c7x9_LB'
     ],
     'rclone' => [
         'bin' => '/usr/bin/rclone',
