@@ -101,8 +101,8 @@ try {
         $lh = $login_map[$uname] ?? [];
         $comment = (string)($r['comment'] ?? '');
         $lh_status = strtolower(trim((string)($lh['last_status'] ?? '')));
-        $status = resolve_status_from_sources($r['status'] ?? '', $r['is_invalid'] ?? 0, $r['is_retur'] ?? 0, $r['is_rusak'] ?? 0, $comment, $lh_status);
-        if ($lh_status !== '' && $lh_status !== 'normal') {
+        $status = resolve_status_from_sources($r['status'] ?? '', $r['is_invalid'] ?? 0, $r['is_retur'] ?? 0, $r['is_rusak'] ?? 0, $comment, '');
+        if ($status === 'normal' && in_array($lh_status, ['terpakai', 'retur', 'online'], true)) {
             $status = $lh_status;
         }
         if (in_array($status, ['rusak', 'invalid'], true)) continue;
