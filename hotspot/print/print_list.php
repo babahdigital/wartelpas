@@ -74,7 +74,7 @@ $title_text = $title_labels[$req_status] ?? 'List Voucher Terpakai';
 $profile_label = format_profile_label_print($req_prof);
 $date_label = format_filter_date_print($req_show, $filter_date);
 $hide_logout_col = in_array($req_status, ['used', 'terpakai', 'all', 'online', 'rusak', 'retur'], true);
-$is_ready_print = ($req_status === 'ready');
+$is_ready_print = in_array($req_status, ['ready','vip'], true);
 $retur_ref_map = [];
 if (!empty($display_data)) {
   foreach ($display_data as $row) {
