@@ -67,6 +67,7 @@ $title_labels = [
   'rusak' => 'List Voucher Rusak',
   'retur' => 'List Voucher Retur',
   'ready' => 'List Voucher Ready',
+  'vip' => 'List Voucher Pengelola',
   'all' => 'List Voucher Terpakai'
 ];
 $title_text = $title_labels[$req_status] ?? 'List Voucher Terpakai';

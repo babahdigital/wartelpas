@@ -1364,6 +1364,84 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           } catch(Exception $e) {}
         }
         $action_message = 'Berhasil hapus user ' . $name . ' dari Router.';
+      } elseif ($act == 'vip' || $act == 'unvip') {
+        $uinfo = $api_print('/ip/hotspot/user/print', [
+          '?server' => $hotspot_server,
+          '?name' => $name,
+          '.proplist' => '.id,name,comment,disabled,bytes-in,bytes-out,uptime'
+        ]);
+        $ainfo = $api_print('/ip/hotspot/active/print', [
+          '?server' => $hotspot_server,
+          '?user' => $name,
+          '.proplist' => 'user'
+        ]);
+        $urow = $uinfo[0] ?? [];
+        $arow = $ainfo[0] ?? [];
+        $comment_raw = (string)($urow['comment'] ?? $comm);
+        $disabled = $urow['disabled'] ?? 'false';
+        $bytes = (int)($urow['bytes-in'] ?? 0) + (int)($urow['bytes-out'] ?? 0);
+        $uptime = (string)($urow['uptime'] ?? '');
+        $is_active = isset($arow['user']);
+        $hist_vip = $hist_action ?: get_user_history($name);
+        $hist_status = strtolower((string)($hist_vip['last_status'] ?? ''));
+        $hist_used = $hist_vip && (
+          in_array($hist_status, ['online','terpakai','rusak','retur'], true) ||
+          !empty($hist_vip['login_time_real']) ||
+          !empty($hist_vip['logout_time_real']) ||
+          (!empty($hist_vip['last_uptime']) && $hist_vip['last_uptime'] != '0s') ||
+          (int)($hist_vip['last_bytes'] ?? 0) > 0
+        );
+        $is_ready_now = (!$is_active && $disabled !== 'true' && $bytes <= 50 && ($uptime === '' || $uptime === '0s') && !$hist_used);
+        $has_vip = is_vip_comment($comment_raw) || ($hist_vip && is_vip_comment($hist_vip['raw_comment'] ?? ''));
+
+        if ($act === 'vip' && !$is_ready_now) {
+          $action_blocked = true;
+          $action_error = 'Gagal: VIP hanya untuk user READY (tidak online/terpakai).';
+        } else {
+          $new_comment = $comment_raw;
+          if ($act === 'vip') {
+            if ($has_vip) {
+              $action_message = 'User sudah ditandai sebagai Pengelola.';
+            } else {
+              $base = trim($comment_raw);
+              if ($base === '') {
+                $new_comment = 'VIP';
+              } elseif (!preg_match('/\bVIP\b/i', $base)) {
+                $new_comment = trim($base . ' | VIP');
+              }
+              $action_message = 'Berhasil set Pengelola untuk ' . $name . '.';
+            }
+          } else {
+            if (!$has_vip) {
+              $action_message = 'User tidak berstatus Pengelola.';
+            } else {
+              $clean = preg_replace('/\s*\|\s*VIP\b/i', '', $comment_raw);
+              $clean = preg_replace('/\bVIP\b/i', '', $clean);
+              $clean = preg_replace('/\s+\|\s+/', ' | ', $clean);
+              $clean = trim($clean, " \t\n\r\0\x0B|");
+              $new_comment = $clean;
+              $action_message = 'Berhasil hapus Pengelola untuk ' . $name . '.';
+            }
+          }
+
+          if ($uid != '' && !$action_blocked) {
+            $API->write('/ip/hotspot/user/set', false);
+            $API->write('=.id='.$uid, false);
+            $API->write('=comment='.$new_comment);
+            $API->read();
+            if ($db && $name != '') {
+              $save_data = [
+                'raw' => $new_comment,
+                'status' => 'ready'
+              ];
+              save_user_history($name, $save_data);
+              try {
+                $stmt = $db->prepare("UPDATE login_history SET last_status='ready', raw_comment=:c, updated_at=CURRENT_TIMESTAMP WHERE username = :u");
+                $stmt->execute([':u' => $name, ':c' => $new_comment]);
+              } catch(Exception $e) {}
+            }
+          }
+        }
       } elseif ($act == 'disable') {
         $active_check = $api_print('/ip/hotspot/active/print', [
           '?server' => $hotspot_server,
