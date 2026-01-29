@@ -118,7 +118,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       exit();
     }
   }
-  if ($act == 'invalid' || $act == 'retur' || $act == 'rollback' || $act == 'delete' || $act == 'delete_user_full' || $act == 'delete_block_full' || $act == 'batch_delete' || $act == 'delete_status' || $act == 'check_rusak' || $act == 'disable' || $act == 'vip' || $act == 'unvip' || $act == 'vip_block') {
+  if ($act == 'invalid' || $act == 'retur' || $act == 'rollback' || $act == 'delete' || $act == 'delete_user_full' || $act == 'delete_block_full' || $act == 'batch_delete' || $act == 'delete_status' || $act == 'check_rusak' || $act == 'disable' || $act == 'vip' || $act == 'unvip') {
     $uid = $_GET['uid'] ?? '';
     $name = $_GET['name'] ?? '';
     $comm = $_GET['c'] ?? '';
@@ -1275,94 +1275,6 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       }
       if ($target_status !== '') {
         $action_message = 'Berhasil hapus voucher status ' . $target_status . ($blok_norm ? (' pada ' . $blok_norm) : '') . '.';
-      }
-    } elseif ($act == 'vip_block' && $blok != '') {
-      $profile_filter = $_GET['profile'] ?? '';
-      if (!in_array($profile_filter, ['10','30'], true)) {
-        $profile_filter = '';
-      }
-      $active_list = $api_print("/ip/hotspot/active/print", array(
-        "?server" => $hotspot_server,
-        ".proplist" => "user"
-      ));
-      $active_names = [];
-      foreach ($active_list as $a) {
-        if (isset($a['user'])) $active_names[$a['user']] = true;
-      }
-      $list = $api_print("/ip/hotspot/user/print", array(
-        "?server" => $hotspot_server,
-        ".proplist" => ".id,name,comment,disabled,bytes-in,bytes-out,uptime,profile"
-      ));
-      $blok_norm = extract_blok_name($blok);
-      $blok_raw = $blok;
-      $blok_cmp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $blok_norm ?: $blok_raw));
-      $updated = 0;
-      $skipped = 0;
-      $checked = 0;
-      foreach ($list as $usr) {
-        $uname = $usr['name'] ?? '';
-        if ($uname === '') continue;
-        $cmt = (string)($usr['comment'] ?? '');
-        $cblok = extract_blok_name($cmt);
-        $cblok_cmp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $cblok));
-        if ($blok_cmp !== '' && $cblok_cmp !== $blok_cmp) continue;
-        $checked++;
-
-        if (isset($active_names[$uname])) { $skipped++; continue; }
-        $disabled = $usr['disabled'] ?? 'false';
-        $bytes = (int)($usr['bytes-in'] ?? 0) + (int)($usr['bytes-out'] ?? 0);
-        $uptime = (string)($usr['uptime'] ?? '');
-        $profile_name = (string)($usr['profile'] ?? '');
-
-        if ($profile_filter !== '') {
-          $kind = detect_profile_kind_unified($profile_name, $cmt, $cblok, $uptime);
-          if ($kind !== $profile_filter) continue;
-        }
-
-        $hist_vip = get_user_history($uname);
-        $hist_status = strtolower((string)($hist_vip['last_status'] ?? ''));
-        $hist_used = $hist_vip && (
-          in_array($hist_status, ['online','terpakai','rusak','retur'], true) ||
-          !empty($hist_vip['login_time_real']) ||
-          !empty($hist_vip['logout_time_real']) ||
-          (!empty($hist_vip['last_uptime']) && $hist_vip['last_uptime'] != '0s') ||
-          (int)($hist_vip['last_bytes'] ?? 0) > 0
-        );
-        $is_ready_now = (!isset($active_names[$uname]) && $disabled !== 'true' && $bytes <= 50 && ($uptime === '' || $uptime === '0s') && !$hist_used);
-        $has_vip = is_vip_comment($cmt) || ($hist_vip && is_vip_comment($hist_vip['raw_comment'] ?? ''));
-        if (!$is_ready_now || $has_vip) { $skipped++; continue; }
-
-        $new_comment = trim($cmt);
-        if ($new_comment === '') {
-          $new_comment = 'VIP';
-        } elseif (!preg_match('/\bVIP\b/i', $new_comment)) {
-          $new_comment = trim($new_comment . ' | VIP');
-        }
-
-        if (!empty($usr['.id'])) {
-          $API->write('/ip/hotspot/user/set', false);
-          $API->write('=.id=' . $usr['.id'], false);
-          $API->write('=comment=' . $new_comment);
-          $API->read();
-        }
-        if ($db) {
-          $save_data = [
-            'raw' => $new_comment,
-            'status' => 'ready'
-          ];
-          save_user_history($uname, $save_data);
-          try {
-            $stmt = $db->prepare("UPDATE login_history SET last_status='ready', raw_comment=:c, updated_at=CURRENT_TIMESTAMP WHERE username = :u");
-            $stmt->execute([':u' => $uname, ':c' => $new_comment]);
-          } catch(Exception $e) {}
-        }
-        $updated++;
-      }
-      $label = ($blok_norm ?: $blok_raw);
-      if ($updated > 0) {
-        $action_message = 'Berhasil set Pengelola untuk ' . $updated . ' user pada blok ' . $label . '. (Dilewati: ' . $skipped . ', Dicek: ' . $checked . ')';
-      } else {
-        $action_message = 'Tidak ada user READY yang memenuhi syarat Pengelola pada blok ' . $label . '.';
       }
     } elseif ($act == 'batch_delete' && $blok != '') {
       $active_list = $api_print("/ip/hotspot/active/print", array(

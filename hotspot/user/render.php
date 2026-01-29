@@ -246,24 +246,6 @@
                   <i class="fa fa-print"></i> Print
                 </button>
               <?php endif; ?>
-              <?php if (in_array($req_status, ['ready','all'], true)): ?>
-                <?php
-                  $vip_block_params = [
-                    'hotspot' => 'users',
-                    'action' => 'vip_block',
-                    'blok' => $req_comm,
-                    'session' => $session
-                  ];
-                  if ($req_prof !== '' && $req_prof !== 'all') {
-                    $vip_block_params['profile'] = $req_prof;
-                  }
-                  $vip_block_url = './?' . http_build_query($vip_block_params);
-                  $vip_label = 'Jadikan semua voucher READY di ' . $req_comm . ' sebagai Pengelola?';
-                ?>
-                <button type="button" class="btn btn-warning" style="height:40px;" onclick="actionRequest('<?= $vip_block_url ?>','<?= htmlspecialchars($vip_label, ENT_QUOTES) ?>')">
-                  <i class="fa fa-star"></i> Jadikan Pengelola (Blok)
-                </button>
-              <?php endif; ?>
               <?php if ($can_delete_status): ?>
                 <button type="button" class="btn btn-warning" style="height:40px;" onclick="actionRequest('./?hotspot=users&action=delete_status&status=<?= $req_status ?>&blok=<?= urlencode($req_comm) ?>&session=<?= $session ?>','Hapus semua voucher <?= $status_label ?> di <?= htmlspecialchars($req_comm) ?> (tidak online)?')">
                   <i class="fa fa-trash"></i> Hapus <?= $status_label ?>
