@@ -342,6 +342,8 @@ if (file_exists($dbFile)) {
                 FROM live_sales ls
                 LEFT JOIN login_history lh2 ON lh2.username = ls.username
                 WHERE ls.sync_status='pending' AND $dateFilter
+                  AND instr(lower(COALESCE(ls.comment,'')), 'vip') = 0
+                  AND instr(lower(COALESCE(lh2.raw_comment,'')), 'vip') = 0
               ) t";
             $stmt = $db->prepare($pendingSumSql);
             foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);

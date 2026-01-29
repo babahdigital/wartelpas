@@ -1061,7 +1061,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             }
         }
         if (table_exists($db, 'login_history')) {
-            $stmtOpt = $db->prepare("SELECT DISTINCT username FROM login_history WHERE username != '' AND (substr(login_time_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR login_date = :d) AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'");
+            $stmtOpt = $db->prepare("SELECT DISTINCT username FROM login_history WHERE username != '' AND (substr(login_time_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR login_date = :d) AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready' AND instr(lower(COALESCE(raw_comment,'')), 'vip') = 0");
             $stmtOpt->execute([':d' => $filter_date]);
             foreach ($stmtOpt->fetchAll(PDO::FETCH_COLUMN, 0) as $u) {
                 $u = trim((string)$u);

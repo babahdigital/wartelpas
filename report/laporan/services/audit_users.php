@@ -66,6 +66,7 @@ try {
     foreach ($rows as $r) {
         $uname = trim((string)($r['username'] ?? ''));
         if ($uname === '') continue;
+        if (is_vip_comment($r['comment'] ?? '')) continue;
         $dt = (string)($r['sale_datetime'] ?? '');
         if ($dt === '') {
             $sd = (string)($r['sale_date'] ?? $date);
@@ -88,7 +89,9 @@ try {
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $lh) {
             $u = (string)($lh['username'] ?? '');
             if ($u !== '' && !isset($login_map[$u])) {
-                $login_map[$u] = $lh;
+                if (!is_vip_comment($lh['raw_comment'] ?? '')) {
+                    $login_map[$u] = $lh;
+                }
             }
         }
     }
@@ -111,6 +114,7 @@ try {
             $uname = trim((string)($lh['username'] ?? ''));
             if ($uname === '') continue;
             $lh_comment = (string)($lh['raw_comment'] ?? '');
+            if (is_vip_comment($lh_comment)) continue;
             $blok = normalize_block_name('', $lh_comment);
             if ($blok !== $blok_norm) continue;
             if (isset($user_latest[$uname])) continue;
@@ -149,6 +153,7 @@ try {
         $lh = $login_map[$uname] ?? [];
         $comment = (string)($r['comment'] ?? '');
         $lh_comment = (string)($lh['raw_comment'] ?? '');
+        if (is_vip_comment($comment) || is_vip_comment($lh_comment)) continue;
         $blok = normalize_block_name($r['blok_name'] ?? '', $comment);
         if ($blok !== $blok_norm && $lh_comment !== '') {
             $blok = normalize_block_name($r['blok_name'] ?? '', $lh_comment);
