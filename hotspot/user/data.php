@@ -436,11 +436,12 @@ foreach($all_users as $u) {
     $f_blok = extract_blok_name($comment);
 
     $hist = get_user_history($name);
+    $vip_tag_hist = $hist && is_vip_comment($hist['raw_comment'] ?? '');
     if (empty($f_blok) && $hist && !empty($hist['blok_name'])) {
       $f_blok = $hist['blok_name'];
     }
     if ($only_wartel && !is_wartel_client($comment, $f_blok)) {
-      if (!$vip_tag_comment && $req_status !== 'ready') {
+      if (!($vip_tag_comment || $vip_tag_hist) && $req_status !== 'ready') {
         continue;
       }
     }
@@ -521,7 +522,7 @@ foreach($all_users as $u) {
     elseif ($disabled == 'true') $status = 'RUSAK';
     elseif ($is_used) $status = 'TERPAKAI';
 
-    $is_vip_tag = $vip_tag_comment || ($hist && is_vip_comment($hist['raw_comment'] ?? ''));
+    $is_vip_tag = $vip_tag_comment || $vip_tag_hist;
     if ($status === 'READY' && $is_vip_tag) {
       $status = 'READY';
       if ($is_active) $status = 'ONLINE';
