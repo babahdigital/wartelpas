@@ -129,6 +129,11 @@ if (trim($display_paket) === '') {
   }
   if ($label_fallback !== '') $display_paket = $label_fallback . ' / ';
 }
+
+if (!empty($is_vip)) {
+  $display_paket = 'Pengelola / VIP';
+  $price_display = '';
+}
 ?>
 
 <table class="voucher" data-username="<?= htmlspecialchars($username) ?>" style="width: 160px;">

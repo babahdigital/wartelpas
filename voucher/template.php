@@ -23,6 +23,11 @@ $timelimit = str_replace("h", " Jam", $timelimit);
 if (stripos($timelimit, "Paket") === false) {
     $timelimit = "Paket " . $timelimit;
 }
+
+if (!empty($is_vip)) {
+  $timelimit = 'Pengelola / VIP';
+  $price = '';
+}
 ?>
 
 <table class="voucher" data-username="<?= htmlspecialchars($user) ?>" style="width: 220px;">
@@ -65,7 +70,9 @@ if (stripos($timelimit, "Paket") === false) {
       <td style="vertical-align: middle;">
          <div style="font-weight:bold; font-size:16px; text-align:center;">
             <?= $timelimit; ?><br>
-            <?= $price; ?>
+            <?php if (trim((string)$price) !== ''): ?>
+              <?= $price; ?>
+            <?php endif; ?>
             
             <?php if($lokasi_blok != ""): ?>
                 <div style="margin-top:8px; font-size:18px; color:black; border-top:1px dashed #000; text-align: right; padding-right: 2px;">

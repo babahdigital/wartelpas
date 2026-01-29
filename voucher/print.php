@@ -602,6 +602,7 @@ for ($i = 0; $i < $TotalReg; $i++) {
   $getdatalimit = isset($regtable['limit-bytes-total']) ? $regtable['limit-bytes-total'] : 0;
   $comment = isset($regtable['comment']) ? $regtable['comment'] : '';
   $profile_name = isset($regtable['profile']) ? $regtable['profile'] : $getuprofile;
+  $is_vip = (!empty($comment) && preg_match('/\bvip\b/i', $comment));
   
   if ($getdatalimit == 0) $datalimit = "";
   else $datalimit = formatBytes($getdatalimit, 2);
