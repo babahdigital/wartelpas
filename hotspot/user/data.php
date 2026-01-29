@@ -930,7 +930,8 @@ foreach($all_users as $u) {
 
     $profile_label_display = normalize_profile_label($u['profile'] ?? '');
     if ($profile_label_display === '') {
-      $profile_hist_fallback = resolve_profile_from_history($comment, $hist['validity'] ?? '', $uptime);
+      $comment_source = trim($comment . ' ' . (string)($hist['raw_comment'] ?? ''));
+      $profile_hist_fallback = resolve_profile_from_history($comment_source, $hist['validity'] ?? '', $uptime);
       $profile_label_display = normalize_profile_label($profile_hist_fallback);
     }
     if ($profile_label_display === '' && in_array($profile_kind_final, ['10', '30'], true)) {
