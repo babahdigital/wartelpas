@@ -36,8 +36,17 @@ if (!isset($_SESSION["mikhmon"])) {
   exit();
 
 } elseif (isOperator() && isMaintenanceEnabled()) {
+  $allowed_session = getMaintenanceAllowedSession();
   $allowed_hotspot = array('', 'dashboard');
-  if (!in_array($hotspot, $allowed_hotspot, true)) {
+  if (empty($allowed_session)) {
+    aclRedirect(getMaintenanceUrl());
+    exit();
+  }
+  if (empty($session)) {
+    aclRedirect(getMaintenanceHomeUrl());
+    exit();
+  }
+  if ($session !== $allowed_session || !in_array($hotspot, $allowed_hotspot, true)) {
     aclRedirect(getMaintenanceUrl());
     exit();
   }
