@@ -544,32 +544,13 @@ foreach($all_users as $u) {
     elseif ($is_used) $status = 'TERPAKAI';
 
     $is_vip_tag = $vip_tag_comment || $vip_tag_hist;
-    if ($status === 'READY' && $is_vip_tag) {
-      $status = 'READY';
-      if ($is_active) $status = 'ONLINE';
-      elseif ($is_retur) $status = 'RETUR';
-      elseif ($is_rusak) $status = 'RUSAK';
-      elseif ($disabled == 'true') $status = 'RUSAK';
-      elseif ($is_used) $status = 'TERPAKAI';
-
-      $is_vip_tag = is_vip_comment($comment) || ($hist && is_vip_comment($hist['raw_comment'] ?? ''));
-      $vip_eligible = (!$is_active && !$is_rusak && !$is_retur && $disabled !== 'true');
-      $is_ready_current = ($vip_eligible && $bytes <= 50 && ($uptime == '0s' || $uptime == ''));
-      if ($is_vip_tag && $vip_eligible) {
-        $status = 'VIP';
-      }
-
-      $is_ready_now = ($is_ready_current && !$is_vip_tag);
-      if (($uptime == '0s' || $uptime == '') && !empty($hist['last_uptime'])) {
-        $uptime = $hist['last_uptime'];
-      }
-      if (($f_ip == '-' || $f_ip == '') && !empty($hist['ip_address'])) {
-        $f_ip = $hist['ip_address'];
-      }
-      if (($f_mac == '-' || $f_mac == '') && !empty($hist['mac_address'])) {
-        $f_mac = $hist['mac_address'];
-      }
+    $vip_eligible = (!$is_active && !$is_retur && !$is_rusak && $disabled !== 'true');
+    $is_ready_current = ($vip_eligible && $bytes <= 50 && ($uptime == '0s' || $uptime == ''));
+    if ($is_vip_tag && $vip_eligible) {
+      $status = 'VIP';
     }
+
+    $is_ready_now = ($is_ready_current && !$is_vip_tag);
 
     // Simpan waktu login/logout dan status ke DB (back-calculation)
     $now = date('Y-m-d H:i:s');
