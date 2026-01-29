@@ -619,7 +619,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         return (($ipLong & $maskLong) === ($netLong & $maskLong));
       };
 
-      $active_list = $API->comm('/ip/hotspot/active/print', [
+      $active_list = $api_print('/ip/hotspot/active/print', [
         '?server' => $hotspot_server,
         '.proplist' => '.id,user,address'
       ]);
@@ -1045,7 +1045,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           if ($wartel_subnet !== '' && !$ipInCidr($ip, $wartel_subnet)) continue;
           if ($fw_max_seconds > 0 && (microtime(true) - $fw_start) >= $fw_max_seconds) break;
           try {
-            $conn_list = $API->comm('/ip/firewall/connection/print', [
+            $conn_list = $api_print('/ip/firewall/connection/print', [
               '?src-address' => $ip,
               '.proplist' => '.id'
             ]);
@@ -1103,7 +1103,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
 
       $script_deleted = 0;
       try {
-        $scripts = $API->comm('/system/script/print', [
+        $scripts = $api_print('/system/script/print', [
           '?comment' => 'mikhmon',
           '.proplist' => '.id,name,comment'
         ]);
@@ -1151,7 +1151,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $target_status = $status_map[$status] ?? '';
       if ($target_status != '' && $db) {
         $blok_norm = $blok != '' ? extract_blok_name($blok) : '';
-        $active_list = $API->comm("/ip/hotspot/active/print", array(
+        $active_list = $api_print("/ip/hotspot/active/print", array(
           "?server" => $hotspot_server,
           ".proplist" => "user"
         ));
@@ -1176,7 +1176,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
               $row_blok = extract_blok_name($row['blok_name'] ?? '');
               if (strcasecmp($row_blok, $blok_norm) !== 0) continue;
             }
-            $u = $API->comm("/ip/hotspot/user/print", array(
+            $u = $api_print("/ip/hotspot/user/print", array(
               "?server" => $hotspot_server,
               "?name" => $uname,
               ".proplist" => ".id"
@@ -1191,7 +1191,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             $deleted_any = true;
           }
           if (!$deleted_any && $target_status !== '') {
-            $list = $API->comm("/ip/hotspot/user/print", array(
+            $list = $api_print("/ip/hotspot/user/print", array(
               "?server" => $hotspot_server,
               ".proplist" => ".id,name,comment,disabled,bytes-in,bytes-out,uptime"
             ));
@@ -1240,7 +1240,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             }
           }
           if ($target_status === 'rusak') {
-            $list = $API->comm("/ip/hotspot/user/print", array(
+            $list = $api_print("/ip/hotspot/user/print", array(
               "?server" => $hotspot_server,
               ".proplist" => ".id,name,comment,disabled"
             ));
@@ -1272,7 +1272,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $action_message = 'Berhasil hapus voucher status ' . $target_status . ($blok_norm ? (' pada ' . $blok_norm) : '') . '.';
       }
     } elseif ($act == 'batch_delete' && $blok != '') {
-      $active_list = $API->comm("/ip/hotspot/active/print", array(
+      $active_list = $api_print("/ip/hotspot/active/print", array(
         "?server" => $hotspot_server,
         ".proplist" => "user"
       ));
@@ -1280,7 +1280,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       foreach ($active_list as $a) {
         if (isset($a['user'])) $active_names[$a['user']] = true;
       }
-      $list = $API->comm("/ip/hotspot/user/print", array(
+      $list = $api_print("/ip/hotspot/user/print", array(
         "?server" => $hotspot_server,
         ".proplist" => ".id,name,comment"
       ));
@@ -1360,7 +1360,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         }
         $action_message = 'Berhasil hapus user ' . $name . ' dari Router.';
       } elseif ($act == 'disable') {
-        $active_check = $API->comm('/ip/hotspot/active/print', [
+        $active_check = $api_print('/ip/hotspot/active/print', [
           '?server' => $hotspot_server,
           '?user' => $name,
           '.proplist' => 'user'
@@ -1411,12 +1411,12 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $API->read();
         if ($db && $name != '') {
           $hist = get_user_history($name);
-          $uinfo = $API->comm('/ip/hotspot/user/print', [
+          $uinfo = $api_print('/ip/hotspot/user/print', [
             '?server' => $hotspot_server,
             '?name' => $name,
             '.proplist' => 'comment,bytes-in,bytes-out,uptime,mac-address'
           ]);
-          $ainfo = $API->comm('/ip/hotspot/active/print', [
+          $ainfo = $api_print('/ip/hotspot/active/print', [
             '?server' => $hotspot_server,
             '?user' => $name,
             '.proplist' => 'user,uptime,address,mac-address,bytes-in,bytes-out'
@@ -1493,7 +1493,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $action_message = 'Berhasil set RUSAK untuk ' . $name . '.';
       } elseif ($act == 'rollback') {
         // Kembalikan status RUSAK
-        $uinfo = $API->comm('/ip/hotspot/user/print', [
+        $uinfo = $api_print('/ip/hotspot/user/print', [
           '?server' => $hotspot_server,
           '?name' => $name,
           '.proplist' => '.id,comment,disabled'
@@ -1541,21 +1541,21 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $action_message = 'Berhasil rollback RUSAK untuk ' . $name . '.';
       } elseif ($act == 'retur') {
         // Simpan data voucher lama ke DB sebelum dihapus
-        $user_info = $API->comm("/ip/hotspot/user/print", array(
+        $user_info = $api_print("/ip/hotspot/user/print", array(
           "?server" => $hotspot_server,
           "?name" => $name,
           ".proplist" => ".id,name,comment,profile,bytes-in,bytes-out,uptime,mac-address"
         ));
         $uinfo = $user_info[0] ?? [];
         if (empty($uinfo) && $uid != '') {
-          $user_info = $API->comm("/ip/hotspot/user/print", array(
+          $user_info = $api_print("/ip/hotspot/user/print", array(
             "?server" => $hotspot_server,
             "?.id" => $uid,
             ".proplist" => ".id,name,comment,profile,bytes-in,bytes-out,uptime,mac-address"
           ));
           $uinfo = $user_info[0] ?? [];
         }
-        $active_info = $API->comm("/ip/hotspot/active/print", array(
+        $active_info = $api_print("/ip/hotspot/active/print", array(
           "?server" => $hotspot_server,
           "?user" => $name,
           ".proplist" => "user,uptime,address,mac-address,bytes-in,bytes-out"
