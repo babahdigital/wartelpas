@@ -26,9 +26,6 @@ requireLogin('../admin.php?id=login');
 
 $is_operator = isOperator();
 
-$maintenance_enabled = !empty($env['maintenance']['enabled']);
-
-
 // array color
   $color = array('1' => 'bg-blue', 'bg-indigo', 'bg-purple', 'bg-pink', 'bg-red', 'bg-yellow', 'bg-green', 'bg-teal', 'bg-cyan', 'bg-grey', 'bg-light-blue');
 
@@ -73,32 +70,6 @@ $maintenance_enabled = !empty($env['maintenance']['enabled']);
           $data = $gen;
           fwrite($handle, $data);
 
-    $maintenance_enabled = isset($_POST['maintenance_enable']);
-    $env_path = __DIR__ . '/../include/env.php';
-    if (file_exists($env_path)) {
-      if (!is_writable($env_path)) {
-        echo "<script>alert('Gagal menyimpan. File env.php tidak bisa ditulis.'); window.location='./admin.php?id=sessions';</script>";
-        exit;
-      }
-      $env_content = file_get_contents($env_path);
-      $maintenance_value = $maintenance_enabled ? 'true' : 'false';
-      $pattern = "/('maintenance'\\s*=>\\s*\\[\\s*'enabled'\\s*=>\\s*)(true|false)(\\s*\\])/";
-      if (preg_match($pattern, $env_content)) {
-        $env_content = preg_replace($pattern, "$1{$maintenance_value}$3", $env_content, 1);
-      } else {
-        $insert = "    'maintenance' => [\n        'enabled' => {$maintenance_value}\n    ],\n";
-        if (strpos($env_content, "'rclone' => [") !== false) {
-          $env_content = str_replace("    'rclone' => [", $insert . "    'rclone' => [", $env_content);
-        } else {
-          $env_content = str_replace("];", $insert . "];", $env_content);
-        }
-      }
-      $env_write_ok = file_put_contents($env_path, $env_content);
-      if ($env_write_ok === false) {
-        echo "<script>alert('Gagal menyimpan konfigurasi maintenance.'); window.location='./admin.php?id=sessions';</script>";
-        exit;
-      }
-    }
     echo "<script>window.location='./admin.php?id=sessions'</script>";
   }
 ?>
@@ -217,15 +188,6 @@ $maintenance_enabled = !empty($env['maintenance']['enabled']);
               <option>enable</option>
               <option>disable</option>
             </select>
-          </td>
-        </tr>
-        <tr>
-          <td class="align-middle">Maintenance</td>
-          <td>
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-              <input type="checkbox" name="maintenance_enable" value="1" <?= $maintenance_enabled ? 'checked' : '' ?>>
-              <span>Aktifkan mode maintenance (Operator diarahkan ke maintenance)</span>
-            </label>
           </td>
         </tr>
         <tr>
