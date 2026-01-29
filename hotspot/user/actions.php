@@ -1393,36 +1393,6 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         );
         $is_ready_now = (!$is_active && $disabled !== 'true' && $bytes <= 50 && ($uptime === '' || $uptime === '0s') && !$hist_used);
         $has_vip = is_vip_comment($comment_raw) || ($hist_vip && is_vip_comment($hist_vip['raw_comment'] ?? ''));
-        $vip_cfg = $env['vip'] ?? [];
-        $vip_daily_limit = isset($vip_cfg['daily_limit']) ? (int)$vip_cfg['daily_limit'] : 0;
-        $vip_today_count = null;
-        $vip_date_key = date('Y-m-d');
-
-        if ($act === 'vip' && !$has_vip && $vip_daily_limit > 0) {
-          if (!$db) {
-            $action_blocked = true;
-            $action_error = 'Gagal: database belum siap untuk batas Pengelola harian.';
-          } else {
-            try {
-              $chk = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='vip_actions'");
-              $vip_table_ready = ($chk && $chk->fetchColumn());
-              if (!$vip_table_ready) {
-                $vip_today_count = 0;
-              } else {
-                $stmt = $db->prepare("SELECT COUNT(DISTINCT username) FROM vip_actions WHERE date_key = :d");
-                $stmt->execute([':d' => $vip_date_key]);
-                $vip_today_count = (int)$stmt->fetchColumn();
-                if ($vip_today_count >= $vip_daily_limit) {
-                  $action_blocked = true;
-                  $action_error = 'Batas Pengelola harian tercapai (' . $vip_daily_limit . '). Reset otomatis 00:00.';
-                }
-              }
-            } catch (Exception $e) {
-              $action_blocked = true;
-              $action_error = 'Gagal mengecek batas Pengelola harian.';
-            }
-          }
-        }
 
         if ($act === 'vip' && !$is_ready_now) {
           $action_blocked = true;
@@ -1454,26 +1424,11 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             }
           }
 
-          if ($uid == '' && !$action_blocked) {
-            $action_blocked = true;
-            $action_error = 'Gagal: UID user tidak ditemukan di router.';
-          }
           if ($uid != '' && !$action_blocked) {
             $API->write('/ip/hotspot/user/set', false);
             $API->write('=.id='.$uid, false);
             $API->write('=comment='.$new_comment);
             $API->read();
-
-            $verify = $api_print('/ip/hotspot/user/print', [
-              '?.id' => $uid,
-              '.proplist' => 'comment'
-            ]);
-            $verify_comment = $verify[0]['comment'] ?? $new_comment;
-            if ($act === 'vip' && !is_vip_comment($verify_comment)) {
-              $action_blocked = true;
-              $action_error = 'Gagal: komentar VIP tidak tersimpan di router.';
-            }
-
             if ($db && $name != '') {
               $save_data = [
                 'raw' => $new_comment,
@@ -1484,17 +1439,6 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
                 $stmt = $db->prepare("UPDATE login_history SET last_status='ready', raw_comment=:c, updated_at=CURRENT_TIMESTAMP WHERE username = :u");
                 $stmt->execute([':u' => $name, ':c' => $new_comment]);
               } catch(Exception $e) {}
-              if ($act === 'vip' && !$has_vip) {
-                try {
-                  $stmt = $db->prepare("INSERT OR IGNORE INTO vip_actions (username, date_key, created_at) VALUES (:u, :d, CURRENT_TIMESTAMP)");
-                  $stmt->execute([':u' => $name, ':d' => $vip_date_key]);
-                } catch(Exception $e) {}
-              } elseif ($act === 'unvip') {
-                try {
-                  $stmt = $db->prepare("DELETE FROM vip_actions WHERE username = :u AND date_key = :d");
-                  $stmt->execute([':u' => $name, ':d' => $vip_date_key]);
-                } catch(Exception $e) {}
-              }
             }
           }
         }

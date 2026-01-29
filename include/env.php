@@ -64,9 +64,6 @@ $env = [
             '30menit' => '30 Menit'
         ]
     ],
-    'vip' => [
-        'daily_limit' => 5
-    ],
     'system' => [
         'base_url' => 'http://wartelpas.sobigidul.net',
         'db_file' => 'db_data/mikhmon_stats.db',
