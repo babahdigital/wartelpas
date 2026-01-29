@@ -379,6 +379,8 @@ if ($action === 'logs') {
     $done = false;
     $fail = false;
     $message = '';
+    $lineCount = 0;
+    $forced_done = false;
     $effectiveLogFile = $logFile;
     $log_hint = '';
     clearstatcache(true, $effectiveLogFile);
@@ -399,6 +401,7 @@ if ($action === 'logs') {
         if ($useFileLogs) {
             $lines = @file($effectiveLogFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
             if (is_array($lines)) {
+                $lineCount = count($lines);
                 if (count($lines) > 400) {
                     $lines = array_slice($lines, -400);
                 }
@@ -467,7 +470,7 @@ if ($action === 'logs') {
                 }
             }
 
-            $lineCount = is_array($lines) ? count($lines) : 0;
+            $lineCount = is_array($lines) ? $lineCount : 0;
             $needRouterLogs = (!$done && !$fail && ($lineCount <= 2 || $elapsed > 30));
             if ($needRouterLogs) {
                 $cached = get_cached_router_logs($cacheFile, 8);
@@ -535,6 +538,30 @@ if ($action === 'logs') {
     } catch (Exception $e) {
     }
 
+    if (!$done && !$fail && $elapsed > 120) {
+        $has_start = false;
+        foreach ($logs as $lg) {
+            $msg = strtolower((string)($lg['message'] ?? ''));
+            if (strpos($msg, 'start manual settlement') !== false || strpos($msg, 'script dijalankan') !== false) {
+                $has_start = true;
+                break;
+            }
+        }
+        if ($has_start || $lineCount >= 2) {
+            $done = true;
+            $forced_done = true;
+            $status = 'done';
+            $warn = 'SETTLE: Selesai dipaksa (log sukses tidak ditemukan).';
+            append_settlement_log($logFile, 'system,warning', $warn);
+            $logs[] = [
+                'time' => date('H:i:s'),
+                'topic' => 'system,warning',
+                'type' => 'warning',
+                'message' => $warn
+            ];
+        }
+    }
+
     if ($done) {
         $status = 'done';
     } elseif ($fail) {
@@ -567,6 +594,9 @@ if ($action === 'logs') {
     $info_message = '';
     if ($elapsed > 120 && !$done && !$fail) {
         $info_message = 'Proses settlement berjalan. Jika lama, cek log MikroTik.';
+    }
+    if ($forced_done) {
+        $info_message = $info_message !== '' ? ($info_message . ' Status dipaksa selesai.') : 'Status dipaksa selesai.';
     }
     if ($log_hint !== '') {
         $info_message = $info_message !== '' ? ($info_message . ' ' . $log_hint) : $log_hint;
