@@ -1186,8 +1186,13 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
               $API->write('=.id=' . $u[0]['.id']);
               $API->read();
             }
-            $del = $db->prepare("DELETE FROM login_history WHERE username = :u");
-            $del->execute([':u' => $uname]);
+            $tables = ['login_history', 'login_events', 'sales_history', 'live_sales'];
+            foreach ($tables as $table) {
+              try {
+                $del = $db->prepare("DELETE FROM {$table} WHERE username = :u");
+                $del->execute([':u' => $uname]);
+              } catch (Exception $e) {}
+            }
             $deleted_any = true;
           }
           if (!$deleted_any && $target_status !== '') {
