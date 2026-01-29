@@ -871,8 +871,9 @@ foreach($all_users as $u) {
     }
 
     // Filter tanggal (harian/bulanan/tahunan) memakai last_used (selalu aktif)
+    $status_for_date = ($status === 'VIP') ? 'READY' : $status;
     if ($req_show !== 'semua' && !empty($filter_date)) {
-      if ($status === 'READY') {
+      if ($status_for_date === 'READY') {
         if (!$is_print) {
           $is_today = ($filter_date === date('Y-m-d') && $req_show === 'harian');
           if (!$is_today && $req_status === 'all') {
@@ -893,7 +894,7 @@ foreach($all_users as $u) {
     // Filter status
     if ($req_status == 'ready' && $status !== 'READY') continue;
     if ($req_status == 'vip' && $status !== 'VIP') continue;
-    if ($req_status == 'all' && in_array($status, ['READY','VIP'], true)) continue;
+    if ($req_status == 'all' && in_array($status, ['READY','VIP'], true) && trim((string)$req_search) === '') continue;
     if ($req_status == 'online' && $status !== 'ONLINE') continue;
     if ($req_status == 'used' && !in_array($status, ['TERPAKAI','RETUR','RUSAK'])) continue;
     if ($req_status == 'rusak' && $status !== 'RUSAK') continue;
