@@ -49,6 +49,16 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
   };
   $is_action_ajax = isset($_GET['ajax']) && $_GET['ajax'] == '1' && isset($_GET['action_ajax']);
   $act = $_POST['action'] ?? $_GET['action'];
+  $api_print_cache = [];
+  $api_print = function($path, $params = []) use ($API, &$api_print_cache) {
+    $key = $path . '|' . md5(json_encode($params));
+    if (isset($api_print_cache[$key])) {
+      return $api_print_cache[$key];
+    }
+    $res = $API->comm($path, $params);
+    $api_print_cache[$key] = $res;
+    return $res;
+  };
   if ($act === 'login_events') {
     header('Content-Type: application/json');
     if (!$db) {
@@ -132,7 +142,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     }
 
     if ($uid == '' && $name != '' && in_array($act, ['invalid','retur','rollback','delete','delete_user_full','disable','enable'])) {
-      $uget = $API->comm('/ip/hotspot/user/print', [
+      $uget = $api_print('/ip/hotspot/user/print', [
         '?server' => $hotspot_server,
         '?name' => $name,
         '.proplist' => '.id'
@@ -155,12 +165,12 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     $recent_relogin = 0;
 
     if ($act == 'invalid' || $act == 'retur' || $act == 'check_rusak') {
-      $uinfo = $API->comm('/ip/hotspot/user/print', [
+      $uinfo = $api_print('/ip/hotspot/user/print', [
         '?server' => $hotspot_server,
         '?name' => $name,
         '.proplist' => '.id,name,comment,profile,disabled,bytes-in,bytes-out,uptime'
       ]);
-      $ainfo = $API->comm('/ip/hotspot/active/print', [
+      $ainfo = $api_print('/ip/hotspot/active/print', [
         '?server' => $hotspot_server,
         '?user' => $name,
         '.proplist' => 'user,uptime,bytes-in,bytes-out'
@@ -253,7 +263,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $comment_rusak = true;
       }
       if ($last_status !== 'rusak' && !$comment_rusak) {
-        $ucheck = $API->comm('/ip/hotspot/user/print', [
+        $ucheck = $api_print('/ip/hotspot/user/print', [
           '?server' => $hotspot_server,
           '?name' => $name,
           '.proplist' => 'comment,disabled'
@@ -312,7 +322,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $blok_norm = extract_blok_name($blok);
         $blok_raw = $blok;
         $blok_cmp = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $blok_norm ?: $blok_raw));
-        $list = $API->comm("/ip/hotspot/user/print", array(
+        $list = $api_print("/ip/hotspot/user/print", array(
           "?server" => $hotspot_server,
           ".proplist" => ".id,name,comment"
         ));
@@ -380,7 +390,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     }
 
     if (!$action_blocked && $act == 'delete' && $name != '') {
-      $active_check = $API->comm('/ip/hotspot/active/print', [
+      $active_check = $api_print('/ip/hotspot/active/print', [
         '?server' => $hotspot_server,
         '?user' => $name,
         '.proplist' => 'user'
@@ -400,7 +410,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       }
 
       $base_comment = '';
-      $uinfo_full = $API->comm('/ip/hotspot/user/print', [
+      $uinfo_full = $api_print('/ip/hotspot/user/print', [
         '?server' => $hotspot_server,
         '?name' => $name,
         '.proplist' => '.id,name,comment'
@@ -421,7 +431,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       }
 
       if ($ref_user != '') {
-        $list = $API->comm('/ip/hotspot/user/print', [
+        $list = $api_print('/ip/hotspot/user/print', [
           '?server' => $hotspot_server,
           '.proplist' => '.id,name,comment'
         ]);
@@ -438,7 +448,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
 
       $target_ref = 'Retur Ref:vc-' . $name;
       $target_ref_alt = 'Retur Ref:' . $name;
-      $list = $API->comm('/ip/hotspot/user/print', [
+      $list = $api_print('/ip/hotspot/user/print', [
         '?server' => $hotspot_server,
         '.proplist' => '.id,name,comment'
       ]);
@@ -488,7 +498,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
 
       foreach ($delete_names as $del_name) {
         if ($del_name == '') continue;
-        $active_rows = $API->comm('/ip/hotspot/active/print', [
+        $active_rows = $api_print('/ip/hotspot/active/print', [
           '?server' => $hotspot_server,
           '?user' => $del_name,
           '.proplist' => '.id,user'
@@ -504,7 +514,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         }
 
         $uid_target = '';
-        $uget = $API->comm('/ip/hotspot/user/print', [
+        $uget = $api_print('/ip/hotspot/user/print', [
           '?server' => $hotspot_server,
           '?name' => $del_name,
           '.proplist' => '.id'
@@ -922,7 +932,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         }
       }
 
-      $list = $API->comm('/ip/hotspot/user/print', [
+      $list = $api_print('/ip/hotspot/user/print', [
         '?server' => $hotspot_server,
         '.proplist' => '.id,name,comment'
       ]);
@@ -979,7 +989,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $uname = $d['name'] ?? '';
         if ($uname !== '') {
           try {
-            $cookies = $API->comm('/ip/hotspot/cookie/print', [
+            $cookies = $api_print('/ip/hotspot/cookie/print', [
               '?user' => $uname,
               '.proplist' => '.id'
             ]);
@@ -997,7 +1007,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           $active_addr = is_array($active_info) ? ($active_info['address'] ?? '') : '';
           if ($fw_enable && $active_addr !== '' && ($wartel_subnet === '' || $ipInCidr($active_addr, $wartel_subnet))) {
             try {
-              $conn_list = $API->comm('/ip/firewall/connection/print', [
+              $conn_list = $api_print('/ip/firewall/connection/print', [
                 '?src-address' => $active_addr,
                 '.proplist' => '.id'
               ]);
