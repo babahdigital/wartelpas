@@ -143,6 +143,20 @@ function extract_profile_from_comment($comment) {
     return '';
 }
 
+function infer_profile_from_comment($comment) {
+    $comment = strtolower((string)$comment);
+    if (preg_match('/\b(10|30)\s*(menit|m)\b/', $comment, $m)) {
+        return $m[1] . 'menit';
+    }
+    if (preg_match('/\bblok\s*[-_]?[a-z0-9]+\s*(10|30)\b/', $comment, $m)) {
+        return $m[1] . 'menit';
+    }
+    if (preg_match('/\bblok\s*[-_]?[a-z0-9]+(10|30)\b/', $comment, $m)) {
+        return $m[1] . 'menit';
+    }
+    return '';
+}
+
 function normalize_profile_key($profile) {
     $raw = strtolower(trim((string)$profile));
     if ($raw === '') return '';

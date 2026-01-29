@@ -890,6 +890,16 @@ foreach ($rows as $r) {
             $price = $price10;
         }
     }
+    if ($price <= 0) {
+        $guess_profile = infer_profile_from_comment($raw_comment);
+        if ($guess_profile !== '') {
+            $profile = $guess_profile;
+            $price = resolve_price_from_profile($profile);
+        }
+    }
+    if ($price <= 0 && $profile !== '' && $profile !== '-') {
+        $price = resolve_price_from_profile($profile);
+    }
     $line_price = $price * $qty;
     $blok = normalize_block_name($r['blok_name'] ?? '', $raw_comment);
     $status = strtolower((string)($r['status'] ?? ''));
