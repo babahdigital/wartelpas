@@ -189,7 +189,8 @@ if (file_exists($dbFile)) {
             $auditDateParam[':d'] = $year . '%';
         }
 
-        if (table_exists($db, 'sales_history')) {
+        $has_sales_history = table_exists($db, 'sales_history');
+        if ($has_sales_history) {
             $sumSql = "SELECT
                 SUM(CASE WHEN eff_status='invalid' THEN eff_price * eff_qty ELSE 0 END) AS invalid_sum,
                 SUM(CASE WHEN eff_status='rusak' THEN eff_price * eff_qty ELSE 0 END) AS rusak_sum,
@@ -235,6 +236,77 @@ if (file_exists($dbFile)) {
             $sales_summary['gross'] = $raw_gross - $retur_rp;
             $sales_summary['total'] = (int)($sumRow['total_cnt'] ?? 0);
             $sales_summary['net'] = $raw_gross - $invalid_rp - $rusak_rp;
+        }
+
+        if (table_exists($db, 'login_history')) {
+            try {
+                $lhWhere = "(substr(login_time_real,1,10) = :d_lh OR substr(last_login_real,1,10) = :d_lh OR substr(logout_time_real,1,10) = :d_lh OR substr(updated_at,1,10) = :d_lh OR login_date = :d_lh)";
+                if ($req_show === 'bulanan') {
+                    $lhWhere = "(substr(login_time_real,1,7) = :d_lh OR substr(last_login_real,1,7) = :d_lh OR substr(logout_time_real,1,7) = :d_lh OR substr(updated_at,1,7) = :d_lh OR substr(login_date,1,7) = :d_lh)";
+                } elseif ($req_show === 'tahunan') {
+                    $lhWhere = "(substr(login_time_real,1,4) = :d_lh OR substr(last_login_real,1,4) = :d_lh OR substr(logout_time_real,1,4) = :d_lh OR substr(updated_at,1,4) = :d_lh OR substr(login_date,1,4) = :d_lh)";
+                }
+
+                $lhNotExists = '';
+                if ($has_sales_history) {
+                    $lhNotExists = "AND NOT EXISTS (SELECT 1 FROM sales_history sh WHERE sh.username = lh.username AND $dateFilter)";
+                }
+
+                $lhSql = "SELECT username, price, validity, raw_comment, last_status
+                    FROM login_history lh
+                    WHERE username != ''
+                        AND $lhWhere
+                        AND (
+                            instr(lower(COALESCE(NULLIF(last_status,''), '')), 'rusak') > 0
+                            OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'retur') > 0
+                            OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'invalid') > 0
+                        )
+                        $lhNotExists";
+                $stmt = $db->prepare($lhSql);
+                foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
+                $stmt->bindValue(':d_lh', $filter_date);
+                $stmt->execute();
+                $lhRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                if (!empty($lhRows)) {
+                    $lh_total = 0;
+                    $lh_raw_gross = 0;
+                    $lh_invalid = 0;
+                    $lh_rusak = 0;
+                    $lh_retur = 0;
+                    foreach ($lhRows as $row) {
+                        $status = strtolower(trim((string)($row['last_status'] ?? '')));
+                        if (strpos($status, 'retur') !== false) $status = 'retur';
+                        elseif (strpos($status, 'rusak') !== false) $status = 'rusak';
+                        elseif (strpos($status, 'invalid') !== false) $status = 'invalid';
+                        else $status = '';
+
+                        $price = (int)($row['price'] ?? 0);
+                        if ($price <= 0) {
+                            $profile = (string)($row['validity'] ?? '');
+                            if ($profile === '') {
+                                $profile = extract_profile_from_comment($row['raw_comment'] ?? '');
+                            }
+                            $price = (int)resolve_price_from_profile($profile);
+                        }
+                        if ($price <= 0) continue;
+
+                        $lh_total++;
+                        $lh_raw_gross += $price;
+                        if ($status === 'invalid') $lh_invalid += $price;
+                        elseif ($status === 'rusak') $lh_rusak += $price;
+                        elseif ($status === 'retur') $lh_retur += $price;
+                    }
+                    if ($lh_total > 0) {
+                        $sales_summary['total'] += $lh_total;
+                        $sales_summary['gross'] += ($lh_raw_gross - $lh_retur);
+                        $sales_summary['rusak'] += $lh_rusak;
+                        $sales_summary['retur'] += $lh_retur;
+                        $sales_summary['invalid'] += $lh_invalid;
+                        $sales_summary['net'] += ($lh_raw_gross - $lh_invalid - $lh_rusak);
+                    }
+                }
+            } catch (Exception $e) {}
         }
 
         if (table_exists($db, 'live_sales')) {

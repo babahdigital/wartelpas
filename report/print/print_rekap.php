@@ -584,12 +584,6 @@ foreach ($rows as $r) {
             $comment = $raw_comment;
         }
     }
-    $blok_row = (string)($r['blok_name'] ?? '');
-    if ($blok_row === '' && !preg_match('/\bblok\s*[-_]?\s*[A-Za-z0-9]+/i', $comment)) {
-        continue;
-    }
-    $block = normalize_block_name($r['blok_name'] ?? '', $comment);
-
     $status_db = normalize_status_value($r['status'] ?? '');
     $lh_status = normalize_status_value($r['last_status'] ?? '');
     $cmt_low = strtolower($comment);
@@ -612,6 +606,13 @@ foreach ($rows as $r) {
     } elseif (in_array($status_db, ['online', 'terpakai', 'ready'], true)) {
         $status = $status_db;
     }
+
+    $blok_row = (string)($r['blok_name'] ?? '');
+    $has_block_hint = ($blok_row !== '' || preg_match('/\bblok\s*[-_]?\s*[A-Za-z0-9]+/i', $comment));
+    if (!$has_block_hint && !in_array($status, ['rusak', 'retur', 'invalid'], true)) {
+        continue;
+    }
+    $block = normalize_block_name($r['blok_name'] ?? '', $comment);
 
     if ($status === 'retur') {
         $ref_user = extract_retur_user_from_ref($comment);
@@ -669,11 +670,6 @@ foreach ($rows as $r) {
     if ($qty <= 0) $qty = 1;
     $line_price = $price * $qty;
     $comment = (string)($r['comment'] ?? '');
-    $blok_row = (string)($r['blok_name'] ?? '');
-    if ($blok_row === '' && !preg_match('/\bblok\s*[-_]?\s*[A-Za-z0-9]+/i', $comment)) {
-        continue;
-    }
-    $block = normalize_block_name($r['blok_name'] ?? '', $comment);
     $status_db = normalize_status_value($r['status'] ?? '');
     $lh_status = normalize_status_value($r['last_status'] ?? '');
     $profile = $r['profile_snapshot'] ?? ($r['profile'] ?? '-');
@@ -714,6 +710,13 @@ foreach ($rows as $r) {
             $status = 'rusak';
         }
     }
+
+    $blok_row = (string)($r['blok_name'] ?? '');
+    $has_block_hint = ($blok_row !== '' || preg_match('/\bblok\s*[-_]?\s*[A-Za-z0-9]+/i', $comment));
+    if (!$has_block_hint && !in_array($status, ['rusak', 'retur', 'invalid'], true)) {
+        continue;
+    }
+    $block = normalize_block_name($r['blok_name'] ?? '', $comment);
 
     if ($price <= 0) {
         $price = resolve_price_from_profile($profile);

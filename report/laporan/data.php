@@ -856,10 +856,6 @@ foreach ($rows as $r) {
     if ($qty <= 0) $qty = 1;
     $comment = format_first_login($r['first_login_real'] ?? '');
     $raw_comment = (string)($r['comment'] ?? '');
-    $blok_row = (string)($r['blok_name'] ?? '');
-    if ($blok_row === '' && !preg_match('/\bblok\s*[-_]?\s*[A-Za-z0-9]+/i', $raw_comment)) {
-        continue;
-    }
     $profile = $r['profile_snapshot'] ?? ($r['profile'] ?? '-');
     if ($profile === '' || $profile === '-') {
         $hint = (string)($r['validity'] ?? '') . ' ' . $raw_comment;
@@ -921,6 +917,12 @@ foreach ($rows as $r) {
         elseif (strpos($cmt_low, 'retur') !== false) $status = 'retur';
         elseif (strpos($cmt_low, 'rusak') !== false || $lh_status === 'rusak') $status = 'rusak';
         else $status = 'normal';
+    }
+
+    $blok_row = (string)($r['blok_name'] ?? '');
+    $has_block_hint = ($blok_row !== '' || preg_match('/\bblok\s*[-_]?\s*[A-Za-z0-9]+/i', $raw_comment));
+    if (!$has_block_hint && !in_array($status, ['rusak', 'retur', 'invalid'], true)) {
+        continue;
     }
 
     $gross_add = 0;
