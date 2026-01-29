@@ -385,15 +385,7 @@ if ($action === 'logs') {
     $log_hint = '';
     clearstatcache(true, $effectiveLogFile);
     if (!is_file($effectiveLogFile) || filesize($effectiveLogFile) === 0) {
-        $pattern = $logDir . '/settlement_' . $safe_session . '_*.log';
-        $candidates = glob($pattern);
-        if (is_array($candidates) && count($candidates) > 0) {
-            usort($candidates, function($a, $b){ return filemtime($b) <=> filemtime($a); });
-            $effectiveLogFile = $candidates[0];
-            if ($effectiveLogFile !== $logFile) {
-                $log_hint = 'Log settlement ditemukan di tanggal berbeda: ' . basename($effectiveLogFile);
-            }
-        }
+        $log_hint = 'Log untuk tanggal ini belum tersedia.';
     }
     clearstatcache(true, $effectiveLogFile);
     $useFileLogs = is_file($effectiveLogFile) && filesize($effectiveLogFile) > 0;
