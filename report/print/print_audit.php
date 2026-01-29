@@ -307,7 +307,7 @@ if (file_exists($dbFile)) {
         }
 
         if (table_exists($db, 'live_sales')) {
-            $pendingSql = "SELECT COUNT(*) FROM live_sales WHERE sync_status='pending' AND $dateFilter";
+            $pendingSql = "SELECT COUNT(*) FROM live_sales WHERE sync_status='pending' AND $dateFilter AND instr(lower(COALESCE(comment,'')), 'vip') = 0";
             $stmt = $db->prepare($pendingSql);
             foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
             $stmt->execute();
@@ -368,7 +368,7 @@ if (file_exists($dbFile)) {
                 MIN(COALESCE(NULLIF(raw_date,''),'')) AS min_raw,
                 MAX(COALESCE(NULLIF(raw_date,''),'')) AS max_raw
                 FROM live_sales
-                WHERE sync_status='pending' AND $dateFilter";
+                WHERE sync_status='pending' AND $dateFilter AND instr(lower(COALESCE(comment,'')), 'vip') = 0";
               $stmt = $db->prepare($rangeSql);
               foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
               $stmt->execute();
