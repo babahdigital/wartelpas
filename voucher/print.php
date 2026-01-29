@@ -34,7 +34,7 @@ if (!isset($_SESSION["mikhmon"])) {
   $download = isset($_GET['download']) && $_GET['download'] == '1';
   $img = isset($_GET['img']) && $_GET['img'] == '1';
 
-  $allowed_status = ['ready','online','terpakai','rusak','retur','used','all'];
+  $allowed_status = ['ready','online','terpakai','rusak','retur','used','all','vip'];
   if ($status !== '' && !in_array($status, $allowed_status, true)) {
     $status = '';
   }
@@ -306,6 +306,26 @@ if (!isset($_SESSION["mikhmon"])) {
     $target_status = strtolower($status);
     $getuser = [];
     $routerMap = $getRouterUserMap();
+    if ($target_status === 'vip') {
+      $raw_users = array_values($routerMap);
+      foreach ($raw_users as $u) {
+        $u_comment = $u['comment'] ?? '';
+        if (!preg_match('/\bvip\b/i', $u_comment)) continue;
+        $getuser[] = $u;
+      }
+      if ($profile_filter !== '') {
+        $filtered = [];
+        foreach ($getuser as $u) {
+          $kind = detect_profile_kind_voucher($u['profile'] ?? '', $u['comment'] ?? '', $u['limit-uptime'] ?? '');
+          if ($kind !== $profile_filter) continue;
+          $filtered[] = $u;
+        }
+        $getuser = $filtered;
+      }
+      $TotalReg = count($getuser);
+      $usermode = "vc";
+      goto voucher_print_end;
+    }
     try {
       $db = new PDO('sqlite:../db_data/mikhmon_stats.db');
       $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -420,6 +440,7 @@ if (!isset($_SESSION["mikhmon"])) {
       }
       $TotalReg = count($getuser);
     }
+    voucher_print_end:
   } elseif ($id != "") {
     // B. PRINT PER BLOK (SMART SEARCH + FILTER)
     $usermode = "vc"; 
