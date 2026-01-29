@@ -151,20 +151,19 @@
                             <?php endforeach; ?>
                         </select>
                     </div>
-                </div>
-
-                <div style="margin-top:10px;">
-                    <label class="label-icon"><i class="fa fa-shield"></i> Verifikasi User (Wajib)</label>
-                    <input type="hidden" name="audit_username" id="auditUsernameHidden">
-                    <button type="button" class="audit-user-trigger" id="auditUserTrigger" onclick="openAuditUserModal()">
-                        <span id="auditUserLabel"><i class="fa fa-list-ul"></i> Pilih user terpakai & retur...</span>
-                        <i class="fa fa-chevron-right" style="font-size:10px; opacity:0.7;"></i>
-                    </button>
-                    <div class="audit-user-status">
-                        <span class="audit-user-summary" id="auditUserSummary">Belum ada user dipilih</span>
-                        <span class="audit-user-unreported" id="auditUserUnreported">Tidak dilaporkan: -</span>
+                    <div>
+                        <label class="label-icon"><i class="fa fa-shield"></i> Verifikasi User (Wajib)</label>
+                        <input type="hidden" name="audit_username" id="auditUsernameHidden">
+                        <button type="button" class="audit-user-trigger" id="auditUserTrigger" onclick="openAuditUserModal()">
+                            <span id="auditUserLabel"><i class="fa fa-list-ul"></i> Pilih user terpakai & retur...</span>
+                            <i class="fa fa-chevron-right" style="font-size:10px; opacity:0.7;"></i>
+                        </button>
+                        <div class="audit-user-status">
+                            <span class="audit-user-summary" id="auditUserSummary">Belum ada user dipilih</span>
+                            <span class="audit-user-unreported" id="auditUserUnreported">Tidak dilaporkan: -</span>
+                        </div>
+                        <div class="audit-qty-hint" id="auditQtyLockHint">Qty terkunci karena user dipilih.</div>
                     </div>
-                    <div class="audit-qty-hint" id="auditQtyLockHint">Qty terkunci karena user dipilih.</div>
                 </div>
 
                 <div class="form-group-box" style="margin-top:12px;">
@@ -229,11 +228,9 @@
 
                 <div class="form-group-box" style="margin-top:12px; border-color: rgba(46, 204, 113, 0.35);">
                     <div class="form-group-title" style="color:#2ecc71;"><i class="fa fa-check"></i> Setoran Bersih (Hasil Akhir)</div>
-                    <div class="form-grid-2">
-                        <div>
-                            <label class="label-icon">Setoran Bersih (Setelah Pengeluaran)</label>
-                            <input class="form-input" type="number" id="audit_setoran_net" value="0" readonly tabindex="-1">
-                        </div>
+                    <div>
+                        <label class="label-icon">Setoran Bersih (Setelah Pengeluaran)</label>
+                        <input class="form-input" type="number" id="audit_setoran_net" value="0" readonly tabindex="-1">
                     </div>
                 </div>
                 
