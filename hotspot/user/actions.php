@@ -118,7 +118,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       exit();
     }
   }
-  if ($act == 'invalid' || $act == 'retur' || $act == 'rollback' || $act == 'delete' || $act == 'delete_user_full' || $act == 'delete_block_full' || $act == 'batch_delete' || $act == 'delete_status' || $act == 'check_rusak' || $act == 'disable') {
+  if ($act == 'invalid' || $act == 'retur' || $act == 'rollback' || $act == 'delete' || $act == 'delete_user_full' || $act == 'delete_block_full' || $act == 'batch_delete' || $act == 'delete_status' || $act == 'check_rusak' || $act == 'disable' || $act == 'vip' || $act == 'unvip') {
     $uid = $_GET['uid'] ?? '';
     $name = $_GET['name'] ?? '';
     $comm = $_GET['c'] ?? '';
@@ -141,7 +141,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $is_rusak_target = true;
     }
 
-    if ($uid == '' && $name != '' && in_array($act, ['invalid','retur','rollback','delete','delete_user_full','disable','enable'])) {
+    if ($uid == '' && $name != '' && in_array($act, ['invalid','retur','rollback','delete','delete_user_full','disable','enable','vip','unvip'])) {
       $uget = $api_print('/ip/hotspot/user/print', [
         '?server' => $hotspot_server,
         '?name' => $name,
