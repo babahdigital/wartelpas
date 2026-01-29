@@ -65,6 +65,10 @@ if ($lokasi_blok != "") {
     $lokasi_blok = preg_split('/[\s\(\|]/', $lokasi_blok)[0];
 }
 
+if (!empty($is_vip)) {
+  $lokasi_blok = 'VIP';
+}
+
 // --- LOGIKA WAKTU ---
 $waktu_custom = str_replace("m", " Menit", $timelimit);
 $waktu_custom = str_replace("h", " Jam", $waktu_custom);
