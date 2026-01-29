@@ -212,6 +212,7 @@ if (!empty($router_users)) {
     $comment = $u['comment'] ?? '';
     $disabled = $u['disabled'] ?? 'false';
     $is_active = isset($activeMap[$name]);
+    $vip_tag_comment = is_vip_comment($comment);
     $bytes = (int)($u['bytes-in'] ?? 0) + (int)($u['bytes-out'] ?? 0);
     $uptime = $u['uptime'] ?? '';
     $cm = extract_ip_mac_from_comment($comment);
@@ -439,7 +440,7 @@ foreach($all_users as $u) {
       $f_blok = $hist['blok_name'];
     }
     if ($only_wartel && !is_wartel_client($comment, $f_blok)) {
-      if ($req_status !== 'ready') {
+      if (!$vip_tag_comment && $req_status !== 'ready') {
         continue;
       }
     }
@@ -520,7 +521,7 @@ foreach($all_users as $u) {
     elseif ($disabled == 'true') $status = 'RUSAK';
     elseif ($is_used) $status = 'TERPAKAI';
 
-    $is_vip_tag = is_vip_comment($comment) || ($hist && is_vip_comment($hist['raw_comment'] ?? ''));
+    $is_vip_tag = $vip_tag_comment || ($hist && is_vip_comment($hist['raw_comment'] ?? ''));
     if ($status === 'READY' && $is_vip_tag) {
       $status = 'READY';
       if ($is_active) $status = 'ONLINE';
