@@ -489,7 +489,7 @@ if ($action === 'logs') {
                     }
                 }
                 if (is_array($cached)) {
-                    $log_hint = $log_hint !== '' ? $log_hint : 'Log router dipakai karena file lokal minim.';
+                    $log_hint = $log_hint !== '' ? $log_hint : 'Log diambil langsung dari router agar informasi tetap lengkap.';
                     append_parsed_router_logs($cached, $date, $triggeredTs, $logs, $done, $fail);
                 }
             }
@@ -551,7 +551,7 @@ if ($action === 'logs') {
             $done = true;
             $forced_done = true;
             $status = 'done';
-            $warn = 'SETTLE: Log lengkap belum tersedia. Proses dianggap selesai.';
+            $warn = 'SETTLE: Log lengkap belum tersedia. Proses dianggap selesai demi kelancaran laporan.';
             append_settlement_log($logFile, 'system,warning', $warn);
             $logs[] = [
                 'time' => date('H:i:s'),
@@ -596,7 +596,7 @@ if ($action === 'logs') {
         $info_message = 'Mohon tunggu, log settlement sedang disiapkan.';
     }
     if ($forced_done) {
-        $info_message = $info_message !== '' ? ($info_message . ' Status disetel selesai agar proses dapat dilanjutkan.') : 'Status disetel selesai agar proses dapat dilanjutkan.';
+        $info_message = $info_message !== '' ? ($info_message . ' Status diselesaikan agar proses dapat dilanjutkan.') : 'Status diselesaikan agar proses dapat dilanjutkan.';
     }
     if ($log_hint !== '') {
         $info_message = $info_message !== '' ? ($info_message . ' ' . $log_hint) : $log_hint;

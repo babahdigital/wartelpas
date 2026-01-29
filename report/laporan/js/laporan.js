@@ -190,7 +190,7 @@ function manualSettlement(){
                 logBox.innerHTML = '<span class="cursor-blink"></span>';
             }
             enqueueSettlementLogs([
-                { time: '', topic: 'system,info', type: 'info', message: 'Sabar, sedang mengambil log settlement...' }
+                { time: '', topic: 'system,info', type: 'info', message: 'Mohon tunggu, log settlement sedang disiapkan...' }
             ]);
             var params = new URLSearchParams();
             if (cfg.sessionId) params.set('session', cfg.sessionId);
