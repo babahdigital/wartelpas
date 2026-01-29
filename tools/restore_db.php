@@ -75,6 +75,7 @@ $rateFile = sys_get_temp_dir() . '/restore_db.rate.' . md5($rateKey);
 $rateWindow = isset($env['backup']['rate_window']) ? (int)$env['backup']['rate_window'] : 300;
 $rateLimit = isset($env['backup']['rate_limit']) ? (int)$env['backup']['rate_limit'] : 1;
 $forceRate = isset($_GET['force']) && $_GET['force'] === '1';
+$noRate = isset($_GET['nolimit']) && $_GET['nolimit'] === '1';
 $now = time();
 $hits = [];
 if (is_file($rateFile)) {
@@ -87,7 +88,7 @@ if (is_file($rateFile)) {
 $hits = array_values(array_filter($hits, function($t) use ($now, $rateWindow) {
     return is_int($t) && ($now - $t) <= $rateWindow;
 }));
-if (!$forceRate && count($hits) >= $rateLimit) {
+if (!$forceRate && !$noRate && count($hits) >= $rateLimit) {
     respond_restore(false, 'Rate limited', [], 429);
 }
 $hits[] = $now;

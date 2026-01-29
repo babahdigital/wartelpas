@@ -1241,7 +1241,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
 <?php if ($is_ajax) { echo ob_get_clean(); exit; } ?>
 
 <?php if (!$is_ajax): ?>
-<script src="report/laporan/js/laporan.min.js" defer></script>
+<script src="report/laporan/js/laporan.js" defer></script>
 <?php endif; ?>
 
 <!-- Pendapatan per Blok/Profile sementara disembunyikan sesuai permintaan -->
