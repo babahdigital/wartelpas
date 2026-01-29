@@ -143,22 +143,6 @@ function uptime_to_seconds_sync($uptime) {
     return $total;
 }
 
-function detect_profile_minutes_sync($profile, $comment = '') {
-    $src = strtolower(trim((string)$profile));
-    $cmt = strtolower(trim((string)$comment));
-    $val = 0;
-    if (preg_match('/\b(\d{1,2})\s*(menit|m)\b/', $src, $m)) {
-        $val = (int)$m[1];
-    } elseif (preg_match('/\b(10|30)\b/', $src, $m)) {
-        $val = (int)$m[1];
-    } elseif (preg_match('/\b(10|30)\s*(menit|m)\b/', $cmt, $m)) {
-        $val = (int)$m[1];
-    }
-    if (!in_array($val, [10, 30], true)) {
-        return 0;
-    }
-    return $val;
-}
 
 function log_sync_usage($message) {
     global $logDir;
@@ -343,23 +327,6 @@ foreach ($all_users as $u) {
         if ($is_used) $status = 'terpakai';
     }
 
-    // Auto-rusak untuk profil 10/30: aturan bytes kecil
-    if (!$is_active && !in_array($status, ['retur', 'invalid', 'rusak'], true)) {
-        $profile_minutes = detect_profile_minutes_sync($u['profile'] ?? '', $comment);
-        if ($profile_minutes > 0) {
-            $uptime_sec = uptime_to_seconds_sync($uptime);
-            $bytes_threshold_full = 5 * 1024 * 1024;
-            $bytes_threshold_short = 3 * 1024 * 1024;
-            $short_uptime_limit = 5 * 60;
-            $is_full_uptime = $uptime_sec >= ($profile_minutes * 60);
-            $is_short_use = ($uptime_sec > 0 && $uptime_sec <= $short_uptime_limit);
-
-            if (($is_full_uptime && $bytes < $bytes_threshold_full) || ($is_short_use && $bytes < $bytes_threshold_short)) {
-                $status = 'rusak';
-                log_sync_usage("AUTO_RUSAK user={$name} prof={$profile_minutes}m uptime={$uptime} bytes={$bytes}");
-            }
-        }
-    }
 
     // Ambil history untuk locking
     $hist = null;
