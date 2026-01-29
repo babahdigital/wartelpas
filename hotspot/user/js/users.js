@@ -426,13 +426,15 @@
     const blokLabel = payload && payload.blok ? payload.blok : '-';
     if (!listUrl && !codeUrl) return;
     const hasData = window.hasUserData !== false;
+    const isVip = (listUrl && /status=vip/i.test(listUrl)) || (codeUrl && /status=vip/i.test(codeUrl));
+    const blokText = isVip ? 'Pengelola' : (blokLabel || '-');
 
     const detailMsg = `
       <div style="text-align:left;">
         <div style="font-weight:600; font-size:15px; margin-bottom:6px; color:#fff;">Pilih Jenis Print</div>
         <div style="font-size:13px; color:#cbd5e1; margin-bottom:12px;">Pilih salah satu opsi di bawah ini.</div>
         <div style="background:rgba(59, 130, 246, 0.12); border:1px solid rgba(59, 130, 246, 0.3); padding:10px; border-radius:6px; font-size:12px; color:#e2e8f0;">
-          <strong>Blok:</strong> ${blokLabel || '-'}
+          <strong>Blok:</strong> ${blokText}
         </div>
       </div>
     `;
@@ -452,7 +454,7 @@
             </div>`,
           value: 'list',
           className: 'overlay-btn-info',
-          disabled: !listUrl || !hasData
+          disabled: !listUrl || !hasData || isVip
         },
         {
           label: `
