@@ -48,6 +48,7 @@ if ($date === '') {
     $date = date('Y-m-d');
 }
 $force = isset($_GET['force']) && $_GET['force'] === '1';
+$fix = isset($_GET['fix']) && $_GET['fix'] === '1';
 $blok = trim((string)($_GET['blok'] ?? ''));
 $blok_upper = strtoupper($blok);
 $use_glob = $blok !== '' && !preg_match('/\d$/', $blok_upper);
@@ -142,6 +143,10 @@ try {
         foreach ($rows as $row) {
             $uname = trim((string)($row['username'] ?? ''));
             if ($uname === '') continue;
+            $raw_comment = (string)($row['raw_comment'] ?? '');
+            if (preg_match('/\bRUSAK\b/i', $raw_comment) || preg_match('/\bRETUR\b/i', $raw_comment) || preg_match('/\bINVALID\b/i', $raw_comment)) {
+                if (!$force) continue;
+            }
             $profile_minutes = detect_profile_minutes_restore($row['validity'] ?? '', $row['raw_comment'] ?? '');
             if ($profile_minutes <= 0) continue;
             $uptime = (string)($row['last_uptime'] ?? '');
@@ -156,8 +161,15 @@ try {
             $bytes_threshold_full = ($profile_minutes === 10) ? (3 * 1024 * 1024) : (5 * 1024 * 1024);
             $is_full_uptime = $uptime_sec >= ($profile_minutes * 60);
             $is_short_use = ($uptime_sec > 0 && $uptime_sec <= $short_uptime_limit);
-            if (($is_full_uptime && $bytes < $bytes_threshold_full) || ($is_short_use && $bytes < $bytes_threshold_short)) {
-                $users[] = $uname;
+            $should_rusak = (($is_full_uptime && $bytes < $bytes_threshold_full) || ($is_short_use && $bytes < $bytes_threshold_short));
+            if ($fix) {
+                if (!$should_rusak) {
+                    $users[] = $uname;
+                }
+            } else {
+                if ($should_rusak) {
+                    $users[] = $uname;
+                }
             }
         }
     }
@@ -197,7 +209,7 @@ try {
         } catch (Exception $e) {}
     }
 
-    restore_log($log_file, 'ok restore=' . $updated . ' date=' . $date . ' blok=' . $blok);
+    restore_log($log_file, 'ok restore=' . $updated . ' date=' . $date . ' blok=' . $blok . ' force=' . ($force ? '1' : '0') . ' fix=' . ($fix ? '1' : '0'));
     echo "OK restore=" . $updated;
 } catch (Exception $e) {
     http_response_code(500);
