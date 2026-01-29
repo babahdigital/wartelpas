@@ -93,7 +93,11 @@ function apply_auto_rusak_settlement($db, $date, $logFile) {
         if ($profile_minutes <= 0) continue;
         $uptime = (string)($row['last_uptime'] ?? '');
         $uptime_sec = uptime_to_seconds_manual($uptime);
-        $bytes = (int)($row['last_bytes'] ?? 0);
+        $bytes_raw = (int)($row['last_bytes'] ?? 0);
+        $bytes = $bytes_raw;
+        if ($bytes > 0 && $bytes < 1024 * 1024 && $bytes <= 1024) {
+            $bytes = $bytes * 1024 * 1024;
+        }
         $is_full_uptime = $uptime_sec >= ($profile_minutes * 60);
         $is_short_use = ($uptime_sec > 0 && $uptime_sec <= $short_uptime_limit);
         if (($is_full_uptime && $bytes < $bytes_threshold_full) || ($is_short_use && $bytes < $bytes_threshold_short)) {
