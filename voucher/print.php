@@ -313,101 +313,90 @@ if (!isset($_SESSION["mikhmon"])) {
         if (!preg_match('/\bvip\b/i', $u_comment)) continue;
         $getuser[] = $u;
       }
-      if ($profile_filter !== '') {
-        $filtered = [];
-        foreach ($getuser as $u) {
-          $kind = detect_profile_kind_voucher($u['profile'] ?? '', $u['comment'] ?? '', $u['limit-uptime'] ?? '');
-          if ($kind !== $profile_filter) continue;
-          $filtered[] = $u;
-        }
-        $getuser = $filtered;
-      }
-      $TotalReg = count($getuser);
-      $usermode = "vc";
-      goto voucher_print_end;
-    }
-    try {
-      $db = new PDO('sqlite:../db_data/mikhmon_stats.db');
-      $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-      if ($blok != '') {
-        $stmt = $db->prepare("SELECT username, blok_name, raw_comment FROM login_history WHERE lower(last_status)=:st");
-        $stmt->execute([':st' => $target_status]);
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($rows as $r) {
-          $row_blok = $r['blok_name'] ?? '';
-          $raw_comment = $r['raw_comment'] ?? '';
-          $is_retur_comment = (stripos($raw_comment, '(Retur)') !== false) || (stripos($raw_comment, 'Retur Ref:') !== false);
-          $cm_blok = extract_blok_from_comment($raw_comment);
-          $match = (stripos($row_blok, $blok) !== false) || (stripos($cm_blok, $blok) !== false) || (stripos($raw_comment, $blok) !== false);
-          if (!$match) continue;
-          if ($target_status === 'retur' && !$is_retur_comment) continue;
-          if ($target_status === 'rusak' && $is_retur_comment) continue;
-          $u = isset($routerMap[$r['username']]) ? $routerMap[$r['username']] : null;
-          if (!empty($u)) {
-            $router_comment = $u['comment'] ?? '';
-            $router_is_retur = (stripos($router_comment, '(Retur)') !== false) || (stripos($router_comment, 'Retur Ref:') !== false);
-            if ($target_status === 'retur' && !$router_is_retur) continue;
-            if ($target_status === 'rusak' && $router_is_retur) continue;
-            $getuser[] = $u;
-          } else {
-            $profile_name = '';
-            if (preg_match('/Profile:([^|]+)/i', $raw_comment, $m)) {
-              $profile_name = trim($m[1]);
-            }
-            if ($target_status === 'retur' && !$is_retur_comment) continue;
-            if ($target_status === 'rusak' && $is_retur_comment) continue;
-            $getuser[] = [
-              '.id' => 'db-'.$r['username'],
-              'name' => $r['username'],
-              'password' => $r['username'],
-              'profile' => $profile_name,
-              'comment' => $raw_comment,
-              'limit-uptime' => '',
-              'limit-bytes-total' => 0,
-              'uptime' => '0s',
-              'bytes-in' => 0,
-              'bytes-out' => 0,
-            ];
-          }
-        }
-      } else {
-        $stmt = $db->prepare("SELECT username, raw_comment FROM login_history WHERE lower(last_status)=:st");
-        $stmt->execute([':st' => $target_status]);
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($rows as $r) {
-          $u = isset($routerMap[$r['username']]) ? $routerMap[$r['username']] : null;
-          if (!empty($u)) {
-            $router_comment = $u['comment'] ?? '';
-            $router_is_retur = (stripos($router_comment, '(Retur)') !== false) || (stripos($router_comment, 'Retur Ref:') !== false);
-            if ($target_status === 'retur' && !$router_is_retur) continue;
-            if ($target_status === 'rusak' && $router_is_retur) continue;
-            $getuser[] = $u;
-          } else {
+    } else {
+      try {
+        $db = new PDO('sqlite:../db_data/mikhmon_stats.db');
+        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        if ($blok != '') {
+          $stmt = $db->prepare("SELECT username, blok_name, raw_comment FROM login_history WHERE lower(last_status)=:st");
+          $stmt->execute([':st' => $target_status]);
+          $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+          foreach ($rows as $r) {
+            $row_blok = $r['blok_name'] ?? '';
             $raw_comment = $r['raw_comment'] ?? '';
             $is_retur_comment = (stripos($raw_comment, '(Retur)') !== false) || (stripos($raw_comment, 'Retur Ref:') !== false);
-            $profile_name = '';
-            if (preg_match('/Profile:([^|]+)/i', $raw_comment, $m)) {
-              $profile_name = trim($m[1]);
-            }
+            $cm_blok = extract_blok_from_comment($raw_comment);
+            $match = (stripos($row_blok, $blok) !== false) || (stripos($cm_blok, $blok) !== false) || (stripos($raw_comment, $blok) !== false);
+            if (!$match) continue;
             if ($target_status === 'retur' && !$is_retur_comment) continue;
             if ($target_status === 'rusak' && $is_retur_comment) continue;
-            $getuser[] = [
-              '.id' => 'db-'.$r['username'],
-              'name' => $r['username'],
-              'password' => $r['username'],
-              'profile' => $profile_name,
-              'comment' => $raw_comment,
-              'limit-uptime' => '',
-              'limit-bytes-total' => 0,
-              'uptime' => '0s',
-              'bytes-in' => 0,
-              'bytes-out' => 0,
-            ];
+            $u = isset($routerMap[$r['username']]) ? $routerMap[$r['username']] : null;
+            if (!empty($u)) {
+              $router_comment = $u['comment'] ?? '';
+              $router_is_retur = (stripos($router_comment, '(Retur)') !== false) || (stripos($router_comment, 'Retur Ref:') !== false);
+              if ($target_status === 'retur' && !$router_is_retur) continue;
+              if ($target_status === 'rusak' && $router_is_retur) continue;
+              $getuser[] = $u;
+            } else {
+              $profile_name = '';
+              if (preg_match('/Profile:([^|]+)/i', $raw_comment, $m)) {
+                $profile_name = trim($m[1]);
+              }
+              if ($target_status === 'retur' && !$is_retur_comment) continue;
+              if ($target_status === 'rusak' && $is_retur_comment) continue;
+              $getuser[] = [
+                '.id' => 'db-'.$r['username'],
+                'name' => $r['username'],
+                'password' => $r['username'],
+                'profile' => $profile_name,
+                'comment' => $raw_comment,
+                'limit-uptime' => '',
+                'limit-bytes-total' => 0,
+                'uptime' => '0s',
+                'bytes-in' => 0,
+                'bytes-out' => 0,
+              ];
+            }
+          }
+        } else {
+          $stmt = $db->prepare("SELECT username, raw_comment FROM login_history WHERE lower(last_status)=:st");
+          $stmt->execute([':st' => $target_status]);
+          $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+          foreach ($rows as $r) {
+            $u = isset($routerMap[$r['username']]) ? $routerMap[$r['username']] : null;
+            if (!empty($u)) {
+              $router_comment = $u['comment'] ?? '';
+              $router_is_retur = (stripos($router_comment, '(Retur)') !== false) || (stripos($router_comment, 'Retur Ref:') !== false);
+              if ($target_status === 'retur' && !$router_is_retur) continue;
+              if ($target_status === 'rusak' && $router_is_retur) continue;
+              $getuser[] = $u;
+            } else {
+              $raw_comment = $r['raw_comment'] ?? '';
+              $is_retur_comment = (stripos($raw_comment, '(Retur)') !== false) || (stripos($raw_comment, 'Retur Ref:') !== false);
+              $profile_name = '';
+              if (preg_match('/Profile:([^|]+)/i', $raw_comment, $m)) {
+                $profile_name = trim($m[1]);
+              }
+              if ($target_status === 'retur' && !$is_retur_comment) continue;
+              if ($target_status === 'rusak' && $is_retur_comment) continue;
+              $getuser[] = [
+                '.id' => 'db-'.$r['username'],
+                'name' => $r['username'],
+                'password' => $r['username'],
+                'profile' => $profile_name,
+                'comment' => $raw_comment,
+                'limit-uptime' => '',
+                'limit-bytes-total' => 0,
+                'uptime' => '0s',
+                'bytes-in' => 0,
+                'bytes-out' => 0,
+              ];
+            }
           }
         }
+      } catch (Exception $e) {
+        $getuser = [];
       }
-    } catch (Exception $e) {
-      $getuser = [];
     }
     if ($profile_filter !== '') {
       $filtered = [];
@@ -422,7 +411,7 @@ if (!isset($_SESSION["mikhmon"])) {
     $usermode = "vc";
 
     // Fallback: jika DB kosong, cari langsung di router dari comment
-    if ($TotalReg == 0 && in_array($target_status, ['retur','rusak'])) {
+    if ($TotalReg == 0 && in_array($target_status, ['retur','rusak'], true)) {
       $key = $target_status === 'retur' ? 'Retur' : 'RUSAK';
       $raw_users = array_values($routerMap);
       foreach ($raw_users as $u) {
@@ -440,7 +429,6 @@ if (!isset($_SESSION["mikhmon"])) {
       }
       $TotalReg = count($getuser);
     }
-    voucher_print_end:
   } elseif ($id != "") {
     // B. PRINT PER BLOK (SMART SEARCH + FILTER)
     $usermode = "vc"; 

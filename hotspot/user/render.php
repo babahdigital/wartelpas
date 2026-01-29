@@ -529,6 +529,7 @@
       if (el) dateVal = el.value;
     }
 
+    if (st === 'vip') blok = '';
     let url = './hotspot/print/print_list.php?mode=usage&auto_print=1';
     if (sess) url += '&session=' + encodeURIComponent(sess);
     if (st) url += '&status=' + encodeURIComponent(st);
