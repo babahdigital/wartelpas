@@ -508,6 +508,9 @@ if (!function_exists('detect_profile_kind_from_comment')) {
     if (preg_match('/(\d+)\s*(menit|m|min)\b/i', $c, $m)) {
       return (string)((int)$m[1]);
     }
+    if (preg_match('/(^|[^0-9])(10|30)([^0-9]|$)/', $c, $m)) {
+      return (string)$m[2];
+    }
     return 'other';
   }
 }
@@ -521,8 +524,7 @@ if (!function_exists('detect_profile_kind_unified')) {
     if ($kind !== 'other') return $kind;
 
     $combined = strtolower(trim((string)$comment . ' ' . (string)$blok));
-    if (preg_match('/\b10\b/', $combined)) return '10';
-    if (preg_match('/\b30\b/', $combined)) return '30';
+    if (preg_match('/(^|[^0-9])(10|30)([^0-9]|$)/', $combined, $m)) return (string)$m[2];
     if (preg_match('/\b10\s*(menit|m|min)\b/', $combined)) return '10';
     if (preg_match('/\b30\s*(menit|m|min)\b/', $combined)) return '30';
 

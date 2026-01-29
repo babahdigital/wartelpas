@@ -692,7 +692,8 @@ foreach($all_users as $u) {
           $profile_guess_kind = detect_profile_kind_unified($profile_guess_raw, $comment, $f_blok, $uptime);
           $validity_label = normalize_profile_label($profile_guess_raw);
           if ($validity_label === '') {
-            $validity_fallback = resolve_profile_from_history($comment, $hist['validity'] ?? '', $uptime);
+            $comment_source = trim($comment . ' ' . (string)($hist['raw_comment'] ?? ''));
+            $validity_fallback = resolve_profile_from_history($comment_source, $hist['validity'] ?? '', $uptime);
             $validity_label = normalize_profile_label($validity_fallback);
           }
           if ($validity_label === '' && in_array($profile_guess_kind, ['10', '30'], true)) {
@@ -723,7 +724,8 @@ foreach($all_users as $u) {
     }
 
     $profile_source_raw = $u['profile'] ?? '';
-    $profile_kind_final = detect_profile_kind_unified($profile_source_raw, $comment, $f_blok, $uptime);
+    $comment_source = trim($comment . ' ' . (string)($hist['raw_comment'] ?? ''));
+    $profile_kind_final = detect_profile_kind_unified($profile_source_raw, $comment_source, $f_blok, $uptime);
 
     if (in_array($status, ['RUSAK','RETUR'], true)) {
       $found_in_history = false;
@@ -756,7 +758,7 @@ foreach($all_users as $u) {
     }
 
     if ($status === 'READY' && $profile_kind_final === 'other') {
-      $profile_kind_final = detect_profile_kind_from_comment($comment);
+      $profile_kind_final = detect_profile_kind_from_comment($comment_source);
     }
 
     $profile_raw = (string)($u['profile'] ?? '');
