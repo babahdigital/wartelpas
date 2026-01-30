@@ -1215,7 +1215,7 @@ if ($is_ajax) {
                 $vip_confirm = addslashes('Tetapkan ' . $u['name'] . ' sebagai Pengelola?');
                 $vip_onclick = $vip_disabled ? '' : "actionRequest('" . $vip_action_url . "','" . $vip_confirm . "')";
               ?>
-              <button type="button" class="btn-act btn-act-info" <?= $vip_disabled ? 'disabled' : '' ?> onclick="<?= htmlspecialchars($vip_onclick, ENT_QUOTES) ?>" title="<?= $vip_disabled ? 'Limit Pengelola harian tercapai' : 'Jadikan Pengelola' ?>"><i class="fa fa-star"></i></button>
+              <button type="button" class="btn-act btn-act-info" <?= $vip_disabled ? 'disabled style="opacity:.45;filter:grayscale(1);cursor:not-allowed;"' : '' ?> onclick="<?= htmlspecialchars($vip_onclick, ENT_QUOTES) ?>" title="<?= $vip_disabled ? 'Limit Pengelola harian tercapai' : 'Jadikan Pengelola' ?>"><i class="fa fa-star"></i></button>
               <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=disable&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Disable Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Disable"><i class="fa fa-ban"></i></button>
             <?php elseif ($is_vip): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
