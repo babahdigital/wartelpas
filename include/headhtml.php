@@ -41,8 +41,9 @@ error_reporting(0);
 		<!-- pace -->
 		<link href="css/pace.<?= $theme; ?>.css" rel="stylesheet" />
 		<link href="css/login.css" rel="stylesheet" />
+		<link rel="stylesheet" href="css/tooltips.css">
 		<script src="js/pace.min.js"></script>
-
+		<script src="js/tooltips.js" defer></script>
 
 	</head>
 	<body>
