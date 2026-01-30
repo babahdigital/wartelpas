@@ -799,21 +799,6 @@
           return;
         }
         confirmMsg = null;
-      } else {
-        const ok = await showOverlayChoice({
-          title: 'Konfirmasi',
-          messageHtml: `<div style="text-align:left;font-size:14px;">${confirmMsg}</div>`,
-          type: 'info',
-          buttons: [
-            { label: 'Batal', value: false, className: 'overlay-btn-muted' },
-            { label: 'Ya, Lanjutkan', value: true, className: 'overlay-btn-secondary' }
-          ]
-        });
-        if (!ok) {
-          suspendAutoRefresh = false;
-          return;
-        }
-        confirmMsg = null;
       } else if (msgLower.includes('pengelola')) {
         const match = confirmMsg.match(/Tetapkan\s+(.+)\s+sebagai\s+Pengelola\?/i);
         const userName = match ? match[1].trim() : 'Target';
@@ -857,6 +842,21 @@
               value: false,
               className: 'overlay-btn-muted'
             }
+          ]
+        });
+        if (!ok) {
+          suspendAutoRefresh = false;
+          return;
+        }
+        confirmMsg = null;
+      } else {
+        const ok = await showOverlayChoice({
+          title: 'Konfirmasi',
+          messageHtml: `<div style="text-align:left;font-size:14px;">${confirmMsg}</div>`,
+          type: 'info',
+          buttons: [
+            { label: 'Batal', value: false, className: 'overlay-btn-muted' },
+            { label: 'Ya, Lanjutkan', value: true, className: 'overlay-btn-secondary' }
           ]
         });
         if (!ok) {
