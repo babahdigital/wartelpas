@@ -262,6 +262,35 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **Harga per profil** dipusatkan di `env.php` (`pricing.profile_prices`) dan dipakai sebagai fallback jika harga transaksi kosong.
 - **User rusak yang sudah diretur** disembunyikan dari list audit agar tidak membingungkan.
 
+### 2.32 Popup Global & Tooltip Global (2026-01-30)
+#### Popup Global
+- Sumber desain: **dev/design-popup.html** (diubah menjadi komponen global).
+- File global:
+  - CSS: **css/popup.css**
+  - JS: **js/popup.js**
+  - Injeksi: **include/headhtml.php**
+- API global:
+  - `window.MikhmonPopup.open({...})` untuk membuka popup.
+  - `window.MikhmonPopup.close()` untuk menutup popup.
+- Parameter utama `open`:
+  - `title`: judul popup.
+  - `iconClass`: ikon font-awesome (contoh `fa fa-database`).
+  - `statusIcon`: ikon status di body.
+  - `statusColor`: warna ikon status.
+  - `message`: teks utama (plain).
+  - `messageHtml`: teks utama (HTML).
+  - `alert`: `{ type: info|warning|danger, text|html, iconClass }`.
+  - `buttons`: array tombol `{ label, className, onClick, close }`.
+
+#### Tooltip Global
+- File global:
+  - CSS: **css/tooltips.css**
+  - JS: **js/tooltips.js**
+  - Injeksi: **include/headhtml.php** dan **include/menu.php**
+- Cara pakai:
+  - Tambahkan atribut `title` pada elemen apa pun.
+  - Tooltip otomatis offset dari kursor dan menyesuaikan posisi di tepi layar.
+
 ### 2.31 Penyelarasan Audit Summary & Prioritas Status (2026-01-28)
 - **report/audit.php** dan **report/print/print_audit.php** kini menghitung:
   - **Qty manual = raw** (total voucher),
