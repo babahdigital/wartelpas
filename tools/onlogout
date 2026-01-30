@@ -1,6 +1,5 @@
-# SCRIPT MIKROTIK ON-LOGOUT (OPTIMIZED & SAFE)
-# Fungsi: Save IP/MAC + Clean Connection (Tanpa Loop Berat)
-# Update: 2026-01-30
+# SCRIPT MIKROTIK ON-LOGOUT (FINAL VERSION)
+# Update: 2026-01-30 | Fix: VIP Persist, Firewall Cleanup, HTTPS
 
 # --- KONFIGURASI ---
 :local baseUrl "{{BASE_URL}}";
@@ -10,14 +9,14 @@
 # --- HELPER: URL ENCODE ---
 :local urlEncode do={
     :local i [:tostr $1]; :local o ""; :local l [:len $i];
-    :if ($l=0) do={:return ""}
-    :for c from=0 to=($l-1) do={
-        :local ch [:pick $i $c];
-        :if ($ch=" ") do={:set o ($o."%20")} else={
-        :if ($ch=":") do={:set o ($o."%3A")} else={
-        :if ($ch="/") do={:set o ($o."%2F")} else={
-        :if ($ch="|") do={:set o ($o."%7C")} else={
-        :set o ($o.$ch)}}}}
+    :if ($l = 0) do={ :return ""; }
+    :for c from=0 to=($l - 1) do={
+        :local ch [:pick $i $c ($c + 1)];
+        :if ($ch = " ") do={ :set o ($o . "%20"); } else={
+        :if ($ch = ":") do={ :set o ($o . "%3A"); } else={
+        :if ($ch = "/") do={ :set o ($o . "%2F"); } else={
+        :if ($ch = "|") do={ :set o ($o . "%7C"); } else={
+        :set o ($o . $ch); }}}}
     }
     :return $o;
 };
@@ -29,15 +28,13 @@
     :local usermac $"mac-address";
     :local logoutDate [/system clock get date];
     :local logoutTime [/system clock get time];
-    
-    # Validasi User
+
     :if ([:len $username] = 0) do={ :return; }
-    
+
     # 1. AMBIL DATA USER TERAKHIR
     :local uID [/ip hotspot user find where name="$username"];
     :local currentComment "";
     :local userUptime "";
-    :local vipTag "";
     
     :if ([:len $uID] > 0) do={
         :set uID ($uID->0);
@@ -45,17 +42,9 @@
             :set currentComment [/ip hotspot user get $uID comment];
             :set userUptime [/ip hotspot user get $uID uptime];
         } on-error={ :set currentComment ""; }
-    } else={
-        # User sudah hilang/expired, hentikan script (Hemat resource)
-        :return;
-    }
-    :local posVIP [:find $currentComment "VIP"];
-    :local posPengelola [:find $currentComment "Pengelola"];
-    :if (([:typeof $posVIP] != "nil") || ([:typeof $posPengelola] != "nil")) do={
-        :set vipTag "VIP";
-    }
+    } else={ :return; }
 
-    # 2. PRESERVE BLOK INFO (Metode Cepat :Find)
+    # 2. PRESERVE INFO (Blok & VIP)
     :local blokInfo "";
     :local posBlok [:find $currentComment "Blok-"];
     if ([:typeof $posBlok] = "nil") do={ :set posBlok [:find $currentComment "blok-"]; }
@@ -64,63 +53,51 @@
         :local endPos [:find $currentComment "|" $posBlok];
         if ([:typeof $endPos] = "nil") do={ :set endPos [:len $currentComment]; }
         :set blokInfo [:pick $currentComment $posBlok $endPos];
-        
-        # Trim spasi
-        :if ([:pick $blokInfo ([:len $blokInfo]-1)] = " ") do={
+        if ([:pick $blokInfo ([:len $blokInfo]-1)] = " ") do={
             :set blokInfo [:pick $blokInfo 0 ([:len $blokInfo]-1)];
         }
     }
     
-    # 3. BERSIHKAN KOMENTAR LAMA (Hapus IP/MAC sebelumnya)
+    :local vipTag "";
+    :if (([:find $currentComment "VIP"] != nil) || ([:find $currentComment "Pengelola"] != nil)) do={
+        :set vipTag "VIP";
+    }
+
+    # 3. BERSIHKAN KOMENTAR (Reset IP lama)
     :local cleanComment $currentComment;
     :local ipTagPos [:find $currentComment " | IP:"];
-    :if ([:typeof $ipTagPos] != "nil") do={
-        :set cleanComment [:pick $currentComment 0 $ipTagPos];
-    }
-    
-    # Jika cleanComment jadi kosong (format salah), pakai waktu logout
+    :if ([:typeof $ipTagPos] != "nil") do={ :set cleanComment [:pick $currentComment 0 $ipTagPos]; }
     :if ([:len $cleanComment] < 5) do={ :set cleanComment ("$logoutDate $logoutTime"); }
     
-    # Pastikan Blok Info ada (jika tidak sengaja terhapus)
-    :if ([:len $blokInfo] > 0 && [:find $cleanComment $blokInfo] = nil) do={
-        :set cleanComment ("$cleanComment | $blokInfo");
-    }
-    # Pertahankan tag VIP jika ada
-    :if ([:len $vipTag] > 0 && [:find $cleanComment "VIP"] = nil) do={
-        :set cleanComment ("$cleanComment | VIP");
-    }
+    # Pasang Kembali Info Penting
+    :if ([:len $blokInfo] > 0 && [:find $cleanComment $blokInfo] = nil) do={ :set cleanComment ("$cleanComment | $blokInfo"); }
+    :if ([:len $vipTag] > 0 && [:find $cleanComment "VIP"] = nil) do={ :set cleanComment ("$cleanComment | VIP"); }
 
-    # 4. SIMPAN DATA LOGOUT (IP & MAC)
+    # 4. SIMPAN STATUS LOGOUT
     :local finalComment ("$cleanComment | IP:$userip | MAC:$usermac");
-    :do {
-        /ip hotspot user set comment=$finalComment $uID;
-    } on-error={ :log debug "LOGOUT: Gagal set comment user $username"; }
+    :do { /ip hotspot user set comment=$finalComment $uID; } on-error={}
 
     # 5. FETCH USAGE (LOGOUT EVENT)
-    :if ([:len $baseUrl] > 0 && [:find $baseUrl "{{"] = nil) do={
-        :local usageUrl ($baseUrl."/report/laporan/services/usage_ingest.php?key=".[$urlEncode $usageKey]."&session=".[$urlEncode $session]."&event=logout&user=".[$urlEncode $username]."&date=".[$urlEncode $logoutDate]."&time=".[$urlEncode $logoutTime]."&ip=".[$urlEncode $userip]."&mac=".[$urlEncode $usermac]."&uptime=".[$urlEncode $userUptime]);
+    :if ([:find $baseUrl "{{"] = nil) do={
+        :local usageUrl ($baseUrl . "/report/laporan/services/usage_ingest.php?key=" . [$urlEncode $usageKey] . "&session=" . [$urlEncode $session] . "&event=logout&user=" . [$urlEncode $username] . "&date=" . [$urlEncode $logoutDate] . "&time=" . [$urlEncode $logoutTime] . "&ip=" . [$urlEncode $userip] . "&mac=" . [$urlEncode $usermac] . "&uptime=" . [$urlEncode $userUptime]);
+        # FIX: check-certificate=no
         :do { 
-            /tool fetch url=$usageUrl keep-result=no; 
-        } on-error={ :log debug "LOGOUT: Usage ingest timeout"; }
+            /tool fetch url=$usageUrl mode=http keep-result=no check-certificate=no; 
+        } on-error={ :log warning "LOGOUT: Usage Ingest Failed"; }
     }
 
-    # 6. BERSIHKAN KONEKSI (Hanya User Wartel/Blok)
-    # Gunakan Regex untuk menghapus sekaligus (Tanpa Loop Foreach) -> JAUH LEBIH RINGAN
+    # 6. BERSIHKAN KONEKSI (Hanya jika ada Blok Info / User Wartel)
     :if ([:len $blokInfo] > 0) do={
-        
-        # Hapus Cookie & Active
         :do { /ip hotspot cookie remove [find user="$username"]; } on-error={}
         :do { /ip hotspot active remove [find user="$username"]; } on-error={}
         
-        # Hapus Firewall Connection (SAFE MODE)
-        # Regex "^IP:" memastikan hanya IP tersebut yang dihapus, tidak salah sasaran.
-        # Syarat tambahan: IP harus valid (>6 char)
+        # Regex Cleaner (Cepat & Aman)
         :if ([:len $userip] > 6) do={
             :do {
                 :local ipRegex ("^" . $userip . ":");
                 /ip firewall connection remove [find src-address~$ipRegex];
                 /ip firewall connection remove [find dst-address~$ipRegex];
-            } on-error={ :log debug "LOGOUT: Firewall clean skip (busy/error)"; }
+            } on-error={}
         }
     }
 }

@@ -1,6 +1,5 @@
-# SCRIPT MIKROTIK ON-LOGIN (OPTIMIZED)
-# Fungsi: Live Report + Preserve Blok Info + Auto Scheduler
-# Update: 2026-01-30
+# SCRIPT MIKROTIK ON-LOGIN (FINAL VERSION)
+# Update: 2026-01-30 | Fix: URL Encode, HTTPS Fetch, Logic VIP
 
 # --- KONFIGURASI ---
 :local baseUrl "{{BASE_URL}}";
@@ -8,17 +7,20 @@
 :local session "{{SESSION}}";
 :local usageKey "{{USAGE_KEY}}";
 
-# --- HELPER: URL ENCODE (Compact & Fast) ---
+# --- HELPER: URL ENCODE (DIPERBAIKI) ---
+# Logic lama salah di :pick, ini versi yang benar
 :local urlEncode do={
     :local i [:tostr $1]; :local o ""; :local l [:len $i];
-    :if ($l=0) do={:return ""}
-    :for c from=0 to=($l-1) do={
-        :local ch [:pick $i $c];
-        :if ($ch=" ") do={:set o ($o."%20")} else={
-        :if ($ch=":") do={:set o ($o."%3A")} else={
-        :if ($ch="/") do={:set o ($o."%2F")} else={
-        :if ($ch="|") do={:set o ($o."%7C")} else={
-        :set o ($o.$ch)}}}}
+    :if ($l = 0) do={ :return ""; }
+    :for c from=0 to=($l - 1) do={
+        # PERBAIKAN: Ambil tepat 1 karakter
+        :local ch [:pick $i $c ($c + 1)];
+        :if ($ch = " ") do={ :set o ($o . "%20"); } else={
+        :if ($ch = ":") do={ :set o ($o . "%3A"); } else={
+        :if ($ch = "/") do={ :set o ($o . "%2F"); } else={
+        :if ($ch = "|") do={ :set o ($o . "%7C"); } else={
+        :if ($ch = "&") do={ :set o ($o . "%26"); } else={
+        :set o ($o . $ch); }}}}}
     }
     :return $o;
 };
@@ -32,13 +34,16 @@
     :local time [/system clock get time];
     :local year [:pick $date 7 11];
     :local month [:pick $date 0 3];
+
+    # VALIDASI CONFIG (Cek apakah URL sudah diganti)
+    :local configOk true;
+    :if ([:find $baseUrl "{{"] != nil) do={ :set configOk false; :log error "LOGIN: Config Error! {{BASE_URL}} belum diganti."; }
     
-    # 1. AMBIL DATA USER (SAFE METHOD)
-    # Menggunakan do-on-error agar script tidak stop jika user dihapus saat proses
     :do {
+        # 1. AMBIL DATA USER
         :local uID [/ip hotspot user find where name="$username"];
-        :local comment "";
-        :local profile "";
+        :local comment ""; 
+        :local profile ""; 
         :local vipTag "";
         
         :if ([:len $uID] > 0) do={
@@ -46,14 +51,13 @@
             :set comment [/ip hotspot user get $uID comment];
             :set profile [/ip hotspot user get $uID profile];
         }
-        :local posVIP [:find $comment "VIP"];
-        :local posPengelola [:find $comment "Pengelola"];
-        :if (([:typeof $posVIP] != "nil") || ([:typeof $posPengelola] != "nil")) do={
+        
+        # Cek VIP / Pengelola
+        :if (([:find $comment "VIP"] != nil) || ([:find $comment "Pengelola"] != nil)) do={
             :set vipTag "VIP";
         }
-        
-        # 2. EKSTRAK INFO "Blok-" (METODE CEPAT :FIND)
-        # Tidak menggunakan looping karakter yang berat
+
+        # 2. EKSTRAK INFO "Blok-" (OPTIMIZED)
         :local blokInfo "";
         :local posBlok [:find $comment "Blok-"];
         if ([:typeof $posBlok] = "nil") do={ :set posBlok [:find $comment "blok-"]; }
@@ -62,84 +66,88 @@
             :local endPos [:find $comment "|" $posBlok];
             :if ([:typeof $endPos] = "nil") do={ :set endPos [:len $comment]; }
             :set blokInfo [:pick $comment $posBlok $endPos];
-            
-            # Bersihkan spasi di ujung (Trim)
+            # Trim spasi akhir
             :if ([:pick $blokInfo ([:len $blokInfo]-1)] = " ") do={
                 :set blokInfo [:pick $blokInfo 0 ([:len $blokInfo]-1)];
             }
         }
 
-        # 3. LOGIC SCHEDULER & LOGGING (MIKHMON STYLE)
-        # Cek apakah log hari ini sudah ada
-        :local hasLog [/system script find where comment="mikhmon" and name~"-\\|-$username-\\|-"];
+        # 3. PROSES DATA & SALES LOG
+        # Cek database lokal HARI INI (source=$date) agar tidak double input penjualan
+        :local hasLog [/system script find where comment="mikhmon" and source="$date" and name~"-\\|-$username-\\|-"];
         
         :if ([:len $hasLog] = 0) do={
-            # Buat Scheduler Baru (Untuk hitung expired)
-            :do {
-                /sys sch add name="$username" disable=no start-date=$date interval="1d";
-            } on-error={ :log debug "LOGIN: Scheduler exist, skip."; }
+            # --- START: PROSES USER BARU HARI INI ---
             
-            :delay 2s;
-            
-            # Ambil Expired Date dari Scheduler
+            # Setup Scheduler
+            :do { /sys sch add name="$username" disable=no start-date=$date interval="1d"; } on-error={};
+            :delay 1s;
             :local schId [/sys sch find where name="$username"];
             :local exp "";
             :if ([:len $schId] > 0) do={
                 :set exp [/sys sch get ($schId->0) next-run];
-                # Hapus scheduler temp (PENTING: Agar tidak menumpuk)
                 /sys sch remove $schId;
             }
 
-            # Format Komentar Baru
+            # Buat Komentar Baru
             :local newComment "";
-            
-            # Cek tanggal lama di comment (Prioritas)
             :local pipePos [:find $comment "|"];
+            
+            # Prioritas: Tanggal Lama > Scheduler > Sekarang
             :if ([:typeof $pipePos] != "nil") do={
                 :set newComment [:pick $comment 0 $pipePos];
             } else={
-                # Jika kosong, pakai expired dari scheduler atau waktu sekarang
-                :local getxp [:len $exp];
-                :if ($getxp = 15) do={ :set newComment ([:pick $exp 0 6]."/".$year." ".[:pick $exp 7 16]); }
-                :if ($getxp = 8) do={ :set newComment ("$date $exp"); }
+                :if ([:len $exp] = 15) do={ :set newComment ([:pick $exp 0 6]."/".$year." ".[:pick $exp 7 16]); }
+                :if ([:len $exp] = 8) do={ :set newComment ("$date $exp"); }
                 :if ([:len $newComment] = 0) do={ :set newComment "$date $time"; }
             }
             
-            # Gabungkan: TANGGAL | BLOK INFO | VIP (jika ada)
+            # Append Info (Blok & VIP)
             :if ([:len $blokInfo] > 0) do={ :set newComment ("$newComment | $blokInfo"); }
-            :if ([:len $vipTag] > 0 && [:find $newComment "VIP"] = nil) do={
-                :set newComment ("$newComment | VIP");
-            }
+            :if ([:len $vipTag] > 0 && [:find $newComment "VIP"] = nil) do={ :set newComment ("$newComment | VIP"); }
             
-            # 4. SIMPAN LOG DATABASE (SYSTEM SCRIPT)
+            # 4. SIMPAN KE DATABASE LOKAL
             :local price "5000"; :local validity "1d"; :local pLabel "10Menit";
             :if ($profile = "30Menit") do={ :set price "20000"; :set pLabel "30Menit"; }
             
             :local logTxt "$date-|$time-|$username-|$price-|$userip-|$usermac-|$validity-|$pLabel-|$blokInfo";
-            
-            :do {
-                /system script add name=$logTxt owner="$month$year" source="$date" comment="mikhmon";
-            } on-error={ :log warning "LOGIN: Gagal simpan DB lokal"; }
+            # source=$date PENTING untuk hasLog di atas
+            :do { /system script add name=$logTxt owner="$month$year" source="$date" comment="mikhmon"; } on-error={}
 
-            # 5. FETCH LIVE INGEST (HTTP POST)
-            :if ([:len $baseUrl] > 0 && [:find $baseUrl "{{"] = nil) do={
+            # 5. FETCH LIVE INGEST (SALES REPORT)
+            # Hanya jalan jika Config OK dan User belum terekam hari ini
+            :if ($configOk = true) do={
                 :local liveUrl ($baseUrl . "/report/laporan/services/live_ingest.php");
-                :local postData ("data=".[$urlEncode $logTxt]."&key=".[$urlEncode $key]."&session=".[$urlEncode $session]);
-                :do { 
-                    /tool fetch url=$liveUrl http-method=post http-data=$postData keep-result=no; 
-                } on-error={ :log debug "LOGIN: Live ingest timeout"; }
+                :local postData ("data=" . [$urlEncode $logTxt] . "&key=" . [$urlEncode $key] . "&session=" . [$urlEncode $session]);
+                
+                # FIX: check-certificate=no dan mode=http agar aman dari error SSL
+                # FIX: Tambah Header Content-Type
+                :do {
+                    /tool fetch url=$liveUrl http-method=post http-data=$postData http-header-field="content-type: application/x-www-form-urlencoded" mode=http keep-result=no check-certificate=no;
+                    :log info "LOGIN: Live Ingest Sent for $username";
+                } on-error={ :log warning "LOGIN: Live Ingest Failed (Check Internet/URL)"; }
             }
-
-            # 6. UPDATE USER COMMENT
+            
+            # Update User Comment di Hotspot
             :if ([:len $uID] > 0) do={
                 :do { /ip hotspot user set comment=$newComment mac-address=$usermac $uID; } on-error={}
             }
+            
+        } else={
+            # Jika user sudah ada lognya hari ini, skip Live Ingest (Sales) agar tidak double omset
+            # Ini NORMAL, jangan dikira error
+            :log debug "LOGIN: User $username already logged today. Skipping Live Ingest (Sales).";
         }
 
-        # 7. FETCH USAGE (Login Event)
-        :if ([:len $baseUrl] > 0 && [:find $baseUrl "{{"] = nil) do={
-            :local useUrl ($baseUrl."/report/laporan/services/usage_ingest.php?key=".[$urlEncode $usageKey]."&session=".[$urlEncode $session]."&event=login&user=".[$urlEncode $username]."&date=".[$urlEncode $date]."&time=".[$urlEncode $time]."&ip=".[$urlEncode $userip]."&mac=".[$urlEncode $usermac]."&uptime=0s");
-            :do { /tool fetch url=$useUrl keep-result=no; } on-error={}
+        # 6. FETCH USAGE (STATUS ONLINE) - JALAN SETIAP LOGIN
+        # Ini memastikan status "Online" di dashboard selalu update meskipun user re-login
+        :if ($configOk = true) do={
+            :local useUrl ($baseUrl . "/report/laporan/services/usage_ingest.php?key=" . [$urlEncode $usageKey] . "&session=" . [$urlEncode $session] . "&event=login&user=" . [$urlEncode $username] . "&date=" . [$urlEncode $date] . "&time=" . [$urlEncode $time] . "&ip=" . [$urlEncode $userip] . "&mac=" . [$urlEncode $usermac] . "&uptime=0s");
+            
+            :do {
+                /tool fetch url=$useUrl mode=http keep-result=no check-certificate=no;
+            } on-error={ :log warning "LOGIN: Usage Ingest Failed"; }
         }
+
     } on-error={ :log error "LOGIN CRITICAL ERROR for $username"; }
 }
