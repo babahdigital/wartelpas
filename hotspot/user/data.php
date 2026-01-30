@@ -1,5 +1,11 @@
 <?php
 require_once __DIR__ . '/helpers.php';
+$env = $GLOBALS['env_config'] ?? [];
+$vip_cfg = $env['vip'] ?? [];
+$vip_daily_limit = (int)($vip_cfg['daily_limit'] ?? 0);
+$vip_date_key = date('Y-m-d');
+$vip_daily_used = $vip_daily_limit > 0 ? get_vip_daily_usage($db, $vip_date_key) : 0;
+$vip_limit_reached = ($vip_daily_limit > 0 && $vip_daily_used >= $vip_daily_limit);
 $history_cache = null;
 function save_user_history($name, $data) {
     global $db;
@@ -1201,7 +1207,15 @@ if ($is_ajax) {
                 <button type="button" class="btn-act btn-act-enable" onclick="actionRequest('./?hotspot=users&action=enable&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Enable Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Enable"><i class="fa fa-check"></i></button>
               <?php endif; ?>
             <?php elseif ($is_ready): ?>
-              <button type="button" class="btn-act btn-act-info" onclick="actionRequest('./?hotspot=users&action=vip&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Tetapkan <?= htmlspecialchars($u['name']) ?> sebagai Pengelola?')" title="Jadikan Pengelola"><i class="fa fa-star"></i></button>
+              <?php $vip_disabled = $vip_limit_reached; ?>
+              <?php
+                $vip_action_url = './?hotspot=users&action=vip&uid=' . urlencode($u['uid']) .
+                  '&name=' . urlencode($u['name']) .
+                  '&session=' . urlencode($session) . $keep_params;
+                $vip_confirm = addslashes('Tetapkan ' . $u['name'] . ' sebagai Pengelola?');
+                $vip_onclick = $vip_disabled ? '' : "actionRequest('" . $vip_action_url . "','" . $vip_confirm . "')";
+              ?>
+              <button type="button" class="btn-act btn-act-info" <?= $vip_disabled ? 'disabled' : '' ?> onclick="<?= htmlspecialchars($vip_onclick, ENT_QUOTES) ?>" title="<?= $vip_disabled ? 'Limit Pengelola harian tercapai' : 'Jadikan Pengelola' ?>"><i class="fa fa-star"></i></button>
               <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=disable&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Disable Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Disable"><i class="fa fa-ban"></i></button>
             <?php elseif ($is_vip): ?>
               <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>

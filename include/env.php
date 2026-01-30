@@ -101,6 +101,9 @@ $env = [
         'qty_mode' => 'raw',
         'setoran_mode' => 'net'
     ],
+    'vip' => [
+        'daily_limit' => 5
+    ],
     'maintenance' => [
         'enabled' => false
     ],

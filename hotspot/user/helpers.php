@@ -329,6 +329,54 @@ if (!function_exists('get_user_history_from_db')) {
   }
 }
 
+// Helper: Limit VIP harian
+if (!function_exists('ensure_vip_daily_table')) {
+  function ensure_vip_daily_table($db) {
+    if (!$db) return false;
+    try {
+      $db->exec("CREATE TABLE IF NOT EXISTS vip_daily_quota (
+        date_key TEXT PRIMARY KEY,
+        count INTEGER DEFAULT 0,
+        updated_at DATETIME
+      )");
+      return true;
+    } catch (Exception $e) {
+      return false;
+    }
+  }
+}
+
+if (!function_exists('get_vip_daily_usage')) {
+  function get_vip_daily_usage($db, $date_key) {
+    if (!$db || $date_key === '') return 0;
+    if (!ensure_vip_daily_table($db)) return 0;
+    try {
+      $stmt = $db->prepare("SELECT count FROM vip_daily_quota WHERE date_key = :d LIMIT 1");
+      $stmt->execute([':d' => $date_key]);
+      $row = $stmt->fetch(PDO::FETCH_ASSOC);
+      return (int)($row['count'] ?? 0);
+    } catch (Exception $e) {
+      return 0;
+    }
+  }
+}
+
+if (!function_exists('increment_vip_daily_usage')) {
+  function increment_vip_daily_usage($db, $date_key) {
+    if (!$db || $date_key === '') return false;
+    if (!ensure_vip_daily_table($db)) return false;
+    try {
+      $stmt = $db->prepare("INSERT INTO vip_daily_quota(date_key, count, updated_at)
+        VALUES(:d, 1, CURRENT_TIMESTAMP)
+        ON CONFLICT(date_key) DO UPDATE SET count = count + 1, updated_at = CURRENT_TIMESTAMP");
+      $stmt->execute([':d' => $date_key]);
+      return true;
+    } catch (Exception $e) {
+      return false;
+    }
+  }
+}
+
 // Helper: Total uptime dari event login (standalone)
 if (!function_exists('get_cumulative_uptime_from_events_db')) {
   function get_cumulative_uptime_from_events_db($db, $username, $date_key = '', $fallback_logout = '') {

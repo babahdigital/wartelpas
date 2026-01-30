@@ -1386,6 +1386,16 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         }
         $action_message = 'Berhasil hapus user ' . $name . ' dari Router.';
       } elseif ($act == 'vip' || $act == 'unvip') {
+        $vip_cfg = $env['vip'] ?? [];
+        $vip_daily_limit = (int)($vip_cfg['daily_limit'] ?? 0);
+        $vip_date_key = date('Y-m-d');
+        if ($act === 'vip' && $vip_daily_limit > 0) {
+          $vip_used = get_vip_daily_usage($db, $vip_date_key);
+          if ($vip_used >= $vip_daily_limit) {
+            $action_blocked = true;
+            $action_error = 'Gagal: limit Pengelola harian tercapai (' . $vip_used . '/' . $vip_daily_limit . ').';
+          }
+        }
         $uinfo = $api_print('/ip/hotspot/user/print', [
           '?server' => $hotspot_server,
           '?name' => $name,
@@ -1415,6 +1425,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $is_ready_now = (!$is_active && $disabled !== 'true' && $bytes <= 50 && ($uptime === '' || $uptime === '0s'));
         $has_vip = is_vip_comment($comment_raw) || ($hist_vip && is_vip_comment($hist_vip['raw_comment'] ?? ''));
 
+        $did_set_vip = false;
         if ($act === 'vip' && !$is_ready_now) {
           $reasons = [];
           if ($is_active) $reasons[] = 'masih online';
@@ -1438,6 +1449,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
                 $new_comment = trim($base . ' | VIP');
               }
               $action_message = 'Berhasil set Pengelola untuk ' . $name . '.';
+              $did_set_vip = true;
             }
           } else {
             if (!$has_vip) {
@@ -1467,6 +1479,9 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
                 $stmt = $db->prepare("UPDATE login_history SET last_status='ready', raw_comment=:c, updated_at=CURRENT_TIMESTAMP WHERE username = :u");
                 $stmt->execute([':u' => $name, ':c' => $new_comment]);
               } catch(Exception $e) {}
+              if ($did_set_vip && $vip_daily_limit > 0) {
+                increment_vip_daily_usage($db, $vip_date_key);
+              }
             }
           }
         }
