@@ -7,6 +7,8 @@ requireLogin('../admin.php?id=login');
 requireSuperAdmin('../admin.php?id=sessions');
 
 header('Content-Type: text/plain');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
 
 $root_dir = dirname(__DIR__);
 $env = [];
