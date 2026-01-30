@@ -236,6 +236,18 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - Inisialisasi di **include/menu.php** agar konsisten di seluruh halaman.
 - Tooltip offset dari kursor agar tidak menumpuk dan tetap mudah dibaca.
 
+### 2.31 Penyempurnaan Pengelola (VIP) & Kuota Harian (2026-01-30)
+- **Kuota harian Pengelola** disinkronkan dengan jumlah VIP aktual di RouterOS saat halaman users dibuka.
+- **Unvip** kini membersihkan tag **VIP/Pengelola** di comment dan memastikan kuota harian berkurang.
+- Perbaikan **upsert** pada tabel kuota harian agar decrement tidak gagal saat baris belum ada.
+- **Popup konfirmasi Pengelola** dibedakan untuk set vs batalkan, nama target tampil akurat.
+- **Tooltip tombol Pengelola** menampilkan format: **“Batas Perubahan Pengelola x/y”**, dan label saat limit tercapai.
+- File terkait:
+  - **hotspot/user/actions.php** (logika vip/unvip + kuota)
+  - **hotspot/user/helpers.php** (helper kuota: get/increment/decrement/set)
+  - **hotspot/user/data.php** & **hotspot/user/render.php** (sinkron kuota + tooltip title)
+  - **hotspot/user/js/users.js** (popup konfirmasi Pengelola)
+
 ### 2.24 Penyempurnaan Users Modular (2026-01-26)
 - Tombol **clear search (X)** stabil saat kehilangan fokus (klik di luar/ke taskbar).
 - `Retur dari` kini menampilkan username bersih (tanpa prefix **vc-**), parsing `Retur Ref` lebih fleksibel.
