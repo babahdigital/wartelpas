@@ -800,9 +800,32 @@
         }
         confirmMsg = null;
       } else if (msgLower.includes('pengelola')) {
-        const match = confirmMsg.match(/Tetapkan\s+(.+)\s+sebagai\s+Pengelola\?/i);
-        const userName = match ? match[1].trim() : 'Target';
-        const detailMsg = `
+        const isUnvip = /keluarkan\s+.+\s+dari\s+pengelola\?/i.test(confirmMsg) || /batalkan\s+pengelola/i.test(confirmMsg);
+        let userName = 'Target';
+        if (isUnvip) {
+          const m = confirmMsg.match(/Keluarkan\s+(.+)\s+dari\s+Pengelola\?/i);
+          userName = m ? m[1].trim() : userName;
+        } else {
+          const m = confirmMsg.match(/Tetapkan\s+(.+)\s+sebagai\s+Pengelola\?/i);
+          userName = m ? m[1].trim() : userName;
+        }
+        const detailMsg = isUnvip ? `
+          <div style="text-align:left;">
+             <div style="margin-bottom:8px; color:#cbd5e1; font-size:13px;">Target Pengelola:</div>
+             <div style="font-size:20px; font-weight:bold; color:#fff; margin-bottom:15px; border-left:4px solid #ef4444; padding-left:12px;">
+               ${userName}
+             </div>
+             <div style="background:rgba(239, 68, 68, 0.1); border:1px solid rgba(239, 68, 68, 0.3); padding:12px; border-radius:6px; font-size:13px; color:#fee2e2; line-height:1.5;">
+               <div style="display:flex; gap:10px;">
+                 <i class="fa fa-star-o" style="font-size:16px; color:#fca5a5; margin-top:2px;"></i>
+                 <div>
+                   <strong>Batalkan Pengelola:</strong><br>
+                   Status VIP akan dihapus dari user ini.
+                 </div>
+               </div>
+             </div>
+          </div>
+        ` : `
           <div style="text-align:left;">
              <div style="margin-bottom:8px; color:#cbd5e1; font-size:13px;">Target Pengelola:</div>
              <div style="font-size:20px; font-weight:bold; color:#fff; margin-bottom:15px; border-left:4px solid #f59e0b; padding-left:12px;">
@@ -820,11 +843,29 @@
           </div>
         `;
         const ok = await showOverlayChoice({
-          title: 'Konfirmasi Pengelola',
+          title: isUnvip ? 'Batalkan Pengelola' : 'Konfirmasi Pengelola',
           messageHtml: detailMsg,
-          type: 'warning',
+          type: isUnvip ? 'danger' : 'warning',
           layout: 'vertical',
-          buttons: [
+          buttons: isUnvip ? [
+            {
+              label: `
+                <i class="fa fa-star-o"></i>
+                <div class="btn-rich-text">
+                  <span class="btn-rich-title">Ya, Batalkan Pengelola</span>
+                  <span class="btn-rich-desc">Hapus status VIP untuk user ini.</span>
+                </div>`,
+              value: true,
+              className: 'overlay-btn-danger'
+            },
+            {
+              label: `
+                <i class="fa fa-times"></i>
+                <div class="btn-rich-text"><span class="btn-rich-title">Batal</span></div>`,
+              value: false,
+              className: 'overlay-btn-muted'
+            }
+          ] : [
             {
               label: `
                 <i class="fa fa-star"></i>
