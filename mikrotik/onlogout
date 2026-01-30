@@ -1,204 +1,116 @@
-# SCRIPT MIKROTIK ON-LOGOUT (CAPTURE IP & MAC)
-# File: mikrotik-onlogout.rsc
-# Update: 2026-01-19 - Save IP & MAC to comment on logout
-# 
-# INSTALASI:
-# 1. MikroTik ? IP ? Hotspot ? Server Profiles
-# 2. Pilih profile Anda ? Tab "Login"
-# 3. Paste script ini di bagian "On Logout"
-# 4. Apply & OK
+# SCRIPT MIKROTIK ON-LOGOUT (OPTIMIZED & SAFE)
+# Fungsi: Save IP/MAC + Clean Connection (Tanpa Loop Berat)
+# Update: 2026-01-30
 
+# --- KONFIGURASI ---
+:local baseUrl "{{BASE_URL}}";
+:local usageKey "{{USAGE_KEY}}";
+:local session "{{SESSION}}";
+
+# --- HELPER: URL ENCODE ---
+:local urlEncode do={
+    :local i [:tostr $1]; :local o ""; :local l [:len $i];
+    :if ($l=0) do={:return ""}
+    :for c from=0 to=($l-1) do={
+        :local ch [:pick $i $c];
+        :if ($ch=" ") do={:set o ($o."%20")} else={
+        :if ($ch=":") do={:set o ($o."%3A")} else={
+        :if ($ch="/") do={:set o ($o."%2F")} else={
+        :if ($ch="|") do={:set o ($o."%7C")} else={
+        :set o ($o.$ch)}}}}
+    }
+    :return $o;
+};
+
+# --- MAIN LOGIC ---
 {
     :local username "$user";
     :local userip "$address";
     :local usermac $"mac-address";
-    :local logoutTime [/system clock get time];
     :local logoutDate [/system clock get date];
-    :local userId [/ip hotspot user find where name="$username"];
-    :if ([:len $userId] > 0) do={
-        :set userId ($userId->0);
-    }
-    :local userUptime "";
+    :local logoutTime [/system clock get time];
+    
+    # Validasi User
+    :if ([:len $username] = 0) do={ :return; }
+    
+    # 1. AMBIL DATA USER TERAKHIR
+    :local uID [/ip hotspot user find where name="$username"];
     :local currentComment "";
-    :if ($username = "") do={
-        :log info "LOGOUT: skip empty user";
+    :local userUptime "";
+    
+    :if ([:len $uID] > 0) do={
+        :set uID ($uID->0);
+        :do {
+            :set currentComment [/ip hotspot user get $uID comment];
+            :set userUptime [/ip hotspot user get $uID uptime];
+        } on-error={ :set currentComment ""; }
+    } else={
+        # User sudah hilang/expired, hentikan script (Hemat resource)
         :return;
     }
-    :if ([:len $userId] = 0) do={
-        :local actIds [/ip hotspot active find where user="$username"];
-        :local ckIds [/ip hotspot cookie find where user="$username"];
-        :if ([:len $actIds] = 0 && [:len $ckIds] = 0) do={
-            :log info "LOGOUT: skip user not found";
-            :return;
-        }
-    }
-    :if ([:len $userId] > 0) do={
-        :do {
-            :set userUptime [/ip hotspot user get $userId uptime];
-            :set currentComment [/ip hotspot user get $userId comment];
-        } on-error={
-            :set userUptime "";
-            :set currentComment "";
-            :set userId "";
-        }
-    }
-    # Bersihkan IP/MAC lama jika ada
-    :local cleanComment $currentComment;
-    :local ipPos [:find $cleanComment "| IP:"];
-    :if ([:typeof $ipPos] != "nil") do={
-        :set cleanComment [:pick $cleanComment 0 $ipPos];
-    }
 
-    # Helper URL-encode sederhana
-    :local urlEncode do={
-        :local input [:tostr $1];
-        :local out "";
-        :local len [:len $input];
-        :if ($len = 0) do={ :return ""; }
-        :for i from=0 to=($len - 1) do={
-            :local ch [:pick $input $i];
-            :local replaced false;
-            :if ($ch = " ") do={ :set out ($out . "%20"); :set replaced true; }
-            :if ($replaced = false) do={ :if ($ch = "%") do={ :set out ($out . "%25"); :set replaced true; } }
-            :if ($replaced = false) do={ :if ($ch = ":") do={ :set out ($out . "%3A"); :set replaced true; } }
-            :if ($replaced = false) do={ :if ($ch = "/") do={ :set out ($out . "%2F"); :set replaced true; } }
-            :if ($replaced = false) do={ :if ($ch = "&") do={ :set out ($out . "%26"); :set replaced true; } }
-            :if ($replaced = false) do={ :if ($ch = "|") do={ :set out ($out . "%7C"); :set replaced true; } }
-            :if ($replaced = false) do={ :if ($ch = "[") do={ :set out ($out . "%5B"); :set replaced true; } }
-            :if ($replaced = false) do={ :if ($ch = "]") do={ :set out ($out . "%5D"); :set replaced true; } }
-            :if ($replaced = false) do={ :set out ($out . $ch); }
-        }
-        :return $out;
-    };
-    
-    # Extract Blok info dari comment (preserve)
+    # 2. PRESERVE BLOK INFO (Metode Cepat :Find)
     :local blokInfo "";
+    :local posBlok [:find $currentComment "Blok-"];
+    if ([:typeof $posBlok] = "nil") do={ :set posBlok [:find $currentComment "blok-"]; }
+    
+    :if ([:typeof $posBlok] != "nil") do={
+        :local endPos [:find $currentComment "|" $posBlok];
+        if ([:typeof $endPos] = "nil") do={ :set endPos [:len $currentComment]; }
+        :set blokInfo [:pick $currentComment $posBlok $endPos];
+        
+        # Trim spasi
+        :if ([:pick $blokInfo ([:len $blokInfo]-1)] = " ") do={
+            :set blokInfo [:pick $blokInfo 0 ([:len $blokInfo]-1)];
+        }
+    }
+    
+    # 3. BERSIHKAN KOMENTAR LAMA (Hapus IP/MAC sebelumnya)
+    :local cleanComment $currentComment;
+    :local ipTagPos [:find $currentComment " | IP:"];
+    :if ([:typeof $ipTagPos] != "nil") do={
+        :set cleanComment [:pick $currentComment 0 $ipTagPos];
+    }
+    
+    # Jika cleanComment jadi kosong (format salah), pakai waktu logout
+    :if ([:len $cleanComment] < 5) do={ :set cleanComment ("$logoutDate $logoutTime"); }
+    
+    # Pastikan Blok Info ada (jika tidak sengaja terhapus)
+    :if ([:len $blokInfo] > 0 && [:find $cleanComment $blokInfo] = nil) do={
+        :set cleanComment ("$cleanComment | $blokInfo");
+    }
+
+    # 4. SIMPAN DATA LOGOUT (IP & MAC)
+    :local finalComment ("$cleanComment | IP:$userip | MAC:$usermac");
     :do {
-        :local commentLen [:len $cleanComment];
-        
-        # Cari "Blok-" atau "| Blok-" dalam comment
-        :if ($commentLen > 4) do={
-            :for i from=0 to=($commentLen - 5) do={
-                :local substr [:pick $cleanComment $i ($i + 5)];
-                :if ($substr = "Blok-" or $substr = "blok-") do={
-                    # Extract sampai spasi atau karakter khusus
-                    :local endPos $i;
-                    :for j from=$i to=($commentLen - 1) do={
-                        :local char [:pick $cleanComment $j ($j + 1)];
-                        :if ($char = " " or $char = ")" or $char = "-" or $char = "|") do={
-                            :local nextOk false;
-                            :if ($char = "-") do={
-                                :if ([:len $cleanComment] > ($j + 1)) do={
-                                    :if ([:pick $cleanComment ($j + 1) ($j + 2)] != " ") do={
-                                        :set nextOk true;
-                                    }
-                                }
-                            }
-                            :if ($nextOk = true) do={
-                                # Ini masih bagian dari Blok-A10, lanjut
-                            } else={
-                                :set endPos $j;
-                                :set j $commentLen;
-                            }
-                        }
-                    }
-                    :set blokInfo [:pick $cleanComment $i $endPos];
-                    :set i $commentLen;
-                }
-            }
-        }
-        
-        # Jika Blok tidak ditemukan, coba cari format "| Blok-"
-        :if ([:len $blokInfo] = 0) do={
-            :local pipePos [:find $cleanComment "| Blok-"];
-            :if ([:typeof $pipePos] != "nil") do={
-                :local startPos ($pipePos + 2);
-                :local endPos [:find $cleanComment " " $startPos];
-                :if ([:typeof $endPos] = "nil") do={
-                    :set endPos $commentLen;
-                }
-                :set blokInfo [:pick $cleanComment $startPos $endPos];
-            }
-        }
-    } on-error={
-        :set blokInfo "";
+        /ip hotspot user set comment=$finalComment $uID;
+    } on-error={ :log debug "LOGOUT: Gagal set comment user $username"; }
+
+    # 5. FETCH USAGE (LOGOUT EVENT)
+    :if ([:len $baseUrl] > 0 && [:find $baseUrl "{{"] = nil) do={
+        :local usageUrl ($baseUrl."/report/laporan/services/usage_ingest.php?key=".[$urlEncode $usageKey]."&session=".[$urlEncode $session]."&event=logout&user=".[$urlEncode $username]."&date=".[$urlEncode $logoutDate]."&time=".[$urlEncode $logoutTime]."&ip=".[$urlEncode $userip]."&mac=".[$urlEncode $usermac]."&uptime=".[$urlEncode $userUptime]);
+        :do { 
+            /tool fetch url=$usageUrl keep-result=no; 
+        } on-error={ :log debug "LOGOUT: Usage ingest timeout"; }
     }
-    
-    # Build new comment tanpa ubah tanggal (ambil tanggal lama jika ada)
-    :local baseDate "";
-    :local pipePos2 [:find $cleanComment "|"];
-    :if ([:typeof $pipePos2] != "nil") do={
-        :set baseDate [:pick $cleanComment 0 $pipePos2];
-    } else={
-        :set baseDate $cleanComment;
-    }
-    :if ([:len $baseDate] = 0) do={
-        :set baseDate ("$logoutDate $logoutTime");
-    }
-    
-    # Format: "jan/21/2026 00:25:32 | Blok-A10 | IP:192.168.1.100 | MAC:AA:BB:CC:DD:EE:FF"
-    :local newComment "$baseDate";
-    
+
+    # 6. BERSIHKAN KONEKSI (Hanya User Wartel/Blok)
+    # Gunakan Regex untuk menghapus sekaligus (Tanpa Loop Foreach) -> JAUH LEBIH RINGAN
     :if ([:len $blokInfo] > 0) do={
-        :set newComment ("$newComment | $blokInfo");
-    }
-
-    # Hapus IP/MAC lama jika sudah ada
-    :set newComment ("$newComment | IP:$userip | MAC:$usermac");
-    
-    # Update comment dengan data logout (tanpa menumpuk)
-    :if ([:len $userId] > 0) do={
-        :do { /ip hotspot user set comment=$newComment $userId; } on-error={}
-    } else={
-        :log warning "SYNC WARN: user not found for $username (comment not set)";
-    }
-
-    # REALTIME USAGE (LOGOUT)
-    :local baseUrl "{{BASE_URL}}";
-    :local usageKey "{{USAGE_KEY}}";
-    :local sessKey "{{SESSION}}";
-    :local ingestOk true;
-    :if ([:len $baseUrl] = 0 || [:find $baseUrl "{{"] != nil) do={ :set ingestOk false; }
-    :if ([:len $usageKey] = 0 || [:find $usageKey "{{"] != nil) do={ :set ingestOk false; }
-    :if ([:len $sessKey] = 0 || [:find $sessKey "{{"] != nil) do={ :set ingestOk false; }
-    :if ($ingestOk = true) do={
-        :local usageUrl ("$baseUrl/report/laporan/services/usage_ingest.php?key=$usageKey&session=$sessKey&event=logout&user=" . [$urlEncode $username] . "&date=" . [$urlEncode $logoutDate] . "&time=" . [$urlEncode $logoutTime] . "&ip=" . [$urlEncode $userip] . "&mac=" . [$urlEncode $usermac] . "&uptime=" . [$urlEncode $userUptime]);
-        :do { /tool fetch url=$usageUrl keep-result=no; } on-error={ :log warning "LOGOUT: usage_ingest fetch gagal"; }
-    } else={
-        :log warning "LOGOUT: usage_ingest disabled (base_url/key/session kosong)";
-    }
-
-    # Hapus cookie + putus koneksi untuk user wartel saja (hindari user non-wartel)
-    :local isWartel false;
-    :local blokPos [:find $newComment "Blok-"];
-    :if ([:typeof $blokPos] != "nil") do={ :set isWartel true; }
-    :if ($isWartel = true) do={
-        :local cookieIds [/ip hotspot cookie find where user="$username"];
-        :if ([:len $cookieIds] > 0) do={
-            :foreach cId in=$cookieIds do={
-                :do { /ip hotspot cookie remove $cId; } on-error={}
-            }
-        }
-        # Kick active hanya untuk user yang logout
-        :local activeIds [/ip hotspot active find where user="$username"];
-        :if ([:len $activeIds] > 0) do={
-            :foreach aId in=$activeIds do={
-                :do { /ip hotspot active remove $aId; } on-error={}
-            }
-        }
-        # Putus koneksi hanya untuk user yang logout (berdasarkan IP)
-        :if ([:len $userip] > 0) do={
-            :local connSrc [/ip firewall connection find src-address=$userip];
-            :if ([:len $connSrc] > 0) do={
-                :foreach cSrc in=$connSrc do={ :do { /ip firewall connection remove $cSrc; } on-error={} }
-            }
-            :local connDst [/ip firewall connection find dst-address=$userip];
-            :if ([:len $connDst] > 0) do={
-                :foreach cDst in=$connDst do={ :do { /ip firewall connection remove $cDst; } on-error={} }
-            }
+        
+        # Hapus Cookie & Active
+        :do { /ip hotspot cookie remove [find user="$username"]; } on-error={}
+        :do { /ip hotspot active remove [find user="$username"]; } on-error={}
+        
+        # Hapus Firewall Connection (SAFE MODE)
+        # Regex "^IP:" memastikan hanya IP tersebut yang dihapus, tidak salah sasaran.
+        # Syarat tambahan: IP harus valid (>6 char)
+        :if ([:len $userip] > 6) do={
+            :do {
+                :local ipRegex ("^" . $userip . ":");
+                /ip firewall connection remove [find src-address~$ipRegex];
+                /ip firewall connection remove [find dst-address~$ipRegex];
+            } on-error={ :log debug "LOGOUT: Firewall clean skip (busy/error)"; }
         }
     }
-    
-    # Log ke system log (optional, untuk debugging)
-    :log info "LOGOUT: $username | $userip | $usermac | $blokInfo";
 }

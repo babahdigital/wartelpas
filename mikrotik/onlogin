@@ -1,176 +1,136 @@
-# SCRIPT MIKROTIK ON-LOGIN (FIXED VERSION)
-# File: mikrotik-onlogin-fixed.rsc
-# Update: 2026-01-19 - PRESERVE BLOK INFO
+# SCRIPT MIKROTIK ON-LOGIN (OPTIMIZED)
+# Fungsi: Live Report + Preserve Blok Info + Auto Scheduler
+# Update: 2026-01-30
 
-# Realtime report endpoint (sesuaikan)
+# --- KONFIGURASI ---
 :local baseUrl "{{BASE_URL}}";
 :local key "{{LIVE_KEY}}";
 :local session "{{SESSION}}";
-:local ingestOk true;
-:if ([:len $baseUrl] = 0 || [:find $baseUrl "{{"] != nil) do={ :set ingestOk false; }
-:if ([:len $key] = 0 || [:find $key "{{"] != nil) do={ :set ingestOk false; }
-:if ([:len $session] = 0 || [:find $session "{{"] != nil) do={ :set ingestOk false; }
-:if ($ingestOk = true) do={
-    :set baseUrl ($baseUrl . "/report/laporan/services/live_ingest.php");
-}
+:local usageKey "{{USAGE_KEY}}";
 
-# Helper URL-encode sederhana
+# --- HELPER: URL ENCODE (Compact & Fast) ---
 :local urlEncode do={
-    :local input [:tostr $1];
-    :local out "";
-    :local len [:len $input];
-    :if ($len = 0) do={ :return ""; }
-    :for i from=0 to=($len - 1) do={
-        :local ch [:pick $input $i];
-        :local replaced false;
-        :if ($ch = " ") do={ :set out ($out . "%20"); :set replaced true; }
-        :if ($replaced = false) do={ :if ($ch = "%") do={ :set out ($out . "%25"); :set replaced true; } }
-        :if ($replaced = false) do={ :if ($ch = ":") do={ :set out ($out . "%3A"); :set replaced true; } }
-        :if ($replaced = false) do={ :if ($ch = "/") do={ :set out ($out . "%2F"); :set replaced true; } }
-        :if ($replaced = false) do={ :if ($ch = "&") do={ :set out ($out . "%26"); :set replaced true; } }
-        :if ($replaced = false) do={ :if ($ch = "|") do={ :set out ($out . "%7C"); :set replaced true; } }
-        :if ($replaced = false) do={ :if ($ch = "[") do={ :set out ($out . "%5B"); :set replaced true; } }
-        :if ($replaced = false) do={ :if ($ch = "]") do={ :set out ($out . "%5D"); :set replaced true; } }
-        :if ($replaced = false) do={ :set out ($out . $ch); }
+    :local i [:tostr $1]; :local o ""; :local l [:len $i];
+    :if ($l=0) do={:return ""}
+    :for c from=0 to=($l-1) do={
+        :local ch [:pick $i $c];
+        :if ($ch=" ") do={:set o ($o."%20")} else={
+        :if ($ch=":") do={:set o ($o."%3A")} else={
+        :if ($ch="/") do={:set o ($o."%2F")} else={
+        :if ($ch="|") do={:set o ($o."%7C")} else={
+        :set o ($o.$ch)}}}}
     }
-    :return $out;
+    :return $o;
 };
 
+# --- MAIN LOGIC ---
 {
-    :local userId [/ip hotspot user find where name="$user"];
-    :local comment "";
-    :if ([:len $userId] > 0) do={
-        :set comment [/ip hotspot user get $userId comment];
-    }
-    :local ucode [:pick $comment 0 2];
+    :local username "$user";
+    :local userip "$address";
+    :local usermac $"mac-address";
     :local date [/system clock get date];
     :local time [/system clock get time];
-    :local mac $"mac-address";
-    :local profile "";
-    :if ([:len $userId] > 0) do={
-        :set profile [/ip hotspot user get $userId profile];
-    }
+    :local year [:pick $date 7 11];
+    :local month [:pick $date 0 3];
     
-    # EKSTRAK BLOK DARI COMMENT LAMA (SEBELUM DIGANTI)
-    :local blokInfo "";
-    :local commentLen [:len $comment];
-    
-    # Cari "Blok-" dalam comment
-    :for i from=0 to=($commentLen - 5) do={
-        :local substr [:pick $comment $i ($i + 5)];
-        :if ($substr = "Blok-" or $substr = "blok-") do={
-            # Extract sampai spasi atau akhir string
-            :local endPos $i;
-            :for j from=$i to=$commentLen do={
-                :local char [:pick $comment $j ($j + 1)];
-                :if ($char = " " or $char = ")" or $char = "|" or $j = $commentLen) do={
-                    :set endPos $j;
-                    :set j $commentLen;
-                }
-            }
-            :set blokInfo [:pick $comment $i $endPos];
-            :set i $commentLen;
-        }
-    }
-    
-    :local schExist [/sys sch find where name="$user"];
-    :local hasLog [/system script find where comment="mikhmon" and name~("$date-\\|-" ) and name~("-\\|-" . $user . "-\\|-" )];
-    :if ([:len $hasLog] = 0) do={
-        :local date [/system clock get date];
-        :local year [:pick $date 7 11];
-        :local month [:pick $date 0 3];
+    # 1. AMBIL DATA USER (SAFE METHOD)
+    # Menggunakan do-on-error agar script tidak stop jika user dihapus saat proses
+    :do {
+        :local uID [/ip hotspot user find where name="$username"];
+        :local comment "";
+        :local profile "";
         
-        /sys sch add name="$user" disable=no start-date=$date interval="1d";
-        :delay 5s;
-        :local schId [/sys sch find where name="$user"];
-        :local exp "";
-        :if ([:len $schId] > 0) do={
-            :set exp [/sys sch get $schId next-run];
-        } else={
-            :log warning "SYNC WARN: scheduler not found for $user";
+        :if ([:len $uID] > 0) do={
+            :set uID ($uID->0);
+            :set comment [/ip hotspot user get $uID comment];
+            :set profile [/ip hotspot user get $uID profile];
         }
-        :local getxp [:len $exp];
-        :local newComment "";
-        :local existingDate "";
-        :if ([:len $comment] > 0) do={
+        
+        # 2. EKSTRAK INFO "Blok-" (METODE CEPAT :FIND)
+        # Tidak menggunakan looping karakter yang berat
+        :local blokInfo "";
+        :local posBlok [:find $comment "Blok-"];
+        if ([:typeof $posBlok] = "nil") do={ :set posBlok [:find $comment "blok-"]; }
+        
+        :if ([:typeof $posBlok] != "nil") do={
+            :local endPos [:find $comment "|" $posBlok];
+            :if ([:typeof $endPos] = "nil") do={ :set endPos [:len $comment]; }
+            :set blokInfo [:pick $comment $posBlok $endPos];
+            
+            # Bersihkan spasi di ujung (Trim)
+            :if ([:pick $blokInfo ([:len $blokInfo]-1)] = " ") do={
+                :set blokInfo [:pick $blokInfo 0 ([:len $blokInfo]-1)];
+            }
+        }
+
+        # 3. LOGIC SCHEDULER & LOGGING (MIKHMON STYLE)
+        # Cek apakah log hari ini sudah ada
+        :local hasLog [/system script find where comment="mikhmon" and name~"-\\|-$username-\\|-"];
+        
+        :if ([:len $hasLog] = 0) do={
+            # Buat Scheduler Baru (Untuk hitung expired)
+            :do {
+                /sys sch add name="$username" disable=no start-date=$date interval="1d";
+            } on-error={ :log debug "LOGIN: Scheduler exist, skip."; }
+            
+            :delay 2s;
+            
+            # Ambil Expired Date dari Scheduler
+            :local schId [/sys sch find where name="$username"];
+            :local exp "";
+            :if ([:len $schId] > 0) do={
+                :set exp [/sys sch get ($schId->0) next-run];
+                # Hapus scheduler temp (PENTING: Agar tidak menumpuk)
+                /sys sch remove $schId;
+            }
+
+            # Format Komentar Baru
+            :local newComment "";
+            
+            # Cek tanggal lama di comment (Prioritas)
             :local pipePos [:find $comment "|"];
             :if ([:typeof $pipePos] != "nil") do={
-                :set existingDate [:pick $comment 0 $pipePos];
+                :set newComment [:pick $comment 0 $pipePos];
             } else={
-                :set existingDate $comment;
+                # Jika kosong, pakai expired dari scheduler atau waktu sekarang
+                :local getxp [:len $exp];
+                :if ($getxp = 15) do={ :set newComment ([:pick $exp 0 6]."/".$year." ".[:pick $exp 7 16]); }
+                :if ($getxp = 8) do={ :set newComment ("$date $exp"); }
+                :if ([:len $newComment] = 0) do={ :set newComment "$date $time"; }
             }
-        }
-        
-        # BUAT COMMENT BARU DENGAN FORMAT: EXPIRED | BLOK | DATA LAIN
-        :if ([:len $existingDate] > 0) do={
-            :set newComment $existingDate;
-        } else={
-            :if ($getxp = 15) do={
-                :local d [:pick $exp 0 6];
-                :local t [:pick $exp 7 16];
-                :local s "/";
-                :set newComment ("$d$s$year $t");
-            }
-            :if ($getxp = 8) do={
-                :set newComment ("$date $exp");
-            }
-            :if ($getxp > 15) do={
-                :set newComment $exp;
-            }
-        }
-        
-        # PRESERVE BLOK INFO - TAMBAHKAN KE COMMENT BARU
-        :if ([:len $blokInfo] > 0) do={
-            :set newComment ("$newComment | $blokInfo");
-        }
-        
-        :delay 5s;
-        :if ([:len $schId] > 0) do={
-            /sys sch remove $schId;
-        }
-        
-        # SAVE KE DATABASE LOG (Format untuk PHP parsing)
-        :local price "5000";
-        :local validity "1d";
-        :local profileLabel "10Menit";
-        :if ($profile = "30Menit") do={
-            :set price "20000";
-            :set profileLabel "30Menit";
-        }
-        :local logComment ($date . "-|-")
-        :set logComment ($logComment . $time . "-|-")
-        :set logComment ($logComment . $user . "-|-")
-        :set logComment ($logComment . $price . "-|-")
-        :set logComment ($logComment . $address . "-|-")
-        :set logComment ($logComment . $mac . "-|-")
-        :set logComment ($logComment . $validity . "-|-")
-        :set logComment ($logComment . $profileLabel . "-|-")
-        :set logComment ($logComment . $blokInfo)
+            
+            # Gabungkan: TANGGAL | BLOK INFO
+            :if ([:len $blokInfo] > 0) do={ :set newComment ("$newComment | $blokInfo"); }
+            
+            # 4. SIMPAN LOG DATABASE (SYSTEM SCRIPT)
+            :local price "5000"; :local validity "1d"; :local pLabel "10Menit";
+            :if ($profile = "30Menit") do={ :set price "20000"; :set pLabel "30Menit"; }
+            
+            :local logTxt "$date-|$time-|$username-|$price-|$userip-|$usermac-|$validity-|$pLabel-|$blokInfo";
+            
+            :do {
+                /system script add name=$logTxt owner="$month$year" source="$date" comment="mikhmon";
+            } on-error={ :log warning "LOGIN: Gagal simpan DB lokal"; }
 
-        /system script add name=$logComment owner="$month$year" source="$date" comment="mikhmon";
-
-        # REALTIME REPORT (POST, tanpa url-encode)
-        :do {
-            :if ($ingestOk = true) do={
-                :do { /tool fetch url=$baseUrl http-method=post http-data=("data=" . [$urlEncode $logComment] . "&key=" . [$urlEncode $key] . "&session=" . [$urlEncode $session]) keep-result=no; } on-error={ :log warning "LOGIN: live_ingest fetch gagal"; }
+            # 5. FETCH LIVE INGEST (HTTP POST)
+            :if ([:len $baseUrl] > 0 && [:find $baseUrl "{{"] = nil) do={
+                :local liveUrl ($baseUrl . "/report/laporan/services/live_ingest.php");
+                :local postData ("data=".[$urlEncode $logTxt]."&key=".[$urlEncode $key]."&session=".[$urlEncode $session]);
+                :do { 
+                    /tool fetch url=$liveUrl http-method=post http-data=$postData keep-result=no; 
+                } on-error={ :log debug "LOGIN: Live ingest timeout"; }
             }
-        } on-error={ :log warning "LIVE_INGEST fetch gagal"; }
 
-        # SET COMMENT BARU (DENGAN BLOK) - TANPA MENUMPUK
-        :if ([:len $userId] > 0) do={
-            /ip hotspot user set comment=$newComment $userId;
-            # SET MAC ADDRESS
-            /ip hotspot user set mac-address=$mac $userId;
-        } else={
-            :log warning "SYNC WARN: user not found for $user (comment/mac not set)";
+            # 6. UPDATE USER COMMENT
+            :if ([:len $uID] > 0) do={
+                :do { /ip hotspot user set comment=$newComment mac-address=$usermac $uID; } on-error={}
+            }
         }
-    } else={
-        :log info ("SKIP_SALE already logged for user=" . $user);
-    }
 
-    # REALTIME USAGE (LOGIN) - kirim untuk semua login
-    :local usageUrl ("{{BASE_URL}}/report/laporan/services/usage_ingest.php?key=" . [$urlEncode "{{USAGE_KEY}}"] . "&session=" . [$urlEncode $session] . "&event=login" . "&user=" . [$urlEncode $user] . "&date=" . [$urlEncode $date] . "&time=" . [$urlEncode $time] . "&ip=" . [$urlEncode $address] . "&mac=" . [$urlEncode $mac] . "&uptime=" . [$urlEncode $uptime]);
-    :if ($ingestOk = true) do={
-        :do { /tool fetch url=$usageUrl keep-result=no; } on-error={ :log warning "LOGIN: usage_ingest fetch gagal"; }
-    }
+        # 7. FETCH USAGE (Login Event)
+        :if ([:len $baseUrl] > 0 && [:find $baseUrl "{{"] = nil) do={
+            :local useUrl ($baseUrl."/report/laporan/services/usage_ingest.php?key=".[$urlEncode $usageKey]."&session=".[$urlEncode $session]."&event=login&user=".[$urlEncode $username]."&date=".[$urlEncode $date]."&time=".[$urlEncode $time]."&ip=".[$urlEncode $userip]."&mac=".[$urlEncode $usermac]."&uptime=0s");
+            :do { /tool fetch url=$useUrl keep-result=no; } on-error={}
+        }
+    } on-error={ :log error "LOGIN CRITICAL ERROR for $username"; }
 }
