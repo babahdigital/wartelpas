@@ -103,8 +103,8 @@ if (file_exists($envFile)) {
   $usage_key = $env['security']['usage_ingest']['token'] ?? '';
   if ($live_key === '') $live_key = $env['backup']['secret'] ?? '';
   if ($usage_key === '') $usage_key = $env['backup']['secret'] ?? '';
-  $tmpl_onlogin = __DIR__ . '/../mikrotik/onlogin';
-  $tmpl_onlogout = __DIR__ . '/../mikrotik/onlogout';
+  $tmpl_onlogin = __DIR__ . '/../tools/onlogin';
+  $tmpl_onlogout = __DIR__ . '/../tools/onlogout';
   if (file_exists($tmpl_onlogin) && file_exists($tmpl_onlogout) && $base_url !== '') {
     $replace = [
       '{{BASE_URL}}' => $base_url,
