@@ -884,45 +884,9 @@
         }
         fetchUsers(true, false);
       } else if (!data) {
-        const isBlockDelete = url.includes('action=batch_delete') || url.includes('action=delete_block_full');
-        if (isBlockDelete) {
-          const msg = 'Blok berhasil dihapus.';
-          await showOverlayChoice({
-            title: 'Sukses Hapus Blok',
-            messageHtml: `
-              <div style="text-align:center;">
-                <div style="font-size:50px; color:#10b981; margin-bottom:15px;"><i class="fa fa-check-circle"></i></div>
-                <div style="font-size:18px; font-weight:bold; color:#fff; margin-bottom:10px;">Penghapusan Selesai!</div>
-                <div style="color:#e2e8f0; margin-bottom:20px; font-size:14px; line-height:1.5;">${msg}</div>
-              </div>`,
-            type: 'info',
-            buttons: [
-              {
-                label: 'Tutup & Reload',
-                value: true,
-                className: 'overlay-btn-success',
-                onClick: () => {
-                  window.location.href = './?hotspot=users&session=' + encodeURIComponent(usersSession);
-                }
-              }
-            ],
-            lockClose: true
-          });
-          return;
-        }
-        window.showActionPopup('success', 'Berhasil diproses.');
+        console.error('Respon AJAX tidak valid:', text);
+        window.showActionPopup('error', 'Respon server tidak valid. Coba refresh.');
         suspendAutoRefresh = false;
-        if (url.includes('action=delete_status')) {
-          const params = new URLSearchParams(window.location.search);
-          params.set('hotspot', 'users');
-          params.set('session', usersSession);
-          params.set('status', 'all');
-          if (commentSelect) params.set('comment', commentSelect.value);
-          params.delete('page');
-          window.location.href = './?' + params.toString();
-          return;
-        }
-        fetchUsers(true, false);
       } else {
         window.showActionPopup('error', (data && data.message) ? data.message : 'Gagal memproses.');
         suspendAutoRefresh = false;
