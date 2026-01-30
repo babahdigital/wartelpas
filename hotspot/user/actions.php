@@ -1456,8 +1456,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             if (!$has_vip) {
               $action_message = 'User tidak berstatus Pengelola.';
             } else {
-              $clean = preg_replace('/\s*\|\s*VIP\b/i', '', $comment_raw);
-              $clean = preg_replace('/\bVIP\b/i', '', $clean);
+              $clean = preg_replace('/\s*\|\s*(VIP|Pengelola)\b/i', '', $comment_raw);
+              $clean = preg_replace('/\b(VIP|Pengelola)\b/i', '', $clean);
               $clean = preg_replace('/\s+\|\s+/', ' | ', $clean);
               $clean = trim($clean, " \t\n\r\0\x0B|");
               $new_comment = $clean;
@@ -1484,7 +1484,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
               if ($did_set_vip && $vip_daily_limit > 0) {
                 increment_vip_daily_usage($db, $vip_date_key);
               }
-              if ($did_unvip && $vip_daily_limit > 0) {
+              if ($did_unvip) {
                 decrement_vip_daily_usage($db, $vip_date_key);
               }
             }

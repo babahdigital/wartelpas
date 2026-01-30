@@ -382,7 +382,9 @@ if (!function_exists('decrement_vip_daily_usage')) {
     if (!$db || $date_key === '') return false;
     if (!ensure_vip_daily_table($db)) return false;
     try {
-      $stmt = $db->prepare("UPDATE vip_daily_quota SET count = CASE WHEN count > 0 THEN count - 1 ELSE 0 END, updated_at = CURRENT_TIMESTAMP WHERE date_key = :d");
+      $stmt = $db->prepare("INSERT INTO vip_daily_quota(date_key, count, updated_at)
+        VALUES(:d, 0, CURRENT_TIMESTAMP)
+        ON CONFLICT(date_key) DO UPDATE SET count = CASE WHEN count > 0 THEN count - 1 ELSE 0 END, updated_at = CURRENT_TIMESTAMP");
       $stmt->execute([':d' => $date_key]);
       return true;
     } catch (Exception $e) {
