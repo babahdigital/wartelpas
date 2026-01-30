@@ -1222,9 +1222,9 @@ if ($is_ajax) {
             <?php elseif ($is_ready): ?>
               <?php $vip_disabled = $vip_limit_reached; ?>
               <?php
-                $vip_quota_label = ($vip_daily_limit > 0) ? ('Pengelola ' . $vip_daily_used . '/' . $vip_daily_limit) : 'Jadikan Pengelola';
+                $vip_quota_label = ($vip_daily_limit > 0) ? ('Batas Perubahan Pengelola ' . $vip_daily_used . '/' . $vip_daily_limit) : 'Jadikan Pengelola';
                 $vip_title = $vip_disabled && $vip_daily_limit > 0
-                  ? ('Limit Pengelola harian tercapai (' . $vip_daily_used . '/' . $vip_daily_limit . ')')
+                  ? ('Batas Perubahan Pengelola ' . $vip_daily_used . '/' . $vip_daily_limit . ' (Limit tercapai)')
                   : $vip_quota_label;
                 $vip_action_url = './?hotspot=users&action=vip&uid=' . urlencode($u['uid']) .
                   '&name=' . urlencode($u['name']) .
