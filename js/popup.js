@@ -37,7 +37,7 @@
     footerEl = backdrop.querySelector('.m-modal-footer');
 
     backdrop.addEventListener('click', function(e) {
-      if (e.target === backdrop) close();
+      if (e.target === backdrop) return;
     });
     backdrop.querySelector('.m-close-x').addEventListener('click', close);
   }
