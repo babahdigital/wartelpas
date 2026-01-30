@@ -17,7 +17,7 @@ services:
       - ./db_data:/var/www/html/db_data
       - ./img:/var/www/html/img
       - ./css:/var/www/html/css
-      - ./js
+      - ./js:/var/www/html/js
 
       # ==========================================
       # 2. KONFIGURASI SERVER & PHP
