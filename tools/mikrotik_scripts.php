@@ -46,10 +46,10 @@ $usage_key = $env['security']['usage_ingest']['token'] ?? '';
 if ($live_key === '') $live_key = $env['backup']['secret'] ?? '';
 if ($usage_key === '') $usage_key = $env['backup']['secret'] ?? '';
 
-$tmpl_onlogin = $root_dir . '/mikrotik/onlogin';
-$tmpl_onlogout = $root_dir . '/mikrotik/onlogout';
+$tmpl_onlogin = $root_dir . '/tools/onlogin';
+$tmpl_onlogout = $root_dir . '/tools/onlogout';
 if (!file_exists($tmpl_onlogin) || !file_exists($tmpl_onlogout)) {
-    echo "Error: template mikrotik/onlogin atau mikrotik/onlogout tidak ditemukan.\n";
+    echo "Error: template tools/onlogin atau tools/onlogout tidak ditemukan.\n";
     exit;
 }
 
