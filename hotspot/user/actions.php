@@ -1424,6 +1424,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         );
         $is_ready_now = (!$is_active && $disabled !== 'true' && $bytes <= 50 && ($uptime === '' || $uptime === '0s'));
         $has_vip = is_vip_comment($comment_raw) || ($hist_vip && is_vip_comment($hist_vip['raw_comment'] ?? ''));
+        $did_unvip = false;
 
         $did_set_vip = false;
         if ($act === 'vip' && !$is_ready_now) {
@@ -1461,6 +1462,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
               $clean = trim($clean, " \t\n\r\0\x0B|");
               $new_comment = $clean;
               $action_message = 'Berhasil hapus Pengelola untuk ' . $name . '.';
+              $did_unvip = true;
             }
           }
 
@@ -1481,6 +1483,9 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
               } catch(Exception $e) {}
               if ($did_set_vip && $vip_daily_limit > 0) {
                 increment_vip_daily_usage($db, $vip_date_key);
+              }
+              if ($did_unvip && $vip_daily_limit > 0) {
+                decrement_vip_daily_usage($db, $vip_date_key);
               }
             }
           }

@@ -377,6 +377,20 @@ if (!function_exists('increment_vip_daily_usage')) {
   }
 }
 
+if (!function_exists('decrement_vip_daily_usage')) {
+  function decrement_vip_daily_usage($db, $date_key) {
+    if (!$db || $date_key === '') return false;
+    if (!ensure_vip_daily_table($db)) return false;
+    try {
+      $stmt = $db->prepare("UPDATE vip_daily_quota SET count = CASE WHEN count > 0 THEN count - 1 ELSE 0 END, updated_at = CURRENT_TIMESTAMP WHERE date_key = :d");
+      $stmt->execute([':d' => $date_key]);
+      return true;
+    } catch (Exception $e) {
+      return false;
+    }
+  }
+}
+
 // Helper: Total uptime dari event login (standalone)
 if (!function_exists('get_cumulative_uptime_from_events_db')) {
   function get_cumulative_uptime_from_events_db($db, $username, $date_key = '', $fallback_logout = '') {

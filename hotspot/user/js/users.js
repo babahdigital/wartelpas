@@ -814,6 +814,56 @@
           return;
         }
         confirmMsg = null;
+      } else if (msgLower.includes('pengelola')) {
+        const match = confirmMsg.match(/Tetapkan\s+(.+)\s+sebagai\s+Pengelola\?/i);
+        const userName = match ? match[1].trim() : 'Target';
+        const detailMsg = `
+          <div style="text-align:left;">
+             <div style="margin-bottom:8px; color:#cbd5e1; font-size:13px;">Target Pengelola:</div>
+             <div style="font-size:20px; font-weight:bold; color:#fff; margin-bottom:15px; border-left:4px solid #f59e0b; padding-left:12px;">
+               ${userName}
+             </div>
+             <div style="background:rgba(245, 158, 11, 0.1); border:1px solid rgba(245, 158, 11, 0.3); padding:12px; border-radius:6px; font-size:13px; color:#e2e8f0; line-height:1.5;">
+               <div style="display:flex; gap:10px;">
+                 <i class="fa fa-star" style="font-size:16px; color:#facc15; margin-top:2px;"></i>
+                 <div>
+                   <strong>Konfirmasi Pengelola:</strong><br>
+                   Status VIP akan ditetapkan untuk user ini.
+                 </div>
+               </div>
+             </div>
+          </div>
+        `;
+        const ok = await showOverlayChoice({
+          title: 'Konfirmasi Pengelola',
+          messageHtml: detailMsg,
+          type: 'warning',
+          layout: 'vertical',
+          buttons: [
+            {
+              label: `
+                <i class="fa fa-star"></i>
+                <div class="btn-rich-text">
+                  <span class="btn-rich-title">Ya, Jadikan Pengelola</span>
+                  <span class="btn-rich-desc">Tetapkan status VIP untuk user ini.</span>
+                </div>`,
+              value: true,
+              className: 'overlay-btn-danger'
+            },
+            {
+              label: `
+                <i class="fa fa-times"></i>
+                <div class="btn-rich-text"><span class="btn-rich-title">Batal</span></div>`,
+              value: false,
+              className: 'overlay-btn-muted'
+            }
+          ]
+        });
+        if (!ok) {
+          suspendAutoRefresh = false;
+          return;
+        }
+        confirmMsg = null;
       }
     }
     try {
