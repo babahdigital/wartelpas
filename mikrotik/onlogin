@@ -39,11 +39,17 @@
         :local uID [/ip hotspot user find where name="$username"];
         :local comment "";
         :local profile "";
+        :local vipTag "";
         
         :if ([:len $uID] > 0) do={
             :set uID ($uID->0);
             :set comment [/ip hotspot user get $uID comment];
             :set profile [/ip hotspot user get $uID profile];
+        }
+        :local posVIP [:find $comment "VIP"];
+        :local posPengelola [:find $comment "Pengelola"];
+        :if (([:typeof $posVIP] != "nil") || ([:typeof $posPengelola] != "nil")) do={
+            :set vipTag "VIP";
         }
         
         # 2. EKSTRAK INFO "Blok-" (METODE CEPAT :FIND)
@@ -99,8 +105,11 @@
                 :if ([:len $newComment] = 0) do={ :set newComment "$date $time"; }
             }
             
-            # Gabungkan: TANGGAL | BLOK INFO
+            # Gabungkan: TANGGAL | BLOK INFO | VIP (jika ada)
             :if ([:len $blokInfo] > 0) do={ :set newComment ("$newComment | $blokInfo"); }
+            :if ([:len $vipTag] > 0 && [:find $newComment "VIP"] = nil) do={
+                :set newComment ("$newComment | VIP");
+            }
             
             # 4. SIMPAN LOG DATABASE (SYSTEM SCRIPT)
             :local price "5000"; :local validity "1d"; :local pLabel "10Menit";

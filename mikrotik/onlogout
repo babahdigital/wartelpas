@@ -37,6 +37,7 @@
     :local uID [/ip hotspot user find where name="$username"];
     :local currentComment "";
     :local userUptime "";
+    :local vipTag "";
     
     :if ([:len $uID] > 0) do={
         :set uID ($uID->0);
@@ -47,6 +48,11 @@
     } else={
         # User sudah hilang/expired, hentikan script (Hemat resource)
         :return;
+    }
+    :local posVIP [:find $currentComment "VIP"];
+    :local posPengelola [:find $currentComment "Pengelola"];
+    :if (([:typeof $posVIP] != "nil") || ([:typeof $posPengelola] != "nil")) do={
+        :set vipTag "VIP";
     }
 
     # 2. PRESERVE BLOK INFO (Metode Cepat :Find)
@@ -78,6 +84,10 @@
     # Pastikan Blok Info ada (jika tidak sengaja terhapus)
     :if ([:len $blokInfo] > 0 && [:find $cleanComment $blokInfo] = nil) do={
         :set cleanComment ("$cleanComment | $blokInfo");
+    }
+    # Pertahankan tag VIP jika ada
+    :if ([:len $vipTag] > 0 && [:find $cleanComment "VIP"] = nil) do={
+        :set cleanComment ("$cleanComment | VIP");
     }
 
     # 4. SIMPAN DATA LOGOUT (IP & MAC)
