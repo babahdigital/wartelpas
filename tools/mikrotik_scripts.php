@@ -53,6 +53,13 @@ if (!file_exists($tmpl_onlogin) || !file_exists($tmpl_onlogout)) {
     exit;
 }
 
+clearstatcache(true, $tmpl_onlogin);
+clearstatcache(true, $tmpl_onlogout);
+if (function_exists('opcache_invalidate')) {
+    @opcache_invalidate($tmpl_onlogin, true);
+    @opcache_invalidate($tmpl_onlogout, true);
+}
+
 $replace = [
     '{{BASE_URL}}' => $baseUrl,
     '{{LIVE_KEY}}' => $live_key,

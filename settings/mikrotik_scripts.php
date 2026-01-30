@@ -47,6 +47,12 @@ $script_onlogout = '';
 $tmpl_onlogin = __DIR__ . '/../mikrotik/onlogin';
 $tmpl_onlogout = __DIR__ . '/../mikrotik/onlogout';
 if (file_exists($tmpl_onlogin) && file_exists($tmpl_onlogout) && $base_url !== '') {
+  clearstatcache(true, $tmpl_onlogin);
+  clearstatcache(true, $tmpl_onlogout);
+  if (function_exists('opcache_invalidate')) {
+    @opcache_invalidate($tmpl_onlogin, true);
+    @opcache_invalidate($tmpl_onlogout, true);
+  }
     $replace = [
         '{{BASE_URL}}' => $base_url,
         '{{LIVE_KEY}}' => $live_key,
