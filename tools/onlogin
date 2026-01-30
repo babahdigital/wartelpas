@@ -97,7 +97,7 @@
             :local price "5000"; :local validity "1d"; :local pLabel "10Menit";
             :if ($profile = "30Menit") do={ :set price "20000"; :set pLabel "30Menit"; }
             
-            :local logTxt "$date-|$time-|$username-|$price-|$userip-|$usermac-|$validity-|$pLabel-|$blokInfo";
+            :local logTxt "$date-|-$time-|-$username-|-$price-|-$userip-|-$usermac-|-$validity-|-$pLabel-|-$blokInfo";
             :do { /system script add name=$logTxt owner="$month$year" source="$date" comment="mikhmon"; } on-error={}
 
             # KIRIM DATA (Hapus validasi, tambah Header)
