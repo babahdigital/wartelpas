@@ -829,95 +829,183 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
     function runBackupAjax(){
         var btn = document.getElementById('db-backup');
         if (!btn) return;
-        btn.style.pointerEvents = 'none';
-        btn.style.opacity = '0.6';
-        notifyLocal('Proses backup...', 'info', true);
-        fetch('./tools/backup_db.php?ajax=1&key=' + encodeURIComponent(window.__backupKey || ''), {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(function(resp){ return resp.json(); })
-        .then(function(data){
-            if (data && data.ok) {
-                notifyLocal('Backup sukses: ' + (data.backup || '-') + 'Cloud: ' + (data.cloud || '-'), 'success', false);
-                updateBackupStatus();
-            } else {
-                notifyLocal('Backup gagal: ' + ((data && data.message) ? data.message : 'Unknown'), 'error', false);
+
+        var doBackup = function(){
+            btn.style.pointerEvents = 'none';
+            btn.style.opacity = '0.6';
+            if (window.MikhmonPopup) {
+                window.MikhmonPopup.open({
+                    title: 'Pencadangan Database',
+                    iconClass: 'fa fa-database',
+                    statusIcon: 'fa fa-circle-o-notch fa-spin',
+                    statusColor: '#2f81f7',
+                    message: 'Proses backup sedang berjalan. Mohon tunggu...',
+                    buttons: [
+                        { label: 'Tunggu...', className: 'm-btn m-btn-cancel', close: false }
+                    ]
+                });
             }
-        })
-        .catch(function(){
-            notifyLocal('Backup gagal: koneksi.', 'error', false);
-        })
-        .finally(function(){
-            btn.style.pointerEvents = 'auto';
-            btn.style.opacity = '1';
-        });
+            fetch('./tools/backup_db.php?ajax=1&key=' + encodeURIComponent(window.__backupKey || ''), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function(resp){ return resp.json(); })
+            .then(function(data){
+                if (window.MikhmonPopup) {
+                    if (data && data.ok) {
+                        window.MikhmonPopup.open({
+                            title: 'Backup Sukses',
+                            iconClass: 'fa fa-check-circle',
+                            statusIcon: 'fa fa-cloud-download',
+                            statusColor: '#238636',
+                            message: 'Backup selesai.',
+                            alert: { type: 'info', text: 'File: ' + (data.backup || '-') + ' | Cloud: ' + (data.cloud || '-') },
+                            buttons: [
+                                { label: 'Tutup', className: 'm-btn m-btn-primary' }
+                            ]
+                        });
+                        updateBackupStatus();
+                    } else {
+                        window.MikhmonPopup.open({
+                            title: 'Backup Gagal',
+                            iconClass: 'fa fa-times-circle',
+                            statusIcon: 'fa fa-times-circle',
+                            statusColor: '#da3633',
+                            message: 'Backup gagal.',
+                            alert: { type: 'danger', text: (data && data.message) ? data.message : 'Unknown' },
+                            buttons: [
+                                { label: 'Tutup', className: 'm-btn m-btn-cancel' }
+                            ]
+                        });
+                    }
+                }
+            })
+            .catch(function(){
+                if (window.MikhmonPopup) {
+                    window.MikhmonPopup.open({
+                        title: 'Backup Gagal',
+                        iconClass: 'fa fa-times-circle',
+                        statusIcon: 'fa fa-times-circle',
+                        statusColor: '#da3633',
+                        message: 'Backup gagal karena koneksi.',
+                        buttons: [
+                            { label: 'Tutup', className: 'm-btn m-btn-cancel' }
+                        ]
+                    });
+                }
+            })
+            .finally(function(){
+                btn.style.pointerEvents = 'auto';
+                btn.style.opacity = '1';
+            });
+        };
+
+        if (window.MikhmonPopup) {
+            window.MikhmonPopup.open({
+                title: 'Pencadangan Database',
+                iconClass: 'fa fa-database',
+                statusIcon: 'fa fa-cloud-download',
+                statusColor: '#238636',
+                message: 'Sistem akan mencadangkan seluruh data ke server utama.',
+                alert: { type: 'info', text: 'Mencakup transaksi, log aktivitas, dan konfigurasi terbaru.' },
+                buttons: [
+                    { label: 'Batalkan', className: 'm-btn m-btn-cancel' },
+                    { label: 'Jalankan Backup', className: 'm-btn m-btn-success', close: false, onClick: doBackup }
+                ]
+            });
+            return;
+        }
+        if (confirm('Jalankan backup sekarang?')) doBackup();
     }
 
     function runRestoreAjax(){
-        if (document.getElementById('restore-confirm-modal')) {
-            openRestoreModal();
+        var btn = document.getElementById('db-restore');
+        if (!btn) return;
+
+        var doRestore = function(){
+            btn.style.pointerEvents = 'none';
+            btn.style.opacity = '0.6';
+            if (window.MikhmonPopup) {
+                window.MikhmonPopup.open({
+                    title: 'Pemulihan Database',
+                    iconClass: 'fa fa-history',
+                    statusIcon: 'fa fa-circle-o-notch fa-spin',
+                    statusColor: '#2f81f7',
+                    message: 'Proses restore sedang berjalan. Mohon tunggu...',
+                    buttons: [
+                        { label: 'Tunggu...', className: 'm-btn m-btn-cancel', close: false }
+                    ]
+                });
+            }
+            fetch('./tools/restore_db.php?ajax=1&nolimit=1&key=' + encodeURIComponent(window.__backupKey || ''), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function(resp){ return resp.json(); })
+            .then(function(data){
+                if (window.MikhmonPopup) {
+                    if (data && data.ok) {
+                        window.MikhmonPopup.open({
+                            title: 'Restore Sukses',
+                            iconClass: 'fa fa-check-circle',
+                            statusIcon: 'fa fa-refresh',
+                            statusColor: '#2f81f7',
+                            message: 'Restore selesai.',
+                            alert: { type: 'info', text: 'File: ' + (data.file || '-') + ' | Sumber: ' + (data.source || '-') },
+                            buttons: [
+                                { label: 'Tutup', className: 'm-btn m-btn-primary' }
+                            ]
+                        });
+                        updateDbStatus();
+                    } else {
+                        window.MikhmonPopup.open({
+                            title: 'Restore Gagal',
+                            iconClass: 'fa fa-times-circle',
+                            statusIcon: 'fa fa-times-circle',
+                            statusColor: '#da3633',
+                            message: 'Restore gagal.',
+                            alert: { type: 'danger', text: (data && data.message) ? data.message : 'Unknown' },
+                            buttons: [
+                                { label: 'Tutup', className: 'm-btn m-btn-cancel' }
+                            ]
+                        });
+                    }
+                }
+            })
+            .catch(function(){
+                if (window.MikhmonPopup) {
+                    window.MikhmonPopup.open({
+                        title: 'Restore Gagal',
+                        iconClass: 'fa fa-times-circle',
+                        statusIcon: 'fa fa-times-circle',
+                        statusColor: '#da3633',
+                        message: 'Restore gagal karena koneksi.',
+                        buttons: [
+                            { label: 'Tutup', className: 'm-btn m-btn-cancel' }
+                        ]
+                    });
+                }
+            })
+            .finally(function(){
+                btn.style.pointerEvents = 'auto';
+                btn.style.opacity = '1';
+            });
+        };
+
+        if (window.MikhmonPopup) {
+            window.MikhmonPopup.open({
+                title: 'Pemulihan Database',
+                iconClass: 'fa fa-history',
+                statusIcon: 'fa fa-exclamation-triangle',
+                statusColor: '#d29922',
+                message: 'Database saat ini akan digantikan dengan backup terbaru.',
+                alert: { type: 'warning', html: '<strong>Peringatan:</strong> Tindakan ini tidak dapat dibatalkan.' },
+                buttons: [
+                    { label: 'Batalkan', className: 'm-btn m-btn-cancel' },
+                    { label: 'Mulai Restore', className: 'm-btn m-btn-primary', close: false, onClick: doRestore }
+                ]
+            });
             return;
         }
-        var btn = document.getElementById('db-restore');
-        if (!btn) return;
-        btn.style.pointerEvents = 'none';
-        btn.style.opacity = '0.6';
-        notifyLocal('Proses restore...', 'info', true);
-        fetch('./tools/restore_db.php?ajax=1&nolimit=1&key=' + encodeURIComponent(window.__backupKey || ''), {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(function(resp){ return resp.json(); })
-        .then(function(data){
-            if (data && data.ok) {
-                notifyLocal('Restore sukses: ' + (data.file || '-') + ' <br> Sumber: ' + (data.source || '-'), 'success', false);
-                updateDbStatus();
-            } else {
-                notifyLocal('Restore gagal: ' + ((data && data.message) ? data.message : 'Unknown'), 'error', false);
-            }
-        })
-        .catch(function(){
-            notifyLocal('Restore gagal: koneksi.', 'error', false);
-        })
-        .finally(function(){
-            btn.style.pointerEvents = 'auto';
-            btn.style.opacity = '1';
-        });
-    }
-
-    function openRestoreModal(){
-        var modal = document.getElementById('restore-confirm-modal');
-        if (modal) modal.style.display = 'flex';
-    }
-    function closeRestoreModal(){
-        var modal = document.getElementById('restore-confirm-modal');
-        if (modal) modal.style.display = 'none';
-    }
-    function confirmRestoreModal(){
-        closeRestoreModal();
-        var btn = document.getElementById('db-restore');
-        if (!btn) return;
-        btn.style.pointerEvents = 'none';
-        btn.style.opacity = '0.6';
-        notifyLocal('Proses restore...', 'info', true);
-        fetch('./tools/restore_db.php?ajax=1&nolimit=1&key=' + encodeURIComponent(window.__backupKey || ''), {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(function(resp){ return resp.json(); })
-        .then(function(data){
-            if (data && data.ok) {
-                notifyLocal('Restore sukses: ' + (data.file || '-') + ' <br> Sumber: ' + (data.source || '-'), 'success', false);
-                updateDbStatus();
-            } else {
-                notifyLocal('Restore gagal: ' + ((data && data.message) ? data.message : 'Unknown'), 'error', false);
-            }
-        })
-        .catch(function(){
-            notifyLocal('Restore gagal: koneksi.', 'error', false);
-        })
-        .finally(function(){
-            btn.style.pointerEvents = 'auto';
-            btn.style.opacity = '1';
-        });
+        if (confirm('Restore akan menimpa database. Lanjutkan?')) doRestore();
     }
 </script>
 
@@ -934,27 +1022,6 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         <button id="ajax-overlay-close" type="button" class="overlay-btn" onclick="hideOverlayNotice()">
             Tutup
         </button>
-    </div>
-</div>
-
-<div id="restore-confirm-modal" class="modal-backdrop" onclick="if(event.target===this){closeRestoreModal();}" style="display:none;">
-    <div class="modal-card" style="max-width:420px;">
-        <div class="modal-header">
-            <div class="modal-title"><i class="fa fa-database" style="color:#ff9800; margin-right:8px;"></i> Konfirmasi Restore</div>
-            <button type="button" class="modal-close" onclick="closeRestoreModal()">&times;</button>
-        </div>
-        <div class="modal-body" style="padding:16px;">
-            <div class="modal-info-banner" style="display:flex; gap:10px; align-items:flex-start;">
-                <div class="modal-info-icon"><i class="fa fa-exclamation-triangle"></i></div>
-                <div class="modal-info-text">
-                    Restore akan menimpa database saat ini. Lanjutkan?
-                </div>
-            </div>
-        </div>
-        <div class="modal-footer" style="display:flex; gap:8px; justify-content:flex-end; padding:12px 16px;">
-            <button type="button" class="btn-print btn-default-dark" onclick="closeRestoreModal()">Batal</button>
-            <button type="button" class="btn-print" style="background:#ff9800;color:#fff;" onclick="confirmRestoreModal()">Restore</button>
-        </div>
     </div>
 </div>
 

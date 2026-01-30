@@ -281,6 +281,7 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
   - `messageHtml`: teks utama (HTML).
   - `alert`: `{ type: info|warning|danger, text|html, iconClass }`.
   - `buttons`: array tombol `{ label, className, onClick, close }`.
+  - Menu **Backup/Restore** kini menggunakan popup global ini (konfirmasi + status proses).
 
 #### Tooltip Global
 - File global:
