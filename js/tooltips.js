@@ -13,10 +13,20 @@
 
   function setPosition(x, y) {
     if (!tooltipEl) return;
-    var maxX = window.innerWidth - tooltipEl.offsetWidth - 8;
-    var maxY = window.innerHeight - tooltipEl.offsetHeight - 8;
-    var posX = Math.min(x + offsetX, maxX);
-    var posY = Math.min(y + offsetY, maxY);
+    var pad = 8;
+    var width = tooltipEl.offsetWidth;
+    var height = tooltipEl.offsetHeight;
+    var maxX = window.innerWidth - width - pad;
+    var maxY = window.innerHeight - height - pad;
+
+    var preferRight = (x + offsetX + width) <= maxX;
+    var posX = preferRight ? (x + offsetX) : (x - offsetX - width);
+    if (posX < pad) posX = pad;
+    if (posX > maxX) posX = maxX;
+
+    var posY = y + offsetY;
+    if (posY > maxY) posY = maxY;
+    if (posY < pad) posY = pad;
     tooltipEl.style.left = posX + 'px';
     tooltipEl.style.top = posY + 'px';
   }

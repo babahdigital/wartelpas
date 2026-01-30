@@ -285,27 +285,6 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         100% { transform: scale(1); opacity: 0.9; }
     }
 
-    .global-tooltip {
-        position: fixed;
-        background: rgba(15, 23, 28, 0.95);
-        color: #e6eef2;
-        padding: 6px 10px;
-        border-radius: 6px;
-        font-size: 11px;
-        line-height: 1.2;
-        white-space: nowrap;
-        pointer-events: none;
-        opacity: 0;
-        transform: translateY(6px);
-        transition: opacity 0.15s ease, transform 0.15s ease;
-        border: 1px solid rgba(255,255,255,0.08);
-        box-shadow: 0 6px 16px rgba(0,0,0,0.25);
-        z-index: 99999;
-    }
-    .global-tooltip.show {
-        opacity: 1;
-        transform: translateY(0);
-    }
     .logout-btn {
         height: 36px;
         width: 36px;
@@ -773,58 +752,6 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
             });
     }
 
-    function initGlobalTooltips() {
-        if (window.__tooltipInit) return;
-        window.__tooltipInit = true;
-
-        var tip = document.createElement('div');
-        tip.className = 'global-tooltip';
-        document.body.appendChild(tip);
-
-        function isChartArea(el) {
-            return el && (el.closest('.highcharts-container') || el.closest('.highcharts-tooltip') || el.closest('#chart_container'));
-        }
-
-        function positionTooltip(e) {
-            var pad = 8;
-            var x = e.clientX + 18;
-            var y = e.clientY - 18;
-            var rect = tip.getBoundingClientRect();
-            var maxX = window.innerWidth - rect.width - pad;
-            var maxY = window.innerHeight - rect.height - pad;
-            if (x > maxX) x = Math.max(pad, maxX);
-            if (y > maxY) y = Math.max(pad, maxY);
-            if (y < pad) y = pad;
-            tip.style.left = x + 'px';
-            tip.style.top = y + 'px';
-        }
-
-        document.addEventListener('mouseover', function(e) {
-            var el = e.target.closest('[title], [data-tooltip]');
-            if (!el || isChartArea(el)) return;
-            var title = el.getAttribute('data-tooltip') || el.getAttribute('title');
-            if (!title) return;
-            if (!el.getAttribute('data-tooltip')) {
-                el.setAttribute('data-tooltip', title);
-                el.removeAttribute('title');
-            }
-            tip.textContent = title;
-            tip.classList.add('show');
-            positionTooltip(e);
-        });
-
-        document.addEventListener('mousemove', function(e) {
-            if (!tip.classList.contains('show')) return;
-            positionTooltip(e);
-        });
-
-        document.addEventListener('mouseout', function(e) {
-            var el = e.target.closest('[data-tooltip]');
-            if (!el) return;
-            tip.classList.remove('show');
-        });
-    }
-
     document.addEventListener('DOMContentLoaded', function(){
         window.__backupKey = <?= json_encode($backupKey) ?>;
         if (window.jQuery) {
@@ -843,7 +770,6 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         setInterval(updateDbStatus, 30000);
         updateBackupStatus();
         setInterval(updateBackupStatus, 60000);
-        initGlobalTooltips();
     });
 
     function showOverlayNotice(msg, type, lockClose){
