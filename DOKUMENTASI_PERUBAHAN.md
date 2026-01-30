@@ -229,6 +229,13 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - Opsi **Hapus Total (Router + DB)** khusus superadmin: menghapus user MikroTik (termasuk active) dan membersihkan `login_history`, `login_events`, `sales_history`, `live_sales`.
 - Popup konfirmasi menggunakan style overlay seperti di menu.php.
 
+### 2.30 Tooltip Global (CSS/JS Terpisah) (2026-01-30)
+- Tooltip global dipindahkan ke file terpisah:
+  - CSS: **css/tooltips.css**
+  - JS: **js/tooltips.js**
+- Inisialisasi di **include/menu.php** agar konsisten di seluruh halaman.
+- Tooltip offset dari kursor agar tidak menumpuk dan tetap mudah dibaca.
+
 ### 2.24 Penyempurnaan Users Modular (2026-01-26)
 - Tombol **clear search (X)** stabil saat kehilangan fokus (klik di luar/ke taskbar).
 - `Retur dari` kini menampilkan username bersih (tanpa prefix **vc-**), parsing `Retur Ref` lebih fleksibel.

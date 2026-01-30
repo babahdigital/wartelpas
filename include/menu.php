@@ -156,6 +156,9 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
 <span style="display:none;" id="idto">disable</span>
 <span style="display:none;" id="timer"></span>
 
+<link rel="stylesheet" href="css/tooltips.css">
+<script src="js/tooltips.js" defer></script>
+
 <style>
     :root {
         --nav-bg: #1a2226;
