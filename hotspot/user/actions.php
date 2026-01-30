@@ -1486,6 +1486,19 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
               }
               if ($did_unvip) {
                 decrement_vip_daily_usage($db, $vip_date_key);
+                $vip_left = 0;
+                $vip_list = $api_print('/ip/hotspot/user/print', [
+                  '?server' => $hotspot_server,
+                  '.proplist' => 'comment'
+                ]);
+                if (is_array($vip_list)) {
+                  foreach ($vip_list as $vu) {
+                    if (is_vip_comment($vu['comment'] ?? '')) {
+                      $vip_left++;
+                    }
+                  }
+                }
+                set_vip_daily_usage($db, $vip_date_key, $vip_left);
               }
             }
           }
