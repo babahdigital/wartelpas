@@ -184,6 +184,19 @@ if ($req_status === 'vip') {
   }
 }
 $router_users = $all_users;
+$vip_count_router = 0;
+if ($vip_daily_limit > 0 && !empty($router_users)) {
+  foreach ($router_users as $ru) {
+    if (is_vip_comment($ru['comment'] ?? '')) {
+      $vip_count_router++;
+    }
+  }
+  $vip_daily_used = $vip_count_router;
+  $vip_limit_reached = ($vip_daily_used >= $vip_daily_limit);
+  if ($db && function_exists('set_vip_daily_usage')) {
+    set_vip_daily_usage($db, $vip_date_key, $vip_daily_used);
+  }
+}
 $active = $API->comm("/ip/hotspot/active/print", array(
   "?server" => $hotspot_server,
   ".proplist" => "user,uptime,address,mac-address,bytes-in,bytes-out"
