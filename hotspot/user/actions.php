@@ -1,6 +1,9 @@
 <?php
 // Action handler sederhana (invalid/retur/delete)
 if (isset($_GET['action']) || isset($_POST['action'])) {
+  if (ob_get_level() === 0) {
+    ob_start();
+  }
   // Non-aktifkan timeout agar proses massal tidak terputus
   set_time_limit(0);
   ignore_user_abort(true);
@@ -62,6 +65,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
   if ($act === 'login_events') {
     header('Content-Type: application/json');
     if (!$db) {
+      if (ob_get_length()) { @ob_clean(); }
       echo json_encode(['ok' => false, 'message' => 'DB tidak tersedia.']);
       exit();
     }
@@ -70,6 +74,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     $date = trim($_GET['date'] ?? '');
     $recent = (int)($_GET['recent'] ?? 0);
     if ($name === '') {
+      if (ob_get_length()) { @ob_clean(); }
       echo json_encode(['ok' => false, 'message' => 'User tidak ditemukan.']);
       exit();
     }
@@ -111,9 +116,11 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           'logout_label' => formatDateIndo($row['logout_time'] ?? '')
         ];
       }
+      if (ob_get_length()) { @ob_clean(); }
       echo json_encode(['ok' => true, 'total' => $total, 'limit' => $limit, 'events' => $events]);
       exit();
     } catch (Exception $e) {
+      if (ob_get_length()) { @ob_clean(); }
       echo json_encode(['ok' => false, 'message' => 'Gagal mengambil data relogin.']);
       exit();
     }
@@ -1405,7 +1412,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           (!empty($hist_vip['last_uptime']) && $hist_vip['last_uptime'] != '0s') ||
           (int)($hist_vip['last_bytes'] ?? 0) > 0
         );
-        $is_ready_now = (!$is_active && $disabled !== 'true' && $bytes <= 50 && ($uptime === '' || $uptime === '0s') && !$hist_used);
+        $is_ready_now = (!$is_active && $disabled !== 'true' && $bytes <= 50 && ($uptime === '' || $uptime === '0s'));
         $has_vip = is_vip_comment($comment_raw) || ($hist_vip && is_vip_comment($hist_vip['raw_comment'] ?? ''));
 
         if ($act === 'vip' && !$is_ready_now) {
@@ -1862,6 +1869,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
   }
   $redir = './?' . http_build_query($redir_params);
   if ($is_action_ajax) {
+    if (ob_get_length()) { @ob_clean(); }
     header('Content-Type: application/json');
     echo json_encode([
       'ok' => !$action_blocked,
