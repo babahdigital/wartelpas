@@ -24,11 +24,11 @@ $env = [
         ],
         'usage_ingest' => [
             'token' => 'kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE=',
-            'allowlist' => ['172.16.12.1', '172.16.0.1']
+            'allowlist' => ['172.16.12.1', '172.16.0.1', '172.19.0.1']
         ],
         'live_ingest' => [
             'token' => 'kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE=',
-            'allowlist' => ['172.16.12.1', '172.16.0.1']
+            'allowlist' => ['172.16.12.1', '172.16.0.1', '172.19.0.1']
         ],
         'sync_sales' => [
             'token' => 'kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE=',
