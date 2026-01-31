@@ -352,6 +352,12 @@ function find_report_pdf_for_date($dir, $date) {
     return $list[0] ?? '';
 }
 
+function format_report_date_dmy($date) {
+    $ts = strtotime($date);
+    if ($ts) return date('d-m-Y', $ts);
+    return (string)$date;
+}
+
 $safe_session = preg_replace('/[^A-Za-z0-9_-]/', '', $session);
 $safe_date = preg_replace('/[^0-9-]/', '', $date);
 $logFile = $logDir . '/settlement_' . $safe_session . '_' . $safe_date . '.log';
@@ -624,7 +630,8 @@ if ($action === 'logs') {
             if ($sentAt === '' && $sentStatus === '') {
                 $pdfDir = $root_dir . '/report/pdf';
                 $pdfFile = find_report_pdf_for_date($pdfDir, $date);
-                $msg = 'Laporan Settlement Harian ' . $date;
+                $msgDate = format_report_date_dmy($date);
+                $msg = 'Laporan Settlement Harian ' . $msgDate;
                 if ($pdfFile !== '') {
                     $res = wa_send_file($msg, $pdfFile, '', 'report');
                     $statusText = $res['ok'] ? 'success' : ('failed: ' . ($res['message'] ?? 'error'));
@@ -683,7 +690,8 @@ if ($action === 'wa_report') {
 
     $pdfDir = $root_dir . '/report/pdf';
     $pdfFile = find_report_pdf_for_date($pdfDir, $date);
-    $msg = 'Laporan Settlement Harian ' . $date;
+    $msgDate = format_report_date_dmy($date);
+    $msg = 'Laporan Settlement Harian ' . $msgDate;
     $statusText = '';
     $ok = false;
     if ($pdfFile !== '') {
