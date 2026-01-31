@@ -259,19 +259,22 @@ if (is_dir($pdf_dir)) {
                                 </select>
                             </div>
                             <div class="wa-form-group">
-                                <label class="wa-checkbox">
+                                <label class="wa-switch">
                                     <input type="checkbox" name="wa_active" value="1" <?= ($edit_row && (int)$edit_row['active'] === 0) ? '' : 'checked'; ?>>
-                                    Kirim laporan
+                                    <span class="wa-switch-slider"></span>
+                                    <span class="wa-switch-text">Kirim laporan</span>
                                 </label>
                             </div>
                             <div class="wa-form-group">
-                                <label class="wa-checkbox">
+                                <label class="wa-switch">
                                     <input type="checkbox" name="wa_receive_retur" value="1" <?= ($edit_row && (int)($edit_row['receive_retur'] ?? 1) === 0) ? '' : 'checked'; ?>>
-                                    Notif Retur/Refund
+                                    <span class="wa-switch-slider"></span>
+                                    <span class="wa-switch-text">Notif Retur/Refund</span>
                                 </label>
-                                <label class="wa-checkbox" style="margin-top:6px;">
+                                <label class="wa-switch" style="margin-top:6px;">
                                     <input type="checkbox" name="wa_receive_report" value="1" <?= ($edit_row && (int)($edit_row['receive_report'] ?? 1) === 0) ? '' : 'checked'; ?>>
-                                    Notif Laporan
+                                    <span class="wa-switch-slider"></span>
+                                    <span class="wa-switch-text">Notif Laporan</span>
                                 </label>
                             </div>
                             <div class="wa-btn-group">
