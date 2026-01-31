@@ -78,7 +78,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (sessionParam) params.append('session', sessionParam);
 
         fetch('./?' + params.toString(), { credentials: 'same-origin' })
-            .then(function(resp){ return resp.json(); })
+            .then(function(resp){
+                if (!resp.ok) {
+                    return resp.text().then(function(txt){
+                        throw new Error('HTTP ' + resp.status + ' ' + (txt || ''));
+                    });
+                }
+                return resp.json();
+            })
             .then(function(data){
                 if (data && data.ok) {
                     setValidationState(true, data.message || 'Valid.');
@@ -86,8 +93,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     setValidationState(false, (data && data.message) ? data.message : 'Nomor tidak valid.');
                 }
             })
-            .catch(function(){
-                setValidationState(false, 'Gagal validasi. Coba lagi.');
+            .catch(function(err){
+                var msg = (err && err.message) ? err.message : 'Gagal validasi. Coba lagi.';
+                setValidationState(false, msg);
             });
     }
 

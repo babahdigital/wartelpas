@@ -1,0 +1,647 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Wartelpas </title>
+		<meta charset="utf-8">
+		<meta http-equiv="cache-control" content="private" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<!-- Tell the browser to be responsive to screen width -->
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<!-- Theme color -->
+		<meta name="theme-color" content="#3a4149" />
+		<!-- Font Awesome -->
+		<link rel="stylesheet" type="text/css" href="css/font-awesome/css/font-awesome.min.css" />
+		<!-- Mikhmon UI -->
+		<link rel="stylesheet" href="css/mikhmon-ui.dark.min.css">
+		<!-- favicon -->
+		<link rel="icon" href="./img/favicon.png" />
+		<!-- jQuery -->
+		<script src="js/jquery.min.js"></script>
+		<!-- pace -->
+		<link href="css/pace.dark.css" rel="stylesheet" />
+		<link href="css/login.css" rel="stylesheet" />
+		<link rel="stylesheet" href="css/popup.css">
+		<link rel="stylesheet" href="css/tooltips.css">
+				<script src="js/pace.min.js"></script>
+		<script src="js/popup.js" defer></script>
+		<script src="js/tooltips.js" defer></script>
+
+	</head>
+	<body>
+		<div class="wrapper">
+
+			
+
+<span style="display:none;" id="idto">disable</span>
+<span style="display:none;" id="timer"></span>
+
+<link rel="stylesheet" href="css/tooltips.css">
+<script src="js/tooltips.js" defer></script>
+
+<style>
+    :root {
+        --nav-bg: #1a2226;
+        --nav-hover: #222d32;
+        --nav-text: #9db2ba;
+        --nav-active: #ffffff;
+        --accent: #3c8dbc;
+        --accent-audit: #d81b60;
+        --header-shadow: 0 2px 10px rgba(0,0,0,0.4);
+    }
+
+    body { margin-top: 60px; }
+
+    .top-navbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background-color: var(--nav-bg);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 20px;
+        box-shadow: var(--header-shadow);
+        z-index: 1030;
+        font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .wartelpas-brand {
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+        margin-right: 30px;
+        height: 100%;
+    }
+
+    .brand-logo {
+        height: 50px;
+        width: auto;
+        object-fit: contain;
+    }
+
+    .nav-item { position: relative; }
+
+    .mobile-toggle { display: none; font-size: 24px; color: #fff; cursor: pointer; padding: 10px; }
+
+    .dropdown-item {
+        display: block;
+        padding: 12px 20px;
+        color: var(--nav-text);
+        text-decoration: none;
+        border-bottom: 1px solid #344248;
+        font-size: 13px;
+    }
+
+    .dropdown-item:last-child { border-bottom: none; }
+
+    .dropdown-item:hover {
+        background-color: #222d32;
+        color: #fff;
+        padding-left: 25px;
+        transition: 0.2s;
+    }
+
+    .dropdown-item.audit-item { color: #ffb6c1; }
+    .dropdown-item.audit-item:hover { color: #fff; }
+
+    .dropdown-item i { margin-right: 10px; width: 15px; text-align: center; }
+
+    .nav-right { display: flex; align-items: center; gap: 12px; padding-left: 20px; }
+    .retur-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 10px;
+        border-radius: 12px;
+        background: rgba(245, 158, 11, 0.2);
+        color: #f59e0b;
+        font-size: 11px;
+        font-weight: 700;
+        border: 1px solid rgba(245, 158, 11, 0.4);
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    .retur-pill i { font-size: 11px; }
+    .retur-pill-count {
+        min-width: 22px;
+        height: 22px;
+        padding: 0 6px;
+        border-radius: 10px;
+        background: #f59e0b;
+        color: #111827;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        line-height: 1;
+    }
+    .retur-pill.is-zero {
+        background: rgba(148, 163, 184, 0.18);
+        color: #94a3b8;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+    }
+    .retur-pill.is-zero .retur-pill-count {
+        background: #94a3b8;
+        color: #111827;
+    }
+    .timer-badge {
+        background: rgba(255,255,255,0.05);
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        color: var(--nav-text);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid rgba(255,255,255,0.1);
+        white-space: nowrap;
+    }
+    .db-tools {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        color: var(--nav-text);
+        font-size: 12px;
+        text-decoration: none;
+        transition: 0.2s;
+        white-space: nowrap;
+    }
+    .db-tools:hover {
+        background: rgba(255,255,255,0.08);
+        color: #fff;
+        transform: translateY(-1px);
+    }
+    .db-tools i { opacity: 0.8; }
+    .db-status {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: #8aa2ad;
+        font-size: 12px;
+        transition: 0.2s;
+    }
+    .db-status.db-ok { color: #2ecc71; border-color: rgba(46,204,113,0.6); background: rgba(46,204,113,0.15); }
+    .db-status.db-error { color: #e74c3c; border-color: rgba(231,76,60,0.6); background: rgba(231,76,60,0.15); }
+    .db-status.db-ok i { animation: dbPulse 1.2s ease-in-out infinite; }
+    @keyframes dbPulse {
+        0% { transform: scale(1); opacity: 0.9; }
+        50% { transform: scale(1.15); opacity: 1; }
+        100% { transform: scale(1); opacity: 0.9; }
+    }
+
+    .logout-btn {
+        height: 36px;
+        width: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        color: var(--nav-text);
+        transition: 0.3s;
+        background: transparent;
+    }
+    .logout-btn:hover {
+        background: rgba(216, 27, 96, 0.15);
+        color: #ff4d4d;
+        transform: scale(1.05);
+    }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    #main { margin-left: 0; padding: 20px; }
+    .main-container-fluid { width: 100%; }
+
+    /* Override legacy sidebar layout */
+    #main { margin-left: 0 !important; margin-top: 60px !important; }
+    .sidenav { width: 0 !important; border-right: 0 !important; }
+    #openNav, #closeNav, #cpage { display: none !important; }
+
+    @media (max-width: 750px) {
+        #brand { display: flex !important; }
+    }
+
+    @media (min-width: 993px) {
+        .nav-links {
+            display: flex; gap: 0; flex-grow: 1; align-items: center;
+            list-style: none; margin: 0; padding: 0; height: 100%;
+        }
+        .nav-item { position: relative; height: 100%; }
+        .nav-link {
+            display: flex; align-items: center; gap: 8px;
+            color: var(--nav-text); text-decoration: none;
+            padding: 0 15px; height: 100%;
+            font-size: 13.5px; font-weight: 600;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+        }
+        .nav-link:hover { background-color: var(--nav-hover); color: var(--nav-active); }
+        .nav-link.active { color: var(--nav-active); background-color: var(--nav-hover); border-bottom-color: var(--accent); }
+        .nav-link.audit-link { color: #ffb6c1 !important; }
+        .nav-link.audit-link.active { border-bottom-color: var(--accent-audit); }
+
+        .dropdown-menu {
+            display: none; position: absolute; top: 60px; left: 0;
+            background-color: #2c3b41; min-width: 200px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            border-radius: 0 0 4px 4px; z-index: 1040;
+        }
+        .nav-item:hover .dropdown-menu { display: block; animation: fadeIn 0.2s; }
+    }
+
+    @media (max-width: 992px) {
+        .mobile-toggle { display: block; }
+        .wartelpas-brand { margin-right: auto; }
+        .nav-links {
+            display: none;
+            flex-direction: column;
+            position: absolute; top: 60px; left: 0; right: 0;
+            background-color: var(--nav-bg);
+            height: auto; padding-bottom: 10px;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.5);
+            list-style: none; margin: 0; padding: 0;
+        }
+        .nav-links.show { display: flex !important; }
+        .nav-link {
+            display: flex; align-items: center; gap: 8px;
+            color: var(--nav-text); text-decoration: none;
+            padding: 0 20px; height: 45px;
+            font-size: 14px; font-weight: 600;
+            border-left: 3px solid transparent;
+            width: 100%; box-sizing: border-box;
+        }
+        .nav-link.active { border-left-color: var(--accent); background: #1e282c; color: #fff; }
+        .nav-link.audit-link.active { border-left-color: var(--accent-audit); }
+
+        .dropdown-menu { display: none; position: static; background: #1a2226; box-shadow: none; width: 100%; }
+        .nav-item.active-mobile .dropdown-menu { display: block; }
+    }
+
+</style>
+
+    <nav class="top-navbar">
+        <div class="mobile-toggle" onclick="toggleMenu()"><i class="fa fa-bars"></i></div>
+
+        <a id="brand" class="wartelpas-brand" href="./?session=S3c7x9_LB">
+            <img src="img/logo.png" alt="MIKHMON" class="brand-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <span style="display:none; color:#fff; font-weight:bold; font-size:18px;">WARTELPAS</span>
+        </a>
+
+        <ul class="nav-links" id="mainNav">
+            <li class="nav-item">
+                <a class="nav-link " href="./?session=S3c7x9_LB">
+                    <i class="fa fa-dashboard"></i> Dashboard                </a>
+            </li>
+
+            <li class="nav-item" onclick="toggleMobileSub(this)">
+                <a class="nav-link " href="javascript:void(0)">
+                    <i class="fa fa-users"></i> Pengguna <i class="fa fa-caret-down" style="margin-left:auto;font-size:10px;"></i>
+                </a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="./?hotspot=users&profile=all&session=S3c7x9_LB"><i class="fa fa-list"></i> Daftar User</a>
+                    <a class="dropdown-item" href="./?hotspot-user=generate&session=S3c7x9_LB"><i class="fa fa-user-plus"></i> Generate</a>
+                </div>
+            </li>
+
+
+            <li class="nav-item" onclick="toggleMobileSub(this)">
+                <a class="nav-link " href="javascript:void(0)">
+                    <i class="fa fa-gear"></i> Perangkat <i class="fa fa-caret-down" style="margin-left:auto;font-size:10px;"></i>
+                </a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="./?hotspot=active&session=S3c7x9_LB"><i class="fa fa-gear"></i> User Aktif</a>
+                    <a class="dropdown-item" href="./?hotspot=hosts&session=S3c7x9_LB"><i class="fa fa-laptop"></i> Host Terhubung</a>
+                    <a class="dropdown-item" href="./?hotspot=cookies&session=S3c7x9_LB"><i class="fa fa-hourglass"></i> Cookies</a>
+                    <a class="dropdown-item" href="./?hotspot=dhcp-leases&session=S3c7x9_LB"><i class="fa fa-sitemap"></i> DHCP Leases</a>
+                </div>
+            </li>
+
+            <li class="nav-item" onclick="toggleMobileSub(this)">
+                <a class="nav-link " href="javascript:void(0)">
+                    <i class="fa fa-money"></i> Laporan Penjualan <i class="fa fa-caret-down" style="margin-left:auto;font-size:10px;"></i>
+                </a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="./?report=selling&idbl=jan2026&session=S3c7x9_LB"><i class="fa fa-line-chart"></i> Laporan Penjualan</a>
+                    <a class="dropdown-item audit-item" href="./?report=audit_session&session=S3c7x9_LB"><i class="fa fa-check-square-o"></i> Audit Keuangan</a>
+                </div>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link active" href="./?report=whatsapp&session=S3c7x9_LB">
+                    <i class="fa fa-whatsapp"></i> WhatsApp
+                </a>
+            </li>
+                        <li class="nav-item">
+                <a class="nav-link" href="./admin.php?id=sessions">
+                    <i class="fa fa-gear"></i> Pengaturan Admin                </a>
+            </li>
+                    </ul>
+
+        <div class="nav-right">
+                                        <a id="db-backup" class="db-tools" href="javascript:void(0)" title="Backup Database" onclick="runBackupAjax()">
+                    <i class="fa fa-database"></i> Backup
+                </a>
+                                        <a id="db-restore" class="db-tools" href="javascript:void(0)" title="Restore Backup Terbaru" onclick="runRestoreAjax()">
+                    <i class="fa fa-history"></i> Restore
+                </a>
+                                        <a class="retur-pill " id="retur-menu-pill" href="javascript:void(0)" onclick="return openReturMenuPopup(event);" title="Permintaan Retur Pending">
+                    <i class="fa fa-undo"></i> Retur
+                    <span class="retur-pill-count" id="retur-menu-count">2</span>
+                </a>
+                        <span class="timer-badge" title="Waktu Saat Ini">
+                <i class="fa fa-clock-o"></i> <span id="timer_val">--:--</span>
+            </span>
+            <span id="db-status" class="db-status" title="Kesehatan Database">
+                <i class="fa fa-heart"></i>
+            </span>
+            <a id="logout" class="logout-btn" href="./?hotspot=logout&session=S3c7x9_LB" title="Keluar">
+                <i class="fa fa-sign-out fa-lg"></i>
+            </a>
+        </div>
+    </nav>
+
+    
+
+<div id="sidenav" style="display:none"></div>
+<a id="openNav" href="javascript:void(0)" style="display:none"></a>
+<a id="closeNav" href="javascript:void(0)" style="display:none"></a>
+<div id="overL" style="display:none"></div>
+
+<style>
+    .btn-print.btn-default-dark { background:#343a40; color:#fff; border:1px solid #4b5259; }
+    .btn-print.btn-default-dark:hover { background:#3d434a; color:#fff; }
+</style>
+
+<script>
+    function toggleMenu() {
+        var x = document.getElementById("mainNav");
+        if (x.className === "nav-links") {
+            x.className += " show";
+        } else {
+            x.className = "nav-links";
+        }
+    }
+
+    function toggleMobileSub(el) {
+        if (window.innerWidth <= 992) {
+            el.classList.toggle("active-mobile");
+        }
+    }
+
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 992) {
+            var x = document.getElementById("mainNav");
+            if (x) x.classList.remove("show");
+            var items = document.querySelectorAll('.nav-item.active-mobile');
+            items.forEach(function(item) {
+                item.classList.remove('active-mobile');
+            });
+        }
+    });
+
+    function updateRealTimeBadge() {
+        var el = document.getElementById('timer_val');
+        var fallback = document.getElementById('timer');
+        if (!el && !fallback) return;
+        var now = new Date();
+        var dateStr = now.toLocaleDateString('id-ID', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+        var timeStr = now.toLocaleTimeString('id-ID', { hour12: false });
+        var full = dateStr + ' ' + timeStr;
+        if (el) el.textContent = full;
+        if (fallback) fallback.textContent = full;
+    }
+
+    window.__isSuperAdminFlag = true;
+    window.__returMenuData = {"count":2,"items":[{"id":5,"created_at":"2026-01-31 10:44:35","request_date":"2026-01-31","voucher_code":"69a5dt","blok_name":"BLOK-A","request_type":"pengembalian","customer_name":"Abdullah","reason":"Tes lagi donk sanak","status":"pending","reviewed_by":null,"reviewed_at":null,"review_note":null,"profile_name":"10 Menit","blok_guess":"BLOK-A"},{"id":4,"created_at":"2026-01-31 10:32:33","request_date":"2026-01-31","voucher_code":"4zer23","blok_name":"","request_type":"pengembalian","customer_name":"Saogi","reason":"Coba wa sanak","status":"pending","reviewed_by":null,"reviewed_at":null,"review_note":null,"profile_name":"10 Menit","blok_guess":"BLOK-A"},{"id":3,"created_at":"2026-01-31 09:24:20","request_date":"2026-01-31","voucher_code":"5tmp6n","blok_name":"","request_type":"pengembalian","customer_name":"Abdullah","reason":"Rusak kesian voucher maafkan ai","status":"approved","reviewed_by":"abdullah","reviewed_at":"2026-01-31 09:47:39","review_note":"Ditandai RUSAK.","profile_name":"10 Menit","blok_guess":"BLOK-A"},{"id":2,"created_at":"2026-01-31 08:11:35","request_date":"2026-01-31","voucher_code":"4erhpn","blok_name":"","request_type":"retur","customer_name":null,"reason":"Tes saja","status":"approved","reviewed_by":"abdullah","reviewed_at":"2026-01-31 08:11:52","review_note":"Disetujui operator.","profile_name":null,"blok_guess":null},{"id":1,"created_at":"2026-01-31 03:59:13","request_date":"2026-01-31","voucher_code":"47uzst","blok_name":"","request_type":"retur","customer_name":null,"reason":"Coba aja sulu","status":"approved","reviewed_by":"abdullah","reviewed_at":"2026-01-31 07:57:21","review_note":"Disetujui operator.","profile_name":null,"blok_guess":null}]};
+    window.__returBlokNames = {"A":"ANUGRAH","B":"BERKAH","C":"CENDIKIA","D":"DINAYA","E":"EDUKATORIS","F":"FIDARSA"};
+    window.__returSession = "S3c7x9_LB";
+    window.__backupKey = "kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE=";
+
+    document.addEventListener('DOMContentLoaded', function(){
+        if (window.jQuery) {
+            $(".connect").click(function(){
+                notify("Menghubungkan...");
+                connect(this.id)
+            });
+            $(".slang").change(function(){
+                notify("Memuat...");
+                stheme(this.value)
+            });
+        }
+        updateRealTimeBadge();
+        setInterval(updateRealTimeBadge, 1000);
+        if (typeof window.updateDbStatus === 'function') {
+            window.updateDbStatus();
+            setInterval(window.updateDbStatus, 30000);
+        }
+        if (typeof window.updateBackupStatus === 'function') {
+            window.updateBackupStatus();
+            setInterval(window.updateBackupStatus, 60000);
+        }
+    });
+</script>
+
+<div id="notify"><div class="message"></div></div>
+<div id="temp"></div>
+
+<div id="ajax-overlay" class="overlay-backdrop">
+    <div class="overlay-modal" id="ajax-modal-container">
+        <div class="overlay-icon-box">
+            <i id="ajax-overlay-icon" class="fa fa-circle-o-notch fa-spin"></i>
+        </div>
+        <div class="overlay-title" id="ajax-overlay-title">Processing</div>
+        <div class="overlay-message" id="ajax-overlay-text">Mohon tunggu sebentar...</div>
+        <button id="ajax-overlay-close" type="button" class="overlay-btn" onclick="hideOverlayNotice()">
+            Tutup
+        </button>
+    </div>
+</div>
+
+
+<div id="main">
+<div id="loading" class="lds-dual-ring" ></div><div class="main-container main-container-fluid" style="display:none">
+<link rel="stylesheet" href="./system/whatsapp/whatsapp.css">
+
+<div class="row">
+    <div class="col-12">
+        <div class="box box-solid">
+            <div class="box-header with-border">
+                <h3 class="box-title"><i class="fa fa-whatsapp"></i> WhatsApp Laporan</h3>
+            </div>
+            <div class="box-body">
+                                                
+                <div class="wa-grid">
+                    <div class="wa-card">
+                        <div class="wa-card-header">
+                            <i class="fa fa-address-book"></i>
+                            <h4>Tambah / Edit Penerima</h4>
+                        </div>
+                        <form method="post" action="./?report=whatsapp&session=S3c7x9_LB">
+                            <input type="hidden" name="wa_action" value="save">
+                            <input type="hidden" name="wa_id" value="">
+                            <div class="wa-form-group">
+                                <label class="wa-form-label">Label</label>
+                                <input class="wa-form-input" type="text" name="wa_label" value="" placeholder="Contoh: Owner / Admin">
+                            </div>
+                            <div class="wa-form-group">
+                                <label class="wa-form-label">Target</label>
+                                <input class="wa-form-input" type="text" name="wa_target" value="" placeholder="62xxxxxxxxxx atau 123456@g.us">
+                                <div class="wa-help wa-validate-msg" id="waValidateMsg"></div>
+                            </div>
+                            <div class="wa-form-group">
+                                <label class="wa-form-label">Tipe</label>
+                                <select class="wa-form-select" name="wa_type">
+                                                                        <option value="number" selected>Nomor</option>
+                                    <option value="group" >Group</option>
+                                </select>
+                            </div>
+                            <div class="wa-form-group">
+                                <label class="wa-checkbox">
+                                    <input type="checkbox" name="wa_active" value="1" checked>
+                                    Kirim laporan
+                                </label>
+                            </div>
+                            <div class="wa-form-group">
+                                <label class="wa-checkbox">
+                                    <input type="checkbox" name="wa_receive_retur" value="1" checked>
+                                    Notif Retur/Refund
+                                </label>
+                                <label class="wa-checkbox" style="margin-top:6px;">
+                                    <input type="checkbox" name="wa_receive_report" value="1" checked>
+                                    Notif Laporan
+                                </label>
+                            </div>
+                            <div class="wa-btn-group">
+                                <button type="submit" class="wa-btn wa-btn-primary" id="waSaveBtn"><i class="fa fa-save"></i> Simpan</button>
+                                                            </div>
+                            <div class="wa-help"><i class="fa fa-info-circle"></i> Format nomor wajib 62xxx. Group ID harus diakhiri <strong>@g.us</strong>.</div>
+                        </form>
+                    </div>
+
+                    <div class="wa-card">
+                        <div class="wa-card-header">
+                            <i class="fa fa-file-pdf-o"></i>
+                            <h4>File PDF Laporan</h4>
+                        </div>
+                                                    <div class="wa-empty">Belum ada file PDF di folder report/pdf.</div>
+                                                <div class="wa-help"><i class="fa fa-paperclip"></i> File PDF akan dipakai sebagai attachment saat pengiriman WhatsApp.</div>
+                    </div>
+                </div>
+
+                <div class="wa-card" style="margin-top:20px;">
+                    <div class="wa-card-header">
+                        <i class="fa fa-users"></i>
+                        <h4>Daftar Penerima</h4>
+                        <span class="wa-badge" style="background: var(--wa-primary); margin-left: auto; color:#fff;">
+                            0                        </span>
+                    </div>
+                                            <div class="wa-empty">
+                            <i class="fa fa-user-plus" style="font-size: 24px; margin-bottom: 10px;"></i><br>
+                            Belum ada penerima terdaftar. Tambahkan penerima baru di form di atas.
+                        </div>
+                                    </div>
+
+                <div class="wa-card" style="margin-top:20px;">
+                    <div class="wa-card-header">
+                        <i class="fa fa-history"></i>
+                        <h4>Log Pengiriman (Terbaru)</h4>
+                        <span class="wa-badge" style="background: var(--wa-warning); margin-left: auto; color:#fff;">
+                            2                        </span>
+                    </div>
+                                            <div class="wa-table-container">
+                            <table class="wa-table">
+                                <thead>
+                                    <tr>
+                                        <th><i class="fa fa-clock-o"></i> Waktu</th>
+                                        <th><i class="fa fa-bullseye"></i> Target</th>
+                                        <th><i class="fa fa-info-circle"></i> Status</th>
+                                        <th><i class="fa fa-file-pdf-o"></i> PDF</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                                                            <tr>
+                                            <td><small>2026-01-31 18:44:35</small></td>
+                                            <td><code>62811580039</code></td>
+                                            <td>
+                                                                                                <span class="wa-badge on">success</span>
+                                            </td>
+                                            <td>
+                                                                                                    -
+                                                                                            </td>
+                                        </tr>
+                                                                            <tr>
+                                            <td><small>2026-01-31 18:32:33</small></td>
+                                            <td><code>62811580039</code></td>
+                                            <td>
+                                                                                                <span class="wa-badge on">success</span>
+                                            </td>
+                                            <td>
+                                                                                                    -
+                                                                                            </td>
+                                        </tr>
+                                                                    </tbody>
+                            </table>
+                        </div>
+                                    </div>
+
+                <div class="wa-session-info">
+                    <i class="fa fa-user-circle"></i>
+                    Session aktif: <strong>S3c7x9_LB</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="wa-modal" id="waDeleteModal">
+    <div class="wa-modal-card">
+        <div class="wa-modal-header">
+            <h5><i class="fa fa-trash" style="color: var(--wa-danger);"></i> Hapus Penerima</h5>
+        </div>
+        <div class="wa-modal-body">
+            <p id="waDeleteText">Yakin ingin menghapus penerima ini?</p>
+            <small>Data yang dihapus tidak dapat dikembalikan.</small>
+        </div>
+        <form method="post" action="./?report=whatsapp&session=S3c7x9_LB">
+            <input type="hidden" name="wa_action" value="delete">
+            <input type="hidden" name="wa_id" id="waDeleteId" value="">
+            <div class="wa-modal-footer">
+                <button type="button" class="wa-btn wa-btn-default" onclick="closeDeleteModal()">
+                    <i class="fa fa-times"></i> Batal
+                </button>
+                <button type="submit" class="wa-btn wa-btn-danger">
+                    <i class="fa fa-trash"></i> Hapus
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="./system/whatsapp/whatsapp.js"></script></div>
+</div>
+</div>
+<script src="./js/highcharts/highcharts.js"></script>
+<script src="./js/highcharts/themes/hc.dark.js"></script>
+<script src="./js/mikhmon-ui.dark.min.js"></script>
+<script src="./js/mikhmon.js?t=2026-01-31_19:24:48"></script>
+
+</body>
+</html>

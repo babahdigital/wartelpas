@@ -140,12 +140,25 @@ function wa_validate_number($target, $countryCode, $token, &$error) {
         return false;
     }
     $json = json_decode($resp, true);
-    if (!is_array($json) || empty($json['status'])) {
+    if (!is_array($json) || !array_key_exists('status', $json)) {
         $error = 'Respon validasi tidak dikenali.';
         return false;
     }
+    if (empty($json['status'])) {
+        $error = isset($json['detail']) ? (string)$json['detail'] : 'Validasi gagal.';
+        return false;
+    }
     $registered = $json['registered'] ?? [];
-    return is_array($registered) && in_array((string)$target, $registered, true);
+    if (is_array($registered) && in_array((string)$target, $registered, true)) {
+        return true;
+    }
+    $not_registered = $json['not_registered'] ?? [];
+    if (is_array($not_registered) && in_array((string)$target, $not_registered, true)) {
+        $error = 'Nomor tidak terdaftar di WhatsApp.';
+        return false;
+    }
+    $error = 'Nomor tidak terdaftar di WhatsApp.';
+    return false;
 }
 
 if (isset($_GET['wa_action']) && $_GET['wa_action'] === 'validate' && isset($_GET['ajax'])) {
