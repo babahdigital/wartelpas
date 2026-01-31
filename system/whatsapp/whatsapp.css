@@ -113,6 +113,7 @@
     align-items: center;
     gap: 16px;
     flex-wrap: wrap;
+    margin: 25px 5px;
 }
 
 .wa-switch input {
@@ -162,6 +163,7 @@
     display: flex;
     gap: 10px;
     margin-top: 20px;
+    margin-bottom: 10px;
     flex-wrap: wrap;
 }
 
