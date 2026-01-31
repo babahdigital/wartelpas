@@ -290,6 +290,7 @@ if (is_dir($pdf_dir)) {
                                         <span class="wa-switch-slider"></span>
                                         <span class="wa-switch-text">Notif Laporan</span>
                                     </label>
+                                
                                 </div>
                             </div>
                             <div class="wa-btn-group">
