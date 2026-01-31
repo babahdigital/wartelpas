@@ -919,7 +919,7 @@ $has_refund = $total_audit_refund > 0;
         @media print { 
             .toolbar { display:none; } 
             .audit-summary-box { page-break-inside: avoid; }
-            .dul-gap { margin-top: 20% !important; }
+            .dul-gap { margin-top: 25% !important; }
             body { zoom: 0.9; }
         }
     </style>
