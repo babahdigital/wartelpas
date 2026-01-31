@@ -260,7 +260,7 @@ if (is_dir($pdf_dir)) {
                             </div>
                             <div class="wa-form-group">
                                 <label class="wa-form-label">Target</label>
-                                <input class="wa-form-input" type="text" name="wa_target" value="<?= htmlspecialchars($edit_row['target'] ?? ''); ?>" placeholder="62xxxxxxxxxx atau 123456@g.us">
+                                <input class="wa-form-input" type="text" name="wa_target" value="<?= htmlspecialchars($edit_row['target'] ?? ''); ?>" placeholder="0811xxxxx atau 123456@g.us">
                                 <div class="wa-help wa-validate-msg" id="waValidateMsg"></div>
                             </div>
                             <div class="wa-form-group">
