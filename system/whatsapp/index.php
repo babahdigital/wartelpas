@@ -434,7 +434,7 @@ if (is_dir($pdf_dir)) {
                     <div class="wa-card-header">
                         <i class="fa fa-users"></i>
                         <h4>Daftar Penerima</h4>
-                        <span class="wa-badge" style="background: var(--wa-primary); margin-left: auto; color:#fff;">
+                        <span class="wa-badge" style="background: var(--wa-primary); color:#fff; line-height: 1rem;">
                             <?= count($recipients); ?>
                         </span>
                     </div>
@@ -515,7 +515,7 @@ if (is_dir($pdf_dir)) {
                     <div class="wa-card-header">
                         <i class="fa fa-history"></i>
                         <h4>Log Pengiriman (Terbaru)</h4>
-                        <span class="wa-badge" style="background: var(--wa-warning); margin-left: auto; color:#fff;">
+                        <span class="wa-badge" style="background: var(--wa-warning); color:#fff; line-height: 1rem;">
                             <?= count($logs); ?>
                         </span>
                     </div>
