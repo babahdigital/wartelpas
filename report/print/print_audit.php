@@ -464,12 +464,24 @@ if (file_exists($dbFile)) {
         $db = null;
     }
 }
+
+$title_suffix = '';
+if ($req_show === 'tahunan') {
+  $title_suffix = (string)$filter_date;
+} elseif ($req_show === 'bulanan') {
+  $title_suffix = (string)$filter_date;
+} else {
+  $title_suffix = date('d-m-Y', strtotime((string)$filter_date));
+}
+$file_title = 'LaporanAudit-' . $title_suffix;
+$file_title = preg_replace('/[^a-zA-Z0-9._-]+/', '-', $file_title);
+$file_title = trim($file_title, '-_');
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<title>Audit Penjualan & Voucher</title>
+<title><?= htmlspecialchars($file_title); ?></title>
 <style>
     body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 12mm; }
     h1 { margin: 0 0 4mm 0; font-size: 16px; }
@@ -773,7 +785,7 @@ if (file_exists($dbFile)) {
   <script>
     function shareReport(){
         if (navigator.share) {
-            navigator.share({ title: 'Laporan Audit Keuangan', url: window.location.href });
+        navigator.share({ title: document.title || 'Laporan Audit Keuangan', url: window.location.href });
         } else {
             window.prompt('Salin link laporan:', window.location.href);
         }
