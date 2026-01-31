@@ -125,6 +125,82 @@ function wa_display_target($target) {
     return implode('-', $parts);
 }
 
+function sanitize_pdf_filename($name) {
+    $name = basename((string)$name);
+    $name = preg_replace('/[^a-zA-Z0-9._-]+/', '_', $name);
+    $name = trim($name, '._-');
+    return $name;
+}
+
+function ensure_pdf_dir($dir) {
+    if ($dir === '') return false;
+    if (!is_dir($dir)) {
+        return @mkdir($dir, 0775, true);
+    }
+    return is_writable($dir);
+}
+
+function unique_pdf_filename($dir, $filename) {
+    $base = pathinfo($filename, PATHINFO_FILENAME);
+    $ext = pathinfo($filename, PATHINFO_EXTENSION);
+    if ($ext === '') $ext = 'pdf';
+    $candidate = $base . '.' . $ext;
+    $i = 1;
+    while (file_exists($dir . '/' . $candidate)) {
+        $candidate = $base . '_' . $i . '.' . $ext;
+        $i++;
+    }
+    return $candidate;
+}
+
+if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'upload_pdf') {
+    if (!isset($_FILES['pdf_file'])) {
+        $form_error = 'File PDF belum dipilih.';
+    } else {
+        $file = $_FILES['pdf_file'];
+        if (!empty($file['error'])) {
+            $form_error = 'Gagal upload (error code ' . (int)$file['error'] . ').';
+        } else {
+            $origName = sanitize_pdf_filename($file['name'] ?? '');
+            $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+            $size = (int)($file['size'] ?? 0);
+            if ($origName === '' || $ext !== 'pdf') {
+                $form_error = 'File harus berformat PDF.';
+            } elseif ($size <= 0) {
+                $form_error = 'File kosong atau tidak valid.';
+            } elseif ($size > 4 * 1024 * 1024) {
+                $form_error = 'Ukuran file lebih dari 4MB.';
+            } elseif (!ensure_pdf_dir($pdf_dir)) {
+                $form_error = 'Folder report/pdf tidak bisa ditulis.';
+            } else {
+                if (function_exists('finfo_open')) {
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    if ($finfo) {
+                        $mime = finfo_file($finfo, $file['tmp_name']);
+                        finfo_close($finfo);
+                        if ($mime !== 'application/pdf') {
+                            $form_error = 'File bukan PDF valid.';
+                        }
+                    }
+                }
+                if ($form_error === '') {
+                    $targetName = $origName;
+                    if ($targetName === '') {
+                        $targetName = 'report_' . date('Y-m-d_His') . '.pdf';
+                    }
+                    $targetName = unique_pdf_filename($pdf_dir, $targetName);
+                    $targetPath = rtrim($pdf_dir, '/') . '/' . $targetName;
+                    if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+                        $form_error = 'Gagal menyimpan file.';
+                    } else {
+                        $form_success = 'PDF berhasil diupload: ' . $targetName;
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 if ($db instanceof PDO && isset($_POST['wa_action'])) {
     $action = $_POST['wa_action'];
@@ -306,6 +382,14 @@ if (is_dir($pdf_dir)) {
                             <i class="fa fa-file-pdf-o"></i>
                             <h4>File PDF Laporan</h4>
                         </div>
+                        <form method="post" action="./?report=whatsapp<?= $session_qs; ?>" enctype="multipart/form-data" style="margin:12px 14px 0;">
+                            <input type="hidden" name="wa_action" value="upload_pdf">
+                            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                                <input type="file" name="pdf_file" accept="application/pdf" required>
+                                <button type="submit" class="wa-btn wa-btn-primary"><i class="fa fa-upload"></i> Upload PDF</button>
+                            </div>
+                            <div class="wa-help" style="margin-top:6px;"><i class="fa fa-info-circle"></i> Maksimal 4MB. Nama file disimpan di folder report/pdf.</div>
+                        </form>
                         <?php if (empty($pdf_files)): ?>
                             <div class="wa-empty">Belum ada file PDF di folder report/pdf.</div>
                         <?php else: ?>
