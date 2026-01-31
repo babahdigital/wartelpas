@@ -231,7 +231,7 @@ if (is_dir($pdf_dir)) {
 <div class="row">
     <div class="col-12">
         <div class="box box-solid">
-            <div class="box-header with-border">
+            <div class="box-header with-border wa-babah">
                 <h3 class="box-title"><i class="fa fa-whatsapp"></i> WhatsApp Laporan</h3>
             </div>
             <div class="box-body">

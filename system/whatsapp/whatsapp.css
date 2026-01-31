@@ -9,6 +9,11 @@
     --wa-warning: #f39c12;
 }
 
+ .wa-babah {
+    padding: 0 20px 10px;
+    font-size: 20px;
+ }
+
 .wa-grid {
     display: grid;
     grid-template-columns: 1.1fr 1fr;
