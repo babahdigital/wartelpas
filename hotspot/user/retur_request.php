@@ -15,6 +15,7 @@ $envFile = $root_dir . '/include/env.php';
 if (file_exists($envFile)) {
     require $envFile;
 }
+$wa_cfg = $env['whatsapp'] ?? [];
 $helperFile = $root_dir . '/hotspot/user/helpers.php';
 if (file_exists($helperFile)) {
     require_once $helperFile;
@@ -220,22 +221,28 @@ try {
 
     if (function_exists('wa_send_text')) {
         $type_label = $request_type === 'pengembalian' ? 'REFUND' : 'RETUR';
-        $name_label = $customer_name !== '' ? $customer_name : '-';
-        $contact_label = $contact_phone !== '' ? $contact_phone : '-';
-        $reason_msg = str_replace('"', "'", $reason);
-        $msg = "🔔 *PERMINTAAN " . $type_label . " BARU*\n" .
-            "──────────────────────\n" .
-            "Status: ⏳ *PENDING*\n\n" .
-            "👤 *Data Pengguna*\n" .
-            "• Nama : " . $name_label . "\n" .
-            "• Blok : " . $blok_short . "\n" .
-            "• Profil : " . $profile_label . "\n\n" .
-            "🎫 *Detail Tiket*\n" .
-            "• Voucher : *`" . $voucher_code . "`*\n" .
-            "• Alasan : _\"" . $reason_msg . "\"_\n\n" .
-            "──────────────────────\n" .
-            "Mohon segera diverifikasi melalui dashboard admin.";
-        wa_send_text($msg);
+        $notify_refund = !isset($wa_cfg['notify_refund_enabled']) || $wa_cfg['notify_refund_enabled'] === true || $wa_cfg['notify_refund_enabled'] === 1 || $wa_cfg['notify_refund_enabled'] === '1';
+        $notify_retur = !isset($wa_cfg['notify_retur_enabled']) || $wa_cfg['notify_retur_enabled'] === true || $wa_cfg['notify_retur_enabled'] === 1 || $wa_cfg['notify_retur_enabled'] === '1';
+        $should_send = ($type_label === 'REFUND') ? $notify_refund : $notify_retur;
+        if ($should_send) {
+            $name_label = $customer_name !== '' ? $customer_name : '-';
+            $contact_label = $contact_phone !== '' ? $contact_phone : '-';
+            $reason_msg = str_replace('"', "'", $reason);
+            $line = '────────────';
+            $msg = "🔔 *PERMINTAAN " . $type_label . " BARU*\n" .
+                $line . "\n" .
+                "Status: ⏳ *PENDING*\n\n" .
+                "👤 *Data Pengguna*\n" .
+                "• Nama : " . $name_label . "\n" .
+                "• Blok : " . $blok_short . "\n" .
+                "• Profil : " . $profile_label . "\n\n" .
+                "🎫 *Detail Tiket*\n" .
+                "• Voucher : *`" . $voucher_code . "`*\n" .
+                "• Alasan : _\"" . $reason_msg . "\"_\n\n" .
+                $line . "\n" .
+                "Mohon segera diverifikasi melalui dashboard admin.";
+            wa_send_text($msg);
+        }
     }
 
     echo json_encode(['ok' => true, 'message' => 'Permintaan retur berhasil dikirim.']);
