@@ -469,7 +469,8 @@ $title_suffix = '';
 if ($req_show === 'tahunan') {
   $title_suffix = (string)$filter_date;
 } elseif ($req_show === 'bulanan') {
-  $title_suffix = (string)$filter_date;
+  $ts = strtotime((string)$filter_date . '-01');
+  $title_suffix = $ts ? date('m-Y', $ts) : (string)$filter_date;
 } else {
   $title_suffix = date('d-m-Y', strtotime((string)$filter_date));
 }
