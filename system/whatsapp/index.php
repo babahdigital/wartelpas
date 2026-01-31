@@ -14,6 +14,7 @@ $dbFile = $config['db_file'] ?? dirname(__DIR__, 2) . '/db_data/mikhmon_stats.db
 $pdf_dir = $config['pdf_dir'] ?? (dirname(__DIR__, 2) . '/report/pdf');
 $log_limit = (int)($config['log_limit'] ?? 50);
 $timezone = $config['timezone'] ?? '';
+$wa_cfg = $config['wa'] ?? [];
 $db = null;
 $db_error = '';
 $form_error = '';
@@ -94,6 +95,73 @@ function validate_wa_target($target, $type, &$error) {
         return false;
     }
     return $target;
+}
+
+function wa_validate_number($target, $countryCode, $token, &$error) {
+    if ($token === '') {
+        $error = 'Token WhatsApp belum diisi.';
+        return false;
+    }
+    if (!function_exists('curl_init')) {
+        $error = 'cURL tidak tersedia.';
+        return false;
+    }
+    $endpoint = 'https://api.fonnte.com/validate';
+    $postFields = [
+        'target' => (string)$target,
+        'countryCode' => (string)$countryCode
+    ];
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $endpoint);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Authorization: ' . $token
+    ]);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+    $resp = curl_exec($ch);
+    $err = curl_error($ch);
+    $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($resp === false || $err !== '' || $code >= 400) {
+        $error = $err !== '' ? $err : ('HTTP ' . $code);
+        return false;
+    }
+    $json = json_decode($resp, true);
+    if (!is_array($json) || empty($json['status'])) {
+        $error = 'Respon validasi tidak dikenali.';
+        return false;
+    }
+    $registered = $json['registered'] ?? [];
+    return is_array($registered) && in_array((string)$target, $registered, true);
+}
+
+if (isset($_GET['wa_action']) && $_GET['wa_action'] === 'validate' && isset($_GET['ajax'])) {
+    header('Content-Type: application/json');
+    $target_raw = sanitize_wa_target($_GET['target'] ?? '');
+    $type = $_GET['type'] ?? 'number';
+    $err = '';
+    $validated_target = validate_wa_target($target_raw, $type, $err);
+    if ($validated_target === false) {
+        echo json_encode(['ok' => false, 'message' => $err]);
+        exit;
+    }
+    if ($type === 'group') {
+        echo json_encode(['ok' => true, 'message' => 'Group ID valid.']);
+        exit;
+    }
+    $token = trim((string)($wa_cfg['token'] ?? ''));
+    $country = trim((string)($wa_cfg['country_code'] ?? '62'));
+    $err = '';
+    $ok = wa_validate_number($validated_target, $country, $token, $err);
+    if ($ok) {
+        echo json_encode(['ok' => true, 'message' => 'Nomor WhatsApp aktif.']);
+    } else {
+        echo json_encode(['ok' => false, 'message' => $err !== '' ? $err : 'Nomor tidak terdaftar di WhatsApp.']);
+    }
+    exit;
 }
 
 if ($db instanceof PDO && isset($_POST['wa_action'])) {
@@ -225,6 +293,7 @@ if (is_dir($pdf_dir)) {
                             <div class="wa-form-group">
                                 <label class="wa-form-label">Target</label>
                                 <input class="wa-form-input" type="text" name="wa_target" value="<?= htmlspecialchars($edit_row['target'] ?? ''); ?>" placeholder="62xxxxxxxxxx atau 123456@g.us">
+                                <div class="wa-help wa-validate-msg" id="waValidateMsg"></div>
                             </div>
                             <div class="wa-form-group">
                                 <label class="wa-form-label">Tipe</label>
@@ -241,7 +310,7 @@ if (is_dir($pdf_dir)) {
                                 </label>
                             </div>
                             <div class="wa-btn-group">
-                                <button type="submit" class="wa-btn wa-btn-primary"><i class="fa fa-save"></i> Simpan</button>
+                                <button type="submit" class="wa-btn wa-btn-primary" id="waSaveBtn"><i class="fa fa-save"></i> Simpan</button>
                                 <?php if ($edit_row): ?>
                                     <a class="wa-btn wa-btn-default" href="./?report=whatsapp<?= $session_qs; ?>"><i class="fa fa-times"></i> Batal</a>
                                 <?php endif; ?>

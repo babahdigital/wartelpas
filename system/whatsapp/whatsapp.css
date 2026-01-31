@@ -296,6 +296,26 @@
     align-items: center;
 }
 
+.wa-validate-msg {
+    margin-top: 8px;
+    min-height: 16px;
+}
+
+.wa-validate-msg.is-ok {
+    color: var(--wa-success);
+}
+
+.wa-validate-msg.is-bad {
+    color: var(--wa-danger);
+}
+
+.wa-btn.is-disabled,
+.wa-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
 .wa-session-info {
     margin-top: 16px;
     font-size: 12px;
