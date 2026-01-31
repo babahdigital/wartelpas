@@ -209,6 +209,8 @@
     background: var(--wa-danger);
     color: white;
     width: auto;
+    position: relative;
+    top: -2px;
 }
 
 .wa-btn-danger:hover {
