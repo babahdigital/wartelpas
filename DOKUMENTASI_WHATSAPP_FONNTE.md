@@ -161,6 +161,7 @@ Dokumen ini merangkum detail API Fonnte berdasarkan URL yang diberikan untuk keb
 ### 2.1 Kebutuhan Fitur
 1) **Manajemen Nomor Tujuan**
   - CRUD nomor (format `62xxx`) + **validasi aktif** via API validate sebelum disimpan.
+  - Opsi per penerima: **Notif Retur/Refund** dan **Notif Laporan**.
 2) **Template Pesan**
    - Template teks + attachment PDF (rekap harian).
 3) **Queue/Log Pengiriman**
@@ -201,6 +202,9 @@ Dokumen ini merangkum detail API Fonnte berdasarkan URL yang diberikan untuk keb
 4) **Validasi nomor aktif**
   - Saat input nomor, sistem melakukan cek ke `https://api.fonnte.com/validate`.
   - Jika nomor tidak terdaftar, simpan ditolak.
+5) **Filter penerima berdasarkan kategori**
+  - Retur/Refund dikirim ke penerima dengan opsi **Notif Retur/Refund** aktif.
+  - Laporan dikirim ke penerima dengan opsi **Notif Laporan** aktif.
 4) **Generate PDF**
    - Pastikan link publik/reachable (bisa via folder temp + tokenized link).
 5) **Retry**

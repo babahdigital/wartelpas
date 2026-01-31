@@ -242,7 +242,7 @@ try {
                 "• Alasan : _\"" . $reason_msg . "\"_\n\n" .
                 $line . "\n" .
                 "Mohon segera diverifikasi melalui dashboard admin.";
-            wa_send_text($msg);
+            wa_send_text($msg, '', 'retur');
         }
     }
 

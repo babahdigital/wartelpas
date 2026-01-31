@@ -36,6 +36,8 @@ try {
         target TEXT NOT NULL,
         target_type TEXT NOT NULL DEFAULT 'number',
         active INTEGER NOT NULL DEFAULT 1,
+        receive_retur INTEGER NOT NULL DEFAULT 1,
+        receive_report INTEGER NOT NULL DEFAULT 1,
         created_at TEXT,
         updated_at TEXT
     )");
@@ -51,6 +53,14 @@ try {
         created_at TEXT
     )");
     $db->exec("CREATE INDEX IF NOT EXISTS idx_whatsapp_logs_created ON whatsapp_logs(created_at)");
+    $cols = $db->query("PRAGMA table_info(whatsapp_recipients)")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $col_names = array_map(function($c){ return $c['name'] ?? ''; }, $cols);
+    if (!in_array('receive_retur', $col_names, true)) {
+        $db->exec("ALTER TABLE whatsapp_recipients ADD COLUMN receive_retur INTEGER NOT NULL DEFAULT 1");
+    }
+    if (!in_array('receive_report', $col_names, true)) {
+        $db->exec("ALTER TABLE whatsapp_recipients ADD COLUMN receive_report INTEGER NOT NULL DEFAULT 1");
+    }
 } catch (Exception $e) {
     $db_error = $e->getMessage();
 }
@@ -171,6 +181,8 @@ if ($db instanceof PDO && isset($_POST['wa_action'])) {
         $label = sanitize_wa_label($_POST['wa_label'] ?? '');
         $target_type = $_POST['wa_type'] ?? 'number';
         $active = isset($_POST['wa_active']) ? 1 : 0;
+        $receive_retur = isset($_POST['wa_receive_retur']) ? 1 : 0;
+        $receive_report = isset($_POST['wa_receive_report']) ? 1 : 0;
         $target_raw = sanitize_wa_target($_POST['wa_target'] ?? '');
         $err = '';
         $validated_target = validate_wa_target($target_raw, $target_type, $err);
@@ -180,23 +192,27 @@ if ($db instanceof PDO && isset($_POST['wa_action'])) {
             try {
                 $now = date('Y-m-d H:i:s');
                 if ($id > 0) {
-                    $stmt = $db->prepare("UPDATE whatsapp_recipients SET label=:label, target=:target, target_type=:type, active=:active, updated_at=:updated WHERE id=:id");
+                    $stmt = $db->prepare("UPDATE whatsapp_recipients SET label=:label, target=:target, target_type=:type, active=:active, receive_retur=:rr, receive_report=:rp, updated_at=:updated WHERE id=:id");
                     $stmt->execute([
                         ':label' => $label,
                         ':target' => $validated_target,
                         ':type' => $target_type,
                         ':active' => $active,
+                        ':rr' => $receive_retur,
+                        ':rp' => $receive_report,
                         ':updated' => $now,
                         ':id' => $id
                     ]);
                     $form_success = 'Data penerima diperbarui.';
                 } else {
-                    $stmt = $db->prepare("INSERT INTO whatsapp_recipients (label, target, target_type, active, created_at, updated_at) VALUES (:label,:target,:type,:active,:created,:updated)");
+                    $stmt = $db->prepare("INSERT INTO whatsapp_recipients (label, target, target_type, active, receive_retur, receive_report, created_at, updated_at) VALUES (:label,:target,:type,:active,:rr,:rp,:created,:updated)");
                     $stmt->execute([
                         ':label' => $label,
                         ':target' => $validated_target,
                         ':type' => $target_type,
                         ':active' => $active,
+                        ':rr' => $receive_retur,
+                        ':rp' => $receive_report,
                         ':created' => $now,
                         ':updated' => $now
                     ]);
@@ -309,6 +325,16 @@ if (is_dir($pdf_dir)) {
                                     Kirim laporan
                                 </label>
                             </div>
+                            <div class="wa-form-group">
+                                <label class="wa-checkbox">
+                                    <input type="checkbox" name="wa_receive_retur" value="1" <?= ($edit_row && (int)($edit_row['receive_retur'] ?? 1) === 0) ? '' : 'checked'; ?>>
+                                    Notif Retur/Refund
+                                </label>
+                                <label class="wa-checkbox" style="margin-top:6px;">
+                                    <input type="checkbox" name="wa_receive_report" value="1" <?= ($edit_row && (int)($edit_row['receive_report'] ?? 1) === 0) ? '' : 'checked'; ?>>
+                                    Notif Laporan
+                                </label>
+                            </div>
                             <div class="wa-btn-group">
                                 <button type="submit" class="wa-btn wa-btn-primary" id="waSaveBtn"><i class="fa fa-save"></i> Simpan</button>
                                 <?php if ($edit_row): ?>
@@ -375,6 +401,7 @@ if (is_dir($pdf_dir)) {
                                         <th><i class="fa fa-bullseye"></i> Target</th>
                                         <th><i class="fa fa-list"></i> Tipe</th>
                                         <th><i class="fa fa-power-off"></i> Status</th>
+                                        <th><i class="fa fa-bell"></i> Notif</th>
                                         <th><i class="fa fa-cog"></i> Aksi</th>
                                     </tr>
                                 </thead>
@@ -400,6 +427,18 @@ if (is_dir($pdf_dir)) {
                                                     <span class="wa-badge on"><i class="fa fa-check-circle"></i> Aktif</span>
                                                 <?php else: ?>
                                                     <span class="wa-badge off"><i class="fa fa-times-circle"></i> Nonaktif</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <?php if ((int)($r['receive_retur'] ?? 1) === 1): ?>
+                                                    <span class="wa-badge" style="background:#2563eb; color:#fff;">Retur</span>
+                                                <?php else: ?>
+                                                    <span class="wa-badge off">Retur</span>
+                                                <?php endif; ?>
+                                                <?php if ((int)($r['receive_report'] ?? 1) === 1): ?>
+                                                    <span class="wa-badge" style="background:#16a34a; color:#fff;">Laporan</span>
+                                                <?php else: ?>
+                                                    <span class="wa-badge off">Laporan</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td>

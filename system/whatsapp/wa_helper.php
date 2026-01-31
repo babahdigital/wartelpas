@@ -58,7 +58,7 @@ function wa_log_message($target, $message, $status, $responseJson = '', $pdfFile
     }
 }
 
-function wa_get_active_recipients() {
+function wa_get_active_recipients($category = '') {
     $root_dir = dirname(__DIR__, 2);
     $dbFile = $root_dir . '/db_data/mikhmon_stats.db';
     $targets = [];
@@ -73,10 +73,18 @@ function wa_get_active_recipients() {
             target TEXT NOT NULL,
             target_type TEXT NOT NULL DEFAULT 'number',
             active INTEGER NOT NULL DEFAULT 1,
+            receive_retur INTEGER NOT NULL DEFAULT 1,
+            receive_report INTEGER NOT NULL DEFAULT 1,
             created_at TEXT,
             updated_at TEXT
         )");
-        $stmt = $db->query("SELECT target FROM whatsapp_recipients WHERE active = 1 ORDER BY id ASC");
+        $where = "active = 1";
+        if ($category === 'retur') {
+            $where .= " AND receive_retur = 1";
+        } elseif ($category === 'report') {
+            $where .= " AND receive_report = 1";
+        }
+        $stmt = $db->query("SELECT target FROM whatsapp_recipients WHERE {$where} ORDER BY id ASC");
         $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
         foreach ($rows as $r) {
             $t = trim((string)($r['target'] ?? ''));
@@ -88,7 +96,7 @@ function wa_get_active_recipients() {
     return $targets;
 }
 
-function wa_send_text($message, $target = '') {
+function wa_send_text($message, $target = '', $category = '') {
     $cfg = wa_get_env_config();
     $endpoint = trim((string)($cfg['endpoint_send'] ?? 'https://api.fonnte.com/send'));
     $token = trim((string)($cfg['token'] ?? ''));
@@ -98,7 +106,7 @@ function wa_send_text($message, $target = '') {
     if ($target === '') {
         $target = $defaultTarget;
         if ($target === '') {
-            $list = wa_get_active_recipients();
+            $list = wa_get_active_recipients($category);
             if (!empty($list)) {
                 $target = implode(',', $list);
             }
