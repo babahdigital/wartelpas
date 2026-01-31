@@ -300,6 +300,13 @@ if (is_dir($pdf_dir)) {
         }
     }
 }
+
+if (!empty($pdf_files)) {
+    usort($pdf_files, function($a, $b){
+        return ($b['mtime'] ?? 0) <=> ($a['mtime'] ?? 0);
+    });
+    $pdf_files = array_slice($pdf_files, 0, 2);
+}
 ?>
 
 <link rel="stylesheet" href="./system/whatsapp/whatsapp.css">
