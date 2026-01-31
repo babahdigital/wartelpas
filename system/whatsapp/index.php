@@ -255,8 +255,8 @@ if (is_dir($pdf_dir)) {
                             <input type="hidden" name="wa_action" value="save">
                             <input type="hidden" name="wa_id" value="<?= htmlspecialchars($edit_row['id'] ?? ''); ?>">
                             <div class="wa-form-group">
-                                <label class="wa-form-label">Label</label>
-                                <input class="wa-form-input" type="text" name="wa_label" value="<?= htmlspecialchars($edit_row['label'] ?? ''); ?>" placeholder="Contoh: Owner / Admin">
+                                <label class="wa-form-label">Nama</label>
+                                <input class="wa-form-input" type="text" name="wa_label" value="<?= htmlspecialchars($edit_row['label'] ?? ''); ?>" placeholder="Contoh: Sonny atau Group Kantor">
                             </div>
                             <div class="wa-form-group">
                                 <label class="wa-form-label">Target</label>
