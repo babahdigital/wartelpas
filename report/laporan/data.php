@@ -103,10 +103,13 @@ $audit_total_expected_qty = 0;
 $audit_total_reported_qty = 0;
 $audit_total_expected_setoran = 0;
 $audit_total_actual_setoran = 0;
+$audit_total_refund = 0;
 $audit_total_selisih_qty = 0;
 $audit_total_selisih_setoran = 0;
 $audit_expected_setoran_adj_total = 0;
 $audit_selisih_setoran_adj_total = 0;
+$audit_total_expenses_period = 0;
+$audit_period_rows = [];
 $has_audit_adjusted = false;
 $audit_locked_today = false;
 $current_daily_note = '';
@@ -215,6 +218,8 @@ if (file_exists($dbFile)) {
             expected_setoran INTEGER,
             reported_qty INTEGER,
             actual_setoran INTEGER,
+            refund_amt INTEGER DEFAULT 0,
+            refund_desc TEXT,
             expenses_amt INTEGER,
             expenses_desc TEXT,
             selisih_qty INTEGER,
@@ -241,6 +246,8 @@ if (file_exists($dbFile)) {
         try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN is_locked INTEGER DEFAULT 0"); } catch (Exception $e) {}
         try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN locked_at DATETIME"); } catch (Exception $e) {}
         try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN locked_by TEXT"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN refund_amt INTEGER DEFAULT 0"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE audit_rekap_manual ADD COLUMN refund_desc TEXT"); } catch (Exception $e) {}
         try {
             $hasSales = table_exists($db, 'sales_history');
             $hasLive = table_exists($db, 'live_sales');
@@ -1128,6 +1135,12 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         if ($audit_exp_desc !== '') {
             $audit_exp_desc = mb_substr($audit_exp_desc, 0, 60);
         }
+        $audit_refund_amt = (int)($_POST['audit_refund_amt'] ?? 0);
+        if ($audit_refund_amt < 0) $audit_refund_amt = 0;
+        $audit_refund_desc = trim($_POST['audit_refund_desc'] ?? '');
+        if ($audit_refund_desc !== '') {
+            $audit_refund_desc = mb_substr($audit_refund_desc, 0, 60);
+        }
         $audit_note = '';
         $audit_status = 'OPEN';
 
@@ -1139,6 +1152,9 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         }
         if ($audit_error === '' && ($audit_exp_amt > 0 && $audit_exp_desc === '')) {
             $audit_error = 'Keterangan pengeluaran wajib diisi.';
+        }
+        if ($audit_error === '' && ($audit_refund_amt > 0 && $audit_refund_desc === '')) {
+            $audit_error = 'Keterangan pengembalian wajib diisi.';
         }
         if ($audit_error === '' && $audit_blok !== 'BLOK-LAIN') {
             if ($req_show !== 'harian') {
@@ -1169,6 +1185,13 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             $audit_selisih_setoran = $audit_setoran - $audit_expected_setoran;
             if ($audit_exp_amt > 0 && $audit_exp_desc !== '') {
                 $audit_setoran = $audit_setoran + $audit_exp_amt;
+            }
+            if ($audit_refund_amt > 0 && $audit_selisih_setoran <= 0) {
+                $audit_error = 'Pengembalian hanya boleh jika selisih setoran lebih setor.';
+            }
+            $max_refund = max(0, $audit_setoran - $audit_exp_amt);
+            if ($audit_error === '' && $audit_refund_amt > $max_refund) {
+                $audit_error = 'Pengembalian melebihi setoran bersih.';
             }
 
             $default_profile_key = !empty($audit_profiles) ? (string)($audit_profiles[0]['key'] ?? '10menit') : '10menit';
@@ -1249,14 +1272,16 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
 
             try {
                 $stmt = $db->prepare("INSERT INTO audit_rekap_manual
-                    (report_date, blok_name, audit_username, expected_qty, expected_setoran, reported_qty, actual_setoran, expenses_amt, expenses_desc, selisih_qty, selisih_setoran, note, user_evidence, status, updated_at)
-                    VALUES (:d, :b, :u, :eq, :es, :rq, :rs, :ea, :ed, :sq, :ss, :n, :ev, :st, CURRENT_TIMESTAMP)
+                    (report_date, blok_name, audit_username, expected_qty, expected_setoran, reported_qty, actual_setoran, refund_amt, refund_desc, expenses_amt, expenses_desc, selisih_qty, selisih_setoran, note, user_evidence, status, updated_at)
+                    VALUES (:d, :b, :u, :eq, :es, :rq, :rs, :ra, :rd, :ea, :ed, :sq, :ss, :n, :ev, :st, CURRENT_TIMESTAMP)
                     ON CONFLICT(report_date, blok_name) DO UPDATE SET
                         audit_username=excluded.audit_username,
                         expected_qty=excluded.expected_qty,
                         expected_setoran=excluded.expected_setoran,
                         reported_qty=excluded.reported_qty,
                         actual_setoran=excluded.actual_setoran,
+                        refund_amt=excluded.refund_amt,
+                        refund_desc=excluded.refund_desc,
                         expenses_amt=excluded.expenses_amt,
                         expenses_desc=excluded.expenses_desc,
                         selisih_qty=excluded.selisih_qty,
@@ -1273,6 +1298,8 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     ':es' => $audit_expected_setoran,
                     ':rq' => $audit_qty,
                     ':rs' => $audit_setoran,
+                    ':ra' => $audit_refund_amt,
+                    ':rd' => $audit_refund_desc,
                     ':ea' => $audit_exp_amt,
                     ':ed' => $audit_exp_desc,
                     ':sq' => $audit_selisih_qty,
@@ -1318,11 +1345,13 @@ if ($req_show === 'harian' && isset($db) && $db instanceof PDO) {
             $audit_total_reported_qty += (int)($ar['reported_qty'] ?? 0);
             $audit_total_expected_setoran += (int)($ar['expected_setoran'] ?? 0);
             $audit_total_actual_setoran += (int)($ar['actual_setoran'] ?? 0);
+            $refund_amt = (int)($ar['refund_amt'] ?? 0);
+            $audit_total_refund += $refund_amt;
             $audit_total_selisih_qty += (int)($ar['selisih_qty'] ?? 0);
-            $audit_total_selisih_setoran += (int)($ar['selisih_setoran'] ?? 0);
+            $audit_total_selisih_setoran += (int)($ar['selisih_setoran'] ?? 0) - $refund_amt;
             [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($ar);
             $audit_expected_setoran_adj_total += (int)$expected_adj_setoran;
-            $audit_selisih_setoran_adj_total += (int)$manual_setoran - (int)$expected_adj_setoran;
+            $audit_selisih_setoran_adj_total += (int)$manual_setoran - (int)$expected_adj_setoran - $refund_amt;
             $has_audit_adjusted = true;
         }
     } catch (Exception $e) {
@@ -1331,18 +1360,50 @@ if ($req_show === 'harian' && isset($db) && $db instanceof PDO) {
 }
 if ($req_show !== 'harian' && isset($db) && $db instanceof PDO) {
     try {
-        $stmtAudit = $db->prepare("SELECT expected_setoran, actual_setoran, user_evidence FROM audit_rekap_manual WHERE report_date LIKE :p");
+        $stmtAudit = $db->prepare("SELECT report_date, expected_setoran, actual_setoran, user_evidence, refund_amt, expenses_amt FROM audit_rekap_manual WHERE report_date LIKE :p");
         $stmtAudit->execute([':p' => $filter_date . '%']);
         foreach ($stmtAudit->fetchAll(PDO::FETCH_ASSOC) as $ar) {
+            $d = (string)($ar['report_date'] ?? '');
+            if ($d === '') continue;
             [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($ar);
-            $audit_selisih_setoran_adj_total += (int)$manual_setoran - (int)$expected_adj_setoran;
+            $refund_amt = (int)($ar['refund_amt'] ?? 0);
+            $expense_amt = (int)($ar['expenses_amt'] ?? 0);
+            $audit_total_expected_setoran += (int)($ar['expected_setoran'] ?? 0);
+            $audit_total_actual_setoran += (int)$manual_setoran;
+            $audit_total_refund += $refund_amt;
+            $audit_total_expenses_period += $expense_amt;
+            $audit_expected_setoran_adj_total += (int)$expected_adj_setoran;
+            $audit_selisih_setoran_adj_total += (int)$manual_setoran - (int)$expected_adj_setoran - $refund_amt;
+            $audit_total_selisih_setoran += (int)$manual_setoran - (int)$expected_adj_setoran - $refund_amt;
+
+            $row_key = $req_show === 'bulanan' ? $d : substr($d, 0, 7);
+            if (!isset($audit_period_rows[$row_key])) {
+                $audit_period_rows[$row_key] = [
+                    'date' => $row_key,
+                    'expected' => 0,
+                    'actual' => 0,
+                    'expense' => 0,
+                    'refund' => 0,
+                    'selisih' => 0,
+                ];
+            }
+            $audit_period_rows[$row_key]['expected'] += (int)$expected_adj_setoran;
+            $audit_period_rows[$row_key]['actual'] += (int)$manual_setoran;
+            $audit_period_rows[$row_key]['expense'] += $expense_amt;
+            $audit_period_rows[$row_key]['refund'] += $refund_amt;
+            $audit_period_rows[$row_key]['selisih'] += (int)$manual_setoran - (int)$expected_adj_setoran - $refund_amt;
         }
     } catch (Exception $e) {
     }
 }
 
+if ($req_show !== 'harian' && !empty($audit_period_rows)) {
+    krsort($audit_period_rows);
+    $audit_period_rows = array_values($audit_period_rows);
+}
+
 $has_audit_rows = !empty($audit_rows);
-$audit_ghost_hint = $has_audit_rows ? build_ghost_hint($audit_total_selisih_qty, $audit_total_selisih_setoran) : '';
+$audit_ghost_hint = $has_audit_rows ? build_ghost_hint($audit_total_selisih_qty, $audit_selisih_setoran_adj_total) : '';
 
 if (empty($list) && $last_available_date !== '' && $filter_date !== $last_available_date) {
     $no_sales_message = 'Tidak ada data untuk tanggal ini. Data terakhir: ' . $last_available_date . '.';

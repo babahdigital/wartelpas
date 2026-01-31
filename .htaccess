@@ -55,7 +55,7 @@ ErrorDocument 500 /error.php
 # Folder ini berisi script inti yang tidak boleh dipanggil langsung browser
 RedirectMatch 403 ^/include/.*$
 RedirectMatch 403 ^/process/.*$
-RedirectMatch 403 ^/system/.*$
+RedirectMatch 403 ^/system/(?!whatsapp/.*\.(css|js)$).*$
 RedirectMatch 403 ^/lib/.*$
 
 # D. BLOKIR FOLDER DATA SENSITIF (CRITICAL!)
@@ -194,6 +194,11 @@ Require all denied
 
 # Sync usage endpoint
 <If "%{REQUEST_URI} =~ m#^/report/laporan/services/sync_usage\.php$#">
+    Require all granted
+</If>
+
+# Retur request endpoint (public)
+<If "%{REQUEST_URI} =~ m#^/hotspot/user/retur_request\.php$#">
     Require all granted
 </If>
 

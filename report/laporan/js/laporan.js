@@ -869,6 +869,8 @@ window.openAuditEdit = function(btn){
     var qty30 = btn.getAttribute('data-qty30') || '0';
     var expenseAmt = btn.getAttribute('data-expense') || '0';
     var expenseDesc = btn.getAttribute('data-expense-desc') || '';
+    var refundAmt = btn.getAttribute('data-refund') || '0';
+    var refundDesc = btn.getAttribute('data-refund-desc') || '';
     var profileQtyRaw = btn.getAttribute('data-profile-qty') || '';
     var profileQtyMap = {};
     if (profileQtyRaw) {
@@ -941,6 +943,17 @@ window.openAuditEdit = function(btn){
         expDescInput.value = expenseDesc;
         updateCharRemainingForInput(expDescInput);
     }
+    var refInput = form.querySelector('input[name="audit_refund_amt"]');
+    var refDescInput = form.querySelector('input[name="audit_refund_desc"]');
+    if (refInput) refInput.value = refundAmt;
+    if (refDescInput) {
+        refDescInput.value = refundDesc;
+        updateCharRemainingForInput(refDescInput);
+    }
+    if (refInput) {
+        var evr = new Event('input', { bubbles: true });
+        refInput.dispatchEvent(evr);
+    }
     openAuditModal();
 };
 
@@ -994,6 +1007,7 @@ function openAuditLockModal(){
     var setoranManualInput = form ? form.querySelector('input[name="audit_setoran_manual"]') : null;
     var netSetoranInput = document.getElementById('audit_setoran_net');
     var expenseInput = form ? form.querySelector('input[name="audit_expense_amt"]') : null;
+    var refundInput = form ? form.querySelector('input[name="audit_refund_amt"]') : null;
     var cfg = window.sellingConfig || {};
     var price10 = parseInt(cfg.price10 || 0, 10);
     var price30 = parseInt(cfg.price30 || 0, 10);
@@ -1022,7 +1036,8 @@ function openAuditLockModal(){
         if (!netSetoranInput) return;
         var setVal = setoranTotal ? (parseInt(setoranTotal.value || '0', 10) || 0) : 0;
         var expVal = expenseInput ? (parseInt(expenseInput.value || '0', 10) || 0) : 0;
-        var netVal = setVal - expVal;
+        var refVal = refundInput ? (parseInt(refundInput.value || '0', 10) || 0) : 0;
+        var netVal = setVal - expVal - refVal;
         netSetoranInput.value = netVal >= 0 ? netVal : 0;
     }
     if (qtyInputs && qtyInputs.length) {
@@ -1039,6 +1054,9 @@ function openAuditLockModal(){
     }
     if (expenseInput) {
         expenseInput.addEventListener('input', updateAuditNet);
+    }
+    if (refundInput) {
+        refundInput.addEventListener('input', updateAuditNet);
     }
     updateAuditTotals();
     if (!form) return;

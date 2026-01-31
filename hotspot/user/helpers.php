@@ -523,6 +523,18 @@ if (!function_exists('gen_user')) {
     if ($blok === '') {
       $blok = extract_blok_name($comment_ref);
     }
+    if ($blok === '' && $orig_user !== '' && function_exists('get_user_history')) {
+      $orig_hist = get_user_history($orig_user);
+      if ($orig_hist) {
+        $hist_blok = trim((string)($orig_hist['blok_name'] ?? ''));
+        if ($hist_blok === '' && !empty($orig_hist['raw_comment'])) {
+          $hist_blok = extract_blok_name($orig_hist['raw_comment']);
+        }
+        if ($hist_blok !== '') {
+          $blok = $hist_blok;
+        }
+      }
+    }
     // Hindari nested Retur Ref
     $clean_ref = $comment_ref;
     $clean_ref = preg_replace('/\(Retur\)/i', '', $clean_ref);
@@ -566,6 +578,7 @@ if (!function_exists('is_wartel_client')) {
     if (!empty($hist_blok)) return true;
     $blok = extract_blok_name($comment);
     if (!empty($blok)) return true;
+    if (!empty($comment) && (stripos($comment, '(Retur)') !== false || stripos($comment, 'Retur Ref:') !== false)) return true;
     if (!empty($comment) && stripos($comment, 'blok-') !== false) return true;
     return false;
   }

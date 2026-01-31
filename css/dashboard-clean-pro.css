@@ -21,11 +21,12 @@
     --zoom-factor: 1;
 }
 
-/* Fix 1: GLOBAL RESET */
-*, *::before, *::after {
+/* Fix 1: GLOBAL RESET (scoped to dashboard content) */
+#main,
+#main *,
+#main *::before,
+#main *::after {
     box-sizing: border-box;
-    margin: 0;
-    padding: 0;
 }
 
 /* Fix 2: BODY & LAYOUT */

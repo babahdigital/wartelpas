@@ -32,8 +32,10 @@ $_SESSION['filter_year'] = (int)date("Y");
 // --- INCLUDE LIBRARY ---
 if (file_exists($root . '/include/config.php')) include($root . '/include/config.php');
 if (file_exists($root . '/include/readcfg.php')) include($root . '/include/readcfg.php');
+if (file_exists($root . '/include/env.php')) include($root . '/include/env.php');
 if (file_exists($root . '/lib/routeros_api.class.php')) include_once($root . '/lib/routeros_api.class.php');
 if (file_exists($root . '/lib/formatbytesbites.php')) include_once($root . '/lib/formatbytesbites.php');
+if (file_exists($root . '/report/laporan/helpers.php')) include_once($root . '/report/laporan/helpers.php');
 
 session_write_close(); 
 
@@ -92,6 +94,19 @@ if (!function_exists('table_exists')) {
     }
 }
 
+if (!function_exists('resolve_stats_db_file')) {
+    function resolve_stats_db_file($root_dir) {
+        $env = $GLOBALS['env'] ?? [];
+        $system_cfg = $env['system'] ?? [];
+        $db_rel = $system_cfg['db_file'] ?? 'db_data/mikhmon_stats.db';
+        if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
+            return $db_rel;
+        }
+        return $root_dir . '/' . ltrim($db_rel, '/');
+    }
+}
+
+
 // =========================================================
 // BAGIAN KHUSUS: LIVE DATA PROVIDER (JSON)
 // =========================================================
@@ -112,18 +127,19 @@ if ($load == "live_data") {
 
     $counthotspotactive = 0;
     if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
+        $expected_server = strtolower((string)($hotspot_server ?? 'wartel'));
         $rawActive = $API->comm("/ip/hotspot/active/print", array(".proplist" => "server"));
         if (is_array($rawActive)) {
             foreach ($rawActive as $act) {
                 $server = isset($act['server']) ? strtolower((string)$act['server']) : '';
-                if ($server === 'wartel') {
+                if ($server === $expected_server) {
                     $counthotspotactive++;
                 }
             }
         }
     }
 
-    $dbFile = $root . '/db_data/mikhmon_stats.db';
+    $dbFile = resolve_stats_db_file($root);
     $today = date('Y-m-d');
     $month = date('m');
     $year = date('Y');
@@ -501,7 +517,7 @@ if ($load == "hotspot") {
     $currentYear = (int)date('Y');
     $currentDay = (int)date('d');
 
-    $dbFile = $root . '/db_data/mikhmon_stats.db';
+    $dbFile = resolve_stats_db_file($root);
     $rawDataMerged = [];
     if (file_exists($dbFile)) {
         try {
@@ -537,7 +553,7 @@ if ($load == "hotspot") {
     $dailyQty = array_fill($startDay, $daysInRange, 0);
 
     foreach ($rawDataMerged as $rowString) {
-        $parts = explode("-|-", $rowString);
+        $parts = split_sales_raw($rowString);
         if (count($parts) >= 4) {
             $rawDateString = trim($parts[0]);
             $price = (int)preg_replace('/[^0-9]/', '', $parts[3]);
@@ -665,7 +681,7 @@ if ($load == "logs") {
 
     $filterMonth = $_SESSION['filter_month'];
     $filterYear = $_SESSION['filter_year'];
-    $dbFile = $root . '/db_data/mikhmon_stats.db';
+    $dbFile = resolve_stats_db_file($root);
     $rawDataMerged = [];
 
     if (file_exists($dbFile)) {
@@ -703,7 +719,7 @@ if ($load == "logs") {
 
     $finalLogs = [];
     foreach ($rawDataMerged as $rowString) {
-        $parts = explode("-|-", $rowString);
+        $parts = split_sales_raw($rowString);
         if (count($parts) >= 4) {
             $rawDateString = trim($parts[0]);
             $price = (int)preg_replace('/[^0-9]/', '', $parts[3]);

@@ -315,6 +315,18 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
   - `report/laporan/services/sync_stats.php`
   - `report/laporan/services/sync_usage.php`
 
+### 2.33 Auto‑isi HP Harian + Resolver DB Dashboard (2026-01-30)
+- **Auto‑isi HP harian**: jika tanggal hari ini belum ada data, sistem menyalin otomatis dari tanggal terakhir yang tersedia dan langsung menyimpan, namun tetap **bisa diedit** kapan saja.
+  - File: [report/laporan/render.php](report/laporan/render.php)
+- **Dashboard memakai DB dari env**: `dashboard/aload.php` kini membaca `env.php` dan memakai `resolve_stats_db_file()` agar path DB mengikuti konfigurasi.
+  - File: [dashboard/aload.php](dashboard/aload.php)
+- **Hitung online sesuai server aktif**: jumlah user online mengikuti `hotspot_server` (bukan hardcode wartel).
+  - File: [dashboard/aload.php](dashboard/aload.php)
+- **Draft UI admin**: menambahkan desain admin/pengaturan sebagai referensi UI.
+  - File: [dev/admin.html](dev/admin.html)
+  - File: [dev/pengaturan-admin-1.html](dev/pengaturan-admin-1.html)
+  - File: [dev/pengaturan-admin-2.html](dev/pengaturan-admin-2.html)
+
 ## 3) Masalah Khusus dan Fix Terkait
 ### 3.1 Waktu/Bytes/Uptime kosong saat RUSAK
 - Parsing comment diperluas untuk format:
@@ -1107,3 +1119,38 @@ Jika ada tambahan perubahan atau aturan bisnis baru, dokumentasi ini akan diperb
 - [report/print/print_audit.php](report/print/print_audit.php)
 - [tools/sync_rusak_audit.php](tools/sync_rusak_audit.php)
 - [include/menu.php](include/menu.php)
+
+### 7.15 Penyempurnaan Retur/Refund Request & Popup Manajemen (2026-01-31)
+- **Popup Retur terpusat (CSS/JS dipisah)**:
+  - CSS dipusatkan di **css/popup.css**, JS di **js/popup.js**.
+  - Popup backup/restore diperhalus dan konsisten.
+  - Reset CSS diperbaiki agar tidak merusak popup dashboard.
+- **Konfirmasi/aksi tanpa alert**:
+  - Semua konfirmasi retur/refund memakai **MikhmonPopup** (AJAX) tanpa `alert/confirm`.
+- **Alur Retur vs Refund dipisah**:
+  - **Refund**: wajib **cek kelayakan rusak** → set **RUSAK** → approve request.
+  - **Retur**: langsung **approve → retur** tanpa set RUSAK.
+  - Aksi `retur_request_mark_rusak` dibatasi untuk refund saja.
+- **Kelayakan rusak transparan**:
+  - Popup menampilkan kriteria (offline/bytes/uptime/first login) dan alasan.
+- **Tabel & badge Retur**:
+  - Badge menu Retur selalu tampil; `is-zero` saat 0.
+  - Kolom **Jenis** (Retur/Refund) + **Nama** (wajib untuk refund).
+- **Tab & filter lengkap**:
+  - Pending / Approved / Rejected / Retur / Refund / Semua.
+- **Print list**:
+  - Print **Refund**, **Retur**, dan **Semua** dalam format list.
+  - Tombol print rapi sejajar dengan tab.
+- **Tipe request & nama**:
+  - `request_type` dan `customer_name` ditambahkan ke schema dan migrasi otomatis.
+- **Toggle fitur**:
+  - `include/env.php` menambah `retur_request.enabled` dan `retur_request.message`.
+
+**File terkait:**
+- [include/menu.php](include/menu.php)
+- [css/popup.css](css/popup.css)
+- [js/popup.js](js/popup.js)
+- [hotspot/user/retur_request.php](hotspot/user/retur_request.php)
+- [hotspot/user/actions.php](hotspot/user/actions.php)
+- [hotspot/user/helpers.php](hotspot/user/helpers.php)
+- [include/env.php](include/env.php)

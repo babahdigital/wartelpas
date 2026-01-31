@@ -23,197 +23,133 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 require_once __DIR__ . '/../include/acl.php';
 requireLogin('../admin.php?id=login');
+include_once __DIR__ . '/../include/version.php';
 
 $is_operator = isOperator();
+$version_raw = $_SESSION['v'] ?? '';
+$version_parts = preg_split('/\s+/', trim($version_raw));
+$version_label = $version_parts[0] ?? '-';
+$build_label = $version_parts[1] ?? '-';
+$server_mode = isMaintenanceEnabled() ? 'Maintenance' : 'Online';
+$php_label = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . '.x';
 
-// array color
-  $color = array('1' => 'bg-blue', 'bg-indigo', 'bg-purple', 'bg-pink', 'bg-red', 'bg-yellow', 'bg-green', 'bg-teal', 'bg-cyan', 'bg-grey', 'bg-light-blue');
-
-  if (isset($_POST['save'])) {
-    if ($is_operator) {
-      echo "<script>alert('Akses ditolak. Hubungi Superadmin.'); window.location='./admin.php?id=sessions';</script>";
-      exit;
+$router_list = [];
+if (isset($data) && is_array($data)) {
+  foreach ($data as $key => $row) {
+    if ($key == "mikhmon" || $key == "") {
+      continue;
     }
-
-    if (!is_writable('./include/config.php')) {
-      echo "<script>alert('Gagal menyimpan. File config.php tidak bisa ditulis.'); window.location='./admin.php?id=sessions';</script>";
-      exit;
+    $ip_value = '';
+    if (isset($row[1]) && strpos($row[1], '!') !== false) {
+      $ip_value = explode('!', $row[1])[1];
     }
-
-    $suseradm = ($_POST['useradm']);
-    $spassadm = encrypt($_POST['passadm']);
-    $logobt = ($_POST['logobt']);
-    $qrbt = ($_POST['qrbt']);
-
-    $cari = array('1' => "mikhmon<|<$useradm", "mikhmon>|>$passadm");
-    $ganti = array('1' => "mikhmon<|<$suseradm", "mikhmon>|>$spassadm");
-
-    for ($i = 1; $i < 3; $i++) {
-      $file = file("./include/config.php");
-      $content = file_get_contents("./include/config.php");
-      $newcontent = str_replace((string)$cari[$i], (string)$ganti[$i], "$content");
-      $write_ok = file_put_contents("./include/config.php", "$newcontent");
-      if ($write_ok === false) {
-        echo "<script>alert('Gagal menyimpan. Periksa permission config.php.'); window.location='./admin.php?id=sessions';</script>";
-        exit;
-      }
-    }
-
-  
-  $gen = '<?php $qrbt="' . $qrbt . '";?>';
-          $key = './include/quickbt.php';
-          if (!is_writable($key)) {
-            echo "<script>alert('Gagal menyimpan. File quickbt.php tidak bisa ditulis.'); window.location='./admin.php?id=sessions';</script>";
-            exit;
-          }
-          $handle = fopen($key, 'w') or die('Cannot open file:  ' . $key);
-          $data = $gen;
-          fwrite($handle, $data);
-
-    echo "<script>window.location='./admin.php?id=sessions'</script>";
+    $hotspot_label = isset($row[4]) ? explode('%', $row[4])[1] : $key;
+    $router_list[] = [
+      'session' => $key,
+      'label' => $hotspot_label,
+      'ip' => $ip_value,
+      'active' => $ip_value !== ''
+    ];
   }
+}
+$active_count = 0;
+foreach ($router_list as $router_item) {
+  if (!empty($router_item['active'])) {
+    $active_count++;
+  }
+}
 ?>
-<script>
-  function Pass(id){
-    var x = document.getElementById(id);
-    if (x.type === 'password') {
-    x.type = 'text';
-    } else {
-    x.type = 'password';
-    }}
-</script>
+
+<div class="row" style="margin-bottom: 10px;">
+  <div class="col-12" style="display:flex; align-items:center; justify-content:space-between;">
+    <h2 style="margin:0; font-weight:300;">Dashboard <strong style="font-weight:700;">Utama</strong></h2>
+    <?php if (isSuperAdmin()): ?>
+      <a class="btn-action btn-primary-m" data-no-ajax="1" href="./admin.php?id=settings&router=new-<?= rand(1111,9999); ?>">
+        <i class="fa fa-plus-circle"></i> Tambah Router Baru
+      </a>
+    <?php endif; ?>
+  </div>
+</div>
 
 <div class="row">
-	<div class="col-12">
-  	<div class="card">
-  		<div class="card-header">
-  			<h3 class="card-title"><i class="fa fa-gear"></i> <?= $_admin_settings ?> &nbsp; | &nbsp;&nbsp;<i onclick="location.reload();" class="fa fa-refresh pointer " title="Reload data"></i></h3>
-  		</div>
-      <div class="card-body">
+  <div class="col-6">
+    <div class="card-modern">
+      <div class="card-header-modern">
+        <h3><i class="fa fa-server text-blue"></i> Daftar Router Tersedia</h3>
+        <span class="badge"><?= $active_count; ?> ACTIVE</span>
+        <?php if (isSuperAdmin()): ?>
+          <span class="pointer" title="Tambah Router" onclick="window.location='./admin.php?id=settings&router=new-<?= rand(1111,9999); ?>'" style="margin-left:auto; color:var(--text-secondary);">
+            <i class="fa fa-refresh"></i>
+          </span>
+        <?php endif; ?>
+      </div>
+      <div class="card-body-modern">
+        <?php if (empty($router_list)): ?>
+          <div class="admin-empty">Belum ada router.</div>
+        <?php else: ?>
+          <?php foreach ($router_list as $router_item): ?>
+            <div class="router-item <?= $router_item['active'] ? 'active-router' : 'inactive-router'; ?>">
+              <div class="router-icon"><i class="fa <?= $router_item['active'] ? 'fa-wifi' : 'fa-hdd-o'; ?>"></i></div>
+              <div class="router-info">
+                <span class="router-name"><?= htmlspecialchars($router_item['label']); ?></span>
+                <span class="router-session">Sesi: <?= htmlspecialchars($router_item['session']); ?> | IP: <?= htmlspecialchars($router_item['ip'] !== '' ? $router_item['ip'] : 'Unset'); ?></span>
+              </div>
+              <div class="router-actions">
+                <span class="connect" id="<?= htmlspecialchars($router_item['session']); ?>" title="Quick Connect"><i class="fa fa-bolt"></i></span>
+                <?php if (isSuperAdmin()): ?>
+                  <a href="./admin.php?id=settings&session=<?= htmlspecialchars($router_item['session']); ?>" title="Edit"><i class="fa fa-pencil"></i></a>
+                <?php endif; ?>
+              </div>
+            </div>
+          <?php endforeach; ?>
+        <?php endif; ?>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6">
+    <div class="card-modern">
+      <div class="card-header-modern">
+        <h3><i class="fa fa-info-circle text-green"></i> Status Sistem Mikhmon</h3>
+      </div>
+      <div class="card-body-modern">
         <div class="row">
           <div class="col-6">
-            <div class="card">
-              <div class="card-header">
-                <h3 class="card-title"><i class="fa fa-server"></i> <?= $_router_list ?></h3>
+            <div class="card-modern" style="margin-bottom:12px;">
+              <div class="card-body-modern">
+                <div class="text-secondary" style="font-size:12px;">Versi Sistem</div>
+                <div style="font-size:18px; font-weight:700;">v<?= htmlspecialchars($version_label); ?> <span class="badge" style="margin-left:8px;">LATEST</span></div>
               </div>
-            <div class="card-body">
-            <div class="row">
-              <?php
-              if (isset($data) && is_array($data)) {
-                foreach ($data as $key => $row) {
-                  if ($key == "mikhmon" || $key == "") {
-                    continue;
-                  }
-                  $value = $key;
-                  $hotspot_label = isset($row[4]) ? explode('%', $row[4])[1] : $value;
-                  ?>
-                    <div class="col-12">
-                        <div class="box bmh-75 box-bordered <?= $color[rand(1, 11)]; ?>">
-                                <div class="box-group">
-                                  
-                                  <div class="box-group-icon">
-                                    <span class="connect pointer" id="<?= $value; ?>">
-                                    <i class="fa fa-server"></i>
-                                    </span>
-                                  </div>
-                                
-                                  <div class="box-group-area">
-                                    <span>
-                                      <?= $_hotspot_name ?> : <?= htmlspecialchars($hotspot_label); ?><br>
-                                      <?= $_session_name ?> : <?= htmlspecialchars($value); ?><br>
-                                      <span class="connect pointer"  id="<?= htmlspecialchars($value); ?>"><i class="fa fa-external-link"></i> <?= $_open ?></span>&nbsp;
-                                      <?php if (isSuperAdmin()): ?>
-                                      <a href="./admin.php?id=settings&session=<?= htmlspecialchars($value); ?>"><i class="fa fa-edit"></i> <?= $_edit ?></a>&nbsp;
-                                      <a href="javascript:void(0)" onclick="if(confirm('Are you sure to delete data <?= htmlspecialchars($value);
-                                      echo " (" . htmlspecialchars($hotspot_label) . ")"; ?>?')){loadpage('./admin.php?id=remove-session&session=<?= htmlspecialchars($value); ?>')}else{}"><i class="fa fa-remove"></i> <?= $_delete ?></a>
-                                      <?php endif; ?>
-                                    </span>
-
-                                  </div>
-                                </div>
-                              
-                            </div>
-                          </div>
-              <?php
-                }
-              }
-              ?>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="card-modern" style="margin-bottom:12px;">
+              <div class="card-body-modern">
+                <div class="text-secondary" style="font-size:12px;">Build Date</div>
+                <div style="font-size:18px; font-weight:700;"><?= htmlspecialchars($build_label); ?></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="card-modern">
+              <div class="card-body-modern">
+                <div class="text-secondary" style="font-size:12px;">Mode Server</div>
+                <div style="font-size:18px; font-weight:700;"><?= htmlspecialchars($server_mode); ?></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="card-modern">
+              <div class="card-body-modern">
+                <div class="text-secondary" style="font-size:12px;">PHP Version</div>
+                <div style="font-size:18px; font-weight:700;"><?= htmlspecialchars($php_label); ?></div>
               </div>
             </div>
           </div>
         </div>
-			    <div class="col-6">
-          <?php if ($is_operator): ?>
-            <div class="card">
-              <div class="card-header">
-                <h3 class="card-title"><i class="fa fa-user-circle"></i> <?= $_admin ?></h3>
-              </div>
-              <div class="card-body">
-                <div class="box bg-warning" style="padding:10px;border-radius:6px;">
-                  Akses admin hanya untuk Superadmin.
-                </div>
-              </div>
-            </div>
-          <?php else: ?>
-          <form autocomplete="off" method="post" action="">
-            <div class="card">
-              <div class="card-header">
-                <h3 class="card-title"><i class="fa fa-user-circle"></i> <?= $_admin ?></h3>
-              </div>
-            <div class="card-body">
-      <table class="table table-sm">
-        <tr>
-          <td class="align-middle"><?= $_user_name ?> </td><td><input class="form-control" id="useradm" type="text" size="10" name="useradm" title="User Admin" value="<?= $useradm; ?>" required="1"/></td>
-        </tr>
-        <tr>
-          <td class="align-middle"><?= $_password ?> </td>
-          <td>
-          <div class="input-group">
-          <div class="input-group-11 col-box-10">
-                <input class="group-item group-item-l" id="passadm" type="password" size="10" name="passadm" title="Password Admin" value="<?= decrypt($passadm); ?>" required="1"/>
-              </div>
-                <div class="input-group-1 col-box-2">
-                  <div class="group-item group-item-r pd-2p5 text-center align-middle">
-                      <input title="Show/Hide Password" type="checkbox" onclick="Pass('passadm')">
-                  </div>
-                </div>
-            </div>
-          </td>
-        </tr>
-        <tr>
-          <td class="align-middle"><?= $_quick_print ?> QR</td>
-          <td>
-            <select class="form-control" name="qrbt">
-            <option><?= $qrbt ?></option>
-              <option>enable</option>
-              <option>disable</option>
-            </select>
-          </td>
-        </tr>
-        <tr>
-          <td></td><td class="text-right">
-              <div class="input-group-4">
-                  <input class="group-item group-item-l" type="submit" style="cursor: pointer;" name="save" value="<?= $_save ?>"/>
-                </div>
-                <div class="input-group-2">
-                  <div style="cursor: pointer;" class="group-item group-item-r pd-2p5 text-center" onclick="location.reload();" title="Reload Data"><i class="fa fa-refresh"></i></div>
-                </div>
-                </div>
-          </td>
-        </tr>
-        
-      </table>
-      <div id="loadV">v<?= $_SESSION['v']; ?> </div>
-      <div><b id="newVer" class="text-green"></b></div>
+      </div>
     </div>
-    </div>
-        </form>
-          <?php endif; ?>
   </div>
-</div>
-</div>
-</div>
-</div>
 </div>
 
 

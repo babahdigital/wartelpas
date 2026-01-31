@@ -1,0 +1,133 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../include/acl.php';
+requireLogin('../admin.php?id=login');
+
+$env = [];
+$envFile = __DIR__ . '/../include/env.php';
+if (file_exists($envFile)) {
+    require $envFile;
+}
+
+require_once __DIR__ . '/admin_account_logic.php';
+
+$op_user = $env['auth']['operator_user'] ?? '';
+$op_pass = $env['auth']['operator_pass'] ?? '';
+?>
+
+<?php if (!isSuperAdmin()): ?>
+    <div class="admin-empty">Akses ditolak. Hubungi Superadmin.</div>
+<?php else: ?>
+<form autocomplete="off" method="post" action="">
+    <div class="row">
+        <div class="col-6">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h3><i class="fa fa-user-secret"></i> Data Akun Administrator</h3>
+                </div>
+                <div class="card-body-modern">
+                    <div class="form-group-modern">
+                        <label class="form-label">Username Admin</label>
+                        <div class="input-group-modern">
+                            <div class="input-icon"><i class="fa fa-user-circle"></i></div>
+                            <input class="form-control-modern" type="text" name="useradm" value="<?= htmlspecialchars($useradm ?? ''); ?>" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group-modern">
+                        <label class="form-label">Password Admin</label>
+                        <div class="input-group-modern">
+                            <div class="input-icon"><i class="fa fa-lock"></i></div>
+                            <input class="form-control-modern" type="password" id="passadm" name="passadm" value="<?= htmlspecialchars(decrypt($passadm ?? '')); ?>" required>
+                            <div class="toggle-pass" onclick="Pass('passadm')"><i class="fa fa-eye"></i></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group-modern">
+                        <label class="form-label">Cetak Cepat QR</label>
+                        <div class="input-group-modern">
+                            <div class="input-icon"><i class="fa fa-qrcode"></i></div>
+                            <select class="form-control-modern" name="qrbt">
+                                <option><?= $qrbt ?></option>
+                                <option>enable</option>
+                                <option>disable</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h3><i class="fa fa-users"></i> Akses Operator</h3>
+                    <small class="badge" style="background:var(--warning); color:#000;">Level: Support</small>
+                </div>
+                <div class="card-body-modern">
+                    <p style="font-size:12px; color:var(--text-secondary); margin-bottom:15px;">
+                        Tentukan apa saja yang boleh dilakukan oleh user Operator selain Admin Utama.
+                    </p>
+
+                    <div class="form-group-modern">
+                        <label class="form-label">Username Operator</label>
+                        <div class="input-group-modern">
+                            <div class="input-icon"><i class="fa fa-user"></i></div>
+                            <input class="form-control-modern" type="text" value="<?= htmlspecialchars($op_user); ?>" readonly>
+                        </div>
+                    </div>
+
+                    <div class="form-group-modern">
+                        <label class="form-label">Password Operator</label>
+                        <div class="input-group-modern">
+                            <div class="input-icon"><i class="fa fa-lock"></i></div>
+                            <input class="form-control-modern" type="password" value="<?= htmlspecialchars($op_pass); ?>" readonly>
+                        </div>
+                    </div>
+
+                    <div class="checkbox-wrapper">
+                        <div class="row">
+                            <div class="col-6">
+                                <label class="custom-check">
+                                    <input type="checkbox" name="access_delete_user">
+                                    <span class="checkmark"></span>
+                                    <span class="check-label">Deleted User</span>
+                                </label>
+                                <label class="custom-check">
+                                    <input type="checkbox" name="access_delete_block">
+                                    <span class="checkmark"></span>
+                                    <span class="check-label">Delete Blok</span>
+                                </label>
+                                <label class="custom-check">
+                                    <input type="checkbox" name="access_audit_manual">
+                                    <span class="checkmark"></span>
+                                    <span class="check-label">Edit Audit Manual</span>
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <label class="custom-check">
+                                    <input type="checkbox" name="access_reset_settlement">
+                                    <span class="checkmark"></span>
+                                    <span class="check-label">Reset Settlement</span>
+                                </label>
+                                <label class="custom-check">
+                                    <input type="checkbox" name="access_backup_restore">
+                                    <span class="checkmark"></span>
+                                    <span class="check-label">Backup & Restore</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <button type="submit" name="save" class="btn-action btn-primary-m" style="width: 100%; justify-content: center; padding: 12px;">
+                    <i class="fa fa-save"></i> Simpan Data Admin & Operator
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+<?php endif; ?>

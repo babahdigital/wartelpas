@@ -1,5 +1,64 @@
 <?php
 
+if (!function_exists('split_sales_raw')) {
+    function split_sales_raw($raw) {
+        $raw = (string)$raw;
+        if (strpos($raw, '-|-') !== false) return explode('-|-', $raw);
+        if (strpos($raw, '-|') !== false) return explode('-|', $raw);
+        return explode('-|-', $raw);
+    }
+}
+
+if (!function_exists('ensure_audit_warning_table')) {
+    function ensure_audit_warning_table(PDO $db) {
+        try {
+            $db->exec("CREATE TABLE IF NOT EXISTS audit_warnings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                log_date TEXT,
+                type TEXT,
+                message TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )");
+        } catch (Exception $e) {}
+    }
+}
+
+if (!function_exists('log_audit_warning')) {
+    function log_audit_warning(PDO $db, $date, $type, $message) {
+        try {
+            ensure_audit_warning_table($db);
+            $date = trim((string)$date);
+            $type = trim((string)$type);
+            $msg = trim((string)$message);
+            if ($msg === '') return;
+            if ($type === '') $type = 'system';
+            if ($date !== '' && $type !== '') {
+                $stmtDel = $db->prepare("DELETE FROM audit_warnings WHERE log_date = :d AND type = :t");
+                $stmtDel->execute([':d' => $date, ':t' => $type]);
+            }
+            $stmt = $db->prepare("INSERT INTO audit_warnings (log_date, type, message) VALUES (:d, :t, :m)");
+            $stmt->execute([
+                ':d' => $date,
+                ':t' => $type,
+                ':m' => mb_substr($msg, 0, 500)
+            ]);
+        } catch (Exception $e) {}
+    }
+}
+
+if (!function_exists('fetch_audit_warnings')) {
+    function fetch_audit_warnings(PDO $db, $date) {
+        $rows = [];
+        try {
+            ensure_audit_warning_table($db);
+            $stmt = $db->prepare("SELECT type, message, created_at FROM audit_warnings WHERE log_date = :d ORDER BY id DESC LIMIT 20");
+            $stmt->execute([':d' => $date]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Exception $e) {}
+        return $rows;
+    }
+}
+
 function norm_date_from_raw_report($raw_date) {
     $raw = trim((string)$raw_date);
     if ($raw === '') return '';
@@ -782,4 +841,41 @@ function fetch_rows_for_audit(PDO $db, $audit_date) {
     }
 
     return $rows;
+}
+
+if (!function_exists('rebuild_audit_expected_for_date')) {
+    function rebuild_audit_expected_for_date(PDO $db, $audit_date) {
+        $audit_date = trim((string)$audit_date);
+        if ($audit_date === '') return 0;
+        if (!table_exists($db, 'audit_rekap_manual')) return 0;
+        $rows_src = fetch_rows_for_audit($db, $audit_date);
+        if (empty($rows_src)) return 0;
+        $stmtSel = $db->prepare("SELECT blok_name, reported_qty, actual_setoran FROM audit_rekap_manual WHERE report_date = :d");
+        $stmtSel->execute([':d' => $audit_date]);
+        $rows = $stmtSel->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if (empty($rows)) return 0;
+        $stmtUpd = $db->prepare("UPDATE audit_rekap_manual SET expected_qty = :eq, expected_setoran = :es, selisih_qty = :sq, selisih_setoran = :ss, updated_at = CURRENT_TIMESTAMP WHERE report_date = :d AND blok_name = :b");
+        $updated = 0;
+        foreach ($rows as $r) {
+            $blok = (string)($r['blok_name'] ?? '');
+            if ($blok === '') continue;
+            $expected = calc_expected_for_block($rows_src, $audit_date, $blok);
+            $expected_qty = (int)($expected['qty'] ?? 0);
+            $expected_setoran = (int)($expected['net'] ?? 0);
+            $reported_qty = (int)($r['reported_qty'] ?? 0);
+            $actual_setoran = (int)($r['actual_setoran'] ?? 0);
+            $selisih_qty = $reported_qty - $expected_qty;
+            $selisih_setoran = $actual_setoran - $expected_setoran;
+            $stmtUpd->execute([
+                ':eq' => $expected_qty,
+                ':es' => $expected_setoran,
+                ':sq' => $selisih_qty,
+                ':ss' => $selisih_setoran,
+                ':d' => $audit_date,
+                ':b' => $blok
+            ]);
+            $updated++;
+        }
+        return $updated;
+    }
 }

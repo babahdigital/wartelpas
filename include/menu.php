@@ -27,6 +27,43 @@ if (file_exists($envFile)) {
 }
 $backupKey = $env['backup']['secret'] ?? '';
 
+$menu_retur_pending = 0;
+$menu_retur_list = [];
+$menu_retur_visible = (isOperator() || isSuperAdmin());
+if ($menu_retur_visible) {
+    $root_dir = dirname(__DIR__);
+    $system_cfg = $env['system'] ?? [];
+    $db_rel = $system_cfg['db_file'] ?? 'db_data/mikhmon_stats.db';
+    if (preg_match('/^[A-Za-z]:\\|^\//', $db_rel)) {
+        $db_file = $db_rel;
+    } else {
+        $db_file = $root_dir . '/' . ltrim($db_rel, '/');
+    }
+    try {
+        $db_menu = new PDO('sqlite:' . $db_file);
+        $db_menu->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $menu_retur_pending = (int)$db_menu->query("SELECT COUNT(*) FROM retur_requests WHERE status='pending'")->fetchColumn();
+        $stmt = $db_menu->prepare("SELECT r.id, r.created_at, r.request_date, r.voucher_code, r.blok_name, r.request_type, r.customer_name, r.reason,
+            r.status, r.reviewed_by, r.reviewed_at, r.review_note,
+            COALESCE(
+                (SELECT COALESCE(sh.profile_snapshot, sh.profile) FROM sales_history sh WHERE sh.username = r.voucher_code ORDER BY sh.sale_datetime DESC, sh.id DESC LIMIT 1),
+                (SELECT lh.validity FROM login_history lh WHERE lh.username = r.voucher_code LIMIT 1)
+            ) AS profile_name,
+            COALESCE(
+                (SELECT sh.blok_name FROM sales_history sh WHERE sh.username = r.voucher_code ORDER BY sh.sale_datetime DESC, sh.id DESC LIMIT 1),
+                (SELECT lh.blok_name FROM login_history lh WHERE lh.username = r.voucher_code LIMIT 1)
+            ) AS blok_guess
+            FROM retur_requests r
+            ORDER BY r.created_at DESC
+            LIMIT 200");
+        $stmt->execute();
+        $menu_retur_list = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Exception $e) {
+        $menu_retur_pending = 0;
+        $menu_retur_list = [];
+    }
+}
+
 $btnmenuactive = "font-weight: bold;background-color: #f9f9f9; color: #000000";
 if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?session") {
     $shome = "active";
@@ -231,6 +268,44 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
     .dropdown-item i { margin-right: 10px; width: 15px; text-align: center; }
 
     .nav-right { display: flex; align-items: center; gap: 12px; padding-left: 20px; }
+    .retur-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 10px;
+        border-radius: 12px;
+        background: rgba(245, 158, 11, 0.2);
+        color: #f59e0b;
+        font-size: 11px;
+        font-weight: 700;
+        border: 1px solid rgba(245, 158, 11, 0.4);
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    .retur-pill i { font-size: 11px; }
+    .retur-pill-count {
+        min-width: 22px;
+        height: 22px;
+        padding: 0 6px;
+        border-radius: 10px;
+        background: #f59e0b;
+        color: #111827;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        line-height: 1;
+    }
+    .retur-pill.is-zero {
+        background: rgba(148, 163, 184, 0.18);
+        color: #94a3b8;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+    }
+    .retur-pill.is-zero .retur-pill-count {
+        background: #94a3b8;
+        color: #111827;
+    }
     .timer-badge {
         background: rgba(255,255,255,0.05);
         padding: 6px 12px;
@@ -373,96 +448,6 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         .nav-item.active-mobile .dropdown-menu { display: block; }
     }
 
-    /* --- Styles untuk Overlay Popup Modern --- */
-    .overlay-backdrop {
-        position: fixed;
-        inset: 0;
-        z-index: 20000;
-        background: rgba(0, 0, 0, 0.65);
-        backdrop-filter: blur(4px);
-        display: none;
-        align-items: center;
-        justify-content: center;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-    }
-
-    .overlay-backdrop.show {
-        display: flex;
-        opacity: 1;
-    }
-
-    .overlay-modal {
-        background: #1e282c;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        width: 100%;
-        max-width: 380px;
-        padding: 25px;
-        text-align: center;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.5);
-        transform: scale(0.9);
-        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-
-    .overlay-backdrop.show .overlay-modal {
-        transform: scale(1);
-    }
-
-    .overlay-icon-box {
-        width: 70px;
-        height: 70px;
-        margin: 0 auto 15px auto;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 32px;
-        background: rgba(255, 255, 255, 0.05);
-        transition: all 0.3s;
-    }
-
-    .status-loading .overlay-icon-box { color: #3c8dbc; border: 2px solid rgba(60, 141, 188, 0.3); background: rgba(60, 141, 188, 0.1); }
-    .status-success .overlay-icon-box { color: #00a65a; border: 2px solid rgba(0, 166, 90, 0.3); background: rgba(0, 166, 90, 0.1); }
-    .status-error   .overlay-icon-box { color: #dd4b39; border: 2px solid rgba(221, 75, 57, 0.3); background: rgba(221, 75, 57, 0.1); }
-
-    .overlay-title {
-        font-size: 18px;
-        font-weight: 600;
-        color: #fff;
-        margin-bottom: 8px;
-        letter-spacing: 0.5px;
-    }
-
-    .overlay-message {
-        font-size: 14px;
-        color: #b8c7ce;
-        line-height: 1.5;
-        margin-bottom: 20px;
-    }
-
-    .overlay-btn {
-        background: #3c8dbc;
-        color: white;
-        border: none;
-        padding: 10px 25px;
-        border-radius: 50px;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s;
-        outline: none;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-    }
-
-    .overlay-btn:hover {
-        background: #367fa9;
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(0,0,0,0.3);
-    }
-
-    .status-error .overlay-btn { background: #d73925; }
-    .status-error .overlay-btn:hover { background: #ac2925; }
 </style>
 
 <?php if ($id != "") { ?>
@@ -528,6 +513,12 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
             <?php else: ?>
                 <a id="db-restore" class="db-tools" href="javascript:void(0)" title="Restore Backup Terbaru" onclick="runRestoreAjax()" style="display:none;">
                     <i class="fa fa-history"></i> Restore
+                </a>
+            <?php endif; ?>
+            <?php if ($menu_retur_visible): ?>
+                <a class="retur-pill <?= $menu_retur_pending > 0 ? '' : 'is-zero' ?>" id="retur-menu-pill" href="javascript:void(0)" onclick="return openReturMenuPopup(event);" title="Permintaan Retur Pending">
+                    <i class="fa fa-undo"></i> Retur
+                    <span class="retur-pill-count" id="retur-menu-count"><?= (int)$menu_retur_pending ?></span>
                 </a>
             <?php endif; ?>
             <span class="timer-badge" title="Waktu Saat Ini">
@@ -619,6 +610,12 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                     <i class="fa fa-history"></i> Restore
                 </a>
             <?php endif; ?>
+            <?php if ($menu_retur_visible): ?>
+                <a class="retur-pill <?= $menu_retur_pending > 0 ? '' : 'is-zero' ?>" id="retur-menu-pill" href="javascript:void(0)" onclick="return openReturMenuPopup(event);" title="Permintaan Retur Pending">
+                    <i class="fa fa-undo"></i> Retur
+                    <span class="retur-pill-count" id="retur-menu-count"><?= (int)$menu_retur_pending ?></span>
+                </a>
+            <?php endif; ?>
             <span class="timer-badge" title="Waktu Saat Ini">
                 <i class="fa fa-clock-o"></i> <span id="timer_val">--:--</span>
             </span>
@@ -641,26 +638,6 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
 <div id="overL" style="display:none"></div>
 
 <style>
-    .overlay-backdrop { position: fixed; inset: 0; background: rgba(10, 10, 10, 0.7); display: none; align-items: center; justify-content: center; z-index: 10050; }
-    .overlay-backdrop.show { display: flex; }
-    .overlay-modal { background: #2b2f33; color: #e8edf3; border: 1px solid #3b4248; border-radius: 10px; width: 420px; max-width: 92vw; box-shadow: 0 12px 30px rgba(0,0,0,0.45); padding: 18px; text-align: center; }
-    .overlay-icon-box { width: 56px; height: 56px; border-radius: 50%; background: #1f2428; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 10px; border: 1px solid #3b4248; }
-    .overlay-icon-box i { font-size: 22px; }
-    .overlay-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
-    .overlay-message { font-size: 13px; color: #c5ccd6; margin-bottom: 12px; }
-    .overlay-btn { background: #4f8ef7; color: #fff; border: none; padding: 7px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; }
-    .overlay-btn:hover { background: #3d7be2; }
-
-    .modal-backdrop { position: fixed; inset: 0; background: rgba(10, 10, 10, 0.7); display: none; align-items: center; justify-content: center; z-index: 10060; }
-    .modal-card { background: #2b2f33; color: #e8edf3; border-radius: 10px; width: 420px; max-width: 92vw; border: 1px solid #3b4248; box-shadow: 0 12px 30px rgba(0,0,0,0.45); overflow: hidden; }
-    .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #3b4248; background: #262a2e; }
-    .modal-title { font-size: 14px; font-weight: 700; }
-    .modal-close { background: transparent; border: none; color: #c9d1d9; font-size: 18px; cursor: pointer; }
-    .modal-body { padding: 16px; }
-    .modal-info-banner { background: #1f2428; border: 1px solid #3b4248; border-radius: 8px; padding: 10px; }
-    .modal-info-icon { width: 28px; height: 28px; border-radius: 6px; background: rgba(255,152,0,0.15); color: #ff9800; display: inline-flex; align-items: center; justify-content: center; }
-    .modal-info-text { font-size: 13px; color: #d7dde6; line-height: 1.5; }
-    .modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid #3b4248; background: #262a2e; }
     .btn-print.btn-default-dark { background:#343a40; color:#fff; border:1px solid #4b5259; }
     .btn-print.btn-default-dark:hover { background:#3d434a; color:#fff; }
 </style>
@@ -708,52 +685,13 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         if (fallback) fallback.textContent = full;
     }
 
-    var isSuperAdminFlag = <?= json_encode($is_superadmin); ?>;
-
-    function updateDbStatus() {
-        var el = document.getElementById('db-status');
-        var restoreBtn = document.getElementById('db-restore');
-        if (!el) return;
-        fetch('./tools/db_check.php?key=' + encodeURIComponent(window.__backupKey || ''))
-            .then(function(resp) {
-                if (!resp.ok) throw new Error('bad');
-                return resp.text();
-            })
-            .then(function(txt) {
-                var low = txt ? txt.toLowerCase() : '';
-                var ok = low.indexOf('db error') === -1 && low.indexOf('not found') === -1 && low.indexOf('forbidden') === -1;
-                el.classList.remove('db-ok', 'db-error');
-                el.classList.add(ok ? 'db-ok' : 'db-error');
-                if (restoreBtn && !isSuperAdminFlag) {
-                    restoreBtn.style.display = ok ? 'none' : 'inline-flex';
-                }
-            })
-            .catch(function() {
-                el.classList.remove('db-ok');
-                el.classList.add('db-error');
-                if (restoreBtn && !isSuperAdminFlag) restoreBtn.style.display = 'inline-flex';
-            });
-    }
-
-    function updateBackupStatus() {
-        var backupBtn = document.getElementById('db-backup');
-        if (!backupBtn) return;
-        fetch('./tools/backup_status.php?key=' + encodeURIComponent(window.__backupKey || ''))
-            .then(function(resp) {
-                if (!resp.ok) throw new Error('bad');
-                return resp.json();
-            })
-            .then(function(data) {
-                var validToday = data && data.valid_today === true;
-                backupBtn.style.display = validToday ? 'none' : 'inline-flex';
-            })
-            .catch(function() {
-                backupBtn.style.display = 'inline-flex';
-            });
-    }
+    window.__isSuperAdminFlag = <?= json_encode($is_superadmin); ?>;
+    window.__returMenuData = <?= json_encode(['count' => $menu_retur_pending, 'items' => $menu_retur_list], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+    window.__returBlokNames = <?= json_encode(($env['blok']['names'] ?? []), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+    window.__returSession = <?= json_encode($session); ?>;
+    window.__backupKey = <?= json_encode($backupKey) ?>;
 
     document.addEventListener('DOMContentLoaded', function(){
-        window.__backupKey = <?= json_encode($backupKey) ?>;
         if (window.jQuery) {
             $(".connect").click(function(){
                 notify("<?= $_connecting ?>");
@@ -766,247 +704,15 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         }
         updateRealTimeBadge();
         setInterval(updateRealTimeBadge, 1000);
-        updateDbStatus();
-        setInterval(updateDbStatus, 30000);
-        updateBackupStatus();
-        setInterval(updateBackupStatus, 60000);
+        if (typeof window.updateDbStatus === 'function') {
+            window.updateDbStatus();
+            setInterval(window.updateDbStatus, 30000);
+        }
+        if (typeof window.updateBackupStatus === 'function') {
+            window.updateBackupStatus();
+            setInterval(window.updateBackupStatus, 60000);
+        }
     });
-
-    function showOverlayNotice(msg, type, lockClose){
-        var overlay = document.getElementById('ajax-overlay');
-        var container = document.getElementById('ajax-modal-container');
-        var titleEl = document.getElementById('ajax-overlay-title');
-        var textEl = document.getElementById('ajax-overlay-text');
-        var icon = document.getElementById('ajax-overlay-icon');
-        var btn = document.getElementById('ajax-overlay-close');
-
-        if (!overlay || !container || !titleEl || !textEl || !icon || !btn) return;
-
-        container.classList.remove('status-loading', 'status-success', 'status-error');
-        var t = (type || 'info').toLowerCase();
-        if (t === 'error') {
-            container.classList.add('status-error');
-            icon.className = 'fa fa-times';
-            titleEl.textContent = 'Gagal!';
-        } else if (t === 'success') {
-            container.classList.add('status-success');
-            icon.className = 'fa fa-check';
-            titleEl.textContent = 'Berhasil!';
-        } else {
-            container.classList.add('status-loading');
-            icon.className = 'fa fa-circle-o-notch fa-spin';
-            titleEl.textContent = 'Memproses...';
-        }
-
-        textEl.textContent = msg || '';
-        if (lockClose) {
-            btn.style.display = 'none';
-        } else {
-            btn.style.display = 'inline-block';
-            setTimeout(function(){ btn.focus(); }, 100);
-        }
-
-        overlay.style.display = 'flex';
-        setTimeout(function(){
-            overlay.classList.add('show');
-        }, 10);
-    }
-
-    function hideOverlayNotice(){
-        var overlay = document.getElementById('ajax-overlay');
-        if (overlay) {
-            overlay.classList.remove('show');
-            setTimeout(function(){
-                overlay.style.display = 'none';
-            }, 300);
-        }
-    }
-
-    function notifyLocal(msg, type, lockClose){
-        showOverlayNotice(msg, type, !!lockClose);
-    }
-
-    function runBackupAjax(){
-        var btn = document.getElementById('db-backup');
-        if (!btn) return;
-
-        var doBackup = function(){
-            btn.style.pointerEvents = 'none';
-            btn.style.opacity = '0.6';
-            if (window.MikhmonPopup) {
-                window.MikhmonPopup.open({
-                    title: 'Pencadangan Database',
-                    iconClass: 'fa fa-database',
-                    statusIcon: 'fa fa-circle-o-notch fa-spin',
-                    statusColor: '#2f81f7',
-                    message: 'Proses backup sedang berjalan. Mohon tunggu...',
-                    buttons: [
-                        { label: 'Tunggu...', className: 'm-btn m-btn-cancel', close: false }
-                    ]
-                });
-            }
-            fetch('./tools/backup_db.php?ajax=1&key=' + encodeURIComponent(window.__backupKey || ''), {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            })
-            .then(function(resp){ return resp.json(); })
-            .then(function(data){
-                if (window.MikhmonPopup) {
-                    if (data && data.ok) {
-                        window.MikhmonPopup.open({
-                            title: 'Backup Sukses',
-                            iconClass: 'fa fa-check-circle',
-                            statusIcon: 'fa fa-cloud-download',
-                            statusColor: '#238636',
-                            message: 'Backup selesai.',
-                            alert: { type: 'info', text: 'File: ' + (data.backup || '-') + ' | Cloud: ' + (data.cloud || '-') },
-                            buttons: [
-                                { label: 'Tutup', className: 'm-btn m-btn-primary' }
-                            ]
-                        });
-                        updateBackupStatus();
-                    } else {
-                        window.MikhmonPopup.open({
-                            title: 'Backup Gagal',
-                            iconClass: 'fa fa-times-circle',
-                            statusIcon: 'fa fa-times-circle',
-                            statusColor: '#da3633',
-                            message: 'Backup gagal.',
-                            alert: { type: 'danger', text: (data && data.message) ? data.message : 'Unknown' },
-                            buttons: [
-                                { label: 'Tutup', className: 'm-btn m-btn-cancel' }
-                            ]
-                        });
-                    }
-                }
-            })
-            .catch(function(){
-                if (window.MikhmonPopup) {
-                    window.MikhmonPopup.open({
-                        title: 'Backup Gagal',
-                        iconClass: 'fa fa-times-circle',
-                        statusIcon: 'fa fa-times-circle',
-                        statusColor: '#da3633',
-                        message: 'Backup gagal karena koneksi.',
-                        buttons: [
-                            { label: 'Tutup', className: 'm-btn m-btn-cancel' }
-                        ]
-                    });
-                }
-            })
-            .finally(function(){
-                btn.style.pointerEvents = 'auto';
-                btn.style.opacity = '1';
-            });
-        };
-
-        if (window.MikhmonPopup) {
-            window.MikhmonPopup.open({
-                title: 'Pencadangan Database',
-                iconClass: 'fa fa-database',
-                statusIcon: 'fa fa-cloud-download',
-                statusColor: '#238636',
-                message: 'Sistem akan mencadangkan seluruh data ke server utama.',
-                alert: { type: 'info', text: 'Mencakup transaksi, log aktivitas, dan konfigurasi terbaru.' },
-                buttons: [
-                    { label: 'Batalkan', className: 'm-btn m-btn-cancel' },
-                    { label: 'Jalankan Backup', className: 'm-btn m-btn-success', close: false, onClick: doBackup }
-                ]
-            });
-            return;
-        }
-        if (confirm('Jalankan backup sekarang?')) doBackup();
-    }
-
-    function runRestoreAjax(){
-        var btn = document.getElementById('db-restore');
-        if (!btn) return;
-
-        var doRestore = function(){
-            btn.style.pointerEvents = 'none';
-            btn.style.opacity = '0.6';
-            if (window.MikhmonPopup) {
-                window.MikhmonPopup.open({
-                    title: 'Pemulihan Database',
-                    iconClass: 'fa fa-history',
-                    statusIcon: 'fa fa-circle-o-notch fa-spin',
-                    statusColor: '#2f81f7',
-                    message: 'Proses restore sedang berjalan. Mohon tunggu...',
-                    buttons: [
-                        { label: 'Tunggu...', className: 'm-btn m-btn-cancel', close: false }
-                    ]
-                });
-            }
-            fetch('./tools/restore_db.php?ajax=1&nolimit=1&key=' + encodeURIComponent(window.__backupKey || ''), {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            })
-            .then(function(resp){ return resp.json(); })
-            .then(function(data){
-                if (window.MikhmonPopup) {
-                    if (data && data.ok) {
-                        window.MikhmonPopup.open({
-                            title: 'Restore Sukses',
-                            iconClass: 'fa fa-check-circle',
-                            statusIcon: 'fa fa-refresh',
-                            statusColor: '#2f81f7',
-                            message: 'Restore selesai.',
-                            alert: { type: 'info', text: 'File: ' + (data.file || '-') + ' | Sumber: ' + (data.source || '-') },
-                            buttons: [
-                                { label: 'Tutup', className: 'm-btn m-btn-primary' }
-                            ]
-                        });
-                        updateDbStatus();
-                    } else {
-                        window.MikhmonPopup.open({
-                            title: 'Restore Gagal',
-                            iconClass: 'fa fa-times-circle',
-                            statusIcon: 'fa fa-times-circle',
-                            statusColor: '#da3633',
-                            message: 'Restore gagal.',
-                            alert: { type: 'danger', text: (data && data.message) ? data.message : 'Unknown' },
-                            buttons: [
-                                { label: 'Tutup', className: 'm-btn m-btn-cancel' }
-                            ]
-                        });
-                    }
-                }
-            })
-            .catch(function(){
-                if (window.MikhmonPopup) {
-                    window.MikhmonPopup.open({
-                        title: 'Restore Gagal',
-                        iconClass: 'fa fa-times-circle',
-                        statusIcon: 'fa fa-times-circle',
-                        statusColor: '#da3633',
-                        message: 'Restore gagal karena koneksi.',
-                        buttons: [
-                            { label: 'Tutup', className: 'm-btn m-btn-cancel' }
-                        ]
-                    });
-                }
-            })
-            .finally(function(){
-                btn.style.pointerEvents = 'auto';
-                btn.style.opacity = '1';
-            });
-        };
-
-        if (window.MikhmonPopup) {
-            window.MikhmonPopup.open({
-                title: 'Pemulihan Database',
-                iconClass: 'fa fa-history',
-                statusIcon: 'fa fa-exclamation-triangle',
-                statusColor: '#d29922',
-                message: 'Database saat ini akan digantikan dengan backup terbaru.',
-                alert: { type: 'warning', html: '<strong>Peringatan:</strong> Tindakan ini tidak dapat dibatalkan.' },
-                buttons: [
-                    { label: 'Batalkan', className: 'm-btn m-btn-cancel' },
-                    { label: 'Mulai Restore', className: 'm-btn m-btn-primary', close: false, onClick: doRestore }
-                ]
-            });
-            return;
-        }
-        if (confirm('Restore akan menimpa database. Lanjutkan?')) doRestore();
-    }
 </script>
 
 <div id="notify"><div class="message"></div></div>

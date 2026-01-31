@@ -107,6 +107,10 @@ $env = [
     'maintenance' => [
         'enabled' => false
     ],
+    'retur_request' => [
+        'enabled' => true,
+        'message' => 'Fitur retur sedang dimatikan. Silakan hubungi operator.'
+    ],
     'rclone' => [
         'bin' => '/usr/bin/rclone',
         'remote' => 'Wartelpas:Wartelpas',
@@ -117,6 +121,7 @@ $env = [
     'whatsapp' => [
         'endpoint_send' => 'https://api.fonnte.com/send',
         'token' => 'g7A8dpDfJrnR5SBGXunU',
+        'notify_target' => '0811580039',
         'country_code' => '62',
         'timezone' => 'Asia/Makassar',
         'log_limit' => 50

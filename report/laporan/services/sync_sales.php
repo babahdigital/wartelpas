@@ -75,6 +75,9 @@ if ($session === '' || !isset($data[$session])) {
 // 2. LIBRARY API
 require_once($root_dir . '/lib/routeros_api.class.php');
 require_once($root_dir . '/include/readcfg.php');
+if (file_exists($root_dir . '/report/laporan/helpers.php')) {
+    require_once($root_dir . '/report/laporan/helpers.php');
+}
 
 if (!isset($hotspot_server) || $hotspot_server !== $expected_hotspot) {
     die("Error: Hanya untuk server wartel.");
@@ -199,8 +202,8 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
         foreach ($allScripts as $s) {
             $nm = $s['name'] ?? '';
             if ($nm === '') continue;
-            if (strpos($nm, '-|-') === false) continue;
-            if (preg_match('/^[A-Za-z]{3}\/[0-9]{2}\/[0-9]{4}-\|-/', $nm) || preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}-\|-/', $nm) || preg_match('/^[0-9]{2}\/[0-9]{2}\/[0-9]{4}-\|-/', $nm)) {
+            if (strpos($nm, '-|-') === false && strpos($nm, '-|') === false) continue;
+            if (preg_match('/^[A-Za-z]{3}\/[0-9]{2}\/[0-9]{4}-\|-?/', $nm) || preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}-\|-?/', $nm) || preg_match('/^[0-9]{2}\/[0-9]{2}\/[0-9]{4}-\|-?/', $nm)) {
                 $scripts[] = $s;
             }
         }
@@ -234,7 +237,7 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
         }
         
         // Pecah Data (Explode)
-        $d = explode("-|-", $rawData);
+        $d = function_exists('split_sales_raw') ? split_sales_raw($rawData) : explode('-|-', $rawData);
         
         // Pastikan formatnya benar (Minimal ada 4 elemen)
         if (count($d) >= 4) {
@@ -402,6 +405,29 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
             rebuild_sales_summary($db);
         } catch (Exception $e) {
             // Abaikan error rekap agar sync tetap sukses
+        }
+    }
+
+    if (function_exists('rebuild_audit_expected_for_date')) {
+        try {
+            $rebuild_date = date('Y-m-d');
+            $updated = rebuild_audit_expected_for_date($db, $rebuild_date);
+            if (function_exists('log_audit_warning')) {
+                log_audit_warning($db, $rebuild_date, 'sync_status', 'Sistem sudah disinkronisasi.');
+            }
+        } catch (Exception $e) {}
+    }
+
+    if (function_exists('log_audit_warning')) {
+        $log_date = date('Y-m-d');
+        if ($skip_invalid_format > 0) {
+            log_audit_warning($db, $log_date, 'sync_sales', 'Format raw tidak terbaca: ' . $skip_invalid_format . ' item.');
+        }
+        if ($skip_blok > 0) {
+            log_audit_warning($db, $log_date, 'sync_sales', 'Transaksi tanpa BLOK di-skip: ' . $skip_blok . ' item.');
+        }
+        if ($skip_duplicate > 0) {
+            log_audit_warning($db, $log_date, 'sync_sales', 'Duplikat di-skip: ' . $skip_duplicate . ' item.');
         }
     }
 

@@ -30,6 +30,9 @@ services:
       - ./settings/sessions.php:/var/www/html/settings/sessions.php
       - ./settings/uplogo.php:/var/www/html/settings/uplogo.php
       - ./settings/mikrotik_scripts.php:/var/www/html/settings/mikrotik_scripts.php
+      - ./settings/admin_single.php:/var/www/html/settings/admin_single.php
+      - ./settings/admin_account_logic.php:/var/www/html/settings/admin_account_logic.php
+      - ./settings/operator_access.php:/var/www/html/settings/operator_access.php
       - ./include/readcfg.php:/var/www/html/include/readcfg.php
       - ./custom.ini:/usr/local/etc/php/conf.d/custom.ini
       - ./.htaccess:/var/www/html/.htaccess
@@ -69,10 +72,12 @@ services:
       # 5. FILE ROOT & TOOLS (CORE SYSTEM)
       # ==========================================
       - ./admin.php:/var/www/html/admin.php
+      - ./admin_assets:/var/www/html/admin_assets
       - ./cekip.php:/var/www/html/cekip.php
       - ./error.php:/var/www/html/error.php
       - ./index.php:/var/www/html/index.php
       - ./lang/id.php:/var/www/html/lang/id.php
+      - ./system/whatsapp:/var/www/html/system/whatsapp
 
       # ==========================================
       # 6. INCLUDE LAINNYA

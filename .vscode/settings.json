@@ -5,6 +5,12 @@
         "/^php -r \"\\$db=new SQLite3\\('d:/Data/Projek/wartelpas/db_data/mikhmon_stats\\.db'\\);\\$res=\\$db->query\\('SELECT name FROM sqlite_master WHERE type=\\\\'table\\\\' ORDER BY name'\\);while\\(\\$row=\\$res->fetchArray\\(SQLITE3_ASSOC\\)\\)\\{echo \\$row\\['name'\\]\\.\"\\\\n\";\\}\"$/": {
             "approve": true,
             "matchCommandLine": true
-        }
+        },
+        "/^php -l d:\\\\Data\\\\Projek\\\\wartelpas\\\\report\\\\laporan\\\\render\\.php && php -l d:\\\\Data\\\\Projek\\\\wartelpas\\\\report\\\\laporan\\\\data\\.php$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "where": true,
+        "git checkout": true
     }
 }

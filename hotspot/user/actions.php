@@ -52,6 +52,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
   };
   $is_action_ajax = isset($_GET['ajax']) && $_GET['ajax'] == '1' && isset($_GET['action_ajax']);
   $act = $_POST['action'] ?? $_GET['action'];
+  $retur_request_id = null;
+  $retur_request_note = '';
   $api_print_cache = [];
   $api_print = function($path, $params = []) use ($API, &$api_print_cache) {
     $key = $path . '|' . md5(json_encode($params));
@@ -125,6 +127,216 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       exit();
     }
   }
+  if ($act === 'retur_request_reject') {
+    $req_id = (int)($_GET['req_id'] ?? 0);
+    $note = trim((string)($_GET['note'] ?? 'Ditolak operator.'));
+    if (!isOperator() && !isSuperAdmin()) {
+      $action_blocked = true;
+      $action_error = 'Akses ditolak.';
+    } elseif (!$db) {
+      $action_blocked = true;
+      $action_error = 'Gagal: database belum siap.';
+    } elseif ($req_id <= 0) {
+      $action_blocked = true;
+      $action_error = 'Permintaan tidak ditemukan.';
+    } else {
+      try {
+        $stmt = $db->prepare("SELECT status, voucher_code, reason, request_type, customer_name FROM retur_requests WHERE id = :id");
+        $stmt->execute([':id' => $req_id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $st = strtolower((string)($row['status'] ?? ''));
+        if ($st !== 'pending') {
+          $action_blocked = true;
+          $action_error = 'Permintaan sudah diproses.';
+        } else {
+          $stmt = $db->prepare("UPDATE retur_requests SET status='rejected', reviewed_by=:rb, reviewed_at=CURRENT_TIMESTAMP, review_note=:rn WHERE id=:id");
+          $stmt->execute([
+            ':id' => $req_id,
+            ':rb' => (string)($_SESSION['mikhmon'] ?? 'operator'),
+            ':rn' => $note
+          ]);
+          $action_blocked = false;
+          $action_message = 'Permintaan retur ditolak.';
+        }
+      } catch (Exception $e) {
+        $action_blocked = true;
+        $action_error = 'Gagal memproses permintaan.';
+      }
+    }
+    $redir_params = [
+      'hotspot' => 'users',
+      'session' => $session,
+    ];
+    if (isset($_GET['profile'])) $redir_params['profile'] = $_GET['profile'];
+    if (isset($_GET['comment'])) $redir_params['comment'] = $_GET['comment'];
+    if (isset($_GET['status'])) $redir_params['status'] = $_GET['status'];
+    if (isset($_GET['q'])) $redir_params['q'] = $_GET['q'];
+    if (isset($_GET['show'])) $redir_params['show'] = $_GET['show'];
+    if (isset($_GET['date'])) $redir_params['date'] = $_GET['date'];
+    if (isset($_GET['debug'])) $redir_params['debug'] = $_GET['debug'];
+    if (isset($_GET['only_wartel'])) $redir_params['only_wartel'] = $_GET['only_wartel'];
+    if (isset($_GET['retur_status'])) $redir_params['retur_status'] = $_GET['retur_status'];
+    $redir = './?' . http_build_query($redir_params);
+    if ($is_action_ajax) {
+      if (ob_get_length()) { @ob_clean(); }
+      header('Content-Type: application/json');
+      echo json_encode([
+        'ok' => !$action_blocked,
+        'message' => $action_blocked ? $action_error : ($action_message ?: 'Berhasil diproses.'),
+        'redirect' => $action_blocked ? '' : $redir
+      ]);
+      exit();
+    }
+    if ($action_blocked) {
+      echo "<script>if(window.showActionPopup){window.showActionPopup('error','" . addslashes($action_error) . "');}</script>";
+    } else {
+      echo "<script>if(window.showActionPopup){window.showActionPopup('success','" . addslashes($action_message ?: 'Berhasil diproses.') . "','{$redir}');}else{window.location.href='{$redir}';}</script>";
+    }
+    exit();
+  }
+
+  if ($act === 'retur_request_mark_rusak') {
+    $req_id = (int)($_GET['req_id'] ?? 0);
+    $note = trim((string)($_GET['note'] ?? 'Ditandai RUSAK.'));
+    if (!isOperator() && !isSuperAdmin()) {
+      $action_blocked = true;
+      $action_error = 'Akses ditolak.';
+    } elseif (!$db) {
+      $action_blocked = true;
+      $action_error = 'Gagal: database belum siap.';
+    } elseif ($req_id <= 0) {
+      $action_blocked = true;
+      $action_error = 'Permintaan tidak ditemukan.';
+    } else {
+      try {
+        $stmt = $db->prepare("SELECT status, request_type, voucher_code, reason, customer_name FROM retur_requests WHERE id = :id");
+        $stmt->execute([':id' => $req_id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $st = strtolower((string)($row['status'] ?? ''));
+        $req_type = strtolower((string)($row['request_type'] ?? 'retur'));
+        if ($st !== 'pending') {
+          $action_blocked = true;
+          $action_error = 'Permintaan sudah diproses.';
+        } elseif ($req_type !== 'pengembalian') {
+          $action_blocked = true;
+          $action_error = 'Hanya refund yang bisa ditandai RUSAK.';
+        } else {
+          $stmt = $db->prepare("UPDATE retur_requests SET status='approved', reviewed_by=:rb, reviewed_at=CURRENT_TIMESTAMP, review_note=:rn WHERE id=:id");
+          $stmt->execute([
+            ':id' => $req_id,
+            ':rb' => (string)($_SESSION['mikhmon'] ?? 'operator'),
+            ':rn' => $note !== '' ? $note : 'Ditandai RUSAK.'
+          ]);
+          $action_blocked = false;
+          $action_message = 'Permintaan retur ditandai RUSAK.';
+        }
+      } catch (Exception $e) {
+        $action_blocked = true;
+        $action_error = 'Gagal memproses permintaan.';
+      }
+    }
+    $redir_params = [
+      'hotspot' => 'users',
+      'session' => $session,
+    ];
+    if (isset($_GET['profile'])) $redir_params['profile'] = $_GET['profile'];
+    if (isset($_GET['comment'])) $redir_params['comment'] = $_GET['comment'];
+    if (isset($_GET['status'])) $redir_params['status'] = $_GET['status'];
+    if (isset($_GET['q'])) $redir_params['q'] = $_GET['q'];
+    if (isset($_GET['show'])) $redir_params['show'] = $_GET['show'];
+    if (isset($_GET['date'])) $redir_params['date'] = $_GET['date'];
+    if (isset($_GET['debug'])) $redir_params['debug'] = $_GET['debug'];
+    if (isset($_GET['only_wartel'])) $redir_params['only_wartel'] = $_GET['only_wartel'];
+    if (isset($_GET['retur_status'])) $redir_params['retur_status'] = $_GET['retur_status'];
+    $redir = './?' . http_build_query($redir_params);
+    if ($is_action_ajax) {
+      if (ob_get_length()) { @ob_clean(); }
+      header('Content-Type: application/json');
+      echo json_encode([
+        'ok' => !$action_blocked,
+        'message' => $action_blocked ? $action_error : ($action_message ?: 'Berhasil diproses.'),
+        'redirect' => $action_blocked ? '' : $redir
+      ]);
+      exit();
+    }
+    if ($action_blocked) {
+      echo "<script>if(window.showActionPopup){window.showActionPopup('error','" . addslashes($action_error) . "');}</script>";
+    } else {
+      echo "<script>if(window.showActionPopup){window.showActionPopup('success','" . addslashes($action_message ?: 'Berhasil diproses.') . "','{$redir}');}else{window.location.href='{$redir}';}</script>";
+    }
+    exit();
+  }
+
+  if ($act === 'retur_request_approve') {
+    $req_id = (int)($_GET['req_id'] ?? 0);
+    if (!isOperator() && !isSuperAdmin()) {
+      $action_blocked = true;
+      $action_error = 'Akses ditolak.';
+    } elseif (!$db) {
+      $action_blocked = true;
+      $action_error = 'Gagal: database belum siap.';
+    } elseif ($req_id <= 0) {
+      $action_blocked = true;
+      $action_error = 'Permintaan tidak ditemukan.';
+    } else {
+      try {
+        $stmt = $db->prepare("SELECT id, voucher_code, status, reason FROM retur_requests WHERE id = :id");
+        $stmt->execute([':id' => $req_id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+          $action_blocked = true;
+          $action_error = 'Permintaan tidak ditemukan.';
+        } elseif (strtolower((string)($row['status'] ?? '')) !== 'pending') {
+          $action_blocked = true;
+          $action_error = 'Permintaan sudah diproses.';
+        } else {
+          $voucher = trim((string)($row['voucher_code'] ?? ''));
+          if ($voucher === '') {
+            $action_blocked = true;
+            $action_error = 'Kode voucher kosong.';
+          } else {
+            $retur_request_id = (int)$row['id'];
+            $retur_request_note = 'Disetujui operator.';
+            $_GET['name'] = $voucher;
+            $_GET['c'] = 'Retur Request: ' . trim((string)($row['reason'] ?? ''));
+            $act = 'retur';
+          }
+        }
+      } catch (Exception $e) {
+        $action_blocked = true;
+        $action_error = 'Gagal memproses permintaan.';
+      }
+    }
+    if (!empty($action_blocked)) {
+      $redir_params = [
+        'hotspot' => 'users',
+        'session' => $session,
+      ];
+      if (isset($_GET['profile'])) $redir_params['profile'] = $_GET['profile'];
+      if (isset($_GET['comment'])) $redir_params['comment'] = $_GET['comment'];
+      if (isset($_GET['status'])) $redir_params['status'] = $_GET['status'];
+      if (isset($_GET['q'])) $redir_params['q'] = $_GET['q'];
+      if (isset($_GET['show'])) $redir_params['show'] = $_GET['show'];
+      if (isset($_GET['date'])) $redir_params['date'] = $_GET['date'];
+      if (isset($_GET['debug'])) $redir_params['debug'] = $_GET['debug'];
+      if (isset($_GET['only_wartel'])) $redir_params['only_wartel'] = $_GET['only_wartel'];
+      if (isset($_GET['retur_status'])) $redir_params['retur_status'] = $_GET['retur_status'];
+      $redir = './?' . http_build_query($redir_params);
+      if ($is_action_ajax) {
+        if (ob_get_length()) { @ob_clean(); }
+        header('Content-Type: application/json');
+        echo json_encode([
+          'ok' => false,
+          'message' => $action_error ?: 'Gagal diproses.',
+          'redirect' => ''
+        ]);
+        exit();
+      }
+      echo "<script>if(window.showActionPopup){window.showActionPopup('error','" . addslashes($action_error ?: 'Gagal diproses.') . "');}else{window.location.href='{$redir}';}</script>";
+      exit();
+    }
+  }
+
   if ($act == 'invalid' || $act == 'retur' || $act == 'rollback' || $act == 'delete' || $act == 'delete_user_full' || $act == 'delete_block_full' || $act == 'batch_delete' || $act == 'delete_status' || $act == 'check_rusak' || $act == 'disable' || $act == 'vip' || $act == 'unvip') {
     $uid = $_GET['uid'] ?? '';
     $name = $_GET['name'] ?? '';
@@ -1773,7 +1985,8 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         }
 
         // Generate voucher baru
-        $gen = gen_user($prof ?: 'default', $comm ?: $name, $name);
+        $gen_ref = $cmt ?: ($comm ?: $name);
+        $gen = gen_user($prof ?: 'default', $gen_ref, $name);
         $new_user = $gen['u'] ?? '';
         $profile_kind = detect_profile_kind_unified($prof ?: ($uinfo['profile'] ?? ''), $cmt ?? '', $blok ?? '', $uptime ?? '');
         $limit_uptime = '';
@@ -1882,6 +2095,23 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     }
     $action_message = $action_message ?: ('Berhasil retur voucher ' . $name . '.');
   }
+  if ($retur_request_id && $db) {
+    try {
+      if ($action_blocked) {
+        $note = 'Gagal: ' . ($action_error ?: 'Tidak diketahui.');
+        $stmt = $db->prepare("UPDATE retur_requests SET review_note = :rn WHERE id = :id");
+        $stmt->execute([':id' => $retur_request_id, ':rn' => $note]);
+      } else {
+        $stmt = $db->prepare("UPDATE retur_requests SET status='approved', reviewed_by=:rb, reviewed_at=CURRENT_TIMESTAMP, review_note=:rn WHERE id=:id");
+        $stmt->execute([
+          ':id' => $retur_request_id,
+          ':rb' => (string)($_SESSION['mikhmon'] ?? 'operator'),
+          ':rn' => $retur_request_note !== '' ? $retur_request_note : 'Disetujui operator.'
+        ]);
+      }
+    } catch (Exception $e) {}
+  }
+
   $redir_params = [
     'hotspot' => 'users',
     'session' => $session,
@@ -1894,6 +2124,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
   if (isset($_GET['date'])) $redir_params['date'] = $_GET['date'];
   if (isset($_GET['debug'])) $redir_params['debug'] = $_GET['debug'];
   if (isset($_GET['only_wartel'])) $redir_params['only_wartel'] = $_GET['only_wartel'];
+  if (isset($_GET['retur_status'])) $redir_params['retur_status'] = $_GET['retur_status'];
   if (in_array($act, ['delete_block_full','batch_delete','delete_status'], true)) {
     $redir_params['status'] = 'all';
     $redir_params['comment'] = '';

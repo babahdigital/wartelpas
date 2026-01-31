@@ -323,6 +323,9 @@ if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
 require_once($root_dir . '/lib/routeros_api.class.php');
 require_once($root_dir . '/include/config.php');
 require_once($root_dir . '/include/readcfg.php');
+if (file_exists($root_dir . '/report/laporan/helpers.php')) {
+    require_once($root_dir . '/report/laporan/helpers.php');
+}
 
 $safe_session = preg_replace('/[^A-Za-z0-9_-]/', '', $session);
 $safe_date = preg_replace('/[^0-9-]/', '', $date);
@@ -709,6 +712,15 @@ if ($action === 'start') {
     if ($cleanup) {
         append_settlement_log($logFile, 'system,info', 'SETTLE: CLEANUP dimulai (sales/live/login).');
         cleanup_history_by_router($db, $date, $router_rows, $logFile);
+    }
+
+    if (function_exists('rebuild_audit_expected_for_date') && $date !== '') {
+        $updated = rebuild_audit_expected_for_date($db, $date);
+        if ($updated > 0) {
+            append_settlement_log($logFile, 'system,info', 'SETTLE: Rebuild audit expected selesai: ' . $updated . ' blok.');
+        } else {
+            append_settlement_log($logFile, 'system,info', 'SETTLE: Rebuild audit expected tidak ada perubahan.');
+        }
     }
 
     respond_json(['ok' => true, 'message' => 'Settlement dijalankan.']);

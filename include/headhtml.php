@@ -43,6 +43,11 @@ error_reporting(0);
 		<link href="css/login.css" rel="stylesheet" />
 		<link rel="stylesheet" href="css/popup.css">
 		<link rel="stylesheet" href="css/tooltips.css">
+		<?php if (!empty($is_admin_layout)) : ?>
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+		<link rel="stylesheet" href="admin_assets/admin.css">
+		<script src="admin_assets/admin.js" defer></script>
+		<?php endif; ?>
 		<script src="js/pace.min.js"></script>
 		<script src="js/popup.js" defer></script>
 		<script src="js/tooltips.js" defer></script>

@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Wartelpas </title>
+		<meta charset="utf-8">
+		<meta http-equiv="cache-control" content="private" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<!-- Tell the browser to be responsive to screen width -->
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<!-- Theme color -->
+		<meta name="theme-color" content="#3a4149" />
+		<!-- Font Awesome -->
+		<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+		<!-- Mikhmon UI -->
+		<link rel="stylesheet" href="css/mikhmon-ui.dark.min.css">
+		<!-- favicon -->
+		<link rel="icon" href="./img/favicon.png" />
+		<!-- jQuery -->
+		<script src="js/jquery.min.js"></script>
+		<!-- pace -->
+		<link href="css/pace.dark.css" rel="stylesheet" />
+		<link href="css/login.css" rel="stylesheet" />
+		<link rel="stylesheet" href="css/popup.css">
+		<link rel="stylesheet" href="css/tooltips.css">
+		
+		<script src="js/pace.min.js"></script>
+		<script src="js/popup.js" defer></script>
+		<script src="js/tooltips.js" defer></script>
+	</head>
+	<body>
+		<div class="wrapper">
+			
+<span style="display:none;" id="idto">disable</span><span style="display:none;" id="timer"></span>
+<link rel="stylesheet" href="css/tooltips.css"><script src="js/tooltips.js" defer></script>
+<style>
+    /* --- CORE VARIABLES --- */
+    :root {
+        --nav-bg: #1a2226;
+        --nav-hover: #222d32;
+        --nav-text: #9db2ba;
+        --nav-active: #ffffff;
+        --accent: #3c8dbc;
+        --accent-audit: #d81b60;
+        --header-shadow: 0 2px 10px rgba(0,0,0,0.4);
+        --table-border: #3b4248;
+        --table-bg: #1e282c;
+    }
+
+    body { margin-top: 60px; }
+    
+    /* --- NAVBAR STYLES --- */
+    .top-navbar {
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        height: 60px;
+        background-color: var(--nav-bg);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 20px;
+        box-shadow: var(--header-shadow);
+        z-index: 1030;
+        font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .wartelpas-brand {
+        display: flex; align-items: center; text-decoration: none; margin-right: 30px; height: 100%;
+    }
+    .brand-logo { height: 50px; width: auto; object-fit: contain; }
+    .nav-item { position: relative; }
+    .mobile-toggle { display: none; font-size: 24px; color: #fff; cursor: pointer; padding: 10px; }
+    
+    /* Dropdown */
+    .dropdown-item {
+        display: block; padding: 12px 20px;
+        color: var(--nav-text); text-decoration: none;
+        border-bottom: 1px solid #344248; font-size: 13px;
+    }
+    .dropdown-item:last-child { border-bottom: none; }
+    .dropdown-item:hover {
+        background-color: #222d32; color: #fff; padding-left: 25px; transition: 0.2s;
+    }
+    .dropdown-item.audit-item { color: #ffb6c1; }
+    .dropdown-item.audit-item:hover { color: #fff; }
+    .dropdown-item i { margin-right: 10px; width: 15px; text-align: center; }
+
+    /* Nav Right Items */
+    .nav-right { display: flex; align-items: center; gap: 12px; padding-left: 20px; }
+    
+    /* Retur Pill Button (Navbar) */
+    .retur-pill {
+        display: inline-flex; align-items: center; gap: 6px; margin-left: 10px;
+        padding: 2px 8px; border-radius: 12px;
+        background: rgba(245, 158, 11, 0.2);
+        color: #f59e0b; font-size: 11px; font-weight: 700;
+        border: 1px solid rgba(245, 158, 11, 0.4);
+        cursor: pointer; white-space: nowrap; text-decoration: none;
+    }
+    .retur-pill:hover { background: rgba(245, 158, 11, 0.3); color: #fff; }
+    .retur-pill i { font-size: 11px; }
+    .retur-pill-count {
+        min-width: 18px; height: 18px; padding: 0 6px;
+        border-radius: 10px; background: #f59e0b; color: #111827;
+        font-weight: 800; display: inline-flex;
+        align-items: center; justify-content: center;
+        font-size: 10px; line-height: 1;
+    }
+    
+    /* --- POPUP RETUR STYLES (DIPERBAIKI) --- */
+    .retur-popup-container {
+        padding: 0;
+        text-align: left;
+    }
+    .retur-info-bar {
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.25);
+        color: #f59e0b;
+        padding: 10px 15px;
+        border-radius: 6px;
+        font-size: 13px;
+        margin-bottom: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    /* Wrapper Table - Scrollable */
+    .retur-table-wrapper {
+        max-height: 450px;
+        overflow-y: auto;
+        overflow-x: auto; /* Penting untuk layar kecil */
+        border: 1px solid var(--table-border);
+        border-radius: 6px;
+        background: var(--table-bg);
+    }
+    
+    /* Custom Scrollbar */
+    .retur-table-wrapper::-webkit-scrollbar { width: 8px; height: 8px; }
+    .retur-table-wrapper::-webkit-scrollbar-track { background: #1a2226; }
+    .retur-table-wrapper::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+    .retur-table-wrapper::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+    /* Table Styling Modern */
+    .retur-table {
+        width: 100%;
+        border-collapse: collapse; /* Cleaner look */
+        font-size: 13px;
+        white-space: nowrap; /* Mencegah wrapping default */
+    }
+    
+    .retur-table th {
+        background: #151a1e;
+        color: #94a3b8;
+        font-weight: 600;
+        padding: 12px 10px;
+        text-align: left;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border-bottom: 2px solid var(--table-border);
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 0.5px;
+    }
+    
+    .retur-table td {
+        padding: 10px;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        color: #e8edf3;
+        vertical-align: middle;
+    }
+    
+    .retur-table tr:last-child td { border-bottom: none; }
+    .retur-table tr:hover td { background-color: rgba(60, 141, 188, 0.08); } /* Hover Effect Halus */
+
+    /* Kolom Spesifik */
+    .retur-col-center { text-align: center; }
+    .retur-col-voucher { 
+        font-family: 'Consolas', 'Monaco', monospace; 
+        font-size: 13px; 
+        font-weight: 700; 
+        color: #fff;
+        background: rgba(255,255,255,0.03);
+        padding: 4px 8px;
+        border-radius: 4px;
+        display: inline-block;
+    }
+    .retur-col-reason { 
+        min-width: 200px; /* Mencegah kolom alasan penyet */
+        max-width: 300px;
+        white-space: normal; /* Izinkan wrapping teks */
+        line-height: 1.4;
+        color: #cbd5e1;
+    }
+    .retur-col-blok {
+        font-weight: 600;
+        color: var(--accent);
+    }
+
+    /* Tombol Aksi */
+    .btn-mini-action {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 32px; height: 32px;
+        border-radius: 6px; border: none;
+        cursor: pointer; transition: all 0.2s;
+        margin: 0 4px; color: #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        text-decoration: none;
+    }
+    .btn-approve { background: linear-gradient(135deg, #16a34a, #15803d); }
+    .btn-approve:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(22, 163, 74, 0.4); }
+    
+    .btn-reject { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+    .btn-reject:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(239, 68, 68, 0.4); }
+
+    /* Other Utilities */
+    .timer-badge {
+        background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 20px;
+        font-size: 12px; color: var(--nav-text); display: inline-flex; align-items: center; gap: 6px;
+        border: 1px solid rgba(255,255,255,0.1); white-space: nowrap;
+    }
+    .db-tools {
+        display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px;
+        border-radius: 16px; background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08); color: var(--nav-text);
+        font-size: 12px; text-decoration: none; transition: 0.2s; white-space: nowrap;
+    }
+    .db-tools:hover { background: rgba(255,255,255,0.08); color: #fff; transform: translateY(-1px); }
+    .db-status {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 28px; height: 28px; border-radius: 50%;
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+        color: #8aa2ad; font-size: 12px; transition: 0.2s;
+    }
+    .db-status.db-ok { color: #2ecc71; border-color: rgba(46,204,113,0.6); background: rgba(46,204,113,0.15); }
+    .db-status.db-error { color: #e74c3c; border-color: rgba(231,76,60,0.6); background: rgba(231,76,60,0.15); }
+    .db-status.db-ok i { animation: dbPulse 1.2s ease-in-out infinite; }
+    
+    @keyframes dbPulse {
+        0% { transform: scale(1); opacity: 0.9; }
+        50% { transform: scale(1.15); opacity: 1; }
+        100% { transform: scale(1); opacity: 0.9; }
+    }
+    
+    .logout-btn {
+        height: 36px; width: 36px; display: flex; align-items: center; justify-content: center;
+        border-radius: 50%; color: var(--nav-text); transition: 0.3s; background: transparent;
+    }
+    .logout-btn:hover { background: rgba(216, 27, 96, 0.15); color: #ff4d4d; transform: scale(1.05); }
+
+    /* Animation */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Layout overrides */
+    #main { margin-left: 0; padding: 20px; }
+    .main-container-fluid { width: 100%; }
+    #main { margin-left: 0 !important; margin-top: 60px !important; }
+    .sidenav { width: 0 !important; border-right: 0 !important; }
+    #openNav, #closeNav, #cpage { display: none !important; }
+
+    /* Responsive */
+    @media (max-width: 750px) { #brand { display: flex !important; } }
+    
+    @media (min-width: 993px) {
+        .nav-links {
+            display: flex; gap: 0; flex-grow: 1; align-items: center;
+            list-style: none; margin: 0; padding: 0; height: 100%;
+        }
+        .nav-item { position: relative; height: 100%; }
+        .nav-link {
+            display: flex; align-items: center; gap: 8px;
+            color: var(--nav-text); text-decoration: none;
+            padding: 0 15px; height: 100%;
+            font-size: 13.5px; font-weight: 600;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            border-bottom: 3px solid transparent; white-space: nowrap;
+        }
+        .nav-link:hover { background-color: var(--nav-hover); color: var(--nav-active); }
+        .nav-link.active { color: var(--nav-active); background-color: var(--nav-hover); border-bottom-color: var(--accent); }
+        .dropdown-menu {
+            display: none; position: absolute; top: 60px; left: 0;
+            background-color: #2c3b41; min-width: 200px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3); border-radius: 0 0 4px 4px; z-index: 1040;
+        }
+        .nav-item:hover .dropdown-menu { display: block; animation: fadeIn 0.2s; }
+    }
+
+    @media (max-width: 992px) {
+        .mobile-toggle { display: block; }
+        .wartelpas-brand { margin-right: auto; }
+        .nav-links {
+            display: none; flex-direction: column; position: absolute; top: 60px; left: 0; right: 0;
+            background-color: var(--nav-bg); height: auto; padding-bottom: 10px;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.5); list-style: none; margin: 0; padding: 0;
+        }
+        .nav-links.show { display: flex !important; }
+        .nav-link {
+            display: flex; align-items: center; gap: 8px; color: var(--nav-text); text-decoration: none;
+            padding: 0 20px; height: 45px; font-size: 14px; font-weight: 600;
+            border-left: 3px solid transparent; width: 100%; box-sizing: border-box;
+        }
+        .nav-link.active { border-left-color: var(--accent); background: #1e282c; color: #fff; }
+        .dropdown-menu { display: none; position: static; background: #1a2226; box-shadow: none; width: 100%; }
+        .nav-item.active-mobile .dropdown-menu { display: block; }
+    }
+
+    /* Custom Overlay Styles (Manual) */
+    .overlay-backdrop {
+        position: fixed; inset: 0; z-index: 20000;
+        background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(4px);
+        display: none; align-items: center; justify-content: center;
+        opacity: 0; transition: opacity 0.3s ease;
+    }
+    .overlay-backdrop.show { display: flex; opacity: 1; }
+    .overlay-modal {
+        background: #1e282c; border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px; width: 100%; max-width: 380px; padding: 25px;
+        text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+        transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .overlay-backdrop.show .overlay-modal { transform: scale(1); }
+    .overlay-icon-box {
+        width: 70px; height: 70px; margin: 0 auto 15px auto;
+        border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        font-size: 32px; background: rgba(255, 255, 255, 0.05); transition: all 0.3s;
+    }
+    .status-loading .overlay-icon-box { color: #3c8dbc; border: 2px solid rgba(60, 141, 188, 0.3); background: rgba(60, 141, 188, 0.1); }
+    .status-success .overlay-icon-box { color: #00a65a; border: 2px solid rgba(0, 166, 90, 0.3); background: rgba(0, 166, 90, 0.1); }
+    .status-error   .overlay-icon-box { color: #dd4b39; border: 2px solid rgba(221, 75, 57, 0.3); background: rgba(221, 75, 57, 0.1); }
+    .overlay-title { font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 8px; }
+    .overlay-message { font-size: 14px; color: #b8c7ce; line-height: 1.5; margin-bottom: 20px; }
+    .overlay-btn {
+        background: #3c8dbc; color: white; border: none; padding: 10px 25px;
+        border-radius: 50px; font-size: 14px; font-weight: 500; cursor: pointer;
+        transition: all 0.2s; outline: none; box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+    .overlay-btn:hover { background: #367fa9; transform: translateY(-2px); }
+    
+    /* Extra styles for buttons in popup */
+    .m-btn {
+        padding: 8px 16px; border-radius: 4px; border: none; font-size: 13px; font-weight: 600;
+        cursor: pointer; transition: 0.2s;
+    }
+    .m-btn-primary { background: #3c8dbc; color: white; }
+    .m-btn-primary:hover { background: #367fa9; }
+    .m-btn-cancel { background: #4b5563; color: white; }
+    .m-btn-cancel:hover { background: #374151; }
+</style>
+
+    <nav class="top-navbar">
+        <div class="mobile-toggle" onclick="toggleMenu()"><i class="fa fa-bars"></i></div>
+        <a id="brand" class="wartelpas-brand" href="./?session=S3c7x9_LB">
+            <img src="img/logo.png" alt="MIKHMON" class="brand-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <span style="display:none; color:#fff; font-weight:bold; font-size:18px;">WARTELPAS</span>
+        </a>
+        <ul class="nav-links" id="mainNav">
+            <li class="nav-item"><a class="nav-link active" href="./?session=S3c7x9_LB"><i class="fa fa-dashboard"></i> Dashboard</a></li>
+            <li class="nav-item" onclick="toggleMobileSub(this)">
+                <a class="nav-link " href="javascript:void(0)"><i class="fa fa-users"></i> Pengguna <i class="fa fa-caret-down" style="margin-left:auto;font-size:10px;"></i></a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="./?hotspot=users&profile=all&session=S3c7x9_LB"><i class="fa fa-list"></i> Daftar User</a>
+                    <a class="dropdown-item" href="./?hotspot-user=generate&session=S3c7x9_LB"><i class="fa fa-user-plus"></i> Generate</a>
+                </div>
+            </li>
+            <li class="nav-item" onclick="toggleMobileSub(this)">
+                <a class="nav-link " href="javascript:void(0)"><i class="fa fa-gear"></i> Perangkat <i class="fa fa-caret-down" style="margin-left:auto;font-size:10px;"></i></a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="./?hotspot=active&session=S3c7x9_LB"><i class="fa fa-gear"></i> User Aktif</a>
+                    <a class="dropdown-item" href="./?hotspot=hosts&session=S3c7x9_LB"><i class="fa fa-laptop"></i> Host Terhubung</a>
+                </div>
+            </li>
+            <li class="nav-item" onclick="toggleMobileSub(this)">
+                <a class="nav-link " href="javascript:void(0)"><i class="fa fa-money"></i> Laporan <i class="fa fa-caret-down" style="margin-left:auto;font-size:10px;"></i></a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="./?report=selling&idbl=jan2026&session=S3c7x9_LB"><i class="fa fa-line-chart"></i> Laporan Penjualan</a>
+                    <a class="dropdown-item audit-item" href="./?report=audit_session&session=S3c7x9_LB"><i class="fa fa-check-square-o"></i> Audit Keuangan</a>
+                </div>
+            </li>
+            <li class="nav-item"><a class="nav-link " href="./?report=whatsapp&session=S3c7x9_LB"><i class="fa fa-whatsapp"></i> WhatsApp</a></li>                        
+            <li class="nav-item"><a class="nav-link" href="./admin.php?id=sessions"><i class="fa fa-gear"></i> Pengaturan Admin</a></li>                    
+        </ul>
+        <div class="nav-right">                                        
+            <a id="db-backup" class="db-tools" href="javascript:void(0)" onclick="runBackupAjax()"><i class="fa fa-database"></i> Backup</a>                                        
+            <a id="db-restore" class="db-tools" href="javascript:void(0)" onclick="runRestoreAjax()"><i class="fa fa-history"></i> Restore</a>                                        
+            <a class="retur-pill " id="retur-menu-pill" href="javascript:void(0)" onclick="return openReturMenuPopup(event);" title="Permintaan Retur Pending">
+                <i class="fa fa-undo"></i> Retur <span class="retur-pill-count" id="retur-menu-count">1</span>
+            </a>                        
+            <span class="timer-badge" title="Waktu Saat Ini"><i class="fa fa-clock-o"></i> <span id="timer_val">--:--</span></span>
+            <span id="db-status" class="db-status" title="Kesehatan Database"><i class="fa fa-heart"></i></span>
+            <a id="logout" class="logout-btn" href="./?hotspot=logout&session=S3c7x9_LB" title="Keluar"><i class="fa fa-sign-out fa-lg"></i></a>
+        </div>
+    </nav>
+    
+<div id="sidenav" style="display:none"></div><a id="openNav" href="javascript:void(0)" style="display:none"></a><a id="closeNav" href="javascript:void(0)" style="display:none"></a><div id="overL" style="display:none"></div>
+
+<script>
+    // --- SIMPLE MIKHMON POPUP POLYFILL FOR PREVIEW ---
+    if (!window.MikhmonPopup) {
+        window.MikhmonPopup = {
+            open: function(options) {
+                // Remove existing if any
+                var existing = document.getElementById('custom-popup-backdrop');
+                if (existing) existing.parentNode.removeChild(existing);
+
+                // Create backdrop
+                var backdrop = document.createElement('div');
+                backdrop.id = 'custom-popup-backdrop';
+                backdrop.className = 'overlay-backdrop';
+                
+                // Create Modal
+                var modal = document.createElement('div');
+                modal.className = 'overlay-modal m-modal-card';
+                
+                // Build Content
+                let content = '';
+                
+                // Icon
+                if (options.iconClass) {
+                    content += '<div class="overlay-icon-box" style="color:' + (options.statusColor || '#3c8dbc') + '; border-color:' + (options.statusColor || '#3c8dbc') + '33; background:' + (options.statusColor || '#3c8dbc') + '1a">';
+                    content += '<i class="' + options.iconClass + '"></i>';
+                    content += '</div>';
+                }
+                
+                // Title
+                if (options.title) {
+                    content += '<div class="overlay-title">' + options.title + '</div>';
+                }
+                
+                // Body
+                if (options.messageHtml) {
+                    content += '<div class="overlay-message" style="text-align:left;">' + options.messageHtml + '</div>';
+                } else if (options.message) {
+                     content += '<div class="overlay-message">' + options.message + '</div>';
+                }
+                
+                // Buttons
+                if (options.buttons && options.buttons.length) {
+                    content += '<div style="margin-top:20px; display:flex; justify-content:center; gap:10px;">';
+                    options.buttons.forEach(function(btn) {
+                        var btnClass = btn.className || 'overlay-btn';
+                        var btnLabel = btn.label || 'Button';
+                        var isClose = btnClass.indexOf('cancel') !== -1;
+                        var btnHtml = '<button type="button" class="' + btnClass + '" ';
+                        if (isClose) {
+                            btnHtml += 'onclick="document.getElementById(\'custom-popup-backdrop\').classList.remove(\'show\'); setTimeout(function(){var el=document.getElementById(\'custom-popup-backdrop\'); if(el)el.style.display=\'none\';}, 300);"';
+                        } else {
+                            btnHtml += 'onclick="alert(\'Action triggered: ' + btnLabel + '\')"';
+                        }
+                        btnHtml += '>' + btnLabel + '</button>';
+                        content += btnHtml;
+                    });
+                    content += '</div>';
+                }
+                
+                modal.innerHTML = content;
+                backdrop.appendChild(modal);
+                document.body.appendChild(backdrop);
+                
+                // Show
+                backdrop.style.display = 'flex';
+                setTimeout(function(){ backdrop.classList.add('show'); }, 10);
+            }
+        };
+    }
+    // --------------------------------------------------
+
+    function toggleMenu() { var x = document.getElementById("mainNav"); x.className = (x.className === "nav-links") ? "nav-links show" : "nav-links"; }
+    function toggleMobileSub(el) { if (window.innerWidth <= 992) el.classList.toggle("active-mobile"); }
+    window.addEventListener('resize', function() { if (window.innerWidth > 992) { var x = document.getElementById("mainNav"); if(x) x.classList.remove("show"); } });
+    
+    function updateRealTimeBadge() {
+        var el = document.getElementById('timer_val');
+        if (!el) return;
+        var now = new Date();
+        el.textContent = now.toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' }) + ' ' + now.toLocaleTimeString('id-ID', { hour12: false });
+    }
+
+    var isSuperAdminFlag = true;
+    var returMenuData = {"count":1,"items":[{"id":1,"created_at":"2026-01-31 03:59:13","request_date":"2026-01-31","voucher_code":"47uzst","blok_name":"","reason":"Coba aja sulu","contact_phone":"","profile_name":"10 Menit","blok_guess":"BLOK-A"}]};
+    var returBlokNames = {"A":"ANUGRAH","B":"BERKAH","C":"CENDIKIA","D":"DINAYA","E":"EDUKATORIS","F":"FIDARSA"};
+
+    function escapeHtml(str) { return String(str || '').replace(/[&<>"]/g, function(s) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[s]; }); }
+
+    function formatReturDate(item) {
+        var d = item && (item.request_date || item.created_at) ? String(item.request_date || item.created_at) : '';
+        if (!d) return '-';
+        var datePart = d.substring(0, 10);
+        if (datePart.indexOf('-') === -1) return datePart || '-';
+        var parts = datePart.split('-');
+        return parts.length === 3 ? [parts[2], parts[1], parts[0]].join('-') : datePart;
+    }
+
+    function formatReturTime(item) {
+        var d = item && item.created_at ? String(item.created_at) : '';
+        return (d.length >= 19) ? d.substring(11, 16) : '-';
+    }
+
+    function formatBlokLabel(raw) {
+        var val = String(raw || '').toUpperCase();
+        var match = val.match(/BLOK[-\s]*([A-Z0-9])/i);
+        var key = match ? match[1] : '';
+        return (key && returBlokNames[key]) ? returBlokNames[key] : (val || '-');
+    }
+
+    // --- LOGIKA POPUP RETUR YANG DISEMPURNAKAN ---
+    window.openReturMenuPopup = function(e) {
+        if (e && e.preventDefault) { e.preventDefault(); e.stopPropagation(); }
+        
+        // Remove direct fallback navigation to prevent blob URL errors
+        
+        var items = Array.isArray(returMenuData.items) ? returMenuData.items : [];
+        var count = Number(returMenuData.count || 0);
+        
+        var rows = '';
+        if (items.length) {
+            rows = items.map(function(it) {
+                var id = it.id || 0;
+                var approveUrl = '#'; // './?hotspot=users&action=retur_request_approve&req_id=' + id + '&session=S3c7x9_LB&retur_status=pending';
+                var rejectUrl = '#'; // './?hotspot=users&action=retur_request_reject&req_id=' + id + '&session=S3c7x9_LB&retur_status=pending';
+                var blok = formatBlokLabel(it.blok_name || it.blok_guess || '-');
+                
+                return '<tr>' +
+                        '<td>' + escapeHtml(formatReturDate(it)) + '</td>' +
+                        '<td class="retur-col-center">' + escapeHtml(formatReturTime(it)) + '</td>' +
+                        '<td class="retur-col-center"><span class="retur-col-voucher">' + escapeHtml(it.voucher_code || '-') + '</span></td>' +
+                        '<td class="retur-col-blok">' + escapeHtml(blok) + '</td>' +
+                        '<td>' + escapeHtml(it.profile_name || '-') + '</td>' +
+                        '<td class="retur-col-reason">' + escapeHtml(it.reason || '-') + '</td>' +
+                        '<td class="retur-col-center">' +
+                            '<a class="btn-mini-action btn-approve" href="javascript:void(0)" title="Setujui" onclick="alert(\'Action: Setujui\')"><i class="fa fa-check"></i></a>' +
+                            '<a class="btn-mini-action btn-reject" href="javascript:void(0)" title="Tolak" onclick="alert(\'Action: Tolak\')"><i class="fa fa-times"></i></a>' +
+                        '</td>' +
+                    '</tr>';
+            }).join('');
+        }
+
+        var tableHtml = items.length ?
+            '<div class="retur-table-wrapper">' +
+                '<table class="retur-table">' +
+                    '<thead>' +
+                        '<tr>' +
+                            '<th>Tanggal</th>' +
+                            '<th class="text-center">Jam</th>' +
+                            '<th class="text-center">Voucher</th>' +
+                            '<th>Blok</th>' +
+                            '<th>Profil</th>' +
+                            '<th>Alasan</th>' +
+                            '<th class="text-center">Aksi</th>' +
+                        '</tr>' +
+                    '</thead>' +
+                    '<tbody>' + rows + '</tbody>' +
+                '</table>' +
+            '</div>' : 
+            '<div style="color:#94a3b8; font-size:14px; text-align:center; padding:30px 0; border:1px dashed #4b5563; border-radius:6px;">Tidak ada permintaan retur pending.</div>';
+
+        var infoHtml = '<div class="retur-info-bar">' +
+                '<span><i class="fa fa-inbox"></i> Permintaan Pending: <strong>' + count + '</strong></span>' +
+                '<span style="font-size:11px; opacity:0.8;">Realtime Update</span>' +
+            '</div>';
+
+        window.MikhmonPopup.open({
+            title: 'Manajemen Retur',
+            iconClass: 'fa fa-undo',
+            statusIcon: 'fa fa-inbox',
+            statusColor: count > 0 ? '#f59e0b' : '#22c55e',
+            messageHtml: '<div class="retur-popup-container">' + infoHtml + tableHtml + '</div>',
+            buttons: [
+                { label: 'Buka Halaman Pengguna', className: 'm-btn m-btn-primary' }, // Click handled by polyfill alert
+                { label: 'Tutup', className: 'm-btn m-btn-cancel' }
+            ]
+        });
+        
+        // Logika Resizing yang lebih Agresif dan Aman (Updated selector)
+        var attempts = 0;
+        var resizeInterval = setInterval(function(){
+            // Use ID we set in polyfill if possible, or class
+            var card = document.querySelector('.overlay-modal');
+            if (card) {
+                // Paksa lebar agar tabel tidak penyet
+                card.style.maxWidth = '900px'; 
+                card.style.width = '92vw';
+                
+                if (card.offsetWidth > 500) {
+                    clearInterval(resizeInterval);
+                }
+            }
+            attempts++;
+            if (attempts > 20) clearInterval(resizeInterval); 
+        }, 50);
+        
+        return false;
+    };
+    
+    // --- END LOGIKA RETUR ---
+
+    function updateDbStatus() {
+        var el = document.getElementById('db-status');
+        var restoreBtn = document.getElementById('db-restore');
+        if (!el) return;
+        fetch('./tools/db_check.php?key=' + encodeURIComponent(window.__backupKey || ''))
+            .then(function(resp) { return resp.text(); })
+            .then(function(txt) {
+                var low = txt ? txt.toLowerCase() : '';
+                var ok = low.indexOf('db error') === -1 && low.indexOf('not found') === -1 && low.indexOf('forbidden') === -1;
+                el.classList.toggle('db-ok', ok);
+                el.classList.toggle('db-error', !ok);
+                if (restoreBtn && !isSuperAdminFlag) restoreBtn.style.display = ok ? 'none' : 'inline-flex';
+            })
+            .catch(function() { el.classList.add('db-error'); });
+    }
+
+    function updateBackupStatus() {
+        var backupBtn = document.getElementById('db-backup');
+        if (!backupBtn) return;
+        fetch('./tools/backup_status.php?key=' + encodeURIComponent(window.__backupKey || ''))
+            .then(function(resp) { return resp.json(); })
+            .then(function(data) { backupBtn.style.display = (data && data.valid_today) ? 'none' : 'inline-flex'; })
+            .catch(function() { backupBtn.style.display = 'inline-flex'; });
+    }
+
+    document.addEventListener('DOMContentLoaded', function(){
+        window.__backupKey = "kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE=";
+        updateRealTimeBadge(); setInterval(updateRealTimeBadge, 1000);
+        updateDbStatus(); setInterval(updateDbStatus, 30000);
+        updateBackupStatus(); setInterval(updateBackupStatus, 60000);
+    });
+
+    // Helper functions for overlay
+    function showOverlayNotice(msg, type, lockClose){
+        var overlay = document.getElementById('ajax-overlay');
+        var container = document.getElementById('ajax-modal-container');
+        var titleEl = document.getElementById('ajax-overlay-title');
+        var textEl = document.getElementById('ajax-overlay-text');
+        var icon = document.getElementById('ajax-overlay-icon');
+        var btn = document.getElementById('ajax-overlay-close');
+        
+        if (!overlay) return;
+        container.classList.remove('status-loading', 'status-success', 'status-error');
+        var t = (type || 'info').toLowerCase();
+        
+        if (t === 'error') { container.classList.add('status-error'); icon.className = 'fa fa-times'; titleEl.textContent = 'Gagal!'; } 
+        else if (t === 'success') { container.classList.add('status-success'); icon.className = 'fa fa-check'; titleEl.textContent = 'Berhasil!'; } 
+        else { container.classList.add('status-loading'); icon.className = 'fa fa-circle-o-notch fa-spin'; titleEl.textContent = 'Memproses...'; }
+        
+        textEl.textContent = msg || '';
+        btn.style.display = lockClose ? 'none' : 'inline-block';
+        overlay.style.display = 'flex';
+        setTimeout(function(){ overlay.classList.add('show'); }, 10);
+    }
+    function hideOverlayNotice(){ var ov = document.getElementById('ajax-overlay'); if(ov) { ov.classList.remove('show'); setTimeout(function(){ ov.style.display='none'; }, 300); } }
+    function notifyLocal(msg, type, lockClose){ showOverlayNotice(msg, type, !!lockClose); }
+    function runBackupAjax(){ 
+        if(confirm('Jalankan backup database?')) { showOverlayNotice("Memproses Backup...", "loading", true); setTimeout(function(){ showOverlayNotice("Backup Berhasil Disimpan", "success"); }, 1500); }
+    }
+    function runRestoreAjax(){ 
+        if(confirm('Restore database? Data saat ini akan tertimpa.')) { showOverlayNotice("Memproses Restore...", "loading", true); setTimeout(function(){ showOverlayNotice("Restore Berhasil", "success"); }, 1500); }
+    }
+</script>
+
+<div id="notify"><div class="message"></div></div><div id="temp"></div>
+<div id="ajax-overlay" class="overlay-backdrop">
+    <div class="overlay-modal" id="ajax-modal-container">
+        <div class="overlay-icon-box"><i id="ajax-overlay-icon" class="fa fa-circle-o-notch fa-spin"></i></div>
+        <div class="overlay-title" id="ajax-overlay-title">Processing</div>
+        <div class="overlay-message" id="ajax-overlay-text">Mohon tunggu sebentar...</div>
+        <button id="ajax-overlay-close" type="button" class="overlay-btn" onclick="hideOverlayNotice()">Tutup</button>
+    </div>
+</div>
+
+<div id="main">
+    <div class="main-content">
+        <!-- Dashboard Mockup (Dummy Data for Preview) -->
+        <div style="padding: 20px; text-align: center; color: #6c757d; margin-top: 50px;">
+            <h2><i class="fa fa-dashboard" style="font-size: 48px; margin-bottom: 20px; display: block;"></i>Dashboard Wartelpas</h2>
+            <p>Klik tombol <strong>Retur</strong> di pojok kanan atas untuk melihat popup yang diperbaiki.</p>
+        </div>
+    </div>
+</div>
+
+<script src="./js/highcharts/highcharts.js"></script>
+<script src="./js/highcharts/themes/hc.dark.js"></script>
+<script src="./js/mikhmon-ui.dark.min.js"></script>
+</body>
+</html>

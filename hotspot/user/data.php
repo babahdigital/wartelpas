@@ -7,6 +7,9 @@ $vip_date_key = date('Y-m-d');
 $vip_daily_used = $vip_daily_limit > 0 ? get_vip_daily_usage($db, $vip_date_key) : 0;
 $vip_limit_reached = ($vip_daily_limit > 0 && $vip_daily_used >= $vip_daily_limit);
 $history_cache = null;
+$retur_requests = [];
+$retur_status = isset($_GET['retur_status']) ? strtolower(trim((string)$_GET['retur_status'])) : 'pending';
+$retur_status = in_array($retur_status, ['pending','approved','rejected','all'], true) ? $retur_status : 'pending';
 function save_user_history($name, $data) {
     global $db;
     if(!$db || empty($name)) return false;
@@ -156,6 +159,27 @@ function get_relogin_count_from_events($username, $first_login_real = '') {
 
 if (isset($_GET['action']) || isset($_POST['action'])) {
   return;
+}
+
+if ($db && (isOperator() || isSuperAdmin())) {
+  try {
+    $where = "1=1";
+    $params = [];
+    if ($retur_status !== 'all') {
+      $where .= " AND status = :st";
+      $params[':st'] = $retur_status;
+    }
+    $stmt = $db->prepare("SELECT id, created_at, request_date, voucher_code, blok_name, reason, contact_phone, status, reviewed_by, reviewed_at, review_note
+      FROM retur_requests
+      WHERE $where
+      ORDER BY created_at DESC
+      LIMIT 200");
+    foreach ($params as $k => $v) $stmt->bindValue($k, $v);
+    $stmt->execute();
+    $retur_requests = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+  } catch (Exception $e) {
+    $retur_requests = [];
+  }
 }
 
 $all_users = $API->comm("/ip/hotspot/user/print", array(

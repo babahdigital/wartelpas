@@ -14,12 +14,16 @@ if (!isset($_SESSION["mikhmon"])) {
   include('../lang/'.$langid.'.php');
   include('../include/config.php');
   include('../include/readcfg.php');
+  if (file_exists('../report/laporan/helpers.php')) {
+    require_once('../report/laporan/helpers.php');
+  }
   include_once('../lib/routeros_api.class.php');
   include_once('../lib/formatbytesbites.php');
   
   $API = new RouterosAPI();
   $API->debug = false;
   $API->connect($iphost, $userhost, decrypt($passwdhost));
+
 
   if ($livereport == "disable") {
     $logh = "457px";
@@ -46,7 +50,7 @@ if (!isset($_SESSION["mikhmon"])) {
     $tBl = 0;      // Reset Rupiah
 
     foreach($getSRBl as $row){
-      $parts = explode("-|-", $row['name']);
+      $parts = function_exists('split_sales_raw') ? split_sales_raw($row['name'] ?? '') : explode('-|-', $row['name']);
       
       // === FILTER SECURITY: CEK KOMENTAR ===
       $comment = isset($parts[8]) ? $parts[8] : "";

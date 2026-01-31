@@ -186,6 +186,23 @@ try {
         try { $db->exec("ALTER TABLE login_history ADD COLUMN $col $type"); } catch(Exception $e) {}
       }
     }
+
+    $db->exec("CREATE TABLE IF NOT EXISTS retur_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        request_date TEXT,
+        voucher_code TEXT,
+        blok_name TEXT,
+        reason TEXT,
+        contact_phone TEXT,
+        status TEXT DEFAULT 'pending',
+        reviewed_by TEXT,
+        reviewed_at DATETIME,
+        review_note TEXT,
+        router_name TEXT,
+        source TEXT DEFAULT 'portal'
+    )");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_retur_requests_status_date ON retur_requests(status, request_date)");
 } catch(Exception $e){
     $db = null;
 }

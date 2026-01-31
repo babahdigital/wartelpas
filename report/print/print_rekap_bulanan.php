@@ -48,7 +48,9 @@ $audit_net = [];
 $audit_selisih = [];
 $audit_system = [];
 $audit_expense = [];
+$audit_refund = [];
 $total_expenses_month = 0;
+$total_refund_month = 0;
 $daily_expense_logs = [];
 $notes_map = [];
 $settled_dates = [];
@@ -111,7 +113,7 @@ try {
             $phone_units[$d][$ut] = (int)($row['total_units'] ?? 0);
         }
 
-        $stmtAudit = $db->prepare("SELECT report_date, blok_name, expected_setoran, actual_setoran, user_evidence, expenses_amt, expenses_desc
+        $stmtAudit = $db->prepare("SELECT report_date, blok_name, expected_setoran, actual_setoran, user_evidence, expenses_amt, expenses_desc, refund_amt, refund_desc
             FROM audit_rekap_manual
             WHERE report_date LIKE :m");
         $stmtAudit->execute([':m' => $filter_date . '%']);
@@ -120,14 +122,17 @@ try {
             if ($d === '') continue;
             [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($row);
             $expense = (int)($row['expenses_amt'] ?? 0);
+            $refund_amt = (int)($row['refund_amt'] ?? 0);
             $desc = trim((string)($row['expenses_desc'] ?? ''));
             $blok = (string)($row['blok_name'] ?? '');
             $total_expenses_month += $expense;
-            $net_cash_audit = (int)$manual_setoran - $expense;
+            $total_refund_month += $refund_amt;
+            $net_cash_audit = (int)$manual_setoran - $expense - $refund_amt;
             $audit_net[$d] = (int)($audit_net[$d] ?? 0) + $net_cash_audit;
             $audit_expense[$d] = (int)($audit_expense[$d] ?? 0) + $expense;
+            $audit_refund[$d] = (int)($audit_refund[$d] ?? 0) + $refund_amt;
             $audit_system[$d] = (int)($audit_system[$d] ?? 0) + (int)$expected_adj_setoran;
-            $audit_selisih[$d] = (int)($audit_selisih[$d] ?? 0) + ((int)$manual_setoran - (int)$expected_adj_setoran);
+            $audit_selisih[$d] = (int)($audit_selisih[$d] ?? 0) + ((int)$manual_setoran - (int)$expected_adj_setoran - $refund_amt);
             if ($expense > 0) {
                 $desc_text = $desc !== '' ? $desc : 'Tanpa Keterangan';
                 $daily_expense_logs[$d][] = [
@@ -371,6 +376,10 @@ foreach ($all_dates as $date) {
     $max_active = max($max_active, (int)($ph['active'] ?? 0));
 }
 
+usort($rows_out, function($a, $b) {
+    return strcmp((string)($b['date'] ?? ''), (string)($a['date'] ?? ''));
+});
+
 $total_kerugian = $total_voucher_loss + $total_setoran_loss;
 
 $month_label = month_label_id($filter_date);
@@ -429,7 +438,8 @@ if (!empty($unsettled_dates)) {
         </div>
     <?php endif; ?>
 
-    <div class="summary-grid" style="grid-template-columns: repeat(5, 1fr); gap:15px; margin-bottom:25px;">
+    <?php $show_refund = $total_refund_month > 0; ?>
+    <div class="summary-grid" style="grid-template-columns: repeat(3, 1fr); gap:15px; margin-bottom:25px;">
         <div class="summary-card" style="border:1px solid #ddd; padding:15px; border-radius:4px; background:#fff;">
             <div class="summary-title" style="color:#666; font-size:11px; text-transform:uppercase;">Total Omzet (Gross)</div>
             <div class="summary-value" style="font-size:20px; font-weight:bold;"><?= $cur ?> <?= number_format((int)$total_omzet_gross,0,',','.') ?></div>
@@ -444,6 +454,12 @@ if (!empty($unsettled_dates)) {
             <div class="summary-value" style="font-size:20px; font-weight:bold; color:#d35400;">- <?= $cur ?> <?= number_format((int)$total_expenses_month,0,',','.') ?></div>
             <div style="font-size:10px; color:#e67e22;">(Belanja Toko)</div>
         </div>
+        <?php if ($show_refund): ?>
+            <div class="summary-card" style="border:1px solid #c4b5fd; background:#f5f3ff; padding:15px; border-radius:4px;">
+                <div class="summary-title" style="color:#6c5ce7; font-size:11px; text-transform:uppercase;">Pengembalian</div>
+                <div class="summary-value" style="font-size:20px; font-weight:bold; color:#6c5ce7;">- <?= $cur ?> <?= number_format((int)$total_refund_month,0,',','.') ?></div>
+            </div>
+        <?php endif; ?>
         <div class="summary-card" style="border:1px solid #ddd; padding:15px; border-radius:4px; background:#fff;">
             <div class="summary-title" style="color:#666; font-size:11px; text-transform:uppercase;">Setoran Fisik</div>
             <div class="summary-value" style="font-size:20px; font-weight:bold; color:#1e3a8a;"><?= $cur ?> <?= number_format((int)$total_net_audit,0,',','.') ?></div>
@@ -466,17 +482,17 @@ if (!empty($unsettled_dates)) {
                 <th style="border:1px solid #cbd5e1; padding:8px;">Tanggal</th>
                 <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Terjual</th>
                 <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Rusak</th>
-                <th style="border:1px solid #cbd5e1; padding:8px; text-align:right;">Target Sistem (Net)</th>
-                <th style="border:1px solid #cbd5e1; padding:8px; text-align:right;">Setoran Fisik (Audit)</th>
-                <th style="border:1px solid #cbd5e1; padding:8px; text-align:right;">Pengeluaran</th>
-                <th style="border:1px solid #cbd5e1; padding:8px; text-align:right;">Selisih</th>
-                   <th style="border:1px solid #cbd5e1; padding:8px; text-align:left;">Keterangan / Insiden</th>
+                <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Target Sistem (Net)</th>
+                <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Setoran Fisik (Audit)</th>
+                     <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Pengeluaran</th>
+                <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Selisih</th>
+                   <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Keterangan / Insiden</th>
                 <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Status</th>
             </tr>
         </thead>
         <tbody>
-            <?php if (empty($rows_out)): ?>
-                   <tr><td colspan="9" style="text-align:center; padding:20px;">Tidak ada data transaksi bulan ini.</td></tr>
+                     <?php if (empty($rows_out)): ?>
+                         <tr><td colspan="9" style="text-align:center; padding:20px;">Tidak ada data transaksi bulan ini.</td></tr>
             <?php else: $idx = 0; foreach ($rows_out as $row): $idx++; ?>
                 <?php
                     $daily_selisih = (int)($row['selisih'] ?? 0);
@@ -508,7 +524,7 @@ if (!empty($unsettled_dates)) {
                     <td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:right; font-weight:bold; color:<?= $status_color ?>;">
                         <?= $daily_selisih == 0 ? '-' : number_format($daily_selisih,0,',','.') ?>
                     </td>
-                       <td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:left; font-size:10px; color:#555;">
+                       <td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:center; font-size:10px; color:#555;">
                            <?= $day_note_short !== '' ? esc($day_note_short) : '-' ?>
                        </td>
                     <td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:center; font-size:10px; font-weight:bold; color:<?= $status_color ?>;">
@@ -526,8 +542,8 @@ if (!empty($unsettled_dates)) {
                 <td style="border:1px solid #cbd5e1; padding:8px; text-align:right; color:<?= $total_selisih < 0 ? '#dc2626' : ($total_selisih > 0 ? '#16a34a' : '#333') ?>;">
                     <?= number_format((int)$total_selisih,0,',','.') ?>
                 </td>
-                   <td style="border:1px solid #cbd5e1;"></td>
-                   <td style="border:1px solid #cbd5e1;"></td>
+                <td style="border:1px solid #cbd5e1;"></td>
+                <td style="border:1px solid #cbd5e1;"></td>
             </tr>
         </tfoot>
     </table>
@@ -579,6 +595,7 @@ if (!empty($unsettled_dates)) {
             </table>
         </div>
     <?php endif; ?>
+
 
 <script>
 function setUniquePrintTitle(){

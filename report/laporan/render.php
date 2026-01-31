@@ -254,13 +254,25 @@
                             <div class="modal-note">Sisa <span class="char-remaining" data-max="60" data-target="auditExpenseDesc">60</span> karakter.</div>
                         </div>
                     </div>
+                    <div class="form-grid-2" style="margin-top:10px;">
+                        <div>
+                            <label>Pengembalian (Rp)</label>
+                            <input class="form-input" type="number" name="audit_refund_amt" min="0" value="0" placeholder="0">
+                            <div class="modal-note">Hanya untuk selisih lebih setor.</div>
+                        </div>
+                        <div>
+                            <label>Keterangan Pengembalian</label>
+                            <input class="form-input" type="text" id="auditRefundDesc" name="audit_refund_desc" placeholder="Contoh: Dikembalikan ke blok" maxlength="60">
+                            <div class="modal-note">Sisa <span class="char-remaining" data-max="60" data-target="auditRefundDesc">60</span> karakter.</div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="form-group-box" id="setoran-bersih-box" style="margin-top:12px;">
                     <div class="form-group-title" style="color:#2ecc71;"><i class="fa fa-check"></i> Setoran Bersih (Hasil Akhir)</div>
                     <div class="form-grid-2 form-grid-1">
                         <div>
-                            <label class="label-icon">Setoran Bersih (Setelah Pengeluaran)</label>
+                            <label class="label-icon">Setoran Bersih (Setelah Pengeluaran & Pengembalian)</label>
                             <input class="form-input" type="number" id="audit_setoran_net" value="0" readonly tabindex="-1">
                         </div>
                     </div>
@@ -403,62 +415,98 @@
             $voucher_loss_display = (int)$total_rusak + (int)$total_invalid;
             $setoran_loss_display = $audit_selisih_setoran_adj_total < 0 ? abs((int)$audit_selisih_setoran_adj_total) : 0;
             $kerugian_display = $voucher_loss_display + $setoran_loss_display;
+            $total_expenses_today = 0;
+            if ($req_show === 'harian') {
+                if (!empty($audit_rows)) {
+                    foreach ($audit_rows as $ar) {
+                        $total_expenses_today += (int)($ar['expenses_amt'] ?? 0);
+                    }
+                }
+            } else {
+                $total_expenses_today = (int)($audit_total_expenses_period ?? 0);
+            }
+            $total_refund_today = (int)($audit_total_refund ?? 0);
+            $real_cash = $audit_total_actual_setoran - $total_expenses_today - $total_refund_today;
             $waterfall_tech_loss = $voucher_loss_display;
             $waterfall_target = $net_system_display;
-            $waterfall_actual = ($req_show === 'harian') ? (int)$audit_total_actual_setoran : 0;
+            $waterfall_actual = (int)$real_cash;
             $waterfall_variance = $waterfall_actual - $waterfall_target;
-            $total_expenses_today = 0;
-            if (!empty($audit_rows)) {
-                foreach ($audit_rows as $ar) {
-                    $total_expenses_today += (int)($ar['expenses_amt'] ?? 0);
-                }
-            }
-            $real_cash = $audit_total_actual_setoran - $total_expenses_today;
         ?>
         <div class="summary-grid">
-            <?php
-                $audit_qty_cls = $audit_total_selisih_qty > 0 ? 'audit-pos' : ($audit_total_selisih_qty < 0 ? 'audit-neg' : 'audit-zero');
-                $audit_setoran_cls = $audit_total_selisih_setoran > 0 ? 'audit-pos' : ($audit_total_selisih_setoran < 0 ? 'audit-neg' : 'audit-zero');
-            ?>
-            <div class="summary-card">
-                <div class="summary-title">Gross Income</div>
-                <div class="summary-value"><?= $cur ?> <?= number_format($total_gross,0,',','.') ?></div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-title">Kerugian</div>
-                <div class="summary-value" style="color:#c0392b;">
-                    <?= $cur ?> <?= number_format($kerugian_display,0,',','.') ?>
+            <?php if ($req_show === 'harian'): ?>
+                <?php
+                    $audit_qty_cls = $audit_total_selisih_qty > 0 ? 'audit-pos' : ($audit_total_selisih_qty < 0 ? 'audit-neg' : 'audit-zero');
+                    $audit_setoran_cls = $audit_selisih_setoran_adj_total > 0 ? 'audit-pos' : ($audit_selisih_setoran_adj_total < 0 ? 'audit-neg' : 'audit-zero');
+                ?>
+                <div class="summary-card">
+                    <div class="summary-title">Gross Income</div>
+                    <div class="summary-value"><?= $cur ?> <?= number_format($total_gross,0,',','.') ?></div>
                 </div>
-                <div style="font-size:12px;color:var(--txt-muted)">Voucher: <?= $cur ?> <?= number_format($voucher_loss_display,0,',','.') ?> | Setoran: <?= $cur ?> <?= number_format($setoran_loss_display,0,',','.') ?></div>
-            </div>
-            <div class="summary-card" style="border:1px solid <?= $total_expenses_today > 0 ? '#f39c12' : 'var(--border-col)' ?>;">
-                <div class="summary-title">Setoran Fisik (Cash)</div>
-                <div class="summary-value" style="color:#fff;">
-                    <?= $cur ?> <?= number_format((int)$real_cash,0,',','.') ?>
-                </div>
-                <?php if ($total_expenses_today > 0): ?>
-                    <div style="font-size:11px;color:#f39c12; margin-top:2px;">
-                        <i class="fa fa-minus-circle"></i> Ops: <?= $cur ?> <?= number_format((int)$total_expenses_today,0,',','.') ?> (Bon)
+                <div class="summary-card">
+                    <div class="summary-title">Kerugian</div>
+                    <div class="summary-value" style="color:#c0392b;">
+                        <?= $cur ?> <?= number_format($kerugian_display,0,',','.') ?>
                     </div>
-                <?php else: ?>
-                    <div style="font-size:11px;color:#777; position:relative; top:3px;">Murni Tunai</div>
-                <?php endif; ?>
-            </div>
-            <div class="summary-card">
-                <div class="summary-title">Total Device</div>
-                <div style="margin-top:7px; margin-bottom:10px;">
-                    <span class="summary-badge badge-wartel">WARTEL: <?= number_format($hp_wartel_units,0,',','.') ?></span>
-                    <span class="summary-badge badge-kamtib">KAMTIB: <?= number_format($hp_kamtib_units,0,',','.') ?></span>
+                    <div style="font-size:12px;color:var(--txt-muted)">Voucher: <?= $cur ?> <?= number_format($voucher_loss_display,0,',','.') ?> | Setoran: <?= $cur ?> <?= number_format($setoran_loss_display,0,',','.') ?></div>
                 </div>
-                <div style="font-size:12px;color:var(--txt-muted);margin-top:6px;">
-                    Total: <span style="color:#f39c12;"><?= number_format($hp_total_units,0,',','.') ?></span> | Aktif: <span class="text-green"><?= number_format($hp_active_units,0,',','.') ?></span> | Rusak: <?= number_format($hp_rusak_units,0,',','.') ?> | Spam: <?= number_format($hp_spam_units,0,',','.') ?>
+                <div class="summary-card" style="border:1px solid <?= $total_expenses_today > 0 ? '#f39c12' : 'var(--border-col)' ?>;">
+                    <div class="summary-title">Setoran Fisik (Cash)</div>
+                    <div class="summary-value" style="color:#fff;">
+                        <?= $cur ?> <?= number_format((int)$real_cash,0,',','.') ?>
+                    </div>
+                    <?php if ($total_expenses_today > 0): ?>
+                        <div style="font-size:11px;color:#f39c12; margin-top:2px;">
+                            <i class="fa fa-minus-circle"></i> Ops: <?= $cur ?> <?= number_format((int)$total_expenses_today,0,',','.') ?> (Bon)
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($total_refund_today > 0): ?>
+                        <div style="font-size:11px;color:#6c5ce7; margin-top:2px;">
+                            <i class="fa fa-undo"></i> Pengembalian: <?= $cur ?> <?= number_format((int)$total_refund_today,0,',','.') ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-title">Voucher Terjual</div>
-                <div class="summary-value"><?= number_format($total_qty_laku,0,',','.') ?></div>
-                <div style="font-size:12px;color:var(--txt-muted);margin-top: 1px;">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bandwidth: <?= htmlspecialchars(format_bytes_short($total_bandwidth)) ?></div>
-            </div>
+                <div class="summary-card">
+                    <div class="summary-title">Selisih Audit (Net)</div>
+                    <div class="summary-value" style="color:<?= $audit_setoran_cls === 'audit-neg' ? '#c0392b' : ($audit_setoran_cls === 'audit-pos' ? '#2ecc71' : '#3498db'); ?>;">
+                        <?= $cur ?> <?= number_format((int)$audit_selisih_setoran_adj_total,0,',','.') ?>
+                    </div>
+                    <div style="font-size:12px;color:var(--txt-muted)">Sesudah refund & pengeluaran.</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-title">Voucher Terjual</div>
+                    <div class="summary-value"><?= number_format($total_qty_laku,0,',','.') ?></div>
+                    <div style="font-size:12px;color:var(--txt-muted);margin-top: 1px;">Rusak: <?= number_format($total_qty_rusak,0,',','.') ?> | Retur: <?= number_format($total_qty_retur,0,',','.') ?> | Bandwidth: <?= htmlspecialchars(format_bytes_short($total_bandwidth)) ?></div>
+                </div>
+            <?php else: ?>
+                <div class="summary-card">
+                    <div class="summary-title">Total Omzet (Gross)</div>
+                    <div class="summary-value"><?= $cur ?> <?= number_format($total_gross,0,',','.') ?></div>
+                </div>
+                <div class="summary-card" style="border-color:#fca5a5;">
+                    <div class="summary-title" style="color:#c0392b;">Voucher Loss</div>
+                    <div class="summary-value" style="color:#c0392b;">
+                        <?= $cur ?> <?= number_format($voucher_loss_display,0,',','.') ?>
+                    </div>
+                </div>
+                <div class="summary-card" style="border-color:#f39c12;">
+                    <div class="summary-title" style="color:#f39c12;">Pengeluaran Operasional</div>
+                    <div class="summary-value" style="color:#f39c12;">
+                        <?= $cur ?> <?= number_format((int)$total_expenses_today,0,',','.') ?>
+                    </div>
+                </div>
+                <div class="summary-card" style="border-color:#c4b5fd;">
+                    <div class="summary-title" style="color:#6c5ce7;">Pengembalian</div>
+                    <div class="summary-value" style="color:#6c5ce7;">
+                        <?= $cur ?> <?= number_format((int)$total_refund_today,0,',','.') ?>
+                    </div>
+                </div>
+                <div class="summary-card" style="border-color:#1e3a8a;">
+                    <div class="summary-title">Pendapatan Bersih</div>
+                    <div class="summary-value" style="color:#fff;">
+                        <?= $cur ?> <?= number_format((int)$real_cash,0,',','.') ?>
+                    </div>
+                </div>
+            <?php endif; ?>
         </div>
         <?php if (!empty($audit_ghost_hint)): ?>
             <div style="margin-top:8px;color:#fca5a5;">
@@ -507,7 +555,7 @@ $hp_default_date = '';
 $hp_today_map = [];
 if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
     try {
-        // Ambil data HP hari sebelumnya untuk default form (tanpa menyimpan otomatis)
+        // Ambil data HP hari sebelumnya untuk default form
         $stmtCount = $db->prepare("SELECT COUNT(*) FROM phone_block_daily WHERE report_date = :d");
         $stmtCount->execute([':d' => $filter_date]);
         $hasRows = (int)$stmtCount->fetchColumn();
@@ -529,7 +577,9 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                             'total_units' => 0,
                             'rusak_units' => 0,
                             'spam_units' => 0,
-                            'notes' => ''
+                            'notes' => '',
+                            'has_wartel' => false,
+                            'has_kamtib' => false
                         ];
                     }
                     $ut = strtoupper((string)($row['unit_type'] ?? ''));
@@ -540,11 +590,63 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                         $hp_default_map[$bname]['notes'] = (string)($row['notes'] ?? '');
                     } elseif ($ut === 'WARTEL') {
                         $hp_default_map[$bname]['wartel_units'] = (int)($row['total_units'] ?? 0);
+                        $hp_default_map[$bname]['has_wartel'] = true;
                     } elseif ($ut === 'KAMTIB') {
                         $hp_default_map[$bname]['kamtib_units'] = (int)($row['total_units'] ?? 0);
+                        $hp_default_map[$bname]['has_kamtib'] = true;
                     }
                 }
             }
+        }
+
+        if ($hasRows === 0 && $hp_default_date !== '' && !empty($hp_default_map)) {
+            $db->beginTransaction();
+            $ins = $db->prepare("INSERT INTO phone_block_daily
+                (report_date, blok_name, unit_type, total_units, active_units, rusak_units, spam_units, notes, updated_at)
+                VALUES (:d, :b, :ut, :t, :a, :r, :s, :n, CURRENT_TIMESTAMP)
+            ");
+            foreach ($hp_default_map as $bname => $vals) {
+                $total_units = (int)($vals['total_units'] ?? 0);
+                $rusak_units = (int)($vals['rusak_units'] ?? 0);
+                $spam_units = (int)($vals['spam_units'] ?? 0);
+                $active_units = max(0, $total_units - $rusak_units - $spam_units);
+                $notes = (string)($vals['notes'] ?? '');
+                $ins->execute([
+                    ':d' => $filter_date,
+                    ':b' => $bname,
+                    ':ut' => 'TOTAL',
+                    ':t' => $total_units,
+                    ':a' => $active_units,
+                    ':r' => $rusak_units,
+                    ':s' => $spam_units,
+                    ':n' => $notes
+                ]);
+                if (!empty($vals['has_wartel'])) {
+                    $ins->execute([
+                        ':d' => $filter_date,
+                        ':b' => $bname,
+                        ':ut' => 'WARTEL',
+                        ':t' => (int)($vals['wartel_units'] ?? 0),
+                        ':a' => 0,
+                        ':r' => 0,
+                        ':s' => 0,
+                        ':n' => ''
+                    ]);
+                }
+                if (!empty($vals['has_kamtib'])) {
+                    $ins->execute([
+                        ':d' => $filter_date,
+                        ':b' => $bname,
+                        ':ut' => 'KAMTIB',
+                        ':t' => (int)($vals['kamtib_units'] ?? 0),
+                        ':a' => 0,
+                        ':r' => 0,
+                        ':s' => 0,
+                        ':n' => ''
+                    ]);
+                }
+            }
+            $db->commit();
         }
 
         $stmt = $db->prepare("SELECT * FROM phone_block_daily WHERE report_date = :d ORDER BY blok_name,
@@ -592,6 +694,9 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
         $stmt2->execute([':d' => $filter_date]);
         $hp_summary = $stmt2->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
+        if (isset($db) && $db instanceof PDO && $db->inTransaction()) {
+            $db->rollBack();
+        }
         $hp_rows = [];
         $hp_rows_total = [];
         $hp_summary = [];
@@ -603,7 +708,6 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
 <script>
 window.hpDefaultCache = <?= json_encode($hp_default_date !== '' ? [$filter_date => $hp_default_map] : [], JSON_UNESCAPED_UNICODE); ?>;
 window.hpDefaultSourceDate = <?= json_encode($hp_default_date ?? ''); ?>;
-window.hpTodayMapByDate = <?= json_encode(!empty($hp_today_map) ? [$filter_date => $hp_today_map] : [], JSON_UNESCAPED_UNICODE); ?>;
 window.hpDefaultDate = <?= json_encode($filter_date ?? ''); ?>;
 window.hpDefaultsUrl = <?= json_encode('report/laporan/services/hp_defaults.php'); ?>;
 window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
@@ -701,6 +805,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
         </div>
     </div>
 </div>
+<?php endif; ?>
 
 <?php if (!empty($audit_error)): ?>
     <div class="card-solid mb-3">
@@ -712,38 +817,43 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
 
 <div class="card-solid mb-3">
     <div class="card-header-solid">
-        <h3 class="m-0"><i class="fa fa-check-square-o mr-2"></i> Audit Manual Rekap (Harian)</h3>
+        <h3 class="m-0"><i class="fa fa-check-square-o mr-2"></i> Audit Manual Rekap (<?= $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? 'Bulanan' : 'Tahunan') ?>)</h3>
     </div>
     <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table-dark-solid text-nowrap">
-                <thead>
-                    <tr>
-                        <th>Blok</th>
-                        <th class="text-center">QTY</th>
-                        <th class="text-center">Selisih</th>
-                        <th class="text-right">Setoran</th>
-                        <th class="text-center">Selisih</th>
-                        <th class="text-center">Rusak</th>
-                        <th class="text-center">Retur</th>
-                        <th class="text-center">Voucher 10</th>
-                        <th class="text-center">Voucher 30</th>
-                        <th class="text-right">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($audit_rows)): ?>
-                        <tr><td colspan="10" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
-                    <?php else: 
-                        $price10 = (int)$price10;
-                        $price30 = (int)$price30;
-                        $audit_manual_qty_display_total = 0;
-                        $audit_manual_setoran_display_total = 0;
-                        $audit_system_qty_display_total = 0;
-                        $audit_system_setoran_display_total = 0;
-                        $audit_selisih_qty_display_total = 0;
-                        $audit_selisih_setoran_display_total = 0;
-                        foreach ($audit_rows as $ar): ?>
+        <?php if ($req_show === 'harian'): ?>
+            <?php $has_refund_audit = (int)($audit_total_refund ?? 0) > 0; ?>
+            <div class="table-responsive">
+                <table class="table-dark-solid text-nowrap">
+                    <thead>
+                        <tr>
+                            <th>Blok</th>
+                            <th class="text-center">QTY</th>
+                            <th class="text-center">Selisih</th>
+                            <th class="text-right">Setoran</th>
+                            <th class="text-center">Selisih</th>
+                            <?php if ($has_refund_audit): ?>
+                                <th class="text-right">Refund</th>
+                            <?php endif; ?>
+                            <th class="text-center">Rusak</th>
+                            <th class="text-center">Retur</th>
+                            <th class="text-center">Voucher 10</th>
+                            <th class="text-center">Voucher 30</th>
+                            <th class="text-right">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($audit_rows)): ?>
+                            <tr><td colspan="<?= $has_refund_audit ? '11' : '10'; ?>" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
+                        <?php else: 
+                            $price10 = (int)$price10;
+                            $price30 = (int)$price30;
+                            $audit_manual_qty_display_total = 0;
+                            $audit_manual_setoran_display_total = 0;
+                            $audit_system_qty_display_total = 0;
+                            $audit_system_setoran_display_total = 0;
+                            $audit_selisih_qty_display_total = 0;
+                            $audit_selisih_setoran_display_total = 0;
+                            foreach ($audit_rows as $ar): ?>
                         <?php
                             $sq = (int)($ar['selisih_qty'] ?? 0);
                             $ss = (int)($ar['selisih_setoran'] ?? 0);
@@ -903,21 +1013,26 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                             $expected_adj_setoran = $expected_setoran;
                             $sq = $manual_display_qty - $expected_adj_qty;
                             $ss = $manual_display_setoran - $expected_adj_setoran;
+                            $refund_amt_row = (int)($ar['refund_amt'] ?? 0);
+                            $ss_adj = $ss - $refund_amt_row;
                             $cls_q = $sq > 0 ? 'audit-pos' : ($sq < 0 ? 'audit-neg' : 'audit-zero');
-                            $cls_s = $ss > 0 ? 'audit-pos' : ($ss < 0 ? 'audit-neg' : 'audit-zero');
+                            $cls_s = $ss_adj > 0 ? 'audit-pos' : ($ss_adj < 0 ? 'audit-neg' : 'audit-zero');
                             $audit_manual_qty_display_total += $manual_display_qty;
                             $audit_manual_setoran_display_total += $manual_display_setoran;
                             $audit_system_qty_display_total += $expected_adj_qty;
                             $audit_system_setoran_display_total += $expected_adj_setoran;
                             $audit_selisih_qty_display_total += $sq;
-                            $audit_selisih_setoran_display_total += $ss;
+                            $audit_selisih_setoran_display_total += $ss_adj;
                         ?>
                         <tr>
                             <td><?= htmlspecialchars($ar['blok_name'] ?? '-') ?></td>
                             <td class="text-center"><?= number_format($manual_display_qty,0,',','.') ?></td>
                             <td class="text-center"><span class="<?= $cls_q; ?>"><?= number_format($sq,0,',','.') ?></span></td>
                             <td class="text-right"><?= number_format($manual_display_setoran,0,',','.') ?></td>
-                            <td class="text-center"><span class="<?= $cls_s; ?>"><?= number_format($ss,0,',','.') ?></span></td>
+                            <td class="text-center"><span class="<?= $cls_s; ?>"><?= number_format($ss_adj,0,',','.') ?></span></td>
+                            <?php if ($has_refund_audit): ?>
+                                <td class="text-right"><small><?= number_format((int)($ar['refund_amt'] ?? 0),0,',','.') ?></small></td>
+                            <?php endif; ?>
                             <td class="text-center"><small><?= number_format($sys_rusak,0,',','.') ?></small></td>
                             <td class="text-center"><small><?= number_format($sys_retur,0,',','.') ?></small></td>
                             <td class="text-center"><small><?= number_format((int)$profile_qty_10,0,',','.') ?></small></td>
@@ -939,6 +1054,8 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                                     data-setoran-manual="<?= $manual_setoran_flag ? 1 : 0; ?>"
                                     data-expense="<?= (int)($ar['expenses_amt'] ?? 0); ?>"
                                     data-expense-desc="<?= htmlspecialchars($ar['expenses_desc'] ?? ''); ?>"
+                                    data-refund="<?= (int)($ar['refund_amt'] ?? 0); ?>"
+                                    data-refund-desc="<?= htmlspecialchars($ar['refund_desc'] ?? ''); ?>"
                                     data-qty10="<?= (int)$profile_qty_10; ?>"
                                     data-qty30="<?= (int)$profile_qty_30; ?>"
                                     data-profile-qty="<?= $profile_qty_json; ?>">
@@ -972,12 +1089,81 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
             <div>Selisih Qty: <b><?= number_format($audit_selisih_qty_total,0,',','.') ?></b></div>
             <div>Sistem Rp (Total): <b><?= number_format($audit_system_setoran_total,0,',','.') ?></b></div>
             <div>Manual Rp: <b><?= number_format($audit_manual_setoran_total,0,',','.') ?></b></div>
+            <div>Refund Rp: <b><?= number_format((int)($audit_total_refund ?? 0),0,',','.') ?></b></div>
             <div>Selisih Rp: <b><?= number_format($audit_selisih_setoran_total,0,',','.') ?></b></div>
         </div>
+        <?php else: ?>
+            <?php $period_label = $req_show === 'bulanan' ? 'Tanggal' : 'Bulan'; ?>
+            <div class="table-responsive">
+                <table class="table-dark-solid text-nowrap">
+                    <thead>
+                        <tr>
+                            <th class="text-center"><?= $period_label ?></th>
+                            <th class="text-center">Target Sistem (Audit)</th>
+                            <th class="text-center">Setoran Fisik (Audit)</th>
+                            <th class="text-center">Pengeluaran</th>
+                            <th class="text-center">Refund</th>
+                            <th class="text-center">Selisih</th>
+                            <th class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($audit_period_rows)): ?>
+                            <tr><td colspan="7" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
+                        <?php else: foreach ($audit_period_rows as $row): ?>
+                            <?php
+                                $sel = (int)($row['selisih'] ?? 0);
+                                $status_label = $sel < 0 ? 'KURANG' : ($sel > 0 ? 'LEBIH' : 'AMAN');
+                                $status_color = $sel < 0 ? '#c0392b' : ($sel > 0 ? '#2ecc71' : '#3498db');
+                                $date_label = (string)($row['date'] ?? '-');
+                                if ($req_show === 'bulanan') {
+                                    $date_label = $date_label !== '' ? substr($date_label, 8, 2) : '-';
+                                } elseif ($req_show === 'tahunan') {
+                                    $month_map = [
+                                        '01' => 'Januari',
+                                        '02' => 'Februari',
+                                        '03' => 'Maret',
+                                        '04' => 'April',
+                                        '05' => 'Mei',
+                                        '06' => 'Juni',
+                                        '07' => 'Juli',
+                                        '08' => 'Agustus',
+                                        '09' => 'September',
+                                        '10' => 'Oktober',
+                                        '11' => 'November',
+                                        '12' => 'Desember'
+                                    ];
+                                    $mm = substr($date_label, 5, 2);
+                                    $date_label = $month_map[$mm] ?? $date_label;
+                                }
+                            ?>
+                            <tr>
+                                <td class="text-center"><?= htmlspecialchars($date_label) ?></td>
+                                <td class="text-center"><?= number_format((int)($row['expected'] ?? 0),0,',','.') ?></td>
+                                <td class="text-center"><?= number_format((int)($row['actual'] ?? 0),0,',','.') ?></td>
+                                <td class="text-center" style="color:#f39c12;"><?= (int)($row['expense'] ?? 0) > 0 ? number_format((int)($row['expense'] ?? 0),0,',','.') : '-' ?></td>
+                                <td class="text-center" style="color:#6c5ce7;"><?= (int)($row['refund'] ?? 0) > 0 ? number_format((int)($row['refund'] ?? 0),0,',','.') : '-' ?></td>
+                                <td class="text-center" style="color:<?= $status_color ?>; font-weight:700;">
+                                    <?= $sel === 0 ? '-' : number_format($sel,0,',','.') ?>
+                                </td>
+                                <td class="text-center" style="color:<?= $status_color ?>; font-weight:700;">
+                                    <?= $status_label ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; endif; ?>
+                    </tbody>
+                </table>
+            </div>
+            <div class="hp-total-bar">
+                <div>Target Sistem (Total): <b><?= number_format((int)($audit_expected_setoran_adj_total ?? 0),0,',','.') ?></b></div>
+                <div>Setoran Fisik (Total): <b><?= number_format((int)($audit_total_actual_setoran ?? 0),0,',','.') ?></b></div>
+                <div>Pengeluaran (Total): <b><?= number_format((int)($audit_total_expenses_period ?? 0),0,',','.') ?></b></div>
+                <div>Refund (Total): <b><?= number_format((int)($audit_total_refund ?? 0),0,',','.') ?></b></div>
+                <div>Selisih (Total): <b><?= number_format((int)($audit_selisih_setoran_adj_total ?? 0),0,',','.') ?></b></div>
+            </div>
+        <?php endif; ?>
     </div>
 </div>
-
-<?php endif; ?>
 
 <div class="card-solid mb-3">
     <div class="card-header-solid">

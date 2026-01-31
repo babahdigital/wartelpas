@@ -2,6 +2,11 @@
 session_start();
 error_reporting(0);
 
+if (empty($_SESSION['audit_csrf'])) {
+    $_SESSION['audit_csrf'] = bin2hex(random_bytes(16));
+}
+$audit_csrf = $_SESSION['audit_csrf'];
+
 $root_dir = dirname(__DIR__);
 $env = [];
 $envFile = $root_dir . '/include/env.php';
@@ -146,8 +151,13 @@ $audit_manual_summary = [
     'selisih_setoran' => 0,
     'total_rusak_rp' => 0,
     'total_expenses' => 0,
+    'total_refund' => 0,
 ];
+$audit_refund_notes = [];
 $daily_note_alert = '';
+$rebuild_message = '';
+$audit_warnings = [];
+$sync_status_message = '';
 
 if (file_exists($dbFile)) {
     try {
@@ -187,6 +197,22 @@ if (file_exists($dbFile)) {
             $dateParam[':raw1'] = '%/' . $year;
             $auditDateFilter = 'report_date LIKE :d';
             $auditDateParam[':d'] = $year . '%';
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'rebuild_audit_expected') {
+            $token_ok = isset($_POST['audit_csrf']) && hash_equals($audit_csrf, (string)$_POST['audit_csrf']);
+            if (!$token_ok) {
+                $rebuild_message = 'Token tidak valid. Silakan refresh halaman.';
+            } elseif ($req_show !== 'harian') {
+                $rebuild_message = 'Rebuild hanya tersedia untuk rekap harian.';
+            } else {
+                try {
+                    $updated = rebuild_audit_expected_for_date($db, $filter_date);
+                    $rebuild_message = $updated > 0 ? ('Rebuild sukses: ' . $updated . ' blok diperbarui.') : 'Tidak ada blok audit yang bisa diperbarui.';
+                } catch (Exception $e) {
+                    $rebuild_message = 'Rebuild gagal. Coba lagi.';
+                }
+            }
         }
 
         $has_sales_history = table_exists($db, 'sales_history');
@@ -398,7 +424,7 @@ if (file_exists($dbFile)) {
         }
 
         if (table_exists($db, 'audit_rekap_manual')) {
-            $auditSql = "SELECT expected_qty, expected_setoran, reported_qty, actual_setoran, expenses_amt, expenses_desc, user_evidence
+            $auditSql = "SELECT blok_name, expected_qty, expected_setoran, reported_qty, actual_setoran, refund_amt, refund_desc, expenses_amt, expenses_desc, user_evidence
                 FROM audit_rekap_manual WHERE $auditDateFilter";
             $stmt = $db->prepare($auditSql);
             foreach ($auditDateParam as $k => $v) $stmt->bindValue($k, $v);
@@ -413,6 +439,21 @@ if (file_exists($dbFile)) {
                 $audit_manual_summary['manual_setoran'] += (int)$manual_setoran;
                 $audit_manual_summary['expected_setoran'] += (int)$expected_setoran;
                 $audit_manual_summary['total_expenses'] += (int)$expense_amt;
+                $refund_amt = (int)($ar['refund_amt'] ?? 0);
+                $refund_desc = trim((string)($ar['refund_desc'] ?? ''));
+                $audit_manual_summary['total_refund'] += $refund_amt;
+
+                if ($refund_amt > 0) {
+                    $blok_name = trim((string)($ar['blok_name'] ?? ''));
+                    $row_selisih = (int)$manual_setoran - (int)$expected_setoran;
+                    $row_selisih_adj = $row_selisih - $refund_amt;
+                    $audit_refund_notes[] = [
+                        'blok' => $blok_name !== '' ? $blok_name : 'Tanpa Blok',
+                        'refund_amt' => $refund_amt,
+                        'refund_desc' => $refund_desc,
+                        'selisih_adj' => $row_selisih_adj,
+                    ];
+                }
 
                 $curr_rusak_rp = 0;
                 if (!empty($ar['user_evidence'])) {
@@ -446,6 +487,20 @@ if (file_exists($dbFile)) {
                 $stmtN->execute([':d' => $filter_date]);
                 $daily_note_alert = $stmtN->fetchColumn() ?: '';
             } catch (Exception $e) {}
+        }
+        if ($req_show === 'harian') {
+            $audit_warnings = fetch_audit_warnings($db, $filter_date);
+            if (!empty($audit_warnings)) {
+                $audit_warnings = array_values(array_filter($audit_warnings, function($w) {
+                    return (string)($w['type'] ?? '') !== 'sync_status';
+                }));
+            }
+        }
+
+        if ($sales_summary['pending'] > 0) {
+            $sync_status_message = 'Belum disinkronisasi. Masih ada ' . number_format($sales_summary['pending'],0,',','.') . ' transaksi pending. Setelah settlement, klik Rebuild Target Sistem.';
+        } else {
+            $sync_status_message = 'Sistem sudah disinkronisasi.';
         }
     } catch (Exception $e) {
         $db = null;
@@ -483,9 +538,26 @@ if (file_exists($dbFile)) {
 <div class="card card-solid">
     <div class="card-header-solid">
         <h3 class="card-title m-0"><i class="fa fa-shield"></i> Audit Keuangan & Voucher</h3>
-        <a class="btn-solid" style="text-decoration:none;" target="_blank" href="report/print/print_audit.php?session=<?= urlencode($session_id) ?>&show=<?= urlencode($req_show) ?>&date=<?= urlencode($filter_date) ?>"><i class="fa fa-print"></i> Print Laporan Keuangan</a>
+        <div style="display:flex;gap:8px;align-items:center;">
+            <form method="POST" action="?report=audit_session&session=<?= urlencode($session_id) ?>&show=<?= urlencode($req_show) ?>&date=<?= urlencode($filter_date) ?>" style="margin:0;">
+                <input type="hidden" name="action" value="rebuild_audit_expected">
+                <input type="hidden" name="audit_csrf" value="<?= htmlspecialchars($audit_csrf) ?>">
+                <button type="submit" class="btn-solid" style="background:#8e44ad;"><i class="fa fa-refresh"></i> Rebuild Target Sistem</button>
+            </form>
+            <a class="btn-solid" style="text-decoration:none;" target="_blank" href="report/print/print_audit.php?session=<?= urlencode($session_id) ?>&show=<?= urlencode($req_show) ?>&date=<?= urlencode($filter_date) ?>"><i class="fa fa-print"></i> Print Laporan Keuangan</a>
+        </div>
     </div>
     <div class="card-body">
+        <?php if (!empty($rebuild_message)): ?>
+            <div style="background:#e8f0fe;border:1px solid #c6dafc;border-left:5px solid #4c8bf5;padding:12px;border-radius:4px;margin-bottom:14px;color:#1a3c78;">
+                <?= htmlspecialchars($rebuild_message) ?>
+            </div>
+        <?php endif; ?>
+        <?php if (!empty($sync_status_message)): ?>
+            <div style="background:#eef7ff;border:1px solid #cde7ff;border-left:5px solid #5aa2ff;padding:12px;border-radius:4px;margin-bottom:14px;color:#1a3c78;">
+                <?= htmlspecialchars($sync_status_message) ?>
+            </div>
+        <?php endif; ?>
         <form method="GET" class="toolbar" action="?">
             <input type="hidden" name="report" value="audit_session">
             <input type="hidden" name="session" value="<?= htmlspecialchars($session_id) ?>">
@@ -544,17 +616,19 @@ if (file_exists($dbFile)) {
         <?php else: ?>
             <?php
                 $selisih = $audit_manual_summary['selisih_setoran'];
-                $ghost_hint = build_ghost_hint($audit_manual_summary['selisih_qty'], $selisih);
-                $color_status = $selisih < 0 ? '#c0392b' : ($selisih > 0 ? '#2ecc71' : '#3498db');
-                $text_status = $selisih < 0 ? 'KURANG SETOR (LOSS)' : ($selisih > 0 ? 'LEBIH SETOR' : 'AMAN / SESUAI');
-                $bg_status = $selisih < 0 ? '#381818' : ($selisih > 0 ? '#1b3a24' : '#1e2a36');
+                $selisih_adj = $selisih - (int)($audit_manual_summary['total_refund'] ?? 0);
+                $ghost_hint = build_ghost_hint($audit_manual_summary['selisih_qty'], $selisih_adj);
+                $color_status = $selisih_adj < 0 ? '#c0392b' : ($selisih_adj > 0 ? '#2ecc71' : '#3498db');
+                $text_status = $selisih_adj < 0 ? 'KURANG SETOR (LOSS)' : ($selisih_adj > 0 ? 'LEBIH SETOR' : 'AMAN / SESUAI');
+                $bg_status = $selisih_adj < 0 ? '#381818' : ($selisih_adj > 0 ? '#1b3a24' : '#1e2a36');
+                $system_net_total = (int)$sales_summary['net'] + (int)$pending_summary['net'];
             ?>
             <div style="background:<?= $bg_status ?>;border:1px solid <?= $color_status ?>;padding:15px;border-radius:6px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;">
                 <div>
                     <div style="font-size:12px;color:#aaa;text-transform:uppercase;">Status Keuangan</div>
                     <div style="font-size:22px;font-weight:bold;color:<?= $color_status ?>;"><?= $text_status ?></div>
-                    <?php if ($selisih != 0): ?>
-                        <div style="font-size:16px;color:#fff;">Selisih: Rp <?= number_format($selisih,0,',','.') ?></div>
+                    <?php if ($selisih_adj != 0): ?>
+                        <div style="font-size:16px;color:#fff;">Selisih: Rp <?= number_format($selisih_adj,0,',','.') ?></div>
                     <?php endif; ?>
                 </div>
                 <?php if (!empty($ghost_hint)): ?>
@@ -569,7 +643,7 @@ if (file_exists($dbFile)) {
             <div class="summary-grid">
                 <div class="summary-card">
                     <div class="summary-title">Setoran Bersih (Cash)</div>
-                    <div class="summary-value">Rp <?= number_format(max(0, $audit_manual_summary['manual_setoran'] - $audit_manual_summary['total_expenses']),0,',','.') ?></div>
+                    <div class="summary-value">Rp <?= number_format(max(0, $audit_manual_summary['manual_setoran'] - $audit_manual_summary['total_expenses'] - $audit_manual_summary['total_refund']),0,',','.') ?></div>
                 </div>
                 <?php if ($audit_manual_summary['total_expenses'] > 0): ?>
                     <div class="summary-card" style="border-color:#f39c12;">
@@ -578,9 +652,20 @@ if (file_exists($dbFile)) {
                         <div style="font-size:10px;color:#d35400;">(Bon/Belanja)</div>
                     </div>
                 <?php endif; ?>
+                <?php if ($audit_manual_summary['total_refund'] > 0): ?>
+                    <div class="summary-card" style="border-color:#6c5ce7;">
+                        <div class="summary-title" style="color:#6c5ce7;">Pengembalian</div>
+                        <div class="summary-value" style="color:#6c5ce7;">Rp <?= number_format($audit_manual_summary['total_refund'],0,',','.') ?></div>
+                        <div style="font-size:10px;color:#6c5ce7;">(Lebih setor)</div>
+                    </div>
+                <?php endif; ?>
                 <div class="summary-card">
-                    <div class="summary-title">Target Sistem (Net)</div>
+                    <div class="summary-title">Target Sistem (Audit)</div>
                     <div class="summary-value">Rp <?= number_format($audit_manual_summary['expected_setoran'],0,',','.') ?></div>
+                </div>
+                <div class="summary-card" style="border-color:#3f4b57;">
+                    <div class="summary-title">Target Sistem (Global)</div>
+                    <div class="summary-value">Rp <?= number_format($system_net_total,0,',','.') ?></div>
                 </div>
                 <div class="summary-card">
                     <div class="summary-title">Selisih Qty</div>
@@ -631,6 +716,31 @@ if (file_exists($dbFile)) {
                 </div>
             <?php endif; ?>
         </div>
+
+        <?php if ($audit_manual_summary['total_refund'] > 0): ?>
+            <div class="summary-card" style="border:1px solid #3a4046;background:#1f2327;margin-top:10px;">
+                <div style="font-size:12px;color:#cbd5f5;">
+                    <strong>Catatan Refund:</strong> Total refund tercatat Rp <?= number_format($audit_manual_summary['total_refund'],0,',','.') ?>.
+                </div>
+                <?php if (!empty($audit_refund_notes) && $selisih_adj != 0): ?>
+                    <div style="margin-top:8px;">
+                        <div style="font-size:12px;color:#cbd5f5;font-weight:bold;">Catatan Selisih (setelah refund):</div>
+                        <ul style="margin:6px 0 0 16px; padding:0; color:#e2e8f0; font-size:12px;">
+                            <?php foreach ($audit_refund_notes as $rn): ?>
+                                <?php if ((int)$rn['selisih_adj'] === 0) continue; ?>
+                                <li>
+                                    Blok <?= htmlspecialchars((string)$rn['blok']) ?>: Refund Rp <?= number_format((int)$rn['refund_amt'],0,',','.') ?>
+                                    <?php if (!empty($rn['refund_desc'])): ?>
+                                        (<?= htmlspecialchars($rn['refund_desc']) ?>)
+                                    <?php endif; ?>
+                                    — Selisih Rp <?= number_format((int)$rn['selisih_adj'],0,',','.') ?>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
 
         <?php if ($sales_summary['pending'] > 0): ?>
             <div class="summary-card" style="border:1px solid #ffeeba;background:#fff3cd;margin-top:10px;">

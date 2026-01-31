@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <title>Wartelpas Admin Manager - Modern Dark</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#1a1d21" />
+    
+    <!-- Resources: Menggunakan CDN agar Icon pasti muncul -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- CUSTOM MODERN DARK THEME PERFECTED --- */
+        :root {
+            /* Palette Warna */
+            --bg-body: #0f111a;       /* Latar belakang utama sangat gelap */
+            --bg-nav: #161b22;        /* Navbar */
+            --bg-card: #1f242e;       /* Card element */
+            --bg-input: #12151d;      /* Input field background */
+            --border-color: #2f363d;  /* Border halus */
+            
+            /* Typography */
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+
+            /* Accents */
+            --accent: #3b82f6;        /* Modern Blue */
+            --accent-hover: #2563eb;
+            --success: #2ea043;       /* Github Green style */
+            --danger: #da3633;        /* Soft Red */
+            --warning: #d29922;       /* Gold/Orange */
+
+            /* Spacing & Radius */
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        * { box-sizing: border-box; outline: none; }
+
+        body {
+            background-color: var(--bg-body);
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            color: var(--text-primary);
+            margin: 0;
+            padding-top: 70px; /* Space for fixed navbar */
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* --- LAYOUT UTILS --- */
+        .container { max-width: 1280px; margin: 0 auto; padding: 20px; }
+        .row { display: flex; flex-wrap: wrap; margin: 0 -10px; }
+        .col-3 { width: 25%; padding: 0 10px; }
+        .col-4 { width: 33.333%; padding: 0 10px; }
+        .col-6 { width: 50%; padding: 0 10px; }
+        .col-12 { width: 100%; padding: 0 10px; }
+        
+        @media (max-width: 768px) {
+            .col-3, .col-4, .col-6 { width: 100%; margin-bottom: 15px; }
+            .top-navbar { flex-direction: column; height: auto !important; padding: 10px !important; }
+            .nav-tabs-custom { margin-top: 10px; width: 100%; overflow-x: auto; }
+            body { padding-top: 130px; }
+        }
+
+        /* --- NAVBAR --- */
+        .top-navbar {
+            background: var(--bg-nav);
+            border-bottom: 1px solid var(--border-color);
+            height: 64px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 20px;
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .brand-logo {
+            display: flex; align-items: center; gap: 12px;
+            font-weight: 700; font-size: 18px; color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+        .brand-logo img { height: 32px; width: auto; }
+
+        /* --- TABS NAVIGATION --- */
+        .nav-tabs-custom {
+            display: flex; gap: 8px; height: 100%; align-items: center;
+            margin-left: 30px;
+        }
+
+        .nav-btn {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid transparent;
+            padding: 8px 16px;
+            font-size: 13px; font-weight: 600;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        .nav-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+        
+        .nav-btn.active {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        /* --- CARDS --- */
+        .card-modern {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+
+        /* .card-modern:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); } */
+
+        .card-header-modern {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(255,255,255,0.01);
+        }
+
+        .card-header-modern h3 {
+            margin: 0; font-size: 15px; font-weight: 600; color: var(--text-primary);
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        .card-body-modern { padding: 20px; }
+
+        /* --- FORMS --- */
+        .form-group-modern { margin-bottom: 16px; }
+        
+        .form-label {
+            display: block; margin-bottom: 6px; font-size: 12px;
+            color: var(--text-secondary); font-weight: 500;
+        }
+
+        .input-group-modern {
+            display: flex; align-items: stretch;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            transition: all 0.2s;
+        }
+
+        .input-group-modern:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        .input-icon {
+            padding: 0 14px;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+            border-right: 1px solid var(--border-color);
+            background: rgba(255,255,255,0.02);
+        }
+
+        .form-control-modern {
+            flex: 1; width: 100%; background: transparent; border: none;
+            color: var(--text-primary); padding: 10px 12px; font-size: 14px;
+            font-family: inherit;
+        }
+        
+        .form-control-modern::placeholder { color: #444c56; }
+        select.form-control-modern { cursor: pointer; }
+        select.form-control-modern option { background: var(--bg-card); color: var(--text-primary); }
+
+        .toggle-pass {
+            cursor: pointer; padding: 0 12px; display: flex; align-items: center;
+            color: var(--text-secondary); transition: color 0.2s;
+        }
+        .toggle-pass:hover { color: var(--accent); }
+
+        /* --- BUTTONS --- */
+        .btn-action {
+            padding: 8px 16px; border-radius: var(--radius-sm); border: none; font-weight: 600; font-size: 13px;
+            cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+        }
+        .btn-primary-m { background: var(--accent); color: white; }
+        .btn-primary-m:hover { background: var(--accent-hover); box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4); }
+        
+        .btn-success-m { background: var(--success); color: white; }
+        .btn-success-m:hover { filter: brightness(1.1); }
+        
+        .btn-danger-m { background: var(--danger); color: white; }
+        .btn-danger-m:hover { filter: brightness(1.1); }
+
+        .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); }
+        .btn-outline:hover { border-color: var(--text-secondary); color: var(--text-primary); }
+
+        /* --- ROUTER LIST --- */
+        .router-item {
+            display: flex; align-items: center;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border-color);
+            padding: 12px 15px; margin-bottom: 10px; border-radius: var(--radius-sm);
+            transition: all 0.2s;
+        }
+        .router-item:hover { background: rgba(255,255,255,0.04); }
+        
+        .router-item.active-router { border-left: 4px solid var(--success); }
+        .router-item.inactive-router { border-left: 4px solid var(--warning); }
+        
+        .router-icon {
+            font-size: 20px; width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.05); border-radius: 50%;
+            margin-right: 15px; color: var(--accent);
+        }
+        
+        .router-info { flex-grow: 1; }
+        .router-name { font-weight: 600; font-size: 15px; display: block; color: var(--text-primary); }
+        .router-session { font-size: 12px; color: var(--text-muted); font-family: monospace; }
+        
+        .router-actions { display: flex; gap: 8px; }
+        .router-actions span, .router-actions a {
+            width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+            border-radius: 4px; color: var(--text-secondary); cursor: pointer; transition: 0.2s;
+            background: rgba(255,255,255,0.05); text-decoration: none;
+        }
+        .router-actions span:hover, .router-actions a:hover { background: var(--accent); color: white; }
+        .router-actions a.delete-btn:hover { background: var(--danger); }
+
+        /* --- CHECKBOX CUSTOM --- */
+        .checkbox-wrapper { display: flex; flex-direction: column; gap: 8px; }
+        .custom-check {
+            display: flex; align-items: center; cursor: pointer; user-select: none;
+            padding: 8px 10px; border-radius: 4px; transition: background 0.2s;
+        }
+        .custom-check:hover { background: rgba(255,255,255,0.03); }
+        .custom-check input { display: none; }
+        .checkmark {
+            width: 18px; height: 18px; background: var(--bg-input);
+            border: 1px solid var(--border-color); border-radius: 4px;
+            margin-right: 10px; position: relative; display: flex; align-items: center; justify-content: center;
+        }
+        .custom-check input:checked ~ .checkmark { background: var(--accent); border-color: var(--accent); }
+        .custom-check input:checked ~ .checkmark::after {
+            content: '\f00c'; font-family: 'FontAwesome'; font-size: 10px; color: white;
+        }
+        .check-label { font-size: 13px; color: var(--text-secondary); }
+
+        /* --- SCRIPT TEXTAREA --- */
+        .script-area {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px; line-height: 1.6;
+            background: #0d1117; color: #c9d1d9;
+            border: 1px solid var(--border-color);
+            padding: 15px; border-radius: var(--radius-sm);
+            width: 100%; height: 400px; resize: vertical;
+        }
+
+        /* --- UTILS --- */
+        .text-blue { color: var(--accent); }
+        .text-green { color: var(--success); }
+        .pointer { cursor: pointer; }
+        .badge {
+            padding: 4px 8px; font-size: 10px; font-weight: 700; text-transform: uppercase;
+            border-radius: 4px; background: var(--bg-input); border: 1px solid var(--border-color);
+        }
+
+        /* --- VIEW ANIMATION --- */
+        .view-section { display: none; opacity: 0; animation: fadeIn 0.3s forwards; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        /* --- OVERLAY --- */
+        .overlay-bg {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); z-index: 9999;
+            display: none; align-items: center; justify-content: center;
+        }
+        .overlay-box {
+            background: var(--bg-card); padding: 30px; border-radius: var(--radius-md);
+            text-align: center; max-width: 400px; width: 90%;
+            border: 1px solid var(--border-color); box-shadow: var(--shadow-md);
+        }
+    </style>
+</head>
+<body>
+
+<!-- Hidden Elements Logic -->
+<span style="display:none;" id="idto">disable</span>
+<span style="display:none;" id="timer"></span>
+
+<!-- NAVBAR -->
+<nav class="top-navbar">
+    <div style="display: flex; align-items: center;">
+        <div class="brand-logo">
+            <!-- Placeholder Logo jika file tidak ditemukan -->
+            <img src="img/logo.png" onerror="this.src='https://via.placeholder.com/32x32/3b82f6/ffffff?text=W'" alt="Logo">
+            <span>WARTELPAS ADMIN</span>
+        </div>
+        
+        <div class="nav-tabs-custom">
+            <button class="nav-btn active" onclick="switchTab('view-admin')" id="btn-admin">
+                <i class="fa fa-dashboard"></i> Dashboard
+            </button>
+            <button class="nav-btn" onclick="switchTab('view-session')" id="btn-session">
+                <i class="fa fa-cogs"></i> Sesi & Router
+            </button>
+            <button class="nav-btn" onclick="switchTab('view-settings')" id="btn-settings">
+                <i class="fa fa-users"></i> Admin & Operator
+            </button>
+            <button class="nav-btn" onclick="switchTab('view-scripts')" id="btn-scripts">
+                <i class="fa fa-code"></i> Scripts
+            </button>
+        </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 20px;">
+        <span class="badge" id="timer_val">--:--</span>
+        
+        <div style="display:flex; gap:8px;">
+            <button class="btn-action btn-outline" style="font-size: 11px; padding: 6px 10px;" onclick="runBackupAjax()">
+                <i class="fa fa-cloud-download"></i> Backup
+            </button>
+            <button class="btn-action btn-outline" style="font-size: 11px; padding: 6px 10px;" onclick="runRestoreAjax()">
+                <i class="fa fa-history"></i> Restore
+            </button>
+        </div>
+        
+        <a href="./admin.php?id=logout" title="Keluar" style="color: var(--danger); font-size: 16px; margin-left: 10px;">
+            <i class="fa fa-power-off"></i>
+        </a>
+    </div>
+</nav>
+
+<!-- MAIN CONTENT -->
+<div class="container">
+    
+    <div id="notify" style="display:none; position: fixed; top: 80px; right: 20px; z-index: 999;">
+        <div class="message" style="background: var(--success); color: #fff; padding: 12px 20px; border-radius: var(--radius-sm); box-shadow: var(--shadow-md); display: flex; align-items: center; gap: 10px;">
+            <i class="fa fa-check-circle"></i> <span id="notify-msg">Berhasil</span>
+        </div>
+    </div>
+
+    <!-- TAB 1: DASHBOARD ADMIN -->
+    <div id="view-admin" class="view-section active">
+        <div class="row">
+            <div class="col-12">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin:0; font-weight: 300;">Dashboard <strong style="font-weight:700">Utama</strong></h2>
+                    <a href="./admin.php?id=settings&router=new-7280" class="btn-action btn-primary-m">
+                        <i class="fa fa-plus-circle"></i> Tambah Router Baru
+                    </a>
+                </div>
+            </div>
+
+            <!-- Kolom Kiri: Daftar Router -->
+            <div class="col-6">
+                <div class="card-modern">
+                    <div class="card-header-modern">
+                        <h3><i class="fa fa-server text-blue"></i> Daftar Router Tersedia</h3>
+                        <span class="badge">2 Active</span>
+                    </div>
+                    <div class="card-body-modern">
+                        <!-- Router 1 -->
+                        <div class="router-item active-router">
+                            <div class="router-icon"><i class="fa fa-wifi"></i></div>
+                            <div class="router-info">
+                                <span class="router-name">Lapas Batulicin</span>
+                                <span class="router-session">Sesi: S3c7x9_LB | IP: 10.10.83.1</span>
+                            </div>
+                            <div class="router-actions">
+                                <span onclick="switchTab('view-session')" title="Quick Connect"><i class="fa fa-bolt"></i></span>
+                                <span onclick="switchTab('view-session')" title="Edit Config"><i class="fa fa-pencil"></i></span>
+                                <a href="javascript:void(0)" class="delete-btn" onclick="if(confirm('Hapus sesi S3c7x9_LB?')){loadpage('./admin.php?id=remove-session&session=S3c7x9_LB')}" title="Hapus"><i class="fa fa-trash"></i></a>
+                            </div>
+                        </div>
+                        <!-- Router 2 -->
+                        <div class="router-item inactive-router">
+                            <div class="router-icon"><i class="fa fa-hdd-o"></i></div>
+                            <div class="router-info">
+                                <span class="router-name">Cadangan (Tanpa Nama)</span>
+                                <span class="router-session">Sesi: new-9446 | IP: Unset</span>
+                            </div>
+                            <div class="router-actions">
+                                <span onclick="window.location.href='./admin.php?id=settings&session=new-9446'"><i class="fa fa-external-link"></i></span>
+                                <a href="./admin.php?id=settings&session=new-9446"><i class="fa fa-pencil"></i></a>
+                                <a href="javascript:void(0)" class="delete-btn" onclick="if(confirm('Hapus sesi new-9446?')){loadpage('./admin.php?id=remove-session&session=new-9446')}"><i class="fa fa-trash"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kolom Kanan: Status System -->
+            <div class="col-6">
+                <div class="card-modern">
+                    <div class="card-header-modern">
+                        <h3><i class="fa fa-info-circle text-green"></i> Status Sistem Mikhmon</h3>
+                    </div>
+                    <div class="card-body-modern">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div style="background: var(--bg-input); padding: 15px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                                <small style="color:var(--text-secondary); display:block; margin-bottom:5px;">Versi Sistem</small>
+                                <strong style="font-size:16px;">v3.20</strong> <span class="badge" style="color:var(--success)">LATEST</span>
+                            </div>
+                            <div style="background: var(--bg-input); padding: 15px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                                <small style="color:var(--text-secondary); display:block; margin-bottom:5px;">Build Date</small>
+                                <strong style="font-size:16px;">06-30-2021</strong>
+                            </div>
+                            <div style="background: var(--bg-input); padding: 15px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                                <small style="color:var(--text-secondary); display:block; margin-bottom:5px;">Mode Server</small>
+                                <strong style="font-size:16px;">Online</strong>
+                            </div>
+                            <div style="background: var(--bg-input); padding: 15px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                                <small style="color:var(--text-secondary); display:block; margin-bottom:5px;">PHP Version</small>
+                                <strong style="font-size:16px;">7.4.x</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: PENGATURAN SESI -->
+    <div id="view-session" class="view-section">
+        <form autocomplete="off" method="post" action="" name="settings">
+            <div class="card-modern">
+                <div class="card-header-modern">
+                    <h3><i class="fa fa-sliders"></i> Konfigurasi Router: S3c7x9_LB</h3>
+                    <div style="display:flex; gap:10px;">
+                        <button type="button" class="btn-action btn-success-m" id="S3c7x9_LB&c=settings">
+                            <i class="fa fa-plug"></i> Connect
+                        </button>
+                        <button type="button" class="btn-action btn-outline" id="ping_test">
+                            <i class="fa fa-exchange"></i> Ping Router
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="card-body-modern">
+                    <div class="row">
+                        <!-- Kiri: Koneksi -->
+                        <div class="col-6">
+                            <h4 style="margin:0 0 15px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent);">
+                                <i class="fa fa-link"></i> Koneksi MikroTik
+                            </h4>
+                            
+                            <div class="form-group-modern">
+                                <label class="form-label">Nama Sesi (ID Unik)</label>
+                                <div class="input-group-modern">
+                                    <div class="input-icon"><i class="fa fa-tag"></i></div>
+                                    <input class="form-control-modern" type="text" id="sessname" name="sessname" value="S3c7x9_LB" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group-modern">
+                                <label class="form-label">IP MikroTik / Cloud ID</label>
+                                <div class="input-group-modern">
+                                    <div class="input-icon"><i class="fa fa-globe"></i></div>
+                                    <input class="form-control-modern" type="text" name="ipmik" value="10.10.83.1" required>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="form-group-modern">
+                                        <label class="form-label">Username Router</label>
+                                        <div class="input-group-modern">
+                                            <div class="input-icon"><i class="fa fa-user"></i></div>
+                                            <input class="form-control-modern" type="text" id="usermk" name="usermik" value="abdullah" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="form-group-modern">
+                                        <label class="form-label">Password Router</label>
+                                        <div class="input-group-modern">
+                                            <div class="input-icon"><i class="fa fa-key"></i></div>
+                                            <input class="form-control-modern" type="password" id="passmk" name="passmik" value="alhabsyi" required>
+                                            <div class="toggle-pass" onclick="Pass('passmk')"><i class="fa fa-eye"></i></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="ping" style="margin-top:10px;"></div>
+                        </div>
+
+                        <!-- Kanan: Data Hotspot -->
+                        <div class="col-6">
+                            <h4 style="margin:0 0 15px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent);">
+                                <i class="fa fa-wifi"></i> Data Hotspot
+                            </h4>
+
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="form-group-modern">
+                                        <label class="form-label">Nama Hotspot</label>
+                                        <div class="input-group-modern">
+                                            <div class="input-icon"><i class="fa fa-building"></i></div>
+                                            <input class="form-control-modern" type="text" name="hotspotname" value="Lapas Batulicin" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="form-group-modern">
+                                        <label class="form-label">DNS Name (ex: login.net)</label>
+                                        <div class="input-group-modern">
+                                            <div class="input-icon"><i class="fa fa-internet-explorer"></i></div>
+                                            <input class="form-control-modern" type="text" name="dnsname" value="wartelpas.net" required>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group-modern">
+                                <label class="form-label">Hotspot Server Profile</label>
+                                <div class="input-group-modern">
+                                    <div class="input-icon"><i class="fa fa-server"></i></div>
+                                    <input class="form-control-modern" type="text" name="hotspotserver" value="wartel" required>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-4">
+                                    <div class="form-group-modern">
+                                        <label class="form-label">Mata Uang</label>
+                                        <div class="input-group-modern">
+                                            <input class="form-control-modern text-center" type="text" name="currency" value="Rp" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="form-group-modern">
+                                        <label class="form-label">Auto Reload (dtk)</label>
+                                        <div class="input-group-modern">
+                                            <input class="form-control-modern text-center" type="number" name="areload" value="10" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="form-group-modern">
+                                        <label class="form-label">Idle Timeout</label>
+                                        <div class="input-group-modern">
+                                            <select class="form-control-modern" name="idleto">
+                                                <option value="10">10 mnt</option>
+                                                <option value="5">5 mnt</option>
+                                                <option value="30">30 mnt</option>
+                                                <option value="disable">Disable</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <input type="hidden" name="iface" value="1">
+                            <input type="hidden" name="livereport" value="disable">
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: right; margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                        <button type="submit" name="save" class="btn-action btn-primary-m" style="padding: 10px 25px;">
+                            <i class="fa fa-save"></i> Simpan Konfigurasi Sesi
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- TAB 3: ADMIN & OPERATOR SETTINGS (NEW FEATURE) -->
+    <div id="view-settings" class="view-section">
+        <form autocomplete="off" method="post" action="" enctype="multipart/form-data">
+            <div class="row">
+                <!-- Data Admin Utama -->
+                <div class="col-6">
+                    <div class="card-modern">
+                        <div class="card-header-modern">
+                            <h3><i class="fa fa-user-secret"></i> Data Akun Administrator</h3>
+                        </div>
+                        <div class="card-body-modern">
+                            <div class="form-group-modern">
+                                <label class="form-label">Username Admin</label>
+                                <div class="input-group-modern">
+                                    <div class="input-icon"><i class="fa fa-user-circle"></i></div>
+                                    <input class="form-control-modern" type="text" name="useradm" value="abdullah" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group-modern">
+                                <label class="form-label">Password Admin</label>
+                                <div class="input-group-modern">
+                                    <div class="input-icon"><i class="fa fa-lock"></i></div>
+                                    <input class="form-control-modern" type="password" id="passadm" name="passadm" value="alhabsyi" required>
+                                    <div class="toggle-pass" onclick="Pass('passadm')"><i class="fa fa-eye"></i></div>
+                                </div>
+                            </div>
+
+                            <div class="form-group-modern">
+                                <label class="form-label">Upload Logo Usaha</label>
+                                <div class="input-group-modern" style="padding: 5px;">
+                                    <input type="file" name="logo_upload" class="form-control-modern" style="padding:5px;">
+                                </div>
+                                <small style="color:var(--text-muted);">Format: PNG/JPG, Max: 500KB</small>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="form-group-modern">
+                                        <label class="form-label">Cetak Cepat QR</label>
+                                        <div class="input-group-modern">
+                                            <div class="input-icon"><i class="fa fa-qrcode"></i></div>
+                                            <select class="form-control-modern" name="qrbt">
+                                                <option>disable</option>
+                                                <option>enable</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="form-group-modern" style="padding-top: 28px;">
+                                        <label class="custom-check">
+                                            <input type="checkbox" name="maintenance_enable" value="1">
+                                            <span class="checkmark"></span>
+                                            <span style="font-size:13px; font-weight:600;">Maintenance Mode</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hak Akses Operator (NEW CHECKLIST STYLE) -->
+                <div class="col-6">
+                    <div class="card-modern">
+                        <div class="card-header-modern">
+                            <h3><i class="fa fa-users"></i> Hak Akses Operator</h3>
+                            <small class="badge" style="background:var(--warning); color:#000;">Level: Support</small>
+                        </div>
+                        <div class="card-body-modern">
+                            <p style="font-size:12px; color:var(--text-secondary); margin-bottom:15px;">
+                                Tentukan apa saja yang boleh dilakukan oleh user Operator selain Admin Utama.
+                            </p>
+                            
+                            <div class="checkbox-wrapper">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <label class="custom-check">
+                                            <input type="checkbox" name="access_dashboard" checked>
+                                            <span class="checkmark"></span>
+                                            <span class="check-label">Akses Dashboard</span>
+                                        </label>
+                                        <label class="custom-check">
+                                            <input type="checkbox" name="access_generate" checked>
+                                            <span class="checkmark"></span>
+                                            <span class="check-label">Buat Voucher</span>
+                                        </label>
+                                        <label class="custom-check">
+                                            <input type="checkbox" name="access_users">
+                                            <span class="checkmark"></span>
+                                            <span class="check-label">Hapus User Hotspot</span>
+                                        </label>
+                                        <label class="custom-check">
+                                            <input type="checkbox" name="access_report">
+                                            <span class="checkmark"></span>
+                                            <span class="check-label">Lihat Laporan Keuangan</span>
+                                        </label>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="custom-check">
+                                            <input type="checkbox" name="access_settings_session">
+                                            <span class="checkmark"></span>
+                                            <span class="check-label">Edit Sesi Router</span>
+                                        </label>
+                                        <label class="custom-check">
+                                            <input type="checkbox" name="access_reboot">
+                                            <span class="checkmark"></span>
+                                            <span class="check-label">Reboot Router</span>
+                                        </label>
+                                        <label class="custom-check">
+                                            <input type="checkbox" name="access_template">
+                                            <span class="checkmark"></span>
+                                            <span class="check-label">Edit Template Voucher</span>
+                                        </label>
+                                        <label class="custom-check">
+                                            <input type="checkbox" name="access_logs">
+                                            <span class="checkmark"></span>
+                                            <span class="check-label">Lihat Log Sistem</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                                <label class="form-label">Multi-User Limit</label>
+                                <div class="input-group-modern">
+                                    <div class="input-icon">Max</div>
+                                    <input type="number" class="form-control-modern" value="1" min="1" max="5">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: right;">
+                        <button type="submit" name="save_admin" class="btn-action btn-primary-m" style="width: 100%; justify-content: center; padding: 12px;">
+                            <i class="fa fa-save"></i> Simpan Data Admin & Operator
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- TAB 4: SCRIPTS (REQUESTED SEPARATION) -->
+    <div id="view-scripts" class="view-section">
+        <div class="row">
+            <div class="col-12">
+                <div style="margin-bottom:15px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); padding: 10px 15px; border-radius: var(--radius-sm); color: var(--accent);">
+                    <i class="fa fa-info-circle"></i> <strong>Info Script:</strong> Script ini digunakan untuk integrasi Live Report & Status Online. Paste script ini ke System > Scripts di MikroTik Anda.
+                </div>
+            </div>
+            
+            <div class="col-6">
+                <div class="card-modern">
+                    <div class="card-header-modern">
+                        <h3><i class="fa fa-sign-in"></i> On-Login Script</h3>
+                        <button type="button" class="btn-action btn-outline" style="font-size:12px; padding: 4px 10px;" onclick="copyScript('onlogin-output')">
+                            <i class="fa fa-copy"></i> Salin Kode
+                        </button>
+                    </div>
+                    <div class="card-body-modern" style="padding:0;">
+<textarea id="onlogin-output" class="script-area" readonly># SCRIPT MIKROTIK ON-LOGIN (FINAL FIX)
+# Fungsi: Force Send Live Report (No Validation Check)
+# Update: 2026-01-30
+
+# --- KONFIGURASI ---
+:local baseUrl "http://wartelpas.sobigidul.net";
+:local key "kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE=";
+:local session "S3c7x9_LB";
+:local usageKey "kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE=";
+
+# --- HELPER: URL ENCODE (SUDAH DIPERBAIKI) ---
+# Mengambil 1 karakter dengan tepat
+:local urlEncode do={
+    :local i [:tostr $1]; :local o ""; :local l [:len $i];
+    :if ($l = 0) do={ :return ""; }
+    :for c from=0 to=($l - 1) do={
+        :local ch [:pick $i $c ($c + 1)];
+        :if ($ch = " ") do={ :set o ($o . "%20"); } else={
+        :if ($ch = ":") do={ :set o ($o . "%3A"); } else={
+        :if ($ch = "/") do={ :set o ($o . "%2F"); } else={
+        :if ($ch = "|") do={ :set o ($o . "%7C"); } else={
+        :if ($ch = "&") do={ :set o ($o . "%26"); } else={
+        :set o ($o . $ch); }}}}}
+    }
+    :return $o;
+};
+
+# --- MAIN LOGIC ---
+{
+    :local username "$user";
+    :local userip "$address";
+    :local usermac $"mac-address";
+    :local date [/system clock get date];
+    :local time [/system clock get time];
+    :local year [:pick $date 7 11];
+    :local month [:pick $date 0 3];
+
+    :do {
+        # 1. AMBIL DATA USER
+        :local uID [/ip hotspot user find where name="$username"];
+        :local comment ""; 
+        :local profile ""; 
+        
+        :if ([:len $uID] > 0) do={
+            :set uID ($uID->0);
+            :set comment [/ip hotspot user get $uID comment];
+            :set profile [/ip hotspot user get $uID profile];
+        }
+
+        # 2. EKSTRAK INFO (Blok & VIP)
+        :local blokInfo "";
+        :local posBlok [:find $comment "Blok-"];
+        if ([:typeof $posBlok] = "nil") do={ :set posBlok [:find $comment "blok-"]; }
+        :if ([:typeof $posBlok] != "nil") do={
+            :local endPos [:find $comment "|" $posBlok];
+            :if ([:typeof $endPos] = "nil") do={ :set endPos [:len $comment]; }
+            :set blokInfo [:pick $comment $posBlok $endPos];
+            :if ([:pick $blokInfo ([:len $blokInfo]-1)] = " ") do={
+                :set blokInfo [:pick $blokInfo 0 ([:len $blokInfo]-1)];
+            }
+        }
+        
+        :local vipTag "";
+        :if (([:find $comment "VIP"] != nil) || ([:find $comment "Pengelola"] != nil)) do={
+            :set vipTag "VIP";
+        }
+
+        # 3. CEK LOG HARIAN (Mencegah Double Omset)
+        :local hasLog [/system script find where comment="mikhmon" and source="$date" and name~"-\\|-$username-\\|-"];
+        
+        :if ([:len $hasLog] = 0) do={
+            # --- START: SCHEDULER & COMMENT ---
+            :do { /sys sch add name="$username" disable=no start-date=$date interval="1d"; } on-error={};
+            :delay 1s;
+            :local schId [/sys sch find where name="$username"];
+            :local exp "";
+            :if ([:len $schId] > 0) do={
+                :set exp [/sys sch get ($schId->0) next-run];
+                /sys sch remove $schId;
+            }
+
+            :local newComment "";
+            :local pipePos [:find $comment "|"];
+            :if ([:typeof $pipePos] != "nil") do={
+                :set newComment [:pick $comment 0 $pipePos];
+            } else={
+                :if ([:len $exp] = 15) do={ :set newComment ([:pick $exp 0 6]."/".$year." ".[:pick $exp 7 16]); }
+                :if ([:len $exp] = 8) do={ :set newComment ("$date $exp"); }
+                :if ([:len $newComment] = 0) do={ :set newComment ("$date $time"); }
+            }
+            :if ([:len $blokInfo] > 0) do={ :set newComment ("$newComment | $blokInfo"); }
+            :if ([:len $vipTag] > 0 && [:find $newComment "VIP"] = nil) do={ :set newComment ("$newComment | VIP"); }
+            # --- END: SCHEDULER & COMMENT ---
+
+            # 4. LIVE INGEST (SALES REPORT) - FORCE SEND
+            # Simpan DB Lokal
+            :local price "5000"; :local validity "1d"; :local pLabel "10Menit";
+            :if ($profile = "30Menit") do={ :set price "20000"; :set pLabel "30Menit"; }
+            
+            :local logTxt "$date-|-$time-|-$username-|-$price-|-$userip-|-$usermac-|-$validity-|-$pLabel-|-$blokInfo";
+            :do { /system script add name=$logTxt owner="$month$year" source="$date" comment="mikhmon"; } on-error={}
+
+            # KIRIM DATA (Hapus validasi, tambah Header)
+            :local liveUrl ($baseUrl . "/report/laporan/services/live_ingest.php");
+            :local postData ("data=" . [$urlEncode $logTxt] . "&key=" . [$urlEncode $key] . "&session=" . [$urlEncode $session]);
+            
+            :do {
+                # PENTING: Header Content-Type & check-certificate=no
+                /tool fetch url=$liveUrl http-method=post http-data=$postData http-header-field="content-type: application/x-www-form-urlencoded" mode=http keep-result=no check-certificate=no;
+                :log info "LOGIN: Data Sent for $username";
+            } on-error={ :log warning "LOGIN: Gagal Fetch Live Ingest"; }
+            
+            # Update Comment User
+            :if ([:len $uID] > 0) do={
+                :do { /ip hotspot user set comment=$newComment mac-address=$usermac $uID; } on-error={}
+            }
+        }
+
+        # 5. USAGE INGEST (ONLINE STATUS)
+        :local useUrl ($baseUrl . "/report/laporan/services/usage_ingest.php?key=" . [$urlEncode $usageKey] . "&session=" . [$urlEncode $session] . "&event=login" . "&user=" . [$urlEncode $username] . "&date=" . [$urlEncode $date] . "&time=" . [$urlEncode $time] . "&ip=" . [$urlEncode $userip] . "&mac=" . [$urlEncode $usermac] . "&uptime=0s");
+        :do {
+            /tool fetch url=$useUrl mode=http keep-result=no check-certificate=no;
+        } on-error={ :log warning "LOGIN: Gagal Fetch Usage"; }
+
+    } on-error={ :log error "LOGIN: Error Critical Script"; }
+}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6">
+                <div class="card-modern">
+                    <div class="card-header-modern">
+                        <h3><i class="fa fa-sign-out"></i> On-Logout Script</h3>
+                        <button type="button" class="btn-action btn-outline" style="font-size:12px; padding: 4px 10px;" onclick="copyScript('onlogout-output')">
+                            <i class="fa fa-copy"></i> Salin Kode
+                        </button>
+                    </div>
+                    <div class="card-body-modern" style="padding:0;">
+<textarea id="onlogout-output" class="script-area" readonly># SCRIPT MIKROTIK ON-LOGOUT (FINAL FIX)
+# Update: 2026-01-30 | Fix: Firewall Regex & Encode
+
+# --- KONFIGURASI ---
+:local baseUrl "http://wartelpas.sobigidul.net";
+:local usageKey "kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE=";
+:local session "S3c7x9_LB";
+
+# --- HELPER: URL ENCODE ---
+:local urlEncode do={
+    :local i [:tostr $1]; :local o ""; :local l [:len $i];
+    :if ($l = 0) do={ :return ""; }
+    :for c from=0 to=($l - 1) do={
+        :local ch [:pick $i $c ($c + 1)];
+        :if ($ch = " ") do={ :set o ($o . "%20"); } else={
+        :if ($ch = ":") do={ :set o ($o . "%3A"); } else={
+        :if ($ch = "/") do={ :set o ($o . "%2F"); } else={
+        :if ($ch = "|") do={ :set o ($o . "%7C"); } else={
+        :set o ($o . $ch); }}}}
+    }
+    :return $o;
+};
+
+# --- MAIN LOGIC ---
+{
+    :local username "$user";
+    :local userip "$address";
+    :local usermac $"mac-address";
+    :local logoutDate [/system clock get date];
+    :local logoutTime [/system clock get time];
+
+    :if ([:len $username] = 0) do={ :return; }
+
+    # 1. AMBIL DATA USER
+    :local uID [/ip hotspot user find where name="$username"];
+    :local currentComment "";
+    :local userUptime "";
+    
+    :if ([:len $uID] > 0) do={
+        :set uID ($uID->0);
+        :do {
+            :set currentComment [/ip hotspot user get $uID comment];
+            :set userUptime [/ip hotspot user get $uID uptime];
+        } on-error={ :set currentComment ""; }
+    } else={ :return; }
+
+    # 2. PRESERVE INFO (Blok & VIP)
+    :local blokInfo "";
+    :local posBlok [:find $currentComment "Blok-"];
+    if ([:typeof $posBlok] = "nil") do={ :set posBlok [:find $currentComment "blok-"]; }
+    :if ([:typeof $posBlok] != "nil") do={
+        :local endPos [:find $currentComment "|" $posBlok];
+        if ([:typeof $endPos] = "nil") do={ :set endPos [:len $currentComment]; }
+        :set blokInfo [:pick $currentComment $posBlok $endPos];
+        if ([:pick $blokInfo ([:len $blokInfo]-1)] = " ") do={
+            :set blokInfo [:pick $blokInfo 0 ([:len $blokInfo]-1)];
+        }
+    }
+    :local vipTag "";
+    :if (([:find $currentComment "VIP"] != nil) || ([:find $comment "Pengelola"] != nil)) do={
+        :set vipTag "VIP";
+    }
+
+    # 3. SET DATA LOGOUT
+    :local cleanComment $currentComment;
+    :local ipTagPos [:find $currentComment " | IP:"];
+    :if ([:typeof $ipTagPos] != "nil") do={ :set cleanComment [:pick $currentComment 0 $ipTagPos]; }
+    :if ([:len $cleanComment] < 5) do={ :set cleanComment ("$logoutDate $logoutTime"); }
+    :if ([:len $blokInfo] > 0 && [:find $cleanComment $blokInfo] = nil) do={ :set cleanComment ("$cleanComment | $blokInfo"); }
+    :if ([:len $vipTag] > 0 && [:find $cleanComment "VIP"] = nil) do={ :set cleanComment ("$cleanComment | VIP"); }
+
+    :local finalComment ("$cleanComment | IP:$userip | MAC:$usermac");
+    :do { /ip hotspot user set comment=$finalComment $uID; } on-error={}
+
+    # 4. USAGE INGEST (LOGOUT)
+    :local usageUrl ($baseUrl . "/report/laporan/services/usage_ingest.php?key=" . [$urlEncode $usageKey] . "&session=" . [$urlEncode $session] . "&event=logout&user=" . [$urlEncode $username] . "&date=" . [$urlEncode $logoutDate] . "&time=" . [$urlEncode $logoutTime] . "&ip=" . [$urlEncode $userip] . "&mac=" . [$urlEncode $usermac] . "&uptime=" . [$urlEncode $userUptime]);
+    
+    :do { 
+        /tool fetch url=$usageUrl mode=http keep-result=no check-certificate=no; 
+    } on-error={ :log warning "LOGOUT: Gagal Fetch Usage"; }
+
+    # 5. BERSIHKAN KONEKSI (Hanya jika Blok Info / Wartel)
+    :if ([:len $blokInfo] > 0) do={
+        :do { /ip hotspot cookie remove [find user="$username"]; } on-error={}
+        :do { /ip hotspot active remove [find user="$username"]; } on-error={}
+        
+        # Regex Cleaner (Cepat & Aman)
+        :if ([:len $userip] > 6) do={
+            :do {
+                :local ipRegex ("^" . $userip . ":");
+                /ip firewall connection remove [find src-address~$ipRegex];
+                /ip firewall connection remove [find dst-address~$ipRegex];
+            } on-error={}
+        }
+    }
+}</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- OVERLAY BACKUP/RESTORE -->
+<div id="ajax-overlay" class="overlay-bg">
+    <div class="overlay-box" id="ajax-modal-container">
+        <i id="ajax-overlay-icon" class="fa fa-circle-o-notch fa-spin" style="font-size:40px; margin-bottom:15px; color:var(--accent);"></i>
+        <h3 id="ajax-overlay-title" style="margin:0 0 10px 0; color:var(--text-primary);">Processing</h3>
+        <p id="ajax-overlay-text" style="color:var(--text-secondary); margin-bottom:20px;">Mohon tunggu...</p>
+        <button id="ajax-overlay-close" class="btn-action btn-danger-m" onclick="hideOverlayNotice()">Tutup</button>
+    </div>
+</div>
+
+<script>
+    // --- LOGIC TAB ---
+    function switchTab(viewId) {
+        document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+        
+        document.getElementById(viewId).classList.add('active');
+        
+        // Auto set active button
+        const btnId = viewId.replace('view-', 'btn-');
+        const btn = document.getElementById(btnId);
+        if(btn) btn.classList.add('active');
+    }
+
+    // --- TOGGLE PASSWORD ---
+    function Pass(id) {
+        var x = document.getElementById(id);
+        x.type = (x.type === 'password') ? 'text' : 'password';
+    }
+
+    // --- COPY SCRIPT ---
+    function copyScript(id) {
+        var el = document.getElementById(id);
+        if(!el) return;
+        el.select();
+        try {
+            document.execCommand('copy');
+            notify("Script berhasil disalin ke clipboard!");
+        } catch(e) { notify("Gagal menyalin otomatis."); }
+    }
+
+    // --- NOTIFIKASI POPUP ---
+    function notify(msg) {
+        var n = document.getElementById('notify-msg');
+        var p = document.getElementById('notify');
+        if(n && p) {
+            n.innerHTML = msg;
+            p.style.display = 'block';
+            setTimeout(function(){ p.style.display='none'; }, 3000);
+        } else {
+            alert(msg);
+        }
+    }
+
+    // --- JAM REALTIME ---
+    function updateRealTimeBadge() {
+        var el = document.getElementById('timer_val');
+        if (!el) return;
+        var now = new Date();
+        var timeStr = now.toLocaleTimeString('id-ID', { hour12: false });
+        el.textContent = timeStr;
+    }
+
+    // --- OVERLAY LOGIC (BACKUP/RESTORE) ---
+    var isSuperAdminFlag = true;
+    window.__backupKey = "kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE=";
+    var sessionName = "S3c7x9_LB";
+
+    function showOverlayNotice(msg, type, lockClose){
+        var overlay = document.getElementById('ajax-overlay');
+        var titleEl = document.getElementById('ajax-overlay-title');
+        var textEl = document.getElementById('ajax-overlay-text');
+        var icon = document.getElementById('ajax-overlay-icon');
+        var btn = document.getElementById('ajax-overlay-close');
+
+        if (!overlay) return;
+        
+        icon.className = (type === 'error') ? 'fa fa-times-circle text-danger' : 
+                         (type === 'success') ? 'fa fa-check-circle text-green' : 'fa fa-circle-o-notch fa-spin text-blue';
+        
+        titleEl.textContent = (type === 'error') ? 'Gagal' : (type === 'success') ? 'Berhasil' : 'Memproses';
+        textEl.textContent = msg;
+        btn.style.display = lockClose ? 'none' : 'inline-block';
+        
+        overlay.style.display = 'flex';
+    }
+
+    function hideOverlayNotice(){
+        document.getElementById('ajax-overlay').style.display = 'none';
+    }
+
+    function runBackupAjax(){
+        if (!confirm('Backup database sekarang?')) return;
+        showOverlayNotice("Memproses backup database...", "loading", true);
+        
+        // Simulasi Fetch jika file PHP tidak ada (agar UI terlihat jalan)
+        fetch('./tools/backup_db.php?ajax=1&key=' + encodeURIComponent(window.__backupKey || ''), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.ok) showOverlayNotice("Backup selesai: " + (data.backup||'-'), "success");
+            else showOverlayNotice("Gagal: " + (data.message||'Unknown Error'), "error");
+        })
+        .catch(() => {
+            // Fallback simulasi untuk preview HTML
+            setTimeout(() => {
+                showOverlayNotice("Koneksi ke backend gagal (File PHP tidak ditemukan), tapi UI berfungsi.", "error");
+            }, 1000);
+        });
+    }
+
+    function runRestoreAjax(){
+        if (!confirm('PERINGATAN: Restore akan menimpa data yang ada. Lanjutkan?')) return;
+        showOverlayNotice("Sedang memulihkan data...", "loading", true);
+        
+        fetch('./tools/restore_db.php?ajax=1&nolimit=1&key=' + encodeURIComponent(window.__backupKey || ''), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.ok) showOverlayNotice("Restore data berhasil.", "success");
+            else showOverlayNotice("Gagal restore.", "error");
+        })
+        .catch(() => {
+            setTimeout(() => {
+                showOverlayNotice("Koneksi ke backend gagal (File PHP tidak ditemukan).", "error");
+            }, 1000);
+        });
+    }
+
+    // --- INISIALISASI ---
+    document.addEventListener('DOMContentLoaded', function(){
+        setInterval(updateRealTimeBadge, 1000);
+        
+        // Validasi Sesi
+        var sesname = document.getElementById('sessname');
+        if (sesname) {
+            sesname.onchange = function() {
+                if ((this.value || '').toLowerCase() === 'mikhmon') {
+                    notify('Nama sesi "mikhmon" dilarang demi keamanan.');
+                    this.value = '';
+                }
+            };
+        }
+
+        // Dummy JQuery Load replacement for Ping
+        var pingBtn = document.getElementById('ping_test');
+        if(pingBtn) {
+            pingBtn.onclick = function() {
+                var pDiv = document.getElementById('ping');
+                pDiv.innerHTML = '<div style="margin-top:10px; color:var(--accent); font-size:13px;"><i class="fa fa-circle-o-notch fa-spin"></i> Mencoba ping router...</div>';
+                
+                // Real implementation logic (Keep backend path)
+                 fetch('./status/ping-test.php?ping&session=' + encodeURIComponent(sessionName))
+                 .then(r => r.text())
+                 .then(t => { pDiv.innerHTML = t; })
+                 .catch(e => { pDiv.innerHTML = '<span style="color:var(--danger)">Gagal ping (Backend offline)</span>'; });
+            }
+        }
+    });
+
+    // Helper untuk loadpage (delete action)
+    function loadpage(url) {
+        window.location.href = url;
+    }
+</script>
+
+</body>
+</html>

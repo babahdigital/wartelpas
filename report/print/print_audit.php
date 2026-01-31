@@ -139,7 +139,9 @@ $audit_manual_summary = [
   'selisih_setoran' => 0,
   'total_rusak_rp' => 0,
   'total_expenses' => 0,
+  'total_refund' => 0,
 ];
+$audit_refund_notes = [];
 $daily_note_audit = '';
 
 if (file_exists($dbFile)) {
@@ -392,7 +394,7 @@ if (file_exists($dbFile)) {
         }
 
         if (table_exists($db, 'audit_rekap_manual')) {
-          $auditSql = "SELECT expected_qty, expected_setoran, reported_qty, actual_setoran, expenses_amt, expenses_desc, user_evidence
+          $auditSql = "SELECT blok_name, expected_qty, expected_setoran, reported_qty, actual_setoran, refund_amt, refund_desc, expenses_amt, expenses_desc, user_evidence
           FROM audit_rekap_manual WHERE $auditDateFilter";
           $stmt = $db->prepare($auditSql);
           foreach ($auditDateParam as $k => $v) $stmt->bindValue($k, $v);
@@ -400,6 +402,7 @@ if (file_exists($dbFile)) {
           $audit_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
           $audit_manual_summary['rows'] = count($audit_rows);
           $audit_manual_summary['total_rusak_rp'] = 0;
+          $audit_manual_summary['total_refund'] = 0;
           foreach ($audit_rows as $ar) {
             [$manual_qty, $expected_qty, $manual_setoran, $expected_setoran, $expense_amt] = calc_audit_adjusted_totals($ar);
             $audit_manual_summary['manual_qty'] += (int)$manual_qty;
@@ -407,6 +410,22 @@ if (file_exists($dbFile)) {
             $audit_manual_summary['manual_setoran'] += (int)$manual_setoran;
             $audit_manual_summary['expected_setoran'] += (int)$expected_setoran;
             $audit_manual_summary['total_expenses'] += (int)$expense_amt;
+            $refund_amt = (int)($ar['refund_amt'] ?? 0);
+            $refund_desc = trim((string)($ar['refund_desc'] ?? ''));
+            $audit_manual_summary['total_refund'] += $refund_amt;
+
+            if ($refund_amt > 0) {
+              $blok_name = trim((string)($ar['blok_name'] ?? ''));
+              $row_selisih = (int)$manual_setoran - (int)$expected_setoran;
+              $row_selisih_adj = $row_selisih - $refund_amt;
+              $audit_refund_notes[] = [
+                'blok' => $blok_name !== '' ? $blok_name : 'Tanpa Blok',
+                'refund_amt' => $refund_amt,
+                'refund_desc' => $refund_desc,
+                'selisih_raw' => $row_selisih,
+                'selisih_adj' => $row_selisih_adj,
+              ];
+            }
 
             $curr_rusak_rp = 0;
             if (!empty($ar['user_evidence'])) {
@@ -508,13 +527,15 @@ if (file_exists($dbFile)) {
     <?php endif; ?>
 
       <?php
-        $selisih = $audit_manual_summary['selisih_setoran'];
-      $ghost_hint = build_ghost_hint($audit_manual_summary['selisih_qty'], $selisih);
-      $bg_status = $selisih < 0 ? '#fee2e2' : ($selisih > 0 ? '#dcfce7' : '#f3f4f6');
-      $border_status = $selisih < 0 ? '#b91c1c' : ($selisih > 0 ? '#15803d' : '#ccc');
-      $text_color = $selisih < 0 ? '#b91c1c' : ($selisih > 0 ? '#15803d' : '#333');
-      $label_status = $selisih < 0 ? 'KURANG SETOR (LOSS)' : ($selisih > 0 ? 'LEBIH SETOR' : 'SETORAN SESUAI / AMAN');
-  ?>
+        $selisih_base = (int)($audit_manual_summary['selisih_setoran'] ?? 0);
+        $selisih_adj = $selisih_base - (int)($audit_manual_summary['total_refund'] ?? 0);
+        $selisih = $selisih_adj;
+        $ghost_hint = build_ghost_hint($audit_manual_summary['selisih_qty'], $selisih);
+        $bg_status = $selisih < 0 ? '#fee2e2' : ($selisih > 0 ? '#dcfce7' : '#f3f4f6');
+        $border_status = $selisih < 0 ? '#b91c1c' : ($selisih > 0 ? '#15803d' : '#ccc');
+        $text_color = $selisih < 0 ? '#b91c1c' : ($selisih > 0 ? '#15803d' : '#333');
+        $label_status = $selisih < 0 ? 'KURANG SETOR (LOSS)' : ($selisih > 0 ? 'LEBIH SETOR' : 'SETORAN SESUAI / AMAN');
+      ?>
 
     <?php if ($audit_manual_summary['rows'] === 0): ?>
       <?php
@@ -565,6 +586,7 @@ if (file_exists($dbFile)) {
       $system_loss_display = $system_loss;
       $actual_cash = (int)($audit_manual_summary['manual_setoran'] ?? 0);
       $actual_exp = (int)($audit_manual_summary['total_expenses'] ?? 0);
+      $actual_refund = (int)($audit_manual_summary['total_refund'] ?? 0);
     ?>
 
     <div class="section-title">Rekonsiliasi Pendapatan (Sistem vs Fisik)</div>
@@ -605,19 +627,26 @@ if (file_exists($dbFile)) {
           <td class="text-center" style="background:#eee;">-</td>
           <td class="text-right text-red">(Rp <?= number_format($actual_exp,0,',','.') ?>)</td>
         </tr>
+        <?php if ($actual_refund > 0): ?>
+        <tr>
+          <td>(-) Pengembalian</td>
+          <td class="text-center" style="background:#eee;">-</td>
+          <td class="text-right" style="color:#6c5ce7;">(Rp <?= number_format($actual_refund,0,',','.') ?>)</td>
+        </tr>
+        <?php endif; ?>
         <tr class="bold">
           <td>(=) Total Uang Disetor</td>
           <td class="text-center" style="background:#eee;">-</td>
-          <td class="text-right">Rp <?= number_format(max(0, $actual_cash - $actual_exp),0,',','.') ?></td>
+          <td class="text-right">Rp <?= number_format(max(0, $actual_cash - $actual_exp - $actual_refund),0,',','.') ?></td>
         </tr>
       </tbody>
     </table>
 
     <div class="section-title">Rincian Perhitungan</div>
-    <div class="summary-grid">
+    <div class="summary-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
     <div class="summary-card">
       <div class="summary-title">Setoran Bersih (Cash)</div>
-      <div class="summary-value">Rp <?= number_format(max(0, $audit_manual_summary['manual_setoran'] - $audit_manual_summary['total_expenses']),0,',','.') ?></div>
+      <div class="summary-value">Rp <?= number_format(max(0, $audit_manual_summary['manual_setoran'] - $audit_manual_summary['total_expenses'] - ($audit_manual_summary['total_refund'] ?? 0)),0,',','.') ?></div>
     </div>
     <?php if ($audit_manual_summary['total_expenses'] > 0): ?>
       <div class="summary-card">
@@ -626,9 +655,20 @@ if (file_exists($dbFile)) {
         <div style="font-size:10px;color:#d35400;">(Bon/Belanja)</div>
       </div>
     <?php endif; ?>
+    <?php if (!empty($audit_manual_summary['total_refund'])): ?>
+      <div class="summary-card">
+        <div class="summary-title" style="color:#6c5ce7;">Pengembalian</div>
+        <div class="summary-value" style="color:#6c5ce7;">Rp <?= number_format($audit_manual_summary['total_refund'],0,',','.') ?></div>
+      </div>
+    <?php endif; ?>
+    <?php $system_net_total = (int)$sales_summary['net'] + (int)$pending_summary['net']; ?>
     <div class="summary-card">
-      <div class="summary-title">Target Sistem (Net)</div>
+      <div class="summary-title">Target Sistem (Audit)</div>
       <div class="summary-value">Rp <?= number_format($audit_manual_summary['expected_setoran'],0,',','.') ?></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-title">Target Sistem (Global)</div>
+      <div class="summary-value">Rp <?= number_format($system_net_total,0,',','.') ?></div>
     </div>
     <div class="summary-card">
       <div class="summary-title">Selisih Uang</div>
@@ -657,6 +697,28 @@ if (file_exists($dbFile)) {
       <div class="summary-card"><div class="summary-title">Pendapatan Kotor (Gross)</div><div class="summary-value">Rp <?= number_format($stat_gross,0,',','.') ?></div></div>
       <div class="summary-card"><div class="summary-title" style="color:#c0392b;">Total Voucher Rusak/Invalid</div><div class="summary-value" style="color:#c0392b;">Rp <?= number_format($total_loss_real,0,',','.') ?></div><div style="font-size:10px;color:#b91c1c;">(Mengurangi Setoran)</div></div>
     </div>
+    <?php if (!empty($audit_manual_summary['total_refund'])): ?>
+      <div style="margin-top:8px; padding:8px; border:1px solid #e5e7eb; background:#f8fafc; font-size:11px; color:#475569;">
+        <strong>Catatan Refund:</strong> Total refund tercatat Rp <?= number_format($audit_manual_summary['total_refund'],0,',','.') ?>.
+        <?php if ($selisih != 0 && !empty($audit_refund_notes)): ?>
+          <div style="margin-top:6px;">
+            <strong>Catatan Selisih (setelah refund):</strong>
+            <ul style="margin:6px 0 0 16px; padding:0;">
+              <?php foreach ($audit_refund_notes as $rn): ?>
+                <?php if ((int)$rn['selisih_adj'] === 0) continue; ?>
+                <li>
+                  Blok <?= htmlspecialchars((string)$rn['blok']) ?>: Refund Rp <?= number_format((int)$rn['refund_amt'],0,',','.') ?>
+                  <?php if (!empty($rn['refund_desc'])): ?>
+                    (<?= htmlspecialchars($rn['refund_desc']) ?>)
+                  <?php endif; ?>
+                  — Selisih Rp <?= number_format((int)$rn['selisih_adj'],0,',','.') ?>
+                </li>
+              <?php endforeach; ?>
+            </ul>
+          </div>
+        <?php endif; ?>
+      </div>
+    <?php endif; ?>
     <?php if ($sales_summary['pending'] > 0): ?>
         <?php $show_pending_date = ($req_show === 'harian' && $filter_date !== date('Y-m-d')); ?>
         <div class="summary-grid" style="grid-template-columns: repeat(1, 1fr); margin-top:6px;">
@@ -694,15 +756,13 @@ if (file_exists($dbFile)) {
     <div style="margin-top:30px; display:flex; justify-content:space-between; gap:16px;">
       <div style="width:30%; text-align:center;">
         Dibuat Oleh (Operator),
-        <div style="margin-top:120px; border-bottom:1px solid #000; margin-bottom:20px;"></div>
+        <div style="margin-top:100px; border-bottom:1px solid #000; margin-bottom:20px;"></div>
+        <small>( tanda tangan & nama jelas )</small>
       </div>
       <div style="width:30%; text-align:center;">
         Diperiksa Oleh (Admin),
-        <div style="margin-top:120px; border-bottom:1px solid #000; margin-bottom:20px;"></div>
-      </div>
-      <div style="width:30%; text-align:center;">
-        Mengetahui (Owner),
-        <div style="margin-top:120px; border-bottom:1px solid #000; margin-bottom:20px;"></div>
+        <div style="margin-top:100px; border-bottom:1px solid #000; margin-bottom:20px;"></div>
+        <small>( tanda tangan & nama jelas )</small>
       </div>
     </div>
 

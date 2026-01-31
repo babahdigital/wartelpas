@@ -71,14 +71,51 @@ if ($_SESSION['theme'] == "") {
     $themecolor = $_SESSION['themecolor'];
 }
 
-
 // load config
-include_once('./include/headhtml.php');
 include('./include/config.php');
 include('./include/readcfg.php');
 
 include_once('./lib/routeros_api.class.php');
 include_once('./lib/formatbytesbites.php');
+
+$is_admin_content = ($id === 'admin-content');
+$is_admin_layout = in_array($id, array('sessions', 'settings', 'mikrotik-scripts'), true);
+
+if ($is_admin_content) {
+  if (!isset($_SESSION["mikhmon"])) {
+    http_response_code(401);
+    exit;
+  }
+  if (isOperator()) {
+    http_response_code(403);
+    exit;
+  }
+  $section = $_GET['section'] ?? '';
+  if ($section === 'sessions') {
+    include_once('./settings/sessions.php');
+  } elseif ($section === 'settings') {
+    if (empty($session)) {
+      echo "<div class='alert alert-warning'>Pilih sesi terlebih dahulu.</div>";
+    } else {
+      include_once('./settings/settings.php');
+      echo '<script type="text/javascript">document.getElementById("sessname").onkeypress = function(e){var chr = String.fromCharCode(e.which);if (" _!@#$%^&*()+=;|?,~".indexOf(chr) >= 0) return false;};</script>';
+    }
+  } elseif ($section === 'scripts') {
+    if (empty($session)) {
+      echo "<div class='alert alert-warning'>Pilih sesi terlebih dahulu.</div>";
+    } elseif (file_exists('./settings/mikrotik_scripts.php')) {
+      include_once('./settings/mikrotik_scripts.php');
+    } else {
+      echo "<div class='alert alert-danger'>File settings/mikrotik_scripts.php tidak ditemukan.</div>";
+    }
+  } else {
+    echo "<div class='alert alert-danger'>Konten admin tidak ditemukan.</div>";
+  }
+  exit;
+}
+
+// load html head
+include_once('./include/headhtml.php');
 
 ensureRole();
 ?>
@@ -170,8 +207,7 @@ if ($id == "login" || substr($url, -1) == "p") {
 
 } elseif ($id == "sessions") {
   $_SESSION["connect"] = "";
-  include_once('./include/menu.php');
-  include_once('./settings/sessions.php');
+  include_once('./settings/admin_single.php');
   /*echo '
   <script type="text/javascript">
     document.getElementById("sessname").onkeypress = function(e) {
@@ -181,23 +217,15 @@ if ($id == "login" || substr($url, -1) == "p") {
     };
     </script>';*/
 } elseif ($id == "settings" && !empty($session) || $id == "settings" && !empty($router)) {
-  include_once('./include/menu.php');
-  include_once('./settings/settings.php');
-  echo '
-  <script type="text/javascript">
-    document.getElementById("sessname").onkeypress = function(e) {
-    var chr = String.fromCharCode(e.which);
-    if (" _!@#$%^&*()+=;|?,~".indexOf(chr) >= 0)
-        return false;
-    };
-    </script>';
-} elseif ($id == "mikrotik-scripts" && !empty($session)) {
-  include_once('./include/menu.php');
-  if (file_exists('./settings/mikrotik_scripts.php')) {
-    include_once('./settings/mikrotik_scripts.php');
+  if (!empty($router) && explode("-", $router)[0] == "new") {
+    include_once('./settings/settings.php');
   } else {
-    echo "<div class='alert alert-danger'>File settings/mikrotik_scripts.php tidak ditemukan.</div>";
+    include_once('./settings/admin_single.php');
   }
+} elseif ($id == "mikrotik-scripts" && !empty($session)) {
+  include_once('./settings/admin_single.php');
+} elseif ($id == "operator-access") {
+  include_once('./settings/admin_single.php');
 } elseif ($id == "connect"  && !empty($session)) {
   ini_set("max_execution_time",5);  
   include_once('./include/menu.php');

@@ -47,6 +47,8 @@ $audit_net = [];
 $audit_selisih = [];
 $audit_system = [];
 $total_expenses_year = 0;
+$audit_refund = [];
+$total_refund_year = 0;
 $settled_dates = [];
 $pending_dates = [];
 $has_settlement_rows = false;
@@ -107,7 +109,7 @@ try {
             $phone_units[$d][$ut] = (int)($row['total_units'] ?? 0);
         }
 
-        $stmtAudit = $db->prepare("SELECT report_date, expected_setoran, actual_setoran, user_evidence, expenses_amt
+        $stmtAudit = $db->prepare("SELECT report_date, expected_setoran, actual_setoran, user_evidence, expenses_amt, refund_amt
             FROM audit_rekap_manual
             WHERE report_date LIKE :y");
         $stmtAudit->execute([':y' => $filter_year . '%']);
@@ -117,14 +119,17 @@ try {
             if ($d === '') continue;
             [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($row);
             $expense = (int)($row['expenses_amt'] ?? 0);
+            $refund_amt = (int)($row['refund_amt'] ?? 0);
             $mm = substr($d, 5, 2);
             if (!isset($temp_expenses[$mm])) $temp_expenses[$mm] = 0;
             $temp_expenses[$mm] += $expense;
             $total_expenses_year += $expense;
-            $net_cash_audit = (int)$manual_setoran - $expense;
+            $total_refund_year += $refund_amt;
+            $net_cash_audit = (int)$manual_setoran - $expense - $refund_amt;
             $audit_net[$d] = (int)($audit_net[$d] ?? 0) + $net_cash_audit;
+            $audit_refund[$d] = (int)($audit_refund[$d] ?? 0) + $refund_amt;
             $audit_system[$d] = (int)($audit_system[$d] ?? 0) + (int)$expected_adj_setoran;
-            $audit_selisih[$d] = (int)($audit_selisih[$d] ?? 0) + ((int)$manual_setoran - (int)$expected_adj_setoran);
+            $audit_selisih[$d] = (int)($audit_selisih[$d] ?? 0) + ((int)$manual_setoran - (int)$expected_adj_setoran - $refund_amt);
         }
 
         if (table_exists($db, 'settlement_log')) {
@@ -445,6 +450,10 @@ $print_time = date('d-m-Y H:i:s');
         th, td { border:1px solid #000; padding:6px; text-align:center; }
         th { background:#f5f5f5; }
         .currency { text-align:right; white-space:nowrap; }
+        .summary-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin:14px 0 18px; }
+        .summary-card { border:1px solid #ccc; border-radius:6px; padding:10px; background:#fff; }
+        .summary-title { font-size:11px; text-transform:uppercase; color:#555; }
+        .summary-value { font-size:16px; font-weight:700; margin-top:4px; }
         .bar-mini { background:#e2e8f0; height:6px; width:80px; border-radius:3px; overflow:hidden; margin:0 auto; }
         .bar-mini > span { display:block; height:100%; background:#3b82f6; }
         .bar-mini.red > span { background:#ef4444; }
@@ -478,6 +487,29 @@ $print_time = date('d-m-Y H:i:s');
             ?>
         </div>
     <?php endif; ?>
+
+    <div class="summary-grid">
+        <div class="summary-card">
+            <div class="summary-title">Total Omzet (Gross)</div>
+            <div class="summary-value"><?= $cur ?> <?= number_format((int)$total_gross,0,',','.') ?></div>
+        </div>
+        <div class="summary-card" style="border-color:#fca5a5;">
+            <div class="summary-title" style="color:#c0392b;">Voucher Loss</div>
+            <div class="summary-value" style="color:#c0392b;"><?= $cur ?> <?= number_format((int)$total_voucher_loss,0,',','.') ?></div>
+        </div>
+        <div class="summary-card" style="border-color:#f39c12;">
+            <div class="summary-title" style="color:#f39c12;">Pengeluaran Operasional</div>
+            <div class="summary-value" style="color:#f39c12;"><?= $cur ?> <?= number_format((int)$total_expenses_year,0,',','.') ?></div>
+        </div>
+        <div class="summary-card" style="border-color:#c4b5fd;">
+            <div class="summary-title" style="color:#6c5ce7;">Pengembalian</div>
+            <div class="summary-value" style="color:#6c5ce7;"><?= $cur ?> <?= number_format((int)$total_refund_year,0,',','.') ?></div>
+        </div>
+        <div class="summary-card" style="border-color:#1e3a8a;">
+            <div class="summary-title">Pendapatan Bersih</div>
+            <div class="summary-value" style="color:#1e3a8a;"><?= $cur ?> <?= number_format((int)$total_net,0,',','.') ?></div>
+        </div>
+    </div>
 
     <table style="width:100%; border-collapse:collapse; font-size:12px; margin-top:20px;">
         <thead>
@@ -541,6 +573,10 @@ $print_time = date('d-m-Y H:i:s');
                 <td colspan="7" style="padding:8px; text-align:right;">
                     * Angka Setoran Bersih sudah dikurangi Total Pengeluaran Operasional tahun ini sebesar:
                     <b>Rp <?= number_format((int)$total_expenses_year, 0, ',', '.') ?></b>
+                    <?php if ($total_refund_year > 0): ?>
+                        dan Total Pengembalian sebesar:
+                        <b>Rp <?= number_format((int)$total_refund_year, 0, ',', '.') ?></b>
+                    <?php endif; ?>
                 </td>
             </tr>
         </tfoot>

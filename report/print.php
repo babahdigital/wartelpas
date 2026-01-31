@@ -32,6 +32,9 @@ if (!isset($_SESSION["mikhmon"])) {
   // load config
   include('../include/config.php');
   include('../include/readcfg.php');
+	if (file_exists('../report/laporan/helpers.php')) {
+		require_once('../report/laporan/helpers.php');
+	}
 
   // routeros api
   include_once('../lib/routeros_api.class.php');
@@ -114,6 +117,7 @@ if (!isset($_SESSION["mikhmon"])) {
 	} else {
 		$fprefix = "";
 	}
+
 	if (strlen($idhr) > "0") {
 		if ($api_connect()) {
 			$getData = $API->comm("/system/script/print", array(
@@ -300,7 +304,7 @@ function number_format(number, decimals, dec_point, thousands_sep) {
 			if ($fcomment != "" || $pcomment == "!!") {
 
 				for ($i = 0; $i < $TotalReg; $i++) {
-					$getname = explode("-|-", $getData[$i]['name']);
+					$getname = function_exists('split_sales_raw') ? split_sales_raw($getData[$i]['name'] ?? '') : explode("-|-", $getData[$i]['name']);
 					if (strpos($getname[8], $fcomment) !== false){
 						echo "<tr>";
 						echo "<td>";
@@ -333,7 +337,7 @@ function number_format(number, decimals, dec_point, thousands_sep) {
 				}
 			} elseif ($prefix != "") {
 				for ($i = 0; $i < $TotalReg; $i++) {
-					$getname = explode("-|-", $getData[$i]['name']);
+					$getname = function_exists('split_sales_raw') ? split_sales_raw($getData[$i]['name'] ?? '') : explode("-|-", $getData[$i]['name']);
 					if (substr($getname[2], 0, strlen($prefix)) == $prefix) {
 						echo "<tr>";
 						echo "<td>";
@@ -371,7 +375,7 @@ function number_format(number, decimals, dec_point, thousands_sep) {
         $range = range($x, $y);
         
 				for ($i = 0; $i < $TotalReg; $i++) {
-					$getname = explode("-|-", $getData[$i]['name']);
+					$getname = function_exists('split_sales_raw') ? split_sales_raw($getData[$i]['name'] ?? '') : explode("-|-", $getData[$i]['name']);
 					$day = substr($getname[0],4,2); if(substr($day,0,1) == "0"){$day = substr($day,-1);}else{$day=$day;}
 					if (in_array($day, $range)) {
 						echo "<tr>";
@@ -405,7 +409,7 @@ function number_format(number, decimals, dec_point, thousands_sep) {
 				}
 			} else {
 				for ($i = 0; $i < $TotalReg; $i++) {
-					$getname = explode("-|-", $getData[$i]['name']);
+					$getname = function_exists('split_sales_raw') ? split_sales_raw($getData[$i]['name'] ?? '') : explode("-|-", $getData[$i]['name']);
 					echo "<tr>";
 					echo "<td>";
 					

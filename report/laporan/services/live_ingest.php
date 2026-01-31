@@ -19,6 +19,10 @@ $envFile = $root_dir . '/include/env.php';
 if (file_exists($envFile)) {
     require $envFile;
 }
+$helpersFile = $root_dir . '/report/laporan/helpers.php';
+if (file_exists($helpersFile)) {
+    require_once $helpersFile;
+}
 $system_cfg = $env['system'] ?? [];
 $db_rel = $system_cfg['db_file'] ?? 'db_data/mikhmon_stats.db';
 if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
@@ -161,8 +165,11 @@ try {
     try { $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_live_user_date ON live_sales(username, sale_date)"); } catch (Exception $e) {}
     try { $db->exec("ALTER TABLE live_sales ADD COLUMN sprice_snapshot INTEGER"); } catch (Exception $e) {}
 
-    $d = explode('-|-', $raw);
+    $d = function_exists('split_sales_raw') ? split_sales_raw($raw) : explode('-|-', $raw);
     if (count($d) < 4) {
+        if (function_exists('log_audit_warning')) {
+            log_audit_warning($db, date('Y-m-d'), 'live_ingest', 'Format raw tidak terbaca (live): 1 item.');
+        }
         $logWrite(date('c') . " | invalid format | " . $raw . "\n");
         echo "OK";
         exit;
@@ -185,6 +192,9 @@ try {
     }
     if ($blok_name === '') {
         $blok_name = 'BLOK-UNKNOWN';
+        if (function_exists('log_audit_warning')) {
+            log_audit_warning($db, date('Y-m-d'), 'live_ingest', 'Transaksi tanpa BLOK (live) di-set UNKNOWN: 1 item.');
+        }
         $logWrite(date('c') . " | blok empty | set UNKNOWN | " . $raw . "\n");
     }
 

@@ -174,7 +174,7 @@ Dokumen ini merangkum detail API Fonnte berdasarkan URL yang diberikan untuk keb
 - Simpan `requestid`, `id`, dan response ke log DB untuk audit.
 
 ### 2.3 Struktur Folder Implementasi
-- Halaman konfigurasi/monitoring WhatsApp: `report/whatsapp/index.php` (akses via `?report=whatsapp`).
+- Halaman konfigurasi/monitoring WhatsApp: `system/whatsapp/index.php` (akses via `?report=whatsapp`).
 - Folder penyimpanan PDF laporan: `report/pdf/` (akses langsung dibatasi).
 
 ### 2.4 Struktur Data (SQLite)
