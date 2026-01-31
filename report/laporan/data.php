@@ -113,6 +113,8 @@ $audit_period_rows = [];
 $has_audit_adjusted = false;
 $audit_locked_today = false;
 $current_daily_note = '';
+$wa_report_status = '';
+$wa_report_sent_at = '';
 
 // Filter periode
 $req_show = $_GET['show'] ?? 'harian';
@@ -196,6 +198,8 @@ if (file_exists($dbFile)) {
             message TEXT
         )");
         try { $db->exec("ALTER TABLE settlement_log ADD COLUMN completed_at DATETIME"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE settlement_log ADD COLUMN wa_report_sent_at DATETIME"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE settlement_log ADD COLUMN wa_report_status TEXT"); } catch (Exception $e) {}
         $db->exec("CREATE TABLE IF NOT EXISTS phone_block_daily (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             report_date TEXT,
@@ -415,13 +419,17 @@ if (file_exists($dbFile)) {
 
         $settled_today = false;
         $settlement_time = '';
+        $wa_report_status = '';
+        $wa_report_sent_at = '';
         try {
-            $stmtSet = $db->prepare("SELECT status, triggered_at, completed_at FROM settlement_log WHERE report_date = :d LIMIT 1");
+            $stmtSet = $db->prepare("SELECT status, triggered_at, completed_at, wa_report_status, wa_report_sent_at FROM settlement_log WHERE report_date = :d LIMIT 1");
             $stmtSet->execute([':d' => $filter_date]);
             $srow = $stmtSet->fetch(PDO::FETCH_ASSOC);
             $settled_today = $srow && strtolower((string)$srow['status']) === 'done';
             if ($srow) {
                 $settlement_time = $srow['completed_at'] ?: ($srow['triggered_at'] ?? '');
+                $wa_report_status = (string)($srow['wa_report_status'] ?? '');
+                $wa_report_sent_at = (string)($srow['wa_report_sent_at'] ?? '');
             }
         } catch (Exception $e) {
             $settled_today = false;

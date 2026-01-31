@@ -396,6 +396,9 @@
             <?php endif; ?>
             <button class="btn-print" type="button" id="btn-settlement" onclick="manualSettlement()" <?= (!empty($settled_today) ? 'disabled style="opacity:.6;cursor:not-allowed;"' : '') ?>>Settlement</button>
             <?php if (!empty($settled_today)): ?>
+                <button class="btn-print" type="button" id="btn-settlement-wa" onclick="openSettlementWaModal()" style="background:#2ecc71;color:#fff;">
+                    <i class="fa fa-paper-plane"></i> Kirim Ulang WA
+                </button>
                 <button class="btn-print" type="button" id="btn-settlement-reset" onclick="openSettlementResetModal()" style="background:#ff9800;color:#fff;">Reset</button>
             <?php endif; ?>
         </div>
@@ -540,8 +543,27 @@
                 </div>
             </div>
         <?php endif; ?>
+        <?php
+            $wa_report_label = '-';
+            $wa_report_detail = '';
+            $wa_report_time = '';
+            if (!empty($wa_report_status)) {
+                $is_ok = stripos($wa_report_status, 'success') !== false;
+                $wa_report_label = $is_ok ? 'Terkirim' : 'Gagal';
+                $wa_report_detail = $wa_report_status;
+            }
+            if (!empty($wa_report_sent_at)) {
+                $wa_report_time = date('d-m-Y H:i:s', strtotime($wa_report_sent_at));
+            }
+        ?>
         <div id="settlement-time" style="margin-top:12px;font-size:12px;color:var(--txt-muted);">
             Settlement terakhir: <?= $settlement_time ? date('d-m-Y H:i:s', strtotime($settlement_time)) : '-' ?>
+        </div>
+        <div id="settlement-wa-status" style="margin-top:4px;font-size:12px;color:var(--txt-muted);">
+            WA Report: <?= htmlspecialchars($wa_report_label, ENT_QUOTES); ?><?= $wa_report_time !== '' ? ' (' . htmlspecialchars($wa_report_time, ENT_QUOTES) . ')' : ''; ?>
+            <?php if ($wa_report_detail !== '' && stripos($wa_report_detail, 'success') === false): ?>
+                <span style="color:#f39c12;"> - <?= htmlspecialchars($wa_report_detail, ENT_QUOTES); ?></span>
+            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -1292,6 +1314,25 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
         <div class="modal-footer">
             <button type="button" class="btn-print btn-default-dark" onclick="closeSettlementResetModal()">Batal</button>
             <button type="button" class="btn-print" style="background:#ff9800;color:#fff;" onclick="confirmSettlementReset()">Ya, Reset</button>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if (!$is_ajax): ?>
+<div id="settlement-wa-modal" class="modal-backdrop" onclick="if(event.target===this){closeSettlementWaModal();}">
+    <div class="modal-card" style="width:460px;">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fa fa-paper-plane" style="color:#2ecc71;margin-right:6px;"></i> Kirim Ulang Laporan WA</div>
+            <button type="button" class="modal-close" onclick="closeSettlementWaModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div style="line-height:1.6;">Kirim ulang laporan settlement harian via WhatsApp untuk tanggal ini?</div>
+            <div class="modal-note">File PDF diambil otomatis dari folder report/pdf. Ukuran maksimal 4MB.</div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-print btn-default-dark" onclick="closeSettlementWaModal()">Batal</button>
+            <button type="button" class="btn-print" style="background:#2ecc71;color:#fff;" onclick="confirmSettlementWaReport()">Kirim</button>
         </div>
     </div>
 </div>

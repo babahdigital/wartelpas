@@ -311,6 +311,61 @@ function confirmSettlementReset(){
         });
 }
 
+function openSettlementWaModal(){
+    var modal = document.getElementById('settlement-wa-modal');
+    if (modal) modal.style.display = 'flex';
+}
+function closeSettlementWaModal(){
+    var modal = document.getElementById('settlement-wa-modal');
+    if (modal) modal.style.display = 'none';
+}
+function updateSettlementWaStatus(label, sentAt, detail){
+    var statusEl = document.getElementById('settlement-wa-status');
+    if (!statusEl) return;
+    var text = 'WA Report: ' + (label || '-');
+    if (sentAt) text += ' (' + sentAt + ')';
+    if (detail && label !== 'Terkirim') text += ' - ' + detail;
+    statusEl.textContent = text;
+}
+function confirmSettlementWaReport(){
+    var cfg = window.sellingConfig || {};
+    var params = new URLSearchParams();
+    if (cfg.sessionId) params.set('session', cfg.sessionId);
+    params.set('date', cfg.filterDate || '');
+    params.set('action', 'wa_report');
+    var btn = document.getElementById('btn-settlement-wa');
+    updateSettlementWaStatus('Mengirim...', '', '');
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+        btn.style.cursor = 'not-allowed';
+    }
+    fetch('report/laporan/services/settlement_manual.php?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            closeSettlementWaModal();
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            }
+            if (!data || !data.ok) {
+                updateSettlementWaStatus('Gagal', '', (data && data.message) ? data.message : 'Gagal mengirim');
+                return;
+            }
+            updateSettlementWaStatus(data.status_label || 'Terkirim', data.sent_at || '', data.status || '');
+        })
+        .catch(function(){
+            closeSettlementWaModal();
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            }
+            updateSettlementWaStatus('Gagal', '', 'Gagal mengirim');
+        });
+}
+
 function closeSettlementModal(){
     var closeBtn = document.getElementById('settlement-close');
     if (closeBtn && closeBtn.disabled) return;

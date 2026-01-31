@@ -666,6 +666,63 @@ if ($action === 'logs') {
     ]);
 }
 
+if ($action === 'wa_report') {
+    if (!function_exists('wa_send_file')) {
+        respond_json(['ok' => false, 'message' => 'WA helper tidak tersedia.']);
+    }
+    try {
+        $stmtS = $db->prepare("SELECT status FROM settlement_log WHERE report_date = :d LIMIT 1");
+        $stmtS->execute([':d' => $date]);
+        $statusRow = $stmtS->fetch(PDO::FETCH_ASSOC);
+        if (!$statusRow || strtolower((string)$statusRow['status']) !== 'done') {
+            respond_json(['ok' => false, 'message' => 'Settlement belum selesai.']);
+        }
+    } catch (Exception $e) {
+        respond_json(['ok' => false, 'message' => 'Gagal membaca status settlement.']);
+    }
+
+    $pdfDir = $root_dir . '/report/pdf';
+    $pdfFile = find_report_pdf_for_date($pdfDir, $date);
+    $msg = 'Laporan Settlement Harian ' . $date;
+    $statusText = '';
+    $ok = false;
+    if ($pdfFile !== '') {
+        $res = wa_send_file($msg, $pdfFile, '', 'report');
+        $ok = !empty($res['ok']);
+        $statusText = $ok ? 'success' : ('failed: ' . ($res['message'] ?? 'error'));
+    } else {
+        $statusText = 'failed: file PDF tidak ditemukan';
+    }
+
+    try {
+        $stmtWU = $db->prepare("UPDATE settlement_log SET wa_report_status = :s, wa_report_sent_at = CASE WHEN :ok = 1 THEN CURRENT_TIMESTAMP ELSE wa_report_sent_at END WHERE report_date = :d");
+        $stmtWU->execute([
+            ':s' => $statusText,
+            ':ok' => $ok ? 1 : 0,
+            ':d' => $date
+        ]);
+    } catch (Exception $e) {}
+
+    if ($ok) {
+        append_settlement_log($logFile, 'system,info', 'WA REPORT: terkirim ' . basename($pdfFile));
+    } else {
+        append_settlement_log($logFile, 'system,warning', 'WA REPORT: ' . $statusText);
+    }
+
+    $sentAt = '';
+    if ($ok) {
+        $sentAt = date('d-m-Y H:i:s');
+    }
+    $label = $ok ? 'Terkirim' : 'Gagal';
+    respond_json([
+        'ok' => $ok,
+        'status' => $statusText,
+        'status_label' => $label,
+        'sent_at' => $sentAt,
+        'message' => $ok ? 'OK' : $statusText
+    ]);
+}
+
 if ($action === 'reset') {
     try {
         $stmtR = $db->prepare("DELETE FROM settlement_log WHERE report_date = :d");

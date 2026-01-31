@@ -207,6 +207,7 @@ Dokumen ini merangkum detail API Fonnte berdasarkan URL yang diberikan untuk keb
   - Laporan dikirim ke penerima dengan opsi **Notif Laporan** aktif.
 6) **Auto kirim laporan setelah settlement**
   - Saat status settlement **done**, sistem mencari PDF harian terbaru dan mengirim via Fonnte.
+  - Tersedia tombol **Kirim Ulang WA** di halaman laporan untuk resend manual.
 4) **Generate PDF**
    - Pastikan link publik/reachable (bisa via folder temp + tokenized link).
 5) **Retry**
