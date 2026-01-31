@@ -199,6 +199,7 @@
 .wa-btn-default {
     background: #3b424a;
     color: var(--wa-text);
+    width: auto;
 }
 
 .wa-btn-default:hover {
