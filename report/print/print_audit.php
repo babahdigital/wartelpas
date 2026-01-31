@@ -472,7 +472,19 @@ if ($req_show === 'tahunan') {
   $ts = strtotime((string)$filter_date . '-01');
   $title_suffix = $ts ? date('m-Y', $ts) : (string)$filter_date;
 } else {
-  $title_suffix = date('d-m-Y', strtotime((string)$filter_date));
+  $ts = strtotime((string)$filter_date);
+  $day_names = [
+    1 => 'Senin',
+    2 => 'Selasa',
+    3 => 'Rabu',
+    4 => 'Kamis',
+    5 => 'Jumat',
+    6 => 'Sabtu',
+    7 => 'Minggu'
+  ];
+  $day_label = $ts ? ($day_names[(int)date('N', $ts)] ?? '') : '';
+  $date_label = $ts ? date('d-m-Y', $ts) : (string)$filter_date;
+  $title_suffix = $day_label !== '' ? ($day_label . '-' . $date_label) : $date_label;
 }
 $file_title = 'LaporanAudit-' . $title_suffix;
 $file_title = preg_replace('/[^a-zA-Z0-9._-]+/', '-', $file_title);
