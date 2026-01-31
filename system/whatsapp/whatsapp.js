@@ -69,15 +69,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         setValidationState(false, 'Mengecek nomor WhatsApp...');
         var params = new URLSearchParams();
-        params.append('report', 'whatsapp');
         params.append('wa_action', 'validate');
-        params.append('ajax', '1');
         params.append('target', target);
         params.append('type', type);
-        var sessionParam = (new URLSearchParams(window.location.search)).get('session');
-        if (sessionParam) params.append('session', sessionParam);
 
-        fetch('./?' + params.toString(), { credentials: 'same-origin' })
+        fetch('./system/whatsapp/api.php?' + params.toString(), { credentials: 'same-origin' })
             .then(function(resp){
                 if (!resp.ok) {
                     return resp.text().then(function(txt){
