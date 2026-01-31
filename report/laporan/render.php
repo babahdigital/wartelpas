@@ -396,9 +396,6 @@
             <?php endif; ?>
             <button class="btn-print" type="button" id="btn-settlement" onclick="manualSettlement()" <?= (!empty($settled_today) ? 'disabled style="opacity:.6;cursor:not-allowed;"' : '') ?>>Settlement</button>
             <?php if (!empty($settled_today)): ?>
-                <button class="btn-print" type="button" id="btn-settlement-wa" onclick="openSettlementWaModal()" style="background:#2ecc71;color:#fff;">
-                    <i class="fa fa-paper-plane"></i> Kirim Ulang WA
-                </button>
                 <button class="btn-print" type="button" id="btn-settlement-reset" onclick="openSettlementResetModal()" style="background:#ff9800;color:#fff;">Reset</button>
             <?php endif; ?>
         </div>
@@ -1319,24 +1316,6 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
 </div>
 <?php endif; ?>
 
-<?php if (!$is_ajax): ?>
-<div id="settlement-wa-modal" class="modal-backdrop" onclick="if(event.target===this){closeSettlementWaModal();}">
-    <div class="modal-card" style="width:460px;">
-        <div class="modal-header">
-            <div class="modal-title"><i class="fa fa-paper-plane" style="color:#2ecc71;margin-right:6px;"></i> Kirim Ulang Laporan WA</div>
-            <button type="button" class="modal-close" onclick="closeSettlementWaModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <div style="line-height:1.6;">Kirim ulang laporan settlement harian via WhatsApp untuk tanggal ini?</div>
-            <div class="modal-note">File PDF diambil otomatis dari folder report/pdf. Ukuran maksimal 4MB.</div>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn-print btn-default-dark" onclick="closeSettlementWaModal()">Batal</button>
-            <button type="button" class="btn-print" style="background:#2ecc71;color:#fff;" onclick="confirmSettlementWaReport()">Kirim</button>
-        </div>
-    </div>
-</div>
-<?php endif; ?>
 
 <?php if (!$is_ajax): ?>
 <div id="settlement-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:10050;">
