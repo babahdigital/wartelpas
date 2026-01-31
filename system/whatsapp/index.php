@@ -297,7 +297,7 @@ if (is_dir($pdf_dir)) {
                                     <a class="wa-btn wa-btn-default" href="./?report=whatsapp<?= $session_qs; ?>"><i class="fa fa-times"></i> Batal</a>
                                 <?php endif; ?>
                             </div>
-                            <div class="wa-help"><i class="fa fa-info-circle"></i> Format nomor wajib 62xxx. Group ID harus diakhiri <strong>@g.us</strong>.</div>
+                            <div class="wa-help"><i class="fa fa-info-circle"></i> Format nomor wajib 0811xxxx. Group ID harus diakhiri <strong>@g.us</strong>.</div>
                         </form>
                     </div>
 
