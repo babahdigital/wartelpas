@@ -108,6 +108,13 @@
     font-weight: 500;
 }
 
+.wa-switch-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
 .wa-switch input {
     position: absolute;
     opacity: 0;

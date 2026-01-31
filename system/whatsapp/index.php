@@ -266,16 +266,18 @@ if (is_dir($pdf_dir)) {
                                 </label>
                             </div>
                             <div class="wa-form-group">
-                                <label class="wa-switch">
-                                    <input type="checkbox" name="wa_receive_retur" value="1" <?= ($edit_row && (int)($edit_row['receive_retur'] ?? 1) === 0) ? '' : 'checked'; ?>>
-                                    <span class="wa-switch-slider"></span>
-                                    <span class="wa-switch-text">Notif Retur/Refund</span>
-                                </label>
-                                <label class="wa-switch" style="margin-top:6px;">
-                                    <input type="checkbox" name="wa_receive_report" value="1" <?= ($edit_row && (int)($edit_row['receive_report'] ?? 1) === 0) ? '' : 'checked'; ?>>
-                                    <span class="wa-switch-slider"></span>
-                                    <span class="wa-switch-text">Notif Laporan</span>
-                                </label>
+                                <div class="wa-switch-row">
+                                    <label class="wa-switch">
+                                        <input type="checkbox" name="wa_receive_retur" value="1" <?= ($edit_row && (int)($edit_row['receive_retur'] ?? 1) === 0) ? '' : 'checked'; ?>>
+                                        <span class="wa-switch-slider"></span>
+                                        <span class="wa-switch-text">Notif Retur/Refund</span>
+                                    </label>
+                                    <label class="wa-switch">
+                                        <input type="checkbox" name="wa_receive_report" value="1" <?= ($edit_row && (int)($edit_row['receive_report'] ?? 1) === 0) ? '' : 'checked'; ?>>
+                                        <span class="wa-switch-slider"></span>
+                                        <span class="wa-switch-text">Notif Laporan</span>
+                                    </label>
+                                </div>
                             </div>
                             <div class="wa-btn-group">
                                 <button type="submit" class="wa-btn wa-btn-primary" id="waSaveBtn"><i class="fa fa-save"></i> Simpan</button>
@@ -373,9 +375,9 @@ if (is_dir($pdf_dir)) {
                                             </td>
                                             <td>
                                                 <?php if ((int)($r['receive_retur'] ?? 1) === 1): ?>
-                                                    <span class="wa-badge" style="background:#2563eb; color:#fff;">Retur</span>
+                                                    <span class="wa-badge" style="background:#2563eb; color:#fff;">Retur/Refund</span>
                                                 <?php else: ?>
-                                                    <span class="wa-badge off">Retur</span>
+                                                    <span class="wa-badge off">Retur/Refund</span>
                                                 <?php endif; ?>
                                                 <?php if ((int)($r['receive_report'] ?? 1) === 1): ?>
                                                     <span class="wa-badge" style="background:#16a34a; color:#fff;">Laporan</span>
@@ -422,13 +424,25 @@ if (is_dir($pdf_dir)) {
                                         <th><i class="fa fa-clock-o"></i> Waktu</th>
                                         <th><i class="fa fa-bullseye"></i> Target</th>
                                         <th><i class="fa fa-info-circle"></i> Status</th>
-                                        <th><i class="fa fa-file-pdf-o"></i> PDF</th>
+                                        <th><i class="fa fa-file-text-o"></i> Keterangan</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($logs as $log): ?>
                                         <tr>
-                                            <td><small><?= htmlspecialchars($log['created_at'] ?? '-'); ?></small></td>
+                                            <td>
+                                                <small>
+                                                    <?php
+                                                        $dt = $log['created_at'] ?? '';
+                                                        $display_dt = '-';
+                                                        if ($dt !== '') {
+                                                            $ts = strtotime($dt);
+                                                            $display_dt = $ts ? date('d-m-Y H:i:s', $ts) : $dt;
+                                                        }
+                                                        echo htmlspecialchars($display_dt);
+                                                    ?>
+                                                </small>
+                                            </td>
                                             <td><code><?= htmlspecialchars($log['target'] ?? '-'); ?></code></td>
                                             <td>
                                                 <?php
@@ -439,10 +453,9 @@ if (is_dir($pdf_dir)) {
                                             </td>
                                             <td>
                                                 <?php if (!empty($log['pdf_file'])): ?>
-                                                    <i class="fa fa-paperclip"></i>
-                                                    <?= htmlspecialchars($log['pdf_file']); ?>
+                                                    <span class="wa-badge" style="background:#16a34a; color:#fff;">PDF</span>
                                                 <?php else: ?>
-                                                    -
+                                                    <span class="wa-badge" style="background:#64748b; color:#fff;">Text</span>
                                                 <?php endif; ?>
                                             </td>
                                         </tr>
