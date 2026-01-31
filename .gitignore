@@ -1,0 +1,38 @@
+# Folder Dependency & Library (Biasanya ukurannya besar)
+/node_modules
+/vendor
+
+# File System & Environment
+.env
+.DS_Store
+Thumbs.db
+custom.ini
+
+# Sensitive config
+include/env.php
+include/config.php
+include/quickbt.php
+
+# Log & Session (PENTING untuk Mikhmon/Wartelpas agar session user tidak ke-upload)
+*.log
+/sessions
+/session
+*.tmp
+
+# Database & Backups
+/db_data/*.db
+/db_data/*.db-*
+/db_data/*.restore-tmp*
+/db_data/backups/
+
+# Runtime/session folders
+/mikhmon_session/
+/mikhmon/session/
+/mikhmon_session/cache/
+
+# Generated reports
+/report/pdf/*.pdf
+
+# IDE Setting (VS Code / Jetbrains)
+.vscode/
+.idea/
