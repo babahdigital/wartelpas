@@ -112,6 +112,19 @@ function validate_wa_target($target, $type, &$error) {
     return $target;
 }
 
+function wa_display_target($target) {
+    $target = trim((string)$target);
+    if ($target === '') return '-';
+    if (stripos($target, '@g.us') !== false) return $target;
+    $clean = preg_replace('/\D+/', '', $target);
+    if ($clean === '') return $target;
+    if (strpos($clean, '62') === 0) {
+        $clean = '0' . substr($clean, 2);
+    }
+    $parts = str_split($clean, 4);
+    return implode('-', $parts);
+}
+
 
 if ($db instanceof PDO && isset($_POST['wa_action'])) {
     $action = $_POST['wa_action'];
@@ -354,7 +367,7 @@ if (is_dir($pdf_dir)) {
                                         <tr>
                                             <td><?= $i + 1; ?></td>
                                             <td><strong><?= htmlspecialchars($r['label'] ?? '-'); ?></strong></td>
-                                            <td><code><?= htmlspecialchars($r['target'] ?? '-'); ?></code></td>
+                                            <td><code><?= htmlspecialchars(wa_display_target($r['target'] ?? '-')); ?></code></td>
                                             <td>
                                                 <?php if ($r['target_type'] === 'group'): ?>
                                                     <span class="wa-badge" style="background: #3498db; color:#fff;">
@@ -443,7 +456,7 @@ if (is_dir($pdf_dir)) {
                                                     ?>
                                                 </small>
                                             </td>
-                                            <td><code><?= htmlspecialchars($log['target'] ?? '-'); ?></code></td>
+                                            <td><code><?= htmlspecialchars(wa_display_target($log['target'] ?? '-')); ?></code></td>
                                             <td>
                                                 <?php
                                                     $status = $log['status'] ?? '';
