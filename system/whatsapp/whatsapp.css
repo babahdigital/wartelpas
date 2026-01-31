@@ -362,6 +362,74 @@
     align-items: center;
 }
 
+.wa-upload-box {
+    border: 2px dashed #4b535c;
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: #20262c;
+}
+
+.wa-upload-box.has-file {
+    border-color: var(--wa-primary);
+    box-shadow: 0 0 0 2px rgba(37, 211, 102, 0.2);
+}
+
+.wa-upload-input {
+    display: none;
+}
+
+.wa-upload-text {
+    font-size: 13px;
+    color: #cbd5db;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wa-section-sep {
+    border-top: 1px solid var(--wa-border);
+    margin: 16px 0;
+}
+
+.wa-send-box {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.wa-send-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #f2f6f9;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wa-send-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.wa-report-status {
+    font-size: 12px;
+    color: var(--wa-text-light);
+}
+
+.wa-report-status.is-ok {
+    color: var(--wa-success);
+}
+
+.wa-report-status.is-bad {
+    color: var(--wa-danger);
+}
+
 .wa-validate-msg {
     margin-top: 8px;
     min-height: 16px;

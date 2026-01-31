@@ -382,13 +382,14 @@ if (is_dir($pdf_dir)) {
                             <i class="fa fa-file-pdf-o"></i>
                             <h4>File PDF Laporan</h4>
                         </div>
-                        <form method="post" action="./?report=whatsapp<?= $session_qs; ?>" enctype="multipart/form-data" style="margin:12px 14px 0;">
+                        <form id="waPdfForm" method="post" action="./?report=whatsapp<?= $session_qs; ?>" enctype="multipart/form-data" style="margin:12px 14px 0;">
                             <input type="hidden" name="wa_action" value="upload_pdf">
-                            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                                <input type="file" name="pdf_file" accept="application/pdf" required>
-                                <button type="submit" class="wa-btn wa-btn-primary"><i class="fa fa-upload"></i> Upload PDF</button>
+                            <div class="wa-upload-box" id="waUploadBox">
+                                <input type="file" id="waPdfInput" name="pdf_file" accept="application/pdf" class="wa-upload-input" required>
+                                <div class="wa-upload-text" id="waUploadText">Belum ada file dipilih</div>
+                                <button type="button" class="wa-btn wa-btn-primary" id="waPdfButton"><i class="fa fa-upload"></i> Pilih PDF</button>
                             </div>
-                            <div class="wa-help" style="margin-top:6px;"><i class="fa fa-info-circle"></i> Maksimal 4MB. Nama file disimpan di folder report/pdf.</div>
+                            <div class="wa-help" style="margin-top:8px;"><i class="fa fa-info-circle"></i> Maksimal 4MB. File disimpan di folder report/pdf.</div>
                         </form>
                         <?php if (empty($pdf_files)): ?>
                             <div class="wa-empty">Belum ada file PDF di folder report/pdf.</div>
@@ -415,6 +416,17 @@ if (is_dir($pdf_dir)) {
                             </div>
                         <?php endif; ?>
                         <div class="wa-help"><i class="fa fa-paperclip"></i> File PDF akan dipakai sebagai attachment saat pengiriman WhatsApp.</div>
+
+                        <div class="wa-section-sep"></div>
+                        <div class="wa-send-box">
+                            <div class="wa-send-title"><i class="fa fa-paper-plane"></i> Kirim Laporan Settlement</div>
+                            <div class="wa-send-row">
+                                <input type="date" id="waReportDate" class="wa-form-input" value="<?= date('Y-m-d'); ?>">
+                                <button type="button" class="wa-btn wa-btn-primary" id="waReportSend" data-session="<?= htmlspecialchars($session_id); ?>">Kirim WA</button>
+                            </div>
+                            <div class="wa-report-status" id="waReportStatus">Status: -</div>
+                            <div class="wa-help"><i class="fa fa-info-circle"></i> Laporan hanya bisa dikirim setelah settlement selesai untuk tanggal tersebut.</div>
+                        </div>
                     </div>
                 </div>
 
