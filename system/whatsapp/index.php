@@ -3,6 +3,11 @@ session_start();
 error_reporting(0);
 
 if (!isset($_SESSION["mikhmon"])) {
+    if (isset($_GET['wa_action']) && $_GET['wa_action'] === 'validate' && isset($_GET['ajax'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['ok' => false, 'message' => 'Sesi habis. Silakan login ulang.']);
+        exit;
+    }
     header("Location:../admin.php?id=login");
     exit;
 }
