@@ -272,14 +272,12 @@ if (is_dir($pdf_dir)) {
                                 </select>
                             </div>
                             <div class="wa-form-group">
-                                <label class="wa-switch">
-                                    <input type="checkbox" name="wa_active" value="1" <?= ($edit_row && (int)$edit_row['active'] === 0) ? '' : 'checked'; ?>>
-                                    <span class="wa-switch-slider"></span>
-                                    <span class="wa-switch-text">Kirim laporan</span>
-                                </label>
-                            </div>
-                            <div class="wa-form-group">
                                 <div class="wa-switch-row">
+                                    <label class="wa-switch">
+                                        <input type="checkbox" name="wa_active" value="1" <?= ($edit_row && (int)$edit_row['active'] === 0) ? '' : 'checked'; ?>>
+                                        <span class="wa-switch-slider"></span>
+                                        <span class="wa-switch-text">laporan PDF</span>
+                                    </label>
                                     <label class="wa-switch">
                                         <input type="checkbox" name="wa_receive_retur" value="1" <?= ($edit_row && (int)($edit_row['receive_retur'] ?? 1) === 0) ? '' : 'checked'; ?>>
                                         <span class="wa-switch-slider"></span>
