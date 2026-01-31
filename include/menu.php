@@ -510,10 +510,6 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                 <a id="db-restore" class="db-tools" href="javascript:void(0)" title="Restore Backup Terbaru" onclick="runRestoreAjax()">
                     <i class="fa fa-history"></i> Restore
                 </a>
-            <?php else: ?>
-                <a id="db-restore" class="db-tools" href="javascript:void(0)" title="Restore Backup Terbaru" onclick="runRestoreAjax()" style="display:none;">
-                    <i class="fa fa-history"></i> Restore
-                </a>
             <?php endif; ?>
             <?php if ($menu_retur_visible): ?>
                 <a class="retur-pill <?= $menu_retur_pending > 0 ? '' : 'is-zero' ?>" id="retur-menu-pill" href="javascript:void(0)" onclick="return openReturMenuPopup(event);" title="Permintaan Retur Pending">
@@ -585,13 +581,6 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                     <i class="fa fa-whatsapp"></i> WhatsApp
                 </a>
             </li>
-            <?php if (isSuperAdmin()): ?>
-            <li class="nav-item">
-                <a class="nav-link" href="./admin.php?id=sessions">
-                    <i class="fa fa-gear"></i> <?= $_admin_settings ?>
-                </a>
-            </li>
-            <?php endif; ?>
         </ul>
 
         <div class="nav-right">
@@ -600,13 +589,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                 <a id="db-backup" class="db-tools" href="javascript:void(0)" title="Backup Database" onclick="runBackupAjax()">
                     <i class="fa fa-database"></i> Backup
                 </a>
-            <?php endif; ?>
-            <?php if ($is_superadmin): ?>
                 <a id="db-restore" class="db-tools" href="javascript:void(0)" title="Restore Backup Terbaru" onclick="runRestoreAjax()">
-                    <i class="fa fa-history"></i> Restore
-                </a>
-            <?php else: ?>
-                <a id="db-restore" class="db-tools" href="javascript:void(0)" title="Restore Backup Terbaru" onclick="runRestoreAjax()" style="display:none;">
                     <i class="fa fa-history"></i> Restore
                 </a>
             <?php endif; ?>
@@ -622,6 +605,11 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
             <span id="db-status" class="db-status" title="Kesehatan Database">
                 <i class="fa fa-heart"></i>
             </span>
+            <?php if ($is_superadmin): ?>
+                <a class="logout-btn" href="./admin.php?id=sessions" title="<?= $_admin_settings ?>">
+                    <i class="fa fa-gear"></i>
+                </a>
+            <?php endif; ?>
             <a id="logout" class="logout-btn" href="./?hotspot=logout&session=<?= $session; ?>" title="<?= $_logout ?>">
                 <i class="fa fa-sign-out fa-lg"></i>
             </a>
@@ -689,7 +677,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
     window.__returMenuData = <?= json_encode(['count' => $menu_retur_pending, 'items' => $menu_retur_list], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     window.__returBlokNames = <?= json_encode(($env['blok']['names'] ?? []), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     window.__returSession = <?= json_encode($session); ?>;
-    window.__backupKey = <?= json_encode($backupKey) ?>;
+    window.__backupKey = <?= json_encode($is_superadmin ? $backupKey : '') ?>;
 
     document.addEventListener('DOMContentLoaded', function(){
         if (window.jQuery) {

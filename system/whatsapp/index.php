@@ -15,6 +15,10 @@ if (!isset($_SESSION["mikhmon"])) {
 $session_id = $_GET['session'] ?? '';
 $session_qs = $session_id !== '' ? '&session=' . urlencode($session_id) : '';
 $config = include __DIR__ . '/config.php';
+$wa_helper_file = __DIR__ . '/wa_helper.php';
+if (file_exists($wa_helper_file)) {
+    require_once $wa_helper_file;
+}
 $dbFile = $config['db_file'] ?? dirname(__DIR__, 2) . '/db_data/mikhmon_stats.db';
 $pdf_dir = $config['pdf_dir'] ?? (dirname(__DIR__, 2) . '/report/pdf');
 $log_limit = (int)($config['log_limit'] ?? 50);
@@ -201,6 +205,66 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'upload_pdf') {
     }
 }
 
+if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'delete_pdf') {
+    $name = sanitize_pdf_filename($_POST['pdf_name'] ?? '');
+    if ($name === '' || $name === 'index.php') {
+        $form_error = 'Nama file tidak valid.';
+    } else {
+        $baseDir = rtrim($pdf_dir, '/');
+        $targetPath = $baseDir . '/' . $name;
+        $realBase = realpath($baseDir);
+        $realTarget = realpath($targetPath);
+        if ($realBase === false || $realTarget === false || strpos($realTarget, $realBase) !== 0) {
+            $form_error = 'File tidak ditemukan.';
+        } elseif (!is_file($realTarget)) {
+            $form_error = 'File tidak ditemukan.';
+        } elseif (!@unlink($realTarget)) {
+            $form_error = 'Gagal menghapus file.';
+        } else {
+            $form_success = 'File berhasil dihapus: ' . $name;
+        }
+    }
+}
+
+if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'send_selected_pdf') {
+    if (!function_exists('wa_send_file')) {
+        $form_error = 'WA helper tidak tersedia.';
+    } else {
+        $selected = $_POST['pdf_selected'] ?? [];
+        if (!is_array($selected)) $selected = [];
+        $selected = array_values(array_unique(array_filter(array_map('sanitize_pdf_filename', $selected))));
+        if (count($selected) !== 2) {
+            $form_error = 'Pilih tepat 2 file PDF.';
+        } else {
+            $baseDir = rtrim($pdf_dir, '/');
+            $realBase = realpath($baseDir);
+            $send_errors = [];
+            if ($realBase === false) {
+                $form_error = 'Folder report/pdf tidak ditemukan.';
+            } else {
+                foreach ($selected as $fileName) {
+                    $targetPath = $baseDir . '/' . $fileName;
+                    $realTarget = realpath($targetPath);
+                    if ($realTarget === false || strpos($realTarget, $realBase) !== 0 || !is_file($realTarget)) {
+                        $send_errors[] = $fileName . ' tidak ditemukan.';
+                        continue;
+                    }
+                    $msg = 'Laporan PDF: ' . $fileName;
+                    $res = wa_send_file($msg, $realTarget, '', 'report');
+                    if (empty($res['ok'])) {
+                        $send_errors[] = $fileName . ' gagal (' . ($res['message'] ?? 'error') . ').';
+                    }
+                }
+            }
+            if (empty($send_errors) && $form_error === '') {
+                $form_success = '2 file PDF berhasil dikirim.';
+            } elseif ($form_error === '') {
+                $form_error = implode(' ', $send_errors);
+            }
+        }
+    }
+}
+
 
 if ($db instanceof PDO && isset($_POST['wa_action'])) {
     $action = $_POST['wa_action'];
@@ -359,7 +423,7 @@ if (!empty($pdf_files)) {
                                     <label class="wa-switch">
                                         <input type="checkbox" name="wa_active" value="1" <?= ($edit_row && (int)$edit_row['active'] === 0) ? '' : 'checked'; ?>>
                                         <span class="wa-switch-slider"></span>
-                                        <span class="wa-switch-text">laporan PDF</span>
+                                        <span class="wa-switch-text">Aktif</span>
                                     </label>
                                     <label class="wa-switch">
                                         <input type="checkbox" name="wa_receive_retur" value="1" <?= ($edit_row && (int)($edit_row['receive_retur'] ?? 1) === 0) ? '' : 'checked'; ?>>
@@ -405,22 +469,45 @@ if (!empty($pdf_files)) {
                                 <table class="wa-table">
                                     <thead>
                                         <tr>
+                                            <th>Pilih</th>
                                             <th>File</th>
                                             <th>Ukuran</th>
                                             <th>Tanggal</th>
+                                            <th>Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php foreach ($pdf_files as $pf): ?>
                                             <tr>
+                                                <td>
+                                                    <input type="checkbox" class="wa-pdf-select" value="<?= htmlspecialchars($pf['name']); ?>">
+                                                </td>
                                                 <td><?= htmlspecialchars($pf['name']); ?></td>
                                                 <td><?= number_format($pf['size'] / 1024, 1, ',', '.') ?> KB</td>
                                                 <td><?= date('d-m-Y H:i', $pf['mtime']); ?></td>
+                                                <td>
+                                                    <form method="post" action="./?report=whatsapp<?= $session_qs; ?>" onsubmit="return confirm('Hapus file ini?');" style="display:inline;">
+                                                        <input type="hidden" name="wa_action" value="delete_pdf">
+                                                        <input type="hidden" name="pdf_name" value="<?= htmlspecialchars($pf['name']); ?>">
+                                                        <button type="submit" class="wa-btn wa-btn-danger wa-btn-sm"><i class="fa fa-trash"></i> Hapus</button>
+                                                    </form>
+                                                </td>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
                             </div>
+                            <div class="wa-select-actions">
+                                <div class="wa-select-note">Pilih tepat 2 file PDF untuk dikirim.</div>
+                                <div class="wa-select-right">
+                                    <div class="wa-select-msg" id="waSelectMsg"></div>
+                                    <button type="button" class="wa-btn wa-btn-primary" id="waSendSelectedPdf"><i class="fa fa-paper-plane"></i> Kirim 2 PDF</button>
+                                </div>
+                            </div>
+                            <form id="waSendSelectedForm" method="post" action="./?report=whatsapp<?= $session_qs; ?>" style="display:none;">
+                                <input type="hidden" name="wa_action" value="send_selected_pdf">
+                                <div id="waSendSelectedInputs"></div>
+                            </form>
                         <?php endif; ?>
                         <div class="wa-help"><i class="fa fa-paperclip"></i> File PDF akan dipakai sebagai attachment saat pengiriman WhatsApp.</div>
 
@@ -489,16 +576,19 @@ if (!empty($pdf_files)) {
                                                 <?php endif; ?>
                                             </td>
                                             <td>
-                                                <?php if ((int)($r['receive_retur'] ?? 1) === 1): ?>
-                                                    <span class="wa-badge" style="background:#2563eb; color:#fff;">Retur/Refund</span>
-                                                <?php else: ?>
-                                                    <span class="wa-badge off">Retur/Refund</span>
-                                                <?php endif; ?>
-                                                <?php if ((int)($r['receive_report'] ?? 1) === 1): ?>
-                                                    <span class="wa-badge" style="background:#16a34a; color:#fff;">Laporan</span>
-                                                <?php else: ?>
-                                                    <span class="wa-badge off">Laporan</span>
-                                                <?php endif; ?>
+                                                <?php
+                                                    $notif_badges = [];
+                                                    if ((int)($r['receive_retur'] ?? 1) === 1) {
+                                                        $notif_badges[] = '<span class="wa-badge" style="background:#2563eb; color:#fff;">Retur/Refund</span>';
+                                                    }
+                                                    if ((int)($r['receive_report'] ?? 1) === 1) {
+                                                        $notif_badges[] = '<span class="wa-badge" style="background:#16a34a; color:#fff;">Laporan</span>';
+                                                    }
+                                                    if (empty($notif_badges)) {
+                                                        $notif_badges[] = '<span class="wa-badge off">Nonaktif</span>';
+                                                    }
+                                                    echo implode(' ', $notif_badges);
+                                                ?>
                                             </td>
                                             <td>
                                                 <div class="btn-group">

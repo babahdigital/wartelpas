@@ -188,4 +188,57 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         });
     }
+
+    var selectMsg = document.getElementById('waSelectMsg');
+    var sendSelectedBtn = document.getElementById('waSendSelectedPdf');
+    var sendSelectedForm = document.getElementById('waSendSelectedForm');
+    var sendSelectedInputs = document.getElementById('waSendSelectedInputs');
+    var pdfChecks = document.querySelectorAll('.wa-pdf-select');
+
+    function setSelectMsg(text, ok){
+        if (!selectMsg) return;
+        selectMsg.textContent = text || '';
+        selectMsg.classList.remove('is-ok', 'is-bad');
+        if (ok === true) selectMsg.classList.add('is-ok');
+        if (ok === false) selectMsg.classList.add('is-bad');
+    }
+
+    function getSelectedPdfs(){
+        var list = [];
+        pdfChecks.forEach(function(ch){
+            if (ch.checked) list.push(ch.value);
+        });
+        return list;
+    }
+
+    pdfChecks.forEach(function(ch){
+        ch.addEventListener('change', function(){
+            var selected = getSelectedPdfs();
+            if (selected.length > 2) {
+                ch.checked = false;
+                setSelectMsg('Maksimal 2 file PDF.', false);
+                return;
+            }
+            setSelectMsg('Terpilih: ' + selected.length + ' / 2', true);
+        });
+    });
+
+    if (sendSelectedBtn && sendSelectedForm && sendSelectedInputs) {
+        sendSelectedBtn.addEventListener('click', function(){
+            var selected = getSelectedPdfs();
+            if (selected.length !== 2) {
+                setSelectMsg('Pilih tepat 2 file PDF.', false);
+                return;
+            }
+            sendSelectedInputs.innerHTML = '';
+            selected.forEach(function(name){
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'pdf_selected[]';
+                input.value = name;
+                sendSelectedInputs.appendChild(input);
+            });
+            sendSelectedForm.submit();
+        });
+    }
 });

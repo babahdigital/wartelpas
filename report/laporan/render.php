@@ -1062,7 +1062,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                                         <i class="fa fa-search"></i>
                                     </button>
                                 <?php endif; ?>
-                                <?php $audit_btn_disabled = (!$is_superadmin || $is_locked_row) ? 'disabled style="opacity:.5;cursor:not-allowed;"' : ''; ?>
+                                <?php $audit_btn_disabled = ((!$is_superadmin && !$is_operator) || $is_locked_row) ? 'disabled style="opacity:.5;cursor:not-allowed;"' : ''; ?>
                                 <?php $profile_qty_json = htmlspecialchars(json_encode($profile_qty_map), ENT_QUOTES); ?>
                                 <button type="button" class="btn-act" onclick="openAuditEdit(this)" <?= $audit_btn_disabled ?>
                                     data-blok="<?= htmlspecialchars($ar['blok_name'] ?? ''); ?>"
