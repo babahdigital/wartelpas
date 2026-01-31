@@ -371,6 +371,7 @@
     justify-content: space-between;
     gap: 12px;
     background: #20262c;
+    margin-bottom: 20px;
 }
 
 .wa-upload-box.has-file {

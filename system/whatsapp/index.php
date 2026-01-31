@@ -382,7 +382,7 @@ if (is_dir($pdf_dir)) {
                             <i class="fa fa-file-pdf-o"></i>
                             <h4>File PDF Laporan</h4>
                         </div>
-                        <form id="waPdfForm" method="post" action="./?report=whatsapp<?= $session_qs; ?>" enctype="multipart/form-data" style="margin:12px 14px 0;">
+                        <form id="waPdfForm" method="post" action="./?report=whatsapp<?= $session_qs; ?>" enctype="multipart/form-data">
                             <input type="hidden" name="wa_action" value="upload_pdf">
                             <div class="wa-upload-box" id="waUploadBox">
                                 <input type="file" id="waPdfInput" name="pdf_file" accept="application/pdf" class="wa-upload-input" required>
