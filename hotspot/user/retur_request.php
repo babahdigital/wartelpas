@@ -221,9 +221,10 @@ try {
 
     if (function_exists('wa_send_text')) {
         $type_label = $request_type === 'pengembalian' ? 'REFUND' : 'RETUR';
+        $notify_all = !isset($wa_cfg['notify_request_enabled']) || $wa_cfg['notify_request_enabled'] === true || $wa_cfg['notify_request_enabled'] === 1 || $wa_cfg['notify_request_enabled'] === '1';
         $notify_refund = !isset($wa_cfg['notify_refund_enabled']) || $wa_cfg['notify_refund_enabled'] === true || $wa_cfg['notify_refund_enabled'] === 1 || $wa_cfg['notify_refund_enabled'] === '1';
         $notify_retur = !isset($wa_cfg['notify_retur_enabled']) || $wa_cfg['notify_retur_enabled'] === true || $wa_cfg['notify_retur_enabled'] === 1 || $wa_cfg['notify_retur_enabled'] === '1';
-        $should_send = ($type_label === 'REFUND') ? $notify_refund : $notify_retur;
+        $should_send = $notify_all && (($type_label === 'REFUND') ? $notify_refund : $notify_retur);
         if ($should_send) {
             $name_label = $customer_name !== '' ? $customer_name : '-';
             $contact_label = $contact_phone !== '' ? $contact_phone : '-';
