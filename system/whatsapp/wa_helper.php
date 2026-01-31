@@ -154,3 +154,74 @@ function wa_send_text($message, $target = '', $category = '') {
     wa_log_message($target, $message, 'success', (string)$resp);
     return ['ok' => true, 'message' => 'Sent', 'response' => $resp];
 }
+
+function wa_send_file($message, $filePath, $target = '', $category = 'report') {
+    $cfg = wa_get_env_config();
+    $endpoint = trim((string)($cfg['endpoint_send'] ?? 'https://api.fonnte.com/send'));
+    $token = trim((string)($cfg['token'] ?? ''));
+    $country = trim((string)($cfg['country_code'] ?? '62'));
+    $defaultTarget = trim((string)($cfg['notify_target'] ?? ''));
+
+    if ($target === '') {
+        $target = $defaultTarget;
+        if ($target === '') {
+            $list = wa_get_active_recipients($category);
+            if (!empty($list)) {
+                $target = implode(',', $list);
+            }
+        }
+    }
+    $target = wa_normalize_target($target, $country);
+
+    if ($endpoint === '' || $token === '' || $target === '') {
+        wa_log_message($target, $message, 'failed: config', 'missing endpoint/token/target', basename((string)$filePath));
+        return ['ok' => false, 'message' => 'Config WA belum lengkap.'];
+    }
+    if (!function_exists('curl_init')) {
+        wa_log_message($target, $message, 'failed: curl', 'curl not available', basename((string)$filePath));
+        return ['ok' => false, 'message' => 'cURL tidak tersedia.'];
+    }
+    if ($filePath === '' || !is_file($filePath)) {
+        wa_log_message($target, $message, 'failed: file', 'file not found', basename((string)$filePath));
+        return ['ok' => false, 'message' => 'File PDF tidak ditemukan.'];
+    }
+
+    $size = filesize($filePath);
+    if ($size !== false && $size > 4 * 1024 * 1024) {
+        wa_log_message($target, $message, 'failed: size', 'file > 4MB', basename((string)$filePath));
+        return ['ok' => false, 'message' => 'File PDF lebih dari 4MB.'];
+    }
+
+    $postFields = [
+        'target' => $target,
+        'message' => $message,
+        'countryCode' => (string)$country,
+        'connectOnly' => 'false',
+        'file' => new CURLFile($filePath, 'application/pdf', basename($filePath)),
+        'filename' => basename($filePath)
+    ];
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $endpoint);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Authorization: ' . $token
+    ]);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+
+    $resp = curl_exec($ch);
+    $err = curl_error($ch);
+    $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($resp === false || $err !== '' || $code >= 400) {
+        $errMsg = $err !== '' ? $err : ('HTTP ' . $code);
+        wa_log_message($target, $message, 'failed', $errMsg . ' | ' . (string)$resp, basename($filePath));
+        return ['ok' => false, 'message' => $errMsg];
+    }
+
+    wa_log_message($target, $message, 'success', (string)$resp, basename($filePath));
+    return ['ok' => true, 'message' => 'Sent', 'response' => $resp];
+}

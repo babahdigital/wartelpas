@@ -326,6 +326,31 @@ require_once($root_dir . '/include/readcfg.php');
 if (file_exists($root_dir . '/report/laporan/helpers.php')) {
     require_once($root_dir . '/report/laporan/helpers.php');
 }
+if (file_exists($root_dir . '/system/whatsapp/wa_helper.php')) {
+    require_once($root_dir . '/system/whatsapp/wa_helper.php');
+}
+
+function find_report_pdf_for_date($dir, $date) {
+    if ($dir === '' || !is_dir($dir)) return '';
+    $files = glob(rtrim($dir, '/') . '/*.pdf') ?: [];
+    if (empty($files)) return '';
+    $date_ymd = $date;
+    $date_dmy = '';
+    $ts = strtotime($date);
+    if ($ts) {
+        $date_dmy = date('d-m-Y', $ts);
+    }
+    $candidates = [];
+    foreach ($files as $f) {
+        $base = basename($f);
+        if (($date_ymd !== '' && strpos($base, $date_ymd) !== false) || ($date_dmy !== '' && strpos($base, $date_dmy) !== false)) {
+            $candidates[] = $f;
+        }
+    }
+    $list = !empty($candidates) ? $candidates : $files;
+    usort($list, function($a, $b){ return filemtime($b) <=> filemtime($a); });
+    return $list[0] ?? '';
+}
 
 $safe_session = preg_replace('/[^A-Za-z0-9_-]/', '', $session);
 $safe_date = preg_replace('/[^0-9-]/', '', $date);
@@ -349,6 +374,8 @@ try {
     )");
     try { $db->exec("ALTER TABLE settlement_log ADD COLUMN completed_at DATETIME"); } catch (Exception $e) {}
     try { $db->exec("ALTER TABLE settlement_log ADD COLUMN auto_rusak_at DATETIME"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE settlement_log ADD COLUMN wa_report_sent_at DATETIME"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE settlement_log ADD COLUMN wa_report_status TEXT"); } catch (Exception $e) {}
     try { $db->exec("ALTER TABLE login_history ADD COLUMN auto_rusak INTEGER DEFAULT 0"); } catch (Exception $e) {}
 } catch (Exception $e) {
     append_settlement_debug($debugFile, 'db_error=' . $e->getMessage());
@@ -584,6 +611,38 @@ if ($action === 'logs') {
         try {
             $stmtU = $db->prepare("UPDATE settlement_log SET status = :s, completed_at = CURRENT_TIMESTAMP WHERE report_date = :d");
             $stmtU->execute([':s' => $status, ':d' => $date]);
+        } catch (Exception $e) {}
+    }
+
+    if ($status === 'done' && function_exists('wa_send_file')) {
+        try {
+            $stmtW = $db->prepare("SELECT wa_report_sent_at, wa_report_status FROM settlement_log WHERE report_date = :d LIMIT 1");
+            $stmtW->execute([':d' => $date]);
+            $wrow = $stmtW->fetch(PDO::FETCH_ASSOC) ?: [];
+            $sentAt = (string)($wrow['wa_report_sent_at'] ?? '');
+            $sentStatus = (string)($wrow['wa_report_status'] ?? '');
+            if ($sentAt === '' && $sentStatus === '') {
+                $pdfDir = $root_dir . '/report/pdf';
+                $pdfFile = find_report_pdf_for_date($pdfDir, $date);
+                $msg = 'Laporan Settlement Harian ' . $date;
+                if ($pdfFile !== '') {
+                    $res = wa_send_file($msg, $pdfFile, '', 'report');
+                    $statusText = $res['ok'] ? 'success' : ('failed: ' . ($res['message'] ?? 'error'));
+                } else {
+                    $statusText = 'failed: file PDF tidak ditemukan';
+                }
+                $stmtWU = $db->prepare("UPDATE settlement_log SET wa_report_status = :s, wa_report_sent_at = CASE WHEN :ok = 1 THEN CURRENT_TIMESTAMP ELSE wa_report_sent_at END WHERE report_date = :d");
+                $stmtWU->execute([
+                    ':s' => $statusText,
+                    ':ok' => (strpos($statusText, 'success') !== false) ? 1 : 0,
+                    ':d' => $date
+                ]);
+                if (strpos($statusText, 'success') !== false) {
+                    append_settlement_log($logFile, 'system,info', 'WA REPORT: terkirim ' . basename($pdfFile));
+                } else {
+                    append_settlement_log($logFile, 'system,warning', 'WA REPORT: ' . $statusText);
+                }
+            }
         } catch (Exception $e) {}
     }
 

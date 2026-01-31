@@ -170,8 +170,8 @@ Dokumen ini merangkum detail API Fonnte berdasarkan URL yang diberikan untuk keb
    - Otomatis setelah settlement selesai atau jadwal harian.
 
 ### 2.2 Strategi Pengiriman Laporan PDF
-- Gunakan **POST send** dengan `url` menuju file PDF rekap harian (public/accessible).
-- Pastikan file memenuhi **file limitation** Fonnte (ukuran/format).
+- Gunakan **POST send** dengan **upload file langsung (`file`)** ke Fonnte.
+- Pastikan file memenuhi **file limitation** Fonnte (ukuran/format, maksimal 4MB).
 - Simpan `requestid`, `id`, dan response ke log DB untuk audit.
 
 ### 2.3 Struktur Folder Implementasi
@@ -205,6 +205,8 @@ Dokumen ini merangkum detail API Fonnte berdasarkan URL yang diberikan untuk keb
 5) **Filter penerima berdasarkan kategori**
   - Retur/Refund dikirim ke penerima dengan opsi **Notif Retur/Refund** aktif.
   - Laporan dikirim ke penerima dengan opsi **Notif Laporan** aktif.
+6) **Auto kirim laporan setelah settlement**
+  - Saat status settlement **done**, sistem mencari PDF harian terbaru dan mengirim via Fonnte.
 4) **Generate PDF**
    - Pastikan link publik/reachable (bisa via folder temp + tokenized link).
 5) **Retry**
