@@ -58,6 +58,36 @@ function wa_log_message($target, $message, $status, $responseJson = '', $pdfFile
     }
 }
 
+function wa_get_active_recipients() {
+    $root_dir = dirname(__DIR__, 2);
+    $dbFile = $root_dir . '/db_data/mikhmon_stats.db';
+    $targets = [];
+    try {
+        $db = new PDO('sqlite:' . $dbFile);
+        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $db->exec("PRAGMA journal_mode=WAL;");
+        $db->exec("PRAGMA busy_timeout=5000;");
+        $db->exec("CREATE TABLE IF NOT EXISTS whatsapp_recipients (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            label TEXT,
+            target TEXT NOT NULL,
+            target_type TEXT NOT NULL DEFAULT 'number',
+            active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT,
+            updated_at TEXT
+        )");
+        $stmt = $db->query("SELECT target FROM whatsapp_recipients WHERE active = 1 ORDER BY id ASC");
+        $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+        foreach ($rows as $r) {
+            $t = trim((string)($r['target'] ?? ''));
+            if ($t !== '') $targets[] = $t;
+        }
+    } catch (Exception $e) {
+        // silent
+    }
+    return $targets;
+}
+
 function wa_send_text($message, $target = '') {
     $cfg = wa_get_env_config();
     $endpoint = trim((string)($cfg['endpoint_send'] ?? 'https://api.fonnte.com/send'));
@@ -65,7 +95,15 @@ function wa_send_text($message, $target = '') {
     $country = trim((string)($cfg['country_code'] ?? '62'));
     $defaultTarget = trim((string)($cfg['notify_target'] ?? ''));
 
-    if ($target === '') $target = $defaultTarget;
+    if ($target === '') {
+        $target = $defaultTarget;
+        if ($target === '') {
+            $list = wa_get_active_recipients();
+            if (!empty($list)) {
+                $target = implode(',', $list);
+            }
+        }
+    }
     $target = wa_normalize_target($target, $country);
 
     if ($endpoint === '' || $token === '' || $target === '') {
