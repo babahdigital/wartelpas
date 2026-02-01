@@ -36,3 +36,5 @@ include/quickbt.php
 # IDE Setting (VS Code / Jetbrains)
 .vscode/
 .idea/
+/dev
+wartelpas.code-workspace

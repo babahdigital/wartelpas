@@ -198,6 +198,25 @@ Dokumen ini merangkum seluruh perbaikan dan penyempurnaan dari awal sampai akhir
 - **report/laporan/services/sync_stats.php**:
   - Filter berdasarkan hotspot server + skip user tanpa marker BLOK agar data non‑Wartel tidak masuk lagi saat settlement.
 
+### 2.25 WhatsApp Laporan & Audit Manual (2026-02-01)
+- **WhatsApp Laporan**
+  - Upload PDF satu tombol (Pilih → Upload) dan validasi file max 4MB.
+  - Daftar PDF dibatasi **2 file terbaru** + tombol **Hapus** per file.
+  - Tombol kirim WA dipindah ke halaman **WhatsApp Laporan** (pilih tanggal).
+  - Fitur **Kirim 2 PDF Terpilih** (dua pesan, satu file per pesan).
+  - Status pengiriman menampilkan waktu `dd-mm-yyyy HH:MM:SS`.
+- **Auto kirim laporan setelah settlement**
+  - Tetap otomatis saat status settlement `done`, memilih file berdasarkan tanggal (fallback: file terbaru).
+- **Audit Manual**
+  - Tombol edit/hapus audit manual dibuka untuk **operator** (kecuali audit sudah dikunci).
+- **Backup/Restore UI**
+  - Backup/Restore disembunyikan untuk non‑superadmin.
+  - `backupKey` tidak diekspos ke client jika bukan superadmin.
+- **Menu Admin**
+  - Menu pengaturan admin dipindah ke kanan (ikon gear di samping logout).
+- **Git Hygiene**
+  - Update `.gitignore` untuk DB, backup, session, dan PDF report agar tidak ter‑commit.
+
 ### 2.26 Penyempurnaan Status Sync & Ghost Hunter (2026-01-27)
 - **report/laporan/services/sync_stats.php**:
   - Deteksi status rusak/retur lebih fleksibel dari komentar (tidak hanya prefix).

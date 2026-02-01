@@ -173,10 +173,19 @@ Dokumen ini merangkum detail API Fonnte berdasarkan URL yang diberikan untuk keb
 - Gunakan **POST send** dengan **upload file langsung (`file`)** ke Fonnte.
 - Pastikan file memenuhi **file limitation** Fonnte (ukuran/format, maksimal 4MB).
 - Simpan `requestid`, `id`, dan response ke log DB untuk audit.
+- Pesan laporan memakai format tanggal **dd-mm-yyyy**.
+- Pemilihan file otomatis berdasarkan **nama file berisi tanggal** (YYYY-MM-DD atau DD-MM-YYYY), fallback ke **file terbaru**.
 
 ### 2.3 Struktur Folder Implementasi
 - Halaman konfigurasi/monitoring WhatsApp: `system/whatsapp/index.php` (akses via `?report=whatsapp`).
 - Folder penyimpanan PDF laporan: `report/pdf/` (akses langsung dibatasi).
+
+### 2.5 UI WhatsApp Laporan (Implementasi Aktual)
+- **Upload PDF**: satu tombol (Pilih PDF → Upload PDF). File disimpan ke `report/pdf/`.
+- **Daftar PDF**: tampil maksimal 2 file terbaru + tombol **Hapus** per file.
+- **Kirim Laporan Settlement**: pilih tanggal → kirim WA (hanya jika settlement status `done`).
+- **Kirim 2 PDF Terpilih**: pilih tepat 2 file di tabel → sistem mengirim **2 pesan** (satu file per pesan).
+- **Group**: nomor Fonnte harus **sudah join** ke group `@g.us` agar pesan benar‑benar masuk.
 
 ### 2.4 Struktur Data (SQLite)
 - `whatsapp_recipients`
@@ -207,7 +216,7 @@ Dokumen ini merangkum detail API Fonnte berdasarkan URL yang diberikan untuk keb
   - Laporan dikirim ke penerima dengan opsi **Notif Laporan** aktif.
 6) **Auto kirim laporan setelah settlement**
   - Saat status settlement **done**, sistem mencari PDF harian terbaru dan mengirim via Fonnte.
-  - Tersedia tombol **Kirim Ulang WA** di halaman laporan untuk resend manual.
+  - Resend manual dilakukan dari halaman **WhatsApp Laporan** (bukan di laporan).
 4) **Generate PDF**
    - Pastikan link publik/reachable (bisa via folder temp + tokenized link).
 5) **Retry**
