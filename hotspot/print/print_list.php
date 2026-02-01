@@ -138,8 +138,8 @@ if (!empty($display_data)) {
         <th style="width:30px;" class="text-center">No</th>
         <th class="text-center">Username</th>
         <?php if (!$is_ready_print): ?>
-          <th class="text-center">MAC</th>
-          <th class="text-center">IP</th>
+          <th class="text-center">Nama</th>
+          <th class="text-center">Kamar</th>
           <th class="text-center">Login</th>
           <?php if (!$hide_logout_col): ?>
             <th>Logout</th>
@@ -172,11 +172,11 @@ if (!empty($display_data)) {
               <?php endif; ?>
             </td>
             <?php if (!$is_ready_print): ?>
-              <td class="text-center" style="font-family:monospace; font-size:10px;">
-                <?= htmlspecialchars($u['mac'] ?? '-') ?>
+              <td class="text-center">
+                <?= htmlspecialchars(($u['customer_name'] ?? '') !== '' ? $u['customer_name'] : '-') ?>
               </td>
-              <td class="text-center" style="font-family:monospace; font-size:10px;">
-                <?= htmlspecialchars($u['ip'] ?? '-') ?>
+              <td class="text-center">
+                <?= htmlspecialchars(($u['room_name'] ?? '') !== '' ? $u['room_name'] : '-') ?>
               </td>
               <td class="text-center"><?= htmlspecialchars(formatDateIndo($u['login_time'] ?? '-')) ?></td>
               <?php if (!$hide_logout_col): ?>

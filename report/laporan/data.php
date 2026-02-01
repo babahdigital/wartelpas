@@ -263,11 +263,11 @@ if (file_exists($dbFile)) {
             $hasLogin = table_exists($db, 'login_history');
 
             $loginSelect = $hasLogin
-                ? 'lh.last_status, lh.last_bytes, lh.first_login_real'
-                : "'' AS last_status, 0 AS last_bytes, '' AS first_login_real";
+                ? 'lh.last_status, lh.last_bytes, lh.first_login_real, lh.customer_name, lh.room_name'
+                : "'' AS last_status, 0 AS last_bytes, '' AS first_login_real, '' AS customer_name, '' AS room_name";
             $loginSelect2 = $hasLogin
-                ? 'lh2.last_status, lh2.last_bytes, lh2.first_login_real'
-                : "'' AS last_status, 0 AS last_bytes, '' AS first_login_real";
+                ? 'lh2.last_status, lh2.last_bytes, lh2.first_login_real, lh2.customer_name, lh2.room_name'
+                : "'' AS last_status, 0 AS last_bytes, '' AS first_login_real, '' AS customer_name, '' AS room_name";
             $loginJoin = $hasLogin ? 'LEFT JOIN login_history lh ON lh.username = sh.username' : '';
             $loginJoin2 = $hasLogin ? 'LEFT JOIN login_history lh2 ON lh2.username = ls.username' : '';
 
@@ -333,7 +333,9 @@ if (file_exists($dbFile)) {
                     '' AS full_raw_data,
                     last_status,
                     last_bytes,
-                    first_login_real
+                    first_login_real,
+                    customer_name,
+                    room_name
                   FROM login_history
                   WHERE username != ''
                     AND $lhWhere
@@ -763,6 +765,35 @@ $by_block = [];
 $by_profile = [];
 $no_sales_message = '';
 
+$meta_queue_map = [];
+$login_name_map = [];
+if (isset($db) && $db instanceof PDO && table_exists($db, 'login_meta_queue')) {
+    try {
+        $stmtMeta = $db->query("SELECT voucher_code, customer_name, room_name FROM login_meta_queue WHERE voucher_code != '' ORDER BY created_at DESC");
+        while ($row = $stmtMeta->fetch(PDO::FETCH_ASSOC)) {
+            $vc = strtolower(trim((string)($row['voucher_code'] ?? '')));
+            if ($vc === '' || isset($meta_queue_map[$vc])) continue;
+            $meta_queue_map[$vc] = [
+                'customer_name' => trim((string)($row['customer_name'] ?? '')),
+                'room_name' => trim((string)($row['room_name'] ?? ''))
+            ];
+        }
+    } catch (Exception $e) {}
+}
+if (isset($db) && $db instanceof PDO && table_exists($db, 'login_history')) {
+    try {
+        $stmtLn = $db->query("SELECT username, customer_name, room_name FROM login_history WHERE username != ''");
+        while ($row = $stmtLn->fetch(PDO::FETCH_ASSOC)) {
+            $u = strtolower(trim((string)($row['username'] ?? '')));
+            if ($u === '' || isset($login_name_map[$u])) continue;
+            $login_name_map[$u] = [
+                'customer_name' => trim((string)($row['customer_name'] ?? '')),
+                'room_name' => trim((string)($row['room_name'] ?? ''))
+            ];
+        }
+    } catch (Exception $e) {}
+}
+
 $use_summary = false;
 // Summary dimatikan agar data live + final tetap akurat
 $period_type = $req_show === 'harian' ? 'day' : ($req_show === 'bulanan' ? 'month' : 'year');
@@ -1034,9 +1065,29 @@ foreach ($rows as $r) {
     $retur_user = extract_retur_user_from_ref($comment);
     $profile_label = resolve_profile_label($profile);
     if ($profile_label === '') $profile_label = $profile;
+    $customer_name = (string)($r['customer_name'] ?? '');
+    $room_name = (string)($r['room_name'] ?? '');
+    if ($customer_name === '' || $room_name === '') {
+        $u_key = strtolower((string)($r['username'] ?? ''));
+        $ln = $login_name_map[$u_key] ?? null;
+        if ($ln) {
+            if ($customer_name === '' && $ln['customer_name'] !== '') $customer_name = $ln['customer_name'];
+            if ($room_name === '' && $ln['room_name'] !== '') $room_name = $ln['room_name'];
+        }
+        if ($customer_name === '' || $room_name === '') {
+            $meta = $meta_queue_map[$u_key] ?? null;
+            if ($meta) {
+                if ($customer_name === '' && $meta['customer_name'] !== '') $customer_name = $meta['customer_name'];
+                if ($room_name === '' && $meta['room_name'] !== '') $room_name = $meta['room_name'];
+            }
+        }
+    }
+
     $list[] = [
         'dt' => $dt_display,
         'user' => $r['username'] ?? '-',
+        'customer_name' => $customer_name,
+        'room_name' => $room_name,
         'profile' => $profile_label,
         'blok' => $blok,
         'status' => strtoupper($status),

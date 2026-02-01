@@ -389,13 +389,11 @@
                     $print_rekap_url = 'report/print/print_rekap_tahunan.php?date=' . urlencode($filter_date);
                 }
                 if ($session_id !== '') $print_rekap_url .= '&session=' . urlencode($session_id);
-                $print_rincian_url = 'report/print/print_rincian.php?date=' . urlencode($filter_date);
+                $print_rincian_url = 'report/print/print_rincian.php?show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
                 if ($session_id !== '') $print_rincian_url .= '&session=' . urlencode($session_id);
             ?>
             <button class="btn-print" onclick="window.open('<?= $print_rekap_url ?>','_blank')">Print Rekap</button>
-            <?php if ($req_show === 'harian'): ?>
-                <button class="btn-print" onclick="window.open('<?= $print_rincian_url ?>','_blank')">Print Rincian</button>
-            <?php endif; ?>
+            <button class="btn-print" onclick="window.open('<?= $print_rincian_url ?>','_blank')">Print Rincian</button>
             <button class="btn-print" type="button" onclick="openHpModal()">Input HP Blok</button>
             <?php if ($req_show === 'harian'): ?>
                 <button class="btn-print" type="button" onclick="openAuditModal()" <?= $audit_locked_today ? 'disabled style="opacity:.6;cursor:not-allowed;"' : '' ?>>Audit Manual</button>
@@ -564,28 +562,9 @@
                 </div>
             </div>
         <?php endif; ?>
-        <?php
-            $wa_report_label = '-';
-            $wa_report_detail = '';
-            $wa_report_time = '';
-            if (!empty($wa_report_status)) {
-                $is_ok = stripos($wa_report_status, 'success') !== false;
-                $wa_report_label = $is_ok ? 'Terkirim' : 'Gagal';
-                $wa_report_detail = $wa_report_status;
-            }
-            if (!empty($wa_report_sent_at)) {
-                $wa_report_time = date('d-m-Y H:i:s', strtotime($wa_report_sent_at));
-            }
-        ?>
         <?php if ($req_show === 'harian'): ?>
             <div id="settlement-time" style="margin-top:12px;font-size:12px;color:var(--txt-muted);">
                 Settlement terakhir: <?= $settlement_time ? date('d-m-Y H:i:s', strtotime($settlement_time)) : '-' ?>
-            </div>
-            <div id="settlement-wa-status" style="margin-top:4px;font-size:12px;color:var(--txt-muted);">
-                WA Report: <?= htmlspecialchars($wa_report_label, ENT_QUOTES); ?><?= $wa_report_time !== '' ? ' (' . htmlspecialchars($wa_report_time, ENT_QUOTES) . ')' : ''; ?>
-                <?php if ($wa_report_detail !== '' && stripos($wa_report_detail, 'success') === false): ?>
-                    <span style="color:#f39c12;"> - <?= htmlspecialchars($wa_report_detail, ENT_QUOTES); ?></span>
-                <?php endif; ?>
             </div>
         <?php endif; ?>
     </div>
@@ -1256,7 +1235,9 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                         <th style="text-align:center;">Tanggal</th>
                         <th style="text-align:center;">User</th>
                         <th style="text-align:center;">Profile</th>
+                        <th style="text-align:center;">Nama</th>
                         <th style="text-align:center;">Blok</th>
+                        <th style="text-align:center;">Kamar</th>
                         <th style="text-align:center;">Status</th>
                         <th style="text-align:right; padding-right:12px;">Harga</th>
                         <th style="text-align:right; padding-right:12px;">Bandwidth</th>
@@ -1264,7 +1245,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                 </thead>
                 <tbody>
                     <?php if (empty($list_page)): ?>
-                        <tr><td colspan="7" style="text-align:center;color:var(--txt-muted);padding:30px;">Tidak ada data pada periode ini.</td></tr>
+                        <tr><td colspan="9" style="text-align:center;color:var(--txt-muted);padding:30px;">Tidak ada data pada periode ini.</td></tr>
                     <?php else: foreach ($list_page as $it): ?>
                         <tr>
                             <td><?= htmlspecialchars($it['dt']) ?></td>
@@ -1275,7 +1256,9 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                                 <?php endif; ?>
                             </td>
                             <td style="text-align:center"><?= htmlspecialchars($it['profile']) ?></td>
+                            <td style="text-align:center"><?= htmlspecialchars(($it['customer_name'] ?? '') !== '' ? $it['customer_name'] : '-') ?></td>
                             <td style="text-align:center"><?= htmlspecialchars($it['blok']) ?></td>
+                            <td style="text-align:center"><?= htmlspecialchars(($it['room_name'] ?? '') !== '' ? $it['room_name'] : '-') ?></td>
                             <td style="text-align:center">
                                 <?php
                                     $st = strtolower((string)($it['status'] ?? ''));

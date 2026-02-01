@@ -1443,7 +1443,12 @@ function softReloadSelling(){
     url.searchParams.set('report', 'selling');
     fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
         .then(function(r){ return r.text(); })
-        .then(function(html){ content.innerHTML = html; })
+        .then(function(html){
+            content.innerHTML = html;
+            try { initScrollIndicators(); } catch (e) {}
+            try { initScrollPadding(); } catch (e) {}
+            try { initCharRemaining(); } catch (e) {}
+        })
         .catch(function(){});
 }
 window.sellingPauseReload = false;

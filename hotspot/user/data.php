@@ -7,6 +7,7 @@ $vip_date_key = date('Y-m-d');
 $vip_daily_used = $vip_daily_limit > 0 ? get_vip_daily_usage($db, $vip_date_key) : 0;
 $vip_limit_reached = ($vip_daily_limit > 0 && $vip_daily_used >= $vip_daily_limit);
 $history_cache = null;
+$meta_queue_map = [];
 $retur_requests = [];
 $retur_status = isset($_GET['retur_status']) ? strtolower(trim((string)$_GET['retur_status'])) : 'pending';
 $retur_status = in_array($retur_status, ['pending','approved','rejected','all'], true) ? $retur_status : 'pending';
@@ -81,7 +82,7 @@ function get_user_history($name) {
     }
   }
     try {
-  $stmt = $db->prepare("SELECT username, login_time_real, logout_time_real, blok_name, ip_address, mac_address, last_uptime, last_bytes, last_status, first_ip, first_mac, last_ip, last_mac, first_login_real, last_login_real, updated_at, login_count, raw_comment, validity FROM login_history WHERE username = :u LIMIT 1");
+  $stmt = $db->prepare("SELECT username, customer_name, room_name, login_time_real, logout_time_real, blok_name, ip_address, mac_address, last_uptime, last_bytes, last_status, first_ip, first_mac, last_ip, last_mac, first_login_real, last_login_real, updated_at, login_count, raw_comment, validity FROM login_history WHERE username = :u LIMIT 1");
         $stmt->execute([':u' => $name]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if (is_array($history_cache) && $name !== '') {
@@ -182,6 +183,23 @@ if ($db && (isOperator() || isSuperAdmin())) {
   }
 }
 
+if ($db) {
+  try {
+    $stmt = $db->prepare("SELECT voucher_code, customer_name, room_name FROM login_meta_queue WHERE voucher_code != '' ORDER BY created_at DESC");
+    $stmt->execute();
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+      $vc = strtolower(trim((string)($row['voucher_code'] ?? '')));
+      if ($vc === '' || isset($meta_queue_map[$vc])) {
+        continue;
+      }
+      $meta_queue_map[$vc] = [
+        'customer_name' => trim((string)($row['customer_name'] ?? '')),
+        'room_name' => trim((string)($row['room_name'] ?? ''))
+      ];
+    }
+  } catch (Exception $e) {}
+}
+
 $all_users = $API->comm("/ip/hotspot/user/print", array(
     "?server" => $hotspot_server,
   ".proplist" => ".id,name,comment,profile,disabled,bytes-in,bytes-out,uptime"
@@ -253,7 +271,7 @@ if ($db && !empty($all_users)) {
       $params[$ph] = $uname;
     }
     try {
-      $stmt = $db->prepare("SELECT username, login_time_real, logout_time_real, blok_name, ip_address, mac_address, last_uptime, last_bytes, last_status, first_ip, first_mac, last_ip, last_mac, first_login_real, last_login_real, updated_at, login_count, raw_comment, validity FROM login_history WHERE username IN (" . implode(',', $placeholders) . ")");
+      $stmt = $db->prepare("SELECT username, customer_name, room_name, login_time_real, logout_time_real, blok_name, ip_address, mac_address, last_uptime, last_bytes, last_status, first_ip, first_mac, last_ip, last_mac, first_login_real, last_login_real, updated_at, login_count, raw_comment, validity FROM login_history WHERE username IN (" . implode(',', $placeholders) . ")");
       $stmt->execute($params);
       while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $uname = strtolower((string)($row['username'] ?? ''));
@@ -1011,9 +1029,25 @@ foreach($all_users as $u) {
       $profile_label_display = 'Lainnya';
     }
 
+    $customer_name = $hist['customer_name'] ?? '';
+    $room_name = $hist['room_name'] ?? '';
+    if ($customer_name === '' || $room_name === '') {
+      $meta = $meta_queue_map[strtolower($name)] ?? null;
+      if ($meta) {
+        if ($customer_name === '' && $meta['customer_name'] !== '') {
+          $customer_name = $meta['customer_name'];
+        }
+        if ($room_name === '' && $meta['room_name'] !== '') {
+          $room_name = $meta['room_name'];
+        }
+      }
+    }
+
     $display_data[] = [
       'uid' => $u['.id'] ?? '',
         'name' => $name,
+        'customer_name' => $customer_name,
+        'room_name' => $room_name,
         'profile' => $profile_label_display,
         'profile_kind' => $profile_kind,
         'blok' => $f_blok,
@@ -1184,7 +1218,9 @@ if ($is_ajax) {
           ?>
           <span class="badge badge-dark border border-secondary p-1"><?= htmlspecialchars($display_profile) ?></span>
         </td>
+        <td><?= htmlspecialchars($u['customer_name'] !== '' ? $u['customer_name'] : '-') ?></td>
         <td><span class="id-badge"><?= htmlspecialchars($u['blok'] ?: '-') ?></span></td>
+        <td><?= htmlspecialchars($u['room_name'] !== '' ? $u['room_name'] : '-') ?></td>
         <td>
           <div style="font-family:monospace; font-size:12px; color:#aeb6bf"><?= htmlspecialchars($u['mac']) ?></div>
           <div style="font-family:monospace; font-size:11px; color:#85929e"><?= htmlspecialchars($u['ip']) ?></div>
@@ -1275,7 +1311,7 @@ if ($is_ajax) {
       <?php
     }
   } else {
-    ?><tr><td colspan="8" class="text-center py-4 text-muted">Tidak ada data.</td></tr><?php
+    ?><tr><td colspan="10" class="text-center py-4 text-muted">Tidak ada data.</td></tr><?php
   }
   $rows_html = ob_get_clean();
 

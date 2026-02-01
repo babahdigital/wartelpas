@@ -1,0 +1,15 @@
+:global backfillMetaLock;
+:if ([:typeof $backfillMetaLock] = "nothing") do={ :set backfillMetaLock false; }
+:if ($backfillMetaLock = true) do={ :log warning "BACKFILL META: masih berjalan, skip"; :return; }
+:set backfillMetaLock true;
+
+:local url "http://wartelpas.sobigidul.net/report/laporan/services/backfill_meta.php?session=S3c7x9_LB&key=kX8gerJCDnsEn3GWbk5FCRHfpujZBpja2O3lbHvToWE=";
+
+:do {
+ /tool fetch url=$url keep-result=no;
+ :log info "BACKFILL META: OK (2m)";
+} on-error={
+ :log warning "BACKFILL META: Gagal koneksi";
+}
+
+:set backfillMetaLock false;

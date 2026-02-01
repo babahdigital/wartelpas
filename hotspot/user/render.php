@@ -318,7 +318,9 @@
               <tr>
                 <th>Username <span class="text-muted">/ Ket</span></th>
                 <th>Profile</th>
+                <th>Nama</th>
                 <th>Identitas</th>
+                <th>Kamar</th>
                 <th>Koneksi (MAC/IP)</th>
                 <th>Waktu (Login/Logout)</th>
                 <th class="text-right">Usage</th>
@@ -363,7 +365,9 @@
                       ?>
                       <span class="badge badge-dark border border-secondary p-1"><?= htmlspecialchars($display_profile) ?></span>
                     </td>
+                    <td><?= htmlspecialchars($u['customer_name'] !== '' ? $u['customer_name'] : '-') ?></td>
                     <td><span class="id-badge"><?= htmlspecialchars($u['blok'] ?: '-') ?></span></td>
+                    <td><?= htmlspecialchars($u['room_name'] !== '' ? $u['room_name'] : '-') ?></td>
                     <td>
                       <div style="font-family:monospace; font-size:12px; color:#aeb6bf"><?= htmlspecialchars($u['mac']) ?></div>
                       <div style="font-family:monospace; font-size:11px; color:#85929e"><?= htmlspecialchars($u['ip']) ?></div>

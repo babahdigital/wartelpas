@@ -202,6 +202,16 @@ Require all denied
     Require all granted
 </If>
 
+# Login Meta endpoint (public)
+<If "%{REQUEST_URI} =~ m#^/hotspot/user/login_meta\.php$#">
+    Require all granted
+</If>
+
+# Backfill Meta endpoint (public)
+<If "%{REQUEST_URI} =~ m#^/report/laporan/services/backfill_meta\.php$#">
+    Require all granted
+</If>
+
 # Usage ingest endpoint (login/logout)
 <If "%{REQUEST_URI} =~ m#^/report/laporan/services/usage_ingest\.php$#">
     Require all granted

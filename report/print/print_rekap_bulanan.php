@@ -31,6 +31,9 @@ $cur = isset($currency) ? $currency : 'Rp';
 $session_id = $_GET['session'] ?? '';
 
 $filter_date = $_GET['date'] ?? '';
+if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $filter_date)) {
+    $filter_date = substr($filter_date, 0, 7);
+}
 if (!preg_match('/^\d{4}-\d{2}$/', $filter_date)) {
     $filter_date = date('Y-m');
 }
@@ -38,6 +41,53 @@ $month_start = $filter_date . '-01';
 $days_in_month = (int)date('t', strtotime($month_start));
 
 function esc($s){ return htmlspecialchars((string)$s); }
+
+function table_has_column(PDO $db, $table, $column) {
+    try {
+        $stmt = $db->query("PRAGMA table_info(" . $table . ")");
+        if ($stmt) {
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $col) {
+                if (strtolower((string)($col['name'] ?? '')) === strtolower($column)) return true;
+            }
+        }
+    } catch (Exception $e) {}
+    return false;
+}
+
+function build_sales_select(PDO $db, $table, $alias, $login_alias, $has_login, $pending_only = false) {
+    $col = function($name, $default) use ($db, $table, $alias) {
+        return table_has_column($db, $table, $name) ? ($alias . '.' . $name . ' AS ' . $name) : ($default . ' AS ' . $name);
+    };
+    $parts = [
+        $col('raw_date', "''"),
+        $col('raw_time', "''"),
+        $col('sale_date', "''"),
+        $col('sale_time', "''"),
+        $col('sale_datetime', "''"),
+        $col('username', "''"),
+        $col('profile', "''"),
+        $col('profile_snapshot', "''"),
+        $col('price', '0'),
+        $col('price_snapshot', '0'),
+        $col('sprice_snapshot', '0'),
+        $col('validity', "''"),
+        $col('comment', "''"),
+        $col('blok_name', "''"),
+        $col('status', "''"),
+        $col('is_rusak', '0'),
+        $col('is_retur', '0'),
+        $col('is_invalid', '0'),
+        $col('qty', '1'),
+        $col('full_raw_data', "''")
+    ];
+    $login_select = $has_login ? ($login_alias . '.last_status AS last_status, ' . $login_alias . '.last_bytes AS last_bytes') : "'' AS last_status, 0 AS last_bytes";
+    $login_join = $has_login ? ('LEFT JOIN login_history ' . $login_alias . ' ON ' . $login_alias . '.username = ' . $alias . '.username') : '';
+    $where_pending = '';
+    if ($pending_only && table_has_column($db, $table, 'sync_status')) {
+        $where_pending = ' WHERE ' . $alias . ".sync_status = 'pending'";
+    }
+    return 'SELECT ' . implode(', ', $parts) . ', ' . $login_select . ' FROM ' . $table . ' ' . $alias . ' ' . $login_join . $where_pending;
+}
 
 
 $rows = [];
@@ -64,26 +114,18 @@ try {
         $db = new PDO('sqlite:' . $dbFile);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        $res = $db->query("SELECT 
-                sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
-                sh.username, sh.profile, sh.profile_snapshot,
-                sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
-                sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
-                sh.full_raw_data, lh.last_status, lh.last_bytes
-            FROM sales_history sh
-            LEFT JOIN login_history lh ON lh.username = sh.username
-            UNION ALL
-            SELECT 
-                ls.raw_date, ls.raw_time, ls.sale_date, ls.sale_time, ls.sale_datetime,
-                ls.username, ls.profile, ls.profile_snapshot,
-                ls.price, ls.price_snapshot, ls.sprice_snapshot, ls.validity,
-                ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
-                ls.full_raw_data, lh2.last_status, lh2.last_bytes
-            FROM live_sales ls
-            LEFT JOIN login_history lh2 ON lh2.username = ls.username
-            WHERE ls.sync_status = 'pending'
-            ORDER BY sale_datetime DESC, raw_date DESC");
-        if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
+        $has_login = table_exists($db, 'login_history');
+        $selects = [];
+        if (table_exists($db, 'sales_history')) {
+            $selects[] = build_sales_select($db, 'sales_history', 'sh', 'lh', $has_login, false);
+        }
+        if (table_exists($db, 'live_sales')) {
+            $selects[] = build_sales_select($db, 'live_sales', 'ls', 'lh2', $has_login, true);
+        }
+        if (!empty($selects)) {
+            $res = $db->query(implode(' UNION ALL ', $selects) . ' ORDER BY sale_datetime DESC, raw_date DESC');
+            if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
+        }
 
         $stmtPhone = $db->prepare("SELECT report_date,
                 SUM(total_units) AS total_units,
@@ -201,7 +243,10 @@ try {
 $seen_sales = [];
 $seen_user_day = [];
 foreach ($rows as $r) {
-    $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
+    $sale_date_raw = (string)($r['sale_date'] ?? '');
+    $sale_date = norm_date_from_raw_report($sale_date_raw);
+    if ($sale_date === '') $sale_date = norm_date_from_raw_report($r['raw_date'] ?? '');
+    if ($sale_date === '') $sale_date = $sale_date_raw;
     if ($sale_date === '' || strpos((string)$sale_date, $filter_date) !== 0) continue;
 
     $username = $r['username'] ?? '';
@@ -300,6 +345,13 @@ for ($d = 1; $d <= $days_in_month; $d++) {
     }
 }
 
+// Bersihkan key tanggal yang tidak valid agar tidak muncul baris "0"
+foreach (array_keys($data_dates) as $d) {
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$d)) {
+        unset($data_dates[$d]);
+    }
+}
+
 $settled_filter_dates = $settled_dates;
 if (!$has_settlement_rows) {
     $settled_filter_dates = $data_dates;
@@ -330,6 +382,9 @@ $total_expenses_month = $total_expenses_month ?? 0;
 
 $rows_out = [];
 foreach ($all_dates as $date) {
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$date)) {
+        continue;
+    }
     $net = (int)($daily[$date]['net'] ?? 0);
     $system_net = $net;
     $gross = $system_net;
@@ -382,7 +437,7 @@ foreach ($all_dates as $date) {
 }
 
 usort($rows_out, function($a, $b) {
-    return strcmp((string)($b['date'] ?? ''), (string)($a['date'] ?? ''));
+    return strcmp((string)($a['date'] ?? ''), (string)($b['date'] ?? ''));
 });
 
 $total_kerugian = $total_voucher_loss + $total_setoran_loss;
@@ -409,7 +464,7 @@ if (!empty($unsettled_dates)) {
     <style>
         body { font-family: Arial, sans-serif; color:#111; margin:20px; }
         h2 { margin:0 0 6px 0; }
-        .meta { font-size:12px; color:#555; margin-bottom:12px; }
+        .meta { font-size:12px; color:#555; margin-bottom:12px; margin-top: 10px; }
         .toolbar { margin-bottom:14px; display:flex; gap:8px; flex-wrap:wrap; }
         .btn { padding:6px 10px; border:1px solid #999; background:#f2f2f2; cursor:pointer; border-radius:4px; font-size:12px; }
         table { width:100%; border-collapse:collapse; font-size:12px; }
