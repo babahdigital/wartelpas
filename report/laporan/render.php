@@ -266,6 +266,18 @@
                             <div class="modal-note">Sisa <span class="char-remaining" data-max="60" data-target="auditRefundDesc">60</span> karakter.</div>
                         </div>
                     </div>
+                    <div class="form-grid-2" style="margin-top:10px;">
+                        <div>
+                            <label>Kurang Bayar (Rp)</label>
+                            <input class="form-input" type="number" name="audit_kurang_bayar_amt" min="0" value="0" placeholder="0">
+                            <div class="modal-note">Untuk selisih minus yang sudah ditagih.</div>
+                        </div>
+                        <div>
+                            <label>Keterangan Kurang Bayar</label>
+                            <input class="form-input" type="text" id="auditKurangBayarDesc" name="audit_kurang_bayar_desc" placeholder="Contoh: Tagih susulan ke blok" maxlength="60">
+                            <div class="modal-note">Sisa <span class="char-remaining" data-max="60" data-target="auditKurangBayarDesc">60</span> karakter.</div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="form-group-box" id="setoran-bersih-box" style="margin-top:12px;">
@@ -426,7 +438,8 @@
                 $total_expenses_today = (int)($audit_total_expenses_period ?? 0);
             }
             $total_refund_today = (int)($audit_total_refund ?? 0);
-            $real_cash = $audit_total_actual_setoran - $total_expenses_today - $total_refund_today;
+            $total_kurang_bayar_today = (int)($audit_total_kurang_bayar ?? 0);
+            $real_cash = $audit_total_actual_setoran - $total_expenses_today - $total_refund_today + $total_kurang_bayar_today;
             $waterfall_tech_loss = $voucher_loss_display;
             $waterfall_target = $net_system_display;
             $waterfall_actual = (int)$real_cash;
@@ -464,13 +477,18 @@
                             <i class="fa fa-undo"></i> Pengembalian: <?= $cur ?> <?= number_format((int)$total_refund_today,0,',','.') ?>
                         </div>
                     <?php endif; ?>
+                    <?php if ($total_kurang_bayar_today > 0): ?>
+                        <div style="font-size:11px;color:#2ecc71; margin-top:2px;">
+                            <i class="fa fa-plus-circle"></i> Kurang Bayar: <?= $cur ?> <?= number_format((int)$total_kurang_bayar_today,0,',','.') ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
                 <div class="summary-card">
                     <div class="summary-title">Selisih Audit (Net)</div>
                     <div class="summary-value" style="color:<?= $audit_setoran_cls === 'audit-neg' ? '#c0392b' : ($audit_setoran_cls === 'audit-pos' ? '#2ecc71' : '#3498db'); ?>;">
                         <?= $cur ?> <?= number_format((int)$audit_selisih_setoran_adj_total,0,',','.') ?>
                     </div>
-                    <div style="font-size:12px;color:var(--txt-muted)">Sesudah refund & pengeluaran.</div>
+                    <div style="font-size:12px;color:var(--txt-muted)">Sesudah refund, kurang bayar, & pengeluaran.</div>
                 </div>
                 <div class="summary-card">
                     <div class="summary-title">Voucher Terjual</div>
@@ -498,6 +516,12 @@
                     <div class="summary-title" style="color:#6c5ce7;">Pengembalian</div>
                     <div class="summary-value" style="color:#6c5ce7;">
                         <?= $cur ?> <?= number_format((int)$total_refund_today,0,',','.') ?>
+                    </div>
+                </div>
+                <div class="summary-card" style="border-color:#16a34a;">
+                    <div class="summary-title" style="color:#16a34a;">Kurang Bayar</div>
+                    <div class="summary-value" style="color:#16a34a;">
+                        <?= $cur ?> <?= number_format((int)$total_kurang_bayar_today,0,',','.') ?>
                     </div>
                 </div>
                 <div class="summary-card" style="border-color:#1e3a8a;">
@@ -553,15 +577,17 @@
                 $wa_report_time = date('d-m-Y H:i:s', strtotime($wa_report_sent_at));
             }
         ?>
-        <div id="settlement-time" style="margin-top:12px;font-size:12px;color:var(--txt-muted);">
-            Settlement terakhir: <?= $settlement_time ? date('d-m-Y H:i:s', strtotime($settlement_time)) : '-' ?>
-        </div>
-        <div id="settlement-wa-status" style="margin-top:4px;font-size:12px;color:var(--txt-muted);">
-            WA Report: <?= htmlspecialchars($wa_report_label, ENT_QUOTES); ?><?= $wa_report_time !== '' ? ' (' . htmlspecialchars($wa_report_time, ENT_QUOTES) . ')' : ''; ?>
-            <?php if ($wa_report_detail !== '' && stripos($wa_report_detail, 'success') === false): ?>
-                <span style="color:#f39c12;"> - <?= htmlspecialchars($wa_report_detail, ENT_QUOTES); ?></span>
-            <?php endif; ?>
-        </div>
+        <?php if ($req_show === 'harian'): ?>
+            <div id="settlement-time" style="margin-top:12px;font-size:12px;color:var(--txt-muted);">
+                Settlement terakhir: <?= $settlement_time ? date('d-m-Y H:i:s', strtotime($settlement_time)) : '-' ?>
+            </div>
+            <div id="settlement-wa-status" style="margin-top:4px;font-size:12px;color:var(--txt-muted);">
+                WA Report: <?= htmlspecialchars($wa_report_label, ENT_QUOTES); ?><?= $wa_report_time !== '' ? ' (' . htmlspecialchars($wa_report_time, ENT_QUOTES) . ')' : ''; ?>
+                <?php if ($wa_report_detail !== '' && stripos($wa_report_detail, 'success') === false): ?>
+                    <span style="color:#f39c12;"> - <?= htmlspecialchars($wa_report_detail, ENT_QUOTES); ?></span>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -840,7 +866,11 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
     </div>
     <div class="card-body p-0">
         <?php if ($req_show === 'harian'): ?>
-            <?php $has_refund_audit = (int)($audit_total_refund ?? 0) > 0; ?>
+            <?php
+                $has_refund_audit = (int)($audit_total_refund ?? 0) > 0;
+                $has_kurang_bayar_audit = (int)($audit_total_kurang_bayar ?? 0) > 0;
+                $audit_colspan = 10 + ($has_refund_audit ? 1 : 0) + ($has_kurang_bayar_audit ? 1 : 0);
+            ?>
             <div class="table-responsive">
                 <table class="table-dark-solid text-nowrap">
                     <thead>
@@ -853,6 +883,9 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                             <?php if ($has_refund_audit): ?>
                                 <th class="text-right">Refund</th>
                             <?php endif; ?>
+                            <?php if ($has_kurang_bayar_audit): ?>
+                                <th class="text-right">Kurang Bayar</th>
+                            <?php endif; ?>
                             <th class="text-center">Rusak</th>
                             <th class="text-center">Retur</th>
                             <th class="text-center">Voucher 10</th>
@@ -862,7 +895,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                     </thead>
                     <tbody>
                         <?php if (empty($audit_rows)): ?>
-                            <tr><td colspan="<?= $has_refund_audit ? '11' : '10'; ?>" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
+                            <tr><td colspan="<?= (int)$audit_colspan; ?>" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
                         <?php else: 
                             $price10 = (int)$price10;
                             $price30 = (int)$price30;
@@ -1033,7 +1066,8 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                             $sq = $manual_display_qty - $expected_adj_qty;
                             $ss = $manual_display_setoran - $expected_adj_setoran;
                             $refund_amt_row = (int)($ar['refund_amt'] ?? 0);
-                            $ss_adj = $ss - $refund_amt_row;
+                            $kurang_bayar_row = (int)($ar['kurang_bayar_amt'] ?? 0);
+                            $ss_adj = $ss - $refund_amt_row + $kurang_bayar_row;
                             $cls_q = $sq > 0 ? 'audit-pos' : ($sq < 0 ? 'audit-neg' : 'audit-zero');
                             $cls_s = $ss_adj > 0 ? 'audit-pos' : ($ss_adj < 0 ? 'audit-neg' : 'audit-zero');
                             $audit_manual_qty_display_total += $manual_display_qty;
@@ -1051,6 +1085,9 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                             <td class="text-center"><span class="<?= $cls_s; ?>"><?= number_format($ss_adj,0,',','.') ?></span></td>
                             <?php if ($has_refund_audit): ?>
                                 <td class="text-right"><small><?= number_format((int)($ar['refund_amt'] ?? 0),0,',','.') ?></small></td>
+                            <?php endif; ?>
+                            <?php if ($has_kurang_bayar_audit): ?>
+                                <td class="text-right"><small><?= number_format((int)($ar['kurang_bayar_amt'] ?? 0),0,',','.') ?></small></td>
                             <?php endif; ?>
                             <td class="text-center"><small><?= number_format($sys_rusak,0,',','.') ?></small></td>
                             <td class="text-center"><small><?= number_format($sys_retur,0,',','.') ?></small></td>
@@ -1075,6 +1112,8 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                                     data-expense-desc="<?= htmlspecialchars($ar['expenses_desc'] ?? ''); ?>"
                                     data-refund="<?= (int)($ar['refund_amt'] ?? 0); ?>"
                                     data-refund-desc="<?= htmlspecialchars($ar['refund_desc'] ?? ''); ?>"
+                                    data-kurang-bayar="<?= (int)($ar['kurang_bayar_amt'] ?? 0); ?>"
+                                    data-kurang-bayar-desc="<?= htmlspecialchars($ar['kurang_bayar_desc'] ?? ''); ?>"
                                     data-qty10="<?= (int)$profile_qty_10; ?>"
                                     data-qty30="<?= (int)$profile_qty_30; ?>"
                                     data-profile-qty="<?= $profile_qty_json; ?>">
@@ -1109,6 +1148,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
             <div>Sistem Rp (Total): <b><?= number_format($audit_system_setoran_total,0,',','.') ?></b></div>
             <div>Manual Rp: <b><?= number_format($audit_manual_setoran_total,0,',','.') ?></b></div>
             <div>Refund Rp: <b><?= number_format((int)($audit_total_refund ?? 0),0,',','.') ?></b></div>
+            <div>Kurang Bayar Rp: <b><?= number_format((int)($audit_total_kurang_bayar ?? 0),0,',','.') ?></b></div>
             <div>Selisih Rp: <b><?= number_format($audit_selisih_setoran_total,0,',','.') ?></b></div>
         </div>
         <?php else: ?>
@@ -1122,13 +1162,14 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                             <th class="text-center">Setoran Fisik (Audit)</th>
                             <th class="text-center">Pengeluaran</th>
                             <th class="text-center">Refund</th>
+                            <th class="text-center">Kurang Bayar</th>
                             <th class="text-center">Selisih</th>
                             <th class="text-center">Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($audit_period_rows)): ?>
-                            <tr><td colspan="7" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
+                            <tr><td colspan="8" style="text-align:center;color:var(--txt-muted);padding:30px;">Belum ada audit manual.</td></tr>
                         <?php else: foreach ($audit_period_rows as $row): ?>
                             <?php
                                 $sel = (int)($row['selisih'] ?? 0);
@@ -1162,6 +1203,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                                 <td class="text-center"><?= number_format((int)($row['actual'] ?? 0),0,',','.') ?></td>
                                 <td class="text-center" style="color:#f39c12;"><?= (int)($row['expense'] ?? 0) > 0 ? number_format((int)($row['expense'] ?? 0),0,',','.') : '-' ?></td>
                                 <td class="text-center" style="color:#6c5ce7;"><?= (int)($row['refund'] ?? 0) > 0 ? number_format((int)($row['refund'] ?? 0),0,',','.') : '-' ?></td>
+                                <td class="text-center" style="color:#16a34a;"><?= (int)($row['kurang_bayar'] ?? 0) > 0 ? number_format((int)($row['kurang_bayar'] ?? 0),0,',','.') : '-' ?></td>
                                 <td class="text-center" style="color:<?= $status_color ?>; font-weight:700;">
                                     <?= $sel === 0 ? '-' : number_format($sel,0,',','.') ?>
                                 </td>
@@ -1178,6 +1220,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                 <div>Setoran Fisik (Total): <b><?= number_format((int)($audit_total_actual_setoran ?? 0),0,',','.') ?></b></div>
                 <div>Pengeluaran (Total): <b><?= number_format((int)($audit_total_expenses_period ?? 0),0,',','.') ?></b></div>
                 <div>Refund (Total): <b><?= number_format((int)($audit_total_refund ?? 0),0,',','.') ?></b></div>
+                <div>Kurang Bayar (Total): <b><?= number_format((int)($audit_total_kurang_bayar ?? 0),0,',','.') ?></b></div>
                 <div>Selisih (Total): <b><?= number_format((int)($audit_selisih_setoran_adj_total ?? 0),0,',','.') ?></b></div>
             </div>
         <?php endif; ?>

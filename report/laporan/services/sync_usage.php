@@ -203,6 +203,8 @@ try {
     $db->exec("CREATE TABLE IF NOT EXISTS login_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE,
+        customer_name TEXT,
+        room_name TEXT,
         login_date TEXT,
         login_time TEXT,
         price TEXT,
@@ -245,7 +247,9 @@ try {
         'last_status' => "TEXT DEFAULT 'ready'",
         'auto_rusak' => 'INTEGER DEFAULT 0',
         'updated_at' => 'DATETIME',
-        'login_count' => 'INTEGER DEFAULT 0'
+        'login_count' => 'INTEGER DEFAULT 0',
+        'customer_name' => 'TEXT',
+        'room_name' => 'TEXT'
     ];
     $existingCols = [];
     foreach ($db->query("PRAGMA table_info(login_history)") as $row) {

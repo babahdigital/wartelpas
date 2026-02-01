@@ -119,6 +119,8 @@ try {
     $db->exec("CREATE TABLE IF NOT EXISTS login_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE,
+      customer_name TEXT,
+      room_name TEXT,
         login_date TEXT,
         login_time TEXT,
         price TEXT,
@@ -146,6 +148,8 @@ try {
     $db->exec("CREATE TABLE IF NOT EXISTS login_events (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT,
+      customer_name TEXT,
+      room_name TEXT,
         login_time DATETIME,
         logout_time DATETIME,
         seq INTEGER DEFAULT 1,
@@ -175,7 +179,9 @@ try {
       'last_status' => "TEXT DEFAULT 'ready'",
       'auto_rusak' => 'INTEGER DEFAULT 0',
       'updated_at' => 'DATETIME',
-      'login_count' => 'INTEGER DEFAULT 0'
+      'login_count' => 'INTEGER DEFAULT 0',
+      'customer_name' => 'TEXT',
+      'room_name' => 'TEXT'
     ];
     $existingCols = [];
     foreach ($db->query("PRAGMA table_info(login_history)") as $row) {
@@ -186,6 +192,9 @@ try {
         try { $db->exec("ALTER TABLE login_history ADD COLUMN $col $type"); } catch(Exception $e) {}
       }
     }
+
+    try { $db->exec("ALTER TABLE login_events ADD COLUMN customer_name TEXT"); } catch(Exception $e) {}
+    try { $db->exec("ALTER TABLE login_events ADD COLUMN room_name TEXT"); } catch(Exception $e) {}
 
     $db->exec("CREATE TABLE IF NOT EXISTS retur_requests (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

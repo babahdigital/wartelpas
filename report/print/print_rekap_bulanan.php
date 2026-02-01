@@ -49,8 +49,10 @@ $audit_selisih = [];
 $audit_system = [];
 $audit_expense = [];
 $audit_refund = [];
+$audit_kurang_bayar = [];
 $total_expenses_month = 0;
 $total_refund_month = 0;
+$total_kurang_bayar_month = 0;
 $daily_expense_logs = [];
 $notes_map = [];
 $settled_dates = [];
@@ -113,7 +115,7 @@ try {
             $phone_units[$d][$ut] = (int)($row['total_units'] ?? 0);
         }
 
-        $stmtAudit = $db->prepare("SELECT report_date, blok_name, expected_setoran, actual_setoran, user_evidence, expenses_amt, expenses_desc, refund_amt, refund_desc
+        $stmtAudit = $db->prepare("SELECT report_date, blok_name, expected_setoran, actual_setoran, user_evidence, expenses_amt, expenses_desc, refund_amt, refund_desc, kurang_bayar_amt, kurang_bayar_desc
             FROM audit_rekap_manual
             WHERE report_date LIKE :m");
         $stmtAudit->execute([':m' => $filter_date . '%']);
@@ -123,16 +125,19 @@ try {
             [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($row);
             $expense = (int)($row['expenses_amt'] ?? 0);
             $refund_amt = (int)($row['refund_amt'] ?? 0);
+            $kurang_bayar_amt = (int)($row['kurang_bayar_amt'] ?? 0);
             $desc = trim((string)($row['expenses_desc'] ?? ''));
             $blok = (string)($row['blok_name'] ?? '');
             $total_expenses_month += $expense;
             $total_refund_month += $refund_amt;
-            $net_cash_audit = (int)$manual_setoran - $expense - $refund_amt;
+            $total_kurang_bayar_month += $kurang_bayar_amt;
+            $net_cash_audit = (int)$manual_setoran - $expense - $refund_amt + $kurang_bayar_amt;
             $audit_net[$d] = (int)($audit_net[$d] ?? 0) + $net_cash_audit;
             $audit_expense[$d] = (int)($audit_expense[$d] ?? 0) + $expense;
             $audit_refund[$d] = (int)($audit_refund[$d] ?? 0) + $refund_amt;
+            $audit_kurang_bayar[$d] = (int)($audit_kurang_bayar[$d] ?? 0) + $kurang_bayar_amt;
             $audit_system[$d] = (int)($audit_system[$d] ?? 0) + (int)$expected_adj_setoran;
-            $audit_selisih[$d] = (int)($audit_selisih[$d] ?? 0) + ((int)$manual_setoran - (int)$expected_adj_setoran - $refund_amt);
+            $audit_selisih[$d] = (int)($audit_selisih[$d] ?? 0) + ((int)$manual_setoran - (int)$expected_adj_setoran - $refund_amt + $kurang_bayar_amt);
             if ($expense > 0) {
                 $desc_text = $desc !== '' ? $desc : 'Tanpa Keterangan';
                 $daily_expense_logs[$d][] = [
@@ -438,7 +443,10 @@ if (!empty($unsettled_dates)) {
         </div>
     <?php endif; ?>
 
-    <?php $show_refund = $total_refund_month > 0; ?>
+    <?php
+        $show_refund = $total_refund_month > 0;
+        $show_kurang_bayar = $total_kurang_bayar_month > 0;
+    ?>
     <div class="summary-grid" style="grid-template-columns: repeat(3, 1fr); gap:15px; margin-bottom:25px;">
         <div class="summary-card" style="border:1px solid #ddd; padding:15px; border-radius:4px; background:#fff;">
             <div class="summary-title" style="color:#666; font-size:11px; text-transform:uppercase;">Total Omzet (Gross)</div>
@@ -460,18 +468,15 @@ if (!empty($unsettled_dates)) {
                 <div class="summary-value" style="font-size:20px; font-weight:bold; color:#6c5ce7;">- <?= $cur ?> <?= number_format((int)$total_refund_month,0,',','.') ?></div>
             </div>
         <?php endif; ?>
+        <?php if ($show_kurang_bayar): ?>
+            <div class="summary-card" style="border:1px solid #86efac; background:#ecfdf3; padding:15px; border-radius:4px;">
+                <div class="summary-title" style="color:#16a34a; font-size:11px; text-transform:uppercase;">Kurang Bayar</div>
+                <div class="summary-value" style="font-size:20px; font-weight:bold; color:#16a34a;">+ <?= $cur ?> <?= number_format((int)$total_kurang_bayar_month,0,',','.') ?></div>
+            </div>
+        <?php endif; ?>
         <div class="summary-card" style="border:1px solid #ddd; padding:15px; border-radius:4px; background:#fff;">
             <div class="summary-title" style="color:#666; font-size:11px; text-transform:uppercase;">Setoran Fisik</div>
             <div class="summary-value" style="font-size:20px; font-weight:bold; color:#1e3a8a;"><?= $cur ?> <?= number_format((int)$total_net_audit,0,',','.') ?></div>
-        </div>
-        <div class="summary-card" style="border:1px solid <?= $total_selisih < 0 ? '#fca5a5' : ($total_selisih > 0 ? '#86efac' : '#ddd') ?>; background: <?= $total_selisih < 0 ? '#fee2e2' : ($total_selisih > 0 ? '#dcfce7' : '#fff') ?>; padding:15px; border-radius:4px;">
-            <div class="summary-title" style="color:#444; font-size:11px; text-transform:uppercase;">Akumulasi Selisih</div>
-            <div class="summary-value" style="font-size:20px; font-weight:bold; color: <?= $total_selisih < 0 ? '#c0392b' : ($total_selisih > 0 ? '#166534' : '#333') ?>;">
-                <?= $cur ?> <?= number_format((int)$total_selisih,0,',','.') ?>
-            </div>
-            <div style="font-size:10px; color:#555;">
-                <?= $total_selisih < 0 ? 'Total Kurang Setor' : ($total_selisih > 0 ? 'Total Lebih Setor' : 'Balance / Sesuai') ?>
-            </div>
         </div>
     </div>
 

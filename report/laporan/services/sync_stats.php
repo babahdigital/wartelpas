@@ -120,6 +120,8 @@ try {
     $db->exec("CREATE TABLE IF NOT EXISTS login_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE,
+        customer_name TEXT,
+        room_name TEXT,
         login_date TEXT,
         login_time TEXT,
         price TEXT,
@@ -145,6 +147,8 @@ try {
     try { $db->exec("ALTER TABLE login_history ADD COLUMN last_bytes INTEGER"); } catch(Exception $e) {}
     try { $db->exec("ALTER TABLE login_history ADD COLUMN last_ip TEXT"); } catch(Exception $e) {}
     try { $db->exec("ALTER TABLE login_history ADD COLUMN last_mac TEXT"); } catch(Exception $e) {}
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN customer_name TEXT"); } catch(Exception $e) {}
+    try { $db->exec("ALTER TABLE login_history ADD COLUMN room_name TEXT"); } catch(Exception $e) {}
     
 } catch (PDOException $e) { die("Error DB: " . $e->getMessage()); }
 

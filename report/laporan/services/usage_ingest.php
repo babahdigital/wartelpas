@@ -88,6 +88,17 @@ $ip = trim($_GET['ip'] ?? '');
 $mac = trim($_GET['mac'] ?? '');
 $uptime = trim($_GET['uptime'] ?? '');
 $comment = trim($_GET['comment'] ?? '');
+$customer_name = trim($_GET['customer_name'] ?? ($_GET['nama'] ?? ''));
+$room_name = trim($_GET['room'] ?? ($_GET['kamar'] ?? ''));
+$meta_blok_name = trim($_GET['blok_name'] ?? ($_GET['blok'] ?? ''));
+$meta_profile_name = trim($_GET['profile_name'] ?? ($_GET['profile'] ?? ''));
+$meta_price_raw = trim($_GET['price'] ?? ($_GET['harga'] ?? ''));
+$meta_price = is_numeric($meta_price_raw) ? (int)$meta_price_raw : 0;
+if ($customer_name !== '') $customer_name = mb_substr($customer_name, 0, 80);
+if ($room_name !== '') $room_name = mb_substr($room_name, 0, 40);
+if ($meta_blok_name !== '') $meta_blok_name = mb_substr($meta_blok_name, 0, 40);
+if ($meta_profile_name !== '') $meta_profile_name = mb_substr($meta_profile_name, 0, 40);
+if ($meta_price < 0) $meta_price = 0;
 
 if ($event !== 'login' && $event !== 'logout') {
     $event = 'login';
@@ -140,6 +151,8 @@ try {
     $db->exec("CREATE TABLE IF NOT EXISTS login_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE,
+        customer_name TEXT,
+        room_name TEXT,
         login_date TEXT,
         login_time TEXT,
         price TEXT,
@@ -167,6 +180,8 @@ try {
     $db->exec("CREATE TABLE IF NOT EXISTS login_events (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT,
+        customer_name TEXT,
+        room_name TEXT,
         login_time DATETIME,
         logout_time DATETIME,
         seq INTEGER DEFAULT 1,
@@ -196,7 +211,9 @@ try {
         'logout_time_real' => 'DATETIME',
         'last_status' => "TEXT DEFAULT 'ready'",
         'updated_at' => 'DATETIME',
-        'login_count' => 'INTEGER DEFAULT 0'
+        'login_count' => 'INTEGER DEFAULT 0',
+        'customer_name' => 'TEXT',
+        'room_name' => 'TEXT'
     ];
     $existingCols = [];
     foreach ($db->query("PRAGMA table_info(login_history)") as $row) {
@@ -208,18 +225,79 @@ try {
         }
     }
 
+    try { $db->exec("ALTER TABLE login_events ADD COLUMN customer_name TEXT"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE login_events ADD COLUMN room_name TEXT"); } catch (Exception $e) {}
+
+    $db->exec("CREATE TABLE IF NOT EXISTS login_meta_queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        voucher_code TEXT,
+        customer_name TEXT,
+        room_name TEXT,
+        blok_name TEXT,
+        profile_name TEXT,
+        price INTEGER,
+        session_id TEXT,
+        client_ip TEXT,
+        user_agent TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        consumed_at DATETIME,
+        consumed_by TEXT
+    )");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_login_meta_queue_voucher ON login_meta_queue(voucher_code)");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_login_meta_queue_created ON login_meta_queue(created_at)");
+
+    try { $db->exec("ALTER TABLE login_meta_queue ADD COLUMN blok_name TEXT"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE login_meta_queue ADD COLUMN profile_name TEXT"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE login_meta_queue ADD COLUMN price INTEGER"); } catch (Exception $e) {}
+
+    if ($event === 'login' && ($customer_name === '' || $room_name === '' || $meta_blok_name === '' || $meta_profile_name === '' || $meta_price <= 0)) {
+        try {
+            $stmtMeta = $db->prepare("SELECT id, customer_name, room_name, blok_name, profile_name, price FROM login_meta_queue
+                WHERE voucher_code = :u AND consumed_at IS NULL
+                AND (client_ip = :ip OR client_ip = '' OR :ip = '')
+                AND created_at >= datetime('now','-30 minutes')
+                ORDER BY created_at DESC LIMIT 1");
+            $stmtMeta->execute([':u' => $user, ':ip' => $ip]);
+            $meta = $stmtMeta->fetch(PDO::FETCH_ASSOC);
+            if ($meta) {
+                if ($customer_name === '') {
+                    $customer_name = trim((string)($meta['customer_name'] ?? ''));
+                }
+                if ($room_name === '') {
+                    $room_name = trim((string)($meta['room_name'] ?? ''));
+                }
+                if ($meta_blok_name === '') {
+                    $meta_blok_name = trim((string)($meta['blok_name'] ?? ''));
+                }
+                if ($meta_profile_name === '') {
+                    $meta_profile_name = trim((string)($meta['profile_name'] ?? ''));
+                }
+                if ($meta_price <= 0) {
+                    $meta_price = (int)($meta['price'] ?? 0);
+                }
+                $stmtMetaUpd = $db->prepare("UPDATE login_meta_queue SET consumed_at = CURRENT_TIMESTAMP, consumed_by = :u WHERE id = :id");
+                $stmtMetaUpd->execute([':u' => $user, ':id' => (int)$meta['id']]);
+            }
+        } catch (Exception $e) {}
+    }
+
     $status = $event === 'login' ? 'online' : 'terpakai';
 
     $stmt = $db->prepare("INSERT INTO login_history (
-        username, ip_address, mac_address, last_uptime, raw_comment,
+        username, customer_name, room_name, blok_name, validity, price, ip_address, mac_address, last_uptime, raw_comment,
         login_time_real, logout_time_real, first_login_real, last_login_real, last_status, updated_at, login_count
     ) VALUES (
-        :u, :ip, :mac, :up, :raw, :ltr, :lor, :flr, :llr, :st, :upd, :cnt
+        :u, :cn, :rn, :bn, :vf, :pr, :ip, :mac, :up, :raw, :ltr, :lor, :flr, :llr, :st, :upd, :cnt
     ) ON CONFLICT(username) DO UPDATE SET
         ip_address = CASE WHEN excluded.ip_address != '' AND excluded.ip_address != '-' THEN excluded.ip_address ELSE login_history.ip_address END,
         mac_address = CASE WHEN excluded.mac_address != '' AND excluded.mac_address != '-' THEN excluded.mac_address ELSE login_history.mac_address END,
         last_uptime = COALESCE(NULLIF(excluded.last_uptime, ''), login_history.last_uptime),
         raw_comment = CASE WHEN excluded.raw_comment != '' THEN excluded.raw_comment ELSE login_history.raw_comment END,
+        customer_name = CASE WHEN excluded.customer_name != '' THEN excluded.customer_name ELSE login_history.customer_name END,
+        room_name = CASE WHEN excluded.room_name != '' THEN excluded.room_name ELSE login_history.room_name END,
+        blok_name = CASE WHEN excluded.blok_name != '' THEN excluded.blok_name ELSE login_history.blok_name END,
+        validity = CASE WHEN excluded.validity != '' THEN excluded.validity ELSE login_history.validity END,
+        price = CASE WHEN excluded.price != '' AND excluded.price != '0' THEN excluded.price ELSE login_history.price END,
         first_login_real = COALESCE(login_history.first_login_real, excluded.first_login_real),
         last_login_real = CASE WHEN excluded.last_status = 'online' THEN excluded.last_login_real ELSE COALESCE(login_history.last_login_real, excluded.last_login_real) END,
         login_time_real = CASE WHEN excluded.last_status = 'online' THEN excluded.login_time_real ELSE COALESCE(login_history.login_time_real, excluded.login_time_real) END,
@@ -231,6 +309,11 @@ try {
 
     $stmt->execute([
         ':u' => $user,
+        ':cn' => $customer_name,
+        ':rn' => $room_name,
+        ':bn' => $meta_blok_name,
+        ':vf' => $meta_profile_name,
+        ':pr' => $meta_price > 0 ? (string)$meta_price : '',
         ':ip' => $ip,
         ':mac' => $mac,
         ':up' => $uptime,
@@ -257,10 +340,12 @@ try {
         $stmtSeq = $db->prepare("SELECT COALESCE(MAX(seq),0) FROM login_events WHERE username = :u AND date_key = :dk");
         $stmtSeq->execute([':u' => $user, ':dk' => $date_key]);
         $seq = (int)$stmtSeq->fetchColumn() + 1;
-        $stmtIns = $db->prepare("INSERT INTO login_events (username, login_time, logout_time, seq, date_key, created_at, updated_at)
-            VALUES (:u, :lt, NULL, :seq, :dk, :now, :now)");
+        $stmtIns = $db->prepare("INSERT INTO login_events (username, customer_name, room_name, login_time, logout_time, seq, date_key, created_at, updated_at)
+            VALUES (:u, :cn, :rn, :lt, NULL, :seq, :dk, :now, :now)");
         $stmtIns->execute([
             ':u' => $user,
+            ':cn' => $customer_name,
+            ':rn' => $room_name,
             ':lt' => $dt,
             ':seq' => $seq,
             ':dk' => $date_key,
@@ -282,10 +367,12 @@ try {
             $stmtSeq = $db->prepare("SELECT COALESCE(MAX(seq),0) FROM login_events WHERE username = :u AND date_key = :dk");
             $stmtSeq->execute([':u' => $user, ':dk' => $date_key]);
             $seq = (int)$stmtSeq->fetchColumn() + 1;
-            $stmtIns = $db->prepare("INSERT INTO login_events (username, login_time, logout_time, seq, date_key, created_at, updated_at)
-                VALUES (:u, NULL, :lt, :seq, :dk, :now, :now)");
+            $stmtIns = $db->prepare("INSERT INTO login_events (username, customer_name, room_name, login_time, logout_time, seq, date_key, created_at, updated_at)
+                VALUES (:u, :cn, :rn, NULL, :lt, :seq, :dk, :now, :now)");
             $stmtIns->execute([
                 ':u' => $user,
+                ':cn' => $customer_name,
+                ':rn' => $room_name,
                 ':lt' => $dt,
                 ':seq' => $seq,
                 ':dk' => $date_key,

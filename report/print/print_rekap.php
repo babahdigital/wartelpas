@@ -219,6 +219,7 @@ $audit_selisih_setoran_adj_total = 0;
 $has_audit_adjusted = false;
 $total_audit_expense = 0;
 $total_audit_refund = 0;
+$total_audit_kurang_bayar = 0;
 $daily_note_alert = '';
 $hp_active_by_block = [];
 $hp_stats_by_block = [];
@@ -535,11 +536,12 @@ try {
                 $audit_total_actual_setoran += (int)($ar['actual_setoran'] ?? 0);
                 $total_audit_expense += (int)($ar['expenses_amt'] ?? 0);
                 $total_audit_refund += (int)($ar['refund_amt'] ?? 0);
+                $total_audit_kurang_bayar += (int)($ar['kurang_bayar_amt'] ?? 0);
                 $audit_total_selisih_qty += (int)($ar['selisih_qty'] ?? 0);
                 $audit_total_selisih_setoran += (int)($ar['selisih_setoran'] ?? 0);
                 [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($ar);
                 $audit_expected_setoran_adj_total += (int)$expected_adj_setoran;
-                $audit_selisih_setoran_adj_total += (int)$manual_setoran - (int)$expected_adj_setoran;
+                $audit_selisih_setoran_adj_total += (int)$manual_setoran - (int)$expected_adj_setoran - (int)($ar['refund_amt'] ?? 0) + (int)($ar['kurang_bayar_amt'] ?? 0);
                 $has_audit_adjusted = true;
             }
         }
@@ -870,11 +872,12 @@ $setoran_loss_display = ($audit_selisih_setoran_adj_total < 0) ? abs((int)$audit
 $kerugian_display = $voucher_loss_display + $setoran_loss_display;
 $waterfall_tech_loss = $voucher_loss_display;
 $waterfall_target = $net_system_display;
-$raw_actual = (int)($audit_total_actual_setoran - $total_audit_expense - $total_audit_refund);
+$raw_actual = (int)($audit_total_actual_setoran - $total_audit_expense - $total_audit_refund + $total_audit_kurang_bayar);
 $waterfall_actual = ($req_show === 'harian' && !empty($audit_rows)) ? max(0, $raw_actual) : 0;
 $waterfall_variance = $waterfall_actual - $waterfall_target;
 $period_label = $req_show === 'harian' ? 'Harian' : ($req_show === 'bulanan' ? 'Bulanan' : 'Tahunan');
 $has_refund = $total_audit_refund > 0;
+$has_kurang_bayar = $total_audit_kurang_bayar > 0;
 ?>
 <!DOCTYPE html>
 <html>
@@ -949,6 +952,13 @@ $has_refund = $total_audit_refund > 0;
             <div class="label" style="color:#6c5ce7;">Refund</div>
             <div class="value" style="color:#6c5ce7;"><?= $cur ?> <?= number_format($total_audit_refund,0,',','.') ?></div>
             <div class="small" style="color:#6c5ce7;">Pengembalian uang lebih setor</div>
+        </div>
+        <?php endif; ?>
+        <?php if ($has_kurang_bayar): ?>
+        <div class="card" style="border-color:#16a34a;">
+            <div class="label" style="color:#16a34a;">Kurang Bayar</div>
+            <div class="value" style="color:#16a34a;"><?= $cur ?> <?= number_format($total_audit_kurang_bayar,0,',','.') ?></div>
+            <div class="small" style="color:#16a34a;">Penagihan susulan selisih minus</div>
         </div>
         <?php endif; ?>
         <?php if ($req_show === 'harian'): ?>
@@ -1172,7 +1182,7 @@ $has_refund = $total_audit_refund > 0;
                     <tr>
                         <th rowspan="2" style="width:90px;">Blok</th>
                         <th colspan="3">Voucher</th>
-                        <th colspan="<?= $has_refund ? '4' : '3' ?>">Setoran</th>
+                        <th colspan="<?= 3 + ($has_refund ? 1 : 0) + ($has_kurang_bayar ? 1 : 0) ?>">Setoran</th>
                         <th colspan="4">Profil <?= htmlspecialchars($profile_label_1) ?></th>
                         <th colspan="4">Profil <?= htmlspecialchars($profile_label_2) ?></th>
                     </tr>
@@ -1185,6 +1195,9 @@ $has_refund = $total_audit_refund > 0;
                         <th style="width:80px;">Selisih</th>
                         <?php if ($has_refund): ?>
                         <th style="width:90px;">Refund</th>
+                        <?php endif; ?>
+                        <?php if ($has_kurang_bayar): ?>
+                        <th style="width:90px;">Kurang Bayar</th>
                         <?php endif; ?>
                         <th style="width:90px;">User</th>
                         <th style="width:70px;">Up</th>
@@ -1492,10 +1505,13 @@ $has_refund = $total_audit_refund > 0;
 
                             $selisih_qty = $manual_display_qty - $expected_adj_qty;
                             $selisih_setoran = $manual_display_setoran - $expected_adj_setoran;
+                            $refund_amt_row = (int)($ar['refund_amt'] ?? 0);
+                            $kurang_bayar_row = (int)($ar['kurang_bayar_amt'] ?? 0);
+                            $selisih_setoran_adj = $selisih_setoran - $refund_amt_row + $kurang_bayar_row;
                             
                             // === LOGIKA DETEKSI ANOMALI (PENYEMPURNAAN) ===
                             $db_selisih_qty = (int)$selisih_qty;
-                            $db_selisih_rp  = (int)$selisih_setoran;
+                            $db_selisih_rp  = (int)$selisih_setoran_adj;
 
                             $ghost_10 = 0;
                             $ghost_30 = 0;
@@ -1532,9 +1548,11 @@ $has_refund = $total_audit_refund > 0;
                             // Capture data for summary
                             $audit_summary_report[] = [
                                 'blok' => get_block_label(normalize_block_name($ar['blok_name'] ?? '-', (string)($ar['comment'] ?? '')), $blok_names),
-                                'selisih_setoran' => (int)$selisih_setoran,
-                                'refund_amt' => (int)($ar['refund_amt'] ?? 0),
+                                'selisih_setoran' => (int)$selisih_setoran_adj,
+                                'refund_amt' => $refund_amt_row,
                                 'refund_desc' => (string)($ar['refund_desc'] ?? ''),
+                                'kurang_bayar_amt' => $kurang_bayar_row,
+                                'kurang_bayar_desc' => (string)($ar['kurang_bayar_desc'] ?? ''),
                                 'profile_summary' => $profile_qty_summary,
                                 'unreported_total' => (int)array_sum($cnt_unreported),
                                 'unreported_summary' => format_profile_summary($cnt_unreported, $profile_order_keys),
@@ -1554,9 +1572,12 @@ $has_refund = $total_audit_refund > 0;
                             <td style="text-align:center;"><?= number_format((int)$selisih_qty,0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)$expected_adj_setoran,0,',','.') ?></td>
                             <td style="text-align:right;"><?= number_format((int)$manual_display_setoran,0,',','.') ?></td>
-                            <td style="text-align:right;"><?= number_format((int)$selisih_setoran,0,',','.') ?></td>
+                            <td style="text-align:right;"><?= number_format((int)$selisih_setoran_adj,0,',','.') ?></td>
                             <?php if ($has_refund): ?>
-                            <td style="text-align:right;"><?= number_format((int)($ar['refund_amt'] ?? 0),0,',','.') ?></td>
+                            <td style="text-align:right;"><?= number_format($refund_amt_row,0,',','.') ?></td>
+                            <?php endif; ?>
+                            <?php if ($has_kurang_bayar): ?>
+                            <td style="text-align:right;"><?= number_format($kurang_bayar_row,0,',','.') ?></td>
                             <?php endif; ?>
                             
                             <td style="padding:0; text-align: center;"><?= $p1_us ?></td>
@@ -1574,7 +1595,7 @@ $has_refund = $total_audit_refund > 0;
                             $audit_total_selisih_qty_adj += (int)$selisih_qty;
                             $audit_total_expected_setoran_adj += (int)$expected_adj_setoran;
                             $audit_total_actual_setoran_adj += (int)$manual_display_setoran;
-                            $audit_total_selisih_setoran_adj += (int)$selisih_setoran;
+                            $audit_total_selisih_setoran_adj += (int)$selisih_setoran_adj;
                         ?>
                     <?php endforeach; ?>
                     <tr>
@@ -1587,6 +1608,9 @@ $has_refund = $total_audit_refund > 0;
                         <td style="text-align:right;"><b><?= number_format($audit_total_selisih_setoran_adj,0,',','.') ?></b></td>
                         <?php if ($has_refund): ?>
                         <td style="text-align:right;"><b><?= number_format($total_audit_refund,0,',','.') ?></b></td>
+                        <?php endif; ?>
+                        <?php if ($has_kurang_bayar): ?>
+                        <td style="text-align:right;"><b><?= number_format($total_audit_kurang_bayar,0,',','.') ?></b></td>
                         <?php endif; ?>
                         <td colspan="3" style="background:#eee;"></td>
                         <td style="text-align:center;"><b><?= number_format($audit_total_profile_qty_1,0,',','.') ?></b></td>
@@ -1686,7 +1710,7 @@ $has_refund = $total_audit_refund > 0;
                                         $rusak_total = (int)($rep['rusak_total'] ?? 0);
                                         $unreported_total = (int)($rep['unreported_total'] ?? 0);
                                         $refund_amt = (int)($rep['refund_amt'] ?? 0);
-                                        $selisih_setoran_adj = (int)($rep['selisih_setoran'] ?? 0) - $refund_amt;
+                                        $selisih_setoran_adj = (int)($rep['selisih_setoran'] ?? 0);
                                         
                                         // LOGIKA STATUS
                                         if ($selisih_setoran_adj < 0) {
@@ -1708,6 +1732,9 @@ $has_refund = $total_audit_refund > 0;
                                 <?php endif; ?>
                                 <?php if (!empty($rep['refund_amt'])): ?>
                                     <div style="color:#6c5ce7;">• Refund: <b><?= $cur ?> <?= number_format((int)$rep['refund_amt'],0,',','.') ?></b><?php if (!empty($rep['refund_desc'])): ?> <span style="color:#6c5ce7;">(<?= htmlspecialchars($rep['refund_desc']) ?>)</span><?php endif; ?></div>
+                                <?php endif; ?>
+                                <?php if (!empty($rep['kurang_bayar_amt'])): ?>
+                                    <div style="color:#16a34a;">• Kurang Bayar: <b><?= $cur ?> <?= number_format((int)$rep['kurang_bayar_amt'],0,',','.') ?></b><?php if (!empty($rep['kurang_bayar_desc'])): ?> <span style="color:#16a34a;">(<?= htmlspecialchars($rep['kurang_bayar_desc']) ?>)</span><?php endif; ?></div>
                                 <?php endif; ?>
                             </div>
 

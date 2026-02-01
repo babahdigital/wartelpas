@@ -140,8 +140,10 @@ $audit_manual_summary = [
   'total_rusak_rp' => 0,
   'total_expenses' => 0,
   'total_refund' => 0,
+  'total_kurang_bayar' => 0,
 ];
 $audit_refund_notes = [];
+$audit_kurang_bayar_notes = [];
 $daily_note_audit = '';
 
 if (file_exists($dbFile)) {
@@ -394,7 +396,7 @@ if (file_exists($dbFile)) {
         }
 
         if (table_exists($db, 'audit_rekap_manual')) {
-          $auditSql = "SELECT blok_name, expected_qty, expected_setoran, reported_qty, actual_setoran, refund_amt, refund_desc, expenses_amt, expenses_desc, user_evidence
+          $auditSql = "SELECT blok_name, expected_qty, expected_setoran, reported_qty, actual_setoran, refund_amt, refund_desc, kurang_bayar_amt, kurang_bayar_desc, expenses_amt, expenses_desc, user_evidence
           FROM audit_rekap_manual WHERE $auditDateFilter";
           $stmt = $db->prepare($auditSql);
           foreach ($auditDateParam as $k => $v) $stmt->bindValue($k, $v);
@@ -403,6 +405,7 @@ if (file_exists($dbFile)) {
           $audit_manual_summary['rows'] = count($audit_rows);
           $audit_manual_summary['total_rusak_rp'] = 0;
           $audit_manual_summary['total_refund'] = 0;
+          $audit_manual_summary['total_kurang_bayar'] = 0;
           foreach ($audit_rows as $ar) {
             [$manual_qty, $expected_qty, $manual_setoran, $expected_setoran, $expense_amt] = calc_audit_adjusted_totals($ar);
             $audit_manual_summary['manual_qty'] += (int)$manual_qty;
@@ -412,16 +415,31 @@ if (file_exists($dbFile)) {
             $audit_manual_summary['total_expenses'] += (int)$expense_amt;
             $refund_amt = (int)($ar['refund_amt'] ?? 0);
             $refund_desc = trim((string)($ar['refund_desc'] ?? ''));
+            $kurang_bayar_amt = (int)($ar['kurang_bayar_amt'] ?? 0);
+            $kurang_bayar_desc = trim((string)($ar['kurang_bayar_desc'] ?? ''));
             $audit_manual_summary['total_refund'] += $refund_amt;
+            $audit_manual_summary['total_kurang_bayar'] += $kurang_bayar_amt;
 
             if ($refund_amt > 0) {
               $blok_name = trim((string)($ar['blok_name'] ?? ''));
               $row_selisih = (int)$manual_setoran - (int)$expected_setoran;
-              $row_selisih_adj = $row_selisih - $refund_amt;
+              $row_selisih_adj = $row_selisih - $refund_amt + $kurang_bayar_amt;
               $audit_refund_notes[] = [
                 'blok' => $blok_name !== '' ? $blok_name : 'Tanpa Blok',
                 'refund_amt' => $refund_amt,
                 'refund_desc' => $refund_desc,
+                'selisih_raw' => $row_selisih,
+                'selisih_adj' => $row_selisih_adj,
+              ];
+            }
+            if ($kurang_bayar_amt > 0) {
+              $blok_name = trim((string)($ar['blok_name'] ?? ''));
+              $row_selisih = (int)$manual_setoran - (int)$expected_setoran;
+              $row_selisih_adj = $row_selisih - $refund_amt + $kurang_bayar_amt;
+              $audit_kurang_bayar_notes[] = [
+                'blok' => $blok_name !== '' ? $blok_name : 'Tanpa Blok',
+                'kurang_bayar_amt' => $kurang_bayar_amt,
+                'kurang_bayar_desc' => $kurang_bayar_desc,
                 'selisih_raw' => $row_selisih,
                 'selisih_adj' => $row_selisih_adj,
               ];
@@ -496,7 +514,7 @@ $file_title = trim($file_title, '-_');
 <meta charset="utf-8">
 <title><?= htmlspecialchars($file_title); ?></title>
 <style>
-    body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 12mm; }
+    body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 7mm 12mm 3mm 12mm; }
     h1 { margin: 0 0 4mm 0; font-size: 16px; }
     .sub { font-size: 11px; color: #666; margin-bottom: 6mm; }
     .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 8mm; }
@@ -553,7 +571,7 @@ $file_title = trim($file_title, '-_');
 
       <?php
         $selisih_base = (int)($audit_manual_summary['selisih_setoran'] ?? 0);
-        $selisih_adj = $selisih_base - (int)($audit_manual_summary['total_refund'] ?? 0);
+        $selisih_adj = $selisih_base - (int)($audit_manual_summary['total_refund'] ?? 0) + (int)($audit_manual_summary['total_kurang_bayar'] ?? 0);
         $selisih = $selisih_adj;
         $ghost_hint = build_ghost_hint($audit_manual_summary['selisih_qty'], $selisih);
         $bg_status = $selisih < 0 ? '#fee2e2' : ($selisih > 0 ? '#dcfce7' : '#f3f4f6');
@@ -612,6 +630,7 @@ $file_title = trim($file_title, '-_');
       $actual_cash = (int)($audit_manual_summary['manual_setoran'] ?? 0);
       $actual_exp = (int)($audit_manual_summary['total_expenses'] ?? 0);
       $actual_refund = (int)($audit_manual_summary['total_refund'] ?? 0);
+      $actual_kurang_bayar = (int)($audit_manual_summary['total_kurang_bayar'] ?? 0);
     ?>
 
     <div class="section-title">Rekonsiliasi Pendapatan (Sistem vs Fisik)</div>
@@ -659,10 +678,17 @@ $file_title = trim($file_title, '-_');
           <td class="text-right" style="color:#6c5ce7;">(Rp <?= number_format($actual_refund,0,',','.') ?>)</td>
         </tr>
         <?php endif; ?>
+        <?php if ($actual_kurang_bayar > 0): ?>
+        <tr>
+          <td>(+) Kurang Bayar</td>
+          <td class="text-center" style="background:#eee;">-</td>
+          <td class="text-right" style="color:#16a34a;">Rp <?= number_format($actual_kurang_bayar,0,',','.') ?></td>
+        </tr>
+        <?php endif; ?>
         <tr class="bold">
           <td>(=) Total Uang Disetor</td>
           <td class="text-center" style="background:#eee;">-</td>
-          <td class="text-right">Rp <?= number_format(max(0, $actual_cash - $actual_exp - $actual_refund),0,',','.') ?></td>
+          <td class="text-right">Rp <?= number_format(max(0, $actual_cash - $actual_exp - $actual_refund + $actual_kurang_bayar),0,',','.') ?></td>
         </tr>
       </tbody>
     </table>
@@ -671,7 +697,7 @@ $file_title = trim($file_title, '-_');
     <div class="summary-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
     <div class="summary-card">
       <div class="summary-title">Setoran Bersih (Cash)</div>
-      <div class="summary-value">Rp <?= number_format(max(0, $audit_manual_summary['manual_setoran'] - $audit_manual_summary['total_expenses'] - ($audit_manual_summary['total_refund'] ?? 0)),0,',','.') ?></div>
+      <div class="summary-value">Rp <?= number_format(max(0, $audit_manual_summary['manual_setoran'] - $audit_manual_summary['total_expenses'] - ($audit_manual_summary['total_refund'] ?? 0) + ($audit_manual_summary['total_kurang_bayar'] ?? 0)),0,',','.') ?></div>
     </div>
     <?php if ($audit_manual_summary['total_expenses'] > 0): ?>
       <div class="summary-card">
@@ -686,6 +712,12 @@ $file_title = trim($file_title, '-_');
         <div class="summary-value" style="color:#6c5ce7;">Rp <?= number_format($audit_manual_summary['total_refund'],0,',','.') ?></div>
       </div>
     <?php endif; ?>
+    <?php if (!empty($audit_manual_summary['total_kurang_bayar'])): ?>
+      <div class="summary-card">
+        <div class="summary-title" style="color:#16a34a;">Kurang Bayar</div>
+        <div class="summary-value" style="color:#16a34a;">Rp <?= number_format($audit_manual_summary['total_kurang_bayar'],0,',','.') ?></div>
+      </div>
+    <?php endif; ?>
     <?php $system_net_total = (int)$sales_summary['net'] + (int)$pending_summary['net']; ?>
     <div class="summary-card">
       <div class="summary-title">Target Sistem (Audit)</div>
@@ -698,10 +730,6 @@ $file_title = trim($file_title, '-_');
     <div class="summary-card">
       <div class="summary-title">Selisih Uang</div>
       <div class="summary-value" style="color:<?= $text_color ?>;">Rp <?= number_format($selisih,0,',','.') ?></div>
-    </div>
-    <div class="summary-card">
-      <div class="summary-title">Selisih Qty</div>
-      <div class="summary-value" style="color:<?= $text_color ?>;"><?= number_format($audit_manual_summary['selisih_qty'],0,',','.') ?></div>
     </div>
     </div>
   <?php endif; ?>
@@ -727,7 +755,7 @@ $file_title = trim($file_title, '-_');
         <strong>Catatan Refund:</strong> Total refund tercatat Rp <?= number_format($audit_manual_summary['total_refund'],0,',','.') ?>.
         <?php if ($selisih != 0 && !empty($audit_refund_notes)): ?>
           <div style="margin-top:6px;">
-            <strong>Catatan Selisih (setelah refund):</strong>
+            <strong>Catatan Selisih (setelah refund/kurang bayar):</strong>
             <ul style="margin:6px 0 0 16px; padding:0;">
               <?php foreach ($audit_refund_notes as $rn): ?>
                 <?php if ((int)$rn['selisih_adj'] === 0) continue; ?>
@@ -735,6 +763,28 @@ $file_title = trim($file_title, '-_');
                   Blok <?= htmlspecialchars((string)$rn['blok']) ?>: Refund Rp <?= number_format((int)$rn['refund_amt'],0,',','.') ?>
                   <?php if (!empty($rn['refund_desc'])): ?>
                     (<?= htmlspecialchars($rn['refund_desc']) ?>)
+                  <?php endif; ?>
+                  — Selisih Rp <?= number_format((int)$rn['selisih_adj'],0,',','.') ?>
+                </li>
+              <?php endforeach; ?>
+            </ul>
+          </div>
+        <?php endif; ?>
+      </div>
+    <?php endif; ?>
+    <?php if (!empty($audit_manual_summary['total_kurang_bayar'])): ?>
+      <div style="margin-top:8px; padding:8px; border:1px solid #e5e7eb; background:#f8fafc; font-size:11px; color:#475569;">
+        <strong>Catatan Kurang Bayar:</strong> Total kurang bayar tercatat Rp <?= number_format($audit_manual_summary['total_kurang_bayar'],0,',','.') ?>.
+        <?php if ($selisih != 0 && !empty($audit_kurang_bayar_notes)): ?>
+          <div style="margin-top:6px;">
+            <strong>Catatan Selisih (setelah refund/kurang bayar):</strong>
+            <ul style="margin:6px 0 0 16px; padding:0;">
+              <?php foreach ($audit_kurang_bayar_notes as $rn): ?>
+                <?php if ((int)$rn['selisih_adj'] === 0) continue; ?>
+                <li>
+                  Blok <?= htmlspecialchars((string)$rn['blok']) ?>: Kurang Bayar Rp <?= number_format((int)$rn['kurang_bayar_amt'],0,',','.') ?>
+                  <?php if (!empty($rn['kurang_bayar_desc'])): ?>
+                    (<?= htmlspecialchars($rn['kurang_bayar_desc']) ?>)
                   <?php endif; ?>
                   — Selisih Rp <?= number_format((int)$rn['selisih_adj'],0,',','.') ?>
                 </li>
@@ -781,17 +831,17 @@ $file_title = trim($file_title, '-_');
     <div style="margin-top:30px; display:flex; justify-content:space-between; gap:16px;">
       <div style="width:30%; text-align:center;">
         Dibuat Oleh (Operator),
-        <div style="margin-top:100px; border-bottom:1px solid #000; margin-bottom:20px;"></div>
+        <div style="margin-top:80px; border-bottom:1px solid #000; margin-bottom:20px;"></div>
         <small>( tanda tangan & nama jelas )</small>
       </div>
       <div style="width:30%; text-align:center;">
         Diperiksa Oleh (Admin),
-        <div style="margin-top:100px; border-bottom:1px solid #000; margin-bottom:20px;"></div>
+        <div style="margin-top:80px; border-bottom:1px solid #000; margin-bottom:20px;"></div>
         <small>( tanda tangan & nama jelas )</small>
       </div>
     </div>
 
-    <div style="margin-top:20px; font-size:10px; color:#999; text-align:center;">
+    <div style="margin-top:30px; font-size:10px; color:#999; text-align:center;">
       Dicetak oleh Sistem Wartelpas pada <?= date('d-m-Y H:i:s') ?>
   </div>
 

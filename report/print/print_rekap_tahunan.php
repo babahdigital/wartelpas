@@ -49,6 +49,8 @@ $audit_system = [];
 $total_expenses_year = 0;
 $audit_refund = [];
 $total_refund_year = 0;
+$audit_kurang_bayar = [];
+$total_kurang_bayar_year = 0;
 $settled_dates = [];
 $pending_dates = [];
 $has_settlement_rows = false;
@@ -109,7 +111,7 @@ try {
             $phone_units[$d][$ut] = (int)($row['total_units'] ?? 0);
         }
 
-        $stmtAudit = $db->prepare("SELECT report_date, expected_setoran, actual_setoran, user_evidence, expenses_amt, refund_amt
+        $stmtAudit = $db->prepare("SELECT report_date, expected_setoran, actual_setoran, user_evidence, expenses_amt, refund_amt, kurang_bayar_amt
             FROM audit_rekap_manual
             WHERE report_date LIKE :y");
         $stmtAudit->execute([':y' => $filter_year . '%']);
@@ -120,16 +122,19 @@ try {
             [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($row);
             $expense = (int)($row['expenses_amt'] ?? 0);
             $refund_amt = (int)($row['refund_amt'] ?? 0);
+            $kurang_bayar_amt = (int)($row['kurang_bayar_amt'] ?? 0);
             $mm = substr($d, 5, 2);
             if (!isset($temp_expenses[$mm])) $temp_expenses[$mm] = 0;
             $temp_expenses[$mm] += $expense;
             $total_expenses_year += $expense;
             $total_refund_year += $refund_amt;
-            $net_cash_audit = (int)$manual_setoran - $expense - $refund_amt;
+            $total_kurang_bayar_year += $kurang_bayar_amt;
+            $net_cash_audit = (int)$manual_setoran - $expense - $refund_amt + $kurang_bayar_amt;
             $audit_net[$d] = (int)($audit_net[$d] ?? 0) + $net_cash_audit;
             $audit_refund[$d] = (int)($audit_refund[$d] ?? 0) + $refund_amt;
+            $audit_kurang_bayar[$d] = (int)($audit_kurang_bayar[$d] ?? 0) + $kurang_bayar_amt;
             $audit_system[$d] = (int)($audit_system[$d] ?? 0) + (int)$expected_adj_setoran;
-            $audit_selisih[$d] = (int)($audit_selisih[$d] ?? 0) + ((int)$manual_setoran - (int)$expected_adj_setoran - $refund_amt);
+            $audit_selisih[$d] = (int)($audit_selisih[$d] ?? 0) + ((int)$manual_setoran - (int)$expected_adj_setoran - $refund_amt + $kurang_bayar_amt);
         }
 
         if (table_exists($db, 'settlement_log')) {
@@ -488,6 +493,7 @@ $print_time = date('d-m-Y H:i:s');
         </div>
     <?php endif; ?>
 
+    <?php $show_kurang_bayar = $total_kurang_bayar_year > 0; ?>
     <div class="summary-grid">
         <div class="summary-card">
             <div class="summary-title">Total Omzet (Gross)</div>
@@ -497,14 +503,16 @@ $print_time = date('d-m-Y H:i:s');
             <div class="summary-title" style="color:#c0392b;">Voucher Loss</div>
             <div class="summary-value" style="color:#c0392b;"><?= $cur ?> <?= number_format((int)$total_voucher_loss,0,',','.') ?></div>
         </div>
-        <div class="summary-card" style="border-color:#f39c12;">
-            <div class="summary-title" style="color:#f39c12;">Pengeluaran Operasional</div>
-            <div class="summary-value" style="color:#f39c12;"><?= $cur ?> <?= number_format((int)$total_expenses_year,0,',','.') ?></div>
-        </div>
         <div class="summary-card" style="border-color:#c4b5fd;">
             <div class="summary-title" style="color:#6c5ce7;">Pengembalian</div>
             <div class="summary-value" style="color:#6c5ce7;"><?= $cur ?> <?= number_format((int)$total_refund_year,0,',','.') ?></div>
         </div>
+        <?php if ($show_kurang_bayar): ?>
+        <div class="summary-card" style="border-color:#86efac;">
+            <div class="summary-title" style="color:#16a34a;">Kurang Bayar</div>
+            <div class="summary-value" style="color:#16a34a;"><?= $cur ?> <?= number_format((int)$total_kurang_bayar_year,0,',','.') ?></div>
+        </div>
+        <?php endif; ?>
         <div class="summary-card" style="border-color:#1e3a8a;">
             <div class="summary-title">Pendapatan Bersih</div>
             <div class="summary-value" style="color:#1e3a8a;"><?= $cur ?> <?= number_format((int)$total_net,0,',','.') ?></div>
@@ -576,6 +584,10 @@ $print_time = date('d-m-Y H:i:s');
                     <?php if ($total_refund_year > 0): ?>
                         dan Total Pengembalian sebesar:
                         <b>Rp <?= number_format((int)$total_refund_year, 0, ',', '.') ?></b>
+                    <?php endif; ?>
+                    <?php if ($total_kurang_bayar_year > 0): ?>
+                        serta Total Kurang Bayar sebesar:
+                        <b>Rp <?= number_format((int)$total_kurang_bayar_year, 0, ',', '.') ?></b>
                     <?php endif; ?>
                 </td>
             </tr>
