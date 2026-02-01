@@ -201,6 +201,12 @@ Dokumen ini merangkum detail API Fonnte berdasarkan URL yang diberikan untuk keb
 
 ---
 
+## 3) Catatan Pembaruan (2026-02-02)
+- Tidak ada perubahan API Fonnte.
+- Alur kirim laporan setelah settlement dan fitur kirim 2 PDF tetap berlaku.
+
+---
+
 ## 3) Checklist Teknis Implementasi
 1) **Config**
    - Simpan token di env/ini (server-side).

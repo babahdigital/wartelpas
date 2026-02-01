@@ -258,6 +258,27 @@ Audit: RUSAK 26/01/26 vc-316-01.26.26-Blok-A10 | Blok-A10 | IP:172.16.12.146 | M
    - Rusak: 0
    - Invalid: 0
 
+## 16) Pembaruan Terbaru Laporan & Print (2026-02-02)
+### 16.1 Kurang Bayar
+- Nilai kurang bayar ditambahkan ke audit manual dan rekap (harian/bulanan/tahunan).
+- Setoran bersih memperhitungkan kurang bayar: **Net + Kurang Bayar**.
+
+### 16.2 Nama/Kamar (Login Meta)
+- Meta login (nama/kamar/blok/profil/harga) dikirim dari form login ke `login_meta_queue`.
+- Laporan/print melakukan fallback jika `login_history.customer_name/room_name` kosong.
+- Backfill tersedia via `report/laporan/services/backfill_meta.php` untuk mengisi data historis.
+
+### 16.3 Print Rincian & Deduplikasi
+- Sumber transaksi: `sales_history` + `live_sales` **pending**.
+- Deduplikasi menggunakan `full_raw_data`/`sale_datetime`.
+- Status transaksi konsisten dengan laporan (retur tidak menambah gross).
+- Ringkasan print rincian menampilkan **Total QTY, Total Omset, V10, V30, Total Rusak**.
+
+### 16.4 Rekap Bulanan/Tahunan
+- Normalisasi tanggal agar data bulan aktif terbaca (format raw_date/ISO).
+- Urut tanggal dari **muda → tua**.
+- Baris tanggal tidak valid disaring.
+
 ### 15.2 Rekap Rincian Penjualan (Harian)
 - Retur **menambah net** tetapi **tidak menambah qty** (untuk menghindari dobel hitung unit).
 - Rusak yang **sudah diretur** dianggap **0** pada kolom rusak (agar tidak membingungkan).

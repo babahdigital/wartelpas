@@ -224,3 +224,25 @@ WartelPas adalah aplikasi berbasis PHP untuk manajemen hotspot MikroTik dengan f
 
 ## 10) Status Dokumen
 Dokumen ini menyatukan **alur aplikasi**, **cara penggunaan**, dan **audit holistik** dalam satu referensi. Jika ada perubahan logika bisnis (terutama status, laporan, audit), dokumen ini **wajib diperbarui** agar konsisten.
+
+---
+
+## 11) Pembaruan Terbaru (2026-02-02)
+### 11.1 Kurang Bayar
+- Audit manual mendukung input **kurang bayar** (nilai + keterangan).
+- Rekap harian/bulanan/tahunan serta print audit menampilkan kurang bayar.
+- Setoran bersih memperhitungkan kurang bayar (net + kurang bayar).
+
+### 11.2 Login Meta (Nama & Kamar)
+- Form login hotspot mengirim meta **nama/kamar/blok/profil/harga** ke endpoint `login_meta.php`.
+- Data disimpan di `login_meta_queue` untuk fallback laporan/print.
+- **Backfill** tersedia via `report/laporan/services/backfill_meta.php` untuk mengisi data historis ke `login_history/sales_history/live_sales`.
+
+### 11.3 Print Rincian (Revisi)
+- Sumber transaksi sesuai laporan: `sales_history` + `live_sales` pending.
+- Deduplikasi berdasarkan `full_raw_data/sale_datetime`.
+- Ringkasan print rincian menampilkan **Total QTY, Total Omset, V10, V30, Total Rusak**.
+
+### 11.4 Rekap Bulanan/Tahunan
+- Normalisasi tanggal agar bulan aktif terbaca walau format raw_date berbeda.
+- Urutan tanggal dari muda ke tua, baris tanggal invalid disaring.

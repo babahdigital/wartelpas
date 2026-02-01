@@ -1173,3 +1173,38 @@ Jika ada tambahan perubahan atau aturan bisnis baru, dokumentasi ini akan diperb
 - [hotspot/user/actions.php](hotspot/user/actions.php)
 - [hotspot/user/helpers.php](hotspot/user/helpers.php)
 - [include/env.php](include/env.php)
+
+### 7.16 Pembaruan Laporan, Login Meta, dan Print (2026-02-02)
+- **Kurang bayar** ditambahkan end-to-end:
+  - Audit manual menyimpan `kurang_bayar_amt` + deskripsi.
+  - Rekap harian/bulanan/tahunan dan print audit menampilkan nilai kurang bayar.
+  - Setoran bersih memperhitungkan kurang bayar (net + kurang bayar).
+- **Input Nama & Kamar** pada login hotspot:
+  - Form login mengirim meta (nama/kamar/blok/profil/harga) ke endpoint `login_meta.php`.
+  - Data masuk ke `login_meta_queue` sebagai antrian sementara.
+  - Laporan/print melakukan fallback dari `login_meta_queue` jika `login_history` kosong.
+- **Backfill nama/kamar**:
+  - Service `report/laporan/services/backfill_meta.php` untuk mengisi `customer_name`/`room_name` ke `login_history`, `sales_history`, `live_sales`.
+  - Dipakai **sekali saat perlu**, bukan wajib berkala.
+- **Print rincian direwrite**:
+  - Sumber transaksi mengikuti laporan (sales_history + live_sales pending).
+  - Deduplikasi memakai `full_raw_data`/`sale_datetime` + filter blok.
+  - Status rusak/retur/invalid konsisten; retur tidak menambah gross.
+  - Ringkasan: **Total QTY, Total Omset, V10, V30, Total Rusak**.
+- **Rekap bulanan/tahunan**:
+  - Normalisasi tanggal (YYYY-MM-DD / raw_date) agar bulan aktif terbaca.
+  - Urutan tanggal dari **muda → tua**.
+  - Baris tanggal tidak valid (“0”) disaring.
+- **Manajemen Voucher & Print List**:
+  - Kolom **Nama** dan **Kamar** ditambahkan, menggantikan MAC/IP pada print list.
+
+**File terkait:**
+- [hotspot/user/login_meta.php](hotspot/user/login_meta.php)
+- [report/laporan/services/usage_ingest.php](report/laporan/services/usage_ingest.php)
+- [report/laporan/services/backfill_meta.php](report/laporan/services/backfill_meta.php)
+- [report/print/print_rincian.php](report/print/print_rincian.php)
+- [report/print/print_rekap_bulanan.php](report/print/print_rekap_bulanan.php)
+- [report/print/print_rekap_tahunan.php](report/print/print_rekap_tahunan.php)
+- [hotspot/user/data.php](hotspot/user/data.php)
+- [hotspot/user/render.php](hotspot/user/render.php)
+- [hotspot/print/print_list.php](hotspot/print/print_list.php)

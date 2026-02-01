@@ -96,6 +96,11 @@ API yang akan digunakan sesuai dokumentasi `DOKUMENTASI_WHATSAPP_FONNTE.md`.
 - Print list sudah tersedia untuk Refund/Retur/Semua.
 - Toggle fitur via `include/env.php` sudah tersedia.
 
+## Catatan Pembaruan (2026-02-02)
+- Fitur **login meta** (Nama/Kamar) tidak mengubah alur retur/refund.
+- Validasi rusak/retur tetap mengikuti aturan yang sama.
+- Backfill nama/kamar hanya untuk pelaporan, bukan untuk keputusan retur/refund.
+
 ---
 
 Jika dokumentasi ini disetujui, tahap implementasi akan mengikuti urutan di atas.
