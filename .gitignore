@@ -37,5 +37,7 @@ include/quickbt.php
 .vscode/
 .idea/
 /dev
-*.md
 wartelpas.code-workspace
+
+# Dokumen internal (jangan diunggah)
+DOKUMENTASI_*.md
