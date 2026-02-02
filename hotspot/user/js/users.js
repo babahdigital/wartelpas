@@ -1236,8 +1236,8 @@
       if (typeof data.total_label === 'string') totalBadge.textContent = data.total_label;
     } catch (e) {}
     finally {
-      if (showLoading && searchLoading) searchLoading.style.display = 'none';
-      if (showLoading && pageDim) pageDim.style.display = 'none';
+      if (searchLoading) searchLoading.style.display = 'none';
+      if (pageDim) pageDim.style.display = 'none';
     }
   }
 

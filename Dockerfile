@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y \
     git zip unzip sqlite3 libsqlite3-dev curl gnupg \
     && curl https://rclone.org/install.sh | bash \
     && docker-php-ext-install mysqli pdo pdo_sqlite opcache \
-    && a2enmod rewrite headers expires \
+    && a2enmod rewrite headers expires deflate \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # PHP production + OPcache
@@ -15,6 +15,8 @@ RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
     && echo "opcache.interned_strings_buffer=8" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
     && echo "opcache.max_accelerated_files=4000" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
     && echo "opcache.revalidate_freq=2" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
+    && echo "opcache.validate_timestamps=0" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
+    && echo "opcache.revalidate_freq=0" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
     && echo "opcache.fast_shutdown=1" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
     && echo "expose_php = Off" >> "$PHP_INI_DIR/php.ini"
 

@@ -1,4 +1,5 @@
 :root { --dark-bg: #1e2226; --dark-card: #2a3036; --input-bg: #343a40; --border-col: #495057; --txt-main: #ecf0f1; --txt-muted: #adb5bd; --c-blue: #3498db; --c-green: #2ecc71; --c-orange: #f39c12; --c-red: #e74c3c; }
+body { overflow-y: scroll; scrollbar-gutter: stable; }
 .card-solid { background: var(--dark-card); color: var(--txt-main); border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-radius: 8px; }
 .card-header-solid { background: #23272b; padding: 12px 20px; border-bottom: 2px solid var(--border-col); display: flex; justify-content: space-between; align-items: center; border-radius: 8px 8px 0 0; }
 .table-dark-solid { width: 100%; border-collapse: separate; border-spacing: 0; }
@@ -258,6 +259,23 @@
 .confirm-btn-secondary:hover { background: #505050; }
 .confirm-btn-warning { background: #ff9800; color: #fff; }
 .confirm-btn i.fa.fa-print.dul { margin-top:3px; position: relative; margin-right: 8px; }
+
+/* Stabilkan layout tabel user saat AJAX refresh */
+.users-table { table-layout: fixed; width: 100%; }
+.users-table th, .users-table td { overflow: hidden; text-overflow: ellipsis; }
+.users-table th:nth-child(1), .users-table td:nth-child(1) { width: 18%; }
+.users-table th:nth-child(2), .users-table td:nth-child(2) { width: 10%; }
+.users-table th:nth-child(3), .users-table td:nth-child(3) { width: 12%; }
+.users-table th:nth-child(4), .users-table td:nth-child(4) { width: 8%; }
+.users-table th:nth-child(5), .users-table td:nth-child(5) { width: 8%; }
+.users-table th:nth-child(6), .users-table td:nth-child(6) { width: 14%; }
+.users-table th:nth-child(7), .users-table td:nth-child(7) { width: 14%; }
+.users-table th:nth-child(8), .users-table td:nth-child(8) { width: 8%; }
+.users-table th:nth-child(9), .users-table td:nth-child(9) { width: 8%; }
+.users-table th:nth-child(10), .users-table td:nth-child(10) { width: 120px; }
+
+/* Stabilkan wrapper tabel agar tidak geser saat scrollbar muncul */
+.table-responsive { scrollbar-gutter: stable; }
 .relogin-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); z-index: 10002; }
 
 /* --- Tambahan Warna Tombol Rich UI --- */

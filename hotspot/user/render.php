@@ -313,7 +313,7 @@
           </div>
         <?php endif; ?>
         <div class="table-responsive">
-          <table class="table table-dark-solid table-hover text-nowrap">
+          <table class="table table-dark-solid table-hover text-nowrap users-table">
             <thead>
               <tr>
                 <th>Username <span class="text-muted">/ Ket</span></th>
