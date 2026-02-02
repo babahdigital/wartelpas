@@ -1170,6 +1170,33 @@ Jika ada tambahan perubahan atau aturan bisnis baru, dokumentasi ini akan diperb
 - [hotspot/user/css/users.css](hotspot/user/css/users.css)
 - [hotspot/user/js/users.js](hotspot/user/js/users.js)
 - [hotspot/user/render.php](hotspot/user/render.php)
+
+### 7.17 Perbaikan Error 500 Retur Request & Penyempurnaan Infrastruktur (2026-02-02)
+- **Fix Error 500 refund/retur dari login MikroTik**:
+  - Root cause: bentrok fungsi `env_get_value()` antara **hotspot/user/helpers.php** dan **report/laporan/helpers.php**.
+  - Solusi: hapus include report helper di **hotspot/user/retur_request.php** dan gunakan fallback `norm_date_from_raw_report` lokal.
+  - Ditambahkan logging untuk endpoint retur agar mudah debug.
+- **OPcache production**:
+  - Perubahan file PHP hanya aktif setelah **restart** (karena `opcache.validate_timestamps=0`).
+- **Nginx reverse proxy**:
+  - Gzip dan cache header statis ditambahkan pada server block Wartelpas.
+  - Catatan: aturan kompresi/cache efektif di Nginx (bukan .htaccess) saat memakai reverse proxy.
+- **.htaccess hardening**:
+  - Header keamanan tambahan dan blok metode TRACE/TRACK.
+- **Cekip.php**:
+  - Menampilkan status kompresi (gzip/brotli), `Accept-Encoding`, dan info modul/server.
+- **custom.ini**:
+  - Batas waktu diturunkan untuk menjaga endpoint responsif.
+  - Tambah `session.use_strict_mode` dan `session.cookie_httponly`.
+
+**File terkait:**
+- [hotspot/user/retur_request.php](hotspot/user/retur_request.php)
+- [hotspot/user/helpers.php](hotspot/user/helpers.php)
+- [report/laporan/helpers.php](report/laporan/helpers.php)
+- [dev/nginx-utama.conf](dev/nginx-utama.conf)
+- [.htaccess](.htaccess)
+- [cekip.php](cekip.php)
+- [custom.ini](custom.ini)
   - **Retur**: langsung **approve → retur** tanpa set RUSAK.
   - Aksi `retur_request_mark_rusak` dibatasi untuk refund saja.
 - **Kelayakan rusak transparan**:
