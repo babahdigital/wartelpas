@@ -13,6 +13,9 @@ $envFile = $root_dir . '/include/env.php';
 if (file_exists($envFile)) {
     require $envFile;
 }
+if (file_exists($root_dir . '/report/laporan/helpers.php')) {
+    require_once $root_dir . '/report/laporan/helpers.php';
+}
 $secret_token = $env['security']['tools']['token'] ?? ($env['backup']['secret'] ?? '');
 $key = $_GET['key'] ?? ($_POST['key'] ?? '');
 if ($key === '' && isset($_SERVER['HTTP_X_WARTELPAS_KEY'])) {
@@ -70,6 +73,9 @@ function restore_log($file, $message) {
 }
 
 function uptime_to_seconds_restore($uptime) {
+    if (function_exists('auto_rusak_uptime_to_seconds')) {
+        return auto_rusak_uptime_to_seconds($uptime);
+    }
     if (empty($uptime) || $uptime === '0s') return 0;
     $total = 0;
     if (preg_match_all('/(\d+)(w|d|h|m|s)/i', $uptime, $m, PREG_SET_ORDER)) {
@@ -88,6 +94,9 @@ function uptime_to_seconds_restore($uptime) {
 }
 
 function detect_profile_minutes_restore($validity, $raw_comment) {
+    if (function_exists('auto_rusak_profile_minutes')) {
+        return auto_rusak_profile_minutes($validity, $raw_comment);
+    }
     $src = strtolower(trim((string)$validity));
     $cmt = strtolower(trim((string)$raw_comment));
     $val = 0;
@@ -102,6 +111,22 @@ function detect_profile_minutes_restore($validity, $raw_comment) {
     }
     if (!in_array($val, [10, 30], true)) return 0;
     return $val;
+}
+
+function extract_login_minutes_restore(array $row, $date) {
+    if (function_exists('auto_rusak_login_minutes')) {
+        return auto_rusak_login_minutes($row, $date);
+    }
+    $fields = ['login_time_real', 'first_login_real', 'last_login_real', 'logout_time_real', 'updated_at'];
+    foreach ($fields as $f) {
+        $v = trim((string)($row[$f] ?? ''));
+        if ($v === '') continue;
+        $ts = strtotime($v);
+        if ($ts === false) continue;
+        if (date('Y-m-d', $ts) !== $date) continue;
+        return ((int)date('H', $ts)) * 60 + (int)date('i', $ts);
+    }
+    return null;
 }
 
 try {
@@ -125,7 +150,7 @@ try {
         }
     }
 
-    $stmt = $db->prepare("SELECT username, last_uptime, last_bytes, validity, raw_comment FROM login_history WHERE auto_rusak = 1 AND last_status = 'rusak'" . $dateClause . $whereBlok);
+    $stmt = $db->prepare("SELECT username, last_uptime, last_bytes, validity, raw_comment, login_time_real, first_login_real, last_login_real, logout_time_real, updated_at FROM login_history WHERE auto_rusak = 1 AND last_status = 'rusak'" . $dateClause . $whereBlok);
     $stmt->execute($params);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $users = [];
@@ -136,7 +161,7 @@ try {
     }
 
     if ((empty($users) && $force) || empty($users)) {
-        $stmt = $db->prepare("SELECT username, last_uptime, last_bytes, validity, raw_comment FROM login_history WHERE last_status = 'rusak'" . $dateClause . $whereBlok);
+        $stmt = $db->prepare("SELECT username, last_uptime, last_bytes, validity, raw_comment, login_time_real, first_login_real, last_login_real, logout_time_real, updated_at FROM login_history WHERE last_status = 'rusak'" . $dateClause . $whereBlok);
         $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $users = [];
@@ -150,18 +175,11 @@ try {
             $profile_minutes = detect_profile_minutes_restore($row['validity'] ?? '', $row['raw_comment'] ?? '');
             if ($profile_minutes <= 0) continue;
             $uptime = (string)($row['last_uptime'] ?? '');
-            $uptime_sec = uptime_to_seconds_restore($uptime);
             $bytes_raw = (int)($row['last_bytes'] ?? 0);
-            $bytes = $bytes_raw;
-            if ($bytes > 0 && $bytes < 1024 * 1024 && $bytes <= 1024) {
-                $bytes = $bytes * 1024 * 1024;
-            }
-            $bytes_threshold_short = 3 * 1024 * 1024;
-            $short_uptime_limit = 5 * 60;
-            $bytes_threshold_full = ($profile_minutes === 10) ? (3 * 1024 * 1024) : (5 * 1024 * 1024);
-            $is_full_uptime = $uptime_sec >= ($profile_minutes * 60);
-            $is_short_use = ($uptime_sec > 0 && $uptime_sec <= $short_uptime_limit);
-            $should_rusak = (($is_full_uptime && $bytes < $bytes_threshold_full) || ($is_short_use && $bytes < $bytes_threshold_short));
+            $login_minutes = extract_login_minutes_restore($row, $date);
+            $should_rusak = function_exists('auto_rusak_should_rusak')
+                ? auto_rusak_should_rusak($profile_minutes, $uptime, $bytes_raw, $login_minutes)
+                : false;
             if ($fix) {
                 if (!$should_rusak) {
                     $users[] = $uname;

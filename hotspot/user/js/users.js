@@ -1234,6 +1234,9 @@
       if (typeof data.rows_html === 'string') tbody.innerHTML = data.rows_html;
       if (typeof data.pagination_html === 'string') paginationWrap.innerHTML = data.pagination_html;
       if (typeof data.total_label === 'string') totalBadge.textContent = data.total_label;
+      if (!canAutoRefresh() && activeBadge) {
+        activeBadge.textContent = 'Online: 0 User';
+      }
     } catch (e) {}
     finally {
       if (searchLoading) searchLoading.style.display = 'none';

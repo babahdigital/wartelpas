@@ -413,7 +413,7 @@ if ($db) {
 // Tambahkan data history-only agar TERPAKAI/RUSAK/RETUR tetap tampil
 if ($db) {
   try {
-    $need_history = in_array(strtolower($req_status), ['used','rusak','retur','all']) || trim($req_search) !== '';
+    $need_history = in_array(strtolower($req_status), ['used','used_warn','rusak','retur','all']) || trim($req_search) !== '';
     if ($need_history) {
       $res = $db->query("SELECT username, raw_comment, last_status, last_bytes, last_uptime, ip_address, mac_address, blok_name, validity FROM login_history WHERE username IS NOT NULL AND username != ''");
       $existing = [];
@@ -461,6 +461,7 @@ if ($db) {
         if ($h_status === 'READY') continue;
         if (in_array($req_status, ['used','retur','all'], true) && isset($retur_ref_map[strtolower($uname)])) continue;
         if ($req_status === 'used' && !in_array($h_status, ['TERPAKAI','RETUR','RUSAK'])) continue;
+        if ($req_status === 'used_warn' && $h_status !== 'TERPAKAI') continue;
         if ($req_status === 'rusak' && $h_status !== 'RUSAK') continue;
         if ($req_status === 'retur' && $h_status !== 'RETUR') continue;
         $all_users[] = [
@@ -978,6 +979,7 @@ foreach($all_users as $u) {
     if ($req_status == 'all' && in_array($status, ['READY','VIP'], true) && trim((string)$req_search) === '') continue;
     if ($req_status == 'online' && $status !== 'ONLINE') continue;
     if ($req_status == 'used' && !in_array($status, ['TERPAKAI','RETUR','RUSAK'])) continue;
+    if ($req_status == 'used_warn' && $status !== 'TERPAKAI') continue;
     if ($req_status == 'rusak' && $status !== 'RUSAK') continue;
     if ($req_status == 'retur' && $status !== 'RETUR') continue;
     if ($req_status == 'invalid') continue;
@@ -1029,6 +1031,31 @@ foreach($all_users as $u) {
       $profile_label_display = 'Lainnya';
     }
 
+    $terpakai_warning = false;
+    if ($status === 'TERPAKAI') {
+      $profile_minutes = function_exists('auto_rusak_profile_minutes') ? auto_rusak_profile_minutes($hist['validity'] ?? '', $hist['raw_comment'] ?? '') : 0;
+      if ($profile_minutes <= 0 && function_exists('auto_rusak_profile_minutes')) {
+        $profile_minutes = auto_rusak_profile_minutes($profile_label_display, $comment);
+      }
+      if ($profile_minutes <= 0 && in_array($profile_kind_final, ['10', '30'], true)) {
+        $profile_minutes = (int)$profile_kind_final;
+      }
+      if ($profile_minutes > 0) {
+        $bytes_eval = function_exists('auto_rusak_normalize_bytes') ? auto_rusak_normalize_bytes($bytes) : (int)$bytes;
+        $uptime_sec = function_exists('uptime_to_seconds') ? uptime_to_seconds($uptime) : 0;
+        $bytes_threshold = ($profile_minutes === 10) ? (2 * 1024 * 1024) : (3 * 1024 * 1024);
+        $is_full_uptime = $uptime_sec >= ($profile_minutes * 60);
+        $is_short_use = ($uptime_sec > 0 && $uptime_sec <= 5 * 60);
+        if ($bytes_eval > 0 && $bytes_eval < $bytes_threshold && ($is_full_uptime || $is_short_use)) {
+          $terpakai_warning = true;
+        }
+      }
+    }
+
+    if ($req_status == 'used_warn' && !$terpakai_warning) {
+      continue;
+    }
+
     $customer_name = $hist['customer_name'] ?? '';
     $room_name = $hist['room_name'] ?? '';
     if ($customer_name === '' || $room_name === '') {
@@ -1066,7 +1093,8 @@ foreach($all_users as $u) {
         'logout_time' => $logout_disp,
         'last_used' => $last_used_disp,
         'relogin' => $relogin_flag,
-        'relogin_count' => $relogin_count
+        'relogin_count' => $relogin_count,
+        'terpakai_warning' => $terpakai_warning
     ];
 }
 $profile_totals = [];
@@ -1238,7 +1266,7 @@ if ($is_ajax) {
           <?php elseif($u['status'] === 'RUSAK'): ?><span class="status-badge st-rusak">RUSAK</span>
           <?php elseif($u['status'] === 'INVALID'): ?><span class="status-badge st-invalid">INVALID</span>
           <?php elseif($u['status'] === 'RETUR'): ?><span class="status-badge st-retur">RETUR</span>
-          <?php elseif($u['status'] === 'TERPAKAI'): ?><span class="status-badge st-used">TERPAKAI</span>
+          <?php elseif($u['status'] === 'TERPAKAI'): ?><span class="status-badge <?= !empty($u['terpakai_warning']) ? 'st-used-warn' : 'st-used'; ?>">TERPAKAI</span>
           <?php elseif($u['status'] === 'VIP'): ?><span class="status-badge st-vip">PENGELOLA</span>
           <?php else: ?><span class="status-badge st-ready">READY</span>
           <?php endif; ?>

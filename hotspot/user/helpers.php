@@ -1,4 +1,8 @@
 <?php
+$_auto_rusak = dirname(__DIR__, 2) . '/include/auto_rusak.php';
+if (file_exists($_auto_rusak)) {
+  require_once $_auto_rusak;
+}
 // Helper: Format comment untuk display
 if (!function_exists('format_comment_display')) {
   function format_comment_display($comment) {

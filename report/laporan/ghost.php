@@ -64,8 +64,17 @@ if (table_exists($db, 'audit_rekap_manual')) {
 }
 
 $min_bytes_threshold = (int)($system_cfg['ghost_min_bytes'] ?? 51200);
+$min_uptime_threshold = (int)($system_cfg['ghost_min_uptime'] ?? 0);
+if ($min_uptime_threshold > 0 && $min_uptime_threshold <= 300) {
+    $min_uptime_threshold = $min_uptime_threshold * 60;
+}
+$exclude_close_window = false;
+if (isset($system_cfg['ghost_exclude_close_window'])) {
+    $val = $system_cfg['ghost_exclude_close_window'];
+    $exclude_close_window = ($val === true || $val === 1 || $val === '1' || $val === 'true');
+}
 $suspects = function_exists('get_ghost_suspects')
-    ? get_ghost_suspects($db, $g_date, $g_blok_norm, $reported_users, $min_bytes_threshold)
+    ? get_ghost_suspects($db, $g_date, $g_blok_norm, $reported_users, $min_bytes_threshold, $min_uptime_threshold, $exclude_close_window)
     : [];
 
 echo json_encode([
@@ -74,6 +83,8 @@ echo json_encode([
         'date' => $g_date,
         'blok' => $g_blok_norm,
         'threshold' => format_bytes_short($min_bytes_threshold),
+        'min_uptime' => $min_uptime_threshold,
+        'exclude_close_window' => $exclude_close_window,
         'whitelist_count' => count($reported_users)
     ],
     'count' => count($suspects),

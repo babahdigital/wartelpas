@@ -6,6 +6,9 @@ body { overflow-y: scroll; scrollbar-gutter: stable; }
 .table-dark-solid th { background: #1b1e21; padding: 12px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--txt-muted); border-bottom: 2px solid var(--border-col); }
 .table-dark-solid td { padding: 12px; border-bottom: 1px solid #3a4046; vertical-align: middle; font-size: 0.9rem; }
 .table-dark-solid tr:hover td { background: #32383e; }
+.status-legend { display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; padding:10px 16px; background:#23272b; border-bottom:1px solid var(--border-col); font-size:11px; color:var(--txt-muted); }
+.status-legend .legend-item { display:flex; align-items:center; gap:6px; }
+.status-legend .status-badge { font-size:9px; padding:3px 7px; }
 .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
 .st-online { background: #3498db; color: white; }
 .st-ready { background: #4b545c; color: #ccc; border: 1px solid #6c757d; }
@@ -13,6 +16,7 @@ body { overflow-y: scroll; scrollbar-gutter: stable; }
 .st-invalid { background: var(--c-red); color: #fff; }
 .st-retur { background: #8e44ad; color: #fff; }
 .st-used { background: #17a2b8; color: #fff; }
+.st-used-warn { background: #f1c40f; color: #111; }
 .st-vip { background: #f1c40f; color: #111; border: 1px solid #d4ac0d; }
 .st-relogin { background: #9b59b6; color: #fff; }
 .st-relogin.clickable { cursor: pointer; }

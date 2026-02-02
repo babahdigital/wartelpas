@@ -32,6 +32,7 @@ body { overflow-x: hidden; }
 .st-normal { background: #4b545c; color: #ccc; border: 1px solid #6c757d; }
 .st-retur { background: #8e44ad; color: #fff; }
 .st-rusak { background: var(--c-orange); color: #fff; }
+.st-terpakai { background: #f1c40f; color: #111; }
 .st-invalid { background: var(--c-red); color: #fff; }
 .filter-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .filter-bar select, .filter-bar input { background: #343a40; border: 1px solid var(--border-col); color: #fff; padding: 6px 10px; border-radius: 6px; }

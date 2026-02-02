@@ -101,8 +101,21 @@
     <div class="card card-solid">
       <div class="card-header-solid">
         <h3 class="card-title m-0"><i class="fa fa-users mr-2"></i> Manajemen Voucher</h3>
-        <span id="users-total" class="badge badge-secondary p-2" style="font-size:14px">Total: <?= $total_items ?> Items</span>
-        <span id="users-active" class="badge badge-info p-2" style="font-size:14px;margin-left:6px;">Online: -</span>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+          <span id="users-total" class="badge badge-secondary p-2" style="font-size:14px">Total: <?= $total_items ?> Items</span>
+          <span id="users-active" class="badge badge-info p-2" style="font-size:14px;">Online: 0 User</span>
+        </div>
+      </div>
+      <div class="status-legend">
+        <div class="legend-item"><span class="status-badge st-online">ONLINE</span><span>Online</span></div>
+        <div class="legend-item"><span class="status-badge st-ready">READY</span><span>Voucher</span></div>
+        <div class="legend-item"><span class="status-badge st-used">TERPAKAI</span><span>Terpakai</span></div>
+        <div class="legend-item"><span class="status-badge st-used-warn">TERPAKAI</span><span>Terpakai (perlu cek)</span></div>
+        <div class="legend-item"><span class="status-badge st-rusak">RUSAK</span><span>Rusak</span></div>
+        <div class="legend-item"><span class="status-badge st-retur">RETUR</span><span>Retur</span></div>
+        <div class="legend-item"><span class="status-badge st-invalid">INVALID</span><span>Invalid</span></div>
+        <div class="legend-item"><span class="status-badge st-vip">PENGELOLA</span><span>Pengelola</span></div>
+        <div class="legend-item"><span class="status-badge st-relogin">RELOGIN</span><span>Relogin</span></div>
       </div>
       <div class="toolbar-container">
         <form action="?" method="GET" class="toolbar-row m-0" id="users-toolbar-form">
@@ -122,6 +135,7 @@
                 <option value="vip" <?=($req_status=='vip'?'selected':'')?>>🟡 Pengelola</option>
                 <option value="online" <?=($req_status=='online'?'selected':'')?>>🔵 Online</option>
                 <option value="used" <?=($req_status=='used'?'selected':'')?>>⚪ Terpakai</option>
+                <option value="used_warn" <?=($req_status=='used_warn'?'selected':'')?>>🟡 Terpakai (Perlu Cek)</option>
                 <option value="rusak" <?=($req_status=='rusak'?'selected':'')?>>🟠 Rusak / Error</option>
                 <option value="retur" <?=($req_status=='retur'?'selected':'')?>>🟣 Hasil Retur</option>
               </select>
@@ -385,7 +399,7 @@
                         <?php elseif($u['status'] === 'RUSAK'): ?><span class="status-badge st-rusak">RUSAK</span>
                         <?php elseif($u['status'] === 'INVALID'): ?><span class="status-badge st-invalid">INVALID</span>
                         <?php elseif($u['status'] === 'RETUR'): ?><span class="status-badge st-retur">RETUR</span>
-                        <?php elseif($u['status'] === 'TERPAKAI'): ?><span class="status-badge st-used">TERPAKAI</span>
+                        <?php elseif($u['status'] === 'TERPAKAI'): ?><span class="status-badge <?= !empty($u['terpakai_warning']) ? 'st-used-warn' : 'st-used'; ?>">TERPAKAI</span>
                         <?php elseif($u['status'] === 'VIP'): ?><span class="status-badge st-vip">PENGELOLA</span>
                         <?php else: ?><span class="status-badge st-ready">READY</span>
                         <?php endif; ?>

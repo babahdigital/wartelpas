@@ -175,6 +175,9 @@ function append_parsed_router_logs($rawLogs, $date, $triggeredTs, &$logs, &$done
 }
 
 function uptime_to_seconds_manual($uptime) {
+    if (function_exists('auto_rusak_uptime_to_seconds')) {
+        return auto_rusak_uptime_to_seconds($uptime);
+    }
     if (empty($uptime) || $uptime === '0s') return 0;
     $total = 0;
     if (preg_match_all('/(\d+)(w|d|h|m|s)/i', $uptime, $m, PREG_SET_ORDER)) {
@@ -193,6 +196,9 @@ function uptime_to_seconds_manual($uptime) {
 }
 
 function detect_profile_minutes_manual($validity, $raw_comment) {
+    if (function_exists('auto_rusak_profile_minutes')) {
+        return auto_rusak_profile_minutes($validity, $raw_comment);
+    }
     $src = strtolower(trim((string)$validity));
     $cmt = strtolower(trim((string)$raw_comment));
     $val = 0;
@@ -209,14 +215,29 @@ function detect_profile_minutes_manual($validity, $raw_comment) {
     return $val;
 }
 
+function extract_login_minutes_manual(array $row, $date) {
+    if (function_exists('auto_rusak_login_minutes')) {
+        return auto_rusak_login_minutes($row, $date);
+    }
+    $fields = ['login_time_real', 'first_login_real', 'last_login_real', 'logout_time_real', 'updated_at'];
+    foreach ($fields as $f) {
+        $v = trim((string)($row[$f] ?? ''));
+        if ($v === '') continue;
+        $ts = strtotime($v);
+        if ($ts === false) continue;
+        if (date('Y-m-d', $ts) !== $date) continue;
+        return ((int)date('H', $ts)) * 60 + (int)date('i', $ts);
+    }
+    return null;
+}
+
 function apply_auto_rusak_settlement($db, $date, $logFile) {
     if (!$db || $date === '') return 0;
-    $short_uptime_limit = 5 * 60;
     $dateClause = " AND (login_date = :d OR substr(first_login_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR substr(login_time_real,1,10) = :d OR substr(logout_time_real,1,10) = :d OR substr(updated_at,1,10) = :d)";
     $params = [':d' => $date];
     $rows = [];
     try {
-        $stmt = $db->prepare("SELECT username, last_uptime, last_bytes, last_status, validity, raw_comment FROM login_history WHERE last_status NOT IN ('rusak','retur','invalid','online') AND last_uptime IS NOT NULL AND last_uptime != '' " . $dateClause);
+        $stmt = $db->prepare("SELECT username, last_uptime, last_bytes, last_status, validity, raw_comment, login_time_real, first_login_real, last_login_real, logout_time_real, updated_at FROM login_history WHERE last_status NOT IN ('rusak','retur','invalid','online') AND last_uptime IS NOT NULL AND last_uptime != '' " . $dateClause);
         $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
@@ -230,17 +251,12 @@ function apply_auto_rusak_settlement($db, $date, $logFile) {
         $profile_minutes = detect_profile_minutes_manual($row['validity'] ?? '', $row['raw_comment'] ?? '');
         if ($profile_minutes <= 0) continue;
         $uptime = (string)($row['last_uptime'] ?? '');
-        $uptime_sec = uptime_to_seconds_manual($uptime);
         $bytes_raw = (int)($row['last_bytes'] ?? 0);
-        $bytes = $bytes_raw;
-        if ($bytes > 0 && $bytes < 1024 * 1024 && $bytes <= 1024) {
-            $bytes = $bytes * 1024 * 1024;
-        }
-        $is_full_uptime = $uptime_sec >= ($profile_minutes * 60);
-        $is_short_use = ($uptime_sec > 0 && $uptime_sec <= $short_uptime_limit);
-        $bytes_threshold_full = ($profile_minutes === 10) ? (2 * 1024 * 1024) : (3 * 1024 * 1024);
-        $bytes_threshold_short = $bytes_threshold_full;
-        if (($is_full_uptime && $bytes < $bytes_threshold_full) || ($is_short_use && $bytes < $bytes_threshold_short)) {
+        $login_minutes = extract_login_minutes_manual($row, $date);
+        $should_rusak = function_exists('auto_rusak_should_rusak')
+            ? auto_rusak_should_rusak($profile_minutes, $uptime, $bytes_raw, $login_minutes)
+            : (($uptime !== '' && $bytes_raw > 0 && $profile_minutes > 0) ? false : false);
+        if ($should_rusak) {
             try {
             $stmtU = $db->prepare("UPDATE login_history SET last_status='rusak', auto_rusak=1, updated_at=CURRENT_TIMESTAMP WHERE username = :u");
                 $stmtU->execute([':u' => $uname]);
@@ -620,38 +636,7 @@ if ($action === 'logs') {
         } catch (Exception $e) {}
     }
 
-    if ($status === 'done' && function_exists('wa_send_file')) {
-        try {
-            $stmtW = $db->prepare("SELECT wa_report_sent_at, wa_report_status FROM settlement_log WHERE report_date = :d LIMIT 1");
-            $stmtW->execute([':d' => $date]);
-            $wrow = $stmtW->fetch(PDO::FETCH_ASSOC) ?: [];
-            $sentAt = (string)($wrow['wa_report_sent_at'] ?? '');
-            $sentStatus = (string)($wrow['wa_report_status'] ?? '');
-            if ($sentAt === '' && $sentStatus === '') {
-                $pdfDir = $root_dir . '/report/pdf';
-                $pdfFile = find_report_pdf_for_date($pdfDir, $date);
-                $msgDate = format_report_date_dmy($date);
-                $msg = 'Laporan Settlement Harian ' . $msgDate;
-                if ($pdfFile !== '') {
-                    $res = wa_send_file($msg, $pdfFile, '', 'report');
-                    $statusText = $res['ok'] ? 'success' : ('failed: ' . ($res['message'] ?? 'error'));
-                } else {
-                    $statusText = 'failed: file PDF tidak ditemukan';
-                }
-                $stmtWU = $db->prepare("UPDATE settlement_log SET wa_report_status = :s, wa_report_sent_at = CASE WHEN :ok = 1 THEN CURRENT_TIMESTAMP ELSE wa_report_sent_at END WHERE report_date = :d");
-                $stmtWU->execute([
-                    ':s' => $statusText,
-                    ':ok' => (strpos($statusText, 'success') !== false) ? 1 : 0,
-                    ':d' => $date
-                ]);
-                if (strpos($statusText, 'success') !== false) {
-                    append_settlement_log($logFile, 'system,info', 'WA REPORT: terkirim ' . basename($pdfFile));
-                } else {
-                    append_settlement_log($logFile, 'system,warning', 'WA REPORT: ' . $statusText);
-                }
-            }
-        } catch (Exception $e) {}
-    }
+    // Auto send WhatsApp report removed (manual send still available via wa_report action).
 
     $info_message = '';
     if ($elapsed > 120 && !$done && !$fail) {

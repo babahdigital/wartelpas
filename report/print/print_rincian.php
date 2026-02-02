@@ -540,6 +540,7 @@ if ($req_show === 'bulanan') {
         .summary-pill { border:1px solid #999; border-radius:6px; padding:6px 10px; background:#f8f8f8; font-size:12px; }
         .row-rusak { background:#f8d7da; }
         .row-retur { background:#d1e7dd; }
+        .row-terpakai { background:#fff3cd; }
         table { width:100%; border-collapse:collapse; font-size:12px; }
         th, td { border:1px solid #d1d5db; padding:6px 8px; }
         th { background:#f3f4f6; text-align:center; }
@@ -586,6 +587,7 @@ if ($req_show === 'bulanan') {
                     $row_cls = '';
                     if ($st_row === 'rusak') $row_cls = 'row-rusak';
                     elseif ($st_row === 'retur') $row_cls = 'row-retur';
+                    elseif ($st_row === 'terpakai') $row_cls = 'row-terpakai';
                 ?>
                 <tr class="<?= $row_cls ?>">
                     <td class="text-center"><?= htmlspecialchars(format_time_only_local($it['login'] ?: $it['logout'])) ?></td>
@@ -626,6 +628,7 @@ if ($req_show === 'bulanan') {
                     $row_cls = '';
                     if ($st_row === 'rusak') $row_cls = 'row-rusak';
                     elseif ($st_row === 'retur') $row_cls = 'row-retur';
+                    elseif ($st_row === 'terpakai') $row_cls = 'row-terpakai';
                 ?>
                 <tr class="<?= $row_cls ?>">
                     <td class="text-center"><?= htmlspecialchars($it['time'] ?: '-') ?></td>

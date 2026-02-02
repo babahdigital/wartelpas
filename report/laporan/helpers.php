@@ -1,5 +1,10 @@
 <?php
 
+$auto_rusak_file = dirname(__DIR__, 2) . '/include/auto_rusak.php';
+if (file_exists($auto_rusak_file)) {
+    require_once $auto_rusak_file;
+}
+
 if (!function_exists('split_sales_raw')) {
     function split_sales_raw($raw) {
         $raw = (string)$raw;
@@ -448,7 +453,7 @@ function parse_reported_users_from_audit($row) {
     return array_values($uniq);
 }
 
-function get_ghost_suspects(PDO $db, $audit_date, $audit_blok, array $reported_users = [], $min_bytes = 51200) {
+function get_ghost_suspects(PDO $db, $audit_date, $audit_blok, array $reported_users = [], $min_bytes = 51200, $min_uptime = 0, $exclude_close_window = false) {
     $audit_date = trim((string)$audit_date);
     $audit_blok = normalize_block_name($audit_blok);
     $reported_map = [];
@@ -456,7 +461,7 @@ function get_ghost_suspects(PDO $db, $audit_date, $audit_blok, array $reported_u
         $reported_map[strtolower((string)$u)] = true;
     }
     $suspects = [];
-    $stmt = $db->prepare("SELECT username, blok_name, raw_comment, validity, last_status, last_bytes, last_uptime, login_time_real, last_login_real, logout_time_real, first_login_real, updated_at, first_ip, first_mac, last_ip, last_mac
+    $stmt = $db->prepare("SELECT username, blok_name, raw_comment, validity, last_status, last_bytes, last_uptime, login_time_real, last_login_real, logout_time_real, first_login_real, updated_at, first_ip, first_mac, last_ip, last_mac, auto_rusak
         FROM login_history
         WHERE username != '' AND (
             substr(login_time_real,1,10) = :d OR
@@ -475,14 +480,29 @@ function get_ghost_suspects(PDO $db, $audit_date, $audit_blok, array $reported_u
         if ($blok !== $audit_blok) continue;
 
         $status = strtolower((string)($row['last_status'] ?? ''));
+        if (in_array($status, ['rusak', 'retur', 'invalid'], true)) continue;
+        if ((int)($row['auto_rusak'] ?? 0) === 1) continue;
 
         $bytes = (int)($row['last_bytes'] ?? 0);
         $uptime = (string)($row['last_uptime'] ?? '');
+        $uptime_sec = function_exists('auto_rusak_uptime_to_seconds') ? auto_rusak_uptime_to_seconds($uptime) : 0;
         $has_login_time = !empty($row['login_time_real']) || !empty($row['last_login_real']) || !empty($row['logout_time_real']) || !empty($row['first_login_real']);
         $has_usage = $bytes > 0 || ($uptime !== '' && $uptime !== '0s') || $has_login_time;
         if (!$has_usage) continue;
 
-        if ($bytes < $min_bytes && !$has_login_time && ($uptime === '' || $uptime === '0s')) continue;
+        if ($min_uptime < 0) $min_uptime = 0;
+        if ($bytes < $min_bytes && $uptime_sec < $min_uptime && !$has_login_time) continue;
+
+        if ($exclude_close_window && function_exists('auto_rusak_profile_minutes') && function_exists('auto_rusak_login_minutes')) {
+            $profile_minutes = auto_rusak_profile_minutes($row['validity'] ?? '', $row['raw_comment'] ?? '');
+            if ($profile_minutes > 0) {
+                $login_minutes = auto_rusak_login_minutes($row, $audit_date);
+                $close_window_start = ($profile_minutes === 10) ? (17 * 60 + 55) : (17 * 60 + 45);
+                if ($login_minutes !== null && $login_minutes >= $close_window_start) {
+                    continue;
+                }
+            }
+        }
 
         $profile_label = (string)($row['validity'] ?? '');
         $profile_kind = detect_profile_kind_from_label($profile_label);
@@ -509,6 +529,12 @@ function get_ghost_suspects(PDO $db, $audit_date, $audit_blok, array $reported_u
         if ($ip === '') $ip = '-';
         if ($mac === '') $mac = '-';
 
+        $reasons = [];
+        if ($bytes >= $min_bytes) $reasons[] = 'Pemakaian data terdeteksi';
+        if ($min_uptime > 0 && $uptime_sec >= $min_uptime) $reasons[] = 'Uptime terdeteksi';
+        if ($has_login_time) $reasons[] = 'Ada waktu login/logout';
+        if ($status === 'online') $reasons[] = 'Masih tercatat online';
+
         $suspects[] = [
             'username' => $username,
             'profile' => $profile_label !== '' ? $profile_label : ($profile_kind === '30' ? '30 Menit' : '10 Menit'),
@@ -520,7 +546,8 @@ function get_ghost_suspects(PDO $db, $audit_date, $audit_blok, array $reported_u
             'ip' => $ip,
             'mac' => $mac,
             'confidence' => $score,
-            'blok' => $blok
+            'blok' => $blok,
+            'reasons' => $reasons
         ];
     }
     usort($suspects, function($a, $b){ return ($b['confidence'] ?? 0) <=> ($a['confidence'] ?? 0); });

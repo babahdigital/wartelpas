@@ -1266,6 +1266,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                                     $is_replaced = $u_name !== '' && isset($retur_ref_map[$u_name]);
                                     $st_label = strtoupper($st);
                                     $cls = 'st-normal';
+                                    $style = '';
                                     if ($st === 'rusak') {
                                         $cls = 'st-rusak';
                                         if ($is_replaced) {
@@ -1275,11 +1276,14 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                                     } elseif ($st === 'retur') {
                                         $cls = 'st-retur';
                                         $st_label = 'RETUR (PENGGANTI)';
+                                    } elseif ($st === 'terpakai') {
+                                        $cls = 'st-terpakai';
+                                        $style = 'background:#f1c40f;color:#111;';
                                     } elseif ($st === 'invalid') {
                                         $cls = 'st-invalid';
                                     }
                                 ?>
-                                <span class="status-badge <?= $cls; ?>"><?= htmlspecialchars($st_label) ?></span>
+                                <span class="status-badge <?= $cls; ?>" style="<?= $style; ?>"><?= htmlspecialchars($st_label) ?></span>
                             </td>
                             <td class="text-right"><?= number_format($it['price'],0,',','.') ?></td>
                             <td class="text-right"><?= htmlspecialchars(format_bytes_short((int)($it['bytes'] ?? 0))) ?></td>
