@@ -61,6 +61,21 @@ $price_raw = trim((string)($payload['price'] ?? $payload['harga'] ?? ''));
 $price_val = is_numeric($price_raw) ? (int)$price_raw : 0;
 $session_id = trim((string)($payload['session'] ?? ''));
 
+if ($session_id === '') {
+    $configFile = $root_dir . '/include/config.php';
+    if (file_exists($configFile)) {
+        require $configFile;
+        if (isset($data) && is_array($data)) {
+            foreach ($data as $k => $_v) {
+                if ($k !== 'mikhmon') {
+                    $session_id = $k;
+                    break;
+                }
+            }
+        }
+    }
+}
+
 if ($voucher_code === '' || strlen($voucher_code) < 3 || strlen($voucher_code) > 64) {
     echo json_encode(['ok' => false, 'message' => 'Kode voucher tidak valid.']);
     exit;

@@ -60,6 +60,7 @@ if (!$retur_enabled) {
 
 $payload = $_SERVER['REQUEST_METHOD'] === 'GET' ? $_GET : $_POST;
 $session_param = trim((string)($payload['session'] ?? ''));
+$session_param = $session_param !== '' ? $session_param : '';
 $request_type = trim((string)($payload['request_type'] ?? 'retur'));
 $request_type = in_array($request_type, ['retur', 'pengembalian'], true) ? $request_type : 'retur';
 $voucher_code = trim((string)($payload['voucher_code'] ?? ''));
@@ -68,6 +69,21 @@ $contact_phone = trim((string)($payload['contact_phone'] ?? ''));
 $blok_name = trim((string)($payload['blok_name'] ?? ''));
 $customer_name = trim((string)($payload['user_name'] ?? $payload['customer_name'] ?? ''));
 $profile_name = trim((string)($payload['profile_name'] ?? $payload['profile'] ?? ''));
+
+if ($session_param === '') {
+    $configFile = $root_dir . '/include/config.php';
+    if (file_exists($configFile)) {
+        require $configFile;
+        if (isset($data) && is_array($data)) {
+            foreach ($data as $k => $_v) {
+                if ($k !== 'mikhmon') {
+                    $session_param = $k;
+                    break;
+                }
+            }
+        }
+    }
+}
 
 if ($voucher_code === '' || strlen($voucher_code) < 3 || strlen($voucher_code) > 64) {
     echo json_encode(['ok' => false, 'message' => 'Kode voucher tidak valid.']);
