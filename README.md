@@ -1,5 +1,3 @@
-Berikut adalah **README.md** yang telah disempurnakan. Dokumen ini menggabungkan seluruh informasi dari `DOKUMENTASI_APLIKASI_LENGKAP.md`, `DOKUMENTASI_LAPORAN.md`, `DOKUMENTASI_PERUBAHAN.md`, `DOKUMENTASI_RETUR_REQUEST.md`, dan `DOKUMENTASI_WHATSAPP_FONNTE.md` menjadi satu referensi teknis dan operasional yang utuh, mendetail, dan siap pakai.
-
 ```markdown
 # WartelPas (Mikhmon Custom) - Dokumentasi Lengkap
 
