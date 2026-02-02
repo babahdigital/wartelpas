@@ -1037,8 +1037,11 @@ foreach($all_users as $u) {
       if ($profile_minutes <= 0 && function_exists('auto_rusak_profile_minutes')) {
         $profile_minutes = auto_rusak_profile_minutes($profile_label_display, $comment);
       }
-      if ($profile_minutes <= 0 && in_array($profile_kind_final, ['10', '30'], true)) {
-        $profile_minutes = (int)$profile_kind_final;
+      if ($profile_minutes <= 0 && function_exists('detect_profile_kind_unified')) {
+        $profile_kind_guess = detect_profile_kind_unified($u['profile'] ?? '', $comment, $f_blok, $uptime);
+        if (in_array($profile_kind_guess, ['10', '30'], true)) {
+          $profile_minutes = (int)$profile_kind_guess;
+        }
       }
       if ($profile_minutes > 0) {
         $bytes_eval = function_exists('auto_rusak_normalize_bytes') ? auto_rusak_normalize_bytes($bytes) : (int)$bytes;
