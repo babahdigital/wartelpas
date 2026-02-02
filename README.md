@@ -1,4 +1,4 @@
-# Wartelpas (Mikhmon Hotspot Manager)
+# Wartelpas (Hotspot Manager)
 
 Wartelpas adalah aplikasi berbasis PHP untuk manajemen hotspot MikroTik (voucher, profile, laporan, settlement, dan audit). Aplikasi terintegrasi dengan RouterOS API dan SQLite untuk pencatatan transaksi serta monitoring penggunaan.
 
