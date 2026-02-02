@@ -124,6 +124,9 @@ ensureRole();
 if ($id == "login" || substr($url, -1) == "p") {
 
   if (isset($_POST['login'])) {
+    if (!isset($_POST['csrf_token']) || !isset($_SESSION['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+      $error = '<div style="width: 100%; padding:5px 0px 5px 0px; border-radius:5px;" class="bg-danger"><i class="fa fa-ban"></i> Alert!<br>Invalid CSRF Token. Refresh halaman dan coba lagi.</div>';
+    } else {
     $user = $_POST['user'];
     $pass = $_POST['pass'];
     if ($user == $useradm && $pass == decrypt($passadm)) {
@@ -184,6 +187,7 @@ if ($id == "login" || substr($url, -1) == "p") {
       }
     } else {
       $error = '<div style="width: 100%; padding:5px 0px 5px 0px; border-radius:5px;" class="bg-danger"><i class="fa fa-ban"></i> Alert!<br>Invalid username or password.</div>';
+    }
     }
   }
   

@@ -17,6 +17,7 @@ if (file_exists($envFile)) {
 }
 
 $system_cfg = $env['system'] ?? [];
+$meta_key = trim((string)($system_cfg['api_key'] ?? $system_cfg['meta_key'] ?? ''));
 $db_rel = $system_cfg['db_file'] ?? 'db_data/mikhmon_stats.db';
 if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
     $dbFile = $db_rel;
@@ -52,6 +53,11 @@ function table_has_column_local(PDO $db, $table, $column) {
 }
 
 $payload = $_SERVER['REQUEST_METHOD'] === 'GET' ? $_GET : $_POST;
+$req_key = trim((string)($payload['key'] ?? ''));
+if ($meta_key !== '' && $req_key !== $meta_key) {
+    echo json_encode(['ok' => false, 'message' => 'Kunci tidak valid.']);
+    exit;
+}
 $voucher_code = trim((string)($payload['voucher_code'] ?? $payload['username'] ?? $payload['user'] ?? ''));
 $customer_name = trim((string)($payload['customer_name'] ?? $payload['nama'] ?? ''));
 $room_name = trim((string)($payload['room'] ?? $payload['kamar'] ?? ''));
@@ -151,6 +157,22 @@ try {
     try {
         $db->exec("DELETE FROM login_meta_queue WHERE created_at < datetime('now','-7 day')");
     } catch (Exception $e) {}
+
+    if (table_exists_local($db, 'login_history')) {
+        try {
+            $db->exec("CREATE INDEX IF NOT EXISTS idx_login_history_username ON login_history(username)");
+        } catch (Exception $e) {}
+    }
+    if (table_exists_local($db, 'sales_history')) {
+        if (table_has_column_local($db, 'sales_history', 'username') && table_has_column_local($db, 'sales_history', 'sale_date')) {
+            try { $db->exec("CREATE INDEX IF NOT EXISTS idx_sales_history_user_date ON sales_history(username, sale_date)"); } catch (Exception $e) {}
+        }
+    }
+    if (table_exists_local($db, 'live_sales')) {
+        if (table_has_column_local($db, 'live_sales', 'username') && table_has_column_local($db, 'live_sales', 'sale_date')) {
+            try { $db->exec("CREATE INDEX IF NOT EXISTS idx_live_sales_user_date ON live_sales(username, sale_date)"); } catch (Exception $e) {}
+        }
+    }
 
     if (($customer_name !== '' || $room_name !== '') && table_exists_local($db, 'login_history')) {
         $has_customer = table_has_column_local($db, 'login_history', 'customer_name');

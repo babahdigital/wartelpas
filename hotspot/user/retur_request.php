@@ -27,6 +27,7 @@ if (file_exists($waHelper)) {
     require_once $waHelper;
 }
 $system_cfg = $env['system'] ?? [];
+$retur_key = trim((string)($system_cfg['api_key'] ?? $system_cfg['retur_key'] ?? ''));
 $retur_cfg = $env['retur_request'] ?? [];
 $retur_enabled = !isset($retur_cfg['enabled']) || $retur_cfg['enabled'] === true || $retur_cfg['enabled'] === 1 || $retur_cfg['enabled'] === '1';
 $retur_message = trim((string)($retur_cfg['message'] ?? ''));
@@ -59,6 +60,11 @@ if (!$retur_enabled) {
 }
 
 $payload = $_SERVER['REQUEST_METHOD'] === 'GET' ? $_GET : $_POST;
+$req_key = trim((string)($payload['key'] ?? ''));
+if ($retur_key !== '' && $req_key !== $retur_key) {
+    echo json_encode(['ok' => false, 'message' => 'Kunci tidak valid.']);
+    exit;
+}
 $session_param = trim((string)($payload['session'] ?? ''));
 $session_param = $session_param !== '' ? $session_param : '';
 $request_type = trim((string)($payload['request_type'] ?? 'retur'));

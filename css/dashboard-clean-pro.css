@@ -1023,6 +1023,12 @@ body {
     max-width: 150px;
 }
 
+.table-container td:nth-child(4) {
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .table-container td:nth-child(5) {
     white-space: nowrap;
     overflow: visible;

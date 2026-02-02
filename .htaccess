@@ -85,7 +85,7 @@ Require all denied
 # B. WHITELIST: AKSES PUBLIK (Login & Assets)
 # Izinkan file login dan folder assets (css, js, fonts, img)
 # Agar tampilan login tidak rusak saat diakses publik (jika diinginkan)
-<FilesMatch "^(index\.php|admin\.php|login\.php|cekip\.php)$">
+<FilesMatch "^(index\.php|admin\.php|login\.php|cekip\.php|error\.php)$">
     Require all granted
 </FilesMatch>
 
@@ -181,15 +181,17 @@ Require all denied
 <If "%{REQUEST_URI} =~ m#^/report/print/print_rekap_tahunan\.php$#">
     Require all granted
 </If>
-<If "%{REQUEST_URI} =~ m#^/report/print_audit\.php$#">
-    Require all granted
-</If>
 
 <If "%{REQUEST_URI} =~ m#^/report/print/print_rincian\.php$#">
     Require all granted
 </If>
 <If "%{REQUEST_URI} =~ m#^/report/print_audit\.php$#">
      Require all granted
+</If>
+
+# Dashboard AJAX
+<If "%{REQUEST_URI} =~ m#^/dashboard/aload\.php$#">
+    Require all granted
 </If>
 
 # Sync usage endpoint
@@ -207,9 +209,13 @@ Require all denied
     Require all granted
 </If>
 
-# Backfill Meta endpoint (public)
+# Backfill Meta endpoint (restricted)
 <If "%{REQUEST_URI} =~ m#^/report/laporan/services/backfill_meta\.php$#">
-    Require all granted
+    <RequireAny>
+        Require env TAMU_VIP
+        Require ip 127.0.0.1
+        Require ip ::1
+    </RequireAny>
 </If>
 
 # Usage ingest endpoint (login/logout)

@@ -10,6 +10,10 @@
  */
 session_start();
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // Mencegah error "Undefined Variable" jika script ini dijalankan terpisah tanpa include parent
 $error = isset($error) ? $error : '';
 // $_please_login tidak lagi ditampilkan sesuai permintaan, tapi variabel dibiarkan untuk kompatibilitas backend
@@ -25,6 +29,7 @@ $_please_login = isset($_please_login) ? $_please_login : 'Silakan Login';
                 </div>
                 <div class="panel-body">
                     <form id="loginForm" action="" method="post" autocomplete="off">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']); ?>">
                         
                         <!-- Username Input -->
                         <div class="form-group" id="group-username">
