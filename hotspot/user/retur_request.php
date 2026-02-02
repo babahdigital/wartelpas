@@ -12,6 +12,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 
 $root_dir = dirname(__DIR__, 2);
+$log_dir = $root_dir . '/logs';
+if (!is_dir($log_dir)) {
+    @mkdir($log_dir, 0777, true);
+}
+@ini_set('display_errors', '0');
+@ini_set('log_errors', '1');
+@ini_set('error_log', $log_dir . '/retur_request_error.log');
+@error_reporting(E_ALL);
+@file_put_contents($log_dir . '/retur_request_error.log', "START " . date('c') . "\n", FILE_APPEND);
+set_error_handler(function($severity, $message, $file, $line) {
+    error_log('PHP[' . $severity . '] ' . $message . ' in ' . $file . ':' . $line);
+    return false;
+});
+register_shutdown_function(function() {
+    $err = error_get_last();
+    if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        error_log('FATAL: ' . $err['message'] . ' in ' . $err['file'] . ':' . $err['line']);
+    }
+});
 $env = [];
 $envFile = $root_dir . '/include/env.php';
 if (file_exists($envFile)) {
@@ -25,6 +44,21 @@ if (file_exists($helperFile)) {
 $waHelper = $root_dir . '/system/whatsapp/wa_helper.php';
 if (file_exists($waHelper)) {
     require_once $waHelper;
+}
+$has_norm = function_exists('norm_date_from_raw_report');
+if (!$has_norm) {
+    function norm_date_from_raw_report($raw)
+    {
+        $raw = trim((string)$raw);
+        if ($raw === '') return '';
+        if (preg_match('/\b(\d{4})-(\d{2})-(\d{2})\b/', $raw, $m)) {
+            return $m[1] . '-' . $m[2] . '-' . $m[3];
+        }
+        if (preg_match('/\b(\d{2})\/(\d{2})\/(\d{4})\b/', $raw, $m)) {
+            return $m[3] . '-' . $m[2] . '-' . $m[1];
+        }
+        return '';
+    }
 }
 $system_cfg = $env['system'] ?? [];
 $retur_key = trim((string)($system_cfg['api_key'] ?? $system_cfg['retur_key'] ?? ''));
@@ -60,6 +94,16 @@ if (!$retur_enabled) {
 }
 
 $payload = $_SERVER['REQUEST_METHOD'] === 'GET' ? $_GET : $_POST;
+$log_payload = [
+    'method' => $_SERVER['REQUEST_METHOD'] ?? '-',
+    'ip' => $_SERVER['REMOTE_ADDR'] ?? '-',
+    'type' => (string)($payload['request_type'] ?? ''),
+    'voucher_len' => strlen((string)($payload['voucher_code'] ?? '')),
+    'has_key' => isset($payload['key']) ? 1 : 0,
+    'has_name' => isset($payload['user_name']) || isset($payload['customer_name']) ? 1 : 0,
+    'session' => (string)($payload['session'] ?? ''),
+];
+@file_put_contents($log_dir . '/retur_request_error.log', "PAYLOAD " . json_encode($log_payload) . "\n", FILE_APPEND);
 $req_key = trim((string)($payload['key'] ?? ''));
 if ($retur_key !== '' && $req_key !== $retur_key) {
     echo json_encode(['ok' => false, 'message' => 'Kunci tidak valid.']);
@@ -322,5 +366,6 @@ try {
 
     echo json_encode(['ok' => true, 'message' => 'Permintaan retur berhasil dikirim.']);
 } catch (Exception $e) {
+    error_log('EXCEPTION: ' . $e->getMessage());
     echo json_encode(['ok' => false, 'message' => 'Gagal menyimpan permintaan.']);
 }

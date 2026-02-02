@@ -104,6 +104,13 @@ if ($opcache_enabled) {
 	$opcache_status = @opcache_get_status(false);
 }
 
+// Compression & Modules
+$server_software = $_SERVER['SERVER_SOFTWARE'] ?? '-';
+$accept_encoding = $_SERVER['HTTP_ACCEPT_ENCODING'] ?? '-';
+$apache_modules = function_exists('apache_get_modules') ? apache_get_modules() : [];
+$mod_deflate = !empty($apache_modules) && in_array('mod_deflate', $apache_modules, true);
+$mod_brotli = !empty($apache_modules) && in_array('mod_brotli', $apache_modules, true);
+
 // Execute Logic
 $ip = get_client_ip_detail();
 $host = $_SERVER['HTTP_HOST'] ?? '-';
@@ -315,6 +322,20 @@ $server_time = date('Y-m-d H:i:s');
                         <tr>
                             <th>User Agent</th>
                             <td style="font-size:12px;"><?= esc($user_agent); ?></td>
+                        </tr>
+                        <tr>
+                            <th>Server</th>
+                            <td><?= esc($server_software); ?></td>
+                        </tr>
+                        <tr>
+                            <th>Kompresi</th>
+                            <td>
+                                <div style="margin-bottom:4px;">
+                                    <span class="label label-<?= $mod_deflate ? 'success' : 'default'; ?>">gzip/deflate <?= $mod_deflate ? 'ON' : 'OFF'; ?></span>
+                                    <span class="label label-<?= $mod_brotli ? 'success' : 'default'; ?>" style="margin-left:6px;">brotli <?= $mod_brotli ? 'ON' : 'OFF'; ?></span>
+                                </div>
+                                <div class="text-stats">Accept-Encoding: <?= esc($accept_encoding); ?></div>
+                            </td>
                         </tr>
                         <tr>
                             <th>OPcache Status</th>
