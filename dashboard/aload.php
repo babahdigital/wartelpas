@@ -55,6 +55,17 @@ if (!function_exists('normalizeDate')) {
     } 
 }
 
+if (!function_exists('format_room_short_local')) {
+    function format_room_short_local($room) {
+        $raw = trim((string)$room);
+        if ($raw === '') return '-';
+        if (preg_match('/(\d+)/', $raw, $m)) {
+            return $m[1];
+        }
+        return $raw;
+    }
+}
+
 if (!function_exists('norm_date_from_raw_report')) {
     function norm_date_from_raw_report($raw_date) {
         $raw = trim((string)$raw_date);
@@ -750,14 +761,19 @@ if ($load == "logs") {
         if (!empty($usernames)) {
             $placeholders = implode(',', array_fill(0, count($usernames), '?'));
             try {
-                $stmtLogin = $db->prepare("SELECT username, COALESCE(NULLIF(last_login_real,''), first_login_real) AS last_login_real, last_uptime, last_status FROM login_history WHERE username IN ($placeholders)");
+                $stmtLogin = $db->prepare("SELECT username, COALESCE(NULLIF(last_login_real,''), first_login_real) AS last_login_real, last_uptime, last_status, customer_name, room_name, blok_name, raw_comment, validity FROM login_history WHERE username IN ($placeholders)");
                 $stmtLogin->execute(array_keys($usernames));
                 $loginMap = [];
                 foreach ($stmtLogin->fetchAll(PDO::FETCH_ASSOC) as $row) {
                     $loginMap[$row['username']] = [
                         'last_login_real' => $row['last_login_real'] ?? '',
                         'last_uptime' => $row['last_uptime'] ?? '',
-                        'last_status' => $row['last_status'] ?? ''
+                        'last_status' => $row['last_status'] ?? '',
+                        'customer_name' => $row['customer_name'] ?? '',
+                        'room_name' => $row['room_name'] ?? '',
+                        'blok_name' => $row['blok_name'] ?? '',
+                        'raw_comment' => $row['raw_comment'] ?? '',
+                        'validity' => $row['validity'] ?? ''
                     ];
                 }
                 $rekeyed = [];
@@ -766,6 +782,13 @@ if ($load == "logs") {
                     $lastLogin = $loginMap[$uname]['last_login_real'] ?? '';
                     $log['uptime'] = $loginMap[$uname]['last_uptime'] ?? '';
                     $log['status'] = $loginMap[$uname]['last_status'] ?? ($log['status'] ?? 'USED');
+                    $log['customer_name'] = $loginMap[$uname]['customer_name'] ?? '';
+                    $log['room_name'] = $loginMap[$uname]['room_name'] ?? '';
+                    $log['blok_name'] = $loginMap[$uname]['blok_name'] ?? '';
+                    $log['validity'] = $loginMap[$uname]['validity'] ?? '';
+                    if (($log['comment'] ?? '') === '' && !empty($loginMap[$uname]['raw_comment'])) {
+                        $log['comment'] = $loginMap[$uname]['raw_comment'];
+                    }
                     $ts = $lastLogin ? strtotime($lastLogin) : false;
                     if ($ts !== false) {
                         $log['time_str'] = date('d/m/Y H:i', $ts);
@@ -781,39 +804,48 @@ if ($load == "logs") {
     }
 
     krsort($finalLogs, SORT_STRING);
-    $maxShow = 9; $count = 0;
+    $maxShow = 8; $count = 0;
     foreach ($finalLogs as $log) {
         if ($count >= $maxShow) break;
 
         $blokDisplay = "-";
-        if (preg_match('/Blok-([A-Za-z]+)/i', $log['comment'], $match)) {
-            $blokDisplay = strtoupper($match[1]);
+        $blokRaw = trim((string)($log['blok_name'] ?? ''));
+        if ($blokRaw !== '') {
+            $blokRaw = strtoupper(preg_replace('/^BLOK[-_\s]*/i', '', $blokRaw));
+            $blokRaw = strtoupper(preg_replace('/[^A-Z0-9]/', '', $blokRaw));
+            if (preg_match('/^([A-Z])/', $blokRaw, $mb)) {
+                $blokDisplay = $mb[1];
+            } elseif ($blokRaw !== '') {
+                $blokDisplay = $blokRaw;
+            }
+        } elseif (preg_match('/Blok-([A-Za-z0-9]+)/i', $log['comment'], $match)) {
+            $blk = strtoupper($match[1]);
+            $blokDisplay = preg_match('/^([A-Z])/', $blk, $mb) ? $mb[1] : $blk;
         } elseif ($log['comment'] != "") {
-            $cleanCom = preg_replace('/[^A-Za-z]/', '', $log['comment']);
+            $cleanCom = preg_replace('/[^A-Za-z0-9]/', '', $log['comment']);
             if (strlen($cleanCom) > 0) $blokDisplay = strtoupper(substr($cleanCom, 0, 1));
         }
 
         $paketTitle = trim((string)($log['paket'] ?? ''));
         $titleAttr = $paketTitle !== '' && $paketTitle !== '-' ? " title=\"Paket: " . htmlspecialchars($paketTitle) . "\"" : '';
 
-        $uptimeDisplay = $log['uptime'] ?? '';
-        $uptimeDisplay = trim((string)$uptimeDisplay);
-        if ($uptimeDisplay === '') {
-            $uptimeDisplay = '-';
-        } else {
-            if (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})$/', $uptimeDisplay, $m)) {
-                $hh = (int)$m[1];
-                $mm = (int)$m[2];
-                $ss = (int)$m[3];
-                $parts = [];
-                if ($hh > 0) $parts[] = $hh . 'h';
-                if ($mm > 0 || $hh > 0) $parts[] = $mm . 'm';
-                $parts[] = $ss . 's';
-                $uptimeDisplay = implode('', $parts);
+        $nameDisplay = trim((string)($log['customer_name'] ?? ''));
+        if ($nameDisplay !== '') {
+            if (function_exists('format_customer_name')) {
+                $nameDisplay = format_customer_name($nameDisplay);
             } else {
-                $uptimeDisplay = preg_replace('/\s+/', '', formatDTM($uptimeDisplay));
+                $nameDisplay = ucwords(strtolower($nameDisplay));
             }
+        } else {
+            $nameDisplay = '-';
         }
+        $roomDisplay = trim((string)($log['room_name'] ?? ''));
+        $roomDisplay = $roomDisplay !== '' ? format_room_short_local($roomDisplay) : '-';
+
+        $profileRaw = trim((string)($log['paket'] ?? ''));
+        if ($profileRaw === '') $profileRaw = trim((string)($log['validity'] ?? ''));
+        $profileDisplay = $profileRaw !== '' && function_exists('resolve_profile_label') ? resolve_profile_label($profileRaw) : $profileRaw;
+        if ($profileDisplay === '') $profileDisplay = '-';
 
         $statusLabel = strtoupper((string)($log['status'] ?? 'USED'));
         $statusColor = '#6c757d';
@@ -826,12 +858,14 @@ if ($load == "logs") {
         echo "<tr class='zoom-resilient'>";
         echo "<td class='time-col'>" . substr($log['time_str'], 11, 5) . "</td>";
         echo "<td class='user-col' title='" . htmlspecialchars($log['username']) . "'>" . strtoupper($log['username']) . "</td>";
+        echo "<td class='profile-col text-center'" . $titleAttr . ">" . htmlspecialchars($profileDisplay) . "</td>";
+        echo "<td class='name-col text-center'>" . htmlspecialchars($nameDisplay) . "</td>";
         echo "<td class='blok-col text-center'><span class='blok-badge'>" . $blokDisplay . "</span></td>";
+        echo "<td class='room-col text-center'>" . htmlspecialchars($roomDisplay) . "</td>";
         echo "<td class='status-col text-center'><span class='status-badge' style='background:" . $statusColor . "'>" . $statusLabel . "</span></td>";
-        echo "<td class='uptime-col text-right'" . $titleAttr . ">" . $uptimeDisplay . "</td>";
         echo "</tr>";
         $count++;
     }
-    if ($count == 0) { echo "<tr><td colspan='5' class='text-center' style='padding:20px;'>Belum ada transaksi bulan ini.</td></tr>"; }
+    if ($count == 0) { echo "<tr><td colspan='7' class='text-center' style='padding:20px;'>Belum ada transaksi bulan ini.</td></tr>"; }
 }
 ?>

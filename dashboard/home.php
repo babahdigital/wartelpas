@@ -23,13 +23,17 @@ else {
 
 <script type="text/javascript">
     var testDate = "";
+    var currentMonth = <?= (int)date('m') ?>;
     function withTestDate(url) {
+        var finalUrl = url;
         if (testDate && testDate.length === 10) {
-            return url + "&test_date=" + encodeURIComponent(testDate);
+            finalUrl += "&test_date=" + encodeURIComponent(testDate);
         }
-        return url;
+        finalUrl += "&_ts=" + Date.now();
+        return finalUrl;
     }
     function changeMonth(m) {
+        currentMonth = m;
         var chartWrap = $("#chart_container");
         if (!chartWrap.length) chartWrap = $("#r_2_content");
         var loadingBar = $("#loading-halus");
@@ -52,10 +56,10 @@ else {
         }
         chartWrap.css("opacity", "0.7");
         $("#r_2_content").html('<div style="text-align:center; padding:50px; color:#ccc;">Memproses grafik...</div>');
-        $("#tabel_riwayat").html('<tr><td colspan="5" class="text-center" style="padding:20px;">Memuat...</td></tr>');
+        $("#tabel_riwayat").html('<tr><td colspan="7" class="text-center" style="padding:20px;">Memuat...</td></tr>');
         $("#row-count").text("Memuat...");
 
-        $.get("./dashboard/aload.php?session=<?= $session ?>&load=hotspot&m=" + m)
+        $.get(withTestDate("./dashboard/aload.php?session=<?= $session ?>&load=hotspot&m=" + m))
             .done(function(data) {
                 $("#r_2_content").html(data);
                 chartWrap = $("#chart_container");
@@ -75,28 +79,33 @@ else {
             });
 
         setTimeout(function() {
-            $.get(withTestDate("./dashboard/aload.php?session=<?= $session ?>&load=logs&m=" + m))
-                .done(function(dataLogs) {
-                    if(dataLogs.trim() == "") {
-                        $("#tabel_riwayat").html('<tr><td colspan="5" class="text-center text-muted" style="padding:20px;">Belum ada transaksi.</td></tr>');
-                        $("#row-count").text("0 transaksi ditemukan");
-                    } else {
-                        $("#tabel_riwayat").html(dataLogs);
-                        formatUptimeCells();
-                        var rowCount = $("#tabel_riwayat tr:not(.text-center)").length;
-                        if (rowCount > 10) rowCount = 10;
-                        $("#row-count").text("Menampilkan " + rowCount + " transaksi");
-                    }
-                })
-                .fail(function() {
-                    $("#tabel_riwayat").html('<tr><td colspan="5" class="text-center text-danger">Gagal koneksi server.</td></tr>');
-                    $("#row-count").text("Error loading data");
-                })
-                .always(function() {
-                    logsDone = true;
-                    finishLoading();
-                });
+            refreshLogs(m, function() {
+                logsDone = true;
+                finishLoading();
+            });
         }, 500);
+    }
+
+    function refreshLogs(m, done) {
+        $.get(withTestDate("./dashboard/aload.php?session=<?= $session ?>&load=logs&m=" + m))
+            .done(function(dataLogs) {
+                if (dataLogs.trim() == "") {
+                    $("#tabel_riwayat").html('<tr><td colspan="7" class="text-center text-muted" style="padding:20px;">Belum ada transaksi.</td></tr>');
+                    $("#row-count").text("0 transaksi ditemukan");
+                } else {
+                    $("#tabel_riwayat").html(dataLogs);
+                    var rowCount = $("#tabel_riwayat tr:not(.text-center)").length;
+                    if (rowCount > 8) rowCount = 8;
+                    $("#row-count").text("Menampilkan " + rowCount + " transaksi");
+                }
+            })
+            .fail(function() {
+                $("#tabel_riwayat").html('<tr><td colspan="7" class="text-center text-danger">Gagal koneksi server.</td></tr>');
+                $("#row-count").text("Error loading data");
+            })
+            .always(function() {
+                if (typeof done === 'function') done();
+            });
     }
 
     function updateDashboard() {
@@ -146,30 +155,9 @@ else {
             }
             $('#audit-detail').html(detail);
             var visibleRows = $("#tabel_riwayat tr:not(.text-center)").length;
-            if (visibleRows > 10) visibleRows = 10;
+            if (visibleRows > 8) visibleRows = 8;
             $("#row-count").text("Menampilkan " + visibleRows + " transaksi");
-            formatUptimeCells();
             setTimeout(optimizeTableLayout, 50);
-        });
-    }
-
-    function formatUptimeCells() {
-        $('#tabel_riwayat tr').each(function() {
-            var $tds = $(this).find('td');
-            if ($tds.length < 5) return;
-            var $uptime = $tds.eq(4);
-            var val = ($uptime.text() || '').trim();
-            var m = val.match(/^(\d{1,2}):(\d{2}):(\d{2})$/);
-            if (m) {
-                var hh = parseInt(m[1], 10) || 0;
-                var mm = parseInt(m[2], 10) || 0;
-                var ss = parseInt(m[3], 10) || 0;
-                var parts = [];
-                if (hh > 0) parts.push(hh + 'h');
-                if (mm > 0 || hh > 0) parts.push(mm + 'm');
-                parts.push(ss + 's');
-                $uptime.text(parts.join(''));
-            }
         });
     }
 
@@ -240,6 +228,7 @@ else {
         changeMonth(<?= (int)date('m') ?>);
         updateDashboard();
         setInterval(updateDashboard, 10000);
+        setInterval(function() { refreshLogs(currentMonth); }, 10000);
         updateLiveWindow();
         setInterval(updateLiveWindow, 60000);
         setInterval(function() {
@@ -335,14 +324,16 @@ for ($i = 5; $i >= 0; $i--) {
                             <tr>
                                 <th>JAM</th>
                                 <th>USER</th>
+                                <th class="text-center">PROFILE</th>
+                                <th class="text-center">NAMA</th>
                                 <th class="text-center">BLOK</th>
+                                <th class="text-center">KAMAR</th>
                                 <th class="text-center">STATUS</th>
-                                <th class="text-right">UPTIME</th>
                             </tr>
                         </thead>
                         <tbody id="tabel_riwayat">
                             <tr>
-                                <td colspan="5" class="text-center" style="padding:40px; color:var(--text-dim);">
+                                <td colspan="7" class="text-center" style="padding:40px; color:var(--text-dim);">
                                     <i class="fa fa-spinner fa-spin"></i> Memuat transaksi...
                                 </td>
                             </tr>

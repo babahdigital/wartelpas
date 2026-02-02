@@ -1256,7 +1256,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                                 <?php endif; ?>
                             </td>
                             <td style="text-align:center"><?= htmlspecialchars($it['profile']) ?></td>
-                            <td style="text-align:center"><?= htmlspecialchars(($it['customer_name'] ?? '') !== '' ? $it['customer_name'] : '-') ?></td>
+                            <td style="text-align:center"><?= htmlspecialchars(($it['customer_name'] ?? '') !== '' ? format_customer_name($it['customer_name']) : '-') ?></td>
                             <td style="text-align:center"><?= htmlspecialchars($it['blok']) ?></td>
                             <td style="text-align:center"><?= htmlspecialchars(($it['room_name'] ?? '') !== '' ? $it['room_name'] : '-') ?></td>
                             <td style="text-align:center">

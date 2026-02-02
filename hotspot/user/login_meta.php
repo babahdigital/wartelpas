@@ -29,6 +29,28 @@ if (!in_array($_SERVER['REQUEST_METHOD'], ['POST', 'GET'], true)) {
     exit;
 }
 
+function table_exists_local(PDO $db, $table) {
+    try {
+        $stmt = $db->prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=:t");
+        $stmt->execute([':t' => $table]);
+        return (bool)$stmt->fetchColumn();
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+function table_has_column_local(PDO $db, $table, $column) {
+    try {
+        $stmt = $db->query("PRAGMA table_info(" . $table . ")");
+        if ($stmt) {
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $col) {
+                if (strtolower((string)($col['name'] ?? '')) === strtolower($column)) return true;
+            }
+        }
+    } catch (Exception $e) {}
+    return false;
+}
+
 $payload = $_SERVER['REQUEST_METHOD'] === 'GET' ? $_GET : $_POST;
 $voucher_code = trim((string)($payload['voucher_code'] ?? $payload['username'] ?? $payload['user'] ?? ''));
 $customer_name = trim((string)($payload['customer_name'] ?? $payload['nama'] ?? ''));
@@ -114,6 +136,75 @@ try {
     try {
         $db->exec("DELETE FROM login_meta_queue WHERE created_at < datetime('now','-7 day')");
     } catch (Exception $e) {}
+
+    if (($customer_name !== '' || $room_name !== '') && table_exists_local($db, 'login_history')) {
+        $has_customer = table_has_column_local($db, 'login_history', 'customer_name');
+        $has_room = table_has_column_local($db, 'login_history', 'room_name');
+        $has_blok = table_has_column_local($db, 'login_history', 'blok_name');
+        $has_updated = table_has_column_local($db, 'login_history', 'updated_at');
+        if ($has_customer || $has_room || $has_blok) {
+            $cols = ['username'];
+            $vals = [':v'];
+            $updates = [];
+            if ($has_customer) {
+                $cols[] = 'customer_name';
+                $vals[] = ':cn';
+                $updates[] = "customer_name = CASE WHEN :cn != '' THEN :cn ELSE customer_name END";
+            }
+            if ($has_room) {
+                $cols[] = 'room_name';
+                $vals[] = ':rn';
+                $updates[] = "room_name = CASE WHEN :rn != '' THEN :rn ELSE room_name END";
+            }
+            if ($has_blok) {
+                $cols[] = 'blok_name';
+                $vals[] = ':bn';
+                $updates[] = "blok_name = CASE WHEN :bn != '' THEN :bn ELSE blok_name END";
+            }
+            if ($has_updated) {
+                $cols[] = 'updated_at';
+                $vals[] = "datetime('now')";
+                $updates[] = "updated_at = datetime('now')";
+            }
+            $sql = "INSERT INTO login_history (" . implode(',', $cols) . ") VALUES (" . implode(',', $vals) . ")
+                ON CONFLICT(username) DO UPDATE SET " . implode(', ', $updates);
+            $stmt = $db->prepare($sql);
+            $stmt->execute([
+                ':v' => $voucher_code,
+                ':cn' => $customer_name,
+                ':rn' => $room_name,
+                ':bn' => $blok_name
+            ]);
+        }
+    }
+
+    if (($customer_name !== '' || $room_name !== '') && table_exists_local($db, 'sales_history')) {
+        if (table_has_column_local($db, 'sales_history', 'customer_name') && table_has_column_local($db, 'sales_history', 'room_name')) {
+            $stmt = $db->prepare("UPDATE sales_history SET
+                customer_name = CASE WHEN :cn != '' THEN :cn ELSE customer_name END,
+                room_name = CASE WHEN :rn != '' THEN :rn ELSE room_name END
+                WHERE username = :v");
+            $stmt->execute([
+                ':cn' => $customer_name,
+                ':rn' => $room_name,
+                ':v' => $voucher_code
+            ]);
+        }
+    }
+
+    if (($customer_name !== '' || $room_name !== '') && table_exists_local($db, 'live_sales')) {
+        if (table_has_column_local($db, 'live_sales', 'customer_name') && table_has_column_local($db, 'live_sales', 'room_name')) {
+            $stmt = $db->prepare("UPDATE live_sales SET
+                customer_name = CASE WHEN :cn != '' THEN :cn ELSE customer_name END,
+                room_name = CASE WHEN :rn != '' THEN :rn ELSE room_name END
+                WHERE username = :v");
+            $stmt->execute([
+                ':cn' => $customer_name,
+                ':rn' => $room_name,
+                ':v' => $voucher_code
+            ]);
+        }
+    }
 
     echo json_encode(['ok' => true]);
 } catch (Exception $e) {

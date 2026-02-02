@@ -160,6 +160,16 @@ function resolve_status_from_sources($status, $is_invalid, $is_retur, $is_rusak,
     return 'normal';
 }
 
+function format_customer_name($name) {
+    $name = preg_replace('/\s+/', ' ', trim((string)$name));
+    if ($name === '') return '';
+    $lower = function_exists('mb_strtolower') ? mb_strtolower($name, 'UTF-8') : strtolower($name);
+    if (function_exists('mb_convert_case')) {
+        return mb_convert_case($lower, MB_CASE_TITLE, 'UTF-8');
+    }
+    return ucwords($lower);
+}
+
 function is_vip_comment($comment) {
     $c = trim((string)$comment);
     if ($c === '') return false;

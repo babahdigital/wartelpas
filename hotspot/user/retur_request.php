@@ -1,12 +1,14 @@
 <?php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+// --- TAMBAHKAN HEADER INI (Wajib untuk Bypass CORS) ---
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Content-Type: application/json");
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    echo json_encode(['ok' => true]);
-    exit;
+// Jika browser melakukan pre-check (OPTIONS), langsung jawab OK
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    http_response_code(200);
+    exit();
 }
 
 $root_dir = dirname(__DIR__, 2);
@@ -34,6 +36,16 @@ if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
     $dbFile = $db_rel;
 } else {
     $dbFile = $root_dir . '/' . ltrim($db_rel, '/');
+}
+
+function table_exists_local(PDO $db, $table) {
+    try {
+        $stmt = $db->prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=:t");
+        $stmt->execute([':t' => $table]);
+        return (bool)$stmt->fetchColumn();
+    } catch (Exception $e) {
+        return false;
+    }
 }
 
 if (!in_array($_SERVER['REQUEST_METHOD'], ['POST', 'GET'], true)) {
@@ -111,6 +123,46 @@ try {
     }
     if (!in_array('customer_name', $col_names, true)) {
         $db->exec("ALTER TABLE retur_requests ADD COLUMN customer_name TEXT");
+    }
+
+    $today = date('Y-m-d');
+    $voucher_date = '';
+    try {
+        if (table_exists_local($db, 'sales_history')) {
+            $stmt = $db->prepare("SELECT sale_date, raw_date FROM sales_history WHERE username = :u ORDER BY sale_date DESC, raw_date DESC LIMIT 1");
+            $stmt->execute([':u' => $voucher_code]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            if ($row) {
+                $voucher_date = norm_date_from_raw_report($row['sale_date'] ?? '');
+                if ($voucher_date === '') $voucher_date = norm_date_from_raw_report($row['raw_date'] ?? '');
+            }
+        }
+        if ($voucher_date === '' && table_exists_local($db, 'live_sales')) {
+            $stmt = $db->prepare("SELECT sale_date, raw_date FROM live_sales WHERE username = :u ORDER BY sale_date DESC, raw_date DESC LIMIT 1");
+            $stmt->execute([':u' => $voucher_code]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            if ($row) {
+                $voucher_date = norm_date_from_raw_report($row['sale_date'] ?? '');
+                if ($voucher_date === '') $voucher_date = norm_date_from_raw_report($row['raw_date'] ?? '');
+            }
+        }
+        if ($voucher_date === '' && table_exists_local($db, 'login_history')) {
+            $stmt = $db->prepare("SELECT login_date, login_time_real, last_login_real, logout_time_real, updated_at FROM login_history WHERE username = :u LIMIT 1");
+            $stmt->execute([':u' => $voucher_code]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            if ($row) {
+                $voucher_date = norm_date_from_raw_report($row['login_date'] ?? '');
+                if ($voucher_date === '' && !empty($row['login_time_real'])) $voucher_date = substr((string)$row['login_time_real'], 0, 10);
+                if ($voucher_date === '' && !empty($row['last_login_real'])) $voucher_date = substr((string)$row['last_login_real'], 0, 10);
+                if ($voucher_date === '' && !empty($row['logout_time_real'])) $voucher_date = substr((string)$row['logout_time_real'], 0, 10);
+                if ($voucher_date === '' && !empty($row['updated_at'])) $voucher_date = substr((string)$row['updated_at'], 0, 10);
+            }
+        }
+    } catch (Exception $e) {}
+
+    if ($voucher_date !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $voucher_date) && $voucher_date < $today) {
+        echo json_encode(['ok' => false, 'message' => 'Tidak berlaku untuk voucher yang lama. Silahkan ajukan voucher pada hari yang sama.']);
+        exit;
     }
 
     $hist = null;

@@ -590,7 +590,7 @@ if ($req_show === 'bulanan') {
                 <tr class="<?= $row_cls ?>">
                     <td class="text-center"><?= htmlspecialchars(format_time_only_local($it['login'] ?: $it['logout'])) ?></td>
                     <td class="text-center"><?= htmlspecialchars($it['username']) ?></td>
-                    <td class="text-center"><?= htmlspecialchars($it['customer_name'] !== '' ? $it['customer_name'] : '-') ?></td>
+                    <td class="text-center"><?= htmlspecialchars($it['customer_name'] !== '' ? format_customer_name($it['customer_name']) : '-') ?></td>
                     <td class="text-center"><?= htmlspecialchars($it['profile'] ?: '-') ?></td>
                     <td class="text-center"><?= htmlspecialchars(format_blok_short_local($it['blok'] ?? '')) ?></td>
                     <td class="text-center"><?= htmlspecialchars($it['room_name'] !== '' ? format_room_short_local($it['room_name']) : '-') ?></td>
@@ -631,7 +631,7 @@ if ($req_show === 'bulanan') {
                     <td class="text-center"><?= htmlspecialchars($it['time'] ?: '-') ?></td>
                     <td class="text-center"><?= htmlspecialchars($it['username']) ?></td>
                     <td class="text-center"><?= htmlspecialchars($it['profile'] ?: '-') ?></td>
-                    <td class="text-center"><?= htmlspecialchars($it['customer_name'] !== '' ? $it['customer_name'] : '-') ?></td>
+                    <td class="text-center"><?= htmlspecialchars($it['customer_name'] !== '' ? format_customer_name($it['customer_name']) : '-') ?></td>
                     <td class="text-center"><?= htmlspecialchars(format_blok_short_local($it['blok'] ?? '')) ?></td>
                     <td class="text-center"><?= htmlspecialchars($it['room_name'] !== '' ? format_room_short_local($it['room_name']) : '-') ?></td>
                     <td class="text-right"><?= htmlspecialchars(format_bytes_short_local((int)$it['bytes'])) ?></td>

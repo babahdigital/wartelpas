@@ -100,6 +100,18 @@ if (!function_exists('resolve_status_priority')) {
   }
 }
 
+if (!function_exists('format_customer_name')) {
+  function format_customer_name($name) {
+    $name = preg_replace('/\s+/', ' ', trim((string)$name));
+    if ($name === '') return '';
+    $lower = function_exists('mb_strtolower') ? mb_strtolower($name, 'UTF-8') : strtolower($name);
+    if (function_exists('mb_convert_case')) {
+      return mb_convert_case($lower, MB_CASE_TITLE, 'UTF-8');
+    }
+    return ucwords($lower);
+  }
+}
+
 // Helper: Ekstrak nama blok dari comment
 if (!function_exists('extract_blok_name')) {
   function extract_blok_name($comment) {

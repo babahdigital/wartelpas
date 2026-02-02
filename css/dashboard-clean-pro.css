@@ -258,7 +258,7 @@ body {
     width: 100%;
     border-collapse: collapse;
     table-layout: fixed;
-    min-width: 700px;
+    min-width: 820px;
     transform: translateZ(0);
     backface-visibility: hidden;
 }
@@ -298,8 +298,8 @@ body {
 /* Enhanced column widths */
 .table-container th:nth-child(1),
 .table-container td:nth-child(1) {
-    width: 10% !important;
-    min-width: 60px;
+    width: 9% !important;
+    min-width: 58px;
     max-width: 70px;
     padding-left: 12px;
     padding-right: 8px;
@@ -307,9 +307,9 @@ body {
 
 .table-container th:nth-child(2),
 .table-container td:nth-child(2) {
-    width: 22% !important;
-    min-width: 100px;
-    max-width: 140px;
+    width: 16% !important;
+    min-width: 90px;
+    max-width: 120px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -319,7 +319,31 @@ body {
 
 .table-container th:nth-child(3),
 .table-container td:nth-child(3) {
-    width: 10% !important;
+    width: 14% !important;
+    min-width: 90px;
+    max-width: 120px;
+    text-align: center;
+    padding-left: 6px;
+    padding-right: 6px;
+    white-space: nowrap;
+}
+
+.table-container th:nth-child(4),
+.table-container td:nth-child(4) {
+    width: 20% !important;
+    min-width: 120px;
+    max-width: 160px;
+    text-align: center;
+    padding-left: 6px;
+    padding-right: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.table-container th:nth-child(5),
+.table-container td:nth-child(5) {
+    width: 8% !important;
     min-width: 50px;
     max-width: 60px;
     text-align: center;
@@ -327,22 +351,23 @@ body {
     padding-right: 5px;
 }
 
-.table-container th:nth-child(4),
-.table-container td:nth-child(4) {
-    width: 15% !important;
-    min-width: 75px;
-    max-width: 90px;
+.table-container th:nth-child(6),
+.table-container td:nth-child(6) {
+    width: 10% !important;
+    min-width: 60px;
+    max-width: 70px;
     text-align: center;
     padding-left: 5px;
     padding-right: 5px;
+    white-space: nowrap;
 }
 
-.table-container th:nth-child(5),
-.table-container td:nth-child(5) {
-    width: 43% !important;
-    min-width: 120px;
-    text-align: right;
-    padding-right: 20px;
+.table-container th:nth-child(7),
+.table-container td:nth-child(7) {
+    width: 17% !important;
+    min-width: 110px;
+    text-align: center;
+    padding-right: 7px;
     padding-left: 10px;
     overflow: visible !important;
     white-space: nowrap;
@@ -358,7 +383,7 @@ body {
     }
 
     .table-container table {
-        min-width: 750px;
+        min-width: 860px;
     }
 }
 
@@ -752,7 +777,6 @@ body {
     text-align: center;
     color: var(--text-dim) !important;
     font-style: italic;
-    padding: 40px 20px !important;
 }
 
 /* ============ RESPONSIVE BREAKPOINTS ============ */
@@ -871,39 +895,55 @@ body {
     .table-container th:nth-child(4),
     .table-container td:nth-child(4),
     .table-container th:nth-child(5),
-    .table-container td:nth-child(5) {
+    .table-container td:nth-child(5),
+    .table-container th:nth-child(6),
+    .table-container td:nth-child(6),
+    .table-container th:nth-child(7),
+    .table-container td:nth-child(7) {
         width: auto !important;
         min-width: 0 !important;
         max-width: none !important;
-        padding: 0.75rem 0.5rem !important;
     }
 
     .table-container th:nth-child(1),
     .table-container td:nth-child(1) {
         width: 12% !important;
+        padding-left: 20px !important;
     }
 
     .table-container th:nth-child(2),
     .table-container td:nth-child(2) {
-        width: 23% !important;
+        text-align: center;
     }
 
     .table-container th:nth-child(3),
     .table-container td:nth-child(3) {
-        width: 10% !important;
+        width: 14% !important;
         text-align: center;
     }
 
     .table-container th:nth-child(4),
     .table-container td:nth-child(4) {
-        width: 15% !important;
+        width: 20% !important;
         text-align: center;
     }
 
     .table-container th:nth-child(5),
     .table-container td:nth-child(5) {
-        width: 40% !important;
-        text-align: right;
+        width: 8% !important;
+        text-align: center;
+    }
+
+    .table-container th:nth-child(6),
+    .table-container td:nth-child(6) {
+        width: 10% !important;
+        text-align: center;
+    }
+
+    .table-container th:nth-child(7),
+    .table-container td:nth-child(7) {
+        width: 17% !important;
+        text-align: center;
         padding-right: 1rem !important;
     }
 }
@@ -1013,7 +1053,7 @@ body {
 }
 
 .status-badge {
-    padding: 4px 10px;
+    padding: 7px 10px;
     border-radius: 6px;
     font-size: 0.7rem;
     font-weight: 600;

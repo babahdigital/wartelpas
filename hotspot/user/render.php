@@ -365,7 +365,7 @@
                       ?>
                       <span class="badge badge-dark border border-secondary p-1"><?= htmlspecialchars($display_profile) ?></span>
                     </td>
-                    <td><?= htmlspecialchars($u['customer_name'] !== '' ? $u['customer_name'] : '-') ?></td>
+                    <td><?= htmlspecialchars($u['customer_name'] !== '' ? format_customer_name($u['customer_name']) : '-') ?></td>
                     <td><span class="id-badge"><?= htmlspecialchars($u['blok'] ?: '-') ?></span></td>
                     <td><?= htmlspecialchars($u['room_name'] !== '' ? $u['room_name'] : '-') ?></td>
                     <td>
