@@ -529,21 +529,34 @@ if ($load == "hotspot") {
     $currentDay = (int)date('d');
 
     $dbFile = resolve_stats_db_file($root);
-    $rawDataMerged = [];
+    $rowsMerged = [];
     if (file_exists($dbFile)) {
         try {
             $db = new PDO('sqlite:' . $dbFile);
-            $resSales = $db->query("SELECT full_raw_data FROM sales_history ORDER BY id DESC LIMIT 1500");
-            if ($resSales) { foreach($resSales as $row) { $rawDataMerged[] = $row['full_raw_data']; } }
+            $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+            $monthKey = sprintf('%04d-%02d', $filterYear, $filterMonth);
+            $raw1 = sprintf('%02d/%%/%04d', $filterMonth, $filterYear);
+            $raw2 = sprintf('%%/%02d/%04d', $filterMonth, $filterYear);
+            $raw3 = date('M', mktime(0, 0, 0, $filterMonth, 1, $filterYear)) . '/%/' . $filterYear;
+
+            if (table_exists($db, 'sales_history')) {
+                $stmt = $db->prepare("SELECT sale_date, raw_date, price, price_snapshot, sprice_snapshot, qty, full_raw_data
+                    FROM sales_history
+                    WHERE sale_date LIKE :m OR raw_date LIKE :r1 OR raw_date LIKE :r2 OR raw_date LIKE :r3");
+                $stmt->execute([':m' => $monthKey . '%', ':r1' => $raw1, ':r2' => $raw2, ':r3' => $raw3]);
+                $rowsMerged = array_merge($rowsMerged, $stmt->fetchAll(PDO::FETCH_ASSOC) ?: []);
+            }
+
             if (table_exists($db, 'live_sales')) {
-                try {
-                    $resLive = $db->query("SELECT full_raw_data FROM live_sales ORDER BY id DESC LIMIT 500");
-                    if ($resLive) { foreach($resLive as $row) { $rawDataMerged[] = $row['full_raw_data']; } }
-                } catch (Exception $e) { }
+                $stmt = $db->prepare("SELECT sale_date, raw_date, price, price_snapshot, sprice_snapshot, qty, full_raw_data
+                    FROM live_sales
+                    WHERE sync_status='pending' AND (sale_date LIKE :m OR raw_date LIKE :r1 OR raw_date LIKE :r2 OR raw_date LIKE :r3)");
+                $stmt->execute([':m' => $monthKey . '%', ':r1' => $raw1, ':r2' => $raw2, ':r3' => $raw3]);
+                $rowsMerged = array_merge($rowsMerged, $stmt->fetchAll(PDO::FETCH_ASSOC) ?: []);
             }
         } catch (Exception $e) { }
     }
-    $rawDataMerged = array_unique($rawDataMerged);
 
     $daysInMonth = (int)date("t", mktime(0, 0, 0, $filterMonth, 1, $filterYear));
     $startDay = 1;
@@ -563,20 +576,34 @@ if ($load == "hotspot") {
     $dailyIncome = array_fill($startDay, $daysInRange, 0);
     $dailyQty = array_fill($startDay, $daysInRange, 0);
 
-    foreach ($rawDataMerged as $rowString) {
-        $parts = split_sales_raw($rowString);
-        if (count($parts) >= 4) {
-            $rawDateString = trim($parts[0]);
-            $price = (int)preg_replace('/[^0-9]/', '', $parts[3]);
-            $tstamp = strtotime(str_replace("/", "-", normalizeDate($rawDateString)));
-            if (!$tstamp) continue;
-            $d_month = (int)date("m", $tstamp); $d_year = (int)date("Y", $tstamp); $d_day = (int)date("d", $tstamp);
-            if ($d_month == $filterMonth && $d_year == $filterYear) {
-                if ($d_day >= $startDay && $d_day <= $endDay) {
-                    $dailyIncome[$d_day] += $price;
-                    $dailyQty[$d_day] += 1;
-                }
-            }
+    $seen_raw = [];
+    foreach ($rowsMerged as $row) {
+        $raw_key = (string)($row['full_raw_data'] ?? '');
+        if ($raw_key !== '') {
+            if (isset($seen_raw[$raw_key])) continue;
+            $seen_raw[$raw_key] = true;
+        }
+
+        $sale_date = (string)($row['sale_date'] ?? '');
+        if ($sale_date === '') {
+            $sale_date = norm_date_from_raw_report($row['raw_date'] ?? '');
+        }
+        if ($sale_date === '') continue;
+
+        $tstamp = strtotime($sale_date);
+        if (!$tstamp) continue;
+        $d_month = (int)date('m', $tstamp);
+        $d_year = (int)date('Y', $tstamp);
+        $d_day = (int)date('d', $tstamp);
+        if ($d_month != $filterMonth || $d_year != $filterYear) continue;
+
+        if ($d_day >= $startDay && $d_day <= $endDay) {
+            $price = (int)($row['price_snapshot'] ?? $row['price'] ?? 0);
+            if ($price <= 0) $price = (int)($row['sprice_snapshot'] ?? 0);
+            $qty = (int)($row['qty'] ?? 0);
+            if ($qty <= 0) $qty = 1;
+            $dailyIncome[$d_day] += ($price * $qty);
+            $dailyQty[$d_day] += $qty;
         }
     }
 

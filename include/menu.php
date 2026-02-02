@@ -504,7 +504,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         <div class="nav-right">
             <?php $is_superadmin = isSuperAdmin(); ?>
             <?php if ($is_superadmin): ?>
-                <a id="db-backup" class="db-tools" href="javascript:void(0)" title="Backup Database" onclick="runBackupAjax()">
+                <a id="db-backup" class="db-tools" style="display:none" href="javascript:void(0)" title="Backup Database" onclick="runBackupAjax()">
                     <i class="fa fa-database"></i> Backup
                 </a>
                 <a id="db-restore" class="db-tools" href="javascript:void(0)" title="Restore Backup Terbaru" onclick="runRestoreAjax()">
@@ -586,7 +586,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         <div class="nav-right">
             <?php $is_superadmin = isSuperAdmin(); ?>
             <?php if ($is_superadmin): ?>
-                <a id="db-backup" class="db-tools" href="javascript:void(0)" title="Backup Database" onclick="runBackupAjax()">
+                <a id="db-backup" class="db-tools" style="display:none" href="javascript:void(0)" title="Backup Database" onclick="runBackupAjax()">
                     <i class="fa fa-database"></i> Backup
                 </a>
                 <a id="db-restore" class="db-tools" href="javascript:void(0)" title="Restore Backup Terbaru" onclick="runRestoreAjax()">
