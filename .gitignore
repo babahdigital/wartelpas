@@ -37,4 +37,5 @@ include/quickbt.php
 .vscode/
 .idea/
 /dev
+*.md
 wartelpas.code-workspace

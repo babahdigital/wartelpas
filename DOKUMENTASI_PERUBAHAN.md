@@ -1148,6 +1148,28 @@ Jika ada tambahan perubahan atau aturan bisnis baru, dokumentasi ini akan diperb
   - Semua konfirmasi retur/refund memakai **MikhmonPopup** (AJAX) tanpa `alert/confirm`.
 - **Alur Retur vs Refund dipisah**:
   - **Refund**: wajib **cek kelayakan rusak** → set **RUSAK** → approve request.
+
+### 7.16 Optimasi Server & Stabilitas AJAX Users (2026-02-02)
+- **Cek IP + OPcache**:
+  - Halaman **cekip.php** disempurnakan: deteksi IP publik, daftar kandidat, info host/protokol/UA, serta status OPcache.
+- **OPcache production**:
+  - `opcache.validate_timestamps=0` dan `opcache.revalidate_freq=0` untuk performa stabil (deploy wajib restart).
+- **Kompresi & cache header**:
+  - Gzip (deflate) aktif untuk tipe teks.
+  - Cache header statis (css/js/img/font) diberi `Cache-Control` dan `Expires`.
+  - Directive yang tidak diizinkan di `.htaccess` (DeflateCompressionLevel/Brotli) dibersihkan agar tidak memicu 500.
+- **Stabilitas tampilan Users saat AJAX refresh**:
+  - Overlay dim selalu disembunyikan setelah AJAX selesai.
+  - Tabel users memakai `table-layout: fixed` + lebar kolom konsisten.
+  - `scrollbar-gutter: stable` untuk mengurangi pergeseran layout.
+
+**File terkait:**
+- [cekip.php](cekip.php)
+- [Dockerfile](Dockerfile)
+- [.htaccess](.htaccess)
+- [hotspot/user/css/users.css](hotspot/user/css/users.css)
+- [hotspot/user/js/users.js](hotspot/user/js/users.js)
+- [hotspot/user/render.php](hotspot/user/render.php)
   - **Retur**: langsung **approve → retur** tanpa set RUSAK.
   - Aksi `retur_request_mark_rusak` dibatasi untuk refund saja.
 - **Kelayakan rusak transparan**:
