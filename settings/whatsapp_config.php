@@ -143,8 +143,9 @@ function wa_format_log_message($msg) {
     if (stripos($msg, 'laporan') !== false) {
         return 'Laporan';
     }
-    if (mb_strlen($msg) > 60) {
-        return mb_substr($msg, 0, 57) . '...';
+    $len = function_exists('mb_strlen') ? mb_strlen($msg) : strlen($msg);
+    if ($len > 60) {
+        return (function_exists('mb_substr') ? mb_substr($msg, 0, 57) : substr($msg, 0, 57)) . '...';
     }
     return $msg;
 }
@@ -475,6 +476,8 @@ foreach ($wa_recipients as $rec) {
     }
     .wa-log-table th, .wa-log-table td { white-space: nowrap; }
     .wa-log-table td.wa-log-message { max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wa-popup-row { margin-bottom: 10px; }
+    .wa-popup-switches { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
 </style>
 
 <div class="card-modern">
@@ -616,6 +619,8 @@ foreach ($wa_recipients as $rec) {
             </div>
         </div>
 
+        <form id="waRecipientForm" method="post" action="./admin.php?id=whatsapp" style="display:none;"></form>
+
         <div class="row" style="margin-top: 10px;">
             <div class="col-12">
                 <div class="form-group-modern">
@@ -676,22 +681,137 @@ foreach ($wa_recipients as $rec) {
                 }, 3000);
             })();
 
-            (function(){
-                var addBtn = document.getElementById('waAddTargetBtn');
-                var select = document.getElementById('waTargetSelect');
-                var textarea = document.querySelector('textarea[name="wa_notify_target"]');
-                if (!addBtn || !select || !textarea) return;
-                addBtn.addEventListener('click', function(){
-                    var val = (select.value || '').trim();
-                    if (!val) return;
-                    var current = textarea.value || '';
-                    var parts = current.split(/\r?\n|,|;/).map(function(v){ return v.trim(); }).filter(function(v){ return v; });
-                    if (parts.indexOf(val) === -1) {
-                        parts.push(val);
-                    }
-                    textarea.value = parts.join("\n");
+            window.__waRecipients = <?= json_encode($wa_recipients, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+
+            function submitWaRecipientForm(payload) {
+                var form = document.getElementById('waRecipientForm');
+                if (!form) return;
+                form.innerHTML = '';
+                Object.keys(payload || {}).forEach(function(key){
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key;
+                    input.value = payload[key];
+                    form.appendChild(input);
                 });
-            })();
+                form.submit();
+            }
+
+            function openWaRecipientPopup(recId) {
+                if (!window.MikhmonPopup) return;
+                var isNew = !recId || recId === 'new';
+                var data = null;
+                if (!isNew && Array.isArray(window.__waRecipients)) {
+                    data = window.__waRecipients.find(function(r){ return String(r.id) === String(recId); }) || null;
+                }
+                if (!data) {
+                    data = { id: 'new', label: '', target: '', target_type: 'number', active: 1, receive_retur: 1, receive_report: 1 };
+                }
+
+                var html = '' +
+                    '<div class="m-pass-form">' +
+                        '<div class="wa-popup-row">' +
+                            '<label class="m-pass-label">Nama / Label</label>' +
+                            '<input id="wa-rec-label" type="text" class="m-pass-input" value="' + (data.label || '') + '" placeholder="Nama penerima" />' +
+                        '</div>' +
+                        (isNew ?
+                            '<div class="wa-popup-row">' +
+                                '<label class="m-pass-label">Target</label>' +
+                                '<input id="wa-rec-target" type="text" class="m-pass-input" value="" placeholder="62812xxxxxxx atau 1203xxxx@g.us" />' +
+                            '</div>' +
+                            '<div class="wa-popup-row">' +
+                                '<label class="m-pass-label">Tipe</label>' +
+                                '<select id="wa-rec-type" class="m-pass-input">' +
+                                    '<option value="number">Nomor</option>' +
+                                    '<option value="group">Group</option>' +
+                                '</select>' +
+                            '</div>'
+                        :
+                            '<div class="wa-popup-row">' +
+                                '<label class="m-pass-label">Target</label>' +
+                                '<input type="text" class="m-pass-input" value="' + (data.target || '') + '" readonly />' +
+                            '</div>' +
+                            '<div class="wa-popup-row">' +
+                                '<label class="m-pass-label">Tipe</label>' +
+                                '<input type="text" class="m-pass-input" value="' + (data.target_type || 'number') + '" readonly />' +
+                            '</div>'
+                        ) +
+                        '<div class="wa-popup-switches">' +
+                            '<label class="wa-switch">' +
+                                '<input id="wa-rec-active" type="checkbox" ' + ((data.active ? 'checked' : '')) + '>' +
+                                '<span class="wa-switch-slider"></span>' +
+                                '<span style="font-size:12px; color:#cbd5db;">Aktif</span>' +
+                            '</label>' +
+                            '<label class="wa-switch">' +
+                                '<input id="wa-rec-retur" type="checkbox" ' + ((data.receive_retur ? 'checked' : '')) + '>' +
+                                '<span class="wa-switch-slider"></span>' +
+                                '<span style="font-size:12px; color:#cbd5db;">Notif Retur</span>' +
+                            '</label>' +
+                            '<label class="wa-switch">' +
+                                '<input id="wa-rec-report" type="checkbox" ' + ((data.receive_report ? 'checked' : '')) + '>' +
+                                '<span class="wa-switch-slider"></span>' +
+                                '<span style="font-size:12px; color:#cbd5db;">Notif Laporan</span>' +
+                            '</label>' +
+                        '</div>' +
+                    '</div>';
+
+                window.MikhmonPopup.open({
+                    title: isNew ? 'Tambah Penerima' : 'Edit Penerima',
+                    iconClass: 'fa fa-user',
+                    statusIcon: 'fa fa-whatsapp',
+                    statusColor: '#22c55e',
+                    cardClass: 'is-medium',
+                    messageHtml: html,
+                    buttons: [
+                        { label: 'Batal', className: 'm-btn m-btn-cancel' },
+                        {
+                            label: 'Simpan',
+                            className: 'm-btn m-btn-success',
+                            close: false,
+                            onClick: function(){
+                                var label = (document.getElementById('wa-rec-label') || {}).value || '';
+                                var active = (document.getElementById('wa-rec-active') || {}).checked;
+                                var retur = (document.getElementById('wa-rec-retur') || {}).checked;
+                                var report = (document.getElementById('wa-rec-report') || {}).checked;
+                                if (!label.trim()) {
+                                    label = '';
+                                }
+                                if (isNew) {
+                                    var target = (document.getElementById('wa-rec-target') || {}).value || '';
+                                    var type = (document.getElementById('wa-rec-type') || {}).value || 'number';
+                                    if (!target.trim()) {
+                                        return;
+                                    }
+                                    submitWaRecipientForm({
+                                        wa_action: 'add_recipient',
+                                        wa_new_label: label.trim(),
+                                        wa_new_target: target.trim(),
+                                        wa_new_type: type,
+                                        wa_new_active: active ? '1' : '',
+                                        wa_new_receive_retur: retur ? '1' : '',
+                                        wa_new_receive_report: report ? '1' : ''
+                                    });
+                                } else {
+                                    submitWaRecipientForm({
+                                        wa_action: 'update_recipient',
+                                        wa_id: data.id,
+                                        wa_label: label.trim(),
+                                        wa_active: active ? '1' : '',
+                                        wa_receive_retur: retur ? '1' : '',
+                                        wa_receive_report: report ? '1' : ''
+                                    });
+                                }
+                            }
+                        }
+                    ]
+                });
+            }
+
+            function submitWaRecipientDelete(recId) {
+                if (!recId) return;
+                if (!confirm('Hapus penerima ini?')) return;
+                submitWaRecipientForm({ wa_action: 'delete_recipient', wa_id: recId });
+            }
         </script>
     </div>
 </div>
