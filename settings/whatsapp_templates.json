@@ -1,0 +1,26 @@
+[
+  {
+    "id": "retur_request",
+    "name": "Permintaan Retur/Refund",
+    "category": "retur",
+    "body": "🔔 *PERMINTAAN {{TYPE}} BARU*\n────────────\nStatus: ⏳ *PENDING*\n\n👤 *Data Pengguna*\n• Nama : {{NAMA}}\n• Blok : {{BLOK}}\n• Profil : {{PROFIL}}\n\n🎫 *Detail Tiket*\n• Voucher : *`{{VOUCHER}}`*\n• Alasan : _\"{{ALASAN}}\"_\n\n────────────\nMohon segera diverifikasi melalui dashboard admin."
+  },
+  {
+    "id": "settlement_report",
+    "name": "Laporan Settlement Harian",
+    "category": "report",
+    "body": "Laporan Settlement Harian {{DATE}}"
+  },
+  {
+    "id": "report_pdf",
+    "name": "Laporan PDF",
+    "category": "report",
+    "body": "Laporan PDF: {{FILE}}"
+  },
+  {
+    "id": "test_message",
+    "name": "Pesan Test",
+    "category": "test",
+    "body": "Pesan test WhatsApp dari admin."
+  }
+]

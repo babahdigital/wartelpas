@@ -72,6 +72,9 @@ try {
     if (!in_array('receive_report', $col_names, true)) {
         $db->exec("ALTER TABLE whatsapp_recipients ADD COLUMN receive_report INTEGER NOT NULL DEFAULT 1");
     }
+    if (!in_array('receive_ls', $col_names, true)) {
+        $db->exec("ALTER TABLE whatsapp_recipients ADD COLUMN receive_ls INTEGER NOT NULL DEFAULT 1");
+    }
 } catch (Exception $e) {
     $db_error = $e->getMessage();
 }
