@@ -567,7 +567,7 @@ foreach ($wa_recipients as $rec) {
                     </div>
                 </div>
             </div>
-            <div style="display:flex; justify-content:flex-end; margin-top: 10px;">
+            <div style="display:flex; justify-content:flex-start; margin-top: 10px;">
                 <button class="btn-action btn-primary-m" type="submit" name="save_whatsapp">
                     <i class="fa fa-save"></i> Simpan WhatsApp
                 </button>
