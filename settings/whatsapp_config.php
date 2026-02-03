@@ -710,7 +710,7 @@ foreach ($wa_recipients as $rec) {
         </form>
 
         <div class="row" style="margin-top: 10px;">
-            <div class="col-12">
+            <div class="col-7">
                 <div class="form-group-modern">
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top: 20px;">
                         <label class="form-label" style="margin:0;">Daftar Penerima</label>
@@ -718,7 +718,7 @@ foreach ($wa_recipients as $rec) {
                             <i class="fa fa-plus"></i> Tambah Penerima
                         </a>
                     </div>
-                    <small class="wa-muted" style="display:block; margin-bottom:8px;">Kelola izin notifikasi per member (aktif, retur, laporan).</small>
+                    <small class="wa-muted" style="display:block; margin-bottom:8px;">Kelola izin notifikasi per member (aktif, retur, laporan, L/S).</small>
                     <?php if ($stats_db_error !== ''): ?>
                         <div class="alert alert-danger" style="margin-bottom:10px;">Gagal membaca DB WhatsApp: <?= htmlspecialchars($stats_db_error); ?></div>
                     <?php endif; ?>
@@ -752,9 +752,47 @@ foreach ($wa_recipients as $rec) {
                     </div>
                 </div>
             </div>
+            <div class="col-5">
+                <div class="form-group-modern">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top: 20px;">
+                        <label class="form-label" style="margin:0;">Template WhatsApp</label>
+                        <a class="btn-action btn-outline" href="javascript:void(0)" onclick="openWaTemplatePopup('new')" style="padding:6px 10px; font-size:12px;">
+                            <i class="fa fa-plus"></i> Tambah
+                        </a>
+                    </div>
+                    <small class="wa-muted" style="display:block; margin-bottom:8px;">Centralisasi template pesan, bisa diedit dari popup.</small>
+                    <div style="max-height: 320px; overflow:auto;">
+                        <?php if (empty($wa_templates)): ?>
+                            <div class="admin-empty" style="padding:10px;">Belum ada template.</div>
+                        <?php else: ?>
+                            <?php foreach ($wa_templates as $tpl): ?>
+                                <?php
+                                    $tpl_id = (string)($tpl['id'] ?? '');
+                                    $tpl_name = trim((string)($tpl['name'] ?? ''));
+                                    $tpl_cat = trim((string)($tpl['category'] ?? ''));
+                                    $tpl_body = trim((string)($tpl['body'] ?? ''));
+                                    $tpl_preview = $tpl_body !== '' ? (strlen($tpl_body) > 60 ? substr($tpl_body, 0, 57) . '...' : $tpl_body) : '-';
+                                ?>
+                                <div class="router-item" style="margin-bottom:8px;">
+                                    <div class="router-icon"><i class="fa fa-comment"></i></div>
+                                    <div class="router-info">
+                                        <span class="router-name"><?= htmlspecialchars($tpl_name !== '' ? $tpl_name : 'Template'); ?></span>
+                                        <span class="router-session"><?= htmlspecialchars($tpl_cat !== '' ? $tpl_cat : 'general'); ?> • <?= htmlspecialchars($tpl_preview); ?></span>
+                                    </div>
+                                    <div class="router-actions">
+                                        <a href="javascript:void(0)" title="Edit" onclick="openWaTemplatePopup('<?= htmlspecialchars($tpl_id); ?>')"><i class="fa fa-pencil"></i></a>
+                                        <a href="javascript:void(0)" title="Hapus" onclick="submitWaTemplateDelete('<?= htmlspecialchars($tpl_id); ?>')" style="margin-left:6px; color:#dc2626;"><i class="fa fa-trash"></i></a>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <form id="waRecipientForm" method="post" action="./admin.php?id=whatsapp" style="display:none;"></form>
+        <form id="waTemplateForm" method="post" action="./admin.php?id=whatsapp" style="display:none;"></form>
 
         <div class="row" style="margin-top: 10px;">
             <div class="col-12">
@@ -833,9 +871,24 @@ foreach ($wa_recipients as $rec) {
             })();
 
             window.__waRecipients = <?= json_encode($wa_recipients, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+            window.__waTemplates = <?= json_encode($wa_templates, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
 
             function submitWaRecipientForm(payload) {
                 var form = document.getElementById('waRecipientForm');
+                if (!form) return;
+                form.innerHTML = '';
+                Object.keys(payload || {}).forEach(function(key){
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key;
+                    input.value = payload[key];
+                    form.appendChild(input);
+                });
+                form.submit();
+            }
+
+            function submitWaTemplateForm(payload) {
+                var form = document.getElementById('waTemplateForm');
                 if (!form) return;
                 form.innerHTML = '';
                 Object.keys(payload || {}).forEach(function(key){
@@ -970,6 +1023,72 @@ foreach ($wa_recipients as $rec) {
                 if (!recId) return;
                 if (!confirm('Hapus penerima ini?')) return;
                 submitWaRecipientForm({ wa_action: 'delete_recipient', wa_id: recId });
+            }
+
+            function openWaTemplatePopup(tplId) {
+                if (!window.MikhmonPopup) return;
+                var isNew = !tplId || tplId === 'new';
+                var data = null;
+                if (!isNew && Array.isArray(window.__waTemplates)) {
+                    data = window.__waTemplates.find(function(t){ return String(t.id) === String(tplId); }) || null;
+                }
+                if (!data) {
+                    data = { id: 'new', name: '', category: 'general', body: '' };
+                }
+
+                var html = '' +
+                    '<div class="m-pass-form">' +
+                        '<div class="wa-popup-row">' +
+                            '<label class="m-pass-label">Nama Template</label>' +
+                            '<input id="wa-tpl-name" type="text" class="m-pass-input" value="' + (data.name || '') + '" placeholder="Nama template" />' +
+                        '</div>' +
+                        '<div class="wa-popup-row">' +
+                            '<label class="m-pass-label">Kategori</label>' +
+                            '<input id="wa-tpl-category" type="text" class="m-pass-input" value="' + (data.category || '') + '" placeholder="retur / report / test" />' +
+                        '</div>' +
+                        '<div class="wa-popup-row">' +
+                            '<label class="m-pass-label">Isi Template</label>' +
+                            '<textarea id="wa-tpl-body" class="m-pass-input" rows="6" placeholder="Isi pesan...">' + (data.body || '') + '</textarea>' +
+                        '</div>' +
+                    '</div>';
+
+                window.MikhmonPopup.open({
+                    title: isNew ? 'Tambah Template' : 'Edit Template',
+                    iconClass: 'fa fa-comment',
+                    statusIcon: 'fa fa-whatsapp',
+                    statusColor: '#22c55e',
+                    cardClass: 'is-medium',
+                    messageHtml: html,
+                    buttons: [
+                        { label: 'Batal', className: 'm-btn m-btn-cancel' },
+                        {
+                            label: 'Simpan',
+                            className: 'm-btn m-btn-success',
+                            close: false,
+                            onClick: function(){
+                                var name = (document.getElementById('wa-tpl-name') || {}).value || '';
+                                var category = (document.getElementById('wa-tpl-category') || {}).value || '';
+                                var body = (document.getElementById('wa-tpl-body') || {}).value || '';
+                                if (!name.trim() || !body.trim()) {
+                                    return;
+                                }
+                                submitWaTemplateForm({
+                                    wa_action: 'save_template',
+                                    wa_tpl_id: isNew ? '' : data.id,
+                                    wa_tpl_name: name.trim(),
+                                    wa_tpl_category: category.trim(),
+                                    wa_tpl_body: body
+                                });
+                            }
+                        }
+                    ]
+                });
+            }
+
+            function submitWaTemplateDelete(tplId) {
+                if (!tplId) return;
+                if (!confirm('Hapus template ini?')) return;
+                submitWaTemplateForm({ wa_action: 'delete_template', wa_tpl_id: tplId });
             }
         </script>
     </div>
