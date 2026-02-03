@@ -574,7 +574,7 @@ foreach ($wa_recipients as $rec) {
         <div class="row" style="margin-top: 10px;">
             <div class="col-12">
                 <div class="form-group-modern">
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top: 20px;">
                         <label class="form-label" style="margin:0;">Daftar Penerima</label>
                         <a class="btn-action btn-outline" href="javascript:void(0)" onclick="openWaRecipientPopup('new')" style="padding:6px 10px; font-size:12px;">
                             <i class="fa fa-plus"></i> Tambah Penerima
