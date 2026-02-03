@@ -36,7 +36,7 @@ include/config_legacy.php
 .vscode/sftp.json
 .idea/
 /dev
-mikrotik/*
+/mikrotik
 wartelpas.code-workspace
 
 # Dokumen internal (jangan diunggah)
