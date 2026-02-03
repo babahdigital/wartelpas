@@ -11,11 +11,14 @@ function app_db_path()
     if (file_exists($envFile)) {
         require $envFile;
     }
-    $db_rel = $env['system']['app_db_file'] ?? 'db_data/mikhmon_app.db';
+    $db_rel = $env['system']['app_db_file'] ?? 'db_data/babahdigital_app.db';
     if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
-        return $db_rel;
+        $target = $db_rel;
+    } else {
+        $target = $root_dir . '/' . ltrim($db_rel, '/');
     }
-    return $root_dir . '/' . ltrim($db_rel, '/');
+
+    return $target;
 }
 
 function app_db()

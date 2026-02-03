@@ -96,16 +96,24 @@ $hits[] = $now;
 
 $backupDir = dirname(__DIR__) . '/db_data/backups_app';
 $dbFile = app_db_path();
+$dbBase = pathinfo($dbFile, PATHINFO_FILENAME);
 
 if (!is_dir($backupDir)) {
     @mkdir($backupDir, 0777, true);
 }
 
-$files = array_values(array_filter(scandir($backupDir), function ($f) use ($backupDir) {
-    return is_file($backupDir . '/' . $f) && preg_match('/\.db$/i', $f);
+$files = array_values(array_filter(scandir($backupDir), function ($f) use ($backupDir, $dbBase) {
+    if (!is_file($backupDir . '/' . $f)) return false;
+    if (!preg_match('/\.db$/i', $f)) return false;
+    return (bool)preg_match('/^' . preg_quote($dbBase, '/') . '_\d{8}_\d{6}\.db$/', $f);
 }));
 if (empty($files)) {
-    respond_app_restore(false, 'No backup files', [], 404);
+    $files = array_values(array_filter(scandir($backupDir), function ($f) use ($backupDir) {
+        return is_file($backupDir . '/' . $f) && preg_match('/\.db$/i', $f);
+    }));
+    if (empty($files)) {
+        respond_app_restore(false, 'No backup files', [], 404);
+    }
 }
 
 rsort($files);

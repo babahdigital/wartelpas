@@ -23,7 +23,7 @@ WartelPas adalah aplikasi manajemen hotspot berbasis PHP yang dikembangkan dari 
 
 ### 2.1 Stack Teknologi
 * **Backend:** PHP 7.4+ (Disarankan PHP 8.1+ untuk performa OPcache).
-* **Database:** SQLite 3 (`db_data/mikhmon_stats.db`) untuk log transaksi, histori login, dan audit.
+* **Database:** SQLite 3 (`db_data/babahdigital_main.db`) untuk log transaksi, histori login, dan audit.
 * **Router Communication:** RouterOS API (`lib/routeros_api.class.php`).
 * **Frontend:** HTML5, CSS3, JavaScript (jQuery), Bootstrap (Mikhmon base).
 * **Containerization:** Docker & Docker Compose.
@@ -40,7 +40,7 @@ WartelPas adalah aplikasi manajemen hotspot berbasis PHP yang dikembangkan dari 
 * **`include/`**: Konfigurasi inti (`config.php`, `env.php`, `acl.php`).
 
 ### 2.3 Skema Database (SQLite)
-Tabel kunci dalam `mikhmon_stats.db`:
+Tabel kunci dalam `babahdigital_main.db`:
 * `sales_history`: Data transaksi penjualan yang sudah di-*settle* (final).
 * `live_sales`: Data transaksi penjualan berjalan (pending settlement).
 * `login_history`: Riwayat sesi login user (menyimpan uptime, bytes, status terakhir).
@@ -165,7 +165,7 @@ File ini menyimpan variabel sensitif dan *toggles*. Contoh parameter penting:
 * `system.ghost_min_bytes`: Ambang batas bytes untuk deteksi voucher 'hantu'.
 * `fonnte.token`: Token API WhatsApp.
 * `retur_request.enabled`: Mengaktifkan fitur request di portal.
-* `system.app_db_file`: Lokasi DB konfigurasi aplikasi (default: `db_data/mikhmon_app.db`).
+* `system.app_db_file`: Lokasi DB konfigurasi aplikasi (default: `db_data/babahdigital_app.db`).
 
 ### 6.4 Nginx Reverse Proxy
 Disarankan menggunakan Nginx di depan container untuk menangani kompresi dan *caching*.

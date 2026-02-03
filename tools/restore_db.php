@@ -96,7 +96,7 @@ $hits[] = $now;
 
 $root = dirname(__DIR__);
 $system_cfg = $env['system'] ?? [];
-$db_rel = $system_cfg['db_file'] ?? 'db_data/mikhmon_stats.db';
+$db_rel = $system_cfg['db_file'] ?? 'db_data/babahdigital_main.db';
 if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
     $dbFile = $db_rel;
 } else {

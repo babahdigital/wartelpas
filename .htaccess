@@ -218,6 +218,11 @@ Require all denied
     Require all granted
 </If>
 
+# Init app DB endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/init_app_db\.php$#">
+    Require all granted
+</If>
+
 
 # Print report endpoints
 <If "%{REQUEST_URI} =~ m#^/report/print/print_rekap\.php$#">

@@ -41,16 +41,18 @@ $backup_status_badge = 'UNKNOWN';
 $backup_status_class = 'text-secondary';
 $backup_dir = __DIR__ . '/../db_data/backups';
 $db_file = get_stats_db_path();
+$db_base = pathinfo($db_file, PATHINFO_FILENAME);
 // App config backup status
 $app_backup_label = 'Belum ada';
 $app_backup_detail = '-';
 $app_backup_badge = 'UNKNOWN';
 $app_backup_class = 'text-secondary';
 $app_backup_dir = __DIR__ . '/../db_data/backups_app';
-$app_db_file = function_exists('app_db_path') ? app_db_path() : (__DIR__ . '/../db_data/mikhmon_app.db');
+$app_db_file = function_exists('app_db_path') ? app_db_path() : (__DIR__ . '/../db_data/babahdigital_app.db');
+$app_db_base = pathinfo($app_db_file, PATHINFO_FILENAME);
 if (is_dir($backup_dir)) {
   $today = date('Ymd');
-  $files = glob($backup_dir . '/mikhmon_stats_*.db') ?: [];
+  $files = glob($backup_dir . '/' . $db_base . '_*.db') ?: [];
   $latest = '';
   if (!empty($files)) {
     usort($files, function ($a, $b) { return filemtime($b) <=> filemtime($a); });
@@ -60,7 +62,7 @@ if (is_dir($backup_dir)) {
   }
   $today_files = [];
   foreach ($files as $f) {
-    if (preg_match('/mikhmon_stats_' . $today . '_\d{6}\.db$/', basename($f))) {
+    if (preg_match('/' . preg_quote($db_base, '/') . '_' . $today . '_\d{6}\.db$/', basename($f))) {
       $today_files[] = $f;
     }
   }
@@ -102,7 +104,7 @@ if (is_dir($backup_dir)) {
 
 if (is_dir($app_backup_dir)) {
   $today = date('Ymd');
-  $files = glob($app_backup_dir . '/mikhmon_app_*.db') ?: [];
+  $files = glob($app_backup_dir . '/' . $app_db_base . '_*.db') ?: [];
   $latest = '';
   if (!empty($files)) {
     usort($files, function ($a, $b) { return filemtime($b) <=> filemtime($a); });
@@ -112,7 +114,7 @@ if (is_dir($app_backup_dir)) {
   }
   $today_files = [];
   foreach ($files as $f) {
-    if (preg_match('/mikhmon_app_' . $today . '_\d{6}\.db$/', basename($f))) {
+    if (preg_match('/' . preg_quote($app_db_base, '/') . '_' . $today . '_\d{6}\.db$/', basename($f))) {
       $today_files[] = $f;
     }
   }

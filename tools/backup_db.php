@@ -96,7 +96,7 @@ $hits[] = $now;
 
 $root = dirname(__DIR__);
 $system_cfg = $env['system'] ?? [];
-$db_rel = $system_cfg['db_file'] ?? 'db_data/mikhmon_stats.db';
+$db_rel = $system_cfg['db_file'] ?? 'db_data/babahdigital_main.db';
 if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
     $dbFile = $db_rel;
 } else {
@@ -204,7 +204,7 @@ $logLine = date('Y-m-d H:i:s') . "\t" . basename($backupFile) . "\t" . ($tmpSize
 @file_put_contents($logFile, $logLine, FILE_APPEND);
 
 // Cleanup old backups by days
-$files = glob($backupDir . '/mikhmon_stats_*.db') ?: [];
+$files = glob($backupDir . '/' . $dbBase . '_*.db') ?: [];
 $now = time();
 $deleted = 0;
 foreach ($files as $f) {
@@ -215,7 +215,7 @@ foreach ($files as $f) {
 }
 
 // Cleanup old backups by count (keep newest)
-$files = glob($backupDir . '/mikhmon_stats_*.db') ?: [];
+$files = glob($backupDir . '/' . $dbBase . '_*.db') ?: [];
 usort($files, function($a, $b) {
     return filemtime($b) <=> filemtime($a);
 });
@@ -228,11 +228,11 @@ if (count($files) > $keepCount) {
 
 // Cleanup WAL/SHM/temp artifacts in backup folder
 $sidecars = array_merge(
-    glob($backupDir . '/mikhmon_stats_*.db-wal') ?: [],
-    glob($backupDir . '/mikhmon_stats_*.db-shm') ?: [],
-    glob($backupDir . '/mikhmon_stats_*.db.tmp-wal') ?: [],
-    glob($backupDir . '/mikhmon_stats_*.db.tmp-shm') ?: [],
-    glob($backupDir . '/mikhmon_stats_*.db.tmp') ?: []
+    glob($backupDir . '/' . $dbBase . '_*.db-wal') ?: [],
+    glob($backupDir . '/' . $dbBase . '_*.db-shm') ?: [],
+    glob($backupDir . '/' . $dbBase . '_*.db.tmp-wal') ?: [],
+    glob($backupDir . '/' . $dbBase . '_*.db.tmp-shm') ?: [],
+    glob($backupDir . '/' . $dbBase . '_*.db.tmp') ?: []
 );
 foreach ($sidecars as $f) {
     if (@unlink($f)) $deleted++;

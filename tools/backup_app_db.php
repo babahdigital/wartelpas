@@ -99,6 +99,7 @@ $dbFile = app_db_path();
 if (!file_exists($dbFile)) {
     respond_app_backup(false, 'DB not found', [], 404);
 }
+$dbBase = pathinfo($dbFile, PATHINFO_FILENAME);
 
 $backupDir = $root . '/db_data/backups_app';
 if (!is_dir($backupDir)) {
@@ -114,7 +115,7 @@ if ($keepDays <= 0) $keepDays = 14;
 if ($keepCount <= 0) $keepCount = 30;
 
 $stamp = date('Ymd_His');
-$backupFile = $backupDir . '/mikhmon_app_' . $stamp . '.db';
+$backupFile = $backupDir . '/' . $dbBase . '_' . $stamp . '.db';
 $tempFile = $backupFile . '.tmp';
 
 $minDbSize = isset($env['backup']['min_db_size']) ? (int)$env['backup']['min_db_size'] : (1024 * 8);
@@ -173,7 +174,7 @@ $logFile = $root . '/logs/backup_app_db.log';
 $logLine = date('Y-m-d H:i:s') . "\t" . basename($backupFile) . "\t" . ($tmpSize ?? 0) . "\n";
 @file_put_contents($logFile, $logLine, FILE_APPEND);
 
-$files = glob($backupDir . '/mikhmon_app_*.db') ?: [];
+$files = glob($backupDir . '/' . $dbBase . '_*.db') ?: [];
 $deleteCount = 0;
 $now = time();
 if (!empty($files)) {

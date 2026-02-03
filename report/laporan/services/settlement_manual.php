@@ -402,7 +402,7 @@ $logMaxLines = max(50, $logMaxLines);
 $debugMaxLines = max(50, $debugMaxLines);
 $cacheKeepHours = max(1, $cacheKeepHours);
 $debugFile = $logDir . '/settlement_manual_debug.log';
-$db_rel = $system_cfg['db_file'] ?? 'db_data/mikhmon_stats.db';
+$db_rel = $system_cfg['db_file'] ?? 'db_data/babahdigital_main.db';
 if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
     $dbFile = $db_rel;
 } else {
