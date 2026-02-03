@@ -592,7 +592,7 @@ if ($stats_db) {
                         <div class="alert alert-danger" style="margin-bottom:10px;">Gagal membaca DB WhatsApp: <?= htmlspecialchars($stats_db_error); ?></div>
                     <?php endif; ?>
                     <div style="overflow:auto;">
-                        <table class="table" style="min-width:640px;">
+                        <table class="table" style="min-width:820px;">
                             <thead>
                                 <tr>
                                     <th>Label</th>
@@ -613,47 +613,48 @@ if ($stats_db) {
                                             $type = (string)($rec['target_type'] ?? 'number');
                                             $type_badge = strtolower($type) === 'group' ? 'wa-badge wa-badge-purple' : 'wa-badge wa-badge-blue';
                                         ?>
+                                        <?php $form_id = 'wa-rec-' . (int)($rec['id'] ?? 0); ?>
                                         <tr>
-                                            <form method="post" action="./admin.php?id=whatsapp">
-                                                <input type="hidden" name="wa_id" value="<?= (int)($rec['id'] ?? 0); ?>">
-                                                <td>
-                                                    <input class="form-control-modern" type="text" name="wa_label" value="<?= htmlspecialchars($rec['label'] ?? ''); ?>" style="min-width:140px;">
-                                                </td>
-                                                <td>
-                                                    <div class="wa-cell-stack">
-                                                        <span><?= htmlspecialchars($rec['target'] ?? '-'); ?></span>
-                                                    </div>
-                                                </td>
-                                                <td><span class="<?= $type_badge; ?>"><?= htmlspecialchars($type); ?></span></td>
-                                                <td>
-                                                    <label class="wa-switch">
-                                                        <input type="checkbox" name="wa_active" <?= ((int)($rec['active'] ?? 1) === 1) ? 'checked' : ''; ?>>
-                                                        <span class="wa-switch-slider"></span>
-                                                    </label>
-                                                </td>
-                                                <td>
-                                                    <label class="wa-switch">
-                                                        <input type="checkbox" name="wa_receive_retur" <?= ((int)($rec['receive_retur'] ?? 1) === 1) ? 'checked' : ''; ?>>
-                                                        <span class="wa-switch-slider"></span>
-                                                    </label>
-                                                </td>
-                                                <td>
-                                                    <label class="wa-switch">
-                                                        <input type="checkbox" name="wa_receive_report" <?= ((int)($rec['receive_report'] ?? 1) === 1) ? 'checked' : ''; ?>>
-                                                        <span class="wa-switch-slider"></span>
-                                                    </label>
-                                                </td>
-                                                <td>
-                                                    <div style="display:flex; gap:6px;">
-                                                        <button class="btn-action btn-primary-m" type="submit" name="wa_action" value="update_recipient" title="Simpan" style="padding:6px 10px;">
-                                                            <i class="fa fa-save"></i>
-                                                        </button>
-                                                        <button class="btn-action btn-danger-m" type="submit" name="wa_action" value="delete_recipient" title="Hapus" style="padding:6px 10px;" onclick="return confirm('Hapus penerima ini?');">
-                                                            <i class="fa fa-trash"></i>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </form>
+                                            <td>
+                                                <input class="form-control-modern" type="text" name="wa_label" value="<?= htmlspecialchars($rec['label'] ?? ''); ?>" style="min-width:140px;" form="<?= $form_id; ?>">
+                                            </td>
+                                            <td>
+                                                <div class="wa-cell-stack">
+                                                    <span><?= htmlspecialchars($rec['target'] ?? '-'); ?></span>
+                                                </div>
+                                            </td>
+                                            <td><span class="<?= $type_badge; ?>"><?= htmlspecialchars($type); ?></span></td>
+                                            <td>
+                                                <label class="wa-switch">
+                                                    <input type="checkbox" name="wa_active" <?= ((int)($rec['active'] ?? 1) === 1) ? 'checked' : ''; ?> form="<?= $form_id; ?>">
+                                                    <span class="wa-switch-slider"></span>
+                                                </label>
+                                            </td>
+                                            <td>
+                                                <label class="wa-switch">
+                                                    <input type="checkbox" name="wa_receive_retur" <?= ((int)($rec['receive_retur'] ?? 1) === 1) ? 'checked' : ''; ?> form="<?= $form_id; ?>">
+                                                    <span class="wa-switch-slider"></span>
+                                                </label>
+                                            </td>
+                                            <td>
+                                                <label class="wa-switch">
+                                                    <input type="checkbox" name="wa_receive_report" <?= ((int)($rec['receive_report'] ?? 1) === 1) ? 'checked' : ''; ?> form="<?= $form_id; ?>">
+                                                    <span class="wa-switch-slider"></span>
+                                                </label>
+                                            </td>
+                                            <td>
+                                                <div style="display:flex; gap:6px;">
+                                                    <button class="btn-action btn-primary-m" type="submit" name="wa_action" value="update_recipient" title="Simpan" style="padding:6px 10px;" form="<?= $form_id; ?>">
+                                                        <i class="fa fa-save"></i>
+                                                    </button>
+                                                    <button class="btn-action btn-danger-m" type="submit" name="wa_action" value="delete_recipient" title="Hapus" style="padding:6px 10px;" onclick="return confirm('Hapus penerima ini?');" form="<?= $form_id; ?>">
+                                                        <i class="fa fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                                <form id="<?= $form_id; ?>" method="post" action="./admin.php?id=whatsapp" style="display:none;">
+                                                    <input type="hidden" name="wa_id" value="<?= (int)($rec['id'] ?? 0); ?>">
+                                                </form>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
