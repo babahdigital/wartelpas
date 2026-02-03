@@ -503,21 +503,18 @@ foreach ($wa_recipients as $rec) {
                         <div class="wa-muted">Endpoint, token, dan limit log.</div>
                     </div>
                     <div class="form-group-modern">
-                        <label class="form-label">Endpoint Send</label>
                         <div class="input-group-modern">
                             <div class="input-icon"><i class="fa fa-link"></i></div>
                             <input class="form-control-modern" type="text" name="wa_endpoint_send" value="<?= htmlspecialchars($wa_endpoint_send); ?>" placeholder="https://api.fonnte.com/send">
                         </div>
                     </div>
                     <div class="form-group-modern">
-                        <label class="form-label">Token</label>
                         <div class="input-group-modern">
                             <div class="input-icon"><i class="fa fa-key"></i></div>
                             <input class="form-control-modern" type="password" name="wa_token" value="<?= htmlspecialchars($wa_token); ?>" placeholder="Token Fonnte">
                         </div>
                     </div>
                     <div class="form-group-modern">
-                        <label class="form-label">Log Limit</label>
                         <div class="input-group-modern">
                             <div class="input-icon"><i class="fa fa-list"></i></div>
                             <input class="form-control-modern" type="number" min="1" max="500" name="wa_log_limit" value="<?= (int)$wa_log_limit; ?>">
@@ -528,7 +525,7 @@ foreach ($wa_recipients as $rec) {
                 <div class="col-6">
                     <div class="form-group-modern">
                         <div class="wa-section-title">Test Sender WhatsApp</div>
-                        <div class="wa-muted">Kirim pesan uji ke target manual atau pilih dari daftar penerima. Setiap penerima memiliki izin notifikasi masing-masing.</div>
+                        <div class="wa-muted">Kirim pesan uji ke target manual atau pilih dari daftar penerima.</div>
                     </div>
                     <div class="form-group-modern">
                         <form method="post" action="./admin.php?id=whatsapp">
