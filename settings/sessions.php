@@ -39,6 +39,10 @@ $backup_status_label = 'Belum ada';
 $backup_status_detail = '-';
 $backup_status_badge = 'UNKNOWN';
 $backup_status_class = 'text-secondary';
+$cloud_backup_label = 'Belum ada';
+$cloud_backup_detail = '-';
+$cloud_backup_badge = 'UNKNOWN';
+$cloud_backup_class = 'text-secondary';
 $backup_dir = __DIR__ . '/../db_data/backups';
 $db_file = get_stats_db_path();
 $db_base = pathinfo($db_file, PATHINFO_FILENAME);
@@ -47,6 +51,10 @@ $app_backup_label = 'Belum ada';
 $app_backup_detail = '-';
 $app_backup_badge = 'UNKNOWN';
 $app_backup_class = 'text-secondary';
+$app_cloud_label = 'Belum ada';
+$app_cloud_detail = '-';
+$app_cloud_badge = 'UNKNOWN';
+$app_cloud_class = 'text-secondary';
 $app_backup_dir = __DIR__ . '/../db_data/backups_app';
 $app_db_file = function_exists('app_db_path') ? app_db_path() : (__DIR__ . '/../db_data/babahdigital_app.db');
 $app_db_base = pathinfo($app_db_file, PATHINFO_FILENAME);
@@ -98,6 +106,45 @@ if (is_dir($backup_dir)) {
       $backup_status_label = 'Backup Ada (Perlu cek)';
       $backup_status_badge = 'CEK';
       $backup_status_class = 'text-secondary';
+    }
+  }
+}
+
+$cloud_log_file = __DIR__ . '/../logs/backup_db.log';
+if (is_file($cloud_log_file) && is_readable($cloud_log_file)) {
+  $lines = @file($cloud_log_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+  $last = '';
+  for ($i = count($lines) - 1; $i >= 0; $i--) {
+    $line = trim((string)$lines[$i]);
+    if ($line !== '') {
+      $last = $line;
+      break;
+    }
+  }
+  if ($last !== '') {
+    $parts = explode("\t", $last);
+    $cloud_backup_detail = $parts[3] ?? $cloud_backup_detail;
+    $cloud_status = strtolower(trim((string)($parts[3] ?? '')));
+    if ($cloud_status === 'uploaded to drive') {
+      $cloud_backup_label = 'Cloud';
+      $cloud_backup_badge = 'OK';
+      $cloud_backup_class = 'text-green';
+    } elseif ($cloud_status === 'queued') {
+      $cloud_backup_label = 'Cloud';
+      $cloud_backup_badge = 'QUEUE';
+      $cloud_backup_class = 'text-secondary';
+    } elseif ($cloud_status === 'upload failed') {
+      $cloud_backup_label = 'Cloud';
+      $cloud_backup_badge = 'GAGAL';
+      $cloud_backup_class = 'text-red';
+    } elseif ($cloud_status === 'skipped') {
+      $cloud_backup_label = 'Cloud';
+      $cloud_backup_badge = 'OFF';
+      $cloud_backup_class = 'text-secondary';
+    } else {
+      $cloud_backup_label = 'Cloud';
+      $cloud_backup_badge = 'CEK';
+      $cloud_backup_class = 'text-secondary';
     }
   }
 }
@@ -154,6 +201,45 @@ if (is_dir($app_backup_dir)) {
   }
 }
 
+$app_cloud_log_file = __DIR__ . '/../logs/backup_app_db.log';
+if (is_file($app_cloud_log_file) && is_readable($app_cloud_log_file)) {
+  $lines = @file($app_cloud_log_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+  $last = '';
+  for ($i = count($lines) - 1; $i >= 0; $i--) {
+    $line = trim((string)$lines[$i]);
+    if ($line !== '') {
+      $last = $line;
+      break;
+    }
+  }
+  if ($last !== '') {
+    $parts = explode("\t", $last);
+    $app_cloud_detail = $parts[3] ?? $app_cloud_detail;
+    $cloud_status = strtolower(trim((string)($parts[3] ?? '')));
+    if ($cloud_status === 'uploaded to drive') {
+      $app_cloud_label = 'Cloud';
+      $app_cloud_badge = 'OK';
+      $app_cloud_class = 'text-green';
+    } elseif ($cloud_status === 'queued') {
+      $app_cloud_label = 'Cloud';
+      $app_cloud_badge = 'QUEUE';
+      $app_cloud_class = 'text-secondary';
+    } elseif ($cloud_status === 'upload failed') {
+      $app_cloud_label = 'Cloud';
+      $app_cloud_badge = 'GAGAL';
+      $app_cloud_class = 'text-red';
+    } elseif ($cloud_status === 'skipped') {
+      $app_cloud_label = 'Cloud';
+      $app_cloud_badge = 'OFF';
+      $app_cloud_class = 'text-secondary';
+    } else {
+      $app_cloud_label = 'Cloud';
+      $app_cloud_badge = 'CEK';
+      $app_cloud_class = 'text-secondary';
+    }
+  }
+}
+
 $router_list = [];
 if (isset($data) && is_array($data)) {
   foreach ($data as $key => $row) {
@@ -179,12 +265,13 @@ foreach ($router_list as $router_item) {
     $active_count++;
   }
 }
+$has_router = !empty($router_list);
 ?>
 
 <div class="row" style="margin-bottom: 10px;">
   <div class="col-12" style="display:flex; align-items:center; justify-content:space-between;">
     <h2 style="margin:0; font-weight:300;">Dashboard <strong style="font-weight:700;">Utama</strong></h2>
-    <?php if (isSuperAdmin() || (isOperator() && (operator_can('backup_only') || operator_can('restore_only')))): ?>
+    <?php if ((isSuperAdmin() || (isOperator() && (operator_can('backup_only') || operator_can('restore_only')))) && !$has_router): ?>
       <a class="btn-action btn-primary-m" data-no-ajax="1" href="./admin.php?id=settings&session=new-<?= rand(1111,9999); ?>">
         <i class="fa fa-plus-circle"></i> Tambah Router Baru
       </a>
@@ -232,8 +319,10 @@ foreach ($router_list as $router_item) {
         </div>
         <div class="card-body-modern">
           <div class="text-secondary" style="font-size:12px; margin-bottom:8px;">Status Terakhir</div>
-          <div style="font-size:16px; font-weight:700;" class="<?= $backup_status_class; ?>"><?= htmlspecialchars($backup_status_label); ?> <span class="badge" style="margin-left:6px;"><?= htmlspecialchars($backup_status_badge); ?></span></div>
-          <div style="font-size:11px; color: var(--text-muted); margin:6px 0 14px;">File: <?= htmlspecialchars($backup_status_detail); ?></div>
+          <div style="font-size:16px; font-weight:700;" class="<?= $backup_status_class; ?>">Main DB: <?= htmlspecialchars($backup_status_label); ?> <span class="badge" style="margin-left:6px;"><?= htmlspecialchars($backup_status_badge); ?></span></div>
+          <div style="font-size:11px; color: var(--text-muted); margin:6px 0 10px;">File: <?= htmlspecialchars($backup_status_detail); ?></div>
+          <div style="font-size:16px; font-weight:700;" class="<?= $cloud_backup_class; ?>">Cloud: <?= htmlspecialchars($cloud_backup_label); ?> <span class="badge" style="margin-left:6px;"><?= htmlspecialchars($cloud_backup_badge); ?></span></div>
+          <div style="font-size:11px; color: var(--text-muted); margin:6px 0 14px;">Status: <?= htmlspecialchars($cloud_backup_detail); ?></div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <?php if (isSuperAdmin() || (isOperator() && operator_can('backup_only'))): ?>
               <button id="db-backup" class="btn-action btn-outline" onclick="runBackupAjax()">
@@ -248,8 +337,10 @@ foreach ($router_list as $router_item) {
           </div>
           <div style="height:12px;"></div>
           <div class="text-secondary" style="font-size:12px; margin-bottom:8px;">Konfigurasi (App DB)</div>
-          <div style="font-size:16px; font-weight:700;" class="<?= $app_backup_class; ?>"><?= htmlspecialchars($app_backup_label); ?> <span class="badge" style="margin-left:6px;"><?= htmlspecialchars($app_backup_badge); ?></span></div>
-          <div style="font-size:11px; color: var(--text-muted); margin:6px 0 14px;">File: <?= htmlspecialchars($app_backup_detail); ?></div>
+          <div style="font-size:16px; font-weight:700;" class="<?= $app_backup_class; ?>">App DB: <?= htmlspecialchars($app_backup_label); ?> <span class="badge" style="margin-left:6px;"><?= htmlspecialchars($app_backup_badge); ?></span></div>
+          <div style="font-size:11px; color: var(--text-muted); margin:6px 0 10px;">File: <?= htmlspecialchars($app_backup_detail); ?></div>
+          <div style="font-size:16px; font-weight:700;" class="<?= $app_cloud_class; ?>">App Cloud: <?= htmlspecialchars($app_cloud_label); ?> <span class="badge" style="margin-left:6px;"><?= htmlspecialchars($app_cloud_badge); ?></span></div>
+          <div style="font-size:11px; color: var(--text-muted); margin:6px 0 14px;">Status: <?= htmlspecialchars($app_cloud_detail); ?></div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <?php if (isSuperAdmin()): ?>
               <button id="db-app-backup" class="btn-action btn-outline" onclick="runAppBackupAjax()">

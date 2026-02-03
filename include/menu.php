@@ -17,6 +17,8 @@ if (!isset($_SESSION["mikhmon"])) {
 
 require_once __DIR__ . '/acl.php';
 ensureRole();
+require_once __DIR__ . '/db.php';
+app_db_import_legacy_if_needed();
 
 include('./include/version.php');
 
@@ -26,6 +28,7 @@ if (file_exists($envFile)) {
     require $envFile;
 }
 $backupKey = $env['backup']['secret'] ?? '';
+$has_router_session = app_db_first_session_id() !== '';
 
 $menu_retur_pending = 0;
 $menu_retur_list = [];
@@ -492,7 +495,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                     </a>
                 </li>
             <?php endif; ?>
-            <?php if (isSuperAdmin()): ?>
+            <?php if (isSuperAdmin() && !$has_router_session): ?>
                 <li class="nav-item">
                     <a class="nav-link <?= $snsettings; ?>" href="./admin.php?id=settings&router=new-<?= rand(1111,9999) ?>">
                         <i class="fa fa-plus"></i> <?= $_add_router ?>

@@ -4,6 +4,8 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 require_once __DIR__ . '/../include/acl.php';
 requireLogin('../admin.php?id=login');
+require_once __DIR__ . '/../include/db.php';
+app_db_import_legacy_if_needed();
 
 $active_tab = 'sessions';
 if ($id === 'settings') {
@@ -17,6 +19,13 @@ if ($id === 'settings') {
 }
 
 $active_session = $session ?? '';
+if ($active_session === '') {
+    $default_session = app_db_first_session_id();
+    if ($default_session !== '') {
+        $active_session = $default_session;
+        $session = $default_session;
+    }
+}
 $is_new_session = ($active_session !== '' && strpos($active_session, 'new-') === 0);
 $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-';
 ?>

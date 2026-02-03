@@ -146,6 +146,15 @@ if (isset($_POST['save'])) {
 
   $is_new_save = ($is_new_router || (isset($session) && $session !== '' && explode('-', $session)[0] === 'new'));
   if ($is_new_save) {
+    $existing_sessions = app_db_get_sessions();
+    if (!empty($existing_sessions)) {
+      foreach ($existing_sessions as $existing) {
+        $existing_id = (string)($existing['id'] ?? '');
+        if ($existing_id !== '') {
+          app_db_delete_session($existing_id);
+        }
+      }
+    }
     if (app_db_session_exists($sesname)) {
       render_admin_error('Gagal menambah router. Nama sesi sudah digunakan.', './admin.php?id=sessions');
     }

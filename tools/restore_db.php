@@ -120,6 +120,12 @@ $files = array_values(array_filter(scandir($backupDir), function ($f) use ($back
     if (preg_match('/^' . preg_quote($dbBase, '/') . '_\d{8}_\d{6}\.db$/', $f)) return true;
     return false;
 }));
+// fallback to any local .db before cloud
+if (empty($files)) {
+    $files = array_values(array_filter(scandir($backupDir), function ($f) use ($backupDir) {
+        return is_file($backupDir . '/' . $f) && preg_match('/\.db$/i', $f);
+    }));
+}
 // Jika kosong, coba download dari Google Drive
 $downloaded = false;
 $rcloneEnable = isset($env['rclone']['enable']) ? (bool)$env['rclone']['enable'] : false;
@@ -137,16 +143,15 @@ if (empty($files) && $rcloneEnable && $rcloneDownload && $rcloneBin !== '' && $r
             if (preg_match('/^' . preg_quote($dbBase, '/') . '_\d{8}_\d{6}\.db$/', $f)) return true;
             return false;
         }));
+        if (empty($files)) {
+            $files = array_values(array_filter(scandir($backupDir), function ($f) use ($backupDir) {
+                return is_file($backupDir . '/' . $f) && preg_match('/\.db$/i', $f);
+            }));
+        }
     }
 }
 if (empty($files)) {
-    // fallback to any db if prefix not found
-    $files = array_values(array_filter(scandir($backupDir), function ($f) use ($backupDir) {
-        return is_file($backupDir . '/' . $f) && preg_match('/\.db$/i', $f);
-    }));
-    if (empty($files)) {
-        respond_restore(false, 'No backup files', [], 404);
-    }
+    respond_restore(false, 'No backup files', [], 404);
 }
 
 rsort($files);

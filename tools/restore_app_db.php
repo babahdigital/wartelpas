@@ -49,23 +49,24 @@ if ($key === '' && isset($_SERVER['HTTP_X_TOOLS_KEY'])) {
 }
 $is_valid_key = $secret !== '' && hash_equals($secret, (string)$key);
 
-if (!$is_valid_key) {
+$session_allowed = isset($_SESSION['mikhmon']) && isSuperAdmin();
+
+if (!$is_valid_key && !$session_allowed) {
     requireLogin('../admin.php?id=login');
-} else {
-    if (!isset($_SESSION['mikhmon'])) {
-        $_SESSION['mikhmon'] = 'tools';
-        $_SESSION['mikhmon_level'] = 'superadmin';
-    }
+}
+if ($is_valid_key && !isset($_SESSION['mikhmon'])) {
+    $_SESSION['mikhmon'] = 'tools';
+    $_SESSION['mikhmon_level'] = 'superadmin';
 }
 
-if (!$is_valid_key) {
+if (!$is_valid_key && !$session_allowed) {
     respond_app_restore(false, 'Forbidden', [], 403);
 }
 
 $allowedIpList = isset($env['backup']['allowed_ips']) && is_array($env['backup']['allowed_ips'])
     ? $env['backup']['allowed_ips']
     : ['127.0.0.1', '::1', '10.10.83.1', '172.19.0.1'];
-if (!empty($_SERVER['REMOTE_ADDR']) && !empty($allowedIpList)) {
+if ($is_valid_key && !empty($_SERVER['REMOTE_ADDR']) && !empty($allowedIpList)) {
     $clientIp = (string)$_SERVER['REMOTE_ADDR'];
     if (!in_array($clientIp, $allowedIpList, true)) {
         respond_app_restore(false, 'IP not allowed', [], 403);
@@ -77,6 +78,7 @@ $rateKey = $clientIp . '|' . (string)$key . '|app';
 $rateFile = sys_get_temp_dir() . '/restore_app_db.rate.' . md5($rateKey);
 $rateWindow = isset($env['backup']['rate_window']) ? (int)$env['backup']['rate_window'] : 300;
 $rateLimit = isset($env['backup']['rate_limit']) ? (int)$env['backup']['rate_limit'] : 1;
+$rateEnabled = ($rateWindow > 0 && $rateLimit > 0);
 $forceRate = isset($_GET['force']) && $_GET['force'] === '1';
 $noRate = isset($_GET['nolimit']) && $_GET['nolimit'] === '1';
 $now = time();
@@ -91,11 +93,13 @@ if (is_file($rateFile)) {
 $hits = array_values(array_filter($hits, function($t) use ($now, $rateWindow) {
     return is_int($t) && ($now - $t) <= $rateWindow;
 }));
-if (!$forceRate && !$noRate && count($hits) >= $rateLimit) {
+if ($rateEnabled && !$forceRate && !$noRate && count($hits) >= $rateLimit) {
     respond_app_restore(false, 'Rate limited', [], 429);
 }
-$hits[] = $now;
-@file_put_contents($rateFile, json_encode($hits));
+if ($rateEnabled) {
+    $hits[] = $now;
+    @file_put_contents($rateFile, json_encode($hits));
+}
 
 $backupDir = dirname(__DIR__) . '/db_data/backups_app';
 $dbFile = app_db_path();
@@ -110,13 +114,37 @@ $files = array_values(array_filter(scandir($backupDir), function ($f) use ($back
     if (!preg_match('/\.db$/i', $f)) return false;
     return (bool)preg_match('/^' . preg_quote($dbBase, '/') . '_\d{8}_\d{6}\.db$/', $f);
 }));
+// fallback to any local .db before cloud
 if (empty($files)) {
     $files = array_values(array_filter(scandir($backupDir), function ($f) use ($backupDir) {
         return is_file($backupDir . '/' . $f) && preg_match('/\.db$/i', $f);
     }));
-    if (empty($files)) {
-        respond_app_restore(false, 'No backup files', [], 404);
+}
+// Jika kosong, coba download dari Cloud
+$downloaded = false;
+$rcloneEnable = isset($env['rclone']['enable']) ? (bool)$env['rclone']['enable'] : false;
+$rcloneDownload = isset($env['rclone']['download']) ? (bool)$env['rclone']['download'] : false;
+$rcloneBin = isset($env['rclone']['bin']) ? (string)$env['rclone']['bin'] : '';
+$rcloneRemote = isset($env['rclone']['remote']) ? (string)$env['rclone']['remote'] : '';
+if (empty($files) && $rcloneEnable && $rcloneDownload && $rcloneBin !== '' && $rcloneRemote !== '' && file_exists($rcloneBin)) {
+    $cmd = sprintf('%s copy "%s" "%s" --include "*.db" 2>&1', $rcloneBin, $rcloneRemote, $backupDir);
+    exec($cmd, $output, $returnVar);
+    if ($returnVar === 0) {
+        $downloaded = true;
+        $files = array_values(array_filter(scandir($backupDir), function ($f) use ($backupDir, $dbBase) {
+            if (!is_file($backupDir . '/' . $f)) return false;
+            if (!preg_match('/\.db$/i', $f)) return false;
+            return (bool)preg_match('/^' . preg_quote($dbBase, '/') . '_\d{8}_\d{6}\.db$/', $f);
+        }));
+        if (empty($files)) {
+            $files = array_values(array_filter(scandir($backupDir), function ($f) use ($backupDir) {
+                return is_file($backupDir . '/' . $f) && preg_match('/\.db$/i', $f);
+            }));
+        }
     }
+}
+if (empty($files)) {
+    respond_app_restore(false, 'No backup files', [], 404);
 }
 
 rsort($files);
@@ -159,14 +187,18 @@ if (!@rename($tmpRestore, $dbFile)) {
     respond_app_restore(false, 'Failed to finalize restore', [], 500);
 }
 
-$logFile = dirname(__DIR__) . '/logs/restore_app_db.log';
-$logLine = date('Y-m-d H:i:s') . "\t" . $target . "\n";
+$logDir = dirname(__DIR__) . '/logs';
+if (!is_dir($logDir)) {
+    @mkdir($logDir, 0777, true);
+}
+$logFile = $logDir . '/restore_app_db.log';
+$logLine = date('Y-m-d H:i:s') . "\t" . $target . "\t" . ($downloaded ? 'From Cloud' : 'Local') . "\n";
 @file_put_contents($logFile, $logLine, FILE_APPEND);
 
 if ($is_ajax) {
     respond_app_restore(true, 'Restore OK', [
         'file' => $target,
-        'source' => 'local'
+        'source' => $downloaded ? 'cloud' : 'local'
     ], 200);
 }
 echo 'Restore OK: ' . htmlspecialchars($target);

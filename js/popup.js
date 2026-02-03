@@ -167,15 +167,6 @@
             '<label class="m-pass-label">Konfirmasi Password Admin</label>' +
             '<input id="pw-confirm" type="password" class="m-pass-input" placeholder="Ulangi password admin" />' +
           '</div>' +
-          '<div class="m-pass-divider"></div>' +
-          '<div class="m-pass-row">' +
-            '<label class="m-pass-label">Password Operator Baru (Opsional)</label>' +
-            '<input id="pw-op-new" type="password" class="m-pass-input" placeholder="Kosongkan jika tidak diubah" />' +
-          '</div>' +
-          '<div class="m-pass-row">' +
-            '<label class="m-pass-label">Konfirmasi Password Operator</label>' +
-            '<input id="pw-op-confirm" type="password" class="m-pass-input" placeholder="Ulangi password operator" />' +
-          '</div>' +
         '</div>';
     } else {
       html = '' +
@@ -212,8 +203,8 @@
             var current = (document.getElementById('pw-current') || {}).value || '';
             var next = (document.getElementById('pw-new') || {}).value || '';
             var confirm = (document.getElementById('pw-confirm') || {}).value || '';
-            var opNext = (document.getElementById('pw-op-new') || {}).value || '';
-            var opConfirm = (document.getElementById('pw-op-confirm') || {}).value || '';
+            var opNext = '';
+            var opConfirm = '';
             var opCurrent = (document.getElementById('pw-op-current') || {}).value || '';
             var payload = new URLSearchParams();
             payload.append('current_password', current.trim());
@@ -1161,7 +1152,7 @@
               statusIcon: 'fa fa-database',
               statusColor: '#2f81f7',
               message: 'Backup konfigurasi selesai.',
-              alert: { type: 'info', text: 'File: ' + (data.backup || '-') + ' | Hapus: ' + (data.deleted || 0) },
+              alert: { type: 'info', text: 'File: ' + (data.backup || '-') + ' | Cloud: ' + (data.cloud || '-') + ' | Hapus: ' + (data.deleted || 0) },
               buttons: [
                 { label: 'Tutup', className: 'm-btn m-btn-primary' }
               ]
@@ -1237,8 +1228,18 @@
       fetch('./tools/restore_app_db.php?ajax=1&nolimit=1&key=' + encodeURIComponent(window.__backupKey || ''), {
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
       })
-      .then(function(resp){ return resp.json(); })
-      .then(function(data){
+      .then(function(resp){
+        return resp.text().then(function(text){
+          var data = null;
+          try { data = JSON.parse(text); } catch (e) { data = null; }
+          return { ok: resp.ok, status: resp.status, data: data, raw: text };
+        });
+      })
+      .then(function(result){
+        var data = result.data || null;
+        if (!result.ok && !data) {
+          throw new Error('HTTP ' + result.status + (result.raw ? ' - ' + result.raw : ''));
+        }
         if (window.MikhmonPopup) {
           if (data && data.ok) {
             window.MikhmonPopup.open({
@@ -1259,7 +1260,7 @@
               statusIcon: 'fa fa-times-circle',
               statusColor: '#da3633',
               message: 'Restore konfigurasi gagal.',
-              alert: { type: 'danger', text: (data && data.message) ? data.message : 'Unknown' },
+              alert: { type: 'danger', text: (data && data.message) ? data.message : (result.raw || 'Unknown') },
               buttons: [
                 { label: 'Tutup', className: 'm-btn m-btn-cancel' }
               ]
@@ -1274,7 +1275,8 @@
             iconClass: 'fa fa-times-circle',
             statusIcon: 'fa fa-times-circle',
             statusColor: '#da3633',
-            message: 'Restore konfigurasi gagal karena koneksi.',
+            message: 'Restore konfigurasi gagal.',
+            alert: { type: 'danger', text: 'Tidak dapat memproses respons server.' },
             buttons: [
               { label: 'Tutup', className: 'm-btn m-btn-cancel' }
             ]

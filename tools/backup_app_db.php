@@ -49,24 +49,25 @@ if ($key === '' && isset($_SERVER['HTTP_X_TOOLS_KEY'])) {
 }
 $is_valid_key = $secret !== '' && hash_equals($secret, (string)$key);
 
-if (!$is_valid_key) {
+$session_allowed = isset($_SESSION['mikhmon']) && isSuperAdmin();
+
+if (!$is_valid_key && !$session_allowed) {
     requireLogin('../admin.php?id=login');
     requireSuperAdmin('../admin.php?id=sessions');
-} else {
-    if (!isset($_SESSION['mikhmon'])) {
-        $_SESSION['mikhmon'] = 'tools';
-        $_SESSION['mikhmon_level'] = 'superadmin';
-    }
+}
+if ($is_valid_key && !isset($_SESSION['mikhmon'])) {
+    $_SESSION['mikhmon'] = 'tools';
+    $_SESSION['mikhmon_level'] = 'superadmin';
 }
 
-if (!$is_valid_key) {
+if (!$is_valid_key && !$session_allowed) {
     respond_app_backup(false, 'Forbidden', [], 403);
 }
 
 $allowedIpList = isset($env['backup']['allowed_ips']) && is_array($env['backup']['allowed_ips'])
     ? $env['backup']['allowed_ips']
     : ['127.0.0.1', '::1', '10.10.83.1', '172.19.0.1'];
-if (!empty($_SERVER['REMOTE_ADDR']) && !empty($allowedIpList)) {
+if ($is_valid_key && !empty($_SERVER['REMOTE_ADDR']) && !empty($allowedIpList)) {
     $clientIp = (string)$_SERVER['REMOTE_ADDR'];
     if (!in_array($clientIp, $allowedIpList, true)) {
         respond_app_backup(false, 'IP not allowed', [], 403);
@@ -78,6 +79,7 @@ $rateKey = $clientIp . '|' . (string)$key . '|app';
 $rateFile = sys_get_temp_dir() . '/backup_app_db.rate.' . md5($rateKey);
 $rateWindow = isset($env['backup']['rate_window']) ? (int)$env['backup']['rate_window'] : 300;
 $rateLimit = isset($env['backup']['rate_limit']) ? (int)$env['backup']['rate_limit'] : 1;
+$rateEnabled = ($rateWindow > 0 && $rateLimit > 0);
 $forceRate = isset($_GET['force']) && $_GET['force'] === '1';
 $now = time();
 $hits = [];
@@ -91,11 +93,13 @@ if (is_file($rateFile)) {
 $hits = array_values(array_filter($hits, function($t) use ($now, $rateWindow) {
     return is_int($t) && ($now - $t) <= $rateWindow;
 }));
-if (!$forceRate && count($hits) >= $rateLimit) {
+if ($rateEnabled && !$forceRate && count($hits) >= $rateLimit) {
     respond_app_backup(false, 'Rate limited', [], 429);
 }
-$hits[] = $now;
-@file_put_contents($rateFile, json_encode($hits));
+if ($rateEnabled) {
+    $hits[] = $now;
+    @file_put_contents($rateFile, json_encode($hits));
+}
 
 $root = dirname(__DIR__);
 $dbFile = app_db_path();
@@ -121,27 +125,49 @@ $stamp = date('Ymd_His');
 $backupFile = $backupDir . '/' . $dbBase . '_' . $stamp . '.db';
 $tempFile = $backupFile . '.tmp';
 
-$minDbSize = isset($env['backup']['min_db_size']) ? (int)$env['backup']['min_db_size'] : (1024 * 8);
+$minDbSize = isset($env['backup']['min_app_db_size'])
+    ? (int)$env['backup']['min_app_db_size']
+    : 0;
 $srcSize = @filesize($dbFile);
-if (!$srcSize || $srcSize < $minDbSize) {
-    respond_app_backup(false, 'Source DB too small or unreadable', [], 500);
+if ($srcSize === false || $srcSize === 0) {
+    respond_app_backup(false, 'Source DB unreadable', [], 500);
+}
+if ($minDbSize > 0 && $srcSize < $minDbSize) {
+    respond_app_backup(false, 'Source DB too small', [], 500);
 }
 
 $ok = false;
 $message = '';
-try {
-    if (class_exists('SQLite3')) {
-        $src = new SQLite3($dbFile, SQLITE3_OPEN_READONLY);
-        $dest = new SQLite3($tempFile, SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE);
-        $src->backup($dest);
-        $dest->close();
-        $src->close();
-        $ok = true;
-    } else {
-        $ok = @copy($dbFile, $tempFile);
+$localRetries = isset($env['backup']['local_retries']) ? (int)$env['backup']['local_retries'] : 2;
+if ($localRetries < 0) $localRetries = 0;
+$attempts = $localRetries + 1;
+for ($i = 1; $i <= $attempts; $i++) {
+    $ok = false;
+    $message = '';
+    try {
+        if (class_exists('SQLite3')) {
+            $src = new SQLite3($dbFile, SQLITE3_OPEN_READONLY);
+            $dest = new SQLite3($tempFile, SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE);
+            $src->backup($dest);
+            $dest->close();
+            $src->close();
+            $ok = true;
+        } else {
+            $ok = @copy($dbFile, $tempFile);
+        }
+    } catch (Exception $e) {
+        $message = 'Backup failed.';
+        $ok = false;
     }
-} catch (Exception $e) {
-    $message = 'Backup failed.';
+
+    if (!$ok || !file_exists($tempFile)) {
+        @unlink($tempFile);
+        if ($i < $attempts) {
+            usleep(200000);
+            continue;
+        }
+    }
+    break;
 }
 
 if (!$ok || !file_exists($tempFile)) {
@@ -173,9 +199,64 @@ if (!@rename($tempFile, $backupFile)) {
     respond_app_backup(false, 'Failed to finalize backup', [], 500);
 }
 
-$logFile = $root . '/logs/backup_app_db.log';
-$logLine = date('Y-m-d H:i:s') . "\t" . basename($backupFile) . "\t" . ($tmpSize ?? 0) . "\n";
+// Sync ke Cloud via rclone (opsional)
+$cloudStatus = 'Skipped';
+$cloudError = '';
+$rcloneEnable = isset($env['rclone']['enable']) ? (bool)$env['rclone']['enable'] : false;
+$rcloneUpload = isset($env['rclone']['upload']) ? (bool)$env['rclone']['upload'] : false;
+$rcloneBin = isset($env['rclone']['bin']) ? (string)$env['rclone']['bin'] : '';
+$rcloneRemote = isset($env['rclone']['remote']) ? (string)$env['rclone']['remote'] : '';
+$cloudParam = $_GET['cloud'] ?? '';
+$asyncParam = $_GET['async'] ?? '';
+$cloudEnabled = ($cloudParam === '' || $cloudParam === '1');
+$cloudAsync = ($asyncParam === '1') || (!empty($env['backup']['rclone_async']));
+if (!$cloudEnabled) {
+    $cloudStatus = 'Disabled (param)';
+} elseif (!$rcloneEnable || !$rcloneUpload) {
+    $cloudStatus = 'Disabled (rclone off)';
+} elseif ($rcloneBin === '' || !file_exists($rcloneBin)) {
+    $cloudStatus = 'Disabled (rclone missing)';
+} elseif ($rcloneRemote === '') {
+    $cloudStatus = 'Disabled (remote empty)';
+} else {
+    $dest = $rcloneRemote . '/' . basename($backupFile);
+    if ($cloudAsync) {
+        $cmd = sprintf('%s copyto "%s" "%s" >/dev/null 2>&1 &', $rcloneBin, $backupFile, $dest);
+        exec($cmd);
+        $cloudStatus = 'Queued';
+    } else {
+        $rcloneRetries = isset($env['backup']['rclone_retries']) ? (int)$env['backup']['rclone_retries'] : 2;
+        if ($rcloneRetries < 0) $rcloneRetries = 0;
+        $maxTry = $rcloneRetries + 1;
+        for ($i = 1; $i <= $maxTry; $i++) {
+            $cmd = sprintf('%s copyto "%s" "%s" 2>&1', $rcloneBin, $backupFile, $dest);
+            exec($cmd, $output, $returnVar);
+            if ($returnVar === 0) {
+                $cloudStatus = 'Uploaded to Drive';
+                $cloudError = '';
+                break;
+            }
+            $cloudStatus = 'Upload Failed';
+            $cloudError = trim(implode("\n", $output));
+            if ($i < $maxTry) {
+                usleep(300000);
+            }
+        }
+    }
+}
+
+$logDir = $root . '/logs';
+if (!is_dir($logDir)) {
+    @mkdir($logDir, 0777, true);
+}
+$logFile = $logDir . '/backup_app_db.log';
+$logLine = date('Y-m-d H:i:s') . "\t" . basename($backupFile) . "\t" . ($tmpSize ?? 0) . "\t" . $cloudStatus . "\n";
 @file_put_contents($logFile, $logLine, FILE_APPEND);
+if ($cloudError !== '') {
+    $cloudLog = $logDir . '/backup_app_db_cloud.log';
+    $cloudLine = date('Y-m-d H:i:s') . "\t" . basename($backupFile) . "\t" . $cloudError . "\n";
+    @file_put_contents($cloudLog, $cloudLine, FILE_APPEND);
+}
 
 $files = glob($backupDir . '/' . $dbBase . '_*.db') ?: [];
 $deleteCount = 0;
@@ -191,5 +272,7 @@ if (!empty($files)) {
 
 respond_app_backup(true, 'Backup OK', [
     'backup' => basename($backupFile),
+    'cloud' => $cloudStatus,
+    'cloud_error' => $cloudError,
     'deleted' => $deleteCount
 ]);
