@@ -170,6 +170,20 @@ function wa_message_class($msg) {
     return '';
 }
 
+function wa_load_templates($filePath) {
+    if (!is_file($filePath)) return [];
+    $raw = @file_get_contents($filePath);
+    if ($raw === false) return [];
+    $data = json_decode($raw, true);
+    return is_array($data) ? $data : [];
+}
+
+function wa_save_templates($filePath, array $templates) {
+    $payload = json_encode(array_values($templates), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    if ($payload === false) return false;
+    return @file_put_contents($filePath, $payload) !== false;
+}
+
 function wa_display_target($target, array $label_map) {
     $target = trim((string)$target);
     if ($target === '') return '-';
@@ -278,6 +292,92 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'update_recipient') {
     } else {
         $save_message = 'Penerima tidak ditemukan.';
         $save_type = 'warning';
+    }
+
+    if (!$is_ajax) {
+        $_SESSION['wa_save_message'] = $save_message;
+        $_SESSION['wa_save_type'] = $save_type;
+        if (!headers_sent()) {
+            header('Location: ./admin.php?id=whatsapp');
+        } else {
+            echo "<script>window.location='./admin.php?id=whatsapp';</script>";
+        }
+        exit;
+    }
+}
+
+$wa_templates_file = __DIR__ . '/whatsapp_templates.json';
+$wa_templates = wa_load_templates($wa_templates_file);
+
+if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'save_template') {
+    $tpl_id = trim((string)($_POST['wa_tpl_id'] ?? ''));
+    $tpl_name = trim((string)($_POST['wa_tpl_name'] ?? ''));
+    $tpl_category = trim((string)($_POST['wa_tpl_category'] ?? ''));
+    $tpl_body = trim((string)($_POST['wa_tpl_body'] ?? ''));
+    if ($tpl_name === '' || $tpl_body === '') {
+        $save_message = 'Nama dan isi template wajib diisi.';
+        $save_type = 'warning';
+    } else {
+        if ($tpl_id === '') {
+            $tpl_id = uniqid('tpl_', true);
+        }
+        $found = false;
+        foreach ($wa_templates as &$tpl) {
+            if (!is_array($tpl)) continue;
+            if ((string)($tpl['id'] ?? '') === $tpl_id) {
+                $tpl['name'] = $tpl_name;
+                $tpl['category'] = $tpl_category;
+                $tpl['body'] = $tpl_body;
+                $found = true;
+                break;
+            }
+        }
+        unset($tpl);
+        if (!$found) {
+            $wa_templates[] = [
+                'id' => $tpl_id,
+                'name' => $tpl_name,
+                'category' => $tpl_category,
+                'body' => $tpl_body,
+            ];
+        }
+        if (wa_save_templates($wa_templates_file, $wa_templates)) {
+            $save_message = 'Template WhatsApp berhasil disimpan.';
+            $save_type = 'success';
+        } else {
+            $save_message = 'Gagal menyimpan template WhatsApp.';
+            $save_type = 'danger';
+        }
+    }
+
+    if (!$is_ajax) {
+        $_SESSION['wa_save_message'] = $save_message;
+        $_SESSION['wa_save_type'] = $save_type;
+        if (!headers_sent()) {
+            header('Location: ./admin.php?id=whatsapp');
+        } else {
+            echo "<script>window.location='./admin.php?id=whatsapp';</script>";
+        }
+        exit;
+    }
+}
+
+if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'delete_template') {
+    $tpl_id = trim((string)($_POST['wa_tpl_id'] ?? ''));
+    if ($tpl_id === '') {
+        $save_message = 'Template tidak ditemukan.';
+        $save_type = 'warning';
+    } else {
+        $wa_templates = array_values(array_filter($wa_templates, function($tpl) use ($tpl_id) {
+            return (string)($tpl['id'] ?? '') !== $tpl_id;
+        }));
+        if (wa_save_templates($wa_templates_file, $wa_templates)) {
+            $save_message = 'Template WhatsApp berhasil dihapus.';
+            $save_type = 'success';
+        } else {
+            $save_message = 'Gagal menghapus template WhatsApp.';
+            $save_type = 'danger';
+        }
     }
 
     if (!$is_ajax) {
