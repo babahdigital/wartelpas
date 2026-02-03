@@ -37,10 +37,16 @@ try {
             active INTEGER NOT NULL DEFAULT 1,
             receive_retur INTEGER NOT NULL DEFAULT 1,
             receive_report INTEGER NOT NULL DEFAULT 1,
+            receive_ls INTEGER NOT NULL DEFAULT 1,
             created_at TEXT,
             updated_at TEXT
         )");
         $stats_db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_whatsapp_recipients_target ON whatsapp_recipients(target)");
+        $cols = $stats_db->query("PRAGMA table_info(whatsapp_recipients)")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $colNames = array_map(function($c){ return $c['name'] ?? ''; }, $cols);
+        if (!in_array('receive_ls', $colNames, true)) {
+            $stats_db->exec("ALTER TABLE whatsapp_recipients ADD COLUMN receive_ls INTEGER NOT NULL DEFAULT 1");
+        }
         $stats_db->exec("CREATE TABLE IF NOT EXISTS whatsapp_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             target TEXT,
@@ -187,6 +193,7 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'add_recipient') {
     $active = isset($_POST['wa_new_active']) ? 1 : 0;
     $receive_retur = isset($_POST['wa_new_receive_retur']) ? 1 : 0;
     $receive_report = isset($_POST['wa_new_receive_report']) ? 1 : 0;
+    $receive_ls = isset($_POST['wa_new_receive_ls']) ? 1 : 0;
     $err = '';
     $validated_target = validate_wa_target($target_raw, $type, $err);
     if ($validated_target === false) {
@@ -211,7 +218,7 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'add_recipient') {
                 ]);
                 $save_message = 'Penerima WhatsApp diperbarui.';
             } else {
-                $stmtAdd = $stats_db->prepare("INSERT INTO whatsapp_recipients (label, target, target_type, active, receive_retur, receive_report, created_at, updated_at) VALUES (:label, :target, :type, :active, :retur, :report, :now, :now)");
+                $stmtAdd = $stats_db->prepare("INSERT INTO whatsapp_recipients (label, target, target_type, active, receive_retur, receive_report, receive_ls, created_at, updated_at) VALUES (:label, :target, :type, :active, :retur, :report, :ls, :now, :now)");
                 $stmtAdd->execute([
                     ':label' => $label,
                     ':target' => $validated_target,
@@ -219,6 +226,7 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'add_recipient') {
                     ':active' => $active,
                     ':retur' => $receive_retur,
                     ':report' => $receive_report,
+                    ':ls' => $receive_ls,
                     ':now' => $now,
                 ]);
                 $save_message = 'Penerima WhatsApp berhasil ditambahkan.';
@@ -249,13 +257,15 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'update_recipient') {
         $active = isset($_POST['wa_active']) ? 1 : 0;
         $receive_retur = isset($_POST['wa_receive_retur']) ? 1 : 0;
         $receive_report = isset($_POST['wa_receive_report']) ? 1 : 0;
+        $receive_ls = isset($_POST['wa_receive_ls']) ? 1 : 0;
         try {
-            $stmtUp = $stats_db->prepare("UPDATE whatsapp_recipients SET label = :label, active = :active, receive_retur = :retur, receive_report = :report, updated_at = :now WHERE id = :id");
+            $stmtUp = $stats_db->prepare("UPDATE whatsapp_recipients SET label = :label, active = :active, receive_retur = :retur, receive_report = :report, receive_ls = :ls, updated_at = :now WHERE id = :id");
             $stmtUp->execute([
                 ':label' => $label,
                 ':active' => $active,
                 ':retur' => $receive_retur,
                 ':report' => $receive_report,
+                ':ls' => $receive_ls,
                 ':now' => date('Y-m-d H:i:s'),
                 ':id' => $id,
             ]);
@@ -397,7 +407,7 @@ $wa_log_limit = isset($wa['log_limit']) ? (int)$wa['log_limit'] : 50;
 
 if ($stats_db) {
     try {
-        $stmtRec = $stats_db->query("SELECT id, label, target, target_type, active, receive_retur, receive_report, created_at, updated_at FROM whatsapp_recipients ORDER BY id DESC");
+        $stmtRec = $stats_db->query("SELECT id, label, target, target_type, active, receive_retur, receive_report, receive_ls, created_at, updated_at FROM whatsapp_recipients ORDER BY id DESC");
         $wa_recipients = $stmtRec ? $stmtRec->fetchAll(PDO::FETCH_ASSOC) : [];
     } catch (Exception $e) {
         $wa_recipients = [];
@@ -746,7 +756,7 @@ foreach ($wa_recipients as $rec) {
                     data = window.__waRecipients.find(function(r){ return String(r.id) === String(recId); }) || null;
                 }
                 if (!data) {
-                    data = { id: 'new', label: '', target: '', target_type: 'number', active: 1, receive_retur: 1, receive_report: 1 };
+                    data = { id: 'new', label: '', target: '', target_type: 'number', active: 1, receive_retur: 1, receive_report: 1, receive_ls: 1 };
                 }
 
                 var html = '' +
@@ -793,6 +803,11 @@ foreach ($wa_recipients as $rec) {
                                 '<span class="wa-switch-slider"></span>' +
                                 '<span style="font-size:12px; color:#cbd5db;">Notif Laporan</span>' +
                             '</label>' +
+                            '<label class="wa-switch">' +
+                                '<input id="wa-rec-ls" type="checkbox" ' + ((data.receive_ls ? 'checked' : '')) + '>' +
+                                '<span class="wa-switch-slider"></span>' +
+                                '<span style="font-size:12px; color:#cbd5db;">Notif L/S</span>' +
+                            '</label>' +
                         '</div>' +
                     '</div>';
 
@@ -814,6 +829,7 @@ foreach ($wa_recipients as $rec) {
                                 var active = (document.getElementById('wa-rec-active') || {}).checked;
                                 var retur = (document.getElementById('wa-rec-retur') || {}).checked;
                                 var report = (document.getElementById('wa-rec-report') || {}).checked;
+                                var ls = (document.getElementById('wa-rec-ls') || {}).checked;
                                 if (!label.trim()) {
                                     label = '';
                                 }
@@ -830,7 +846,8 @@ foreach ($wa_recipients as $rec) {
                                         wa_new_type: type,
                                         wa_new_active: active ? '1' : '',
                                         wa_new_receive_retur: retur ? '1' : '',
-                                        wa_new_receive_report: report ? '1' : ''
+                                        wa_new_receive_report: report ? '1' : '',
+                                        wa_new_receive_ls: ls ? '1' : ''
                                     });
                                 } else {
                                     submitWaRecipientForm({
@@ -839,7 +856,8 @@ foreach ($wa_recipients as $rec) {
                                         wa_label: label.trim(),
                                         wa_active: active ? '1' : '',
                                         wa_receive_retur: retur ? '1' : '',
-                                        wa_receive_report: report ? '1' : ''
+                                        wa_receive_report: report ? '1' : '',
+                                        wa_receive_ls: ls ? '1' : ''
                                     });
                                 }
                             }

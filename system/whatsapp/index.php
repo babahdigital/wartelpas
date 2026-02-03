@@ -48,6 +48,7 @@ try {
         active INTEGER NOT NULL DEFAULT 1,
         receive_retur INTEGER NOT NULL DEFAULT 1,
         receive_report INTEGER NOT NULL DEFAULT 1,
+        receive_ls INTEGER NOT NULL DEFAULT 1,
         created_at TEXT,
         updated_at TEXT
     )");
