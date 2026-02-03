@@ -483,6 +483,11 @@ foreach ($wa_recipients as $rec) {
     .wa-log-table td.wa-log-message { max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .wa-log-stack { display: flex; flex-direction: column; gap: 2px; }
     .wa-log-sub { font-size: 11px; color: #8b98a7; }
+    .wa-log-table { border-collapse: collapse; width: 100%; }
+    .wa-log-table thead th { background: rgba(15, 23, 42, 0.35); border-bottom: 1px solid rgba(148,163,184,0.18); }
+    .wa-log-table tbody tr { border-bottom: 1px solid rgba(148,163,184,0.12); }
+    .wa-log-table tbody tr:last-child { border-bottom: none; }
+    .wa-log-table th, .wa-log-table td { padding: 10px 12px; }
     .wa-popup-row { margin-bottom: 10px; }
     .wa-popup-switches { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
 </style>
