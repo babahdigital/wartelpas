@@ -33,7 +33,7 @@ include/config_legacy.php
 /report/pdf/*.pdf
 
 # IDE Setting (VS Code / Jetbrains)
-.vscode/
+.vscode/sftp.json
 .idea/
 /dev
 wartelpas.code-workspace
