@@ -231,6 +231,12 @@ if ($stats_db) {
         <?php endif; ?>
         <form method="post" action="./admin.php?id=whatsapp" data-admin-form="whatsapp">
             <div class="row">
+                <div class="col-12">
+                    <div class="form-group-modern" style="margin-bottom:8px;">
+                        <label class="form-label">Konfigurasi Utama</label>
+                        <small style="display:block; color:#6c757d;">Lengkapi endpoint dan token untuk mengaktifkan pengiriman WhatsApp.</small>
+                    </div>
+                </div>
                 <div class="col-6">
                     <div class="form-group-modern">
                         <label class="form-label">Endpoint Send</label>
@@ -249,7 +255,17 @@ if ($stats_db) {
                         </div>
                     </div>
                 </div>
-                <div class="col-6">
+                <div class="col-3">
+                    <div class="form-group-modern">
+                        <label class="form-label">Log Limit</label>
+                        <div class="input-group-modern">
+                            <div class="input-icon"><i class="fa fa-list"></i></div>
+                            <input class="form-control-modern" type="number" min="1" max="500" name="wa_log_limit" value="<?= (int)$wa_log_limit; ?>">
+                        </div>
+                        <small style="display:block; margin-top:6px; color:#6c757d;">Jumlah log terakhir yang ditampilkan di bawah.</small>
+                    </div>
+                </div>
+                <div class="col-9">
                     <div class="form-group-modern">
                         <label class="form-label">Target Notifikasi (nomor / group)</label>
                         <div class="input-group-modern" style="align-items:flex-start;">
@@ -259,16 +275,11 @@ if ($stats_db) {
                         <small style="display:block; margin-top:6px; color:#6c757d;">Kosongkan untuk memakai daftar penerima di menu WhatsApp. Bisa isi nomor atau Group ID (@g.us).</small>
                     </div>
                 </div>
-                <div class="col-3">
-                    <div class="form-group-modern">
-                        <label class="form-label">Log Limit</label>
-                        <div class="input-group-modern">
-                            <div class="input-icon"><i class="fa fa-list"></i></div>
-                            <input class="form-control-modern" type="number" min="1" max="500" name="wa_log_limit" value="<?= (int)$wa_log_limit; ?>">
-                        </div>
-                    </div>
-                </div>
                 <div class="col-12">
+                    <div class="form-group-modern" style="margin-bottom:6px;">
+                        <label class="form-label">Opsi Notifikasi</label>
+                        <small style="display:block; color:#6c757d;">Pilih jenis notifikasi yang diizinkan untuk dikirim.</small>
+                    </div>
                     <div class="checkbox-wrapper">
                         <div class="row">
                             <div>
@@ -313,6 +324,7 @@ if ($stats_db) {
             <div class="col-6">
                 <div class="form-group-modern">
                     <label class="form-label">Ambil dari daftar penerima</label>
+                    <small style="display:block; color:#6c757d; margin-bottom:6px;">Pilih nomor atau group lalu tambahkan ke target notifikasi di atas.</small>
                     <div class="input-group-modern">
                         <div class="input-icon"><i class="fa fa-users"></i></div>
                         <select class="form-control-modern" id="waTargetSelect">
@@ -338,6 +350,7 @@ if ($stats_db) {
             <div class="col-6">
                 <div class="form-group-modern">
                     <label class="form-label">Test Sender WhatsApp</label>
+                    <small style="display:block; color:#6c757d; margin-bottom:6px;">Kirim pesan uji ke target manual atau pilih dari daftar.</small>
                     <form method="post" action="./admin.php?id=whatsapp">
                         <input type="hidden" name="wa_action" value="test_send">
                         <div class="input-group-modern" style="margin-bottom:8px;">
