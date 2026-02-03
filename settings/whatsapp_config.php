@@ -400,11 +400,16 @@ if ($stats_db) {
 }
 
 $wa_label_map = [];
+$wa_type_map = [];
 foreach ($wa_recipients as $rec) {
     $t = trim((string)($rec['target'] ?? ''));
     $l = trim((string)($rec['label'] ?? ''));
+    $tp = trim((string)($rec['target_type'] ?? ''));
     if ($t !== '' && $l !== '') {
         $wa_label_map[$t] = $l;
+    }
+    if ($t !== '' && $tp !== '') {
+        $wa_type_map[$t] = $tp;
     }
 }
 ?>
@@ -651,7 +656,8 @@ foreach ($wa_recipients as $rec) {
                                             $target_raw = trim((string)($log['target'] ?? ''));
                                             $target_label = wa_display_target($target_raw, $wa_label_map);
                                             $target_name = isset($wa_label_map[$target_raw]) ? $wa_label_map[$target_raw] : $target_label;
-                                            $target_sub = isset($wa_label_map[$target_raw]) ? $target_label : '';
+                                            $target_type = isset($wa_type_map[$target_raw]) ? $wa_type_map[$target_raw] : (stripos($target_raw, '@g.us') !== false ? 'group' : 'number');
+                                            $target_sub = isset($wa_label_map[$target_raw]) ? ucfirst($target_type) : '';
                                             $has_file = trim((string)($log['pdf_file'] ?? '')) !== '';
                                             $file_badge = $has_file ? 'wa-badge wa-badge-blue' : 'wa-badge wa-badge-gray';
                                         ?>
