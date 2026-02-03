@@ -123,6 +123,14 @@ function wa_send_text($message, $target = '', $category = '') {
     $token = trim((string)($cfg['token'] ?? ''));
     $country = trim((string)($cfg['country_code'] ?? '62'));
     $defaultTarget = trim((string)($cfg['notify_target'] ?? ''));
+    $notify_ls_enabled = !isset($cfg['notify_ls_enabled']) || $cfg['notify_ls_enabled'] === true || $cfg['notify_ls_enabled'] === 1 || $cfg['notify_ls_enabled'] === '1';
+
+    if ($category === 'report' || $category === 'ls') {
+        if (!$notify_ls_enabled) {
+            wa_log_message($target, $message, 'failed: disabled', 'notif L/S nonaktif');
+            return ['ok' => false, 'message' => 'Notif L/S nonaktif.'];
+        }
+    }
 
     if ($target === '') {
         $target = $defaultTarget;
@@ -182,6 +190,14 @@ function wa_send_file($message, $filePath, $target = '', $category = 'report') {
     $token = trim((string)($cfg['token'] ?? ''));
     $country = trim((string)($cfg['country_code'] ?? '62'));
     $defaultTarget = trim((string)($cfg['notify_target'] ?? ''));
+    $notify_ls_enabled = !isset($cfg['notify_ls_enabled']) || $cfg['notify_ls_enabled'] === true || $cfg['notify_ls_enabled'] === 1 || $cfg['notify_ls_enabled'] === '1';
+
+    if ($category === 'report' || $category === 'ls') {
+        if (!$notify_ls_enabled) {
+            wa_log_message($target, $message, 'failed: disabled', 'notif L/S nonaktif', basename((string)$filePath));
+            return ['ok' => false, 'message' => 'Notif L/S nonaktif.'];
+        }
+    }
 
     if ($target === '') {
         $target = $defaultTarget;
