@@ -29,21 +29,21 @@ $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-
             </div>
 
             <div class="nav-tabs-custom">
-                <button class="nav-btn <?= $active_tab === 'sessions' ? 'active' : ''; ?>" data-tab="sessions">
+                <a class="nav-btn <?= $active_tab === 'sessions' ? 'active' : ''; ?>" data-tab="sessions" href="./admin.php?id=sessions">
                     <i class="fa fa-server"></i> Sesi & Admin
-                </button>
-                <button class="nav-btn <?= $active_tab === 'settings' ? 'active' : ''; ?>" data-tab="settings">
+                </a>
+                <a class="nav-btn <?= $active_tab === 'settings' ? 'active' : ''; ?>" data-tab="settings" href="./admin.php?id=settings<?= $active_session !== '' ? '&session=' . htmlspecialchars($active_session) : ''; ?>">
                     <i class="fa fa-cogs"></i> Pengaturan Router
-                </button>
-                <button class="nav-btn <?= $active_tab === 'operator' ? 'active' : ''; ?>" data-tab="operator">
+                </a>
+                <a class="nav-btn <?= $active_tab === 'operator' ? 'active' : ''; ?>" data-tab="operator" href="./admin.php?id=operator-access">
                     <i class="fa fa-users"></i> Akses Operator
-                </button>
-                <button class="nav-btn <?= $active_tab === 'whatsapp' ? 'active' : ''; ?>" data-tab="whatsapp">
+                </a>
+                <a class="nav-btn <?= $active_tab === 'whatsapp' ? 'active' : ''; ?>" data-tab="whatsapp" href="./admin.php?id=whatsapp">
                     <i class="fa fa-whatsapp"></i> WhatsApp
-                </button>
-                <button class="nav-btn <?= $active_tab === 'scripts' ? 'active' : ''; ?>" data-tab="scripts">
+                </a>
+                <a class="nav-btn <?= $active_tab === 'scripts' ? 'active' : ''; ?>" data-tab="scripts" href="./admin.php?id=mikrotik-scripts<?= $active_session !== '' ? '&session=' . htmlspecialchars($active_session) : ''; ?>">
                     <i class="fa fa-code"></i> Script MikroTik
-                </button>
+                </a>
             </div>
         </div>
 

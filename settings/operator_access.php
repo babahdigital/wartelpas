@@ -36,17 +36,17 @@ if ($op_user === '' && $op_pass === '') {
 <?php if (isset($_GET['saved'])): ?>
     <div class="alert alert-success" data-auto-close="1" style="margin-bottom: 15px; padding: 15px; border-radius: 10px; position: relative;">
         Data admin & operator tersimpan.
-        <button type="button" aria-label="Close" onclick="this.parentElement.style.display='none';" style="position:absolute; right:8px; top:8px; background:transparent; border:none; color:inherit; font-size:16px; cursor:pointer;">×</button>
+        <button type="button" aria-label="Close" onclick="this.parentElement.style.display='none';" style="position:absolute; right:8px; background:transparent; border:none; color:inherit; font-size:16px; cursor:pointer;">×</button>
     </div>
 <?php elseif (isset($_GET['error']) && $_GET['error'] === 'empty-username'): ?>
     <div class="alert alert-danger" data-auto-close="1" style="margin-bottom: 15px; position: relative;">
         Gagal menyimpan. Username tidak boleh kosong.
-        <button type="button" aria-label="Close" onclick="this.parentElement.style.display='none';" style="position:absolute; right:8px; top:8px; background:transparent; border:none; color:inherit; font-size:16px; cursor:pointer;">×</button>
+        <button type="button" aria-label="Close" onclick="this.parentElement.style.display='none';" style="position:absolute; right:8px; background:transparent; border:none; color:inherit; font-size:16px; cursor:pointer;">×</button>
     </div>
 <?php elseif (isset($_GET['error']) && $_GET['error'] === 'forbidden'): ?>
     <div class="alert alert-danger" data-auto-close="1" style="margin-bottom: 15px; position: relative;">
         Akses ditolak. Hubungi Superadmin.
-        <button type="button" aria-label="Close" onclick="this.parentElement.style.display='none';" style="position:absolute; right:8px; top:8px; background:transparent; border:none; color:inherit; font-size:16px; cursor:pointer;">×</button>
+        <button type="button" aria-label="Close" onclick="this.parentElement.style.display='none';" style="position:absolute; right:8px; background:transparent; border:none; color:inherit; font-size:16px; cursor:pointer;">×</button>
     </div>
 <?php endif; ?>
 <script>

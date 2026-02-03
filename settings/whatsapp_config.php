@@ -73,8 +73,9 @@ $wa_log_limit = isset($wa['log_limit']) ? (int)$wa['log_limit'] : 50;
     </div>
     <div class="card-body-modern">
         <?php if ($save_message !== ''): ?>
-            <div class="alert alert-<?= htmlspecialchars($save_type); ?>" style="margin-bottom: 15px; padding: 15px; border-radius: 10px;">
+            <div class="alert alert-<?= htmlspecialchars($save_type); ?>" data-auto-close="1" style="margin-bottom: 15px; padding: 15px; border-radius: 10px; position: relative;">
                 <?= htmlspecialchars($save_message); ?>
+                <button type="button" aria-label="Close" onclick="this.parentElement.style.display='none';" style="position:absolute; right:8px; background:transparent; border:none; color:inherit; font-size:16px; cursor:pointer;">×</button>
             </div>
         <?php endif; ?>
         <form method="post" action="./admin.php?id=whatsapp" data-admin-form="whatsapp">
@@ -167,5 +168,16 @@ $wa_log_limit = isset($wa['log_limit']) ? (int)$wa['log_limit'] : 50;
                 </button>
             </div>
         </form>
+        <script>
+            (function () {
+                var alertBox = document.querySelector('[data-auto-close="1"]');
+                if (!alertBox) return;
+                setTimeout(function () {
+                    if (alertBox && alertBox.style.display !== 'none') {
+                        alertBox.style.display = 'none';
+                    }
+                }, 3000);
+            })();
+        </script>
     </div>
 </div>

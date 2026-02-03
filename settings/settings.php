@@ -59,10 +59,15 @@ if (!empty($_SESSION['settings_save_message'])) {
 
 function render_admin_error($message, $backUrl)
 {
-  $safeMessage = htmlspecialchars((string)$message, ENT_QUOTES, 'UTF-8');
-  $safeUrl = htmlspecialchars((string)$backUrl, ENT_QUOTES, 'UTF-8');
-  echo "<div class='alert alert-danger'>" . $safeMessage . "</div>";
-  echo "<div style='margin-top:10px;'><a class='btn-action btn-outline' data-no-ajax='1' href='{$safeUrl}'>Kembali</a></div>";
+  $_SESSION['settings_save_message'] = (string)$message;
+  $_SESSION['settings_save_type'] = 'danger';
+  $_SESSION['settings_save_session'] = '';
+  if (!headers_sent()) {
+    header('Location: ' . $backUrl);
+  } else {
+    $safeUrl = htmlspecialchars((string)$backUrl, ENT_QUOTES, 'UTF-8');
+    echo "<script>window.location='{$safeUrl}'</script>";
+  }
   exit;
 }
 
@@ -113,6 +118,31 @@ if (isset($_POST['save'])) {
 
   $sesname = (preg_replace('/\s+/', '-', $_POST['sessname']));
   $slivereport = ($_POST['livereport']);
+
+  $host = trim((string)$siphost);
+  if ($host === '') {
+    render_admin_error('IP MikroTik wajib diisi.', './admin.php?id=settings&session=' . ($session ?: ''));
+  }
+  $hostParts = explode(':', $host);
+  $hostIp = trim((string)($hostParts[0] ?? ''));
+  $hostPort = isset($hostParts[1]) && $hostParts[1] !== '' ? (int)$hostParts[1] : 8728;
+  if ($hostIp === '' || $suserhost === '' || empty($_POST['passmik'])) {
+    render_admin_error('IP/User/Password MikroTik wajib diisi.', './admin.php?id=settings&session=' . ($session ?: ''));
+  }
+  $API = new RouterosAPI();
+  $API->debug = false;
+  $canConnect = false;
+  try {
+    $canConnect = $API->connect($hostIp, $suserhost, (string)$_POST['passmik'], $hostPort);
+  } catch (Exception $e) {
+    $canConnect = false;
+  }
+  if (!$canConnect) {
+    render_admin_error('Gagal konek ke MikroTik. Periksa IP/User/Password/Port API.', './admin.php?id=settings&session=' . ($session ?: ''));
+  }
+  if (method_exists($API, 'disconnect')) {
+    $API->disconnect();
+  }
 
   $is_new_save = ($is_new_router || (isset($session) && $session !== '' && explode('-', $session)[0] === 'new'));
   if ($is_new_save) {
@@ -252,19 +282,13 @@ if (file_exists($tmpl_onlogin) && file_exists($tmpl_onlogout) && $base_url !== '
       <div class="card-modern">
           <div class="card-header-modern">
           <h3><i class="fa fa-sliders"></i> Konfigurasi Router: <?= htmlspecialchars($session); ?></h3>
-          <div style="display:flex; gap:10px;">
-            <button type="button" class="btn-action btn-success-m connect" id="<?= $session; ?>&c=settings">
-              <i class="fa fa-plug"></i> Connect
-            </button>
-            <button type="button" class="btn-action btn-outline" id="ping_test">
-              <i class="fa fa-exchange"></i> Ping Router
-            </button>
-          </div>
+          <div style="display:flex; gap:10px;"></div>
         </div>
         <div class="card-body-modern">
           <?php if ($save_message !== ''): ?>
-            <div class="alert alert-<?= htmlspecialchars($save_type ?: 'info'); ?>" style="margin-bottom: 15px; padding: 15px; border-radius: 10px;" <?= $new_session_name !== '' ? 'data-new-session="' . htmlspecialchars($new_session_name) . '"' : ''; ?>>
+            <div class="alert alert-<?= htmlspecialchars($save_type ?: 'info'); ?>" data-auto-close="1" style="margin-bottom: 15px; padding: 15px; border-radius: 10px; position: relative;" <?= $new_session_name !== '' ? 'data-new-session="' . htmlspecialchars($new_session_name) . '"' : ''; ?>>
               <?= htmlspecialchars($save_message); ?>
+              <button type="button" aria-label="Close" onclick="this.parentElement.style.display='none';" style="position:absolute; right:8px; background:transparent; border:none; color:inherit; font-size:16px; cursor:pointer;">×</button>
             </div>
           <?php endif; ?>
           <div class="row">
@@ -428,32 +452,13 @@ if (file_exists($tmpl_onlogin) && file_exists($tmpl_onlogout) && $base_url !== '
               <i class="fa fa-save"></i> Simpan Konfigurasi Sesi
             </button>
           </div>
-          <div id="ping" style="margin-top: 10px;"></div>
+          
         </div>
       </div>
     </div>
   </div>
 </form>
 <script type="text/javascript">
-  var sessionName = "<?= htmlspecialchars($session); ?>";
-
-  function pingTest() {
-    var target = document.getElementById('ping');
-    if (!target || !window.jQuery) return;
-    $(target).load('./status/ping-test.php?ping&session=' + encodeURIComponent(sessionName));
-  }
-
-  function closeX() {
-    if (window.jQuery) {
-      $('#pingX').hide();
-    }
-  }
-
-  var pingBtn = document.getElementById('ping_test');
-  if (pingBtn) {
-    pingBtn.onclick = pingTest;
-  }
-
   var sesname = document.forms.settings ? document.forms.settings.sessname : null;
   function chksname() {
     if (!sesname) return;
@@ -473,3 +478,13 @@ if (file_exists($tmpl_onlogin) && file_exists($tmpl_onlogout) && $base_url !== '
     sesname.onchange = chksname;
 
   }
+
+  (function () {
+    var alertBox = document.querySelector('[data-auto-close="1"]');
+    if (!alertBox) return;
+    setTimeout(function () {
+      if (alertBox && alertBox.style.display !== 'none') {
+        alertBox.style.display = 'none';
+      }
+    }, 3000);
+  })();

@@ -23,9 +23,31 @@ if (!isset($_SESSION["mikhmon"])) {
   } else {
 $session = $_GET['session'];
 $ping = $_GET['ping'];
-if(isset($ping) && !empty($session)){
-    include_once('../include/config.php');
-    $iphost = explode('!', $data[$session][1])[1];
+$hostParam = isset($_GET['host']) ? trim((string)$_GET['host']) : '';
+if(isset($ping)){
+    if ($hostParam !== '') {
+        $iphost = $hostParam;
+    } else {
+        if (empty($session)) {
+            echo '<div id="pingX" class="col-12"><div class="card"><div class="card-header">'
+                . '<h3 class="card-title">Ping Test</h3></div><div class="card-body">'
+                . '<b class="text-warning">Session belum dipilih.</b><br>'
+                . '<span class="pointer btn bg-grey" onclick="closeX()"><i class="fa fa-close text-red "></i> Close</span>'
+                . '</div></div></div>';
+            exit;
+        }
+        include_once('../include/config.php');
+        if (!isset($data[$session]) || !is_array($data[$session])) {
+            echo '<div id="pingX" class="col-12"><div class="card"><div class="card-header">'
+                . '<h3 class="card-title">Ping Test</h3></div><div class="card-body">'
+                . '<b class="text-warning">Session tidak ditemukan. Simpan dulu konfigurasi sesi.</b><br>'
+                . '<span class="pointer btn bg-grey" onclick="closeX()"><i class="fa fa-close text-red "></i> Close</span>'
+                . '</div></div></div>';
+            exit;
+        }
+        $iphost = explode('!', $data[$session][1])[1];
+    }
+
     $host=explode(":",$iphost)[0];
     $port=explode(":",$iphost)[1];
     if(empty($port)){
@@ -69,7 +91,26 @@ function ping($host,$port){
 	fclose($fsock);
 }
 
-$ping_test = ping($host,$port);
-print_r($ping_test);
+$host = trim((string)$host);
+if ($host === '') {
+    echo '<div id="pingX" class="col-12"><div class="card"><div class="card-header">'
+        . '<h3 class="card-title">Ping Test</h3></div><div class="card-body">'
+        . '<b class="text-warning">IP MikroTik belum diisi.</b><br>'
+        . '<span class="pointer btn bg-grey" onclick="closeX()"><i class="fa fa-close text-red "></i> Close</span>'
+        . '</div></div></div>';
+    exit;
+}
+
+    $ping_test = ping($host,$port);
+    if (!is_string($ping_test) || $ping_test === '') {
+        echo '<div id="pingX" class="col-12"><div class="card"><div class="card-header">'
+            . '<h3 class="card-title">Ping Test</h3></div><div class="card-body">'
+            . '<b class="text-warning">Ping menghasilkan output kosong.</b><br>'
+            . 'Host: ' . htmlspecialchars($host) . ' | Port: ' . htmlspecialchars((string)$port) . '<br>'
+            . '<span class="pointer btn bg-grey" onclick="closeX()"><i class="fa fa-close text-red "></i> Close</span>'
+            . '</div></div></div>';
+        exit;
+    }
+    print_r($ping_test);
 }
 }

@@ -327,7 +327,7 @@ foreach ($router_list as $router_item) {
       ?>
       <div class="card-modern" style="margin-top: 20px;">
         <div class="card-header-modern">
-          <h3><i class="fa fa-exclamation-triangle text-secondary"></i> Log Error Admin (Terakhir)</h3>
+          <h3><i class="fa fa-exclamation-triangle text-secondary"></i> Log Admin (Terakhir)</h3>
           <span class="badge"><?= count($log_lines); ?> baris</span>
         </div>
         <div class="card-body-modern">

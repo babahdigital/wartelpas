@@ -24,6 +24,7 @@ services:
       - /home/abdullah/.config/rclone/rclone.conf:/var/www/html/config/rclone.conf:ro
       - ./include:/var/www/html/include
       - ./settings:/var/www/html/settings
+      - ./status:/var/www/html/status
       - ./custom.ini:/usr/local/etc/php/conf.d/custom.ini
       - ./.htaccess:/var/www/html/.htaccess
 

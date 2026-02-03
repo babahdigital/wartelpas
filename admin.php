@@ -262,7 +262,7 @@ if ($id == "login" || ($basename === 'admin.php' && empty($id))) {
   } else {
     include_once('./settings/admin_single.php');
   }
-} elseif ($id == "mikrotik-scripts" && !empty($session)) {
+} elseif ($id == "mikrotik-scripts") {
   include_once('./settings/admin_single.php');
 } elseif ($id == "operator-access") {
   include_once('./settings/admin_single.php');
