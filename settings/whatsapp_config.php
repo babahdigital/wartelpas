@@ -753,7 +753,7 @@ foreach ($wa_recipients as $rec) {
                 </div>
             </div>
             <div class="col-5">
-                <div class="form-group-modern" style="padding-left: 10px;">
+                <div class="form-group-modern" style="display: inline;position: relative;right: 12px;">
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top: 20px;">
                         <label class="form-label" style="margin:0;">Template WhatsApp</label>
                         <a class="btn-action btn-outline" href="javascript:void(0)" onclick="openWaTemplatePopup('new')" style="padding:6px 10px; font-size:12px;">
