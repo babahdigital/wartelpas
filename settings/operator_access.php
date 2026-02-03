@@ -51,6 +51,35 @@ $perm_audit_manual = !empty($op_perms['audit_manual']);
 $perm_reset_settlement = !empty($op_perms['reset_settlement']);
 $perm_backup_only = !empty($op_perms['backup_only']);
 $perm_restore_only = !empty($op_perms['restore_only']);
+
+$operator_payload = [];
+foreach ($operators as $op) {
+    $oid = (int)($op['id'] ?? 0);
+    if (!$oid) {
+        continue;
+    }
+    $operator_payload[$oid] = [
+        'id' => $oid,
+        'username' => $op['username'] ?? '',
+        'is_active' => !empty($op['is_active']),
+        'permissions' => app_db_get_operator_permissions_for($oid),
+    ];
+}
+
+$operator_defaults = [
+    'id' => 'new',
+    'username' => '',
+    'is_active' => true,
+    'permissions' => [
+        'delete_user' => false,
+        'delete_block_router' => false,
+        'delete_block_full' => false,
+        'audit_manual' => false,
+        'reset_settlement' => false,
+        'backup_only' => false,
+        'restore_only' => false,
+    ],
+];
 ?>
 
 <?php if (!isSuperAdmin()): ?>
@@ -62,13 +91,14 @@ $perm_restore_only = !empty($op_perms['restore_only']);
 <script>
     function submitOperatorDelete(opId) {
         if (!opId) return;
-        if (!confirm('Hapus operator ini?')) return;
         var form = document.getElementById('operator-access-form');
         if (!form) return;
         var idInput = document.getElementById('operator-id-input');
         if (idInput) {
             idInput.value = opId;
         }
+        var saveFlag = document.getElementById('save-operator-input');
+        if (saveFlag) saveFlag.value = '';
         var actionInput = document.getElementById('operator-action-input');
         if (!actionInput) {
             actionInput = document.createElement('input');
@@ -79,6 +109,170 @@ $perm_restore_only = !empty($op_perms['restore_only']);
         }
         actionInput.value = 'delete';
         form.submit();
+    }
+
+    function setPopupAlert(type, text) {
+        var alertEl = document.querySelector('.m-popup-backdrop.show .m-alert');
+        if (!alertEl) return;
+        alertEl.className = 'm-alert m-alert-' + (type || 'info');
+        alertEl.classList.remove('m-popup-hidden');
+        alertEl.innerHTML = '<div>' + (text || '') + '</div>';
+    }
+
+    function clearPopupAlert() {
+        var alertEl = document.querySelector('.m-popup-backdrop.show .m-alert');
+        if (!alertEl) return;
+        alertEl.className = 'm-alert m-popup-hidden';
+        alertEl.innerHTML = '';
+    }
+
+    function setHiddenInput(name, value) {
+        var input = document.querySelector('input[name="' + name + '"]');
+        if (!input) {
+            input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            document.getElementById('operator-access-form').appendChild(input);
+        }
+        input.value = value;
+    }
+
+    function escapeHtml(value) {
+        return String(value || '').replace(/[&<>'"]/g, function(ch) {
+            return {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[ch];
+        });
+    }
+
+    function clearOperatorSaveFlag() {
+        var flag = document.getElementById('save-operator-input');
+        if (flag) flag.value = '';
+    }
+
+    window.__operatorData = <?= json_encode($operator_payload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+    window.__operatorDefault = <?= json_encode($operator_defaults, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+
+    function openOperatorPopup(opId) {
+        if (!window.MikhmonPopup) return;
+        clearPopupAlert();
+        var isNew = !opId || opId === 'new';
+        var data = isNew ? window.__operatorDefault : (window.__operatorData[opId] || window.__operatorDefault);
+        var perms = data.permissions || {};
+
+        var html = '' +
+            '<div class="m-pass-form">' +
+                '<div class="m-pass-row">' +
+                    '<label class="m-pass-label">Username Operator</label>' +
+                    '<input id="op-username" type="text" class="m-pass-input" value="' + escapeHtml(data.username || '') + '" placeholder="Username operator" />' +
+                '</div>' +
+                '<div class="m-pass-row">' +
+                    '<label class="m-pass-label">Password Operator</label>' +
+                    '<input id="op-password" type="password" class="m-pass-input" placeholder="' + (isNew ? 'Wajib untuk operator baru' : 'Kosongkan jika tidak diubah') + '" />' +
+                '</div>' +
+                '<div class="m-pass-row">' +
+                    '<label class="custom-check" style="margin-bottom:0;">' +
+                        '<input id="op-active" type="checkbox" ' + (data.is_active ? 'checked' : '') + '>' +
+                        '<span class="checkmark"></span>' +
+                        '<span class="check-label">Aktifkan Operator</span>' +
+                    '</label>' +
+                '</div>' +
+                '<div class="m-pass-divider"></div>' +
+                '<div class="checkbox-wrapper">' +
+                    '<div class="row">' +
+                        '<div class="col-6">' +
+                            '<label class="custom-check">' +
+                                '<input id="perm-delete-user" type="checkbox" ' + (perms.delete_user ? 'checked' : '') + '>' +
+                                '<span class="checkmark"></span>' +
+                                '<span class="check-label">Deleted User</span>' +
+                            '</label>' +
+                            '<label class="custom-check">' +
+                                '<input id="perm-delete-block-router" type="checkbox" ' + (perms.delete_block_router ? 'checked' : '') + '>' +
+                                '<span class="checkmark"></span>' +
+                                '<span class="check-label">Hapus Blok (Router)</span>' +
+                            '</label>' +
+                            '<label class="custom-check">' +
+                                '<input id="perm-delete-block-full" type="checkbox" ' + (perms.delete_block_full ? 'checked' : '') + '>' +
+                                '<span class="checkmark"></span>' +
+                                '<span class="check-label">Hapus Blok (Router + DB)</span>' +
+                            '</label>' +
+                            '<label class="custom-check">' +
+                                '<input id="perm-audit-manual" type="checkbox" ' + (perms.audit_manual ? 'checked' : '') + '>' +
+                                '<span class="checkmark"></span>' +
+                                '<span class="check-label">Edit Audit Manual</span>' +
+                            '</label>' +
+                        '</div>' +
+                        '<div class="col-6">' +
+                            '<label class="custom-check">' +
+                                '<input id="perm-reset-settlement" type="checkbox" ' + (perms.reset_settlement ? 'checked' : '') + '>' +
+                                '<span class="checkmark"></span>' +
+                                '<span class="check-label">Reset Settlement</span>' +
+                            '</label>' +
+                            '<label class="custom-check">' +
+                                '<input id="perm-backup-only" type="checkbox" ' + (perms.backup_only ? 'checked' : '') + '>' +
+                                '<span class="checkmark"></span>' +
+                                '<span class="check-label">Backup (DB Utama)</span>' +
+                            '</label>' +
+                            '<label class="custom-check">' +
+                                '<input id="perm-restore-only" type="checkbox" ' + (perms.restore_only ? 'checked' : '') + '>' +
+                                '<span class="checkmark"></span>' +
+                                '<span class="check-label">Restore (DB Utama)</span>' +
+                            '</label>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+
+        window.MikhmonPopup.open({
+            title: isNew ? 'Tambah Operator' : 'Edit Operator',
+            iconClass: 'fa fa-user',
+            statusIcon: 'fa fa-user',
+            statusColor: '#10b981',
+            cardClass: 'is-medium',
+            messageHtml: html,
+            buttons: [
+                { label: 'Batal', className: 'm-btn m-btn-cancel' },
+                {
+                    label: 'Simpan',
+                    className: 'm-btn m-btn-success',
+                    close: false,
+                    onClick: function() {
+                        clearPopupAlert();
+                        var username = (document.getElementById('op-username') || {}).value || '';
+                        var password = (document.getElementById('op-password') || {}).value || '';
+                        var active = (document.getElementById('op-active') || {}).checked;
+                        if (!username.trim()) {
+                            setPopupAlert('danger', 'Username operator wajib diisi.');
+                            return;
+                        }
+                        if (isNew && !password.trim()) {
+                            setPopupAlert('danger', 'Password operator baru wajib diisi.');
+                            return;
+                        }
+
+                        setHiddenInput('operator_id', isNew ? 'new' : data.id);
+                        setHiddenInput('operator_user', username.trim());
+                        setHiddenInput('operator_password', password);
+                        setHiddenInput('operator_active', active ? '1' : '');
+                        setHiddenInput('access_delete_user', document.getElementById('perm-delete-user').checked ? '1' : '');
+                        setHiddenInput('access_delete_block_router', document.getElementById('perm-delete-block-router').checked ? '1' : '');
+                        setHiddenInput('access_delete_block_full', document.getElementById('perm-delete-block-full').checked ? '1' : '');
+                        setHiddenInput('access_audit_manual', document.getElementById('perm-audit-manual').checked ? '1' : '');
+                        setHiddenInput('access_reset_settlement', document.getElementById('perm-reset-settlement').checked ? '1' : '');
+                        setHiddenInput('access_backup_only', document.getElementById('perm-backup-only').checked ? '1' : '');
+                        setHiddenInput('access_restore_only', document.getElementById('perm-restore-only').checked ? '1' : '');
+                        setHiddenInput('save_operator', '1');
+
+                        var form = document.getElementById('operator-access-form');
+                        if (form) form.submit();
+                    }
+                }
+            ]
+        });
     }
 </script>
 <?php if (isset($_GET['saved'])): ?>
@@ -141,13 +335,8 @@ $perm_restore_only = !empty($op_perms['restore_only']);
                 <button type="button" class="btn-action" style="width: 100%; justify-content: center; padding: 12px; margin-bottom: 10px;" onclick="openPasswordPopup()">
                     <i class="fa fa-lock"></i> Ubah Password
                 </button>
-                <?php if ($op_id !== '' && $op_id !== 'new'): ?>
-                    <button type="submit" name="operator_action" value="delete" class="btn-action btn-outline" style="width: 100%; justify-content: center; padding: 12px; margin-bottom: 10px; border-color:#dc2626; color:#dc2626;">
-                        <i class="fa fa-trash"></i> Hapus Operator
-                    </button>
-                <?php endif; ?>
-                <button type="submit" name="save" class="btn-action btn-primary-m" style="width: 100%; justify-content: center; padding: 12px;">
-                    <i class="fa fa-save"></i> Simpan Data Admin & Operator
+                <button type="submit" name="save_admin" class="btn-action btn-primary-m" style="width: 100%; justify-content: center; padding: 12px;" onclick="clearOperatorSaveFlag()">
+                    <i class="fa fa-save"></i> Simpan Admin
                 </button>
             </div>
         </div>
@@ -166,7 +355,7 @@ $perm_restore_only = !empty($op_perms['restore_only']);
                     <div class="form-group-modern" style="margin-bottom:12px;">
                         <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
                             <label class="form-label" style="margin:0;">Daftar Operator</label>
-                            <a class="btn-action btn-outline" href="./admin.php?id=operator-access&op=new" style="padding:6px 10px; font-size:12px;">
+                            <a class="btn-action btn-outline" href="javascript:void(0)" onclick="openOperatorPopup('new')" style="padding:6px 10px; font-size:12px;">
                                 <i class="fa fa-plus"></i> Tambah Operator
                             </a>
                         </div>
@@ -186,8 +375,8 @@ $perm_restore_only = !empty($op_perms['restore_only']);
                                             <span class="router-session">ID: <?= (int)$op['id']; ?> | <?= $active ? 'Aktif' : 'Nonaktif'; ?></span>
                                         </div>
                                         <div class="router-actions">
-                                            <a href="./admin.php?id=operator-access&op=<?= (int)$op['id']; ?>" title="Edit"><i class="fa fa-pencil"></i></a>
-                                            <a href="#" title="Hapus" onclick="submitOperatorDelete(<?= (int)$op['id']; ?>); return false;" style="margin-left:6px; color:#dc2626;"><i class="fa fa-trash"></i></a>
+                                            <a href="javascript:void(0)" title="Edit" onclick="openOperatorPopup(<?= (int)$op['id']; ?>)"><i class="fa fa-pencil"></i></a>
+                                            <a href="javascript:void(0)" title="Hapus" onclick="submitOperatorDelete(<?= (int)$op['id']; ?>);" style="margin-left:6px; color:#dc2626;"><i class="fa fa-trash"></i></a>
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
@@ -195,78 +384,22 @@ $perm_restore_only = !empty($op_perms['restore_only']);
                         </div>
                     </div>
 
+                    <div class="admin-empty" style="padding:10px;">
+                        Pilih operator untuk edit atau klik "Tambah Operator".
+                    </div>
+
                     <input id="operator-id-input" type="hidden" name="operator_id" value="<?= htmlspecialchars($op_id); ?>">
-
-                    <div class="form-group-modern">
-                        <label class="form-label">Username Operator</label>
-                        <div class="input-group-modern">
-                            <div class="input-icon"><i class="fa fa-user"></i></div>
-                            <input class="form-control-modern" type="text" name="operator_user" value="<?= htmlspecialchars($op_user); ?>" required>
-                        </div>
-                    </div>
-
-                    <div class="form-group-modern">
-                        <label class="form-label">Password Operator</label>
-                        <div class="input-group-modern">
-                            <div class="input-icon"><i class="fa fa-lock"></i></div>
-                            <input class="form-control-modern" type="password" name="operator_password" placeholder="<?= $op_id === 'new' ? 'Wajib untuk operator baru' : 'Kosongkan jika tidak diubah'; ?>">
-                        </div>
-                        <small style="display:block; margin-top:6px; color:var(--text-secondary);">
-                            Operator bisa ubah lewat tombol gear di samping logout.
-                        </small>
-                    </div>
-
-                    <div class="form-group-modern" style="margin-top:6px;">
-                        <label class="custom-check" style="margin-bottom:0;">
-                            <input type="checkbox" name="operator_active" value="1" <?= $op_active ? 'checked' : ''; ?>>
-                            <span class="checkmark"></span>
-                            <span class="check-label">Aktifkan Operator</span>
-                        </label>
-                    </div>
-
-                    <div class="checkbox-wrapper" style="margin-top:12px;">
-                        <div class="row">
-                            <div class="col-6">
-                                <label class="custom-check">
-                                    <input type="checkbox" name="access_delete_user" <?= $perm_delete_user ? 'checked' : ''; ?>>
-                                    <span class="checkmark"></span>
-                                    <span class="check-label">Deleted User</span>
-                                </label>
-                                <label class="custom-check">
-                                    <input type="checkbox" name="access_delete_block_router" <?= $perm_delete_block_router ? 'checked' : ''; ?>>
-                                    <span class="checkmark"></span>
-                                    <span class="check-label">Hapus Blok (Router)</span>
-                                </label>
-                                <label class="custom-check">
-                                    <input type="checkbox" name="access_delete_block_full" <?= $perm_delete_block_full ? 'checked' : ''; ?>>
-                                    <span class="checkmark"></span>
-                                    <span class="check-label">Hapus Blok (Router + DB)</span>
-                                </label>
-                                <label class="custom-check">
-                                    <input type="checkbox" name="access_audit_manual" <?= $perm_audit_manual ? 'checked' : ''; ?>>
-                                    <span class="checkmark"></span>
-                                    <span class="check-label">Edit Audit Manual</span>
-                                </label>
-                            </div>
-                            <div class="col-6">
-                                <label class="custom-check">
-                                    <input type="checkbox" name="access_reset_settlement" <?= $perm_reset_settlement ? 'checked' : ''; ?>>
-                                    <span class="checkmark"></span>
-                                    <span class="check-label">Reset Settlement</span>
-                                </label>
-                                <label class="custom-check">
-                                    <input type="checkbox" name="access_backup_only" <?= $perm_backup_only ? 'checked' : ''; ?>>
-                                    <span class="checkmark"></span>
-                                    <span class="check-label">Backup (DB Utama)</span>
-                                </label>
-                                <label class="custom-check">
-                                    <input type="checkbox" name="access_restore_only" <?= $perm_restore_only ? 'checked' : ''; ?>>
-                                    <span class="checkmark"></span>
-                                    <span class="check-label">Restore (DB Utama)</span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
+                    <input type="hidden" id="operator-user-input" name="operator_user" value="">
+                    <input type="hidden" id="operator-password-input" name="operator_password" value="">
+                    <input type="hidden" id="operator-active-input" name="operator_active" value="">
+                    <input type="hidden" id="operator-perm-delete-user" name="access_delete_user" value="">
+                    <input type="hidden" id="operator-perm-delete-block-router" name="access_delete_block_router" value="">
+                    <input type="hidden" id="operator-perm-delete-block-full" name="access_delete_block_full" value="">
+                    <input type="hidden" id="operator-perm-audit-manual" name="access_audit_manual" value="">
+                    <input type="hidden" id="operator-perm-reset-settlement" name="access_reset_settlement" value="">
+                    <input type="hidden" id="operator-perm-backup-only" name="access_backup_only" value="">
+                    <input type="hidden" id="operator-perm-restore-only" name="access_restore_only" value="">
+                    <input type="hidden" id="save-operator-input" name="save_operator" value="">
                 </div>
             </div>
 
