@@ -711,7 +711,7 @@ foreach ($wa_recipients as $rec) {
 
         <div class="row" style="margin-top: 10px;">
             <div class="col-7">
-                <div class="form-group-modern">
+                <div class="form-group-modern" style="padding-right: 10%; padding-left: 10px;">
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top: 20px;">
                         <label class="form-label" style="margin:0;">Daftar Penerima</label>
                         <a class="btn-action btn-outline" href="javascript:void(0)" onclick="openWaRecipientPopup('new')" style="padding:6px 10px; font-size:12px;">
@@ -753,7 +753,7 @@ foreach ($wa_recipients as $rec) {
                 </div>
             </div>
             <div class="col-5">
-                <div class="form-group-modern">
+                <div class="form-group-modern" style="padding-left: 10px;">
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top: 20px;">
                         <label class="form-label" style="margin:0;">Template WhatsApp</label>
                         <a class="btn-action btn-outline" href="javascript:void(0)" onclick="openWaTemplatePopup('new')" style="padding:6px 10px; font-size:12px;">
