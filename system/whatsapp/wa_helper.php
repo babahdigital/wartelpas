@@ -13,7 +13,7 @@ function wa_get_env_config() {
     return $cache;
 }
 
-function wa_normalize_target($target, $countryCode = '62') {
+function wa_normalize_target_single($target, $countryCode = '62') {
     $target = trim((string)$target);
     if ($target === '') return '';
     if (stripos($target, '@g.us') !== false) return $target;
@@ -27,6 +27,24 @@ function wa_normalize_target($target, $countryCode = '62') {
         $clean = $countryCode . $clean;
     }
     return $clean;
+}
+
+function wa_normalize_target($target, $countryCode = '62') {
+    $target = trim((string)$target);
+    if ($target === '') return '';
+    if (preg_match('/[\r\n,;]+/', $target)) {
+        $parts = preg_split('/[\r\n,;]+/', $target);
+        $normalized = [];
+        foreach ((array)$parts as $part) {
+            $part = trim((string)$part);
+            if ($part === '') continue;
+            $norm = wa_normalize_target_single($part, $countryCode);
+            if ($norm !== '') $normalized[] = $norm;
+        }
+        $normalized = array_values(array_unique($normalized));
+        return implode(',', $normalized);
+    }
+    return wa_normalize_target_single($target, $countryCode);
 }
 
 function wa_log_message($target, $message, $status, $responseJson = '', $pdfFile = '') {

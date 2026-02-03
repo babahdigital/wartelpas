@@ -20,7 +20,12 @@ if (isset($_POST['save_whatsapp'])) {
     $wh = app_db_get_whatsapp_config();
     $wh['endpoint_send'] = trim((string)($_POST['wa_endpoint_send'] ?? ($wh['endpoint_send'] ?? '')));
     $wh['token'] = trim((string)($_POST['wa_token'] ?? ($wh['token'] ?? '')));
-    $wh['notify_target'] = trim((string)($_POST['wa_notify_target'] ?? ($wh['notify_target'] ?? '')));
+    $raw_targets = trim((string)($_POST['wa_notify_target'] ?? ($wh['notify_target'] ?? '')));
+    $targets = preg_split('/[\r\n,;]+/', $raw_targets);
+    $targets = array_filter(array_map('trim', (array)$targets), function ($val) {
+        return $val !== '';
+    });
+    $wh['notify_target'] = implode(',', array_values($targets));
     $wh['notify_request_enabled'] = !empty($_POST['wa_notify_request_enabled']);
     $wh['notify_retur_enabled'] = !empty($_POST['wa_notify_retur_enabled']);
     $wh['notify_refund_enabled'] = !empty($_POST['wa_notify_refund_enabled']);
@@ -59,6 +64,14 @@ $wa = app_db_get_whatsapp_config();
 $wa_endpoint_send = $wa['endpoint_send'] ?? '';
 $wa_token = $wa['token'] ?? '';
 $wa_notify_target = $wa['notify_target'] ?? '';
+$wa_notify_target_list = '';
+if ($wa_notify_target !== '') {
+    $tmp_targets = preg_split('/[\r\n,;]+/', (string)$wa_notify_target);
+    $tmp_targets = array_filter(array_map('trim', (array)$tmp_targets), function ($val) {
+        return $val !== '';
+    });
+    $wa_notify_target_list = implode("\n", array_values($tmp_targets));
+}
 $wa_notify_request_enabled = !empty($wa['notify_request_enabled']);
 $wa_notify_retur_enabled = !empty($wa['notify_retur_enabled']);
 $wa_notify_refund_enabled = !empty($wa['notify_refund_enabled']);
@@ -100,11 +113,12 @@ $wa_log_limit = isset($wa['log_limit']) ? (int)$wa['log_limit'] : 50;
                 </div>
                 <div class="col-6">
                     <div class="form-group-modern">
-                        <label class="form-label">Nomor Notifikasi (opsional)</label>
-                        <div class="input-group-modern">
+                        <label class="form-label">Target Notifikasi (nomor / group)</label>
+                        <div class="input-group-modern" style="align-items:flex-start;">
                             <div class="input-icon"><i class="fa fa-phone"></i></div>
-                            <input class="form-control-modern" type="text" name="wa_notify_target" value="<?= htmlspecialchars($wa_notify_target); ?>" placeholder="62xxxxxxxx">
+                            <textarea class="form-control-modern" name="wa_notify_target" rows="4" placeholder="62812xxxxxxx&#10;120363xxxx@g.us&#10;(pisahkan dengan enter atau koma)"><?= htmlspecialchars($wa_notify_target_list); ?></textarea>
                         </div>
+                        <small style="display:block; margin-top:6px; color:#6c757d;">Kosongkan untuk memakai daftar penerima di menu WhatsApp. Bisa isi nomor atau Group ID (@g.us).</small>
                     </div>
                 </div>
                 <div class="col-3">
@@ -141,7 +155,7 @@ $wa_log_limit = isset($wa['log_limit']) ? (int)$wa['log_limit'] : 50;
                                 <label class="custom-check">
                                     <input type="checkbox" name="wa_notify_request_enabled" <?= $wa_notify_request_enabled ? 'checked' : ''; ?>>
                                     <span class="checkmark"></span>
-                                    <span class="check-label">Notif Request</span>
+                                    <span class="check-label">Aktifkan Notifikasi</span>
                                 </label>
                             </div>
                             <div>
