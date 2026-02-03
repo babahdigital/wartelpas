@@ -71,10 +71,8 @@ $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-
         </div>
 
         <div class="view-section <?= $active_tab === 'settings' ? 'active' : ''; ?>" data-view="settings" style="display: <?= $active_tab === 'settings' ? 'block' : 'none'; ?>;" <?= ($active_tab === 'settings' && $is_new_session) ? 'data-loaded="1" data-loaded-session="' . htmlspecialchars($active_session) . '"' : ''; ?>>
-            <?php if ($active_tab === 'settings' && $active_session !== '' && $is_new_session): ?>
+            <?php if ($active_tab === 'settings' && $active_session !== ''): ?>
                 <?php include __DIR__ . '/settings.php'; ?>
-            <?php elseif ($active_tab === 'settings' && $active_session !== ''): ?>
-                <div class="admin-async" data-section="settings"></div>
             <?php elseif ($active_tab === 'settings'): ?>
                 <div class="admin-empty">Pilih sesi terlebih dahulu untuk membuka pengaturan router.</div>
             <?php else: ?>
@@ -84,7 +82,11 @@ $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-
 
         <div class="view-section <?= $active_tab === 'scripts' ? 'active' : ''; ?>" data-view="scripts" style="display: <?= $active_tab === 'scripts' ? 'block' : 'none'; ?>;">
             <?php if ($active_tab === 'scripts' && $active_session !== ''): ?>
-                <div class="admin-async" data-section="scripts"></div>
+                <?php if (file_exists(__DIR__ . '/mikrotik_scripts.php')): ?>
+                    <?php include __DIR__ . '/mikrotik_scripts.php'; ?>
+                <?php else: ?>
+                    <div class="admin-empty">File script MikroTik tidak ditemukan.</div>
+                <?php endif; ?>
             <?php elseif ($active_tab === 'scripts'): ?>
                 <div class="admin-empty">Pilih sesi terlebih dahulu untuk membuka script MikroTik.</div>
             <?php else: ?>
@@ -93,7 +95,11 @@ $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-
         </div>
 
         <div class="view-section <?= $active_tab === 'operator' ? 'active' : ''; ?>" data-view="operator" style="display: <?= $active_tab === 'operator' ? 'block' : 'none'; ?>;">
-            <div class="admin-async" data-section="operator"></div>
+            <?php if ($active_tab === 'operator'): ?>
+                <?php include __DIR__ . '/operator_access.php'; ?>
+            <?php else: ?>
+                <div class="admin-async" data-section="operator"></div>
+            <?php endif; ?>
         </div>
 
         <div class="view-section <?= $active_tab === 'whatsapp' ? 'active' : ''; ?>" data-view="whatsapp" style="display: <?= $active_tab === 'whatsapp' ? 'block' : 'none'; ?>;">

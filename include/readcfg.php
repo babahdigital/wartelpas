@@ -31,6 +31,29 @@ if (file_exists($envFile)) {
 }
 // read config
 
+$useradm = '';
+$passadm = '';
+if (isset($data['mikhmon']) && is_array($data['mikhmon'])) {
+    $useradm = isset($data['mikhmon'][1]) ? explode('<|<', $data['mikhmon'][1])[1] : '';
+    $passadm = isset($data['mikhmon'][2]) ? explode('>|>', $data['mikhmon'][2])[1] : '';
+}
+
+if (empty($session) || !isset($data[$session]) || !is_array($data[$session])) {
+    $iphost = '';
+    $userhost = '';
+    $passwdhost = '';
+    $hotspotname = '';
+    $dnsname = '';
+    $currency = '';
+    $areload = '';
+    $iface = '';
+    $infolp = '';
+    $idleto = '';
+    $sesname = '';
+    $livereport = '';
+    $hotspot_server = isset($env['system']['hotspot_server']) ? (string)$env['system']['hotspot_server'] : 'wartel';
+    return;
+}
 $iphost = explode('!', $data[$session][1])[1];
 $userhost = explode('@|@', $data[$session][2])[1];
 $passwdhost = explode('#|#', $data[$session][3])[1];
@@ -42,8 +65,6 @@ $iface = explode('(', $data[$session][8])[1];
 $infolp = explode(')', $data[$session][9])[1];
 $idleto = explode('=', $data[$session][10])[1];
 $sesname = explode('+', $data[$session][10])[1];
-$useradm = explode('<|<', $data['mikhmon'][1])[1];
-$passadm = explode('>|>', $data['mikhmon'][2])[1];
 $livereport = explode('@!@', $data[$session][11])[1];
 $hotspot_server = isset($data[$session][12]) ? explode('~', $data[$session][12])[1] : 'wartel';
 if (empty($hotspot_server)) {

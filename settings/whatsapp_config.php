@@ -73,7 +73,7 @@ $wa_log_limit = isset($wa['log_limit']) ? (int)$wa['log_limit'] : 50;
     </div>
     <div class="card-body-modern">
         <?php if ($save_message !== ''): ?>
-            <div class="alert alert-<?= htmlspecialchars($save_type); ?>" style="margin-bottom: 12px;">
+            <div class="alert alert-<?= htmlspecialchars($save_type); ?>" style="margin-bottom: 15px; padding: 15px; border-radius: 10px;">
                 <?= htmlspecialchars($save_message); ?>
             </div>
         <?php endif; ?>

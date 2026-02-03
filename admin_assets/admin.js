@@ -16,6 +16,7 @@
 
     var tabs = shell.querySelectorAll('[data-tab]');
     var views = shell.querySelectorAll('[data-view]');
+    var disableAjax = true;
 
     function setActiveTab(tabId) {
         tabs.forEach(function (tab) {
@@ -48,6 +49,7 @@
     }
 
     function loadSection(tabId, sessionValue) {
+        if (disableAjax) return;
         var view = shell.querySelector('[data-view="' + tabId + '"]');
         if (!view) return;
 
@@ -109,6 +111,12 @@
         if (sessionBadge) {
             sessionBadge.textContent = 'Sesi: ' + (currentSession || '-');
         }
+        if (disableAjax) {
+            var nextUrl = buildTabUrl(tabId, currentSession);
+            window.location.href = nextUrl;
+            return;
+        }
+
         setActiveTab(tabId);
         loadSection(tabId, currentSession);
 
@@ -195,6 +203,7 @@
         if (!form || form.tagName !== 'FORM') return;
         if (!shell.contains(form)) return;
         if (form.getAttribute('data-no-ajax') === '1') return;
+        if (disableAjax) return;
 
         var viewName = form.getAttribute('data-admin-form') || '';
         var activeView = shell.querySelector('.view-section.active');
@@ -245,7 +254,7 @@
                         var targetView = activeView || shell.querySelector('[data-view="operator"]');
                         if (targetView) {
                             targetView.insertAdjacentHTML('afterbegin',
-                                '<div class="alert ' + (ok ? 'alert-success' : 'alert-danger') + '" style="margin-bottom: 12px;">' + message + '</div>'
+                                '<div class="alert ' + (ok ? 'alert-success' : 'alert-danger') + '" style="margin-bottom: 15px; padding: 15px; border-radius: 10px;">' + message + '</div>'
                             );
                         }
                     }
@@ -284,7 +293,7 @@
                     var cardBody = activeView.querySelector('.card-body-modern');
                     if (cardBody) {
                         cardBody.insertAdjacentHTML('afterbegin',
-                            '<div class="alert alert-success" style="margin-bottom: 15px; padding: 15px;">Konfigurasi WhatsApp tersimpan.</div>'
+                            '<div class="alert alert-success" style="margin-bottom: 15px; padding: 15px; border-radius: 10px;">Konfigurasi WhatsApp tersimpan.</div>'
                         );
                     }
                 }
@@ -293,7 +302,7 @@
                     var settingsBody = activeView.querySelector('.card-body-modern');
                     if (settingsBody) {
                         settingsBody.insertAdjacentHTML('afterbegin',
-                            '<div class="alert alert-success" style="margin-bottom: 12px;">Konfigurasi router tersimpan.</div>'
+                            '<div class="alert alert-success" style="margin-bottom: 15px; padding: 15px; border-radius: 10px;">Konfigurasi router tersimpan.</div>'
                         );
                     }
                 }
@@ -353,7 +362,9 @@
     var defaultTab = shell.getAttribute('data-active-tab') || 'sessions';
     var defaultSession = shell.getAttribute('data-session') || '';
     setActiveTab(defaultTab);
-    loadSection(defaultTab, defaultSession);
+    if (!disableAjax) {
+        loadSection(defaultTab, defaultSession);
+    }
     updateClock();
     setInterval(updateClock, 1000);
 })();

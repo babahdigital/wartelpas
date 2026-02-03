@@ -65,6 +65,12 @@ $c = $_GET['c'];
 $router = $_GET['router'];
 $logo = $_GET['logo'];
 
+if ($id === 'settings' && !empty($session) && strpos($session, 'new-') === 0) {
+  ini_set('display_errors', '1');
+  ini_set('display_startup_errors', '1');
+  error_reporting(E_ALL);
+}
+
 if ($id === 'operator-access' && isset($_POST['save'])) {
   include_once('./settings/admin_account_logic.php');
 }

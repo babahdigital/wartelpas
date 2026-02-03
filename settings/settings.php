@@ -28,10 +28,34 @@ app_db_import_legacy_if_needed();
 requireLogin('../admin.php?id=login');
 requireSuperAdmin('../admin.php?id=sessions');
 
+if (!function_exists('encrypt')) {
+  require_once __DIR__ . '/../lib/routeros_api.class.php';
+}
+
+if (!isset($data) || !is_array($data)) {
+  $data = app_db_load_config();
+}
+if (!isset($session) || $session === '') {
+  $session = $_GET['session'] ?? '';
+}
+if (!isset($router) || $router === '') {
+  $router = $_GET['router'] ?? '';
+}
+if (!isset($id) || $id === '') {
+  $id = $_GET['id'] ?? '';
+}
+
 $is_ajax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower((string)$_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 $save_message = '';
 $save_type = '';
 $new_session_name = '';
+
+if (!empty($_SESSION['settings_save_message'])) {
+  $save_message = (string)$_SESSION['settings_save_message'];
+  $save_type = (string)($_SESSION['settings_save_type'] ?? 'success');
+  $new_session_name = (string)($_SESSION['settings_save_session'] ?? '');
+  unset($_SESSION['settings_save_message'], $_SESSION['settings_save_type'], $_SESSION['settings_save_session']);
+}
 
 function render_admin_error($message, $backUrl)
 {
@@ -131,7 +155,14 @@ if (isset($_POST['save'])) {
     $hotspot_server = $shotspotserver;
     $is_new_router = false;
     if (!$is_ajax) {
-      echo "<script>window.location='./admin.php?id=settings&session=" . $sesname . "'</script>";
+      $_SESSION['settings_save_message'] = $save_message;
+      $_SESSION['settings_save_type'] = $save_type;
+      $_SESSION['settings_save_session'] = $new_session_name;
+      if (!headers_sent()) {
+        header('Location: ./admin.php?id=settings&session=' . $sesname);
+      } else {
+        echo "<script>window.location='./admin.php?id=settings&session=" . $sesname . "'</script>";
+      }
       exit;
     }
   }
@@ -172,7 +203,14 @@ if (isset($_POST['save'])) {
   $livereport = $slivereport;
   $hotspot_server = $shotspotserver;
   if (!$is_ajax) {
-    echo "<script>window.location='./admin.php?id=settings&session=" . $sesname . "'</script>";
+    $_SESSION['settings_save_message'] = $save_message;
+    $_SESSION['settings_save_type'] = $save_type;
+    $_SESSION['settings_save_session'] = $new_session_name;
+    if (!headers_sent()) {
+      header('Location: ./admin.php?id=settings&session=' . $sesname);
+    } else {
+      echo "<script>window.location='./admin.php?id=settings&session=" . $sesname . "'</script>";
+    }
   }
 }
 if ($currency == "" && !$is_new_router) {
@@ -225,7 +263,7 @@ if (file_exists($tmpl_onlogin) && file_exists($tmpl_onlogout) && $base_url !== '
         </div>
         <div class="card-body-modern">
           <?php if ($save_message !== ''): ?>
-            <div class="alert alert-<?= htmlspecialchars($save_type ?: 'info'); ?>" style="margin-bottom: 12px;" <?= $new_session_name !== '' ? 'data-new-session="' . htmlspecialchars($new_session_name) . '"' : ''; ?>>
+            <div class="alert alert-<?= htmlspecialchars($save_type ?: 'info'); ?>" style="margin-bottom: 15px; padding: 15px; border-radius: 10px;" <?= $new_session_name !== '' ? 'data-new-session="' . htmlspecialchars($new_session_name) . '"' : ''; ?>>
               <?= htmlspecialchars($save_message); ?>
             </div>
           <?php endif; ?>
