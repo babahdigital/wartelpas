@@ -610,8 +610,9 @@ if ($load == "hotspot") {
     $categories = [];
     $dataIncome = [];
     $dataQty = [];
+    $skipDay3 = ($filterMonth === $currentMonth && $filterYear === $currentYear);
     for ($d = $startDay; $d <= $endDay; $d++) {
-        if ($d === 3) {
+        if ($skipDay3 && $d === 3) {
             continue;
         }
         $categories[] = (string)$d;
