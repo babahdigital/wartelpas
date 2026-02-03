@@ -34,6 +34,10 @@ $last_sync_sales = '-';
 $last_sync_live = '-';
 $last_sync_sales_full = '-';
 $last_sync_live_full = '-';
+$last_sync_sales_class = 'sync-ok';
+$last_sync_live_class = 'sync-ok';
+$last_sync_sales_blink = 'blink-slow';
+$last_sync_live_blink = 'blink-slow';
 try {
     $system_cfg = $env['system'] ?? [];
     $db_rel = $system_cfg['db_file'] ?? 'db_data/babahdigital_main.db';
@@ -60,6 +64,43 @@ if ($last_sync_sales_full !== '-' && strlen($last_sync_sales_full) >= 16) {
 }
 if ($last_sync_live_full !== '-' && strlen($last_sync_live_full) >= 16) {
     $last_sync_live = substr($last_sync_live_full, 11, 5);
+}
+
+$now_ts = time();
+$warn_minutes = 15;
+$late_minutes = 60;
+if ($last_sync_sales_full !== '-') {
+    $ts = strtotime($last_sync_sales_full);
+    if ($ts) {
+        $diff_min = (int)floor(($now_ts - $ts) / 60);
+        if ($diff_min >= $late_minutes) {
+            $last_sync_sales_class = 'sync-late';
+            $last_sync_sales_blink = 'blink-fast';
+        } elseif ($diff_min >= $warn_minutes) {
+            $last_sync_sales_class = 'sync-warn';
+        }
+    } else {
+        $last_sync_sales_class = 'sync-warn';
+    }
+} else {
+    $last_sync_sales_class = 'sync-warn';
+}
+
+if ($last_sync_live_full !== '-') {
+    $ts = strtotime($last_sync_live_full);
+    if ($ts) {
+        $diff_min = (int)floor(($now_ts - $ts) / 60);
+        if ($diff_min >= $late_minutes) {
+            $last_sync_live_class = 'sync-late';
+            $last_sync_live_blink = 'blink-fast';
+        } elseif ($diff_min >= $warn_minutes) {
+            $last_sync_live_class = 'sync-warn';
+        }
+    } else {
+        $last_sync_live_class = 'sync-warn';
+    }
+} else {
+    $last_sync_live_class = 'sync-warn';
 }
 
 $menu_retur_pending = 0;
@@ -558,7 +599,9 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                 </a>
             <?php endif; ?>
             <span class="timer-badge" title="Live: <?= htmlspecialchars($last_sync_live_full); ?> | Sales: <?= htmlspecialchars($last_sync_sales_full); ?>">
-                <i class="fa fa-clock-o"></i> L: <span><?= htmlspecialchars($last_sync_live); ?></span> S: <span><?= htmlspecialchars($last_sync_sales); ?></span>
+                <i class="fa fa-clock-o"></i>
+                L: <span class="sync-pill <?= $last_sync_live_class; ?> <?= $last_sync_live_blink; ?>"><?= htmlspecialchars($last_sync_live); ?></span>
+                S: <span class="sync-pill <?= $last_sync_sales_class; ?> <?= $last_sync_sales_blink; ?>"><?= htmlspecialchars($last_sync_sales); ?></span>
             </span>
             <span id="db-status" class="db-status" title="Kesehatan Database">
                 <i class="fa fa-heart"></i>
@@ -686,6 +729,13 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
 <style>
     .btn-print.btn-default-dark { background:#343a40; color:#fff; border:1px solid #4b5259; }
     .btn-print.btn-default-dark:hover { background:#3d434a; color:#fff; }
+    .sync-pill { display:inline-block; padding:1px 6px; border-radius:10px; font-weight:700; font-size:11px; }
+    .sync-ok { color:#16a34a; background:rgba(22,163,74,0.12); }
+    .sync-warn { color:#f59e0b; background:rgba(245,158,11,0.12); }
+    .sync-late { color:#ef4444; background:rgba(239,68,68,0.15); }
+    .blink-slow { animation: syncBlink 2.4s ease-in-out infinite; }
+    .blink-fast { animation: syncBlink 1.2s ease-in-out infinite; }
+    @keyframes syncBlink { 50% { opacity: 0.35; } }
 </style>
 
 <script>
