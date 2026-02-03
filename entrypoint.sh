@@ -23,6 +23,12 @@ if [ -f "/var/www/html/include/quickbt.php" ]; then
     chmod 664 /var/www/html/include/quickbt.php || true
 fi
 
+# 2b. Pastikan folder include writable saat dimount
+if [ -d "/var/www/html/include" ]; then
+    chown -R www-data:www-data /var/www/html/include || true
+    chmod -R 775 /var/www/html/include || true
+fi
+
 # 3. Khusus folder settings agar bisa simpan config
 if [ -d "/var/www/html/settings" ]; then
     chmod -R 777 /var/www/html/settings

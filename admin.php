@@ -19,6 +19,14 @@ session_start();
 // hide all error
 error_reporting(0);
 
+// disable cache for admin pages
+if (!headers_sent()) {
+  header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+  header('Cache-Control: post-check=0, pre-check=0', false);
+  header('Pragma: no-cache');
+  header('Expires: 0');
+}
+
 require_once __DIR__ . '/include/acl.php';
 
 $env = [];
@@ -37,6 +45,8 @@ ob_start("ob_gzhandler");
 
 // check url
 $url = $_SERVER['REQUEST_URI'];
+$path = parse_url($url, PHP_URL_PATH);
+$basename = $path ? basename($path) : '';
 
 // load session MikroTik
 $session = $_GET['session'];
@@ -47,6 +57,11 @@ $id = $_GET['id'];
 $c = $_GET['c'];
 $router = $_GET['router'];
 $logo = $_GET['logo'];
+
+if ($id === 'settings' && empty($session) && !empty($router) && explode('-', $router)[0] === 'new') {
+  echo "<script>window.location='./admin.php?id=settings&session=" . $router . "'</script>";
+  exit;
+}
 
 $ids = array(
   "editor",
@@ -83,7 +98,7 @@ include_once('./lib/routeros_api.class.php');
 include_once('./lib/formatbytesbites.php');
 
 $is_admin_content = ($id === 'admin-content');
-$is_admin_layout = in_array($id, array('sessions', 'settings', 'mikrotik-scripts'), true);
+$is_admin_layout = in_array($id, array('sessions', 'settings', 'mikrotik-scripts', 'operator-access', 'whatsapp'), true);
 
 if ($is_admin_content) {
   if (!isset($_SESSION["mikhmon"])) {
@@ -112,6 +127,10 @@ if ($is_admin_content) {
     } else {
       echo "<div class='alert alert-danger'>File settings/mikrotik_scripts.php tidak ditemukan.</div>";
     }
+  } elseif ($section === 'operator') {
+    include_once('./settings/operator_access.php');
+  } elseif ($section === 'whatsapp') {
+    include_once('./settings/whatsapp_config.php');
   } else {
     echo "<div class='alert alert-danger'>Konten admin tidak ditemukan.</div>";
   }
@@ -125,7 +144,7 @@ ensureRole();
 ?>
     
 <?php
-if ($id == "login" || substr($url, -1) == "p") {
+if ($id == "login" || ($basename === 'admin.php' && empty($id))) {
 
   if (isset($_POST['login'])) {
     if (!isset($_POST['csrf_token']) || !isset($_SESSION['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
@@ -250,6 +269,8 @@ if ($id == "login" || substr($url, -1) == "p") {
   include_once('./settings/admin_single.php');
 } elseif ($id == "operator-access") {
   include_once('./settings/admin_single.php');
+} elseif ($id == "whatsapp") {
+  include_once('./settings/admin_single.php');
 } elseif ($id == "connect"  && !empty($session)) {
   ini_set("max_execution_time",5);  
   include_once('./include/menu.php');
@@ -290,6 +311,9 @@ if ($id == "login" || substr($url, -1) == "p") {
       fputs($f, $line);
   }
   fclose($f);
+  if (function_exists('opcache_invalidate')) {
+    @opcache_invalidate(__DIR__ . '/include/config.php', true);
+  }
   echo "<script>window.location='./admin.php?id=sessions'</script>";
 } elseif ($id == "about") {
   include_once('./include/menu.php');
@@ -314,8 +338,10 @@ if ($id == "login" || substr($url, -1) == "p") {
   echo "<script>window.location='./admin.php?id=sessions'</script>";
 }
 ?>
+<?php if (empty($is_admin_layout)): ?>
 <script src="js/mikhmon-ui.<?= $theme; ?>.min.js"></script>
 <script src="js/mikhmon.js?t=<?= str_replace(" ","_",date("Y-m-d H:i:s")); ?>"></script>
+<?php endif; ?>
 <?php include('./include/info.php'); ?>
 </body>
 </html>

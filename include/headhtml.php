@@ -45,8 +45,10 @@ error_reporting(0);
 		<link rel="stylesheet" href="css/tooltips.css">
 		<?php if (!empty($is_admin_layout)) : ?>
 		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-		<link rel="stylesheet" href="admin_assets/admin.css">
-		<script src="admin_assets/admin.js" defer></script>
+		<?php $adminCssVer = @filemtime(__DIR__ . '/../admin_assets/admin.css') ?: time(); ?>
+		<?php $adminJsVer = @filemtime(__DIR__ . '/../admin_assets/admin.js') ?: time(); ?>
+		<link rel="stylesheet" href="admin_assets/admin.css?v=<?= $adminCssVer; ?>">
+		<script src="admin_assets/admin.js?v=<?= $adminJsVer; ?>" defer></script>
 		<?php endif; ?>
 		<script src="js/pace.min.js"></script>
 		<script src="js/popup.js" defer></script>

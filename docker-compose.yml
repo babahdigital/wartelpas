@@ -23,16 +23,8 @@ services:
       # 2. KONFIGURASI SERVER & PHP
       # ==========================================
       - /home/abdullah/.config/rclone/rclone.conf:/var/www/html/config/rclone.conf:ro
-      - ./include/config.php:/var/www/html/include/config.php
-      - ./include/env.php:/var/www/html/include/env.php
-      - ./include/quickbt.php:/var/www/html/include/quickbt.php
-      - ./settings/settings.php:/var/www/html/settings/settings.php
-      - ./settings/sessions.php:/var/www/html/settings/sessions.php
-      - ./settings/uplogo.php:/var/www/html/settings/uplogo.php
-      - ./settings/mikrotik_scripts.php:/var/www/html/settings/mikrotik_scripts.php
-      - ./settings/admin_single.php:/var/www/html/settings/admin_single.php
-      - ./settings/admin_account_logic.php:/var/www/html/settings/admin_account_logic.php
-      - ./settings/operator_access.php:/var/www/html/settings/operator_access.php
+      - ./include:/var/www/html/include
+      - ./settings:/var/www/html/settings
       - ./include/readcfg.php:/var/www/html/include/readcfg.php
       - ./custom.ini:/usr/local/etc/php/conf.d/custom.ini
       - ./.htaccess:/var/www/html/.htaccess

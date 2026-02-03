@@ -12,9 +12,12 @@ if ($id === 'settings') {
     $active_tab = 'scripts';
 } elseif ($id === 'operator-access') {
     $active_tab = 'operator';
+} elseif ($id === 'whatsapp') {
+    $active_tab = 'whatsapp';
 }
 
 $active_session = $session ?? '';
+$is_new_session = ($active_session !== '' && strpos($active_session, 'new-') === 0);
 $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-';
 ?>
 
@@ -32,11 +35,14 @@ $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-
                 <button class="nav-btn <?= $active_tab === 'settings' ? 'active' : ''; ?>" data-tab="settings">
                     <i class="fa fa-cogs"></i> Pengaturan Router
                 </button>
-                <button class="nav-btn <?= $active_tab === 'scripts' ? 'active' : ''; ?>" data-tab="scripts">
-                    <i class="fa fa-code"></i> Script MikroTik
-                </button>
                 <button class="nav-btn <?= $active_tab === 'operator' ? 'active' : ''; ?>" data-tab="operator">
                     <i class="fa fa-users"></i> Akses Operator
+                </button>
+                <button class="nav-btn <?= $active_tab === 'whatsapp' ? 'active' : ''; ?>" data-tab="whatsapp">
+                    <i class="fa fa-whatsapp"></i> WhatsApp
+                </button>
+                <button class="nav-btn <?= $active_tab === 'scripts' ? 'active' : ''; ?>" data-tab="scripts">
+                    <i class="fa fa-code"></i> Script MikroTik
                 </button>
             </div>
         </div>
@@ -50,15 +56,6 @@ $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-
                     <i class="fa fa-home"></i> Halaman Utama
                 </a>
                 <?php if (isSuperAdmin()): ?>
-                    <button class="btn-action btn-outline" style="font-size: 11px; padding: 6px 10px;" onclick="runBackupAjax()">
-                        <i class="fa fa-database"></i> Backup
-                    </button>
-                    <button class="btn-action btn-outline" style="font-size: 11px; padding: 6px 10px;" onclick="runRestoreAjax()">
-                        <i class="fa fa-history"></i> Restore
-                    </button>
-                    <a class="btn-action btn-primary-m" style="font-size: 11px; padding: 6px 10px;" data-no-ajax="1" href="./admin.php?id=settings&router=new-<?= rand(1111,9999); ?>">
-                        <i class="fa fa-plus"></i> Tambah Router
-                    </a>
                 <?php endif; ?>
             </div>
 
@@ -69,12 +66,14 @@ $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-
     </nav>
 
     <div class="container">
-        <div class="view-section <?= $active_tab === 'sessions' ? 'active' : ''; ?>" data-view="sessions">
+        <div class="view-section <?= $active_tab === 'sessions' ? 'active' : ''; ?>" data-view="sessions" style="display: <?= $active_tab === 'sessions' ? 'block' : 'none'; ?>;">
             <?php include __DIR__ . '/sessions.php'; ?>
         </div>
 
-        <div class="view-section <?= $active_tab === 'settings' ? 'active' : ''; ?>" data-view="settings">
-            <?php if ($active_tab === 'settings' && $active_session !== ''): ?>
+        <div class="view-section <?= $active_tab === 'settings' ? 'active' : ''; ?>" data-view="settings" style="display: <?= $active_tab === 'settings' ? 'block' : 'none'; ?>;" <?= ($active_tab === 'settings' && $is_new_session) ? 'data-loaded="1" data-loaded-session="' . htmlspecialchars($active_session) . '"' : ''; ?>>
+            <?php if ($active_tab === 'settings' && $active_session !== '' && $is_new_session): ?>
+                <?php include __DIR__ . '/settings.php'; ?>
+            <?php elseif ($active_tab === 'settings' && $active_session !== ''): ?>
                 <div class="admin-async" data-section="settings"></div>
             <?php elseif ($active_tab === 'settings'): ?>
                 <div class="admin-empty">Pilih sesi terlebih dahulu untuk membuka pengaturan router.</div>
@@ -83,7 +82,7 @@ $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-
             <?php endif; ?>
         </div>
 
-        <div class="view-section <?= $active_tab === 'scripts' ? 'active' : ''; ?>" data-view="scripts">
+        <div class="view-section <?= $active_tab === 'scripts' ? 'active' : ''; ?>" data-view="scripts" style="display: <?= $active_tab === 'scripts' ? 'block' : 'none'; ?>;">
             <?php if ($active_tab === 'scripts' && $active_session !== ''): ?>
                 <div class="admin-async" data-section="scripts"></div>
             <?php elseif ($active_tab === 'scripts'): ?>
@@ -93,8 +92,16 @@ $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-
             <?php endif; ?>
         </div>
 
-        <div class="view-section <?= $active_tab === 'operator' ? 'active' : ''; ?>" data-view="operator">
-            <?php include __DIR__ . '/operator_access.php'; ?>
+        <div class="view-section <?= $active_tab === 'operator' ? 'active' : ''; ?>" data-view="operator" style="display: <?= $active_tab === 'operator' ? 'block' : 'none'; ?>;">
+            <div class="admin-async" data-section="operator"></div>
+        </div>
+
+        <div class="view-section <?= $active_tab === 'whatsapp' ? 'active' : ''; ?>" data-view="whatsapp" style="display: <?= $active_tab === 'whatsapp' ? 'block' : 'none'; ?>;">
+            <?php if ($active_tab === 'whatsapp'): ?>
+                <?php include __DIR__ . '/whatsapp_config.php'; ?>
+            <?php else: ?>
+                <div class="admin-async" data-section="whatsapp"></div>
+            <?php endif; ?>
         </div>
     </div>
 </div>

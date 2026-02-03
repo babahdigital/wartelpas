@@ -26,23 +26,47 @@ require_once __DIR__ . '/../include/acl.php';
 requireLogin('../admin.php?id=login');
 requireSuperAdmin('../admin.php?id=sessions');
 
+$is_ajax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower((string)$_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+$save_message = '';
+$save_type = '';
+$new_session_name = '';
+
+function render_admin_error($message, $backUrl)
+{
+  $safeMessage = htmlspecialchars((string)$message, ENT_QUOTES, 'UTF-8');
+  $safeUrl = htmlspecialchars((string)$backUrl, ENT_QUOTES, 'UTF-8');
+  echo "<div class='alert alert-danger'>" . $safeMessage . "</div>";
+  echo "<div style='margin-top:10px;'><a class='btn-action btn-outline' data-no-ajax='1' href='{$safeUrl}'>Kembali</a></div>";
+  exit;
+}
+
 $env = [];
 $envFile = __DIR__ . '/../include/env.php';
 if (file_exists($envFile)) {
   require $envFile;
 }
 
-if ($id == "settings" && explode("-", $router)[0] == "new") {
-  $data = '$data';
-  $f = fopen('./include/config.php', 'a');
-  fwrite($f, "\n'$'data['" . $router . "'] = array ('1'=>'" . $router . "!','" . $router . "@|@','" . $router . "#|#','" . $router . "%','" . $router . "^','" . $router . "&Rp','" . $router . "*10','" . $router . "(1','" . $router . ")','" . $router . "=10','" . $router . "@!@disable','" . $router . "~wartel');");
-  fclose($f);
-  $search = "'$'data";
-  $replace = (string)$data;
-  $content = file_get_contents("./include/config.php");
-  $newcontent = str_replace((string)$search, (string)$replace, "$content");
-  file_put_contents("./include/config.php", "$newcontent");
-  echo "<script>window.location='./admin.php?id=settings&session=" . $router . "'</script>";
+$session_is_new = (!empty($session) && explode('-', $session)[0] === 'new');
+$router_is_new = (!empty($router) && explode('-', $router)[0] === 'new');
+$is_new_router = ($id === "settings" && ($router_is_new || ($session_is_new && (!isset($data[$session]) || !is_array($data[$session])))));
+if ($is_new_router) {
+  if (empty($session)) {
+    $session = $router;
+  }
+  $iphost = '';
+  $userhost = '';
+  $passwdhost = '';
+  $hotspotname = '';
+  $dnsname = '';
+  $currency = '';
+  $areload = 10;
+  $iface = '';
+  $infolp = '';
+  $idleto = '10';
+  $livereport = 'disable';
+  if (empty($hotspot_server)) {
+    $hotspot_server = 'wartel';
+  }
 }
 
 if (isset($_POST['save'])) {
@@ -64,19 +88,106 @@ if (isset($_POST['save'])) {
   $sesname = (preg_replace('/\s+/', '-', $_POST['sessname']));
   $slivereport = ($_POST['livereport']);
 
+  $is_new_save = ($is_new_router || (isset($session) && $session !== '' && explode('-', $session)[0] === 'new'));
+  if ($is_new_save) {
+    if (isset($data[$sesname])) {
+      render_admin_error('Gagal menambah router. Nama sesi sudah digunakan.', './admin.php?id=sessions');
+    }
+    if (!is_writable('./include/config.php')) {
+      @error_log(date('c') . " [admin][settings] config.php not writable (new router save)\n", 3, __DIR__ . '/../logs/admin_errors.log');
+      render_admin_error('Gagal menambah router. File config.php tidak bisa ditulis.', './admin.php?id=sessions');
+    }
+    $f = fopen('./include/config.php', 'a');
+    if ($f === false) {
+      @error_log(date('c') . " [admin][settings] fopen config.php failed (new router save)\n", 3, __DIR__ . '/../logs/admin_errors.log');
+      render_admin_error('Gagal menambah router. Tidak bisa membuka config.php.', './admin.php?id=sessions');
+    }
+    $line = "\n\$data['" . $sesname . "'] = array (" .
+      "'1'=>'" . $sesname . "!" . $siphost . "'," .
+      "'" . $sesname . "@|@" . $suserhost . "'," .
+      "'" . $sesname . "#|#" . $spasswdhost . "'," .
+      "'" . $sesname . "%" . $shotspotname . "'," .
+      "'" . $sesname . "^" . $sdnsname . "'," .
+      "'" . $sesname . "&" . $scurrency . "'," .
+      "'" . $sesname . "*" . $sreload . "'," .
+      "'" . $sesname . "(" . $siface . "'," .
+      "'" . $sesname . ")" . $sinfolp . "'," .
+      "'" . $sesname . "=" . $sidleto . "'," .
+      "'" . $sesname . "@!@" . $slivereport . "'," .
+      "'" . $sesname . "~" . $shotspotserver . "');";
+    $write_ok = fwrite($f, $line);
+    fclose($f);
+    if ($write_ok === false) {
+      @error_log(date('c') . " [admin][settings] fwrite config.php failed (new router save)\n", 3, __DIR__ . '/../logs/admin_errors.log');
+      render_admin_error('Gagal menambah router. Penulisan config.php gagal.', './admin.php?id=sessions');
+    }
+    if (function_exists('opcache_invalidate')) {
+      @opcache_invalidate(__DIR__ . '/../include/config.php', true);
+    }
+    $save_message = 'Sesi baru berhasil disimpan: ' . $sesname;
+    $save_type = 'success';
+    $new_session_name = $sesname;
+    $session = $sesname;
+    $iphost = $siphost;
+    $userhost = $suserhost;
+    $passwdhost = $spasswdhost;
+    $hotspotname = $shotspotname;
+    $dnsname = $sdnsname;
+    $currency = $scurrency;
+    $areload = $sreload;
+    $iface = $siface;
+    $infolp = $sinfolp;
+    $idleto = $sidleto;
+    $livereport = $slivereport;
+    $hotspot_server = $shotspotserver;
+    $is_new_router = false;
+    if (!$is_ajax) {
+      echo "<script>window.location='./admin.php?id=settings&session=" . $sesname . "'</script>";
+      exit;
+    }
+  }
+
   $search = array('1' => "$session!$iphost", "$session@|@$userhost", "$session#|#$passwdhost", "$session%$hotspotname", "$session^$dnsname", "$session&$currency", "$session*$areload", "$session($iface", "$session)$infolp", "$session=$idleto", "'$session'", "$session@!@$livereport", "$session~$hotspot_server");
 
   $replace = array('1' => "$sesname!$siphost", "$sesname@|@$suserhost", "$sesname#|#$spasswdhost", "$sesname%$shotspotname", "$sesname^$sdnsname", "$sesname&$scurrency", "$sesname*$sreload", "$sesname($siface", "$sesname)$sinfolp", "$sesname=$sidleto", "'$sesname'", "$sesname@!@$slivereport", "$sesname~$shotspotserver");
 
   for ($i = 1; $i < 15; $i++) {
     $content = file_get_contents("./include/config.php");
+    if ($content === false) {
+      @error_log(date('c') . " [admin][settings] read config.php failed (save session)\n", 3, __DIR__ . '/../logs/admin_errors.log');
+      render_admin_error('Gagal menyimpan. File config.php tidak bisa dibaca.', './admin.php?id=settings&session=' . $session);
+    }
     $newcontent = str_replace((string)$search[$i], (string)$replace[$i], "$content");
-    file_put_contents("./include/config.php", "$newcontent");
+    if (file_put_contents("./include/config.php", "$newcontent") === false) {
+      @error_log(date('c') . " [admin][settings] write config.php failed (save session)\n", 3, __DIR__ . '/../logs/admin_errors.log');
+      render_admin_error('Gagal menyimpan. File config.php tidak bisa ditulis.', './admin.php?id=settings&session=' . $session);
+    }
+  }
+  if (function_exists('opcache_invalidate')) {
+    @opcache_invalidate(__DIR__ . '/../include/config.php', true);
   }
   $_SESSION["connect"] = "";
-  echo "<script>window.location='./admin.php?id=settings&session=" . $sesname . "'</script>";
+  $save_message = 'Konfigurasi router berhasil disimpan.';
+  $save_type = 'success';
+  @error_log(date('c') . " [admin][settings] saved session=" . $sesname . "\n", 3, __DIR__ . '/../logs/admin_errors.log');
+  $session = $sesname;
+  $iphost = $siphost;
+  $userhost = $suserhost;
+  $passwdhost = $spasswdhost;
+  $hotspotname = $shotspotname;
+  $dnsname = $sdnsname;
+  $currency = $scurrency;
+  $areload = $sreload;
+  $iface = $siface;
+  $infolp = $sinfolp;
+  $idleto = $sidleto;
+  $livereport = $slivereport;
+  $hotspot_server = $shotspotserver;
+  if (!$is_ajax) {
+    echo "<script>window.location='./admin.php?id=settings&session=" . $sesname . "'</script>";
+  }
 }
-if ($currency == "") {
+if ($currency == "" && !$is_new_router) {
   echo "<script>window.location='./admin.php?id=settings&session=" . $session . "'</script>";
 }
 
@@ -109,7 +220,7 @@ if (file_exists($tmpl_onlogin) && file_exists($tmpl_onlogout) && $base_url !== '
 }
 ?>
 
-<form autocomplete="off" method="post" action="" name="settings">
+<form autocomplete="off" method="post" action="" name="settings" data-admin-form="settings">
   <div class="row">
     <div class="col-12">
       <div class="card-modern">
@@ -125,6 +236,11 @@ if (file_exists($tmpl_onlogin) && file_exists($tmpl_onlogout) && $base_url !== '
           </div>
         </div>
         <div class="card-body-modern">
+          <?php if ($save_message !== ''): ?>
+            <div class="alert alert-<?= htmlspecialchars($save_type ?: 'info'); ?>" style="margin-bottom: 12px;" <?= $new_session_name !== '' ? 'data-new-session="' . htmlspecialchars($new_session_name) . '"' : ''; ?>>
+              <?= htmlspecialchars($save_message); ?>
+            </div>
+          <?php endif; ?>
           <div class="row">
             <div class="col-6">
               <div class="card-modern">
@@ -160,7 +276,7 @@ if (file_exists($tmpl_onlogin) && file_exists($tmpl_onlogout) && $base_url !== '
                         <label class="form-label">Username Router</label>
                         <div class="input-group-modern">
                           <div class="input-icon"><i class="fa fa-user"></i></div>
-                          <input class="form-control-modern" id="usermk" type="text" name="usermik" title="User MikroTik" value="<?= $userhost; ?>" required="1"/>
+                          <input class="form-control-modern" id="usermk" type="text" name="usermik" title="User MikroTik" value="<?= $userhost; ?>" required="1" autocomplete="username"/>
                         </div>
                       </div>
                     </div>
@@ -169,7 +285,7 @@ if (file_exists($tmpl_onlogin) && file_exists($tmpl_onlogout) && $base_url !== '
                         <label class="form-label">Password Router</label>
                         <div class="input-group-modern">
                           <div class="input-icon"><i class="fa fa-lock"></i></div>
-                          <input class="form-control-modern" id="passmk" type="password" name="passmik" title="Password MikroTik" value="<?= decrypt($passwdhost); ?>" required="1"/>
+                          <input class="form-control-modern" id="passmk" type="password" name="passmik" title="Password MikroTik" value="<?= decrypt($passwdhost); ?>" required="1" autocomplete="current-password"/>
                           <div class="toggle-pass" onclick="PassMk()"><i class="fa fa-eye"></i></div>
                         </div>
                       </div>
@@ -276,7 +392,12 @@ if (file_exists($tmpl_onlogin) && file_exists($tmpl_onlogout) && $base_url !== '
               </div>
             </div>
           </div>
-          <div style="display:flex; justify-content:flex-end; margin-top: 10px;">
+          <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 10px;">
+            <?php if (!empty($is_new_router)): ?>
+              <a class="btn-action btn-outline" data-no-ajax="1" href="./admin.php?id=sessions">
+                <i class="fa fa-times"></i> Batal
+              </a>
+            <?php endif; ?>
             <button class="btn-action btn-primary-m" type="submit" name="save">
               <i class="fa fa-save"></i> Simpan Konfigurasi Sesi
             </button>

@@ -5,6 +5,12 @@
         input.type = input.type === 'password' ? 'text' : 'password';
     };
 
+    window.PassMk = function () {
+        var input = document.getElementById('passmk');
+        if (!input) return;
+        input.type = input.type === 'password' ? 'text' : 'password';
+    };
+
     var shell = document.querySelector('.admin-shell');
     if (!shell) return;
 
@@ -17,6 +23,7 @@
         });
         views.forEach(function (view) {
             view.classList.toggle('active', view.getAttribute('data-view') === tabId);
+            view.style.display = view.getAttribute('data-view') === tabId ? 'block' : 'none';
         });
     }
 
@@ -44,8 +51,8 @@
         var view = shell.querySelector('[data-view="' + tabId + '"]');
         if (!view) return;
 
-        if (tabId === 'sessions' || tabId === 'operator') return;
-        if (!sessionValue) {
+        if (tabId === 'sessions') return;
+        if (tabId !== 'operator' && tabId !== 'whatsapp' && !sessionValue) {
             showMessage(view, 'Pilih sesi terlebih dahulu.');
             return;
         }
@@ -59,8 +66,11 @@
         view.setAttribute('data-loaded', '0');
         view.innerHTML = '<div class="admin-loading">Memuat data...</div>';
 
-        var section = tabId === 'settings' ? 'settings' : 'scripts';
-        var url = 'admin.php?id=admin-content&section=' + encodeURIComponent(section) + '&session=' + encodeURIComponent(sessionValue);
+        var section = tabId === 'settings' ? 'settings' : (tabId === 'scripts' ? 'scripts' : (tabId === 'whatsapp' ? 'whatsapp' : 'operator'));
+        var url = 'admin.php?id=admin-content&section=' + encodeURIComponent(section);
+        if (sessionValue) {
+            url += '&session=' + encodeURIComponent(sessionValue);
+        }
 
         fetch(url, { credentials: 'same-origin' })
             .then(function (res) { return res.text(); })
@@ -74,6 +84,23 @@
             });
     }
 
+    function buildTabUrl(tabId, sessionValue) {
+        var base = 'admin.php';
+        if (tabId === 'settings') {
+            return base + '?id=settings' + (sessionValue ? '&session=' + encodeURIComponent(sessionValue) : '');
+        }
+        if (tabId === 'scripts') {
+            return base + '?id=mikrotik-scripts' + (sessionValue ? '&session=' + encodeURIComponent(sessionValue) : '');
+        }
+        if (tabId === 'operator') {
+            return base + '?id=operator-access';
+        }
+        if (tabId === 'whatsapp') {
+            return base + '?id=whatsapp';
+        }
+        return base + '?id=sessions';
+    }
+
     function switchTab(tabId, sessionValue) {
         if (!tabId) return;
         var currentSession = sessionValue || shell.getAttribute('data-session') || '';
@@ -84,6 +111,14 @@
         }
         setActiveTab(tabId);
         loadSection(tabId, currentSession);
+
+        var needsSession = (tabId === 'settings' || tabId === 'scripts');
+        if (!needsSession || currentSession) {
+            var nextUrl = buildTabUrl(tabId, currentSession);
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState({}, document.title, nextUrl);
+            }
+        }
     }
 
     function getSessionFromUrl(href) {
@@ -107,6 +142,29 @@
         if (!link) return;
 
         if (link.getAttribute('data-no-ajax') === '1') {
+            return;
+        }
+
+        if (link.hasAttribute('data-delete-session')) {
+            event.preventDefault();
+            var sessionName = link.getAttribute('data-delete-session') || '';
+            var targetUrl = link.getAttribute('href') || '';
+            if (window.MikhmonPopup) {
+                window.MikhmonPopup.open({
+                    title: 'Konfirmasi Hapus',
+                    iconClass: 'fa fa-trash',
+                    statusIcon: 'fa fa-exclamation-triangle',
+                    statusColor: '#f59e0b',
+                    messageHtml: '<div style="text-align:center;">Hapus sesi <strong>' + sessionName + '</strong>?</div>',
+                    buttons: [
+                        { label: 'Batal', className: 'm-btn m-btn-cancel' },
+                        { label: 'Hapus', className: 'm-btn m-btn-danger', onClick: function () { window.location.href = targetUrl; } }
+                    ],
+                    sizeClass: 'is-small'
+                });
+            } else if (confirm('Hapus sesi ' + sessionName + '?')) {
+                window.location.href = targetUrl;
+            }
             return;
         }
 
@@ -137,11 +195,17 @@
         if (!form || form.tagName !== 'FORM') return;
         if (!shell.contains(form)) return;
 
+        var viewName = form.getAttribute('data-admin-form') || '';
         var activeView = shell.querySelector('.view-section.active');
-        if (!activeView || !activeView.contains(form)) return;
-
-        if (activeView.getAttribute('data-view') !== 'settings') return;
-        if (!shell.getAttribute('data-session')) return;
+        if (!viewName) {
+            if (!activeView || !activeView.contains(form)) return;
+            viewName = activeView.getAttribute('data-view') || '';
+        }
+        if (viewName === 'settings' && !shell.getAttribute('data-session')) return;
+        if (viewName !== 'settings' && viewName !== 'whatsapp') return;
+        if (!activeView || !activeView.contains(form)) {
+            activeView = shell.querySelector('[data-view="' + viewName + '"]') || activeView;
+        }
 
         event.preventDefault();
         var submitBtn = form.querySelector('input[type="submit"], button[type="submit"]');
@@ -153,14 +217,64 @@
         }
 
         var formData = new FormData(form);
-        fetch(window.location.href, {
+        var postUrl = viewName === 'whatsapp'
+            ? 'admin.php?id=admin-content&section=whatsapp'
+            : (viewName === 'settings'
+                ? 'admin.php?id=admin-content&section=settings&session=' + encodeURIComponent(shell.getAttribute('data-session') || '')
+                : window.location.href);
+        fetch(postUrl, {
             method: 'POST',
             body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
             credentials: 'same-origin'
         }).then(function (res) {
             return res.text();
-        }).then(function () {
-            loadSection('settings', shell.getAttribute('data-session'));
+        }).then(function (html) {
+            if (viewName === 'whatsapp' || viewName === 'settings') {
+                activeView.innerHTML = html;
+                activeView.setAttribute('data-loaded', '1');
+                executeInlineScripts(activeView);
+
+                var alertBox = activeView.querySelector('.alert');
+                if (!alertBox && viewName === 'whatsapp') {
+                    var cardBody = activeView.querySelector('.card-body-modern');
+                    if (cardBody) {
+                        cardBody.insertAdjacentHTML('afterbegin',
+                            '<div class="alert alert-success" style="margin-bottom: 15px; padding: 15px;">Konfigurasi WhatsApp tersimpan.</div>'
+                        );
+                    }
+                }
+
+                if (!alertBox && viewName === 'settings') {
+                    var settingsBody = activeView.querySelector('.card-body-modern');
+                    if (settingsBody) {
+                        settingsBody.insertAdjacentHTML('afterbegin',
+                            '<div class="alert alert-success" style="margin-bottom: 12px;">Konfigurasi router tersimpan.</div>'
+                        );
+                    }
+                }
+
+                if (viewName === 'settings') {
+                    var newSessionNode = activeView.querySelector('[data-new-session]');
+                    if (newSessionNode) {
+                        var newSession = newSessionNode.getAttribute('data-new-session') || '';
+                        if (newSession) {
+                            shell.setAttribute('data-session', newSession);
+                            var badge = shell.querySelector('[data-session-badge]');
+                            if (badge) badge.textContent = 'Sesi: ' + newSession;
+                            if (window.history && window.history.replaceState) {
+                                window.history.replaceState({}, document.title, 'admin.php?id=settings&session=' + encodeURIComponent(newSession));
+                            }
+                        }
+                    }
+                }
+
+                if (viewName === 'whatsapp' && window.history && window.history.replaceState) {
+                    window.history.replaceState({}, document.title, 'admin.php?id=whatsapp');
+                }
+            } else {
+                loadSection('settings', shell.getAttribute('data-session'));
+            }
         }).catch(function () {
             showMessage(activeView, 'Gagal menyimpan data.');
         }).finally(function () {

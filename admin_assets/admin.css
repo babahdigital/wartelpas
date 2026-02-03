@@ -68,7 +68,7 @@ body {
     letter-spacing: -0.5px;
 }
 
-.brand-logo img { height: 32px; width: auto; }
+.brand-logo img { height: 50px; width: auto; }
 
 .nav-tabs-custom {
     display: flex; gap: 8px; height: 100%; align-items: center;
@@ -150,6 +150,21 @@ body {
     font-size: 14px;
     border-right: 1px solid var(--border-color);
     background: rgba(255,255,255,0.02);
+}
+
+.toggle-pass {
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    border-left: 1px solid var(--border-color);
+    cursor: pointer;
+    background: rgba(255,255,255,0.02);
+}
+
+.toggle-pass:hover {
+    color: var(--text-primary);
 }
 
 .form-control-modern,

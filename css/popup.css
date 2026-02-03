@@ -126,6 +126,7 @@
   font-size: 14px;
   color: var(--popup-text);
   line-height: 1.6;
+  padding-top: 20px;
 }
 
 .m-pass-form { display: flex; flex-direction: column; gap: 14px; text-align: left; }
