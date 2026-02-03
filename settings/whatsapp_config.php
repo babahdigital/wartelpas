@@ -555,7 +555,7 @@ foreach ($wa_recipients as $rec) {
                                 <div class="input-icon"><i class="fa fa-comment"></i></div>
                                 <textarea class="form-control-modern" name="wa_test_message" rows="3" placeholder="Pesan test"></textarea>
                             </div>
-                            <div style="display:flex; justify-content:flex-end;">
+                            <div style="display:flex;justify-content:flex-end;margin-top: 20px;">
                                 <button class="btn-action btn-primary-m" type="submit">
                                     <i class="fa fa-paper-plane"></i> Kirim Test
                                 </button>
@@ -564,7 +564,7 @@ foreach ($wa_recipients as $rec) {
                     </div>
                 </div>
             </div>
-            <div style="display:flex;justify-content:flex-start;margin-top: -40px;width: 200px;margin-bottom: 20px;">
+            <div style="display:flex;justify-content:flex-start;margin-top: -50px;width: 200px;margin-bottom: 20px;">
                 <button class="btn-action btn-primary-m" type="submit" name="save_whatsapp">
                     <i class="fa fa-save"></i> Simpan WhatsApp
                 </button>
