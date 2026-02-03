@@ -96,14 +96,22 @@ function wa_get_active_recipients($category = '') {
             active INTEGER NOT NULL DEFAULT 1,
             receive_retur INTEGER NOT NULL DEFAULT 1,
             receive_report INTEGER NOT NULL DEFAULT 1,
+            receive_ls INTEGER NOT NULL DEFAULT 1,
             created_at TEXT,
             updated_at TEXT
         )");
+        $cols = $db->query("PRAGMA table_info(whatsapp_recipients)")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $colNames = array_map(function($c){ return $c['name'] ?? ''; }, $cols);
+        if (!in_array('receive_ls', $colNames, true)) {
+            $db->exec("ALTER TABLE whatsapp_recipients ADD COLUMN receive_ls INTEGER NOT NULL DEFAULT 1");
+        }
         $where = "active = 1";
         if ($category === 'retur') {
             $where .= " AND receive_retur = 1";
         } elseif ($category === 'report') {
             $where .= " AND receive_report = 1";
+        } elseif ($category === 'ls') {
+            $where .= " AND receive_ls = 1";
         }
         $stmt = $db->query("SELECT target FROM whatsapp_recipients WHERE {$where} ORDER BY id ASC");
         $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
