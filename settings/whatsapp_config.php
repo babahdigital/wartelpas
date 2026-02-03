@@ -134,6 +134,9 @@ function wa_format_log_message($msg) {
     if (stripos($msg, 'permintaan retur baru') !== false) {
         return 'Permintaan Retur';
     }
+    if (stripos($msg, 'permintaan refund') !== false) {
+        return 'Permintaan Refund';
+    }
     if (stripos($msg, 'laporan settlement harian') !== false) {
         return 'Settlement Harian';
     }
@@ -148,6 +151,17 @@ function wa_format_log_message($msg) {
         return (function_exists('mb_substr') ? mb_substr($msg, 0, 57) : substr($msg, 0, 57)) . '...';
     }
     return $msg;
+}
+
+function wa_message_class($msg) {
+    $msg = strtolower((string)$msg);
+    if (strpos($msg, 'permintaan refund') !== false) {
+        return 'wa-msg-refund';
+    }
+    if (strpos($msg, 'permintaan retur') !== false) {
+        return 'wa-msg-retur';
+    }
+    return '';
 }
 
 function wa_display_target($target, array $label_map) {
@@ -488,6 +502,8 @@ foreach ($wa_recipients as $rec) {
     .wa-log-table tbody tr { border-bottom: 1px solid rgba(148,163,184,0.12); }
     .wa-log-table tbody tr:last-child { border-bottom: none; }
     .wa-log-table th, .wa-log-table td { padding: 10px 12px; }
+    .wa-msg-refund { color: #fbbf24; font-weight: 600; }
+    .wa-msg-retur { color: #f59e0b; font-weight: 600; }
     .wa-popup-row { margin-bottom: 10px; }
     .wa-popup-switches { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
 </style>
@@ -651,7 +667,9 @@ foreach ($wa_recipients as $rec) {
                                 <?php else: ?>
                                     <?php foreach ($wa_logs as $log): ?>
                                         <?php
-                                            $msg = wa_format_log_message($log['message'] ?? '');
+                                            $raw_msg = (string)($log['message'] ?? '');
+                                            $msg = wa_format_log_message($raw_msg);
+                                            $msg_class = wa_message_class($raw_msg);
                                             $status = strtolower((string)($log['status'] ?? ''));
                                             $status_badge = strpos($status, 'success') !== false ? 'wa-badge wa-badge-green' : (strpos($status, 'fail') !== false || strpos($status, 'error') !== false ? 'wa-badge wa-badge-red' : 'wa-badge wa-badge-blue');
                                             $created = (string)($log['created_at'] ?? '');
@@ -682,7 +700,7 @@ foreach ($wa_recipients as $rec) {
                                                 </div>
                                             </td>
                                             <td><span class="<?= $status_badge; ?>"><?= htmlspecialchars($log['status'] ?? '-'); ?></span></td>
-                                            <td class="wa-log-message" title="<?= htmlspecialchars($msg); ?>"><?= htmlspecialchars($msg); ?></td>
+                                            <td class="wa-log-message <?= $msg_class; ?>" title="<?= htmlspecialchars($msg); ?>"><?= htmlspecialchars($msg); ?></td>
                                             <td><span class="<?= $file_badge; ?>"><?= $has_file ? 'PDF' : 'Text'; ?></span></td>
                                         </tr>
                                     <?php endforeach; ?>
