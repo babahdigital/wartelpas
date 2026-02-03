@@ -254,7 +254,12 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'send_selected_pdf') {
                         $send_errors[] = $fileName . ' tidak ditemukan.';
                         continue;
                     }
-                    $msg = 'Laporan PDF: ' . $fileName;
+                    $tpl = function_exists('wa_get_template_body') ? wa_get_template_body('report_pdf') : '';
+                    if ($tpl !== '' && function_exists('wa_render_template')) {
+                        $msg = wa_render_template($tpl, ['file' => $fileName]);
+                    } else {
+                        $msg = 'Laporan PDF: ' . $fileName;
+                    }
                     $res = wa_send_file($msg, $realTarget, '', 'report');
                     if (empty($res['ok'])) {
                         $send_errors[] = $fileName . ' gagal (' . ($res['message'] ?? 'error') . ').';

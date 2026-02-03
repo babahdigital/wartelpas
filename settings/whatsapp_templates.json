@@ -22,5 +22,11 @@
     "name": "Pesan Test",
     "category": "test",
     "body": "Pesan test WhatsApp dari admin."
+  },
+  {
+    "id": "ls_alert",
+    "name": "Alert L/S Telat",
+    "category": "ls",
+    "body": "⚠️ *L/S {{TYPE}} TELAT*\nTerakhir: {{TIME}}\nSelisih: {{MINUTES}} menit."
   }
 ]

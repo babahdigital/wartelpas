@@ -13,6 +13,45 @@ function wa_get_env_config() {
     return $cache;
 }
 
+function wa_get_templates() {
+    static $cache = null;
+    if ($cache !== null) return $cache;
+    $root_dir = dirname(__DIR__, 2);
+    $file = $root_dir . '/settings/whatsapp_templates.json';
+    if (!is_file($file)) {
+        $cache = [];
+        return $cache;
+    }
+    $raw = @file_get_contents($file);
+    if ($raw === false) {
+        $cache = [];
+        return $cache;
+    }
+    $data = json_decode($raw, true);
+    $cache = is_array($data) ? $data : [];
+    return $cache;
+}
+
+function wa_get_template_body($id) {
+    $id = (string)$id;
+    foreach (wa_get_templates() as $tpl) {
+        if (!is_array($tpl)) continue;
+        if ((string)($tpl['id'] ?? '') === $id) {
+            return (string)($tpl['body'] ?? '');
+        }
+    }
+    return '';
+}
+
+function wa_render_template($body, array $vars = []) {
+    $out = (string)$body;
+    foreach ($vars as $k => $v) {
+        $key = strtoupper((string)$k);
+        $out = str_replace('{{' . $key . '}}', (string)$v, $out);
+    }
+    return $out;
+}
+
 function wa_normalize_target_single($target, $countryCode = '62') {
     $target = trim((string)$target);
     if ($target === '') return '';

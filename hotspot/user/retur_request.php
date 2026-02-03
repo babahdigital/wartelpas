@@ -348,19 +348,31 @@ try {
             $name_label = $customer_name !== '' ? $customer_name : '-';
             $contact_label = $contact_phone !== '' ? $contact_phone : '-';
             $reason_msg = str_replace('"', "'", $reason);
-            $line = '────────────';
-            $msg = "🔔 *PERMINTAAN " . $type_label . " BARU*\n" .
-                $line . "\n" .
-                "Status: ⏳ *PENDING*\n\n" .
-                "👤 *Data Pengguna*\n" .
-                "• Nama : " . $name_label . "\n" .
-                "• Blok : " . $blok_short . "\n" .
-                "• Profil : " . $profile_label . "\n\n" .
-                "🎫 *Detail Tiket*\n" .
-                "• Voucher : *`" . $voucher_code . "`*\n" .
-                "• Alasan : _\"" . $reason_msg . "\"_\n\n" .
-                $line . "\n" .
-                "Mohon segera diverifikasi melalui dashboard admin.";
+            $tpl = function_exists('wa_get_template_body') ? wa_get_template_body('retur_request') : '';
+            if ($tpl !== '' && function_exists('wa_render_template')) {
+                $msg = wa_render_template($tpl, [
+                    'type' => $type_label,
+                    'nama' => $name_label,
+                    'blok' => $blok_short,
+                    'profil' => $profile_label,
+                    'voucher' => $voucher_code,
+                    'alasan' => $reason_msg
+                ]);
+            } else {
+                $line = '────────────';
+                $msg = "🔔 *PERMINTAAN " . $type_label . " BARU*\n" .
+                    $line . "\n" .
+                    "Status: ⏳ *PENDING*\n\n" .
+                    "👤 *Data Pengguna*\n" .
+                    "• Nama : " . $name_label . "\n" .
+                    "• Blok : " . $blok_short . "\n" .
+                    "• Profil : " . $profile_label . "\n\n" .
+                    "🎫 *Detail Tiket*\n" .
+                    "• Voucher : *`" . $voucher_code . "`*\n" .
+                    "• Alasan : _\"" . $reason_msg . "\"_\n\n" .
+                    $line . "\n" .
+                    "Mohon segera diverifikasi melalui dashboard admin.";
+            }
             wa_send_text($msg, '', 'retur');
         }
     }

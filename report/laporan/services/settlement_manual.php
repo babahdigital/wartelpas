@@ -757,7 +757,12 @@ if ($action === 'wa_report') {
     $pdfDir = $root_dir . '/report/pdf';
     $pdfFile = find_report_pdf_for_date($pdfDir, $date);
     $msgDate = format_report_date_dmy($date);
-    $msg = 'Laporan Settlement Harian ' . $msgDate;
+    $tpl = function_exists('wa_get_template_body') ? wa_get_template_body('settlement_report') : '';
+    if ($tpl !== '' && function_exists('wa_render_template')) {
+        $msg = wa_render_template($tpl, ['date' => $msgDate]);
+    } else {
+        $msg = 'Laporan Settlement Harian ' . $msgDate;
+    }
     $statusText = '';
     $ok = false;
     if ($pdfFile !== '') {

@@ -34,10 +34,15 @@ $last_sync_sales = '-';
 $last_sync_live = '-';
 $last_sync_sales_full = '-';
 $last_sync_live_full = '-';
+$last_sync_sales_title = '-';
+$last_sync_live_title = '-';
+$last_sync_sales_short = '-';
+$last_sync_live_short = '-';
 $last_sync_sales_class = 'sync-ok';
 $last_sync_live_class = 'sync-ok';
 $last_sync_sales_blink = 'blink-slow';
 $last_sync_live_blink = 'blink-slow';
+$db_sync = null;
 try {
     $system_cfg = $env['system'] ?? [];
     $db_rel = $system_cfg['db_file'] ?? 'db_data/babahdigital_main.db';
@@ -81,6 +86,21 @@ if ($last_sync_live_full !== '-' && strlen($last_sync_live_full) >= 16) {
     $last_sync_live = substr($last_sync_live_full, 11, 5);
 }
 
+if ($last_sync_sales_full !== '-') {
+    $ts = strtotime($last_sync_sales_full);
+    if ($ts) {
+        $last_sync_sales_title = date('d-m-Y H:i', $ts);
+        $last_sync_sales_short = date('d-m-y', $ts);
+    }
+}
+if ($last_sync_live_full !== '-') {
+    $ts = strtotime($last_sync_live_full);
+    if ($ts) {
+        $last_sync_live_title = date('d-m-Y H:i', $ts);
+        $last_sync_live_short = date('d-m-y', $ts);
+    }
+}
+
 $now_ts = time();
 $warn_minutes = 15;
 $late_minutes = 60;
@@ -116,6 +136,85 @@ if ($last_sync_live_full !== '-') {
     }
 } else {
     $last_sync_live_class = 'sync-warn';
+}
+
+function wa_load_ls_template($filePath) {
+    if (!is_file($filePath)) return '';
+    $raw = @file_get_contents($filePath);
+    if ($raw === false) return '';
+    $data = json_decode($raw, true);
+    if (!is_array($data)) return '';
+    foreach ($data as $tpl) {
+        if (!is_array($tpl)) continue;
+        if (($tpl['id'] ?? '') === 'ls_alert') {
+            return (string)($tpl['body'] ?? '');
+        }
+    }
+    return '';
+}
+
+function wa_alert_should_send($db, $key) {
+    if (!$db) return false;
+    $db->exec("CREATE TABLE IF NOT EXISTS whatsapp_alerts (key TEXT PRIMARY KEY, last_sent TEXT)");
+    $stmt = $db->prepare("SELECT last_sent FROM whatsapp_alerts WHERE key = :k");
+    $stmt->execute([':k' => $key]);
+    $last = (string)($stmt->fetchColumn() ?: '');
+    return $last === '';
+}
+
+function wa_alert_mark_sent($db, $key) {
+    if (!$db) return;
+    $stmt = $db->prepare("INSERT OR REPLACE INTO whatsapp_alerts (key, last_sent) VALUES (:k, :t)");
+    $stmt->execute([':k' => $key, ':t' => date('Y-m-d H:i:s')]);
+}
+
+// Kirim notifikasi L/S jika telat atau tidak ada data (sekali per interval)
+try {
+    $ls_template = wa_load_ls_template(__DIR__ . '/../settings/whatsapp_templates.json');
+    if ($ls_template === '') {
+        $ls_template = "⚠️ *L/S {{TYPE}} TELAT*\nTerakhir: {{TIME}}\nSelisih: {{MINUTES}} menit.";
+    }
+    if ($db_sync instanceof PDO && is_file(__DIR__ . '/../system/whatsapp/wa_helper.php')) {
+        require_once __DIR__ . '/../system/whatsapp/wa_helper.php';
+        if (function_exists('wa_send_text')) {
+            $alerts = [];
+
+            $live_ts = ($last_sync_live_full !== '-') ? strtotime($last_sync_live_full) : false;
+            $live_diff = $live_ts ? (int)floor((time() - $live_ts) / 60) : null;
+            if ($last_sync_live_full === '-' || ($live_diff !== null && $live_diff >= $late_minutes)) {
+                $alerts[] = [
+                    'key' => 'ls_live',
+                    'type' => 'Live',
+                    'time' => $last_sync_live_full === '-' ? 'Tidak ada data' : $last_sync_live_full,
+                    'minutes' => $live_diff !== null ? $live_diff : '-'
+                ];
+            }
+
+            $sales_ts = ($last_sync_sales_full !== '-') ? strtotime($last_sync_sales_full) : false;
+            $sales_diff = $sales_ts ? (int)floor((time() - $sales_ts) / 60) : null;
+            if ($last_sync_sales_full === '-' || ($sales_diff !== null && $sales_diff >= $late_minutes)) {
+                $alerts[] = [
+                    'key' => 'ls_sales',
+                    'type' => 'Sales',
+                    'time' => $last_sync_sales_full === '-' ? 'Tidak ada data' : $last_sync_sales_full,
+                    'minutes' => $sales_diff !== null ? $sales_diff : '-'
+                ];
+            }
+
+            foreach ($alerts as $a) {
+                if (!wa_alert_should_send($db_sync, $a['key'])) continue;
+                $msg = str_replace(
+                    ['{{TYPE}}','{{TIME}}','{{MINUTES}}'],
+                    [$a['type'], $a['time'], (string)$a['minutes']],
+                    $ls_template
+                );
+                wa_send_text($msg, '', 'ls');
+                wa_alert_mark_sent($db_sync, $a['key']);
+            }
+        }
+    }
+} catch (Exception $e) {
+    // silent
 }
 
 $menu_retur_pending = 0;
@@ -613,10 +712,10 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                     <span class="retur-pill-count" id="retur-menu-count"><?= (int)$menu_retur_pending ?></span>
                 </a>
             <?php endif; ?>
-            <span class="timer-badge" title="Live: <?= htmlspecialchars($last_sync_live_full); ?> | Sales: <?= htmlspecialchars($last_sync_sales_full); ?>">
+            <span class="timer-badge" title="Live: <?= htmlspecialchars($last_sync_live_title); ?> | Sales: <?= htmlspecialchars($last_sync_sales_title); ?>">
                 <i class="fa fa-clock-o"></i>
-                L: <span class="sync-pill <?= $last_sync_live_class; ?> <?= $last_sync_live_blink; ?>"><?= htmlspecialchars($last_sync_live); ?></span>
-                S: <span class="sync-pill <?= $last_sync_sales_class; ?> <?= $last_sync_sales_blink; ?>"><?= htmlspecialchars($last_sync_sales); ?></span>
+                L: <span class="sync-pill <?= $last_sync_live_class; ?> <?= $last_sync_live_blink; ?>"><?= htmlspecialchars($last_sync_live_short); ?></span>
+                S: <span class="sync-pill <?= $last_sync_sales_class; ?> <?= $last_sync_sales_blink; ?>"><?= htmlspecialchars($last_sync_sales_short); ?></span>
             </span>
             <span id="db-status" class="db-status" title="Kesehatan Database">
                 <i class="fa fa-heart"></i>
@@ -711,8 +810,8 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                     <span class="retur-pill-count" id="retur-menu-count"><?= (int)$menu_retur_pending ?></span>
                 </a>
             <?php endif; ?>
-            <span class="timer-badge" title="Live: <?= htmlspecialchars($last_sync_live_full); ?> | Sales: <?= htmlspecialchars($last_sync_sales_full); ?>">
-                <i class="fa fa-clock-o"></i> L: <span><?= htmlspecialchars($last_sync_live); ?></span> S: <span><?= htmlspecialchars($last_sync_sales); ?></span>
+            <span class="timer-badge" title="Live: <?= htmlspecialchars($last_sync_live_title); ?> | Sales: <?= htmlspecialchars($last_sync_sales_title); ?>">
+                <i class="fa fa-clock-o"></i> L: <span><?= htmlspecialchars($last_sync_live_short); ?></span> S: <span><?= htmlspecialchars($last_sync_sales_short); ?></span>
             </span>
             <span id="db-status" class="db-status" title="Kesehatan Database">
                 <i class="fa fa-heart"></i>
