@@ -116,8 +116,23 @@ if (is_file($db_file)) {
   try {
     $db_sync = new PDO('sqlite:' . $db_file);
     $db_sync->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $last_sync_sales = (string)$db_sync->query("SELECT MAX(sync_date) FROM sales_history")->fetchColumn();
-    $last_sync_live = (string)$db_sync->query("SELECT MAX(sync_date) FROM live_sales")->fetchColumn();
+
+    $sales_cols = $db_sync->query("PRAGMA table_info(sales_history)")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $sales_names = array_map(function($c){ return $c['name'] ?? ''; }, $sales_cols);
+    $sales_col = in_array('sync_date', $sales_names, true) ? 'sync_date' : (in_array('created_at', $sales_names, true) ? 'created_at' : '');
+    if ($sales_col !== '') {
+      $last_sync_sales = (string)$db_sync->query("SELECT MAX($sales_col) FROM sales_history")->fetchColumn();
+    }
+
+    $live_cols = $db_sync->query("PRAGMA table_info(live_sales)")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $live_names = array_map(function($c){ return $c['name'] ?? ''; }, $live_cols);
+    $live_col = in_array('sync_date', $live_names, true)
+      ? 'sync_date'
+      : (in_array('created_at', $live_names, true) ? 'created_at' : (in_array('sale_datetime', $live_names, true) ? 'sale_datetime' : ''));
+    if ($live_col !== '') {
+      $last_sync_live = (string)$db_sync->query("SELECT MAX($live_col) FROM live_sales")->fetchColumn();
+    }
+
     if ($last_sync_sales === '') $last_sync_sales = '-';
     if ($last_sync_live === '') $last_sync_live = '-';
   } catch (Exception $e) {
