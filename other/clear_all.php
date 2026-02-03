@@ -18,6 +18,7 @@ $envFile = $root_dir . '/include/env.php';
 if (file_exists($envFile)) {
     require $envFile;
 }
+require_once $root_dir . '/include/db_helpers.php';
 $secret_token = $env['security']['tools']['token'] ?? ($env['backup']['secret'] ?? '');
 if (!isset($_GET['key']) || $_GET['key'] !== $secret_token) {
     http_response_code(403);
@@ -35,7 +36,7 @@ if ($confirm !== 'YES') {
     die("Error: Tambahkan confirm=YES untuk menjalankan reset total.\n");
 }
 
-$dbFile = $root_dir . '/db_data/mikhmon_stats.db';
+$dbFile = get_stats_db_path();
 if (!file_exists($dbFile)) {
     die("Error: Database tidak ditemukan.\n");
 }

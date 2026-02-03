@@ -54,7 +54,14 @@ if (!empty($_SERVER['REMOTE_ADDR']) && !empty($allowedIpList)) {
 }
 
 $root = dirname(__DIR__);
-$dbFile = $root . '/db_data/mikhmon_stats.db';
+$system_cfg = $env['system'] ?? [];
+$db_rel = $system_cfg['db_file'] ?? 'db_data/mikhmon_stats.db';
+if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
+    $dbFile = $db_rel;
+} else {
+    $dbFile = $root . '/' . ltrim($db_rel, '/');
+}
+$dbBase = pathinfo($dbFile, PATHINFO_FILENAME);
 $backupDir = $root . '/db_data/backups';
 
 if (!is_dir($backupDir)) {
@@ -63,10 +70,10 @@ if (!is_dir($backupDir)) {
 }
 
 $today = date('Ymd');
-$files = glob($backupDir . '/mikhmon_stats_*.db') ?: [];
+$files = glob($backupDir . '/' . $dbBase . '_*.db') ?: [];
 $todayFiles = [];
 foreach ($files as $f) {
-    if (preg_match('/mikhmon_stats_' . $today . '_\d{6}\.db$/', basename($f))) {
+    if (preg_match('/' . preg_quote($dbBase, '/') . '_' . $today . '_\d{6}\.db$/', basename($f))) {
         $todayFiles[] = $f;
     }
 }

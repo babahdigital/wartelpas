@@ -3,6 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../include/acl.php';
+require_once __DIR__ . '/../include/db_helpers.php';
 requireLogin('../admin.php?id=login');
 requireSuperAdmin('../admin.php?id=sessions');
 // Clear a block from login_history (protected)
@@ -77,7 +78,7 @@ if ($date !== '') {
     $dateParamsLogin[':d'] = $date;
 }
 
-$dbFile = $root_dir . '/db_data/mikhmon_stats.db';
+$dbFile = get_stats_db_path();
 if (!file_exists($dbFile)) {
     die("DB not found");
 }

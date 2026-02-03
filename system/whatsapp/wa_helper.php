@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../include/db_helpers.php';
+
 function wa_get_env_config() {
     $root_dir = dirname(__DIR__, 2);
     $env = [];
@@ -28,7 +30,7 @@ function wa_normalize_target($target, $countryCode = '62') {
 
 function wa_log_message($target, $message, $status, $responseJson = '', $pdfFile = '') {
     $root_dir = dirname(__DIR__, 2);
-    $dbFile = $root_dir . '/db_data/mikhmon_stats.db';
+    $dbFile = get_stats_db_path();
     try {
         $db = new PDO('sqlite:' . $dbFile);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -60,7 +62,7 @@ function wa_log_message($target, $message, $status, $responseJson = '', $pdfFile
 
 function wa_get_active_recipients($category = '') {
     $root_dir = dirname(__DIR__, 2);
-    $dbFile = $root_dir . '/db_data/mikhmon_stats.db';
+    $dbFile = get_stats_db_path();
     $targets = [];
     try {
         $db = new PDO('sqlite:' . $dbFile);

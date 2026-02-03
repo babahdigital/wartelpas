@@ -1,4 +1,3 @@
-version: '3'
 services:
   mikhmon:
     build: . 
@@ -13,7 +12,7 @@ services:
       # ==========================================
       # 1. PERSISTENSI DATA (WAJIB AMAN)
       # ==========================================
-      - ./mikhmon_session:/var/www/html/mikhmon_session
+      - ./session:/var/www/html/session
       - ./db_data:/var/www/html/db_data
       - ./img:/var/www/html/img
       - ./css:/var/www/html/css

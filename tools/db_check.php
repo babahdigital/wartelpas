@@ -24,7 +24,13 @@ if ($key !== $secret) {
     exit;
 }
 
-$dbFile = $root_dir . '/db_data/mikhmon_stats.db';
+$system_cfg = $env['system'] ?? [];
+$db_rel = $system_cfg['db_file'] ?? 'db_data/mikhmon_stats.db';
+if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
+    $dbFile = $db_rel;
+} else {
+    $dbFile = $root_dir . '/' . ltrim($db_rel, '/');
+}
 $dbReal = realpath($dbFile) ?: $dbFile;
 if (!file_exists($dbFile)) {
     echo "DB not found";

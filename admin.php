@@ -28,14 +28,21 @@ if (!headers_sent()) {
 }
 
 require_once __DIR__ . '/include/acl.php';
+require_once __DIR__ . '/include/db.php';
+app_db_import_legacy_if_needed();
 
 $env = [];
 $envFile = __DIR__ . '/include/env.php';
 if (file_exists($envFile)) {
   require $envFile;
 }
-$op_user = $env['auth']['operator_user'] ?? '';
-$op_pass = $env['auth']['operator_pass'] ?? '';
+$op_db = app_db_get_operator();
+$op_user = $op_db['username'] ?? '';
+$op_pass = $op_db['password'] ?? '';
+if ($op_user === '' && $op_pass === '') {
+  $op_user = $env['auth']['operator_user'] ?? '';
+  $op_pass = $env['auth']['operator_pass'] ?? '';
+}
 $op_override = get_operator_password_override();
 if ($op_override !== '') {
   $op_pass = $op_override;
@@ -74,9 +81,6 @@ $ids = array(
 include('./lang/isocodelang.php');
 include('./include/lang.php');
 include('./lang/'.$langid.'.php');
-
-// quick bt
-include('./include/quickbt.php');
 
 // theme
 include('./include/theme.php');
@@ -150,6 +154,11 @@ if ($id == "login" || ($basename === 'admin.php' && empty($id))) {
     if (!isset($_POST['csrf_token']) || !isset($_SESSION['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
       $error = '<div style="width: 100%; padding:5px 0px 5px 0px; border-radius:5px;" class="bg-danger"><i class="fa fa-ban"></i> Alert!<br>Invalid CSRF Token. Refresh halaman dan coba lagi.</div>';
     } else {
+    if (function_exists('opcache_invalidate')) {
+      @opcache_invalidate(__DIR__ . '/include/config.php', true);
+    }
+    include('./include/config.php');
+    include('./include/readcfg.php');
     $user = $_POST['user'];
     $pass = $_POST['pass'];
     if ($user == $useradm && verify_password_compat($pass, $passadm)) {
@@ -160,24 +169,8 @@ if ($id == "login" || ($basename === 'admin.php' && empty($id))) {
       $_SESSION["mikhmon"] = $user;
       $_SESSION["mikhmon_level"] = "superadmin";
 
-      // MODIFIKASI: Deteksi Router Otomatis
-      // Baca file config untuk mencari session router yang tersedia
-      $lines = file('./include/config.php');
-      $first_session = "";
-      foreach ($lines as $line) {
-          // Cari baris yang mengandung $data['namasession']
-          if (strpos($line, '$data') !== false) {
-              $parts = explode("'", $line);
-              if (isset($parts[1])) {
-                  $s_name = $parts[1];
-                  // Lewati session default 'mikhmon', cari nama router user
-                  if ($s_name != "mikhmon" && $s_name != "") {
-                      $first_session = $s_name;
-                      break; // Stop jika sudah ketemu satu
-                  }
-              }
-          }
-      }
+        // MODIFIKASI: Deteksi Router Otomatis
+        $first_session = app_db_first_session_id();
 
       if ($first_session != "") {
           // Jika ada router, langsung connect ke Dashboard
@@ -203,20 +196,7 @@ if ($id == "login" || ($basename === 'admin.php' && empty($id))) {
       $_SESSION["mikhmon"] = $user;
       $_SESSION["mikhmon_level"] = "operator";
 
-      $lines = file('./include/config.php');
-      $first_session = "";
-      foreach ($lines as $line) {
-        if (strpos($line, '$data') !== false) {
-          $parts = explode("'", $line);
-          if (isset($parts[1])) {
-            $s_name = $parts[1];
-            if ($s_name != "mikhmon" && $s_name != "") {
-              $first_session = $s_name;
-              break;
-            }
-          }
-        }
-      }
+      $first_session = app_db_first_session_id();
 
       if ($first_session != "") {
         echo "<script>window.location='./?session=" . $first_session . "'</script>";
@@ -302,18 +282,7 @@ if ($id == "login" || ($basename === 'admin.php' && empty($id))) {
   include_once('./process/shutdown.php');
 } elseif ($id == "remove-session" && $session != "") {
   include_once('./include/menu.php');
-  $fc = file("./include/config.php" );
-  $f = fopen("./include/config.php", "w");
-  $q = "'";
-  $rem = '$data['.$q.$session.$q.']';
-  foreach ($fc as $line) {
-    if (!strstr($line, $rem))
-      fputs($f, $line);
-  }
-  fclose($f);
-  if (function_exists('opcache_invalidate')) {
-    @opcache_invalidate(__DIR__ . '/include/config.php', true);
-  }
+  app_db_delete_session($session);
   echo "<script>window.location='./admin.php?id=sessions'</script>";
 } elseif ($id == "about") {
   include_once('./include/menu.php');
@@ -341,6 +310,7 @@ if ($id == "login" || ($basename === 'admin.php' && empty($id))) {
 <?php if (empty($is_admin_layout)): ?>
 <script src="js/mikhmon-ui.<?= $theme; ?>.min.js"></script>
 <script src="js/mikhmon.js?t=<?= str_replace(" ","_",date("Y-m-d H:i:s")); ?>"></script>
+<script src="js/ajax_helper.js"></script>
 <?php endif; ?>
 <?php include('./include/info.php'); ?>
 </body>

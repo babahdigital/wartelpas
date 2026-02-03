@@ -16,6 +16,8 @@ if (!isset($_SESSION["mikhmon"])) {
   $session = $_GET['session'] ?? '';
 
   include('../include/config.php');
+  require_once __DIR__ . '/../include/db_helpers.php';
+  $dbFile = get_stats_db_path();
   if ($session === '' || !isset($data[$session])) {
     header("Location:../admin.php?id=login");
     exit;
@@ -123,7 +125,7 @@ if (!isset($_SESSION["mikhmon"])) {
     $getuser = [];
     $routerMap = $getRouterUserMap();
     try {
-      $db = new PDO('sqlite:../db_data/mikhmon_stats.db');
+      $db = new PDO('sqlite:' . $dbFile);
       $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
       if ($blok != '') {
         $stmt = $db->prepare("SELECT username, blok_name, raw_comment FROM login_history WHERE lower(last_status)=:st");
@@ -271,7 +273,7 @@ if (!isset($_SESSION["mikhmon"])) {
 
     if ($TotalReg == 0) {
       try {
-        $db = new PDO('sqlite:../db_data/mikhmon_stats.db');
+        $db = new PDO('sqlite:' . $dbFile);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $stmt = $db->prepare("SELECT username, raw_comment FROM login_history WHERE username = :u LIMIT 1");
         $stmt->execute([':u' => $user]);
@@ -315,7 +317,7 @@ if (!isset($_SESSION["mikhmon"])) {
       }
     } else {
       try {
-        $db = new PDO('sqlite:../db_data/mikhmon_stats.db');
+        $db = new PDO('sqlite:' . $dbFile);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         if ($blok != '') {
           $stmt = $db->prepare("SELECT username, blok_name, raw_comment FROM login_history WHERE lower(last_status)=:st");

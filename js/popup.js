@@ -1123,6 +1123,181 @@
     if (confirm('Restore akan menimpa database. Lanjutkan?')) doRestore();
   };
 
+  window.runAppBackupAjax = function() {
+    var btn = document.getElementById('db-app-backup');
+    if (!btn) return;
+
+    var doBackup = function(){
+      btn.style.pointerEvents = 'none';
+      btn.style.opacity = '0.6';
+      if (window.MikhmonPopup) {
+        window.MikhmonPopup.open({
+          title: 'Backup Konfigurasi',
+          iconClass: 'fa fa-database',
+          statusIcon: 'fa fa-circle-o-notch fa-spin',
+          statusColor: '#2f81f7',
+          message: 'Proses backup konfigurasi sedang berjalan. Mohon tunggu...'
+        });
+      }
+      fetch('./tools/backup_app_db.php?ajax=1&nolimit=1&key=' + encodeURIComponent(window.__backupKey || ''), {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(function(resp){ return resp.json(); })
+      .then(function(data){
+        btn.style.pointerEvents = '';
+        btn.style.opacity = '';
+        if (window.MikhmonPopup) {
+          if (data && data.ok) {
+            window.MikhmonPopup.open({
+              title: 'Backup Sukses',
+              iconClass: 'fa fa-check-circle',
+              statusIcon: 'fa fa-database',
+              statusColor: '#2f81f7',
+              message: 'Backup konfigurasi selesai.',
+              alert: { type: 'info', text: 'File: ' + (data.backup || '-') + ' | Hapus: ' + (data.deleted || 0) },
+              buttons: [
+                { label: 'Tutup', className: 'm-btn m-btn-primary' }
+              ]
+            });
+          } else {
+            window.MikhmonPopup.open({
+              title: 'Backup Gagal',
+              iconClass: 'fa fa-times-circle',
+              statusIcon: 'fa fa-times-circle',
+              statusColor: '#da3633',
+              message: 'Backup konfigurasi gagal.',
+              alert: { type: 'danger', text: (data && data.message) ? data.message : 'Unknown' },
+              buttons: [
+                { label: 'Tutup', className: 'm-btn m-btn-cancel' }
+              ]
+            });
+          }
+        }
+      })
+      .catch(function(){
+        btn.style.pointerEvents = '';
+        btn.style.opacity = '';
+        if (window.MikhmonPopup) {
+          window.MikhmonPopup.open({
+            title: 'Backup Gagal',
+            iconClass: 'fa fa-times-circle',
+            statusIcon: 'fa fa-times-circle',
+            statusColor: '#da3633',
+            message: 'Backup konfigurasi gagal.',
+            alert: { type: 'danger', text: 'Tidak dapat menghubungi server.' },
+            buttons: [
+              { label: 'Tutup', className: 'm-btn m-btn-cancel' }
+            ]
+          });
+        }
+      });
+    };
+
+    if (window.MikhmonPopup) {
+      window.MikhmonPopup.open({
+        title: 'Backup Konfigurasi',
+        iconClass: 'fa fa-database',
+        statusIcon: 'fa fa-cloud-download',
+        statusColor: '#238636',
+        message: 'Sistem akan mencadangkan konfigurasi aplikasi.',
+        alert: { type: 'info', text: 'Mencakup akun admin/operator dan sesi router.' },
+        buttons: [
+          { label: 'Batalkan', className: 'm-btn m-btn-cancel' },
+          { label: 'Jalankan Backup', className: 'm-btn m-btn-success', close: false, onClick: doBackup }
+        ]
+      });
+      return;
+    }
+    if (confirm('Jalankan backup konfigurasi sekarang?')) doBackup();
+  };
+
+  window.runAppRestoreAjax = function() {
+    var btn = document.getElementById('db-app-restore');
+    if (!btn) return;
+
+    var doRestore = function(){
+      btn.style.pointerEvents = 'none';
+      btn.style.opacity = '0.6';
+      if (window.MikhmonPopup) {
+        window.MikhmonPopup.open({
+          title: 'Restore Konfigurasi',
+          iconClass: 'fa fa-history',
+          statusIcon: 'fa fa-circle-o-notch fa-spin',
+          statusColor: '#2f81f7',
+          message: 'Proses restore konfigurasi sedang berjalan. Mohon tunggu...'
+        });
+      }
+      fetch('./tools/restore_app_db.php?ajax=1&nolimit=1&key=' + encodeURIComponent(window.__backupKey || ''), {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(function(resp){ return resp.json(); })
+      .then(function(data){
+        if (window.MikhmonPopup) {
+          if (data && data.ok) {
+            window.MikhmonPopup.open({
+              title: 'Restore Sukses',
+              iconClass: 'fa fa-check-circle',
+              statusIcon: 'fa fa-refresh',
+              statusColor: '#2f81f7',
+              message: 'Restore konfigurasi selesai.',
+              alert: { type: 'info', text: 'File: ' + (data.file || '-') + ' | Sumber: ' + (data.source || '-') },
+              buttons: [
+                { label: 'Tutup', className: 'm-btn m-btn-primary' }
+              ]
+            });
+          } else {
+            window.MikhmonPopup.open({
+              title: 'Restore Gagal',
+              iconClass: 'fa fa-times-circle',
+              statusIcon: 'fa fa-times-circle',
+              statusColor: '#da3633',
+              message: 'Restore konfigurasi gagal.',
+              alert: { type: 'danger', text: (data && data.message) ? data.message : 'Unknown' },
+              buttons: [
+                { label: 'Tutup', className: 'm-btn m-btn-cancel' }
+              ]
+            });
+          }
+        }
+      })
+      .catch(function(){
+        if (window.MikhmonPopup) {
+          window.MikhmonPopup.open({
+            title: 'Restore Gagal',
+            iconClass: 'fa fa-times-circle',
+            statusIcon: 'fa fa-times-circle',
+            statusColor: '#da3633',
+            message: 'Restore konfigurasi gagal karena koneksi.',
+            buttons: [
+              { label: 'Tutup', className: 'm-btn m-btn-cancel' }
+            ]
+          });
+        }
+      })
+      .finally(function(){
+        btn.style.pointerEvents = 'auto';
+        btn.style.opacity = '1';
+      });
+    };
+
+    if (window.MikhmonPopup) {
+      window.MikhmonPopup.open({
+        title: 'Restore Konfigurasi',
+        iconClass: 'fa fa-history',
+        statusIcon: 'fa fa-exclamation-triangle',
+        statusColor: '#d29922',
+        message: 'Konfigurasi saat ini akan digantikan dengan backup terbaru.',
+        alert: { type: 'warning', html: '<strong>Peringatan:</strong> Tindakan ini tidak dapat dibatalkan.' },
+        buttons: [
+          { label: 'Batalkan', className: 'm-btn m-btn-cancel' },
+          { label: 'Mulai Restore', className: 'm-btn m-btn-primary', close: false, onClick: doRestore }
+        ]
+      });
+      return;
+    }
+    if (confirm('Restore akan menimpa konfigurasi. Lanjutkan?')) doRestore();
+  };
+
   window.showOverlayNotice = function(msg, type, lockClose){
     var overlay = document.getElementById('ajax-overlay');
     var container = document.getElementById('ajax-modal-container');

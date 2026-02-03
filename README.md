@@ -150,7 +150,7 @@ Untuk kebutuhan identifikasi user yang lebih detail.
 
 ### 6.2 Deployment dengan Docker
 1.  Clone repositori.
-2.  Sesuaikan `include/config.php` (IP Router, User, Pass).
+2.  Konfigurasi awal router/admin dapat dimigrasikan otomatis dari `include/config_legacy.php` ke SQLite.
 3.  Sesuaikan `include/env.php` (Token, Harga Profil, Fitur Toggle).
 4.  Jalankan perintah:
     ```bash
@@ -165,6 +165,7 @@ File ini menyimpan variabel sensitif dan *toggles*. Contoh parameter penting:
 * `system.ghost_min_bytes`: Ambang batas bytes untuk deteksi voucher 'hantu'.
 * `fonnte.token`: Token API WhatsApp.
 * `retur_request.enabled`: Mengaktifkan fitur request di portal.
+* `system.app_db_file`: Lokasi DB konfigurasi aplikasi (default: `db_data/mikhmon_app.db`).
 
 ### 6.4 Nginx Reverse Proxy
 Disarankan menggunakan Nginx di depan container untuk menangani kompresi dan *caching*.
@@ -209,11 +210,14 @@ Lokasi file log untuk diagnosa:
 * `logs/sync_usage.log`: Log sinkronisasi penggunaan data.
 * `logs/whatsapp_logs.log`: Log status pengiriman pesan WA.
 * `logs/backup_db.log` & `logs/restore_db.log`: Log aktivitas database tool.
+* `logs/backup_app_db.log` & `logs/restore_app_db.log`: Log backup/restore DB konfigurasi aplikasi.
 
 ### 8.3 Tools Database
 Akses menu **Tools** (ikon Admin) untuk:
 * **Backup Database:** Download file `.db` yang aman (WAL checkpointed).
 * **Restore Database:** Mengembalikan data dari backup.
+* **Backup Konfigurasi:** Mencadangkan DB konfigurasi aplikasi.
+* **Restore Konfigurasi:** Mengembalikan konfigurasi dari backup.
 * **Clear Logs:** Membersihkan file log lama untuk menghemat ruang disk.
 * **Sync Rusak Audit:** Menyelaraskan status rusak antara `login_history` dan `sales_history` jika terjadi anomali data bulanan.
 

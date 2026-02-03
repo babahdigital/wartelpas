@@ -24,10 +24,10 @@ include(__DIR__ . '/../../include/readcfg.php');
 include_once(__DIR__ . '/../../lib/routeros_api.class.php');
 include_once(__DIR__ . '/../../lib/formatbytesbites.php');
 include_once(__DIR__ . '/../../hotspot/user/helpers.php');
+require_once(__DIR__ . '/../../include/db_helpers.php');
 
 // --- DATABASE ---
-$dbDir = __DIR__ . '/../../db_data';
-$dbFile = $dbDir . '/mikhmon_stats.db';
+$dbFile = get_stats_db_path();
 $db = null;
 if (file_exists($dbFile)) {
     try {

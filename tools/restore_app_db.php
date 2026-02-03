@@ -3,10 +3,11 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../include/acl.php';
-// Restore SQLite DB from backup (protected)
+require_once __DIR__ . '/../include/db.php';
+// Restore App Config DB (SQLite)
 ini_set('display_errors', 0);
 error_reporting(0);
-// Mode respons
+
 $is_ajax = (isset($_GET['ajax']) && $_GET['ajax'] == '1') ||
     (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower((string)$_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') ||
     (isset($_SERVER['HTTP_ACCEPT']) && stripos((string)$_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
@@ -17,7 +18,7 @@ if ($is_ajax) {
     header('Content-Type: text/html; charset=utf-8');
 }
 
-function respond_restore($ok, $message, $data = [], $code = 200) {
+function respond_app_restore($ok, $message, $data = [], $code = 200) {
     global $is_ajax;
     http_response_code($code);
     if ($is_ajax) {
@@ -28,7 +29,6 @@ function respond_restore($ok, $message, $data = [], $code = 200) {
     exit;
 }
 
-// Konfigurasi terpusat
 $envFile = dirname(__DIR__) . '/include/env.php';
 if (is_file($envFile)) {
     require_once $envFile;
@@ -56,7 +56,7 @@ if (!$is_valid_key) {
 }
 
 if (!$is_valid_key) {
-    respond_restore(false, 'Forbidden', [], 403);
+    respond_app_restore(false, 'Forbidden', [], 403);
 }
 
 $allowedIpList = isset($env['backup']['allowed_ips']) && is_array($env['backup']['allowed_ips'])
@@ -65,13 +65,13 @@ $allowedIpList = isset($env['backup']['allowed_ips']) && is_array($env['backup']
 if (!empty($_SERVER['REMOTE_ADDR']) && !empty($allowedIpList)) {
     $clientIp = (string)$_SERVER['REMOTE_ADDR'];
     if (!in_array($clientIp, $allowedIpList, true)) {
-        respond_restore(false, 'IP not allowed', [], 403);
+        respond_app_restore(false, 'IP not allowed', [], 403);
     }
 }
 
 $clientIp = !empty($_SERVER['REMOTE_ADDR']) ? (string)$_SERVER['REMOTE_ADDR'] : '';
-$rateKey = $clientIp . '|' . (string)$key;
-$rateFile = sys_get_temp_dir() . '/restore_db.rate.' . md5($rateKey);
+$rateKey = $clientIp . '|' . (string)$key . '|app';
+$rateFile = sys_get_temp_dir() . '/restore_app_db.rate.' . md5($rateKey);
 $rateWindow = isset($env['backup']['rate_window']) ? (int)$env['backup']['rate_window'] : 300;
 $rateLimit = isset($env['backup']['rate_limit']) ? (int)$env['backup']['rate_limit'] : 1;
 $forceRate = isset($_GET['force']) && $_GET['force'] === '1';
@@ -89,59 +89,23 @@ $hits = array_values(array_filter($hits, function($t) use ($now, $rateWindow) {
     return is_int($t) && ($now - $t) <= $rateWindow;
 }));
 if (!$forceRate && !$noRate && count($hits) >= $rateLimit) {
-    respond_restore(false, 'Rate limited', [], 429);
+    respond_app_restore(false, 'Rate limited', [], 429);
 }
 $hits[] = $now;
 @file_put_contents($rateFile, json_encode($hits));
 
-$root = dirname(__DIR__);
-$system_cfg = $env['system'] ?? [];
-$db_rel = $system_cfg['db_file'] ?? 'db_data/mikhmon_stats.db';
-if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
-    $dbFile = $db_rel;
-} else {
-    $dbFile = $root . '/' . ltrim($db_rel, '/');
-}
-$dbBase = pathinfo($dbFile, PATHINFO_FILENAME);
-$backupDir = $root . '/db_data/backups';
+$backupDir = dirname(__DIR__) . '/db_data/backups_app';
+$dbFile = app_db_path();
 
 if (!is_dir($backupDir)) {
     @mkdir($backupDir, 0777, true);
 }
 
-$files = array_values(array_filter(scandir($backupDir), function ($f) use ($backupDir, $dbBase) {
-    if (!is_file($backupDir . '/' . $f)) return false;
-    if (!preg_match('/\.db$/i', $f)) return false;
-    if (preg_match('/^' . preg_quote($dbBase, '/') . '_\d{8}_\d{6}\.db$/', $f)) return true;
-    return false;
+$files = array_values(array_filter(scandir($backupDir), function ($f) use ($backupDir) {
+    return is_file($backupDir . '/' . $f) && preg_match('/\.db$/i', $f);
 }));
-// Jika kosong, coba download dari Google Drive
-$downloaded = false;
-$rcloneEnable = isset($env['rclone']['enable']) ? (bool)$env['rclone']['enable'] : false;
-$rcloneDownload = isset($env['rclone']['download']) ? (bool)$env['rclone']['download'] : false;
-$rcloneBin = isset($env['rclone']['bin']) ? (string)$env['rclone']['bin'] : '';
-$rcloneRemote = isset($env['rclone']['remote']) ? (string)$env['rclone']['remote'] : '';
-if (empty($files) && $rcloneEnable && $rcloneDownload && $rcloneBin !== '' && $rcloneRemote !== '' && file_exists($rcloneBin)) {
-    $cmd = sprintf('%s copy "%s" "%s" --include "*.db" 2>&1', $rcloneBin, $rcloneRemote, $backupDir);
-    exec($cmd, $output, $returnVar);
-    if ($returnVar === 0) {
-        $downloaded = true;
-        $files = array_values(array_filter(scandir($backupDir), function ($f) use ($backupDir, $dbBase) {
-            if (!is_file($backupDir . '/' . $f)) return false;
-            if (!preg_match('/\.db$/i', $f)) return false;
-            if (preg_match('/^' . preg_quote($dbBase, '/') . '_\d{8}_\d{6}\.db$/', $f)) return true;
-            return false;
-        }));
-    }
-}
 if (empty($files)) {
-    // fallback to any db if prefix not found
-    $files = array_values(array_filter(scandir($backupDir), function ($f) use ($backupDir) {
-        return is_file($backupDir . '/' . $f) && preg_match('/\.db$/i', $f);
-    }));
-    if (empty($files)) {
-        respond_restore(false, 'No backup files', [], 404);
-    }
+    respond_app_restore(false, 'No backup files', [], 404);
 }
 
 rsort($files);
@@ -150,20 +114,20 @@ $target = basename((string)$target);
 $src = $backupDir . '/' . $target;
 
 if (!file_exists($src)) {
-    respond_restore(false, 'Backup not found', [], 404);
+    respond_app_restore(false, 'Backup not found', [], 404);
 }
 
 if (!is_writable(dirname($dbFile))) {
-    respond_restore(false, 'DB folder not writable', [], 500);
+    respond_app_restore(false, 'DB folder not writable', [], 500);
 }
 
 if (!is_readable($src)) {
-    respond_restore(false, 'Backup not readable', [], 500);
+    respond_app_restore(false, 'Backup not readable', [], 500);
 }
 
 $tmpRestore = $dbFile . '.restore-tmp';
 if (!copy($src, $tmpRestore)) {
-    respond_restore(false, 'Restore failed', [], 500);
+    respond_app_restore(false, 'Restore failed', [], 500);
 }
 
 try {
@@ -176,25 +140,22 @@ try {
     $db->exec('VACUUM;');
 } catch (Exception $e) {
     @unlink($tmpRestore);
-    respond_restore(false, 'Restore integrity failed: ' . htmlspecialchars($e->getMessage()), [], 500);
+    respond_app_restore(false, 'Restore integrity failed: ' . htmlspecialchars($e->getMessage()), [], 500);
 }
 
 if (!@rename($tmpRestore, $dbFile)) {
     @unlink($tmpRestore);
-    respond_restore(false, 'Failed to finalize restore', [], 500);
+    respond_app_restore(false, 'Failed to finalize restore', [], 500);
 }
 
-$logFile = dirname(__DIR__) . '/logs/restore_db.log';
-$logLine = date('Y-m-d H:i:s') . "\t" . $target . "\t" . ($downloaded ? 'From Cloud' : 'Local') . "\n";
+$logFile = dirname(__DIR__) . '/logs/restore_app_db.log';
+$logLine = date('Y-m-d H:i:s') . "\t" . $target . "\n";
 @file_put_contents($logFile, $logLine, FILE_APPEND);
 
 if ($is_ajax) {
-    respond_restore(true, 'Restore OK', [
+    respond_app_restore(true, 'Restore OK', [
         'file' => $target,
-        'source' => $downloaded ? 'cloud' : 'local'
+        'source' => 'local'
     ], 200);
 }
-echo "Restore OK: " . htmlspecialchars($target);
-if ($downloaded) {
-    echo " (Restored from Google Drive)";
-}
+echo 'Restore OK: ' . htmlspecialchars($target);

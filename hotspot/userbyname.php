@@ -183,14 +183,7 @@ Login : *http://" . $dnsname . "* %0A
     $shareWA = $shareWAUP;
   }
 
-// quick bt
-include('./include/quickbt.php');
-
-// Print BT
-  $chl = urlencode("http://$dnsname/login?username=$uname&password=$upass");
-	$qrcode = 'https://chart.googleapis.com/chart?cht=qr&chs=100x100&chld=L|0&chl=' . $chl . '&choe=utf-8';
-  //$qrcode = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='.$chl;
- 
+  
 
 
 if ($currency == in_array($currency, $cekindo['indo'])) {
@@ -274,7 +267,6 @@ if ($currency == in_array($currency, $cekindo['indo'])) {
     echo "<script>window.location='./?hotspot-user=" . $uid . "&session=" . $session . "'</script>";
   }
 }
-include('./voucher/printbt.php');
 ?>
 
 <script>
@@ -321,7 +313,7 @@ include('./voucher/printbt.php');
     } ?>
     <a id="shareWA" class="btn bg-green" title="Share WhatsApp" href="whatsapp://send?text=<?= $shareWA; ?>"> <i class="fa fa-whatsapp"></i> <?= $_share ?></a>
     <!--<div id="shareWA" class="btn bg-blue printBT" title="Print Bluetooth"><i class="fa fa-bluetooth"></i> <?= $_print ?> BT</div>-->
-    <div id="shareWA" class="btn bg-blue" onclick="sendToQuickPrinterChrome()" title="Print Bluetooth"><i class="fa fa-bluetooth"></i> <?= $_print ?> BT</div><br>
+    <br>
   </div>
 <table class="table">
   <tr>

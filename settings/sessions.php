@@ -24,6 +24,7 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../include/acl.php';
 requireLogin('../admin.php?id=login');
 include_once __DIR__ . '/../include/version.php';
+require_once __DIR__ . '/../include/db_helpers.php';
 
 $is_operator = isOperator();
 $version_raw = $_SESSION['v'] ?? '';
@@ -39,7 +40,14 @@ $backup_status_detail = '-';
 $backup_status_badge = 'UNKNOWN';
 $backup_status_class = 'text-secondary';
 $backup_dir = __DIR__ . '/../db_data/backups';
-$db_file = __DIR__ . '/../db_data/mikhmon_stats.db';
+$db_file = get_stats_db_path();
+// App config backup status
+$app_backup_label = 'Belum ada';
+$app_backup_detail = '-';
+$app_backup_badge = 'UNKNOWN';
+$app_backup_class = 'text-secondary';
+$app_backup_dir = __DIR__ . '/../db_data/backups_app';
+$app_db_file = function_exists('app_db_path') ? app_db_path() : (__DIR__ . '/../db_data/mikhmon_app.db');
 if (is_dir($backup_dir)) {
   $today = date('Ymd');
   $files = glob($backup_dir . '/mikhmon_stats_*.db') ?: [];
@@ -88,6 +96,58 @@ if (is_dir($backup_dir)) {
       $backup_status_label = 'Backup Ada (Perlu cek)';
       $backup_status_badge = 'CEK';
       $backup_status_class = 'text-secondary';
+    }
+  }
+}
+
+if (is_dir($app_backup_dir)) {
+  $today = date('Ymd');
+  $files = glob($app_backup_dir . '/mikhmon_app_*.db') ?: [];
+  $latest = '';
+  if (!empty($files)) {
+    usort($files, function ($a, $b) { return filemtime($b) <=> filemtime($a); });
+    $latest = $files[0];
+    $app_backup_detail = basename($latest);
+    $app_backup_badge = 'ADA';
+  }
+  $today_files = [];
+  foreach ($files as $f) {
+    if (preg_match('/mikhmon_app_' . $today . '_\d{6}\.db$/', basename($f))) {
+      $today_files[] = $f;
+    }
+  }
+  if (!empty($today_files)) {
+    $src_size = file_exists($app_db_file) ? @filesize($app_db_file) : 0;
+    $valid_today = false;
+    foreach ($today_files as $tf) {
+      $size = @filesize($tf) ?: 0;
+      if ($size <= 0) continue;
+      if ($src_size > 0 && $size < ($src_size * 0.5)) continue;
+      if (class_exists('SQLite3')) {
+        try {
+          $chk = new SQLite3($tf, SQLITE3_OPEN_READONLY);
+          $res = $chk->querySingle('PRAGMA quick_check;');
+          $chk->close();
+          if (strtolower((string)$res) === 'ok') {
+            $valid_today = true;
+            break;
+          }
+        } catch (Exception $e) {
+          continue;
+        }
+      } else {
+        $valid_today = true;
+        break;
+      }
+    }
+    if ($valid_today) {
+      $app_backup_label = 'Backup';
+      $app_backup_badge = 'OK';
+      $app_backup_class = 'text-green';
+    } else {
+      $app_backup_label = 'Backup Ada (Perlu cek)';
+      $app_backup_badge = 'CEK';
+      $app_backup_class = 'text-secondary';
     }
   }
 }
@@ -178,6 +238,18 @@ foreach ($router_list as $router_item) {
             </button>
             <button id="db-restore" class="btn-action btn-outline" onclick="runRestoreAjax()">
               <i class="fa fa-history"></i> Restore
+            </button>
+          </div>
+          <div style="height:12px;"></div>
+          <div class="text-secondary" style="font-size:12px; margin-bottom:8px;">Konfigurasi (App DB)</div>
+          <div style="font-size:16px; font-weight:700;" class="<?= $app_backup_class; ?>"><?= htmlspecialchars($app_backup_label); ?> <span class="badge" style="margin-left:6px;"><?= htmlspecialchars($app_backup_badge); ?></span></div>
+          <div style="font-size:11px; color: var(--text-muted); margin:6px 0 14px;">File: <?= htmlspecialchars($app_backup_detail); ?></div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="db-app-backup" class="btn-action btn-outline" onclick="runAppBackupAjax()">
+              <i class="fa fa-database"></i> Backup Konfigurasi
+            </button>
+            <button id="db-app-restore" class="btn-action btn-outline" onclick="runAppRestoreAjax()">
+              <i class="fa fa-history"></i> Restore Konfigurasi
             </button>
           </div>
         </div>

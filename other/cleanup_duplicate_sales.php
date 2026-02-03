@@ -12,7 +12,8 @@ ini_set('display_errors', 0);
 error_reporting(0);
 
 $root_dir = dirname(__DIR__);
-$dbFile = $root_dir . '/db_data/mikhmon_stats.db';
+require_once $root_dir . '/include/db_helpers.php';
+$dbFile = get_stats_db_path();
 $logDir = $root_dir . '/logs';
 if (!is_dir($logDir)) {
     @mkdir($logDir, 0755, true);

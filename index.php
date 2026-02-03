@@ -74,7 +74,6 @@ if (!isset($_SESSION["mikhmon"])) {
 
   include('./include/lang.php');
   include('./lang/'.$langid.'.php');
-  include('./include/quickbt.php');
   include('./include/readcfg.php');
   include('./include/theme.php');
   include('./settings/settheme.php');
@@ -454,6 +453,7 @@ elseif ($ppp == "edit-profile") {
 <script src="./js/highcharts/themes/hc.<?= $theme; ?>.js"></script>
 <script src="./js/mikhmon-ui.<?= $theme; ?>.min.js"></script>
 <script src="./js/mikhmon.js?t=<?= str_replace(" ","_",date("Y-m-d H:i:s")); ?>"></script>
+<script src="./js/ajax_helper.js"></script>
 
 <?php
 if ($hotspot == "dashboard" || ($hotspot == "" && $hotspotuser == "" && $userprofile == "" && $removeuserprofile == "" && $report == "" && $removereport == "" && !empty($session))) {

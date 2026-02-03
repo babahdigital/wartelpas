@@ -34,6 +34,7 @@ if (!isset($data[$session])) {
 include(__DIR__ . '/../../include/readcfg.php');
 include_once(__DIR__ . '/../../lib/routeros_api.class.php');
 include_once(__DIR__ . '/../../lib/formatbytesbites.php');
+require_once(__DIR__ . '/../../include/db_helpers.php');
 
 $API = new RouterosAPI();
 $API->debug = false;
@@ -59,7 +60,7 @@ $timelimit = $urow['limit-uptime'] ?? '';
 $db_comment = '';
 $db_profile = '';
 $db_validity = '';
-$db_dir = __DIR__ . '/../../db_data/mikhmon_stats.db';
+$db_dir = get_stats_db_path();
 if ($user !== '' && file_exists($db_dir)) {
     try {
         $db = new PDO('sqlite:' . $db_dir);

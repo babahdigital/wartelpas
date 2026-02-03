@@ -3,6 +3,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../include/acl.php';
+require_once __DIR__ . '/../include/db.php';
+app_db_import_legacy_if_needed();
 requireLogin('../admin.php?id=login');
 
 $env = [];
@@ -13,8 +15,13 @@ if (file_exists($envFile)) {
 
 require_once __DIR__ . '/admin_account_logic.php';
 
-$op_user = $env['auth']['operator_user'] ?? '';
-$op_pass = $env['auth']['operator_pass'] ?? '';
+$op_db = app_db_get_operator();
+$op_user = $op_db['username'] ?? '';
+$op_pass = $op_db['password'] ?? '';
+if ($op_user === '' && $op_pass === '') {
+    $op_user = $env['auth']['operator_user'] ?? '';
+    $op_pass = $env['auth']['operator_pass'] ?? '';
+}
 ?>
 
 <?php if (!isSuperAdmin()): ?>
@@ -50,17 +57,6 @@ $op_pass = $env['auth']['operator_pass'] ?? '';
                         </small>
                     </div>
 
-                    <div class="form-group-modern">
-                        <label class="form-label">Cetak Cepat QR</label>
-                        <div class="input-group-modern">
-                            <div class="input-icon"><i class="fa fa-qrcode"></i></div>
-                            <select class="form-control-modern" name="qrbt">
-                                <option><?= $qrbt ?></option>
-                                <option>enable</option>
-                                <option>disable</option>
-                            </select>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

@@ -47,6 +47,7 @@ $envFile = $root_dir . '/include/env.php';
 if (file_exists($envFile)) {
     require $envFile;
 }
+require_once $root_dir . '/include/db_helpers.php';
 $profiles_cfg = $env['profiles'] ?? [];
 $pricing_cfg = $env['pricing'] ?? [];
 $blok_cfg = $env['blok'] ?? ($env['blocks'] ?? []);
@@ -294,7 +295,7 @@ if (!isset($_SESSION["mikhmon"])) {
         '.proplist' => 'name,comment,disabled,bytes-in,bytes-out,uptime'
     ]) : [];
 
-    $dbFile = dirname(__DIR__) . '/db_data/mikhmon_stats.db';
+    $dbFile = get_stats_db_path();
     if (file_exists($dbFile)) {
         try {
             $db = new PDO('sqlite:' . $dbFile);

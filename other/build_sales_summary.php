@@ -13,7 +13,8 @@ error_reporting(E_ALL);
 header('Content-Type: text/plain');
 
 $root_dir = dirname(__DIR__);
-$dbFile = $root_dir . '/db_data/mikhmon_stats.db';
+require_once $root_dir . '/include/db_helpers.php';
+$dbFile = get_stats_db_path();
 if (!file_exists($dbFile)) {
     die("Error: Database tidak ditemukan.\n");
 }

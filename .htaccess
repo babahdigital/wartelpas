@@ -98,7 +98,7 @@ RedirectMatch 403 ^/lib/.*$
 
 # D. BLOKIR FOLDER DATA SENSITIF (CRITICAL!)
 # Folder ini berisi session aktif, database, dan logs. HARAM diakses umum.
-RedirectMatch 403 ^/mikhmon_session/.*$
+RedirectMatch 403 ^/session/.*$
 RedirectMatch 403 ^/db_data/.*$
 RedirectMatch 403 ^/logs/.*$
 RedirectMatch 403 ^/mikhmon/.*$
@@ -123,7 +123,7 @@ Require all denied
 # B. WHITELIST: AKSES PUBLIK (Login & Assets)
 # Izinkan file login dan folder assets (css, js, fonts, img)
 # Agar tampilan login tidak rusak saat diakses publik (jika diinginkan)
-<FilesMatch "^(index\.php|admin\.php|login\.php|cekip\.php|error\.php)$">
+<FilesMatch "^(index\.php|admin\.php|login\.php|status\.php|error\.php)$">
     Require all granted
 </FilesMatch>
 

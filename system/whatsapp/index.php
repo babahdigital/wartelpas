@@ -19,7 +19,8 @@ $wa_helper_file = __DIR__ . '/wa_helper.php';
 if (file_exists($wa_helper_file)) {
     require_once $wa_helper_file;
 }
-$dbFile = $config['db_file'] ?? dirname(__DIR__, 2) . '/db_data/mikhmon_stats.db';
+require_once __DIR__ . '/../../include/db_helpers.php';
+$dbFile = $config['db_file'] ?? get_stats_db_path();
 $pdf_dir = $config['pdf_dir'] ?? (dirname(__DIR__, 2) . '/report/pdf');
 $log_limit = (int)($config['log_limit'] ?? 50);
 $timezone = $config['timezone'] ?? '';

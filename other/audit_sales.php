@@ -14,6 +14,7 @@ $envFile = $root . '/include/env.php';
 if (file_exists($envFile)) {
     require $envFile;
 }
+require_once $root . '/include/db_helpers.php';
 $secret = $env['security']['tools']['token'] ?? ($env['backup']['secret'] ?? '');
 $key = $_GET['key'] ?? '';
 if ($key === '' && isset($_POST['key'])) {
@@ -43,7 +44,7 @@ if (!$is_valid_key) {
     exit;
 }
 
-$dbFile = $root . '/db_data/mikhmon_stats.db';
+$dbFile = get_stats_db_path();
 if (!file_exists($dbFile)) {
     echo 'DB not found';
     exit;

@@ -23,7 +23,7 @@ COPY entrypoint.sh /usr/local/bin/
 
 # 3. Setup Permission Awal & Entrypoint
 RUN chmod +x /usr/local/bin/entrypoint.sh \
-    && mkdir -p /var/www/html/mikhmon_session \
+    && mkdir -p /var/www/html/session \
     /var/www/html/db_data \
     /var/www/html/logs \
     /var/www/html/img \

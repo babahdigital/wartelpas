@@ -13,6 +13,7 @@ $envFile = $root_dir . '/include/env.php';
 if (file_exists($envFile)) {
     require $envFile;
 }
+require_once($root_dir . '/include/db_helpers.php');
 if (file_exists($root_dir . '/report/laporan/helpers.php')) {
     require_once $root_dir . '/report/laporan/helpers.php';
 }
@@ -57,7 +58,7 @@ $blok_upper = strtoupper($blok);
 $use_glob = $blok !== '' && !preg_match('/\d$/', $blok_upper);
 $glob_pattern = $use_glob ? ($blok_upper . '[0-9]*') : '';
 
-$dbFile = $root_dir . '/db_data/mikhmon_stats.db';
+$dbFile = get_stats_db_path();
 if (!file_exists($dbFile)) {
     die("DB not found");
 }

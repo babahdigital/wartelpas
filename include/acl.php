@@ -115,37 +115,28 @@ function verify_password_compat($plain, $stored)
 
 function update_admin_password_hash($oldStored, $newHash)
 {
-    $cfgFile = __DIR__ . '/config.php';
-    if (!is_file($cfgFile) || !is_writable($cfgFile)) return false;
-    $content = @file_get_contents($cfgFile);
-    if ($content === false) return false;
-    $oldToken = "mikhmon>|>" . $oldStored;
-    $newToken = "mikhmon>|>" . $newHash;
-    if (strpos($content, $oldToken) === false) return false;
-    $newContent = str_replace($oldToken, $newToken, $content);
-    return @file_put_contents($cfgFile, $newContent) !== false;
+    if (!is_string($newHash) || $newHash === '') return false;
+    require_once __DIR__ . '/db.php';
+    $admin = app_db_get_admin();
+    $username = $admin['username'] ?? '';
+    if ($username === '') return false;
+    app_db_set_admin($username, $newHash);
+    return true;
 }
 
 function update_operator_password_hash($newHash)
 {
-    $envFile = __DIR__ . '/env.php';
-    if (is_file($envFile) && is_writable($envFile)) {
-        $content = @file_get_contents($envFile);
-        if ($content !== false) {
-            $pattern = "/('operator_pass'\s*=>\s*)'[^']*'/";
-            $replacement = "${1}'" . $newHash . "'";
-            $newContent = preg_replace($pattern, $replacement, $content, 1);
-            if ($newContent !== null && $newContent !== $content) {
-                if (@file_put_contents($envFile, $newContent) !== false) {
-                    return true;
-                }
-            }
-        }
+    if (!is_string($newHash) || $newHash === '') return false;
+    require_once __DIR__ . '/db.php';
+    $op = app_db_get_operator();
+    $username = $op['username'] ?? '';
+    if ($username === '') {
+        $env = getEnvConfig();
+        $username = $env['auth']['operator_user'] ?? '';
     }
-
-    $overrideFile = __DIR__ . '/operator_pass.php';
-    $payload = "<?php\n\$operator_pass_override = '" . addslashes($newHash) . "';\n";
-    return @file_put_contents($overrideFile, $payload) !== false;
+    if ($username === '') return false;
+    app_db_set_operator($username, $newHash);
+    return true;
 }
 
 function get_operator_password_override()

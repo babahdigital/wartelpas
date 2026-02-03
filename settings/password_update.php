@@ -3,7 +3,9 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../include/acl.php';
+require_once __DIR__ . '/../include/db.php';
 require_once __DIR__ . '/../lib/routeros_api.class.php';
+app_db_import_legacy_if_needed();
 requireLogin('../admin.php?id=login');
 header('Content-Type: application/json');
 
@@ -44,10 +46,10 @@ if ($opPass !== '' && strlen($opPass) < 6) {
     exit;
 }
 
-require_once __DIR__ . '/../include/config.php';
 $adminPassStored = '';
-if (isset($data['mikhmon'][2])) {
-    $adminPassStored = explode('>|>', $data['mikhmon'][2])[1] ?? '';
+$adminRow = app_db_get_admin();
+if (!empty($adminRow)) {
+    $adminPassStored = $adminRow['password'] ?? '';
 }
 
 $env = [];
@@ -55,8 +57,17 @@ $envFile = __DIR__ . '/../include/env.php';
 if (file_exists($envFile)) {
     require $envFile;
 }
-$opUser = $env['auth']['operator_user'] ?? '';
-$opPassStored = $env['auth']['operator_pass'] ?? '';
+$opUser = '';
+$opPassStored = '';
+$opRow = app_db_get_operator();
+if (!empty($opRow)) {
+    $opUser = $opRow['username'] ?? '';
+    $opPassStored = $opRow['password'] ?? '';
+}
+if ($opUser === '' && $opPassStored === '') {
+    $opUser = $env['auth']['operator_user'] ?? '';
+    $opPassStored = $env['auth']['operator_pass'] ?? '';
+}
 $opOverride = get_operator_password_override();
 if ($opOverride !== '') {
     $opPassStored = $opOverride;

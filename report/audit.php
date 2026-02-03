@@ -13,6 +13,7 @@ $envFile = $root_dir . '/include/env.php';
 if (file_exists($envFile)) {
     require $envFile;
 }
+require_once($root_dir . '/include/db_helpers.php');
 require_once($root_dir . '/report/laporan/helpers.php');
 $pricing = $env['pricing'] ?? [];
 $price10 = (int)($pricing['price_10'] ?? 0);
@@ -20,7 +21,7 @@ $price30 = (int)($pricing['price_30'] ?? 0);
 $profile_price_map = $pricing['profile_prices'] ?? [];
 $GLOBALS['profile_price_map'] = $profile_price_map;
 
-$dbFile = dirname(__DIR__) . '/db_data/mikhmon_stats.db';
+$dbFile = get_stats_db_path();
 $session_id = $_GET['session'] ?? '';
 
 $req_show = $_GET['show'] ?? 'harian';

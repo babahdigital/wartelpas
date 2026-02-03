@@ -12,6 +12,7 @@ custom.ini
 include/env.php
 include/config.php
 include/quickbt.php
+include/config_legacy.php
 
 # Log & Session (PENTING untuk Mikhmon/Wartelpas agar session user tidak ke-upload)
 *.log
@@ -26,9 +27,7 @@ include/quickbt.php
 /db_data/backups/
 
 # Runtime/session folders
-/mikhmon_session/
 /mikhmon/session/
-/mikhmon_session/cache/
 
 # Generated reports
 /report/pdf/*.pdf

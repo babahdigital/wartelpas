@@ -16,6 +16,7 @@ $envFile = $root_dir . '/include/env.php';
 if (file_exists($envFile)) {
     require $envFile;
 }
+require_once $root_dir . '/include/db_helpers.php';
 $secret_token = $env['security']['tools']['token'] ?? ($env['backup']['secret'] ?? '');
 $key = $_GET['key'] ?? ($_POST['key'] ?? '');
 if ($key === '' && isset($_SERVER['HTTP_X_WARTELPAS_KEY'])) {
@@ -77,7 +78,7 @@ if ($date !== '') {
     $dateParamsLogin[':d'] = $date;
 }
 
-$dbFile = $root_dir . '/db_data/mikhmon_stats.db';
+$dbFile = get_stats_db_path();
 if (!file_exists($dbFile)) {
     die("DB not found");
 }

@@ -23,6 +23,8 @@ if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 require_once __DIR__ . '/../include/acl.php';
+require_once __DIR__ . '/../include/db.php';
+app_db_import_legacy_if_needed();
 requireLogin('../admin.php?id=login');
 requireSuperAdmin('../admin.php?id=sessions');
 
@@ -90,39 +92,26 @@ if (isset($_POST['save'])) {
 
   $is_new_save = ($is_new_router || (isset($session) && $session !== '' && explode('-', $session)[0] === 'new'));
   if ($is_new_save) {
-    if (isset($data[$sesname])) {
+    if (app_db_session_exists($sesname)) {
       render_admin_error('Gagal menambah router. Nama sesi sudah digunakan.', './admin.php?id=sessions');
     }
-    if (!is_writable('./include/config.php')) {
-      @error_log(date('c') . " [admin][settings] config.php not writable (new router save)\n", 3, __DIR__ . '/../logs/admin_errors.log');
-      render_admin_error('Gagal menambah router. File config.php tidak bisa ditulis.', './admin.php?id=sessions');
-    }
-    $f = fopen('./include/config.php', 'a');
-    if ($f === false) {
-      @error_log(date('c') . " [admin][settings] fopen config.php failed (new router save)\n", 3, __DIR__ . '/../logs/admin_errors.log');
-      render_admin_error('Gagal menambah router. Tidak bisa membuka config.php.', './admin.php?id=sessions');
-    }
-    $line = "\n\$data['" . $sesname . "'] = array (" .
-      "'1'=>'" . $sesname . "!" . $siphost . "'," .
-      "'" . $sesname . "@|@" . $suserhost . "'," .
-      "'" . $sesname . "#|#" . $spasswdhost . "'," .
-      "'" . $sesname . "%" . $shotspotname . "'," .
-      "'" . $sesname . "^" . $sdnsname . "'," .
-      "'" . $sesname . "&" . $scurrency . "'," .
-      "'" . $sesname . "*" . $sreload . "'," .
-      "'" . $sesname . "(" . $siface . "'," .
-      "'" . $sesname . ")" . $sinfolp . "'," .
-      "'" . $sesname . "=" . $sidleto . "'," .
-      "'" . $sesname . "@!@" . $slivereport . "'," .
-      "'" . $sesname . "~" . $shotspotserver . "');";
-    $write_ok = fwrite($f, $line);
-    fclose($f);
-    if ($write_ok === false) {
-      @error_log(date('c') . " [admin][settings] fwrite config.php failed (new router save)\n", 3, __DIR__ . '/../logs/admin_errors.log');
-      render_admin_error('Gagal menambah router. Penulisan config.php gagal.', './admin.php?id=sessions');
-    }
-    if (function_exists('opcache_invalidate')) {
-      @opcache_invalidate(__DIR__ . '/../include/config.php', true);
+    $save = app_db_upsert_session($sesname, $sesname, [
+      'iphost' => $siphost,
+      'userhost' => $suserhost,
+      'passwdhost' => $spasswdhost,
+      'hotspotname' => $shotspotname,
+      'dnsname' => $sdnsname,
+      'currency' => $scurrency,
+      'areload' => $sreload,
+      'iface' => $siface,
+      'infolp' => $sinfolp,
+      'idleto' => $sidleto,
+      'livereport' => $slivereport,
+      'hotspot_server' => $shotspotserver,
+    ]);
+    if (empty($save['ok'])) {
+      @error_log(date('c') . " [admin][settings] db insert failed (new router save)\n", 3, __DIR__ . '/../logs/admin_errors.log');
+      render_admin_error($save['message'] ?? 'Gagal menambah router. Database tidak bisa ditulis.', './admin.php?id=sessions');
     }
     $save_message = 'Sesi baru berhasil disimpan: ' . $sesname;
     $save_type = 'success';
@@ -147,24 +136,23 @@ if (isset($_POST['save'])) {
     }
   }
 
-  $search = array('1' => "$session!$iphost", "$session@|@$userhost", "$session#|#$passwdhost", "$session%$hotspotname", "$session^$dnsname", "$session&$currency", "$session*$areload", "$session($iface", "$session)$infolp", "$session=$idleto", "'$session'", "$session@!@$livereport", "$session~$hotspot_server");
-
-  $replace = array('1' => "$sesname!$siphost", "$sesname@|@$suserhost", "$sesname#|#$spasswdhost", "$sesname%$shotspotname", "$sesname^$sdnsname", "$sesname&$scurrency", "$sesname*$sreload", "$sesname($siface", "$sesname)$sinfolp", "$sesname=$sidleto", "'$sesname'", "$sesname@!@$slivereport", "$sesname~$shotspotserver");
-
-  for ($i = 1; $i < 15; $i++) {
-    $content = file_get_contents("./include/config.php");
-    if ($content === false) {
-      @error_log(date('c') . " [admin][settings] read config.php failed (save session)\n", 3, __DIR__ . '/../logs/admin_errors.log');
-      render_admin_error('Gagal menyimpan. File config.php tidak bisa dibaca.', './admin.php?id=settings&session=' . $session);
-    }
-    $newcontent = str_replace((string)$search[$i], (string)$replace[$i], "$content");
-    if (file_put_contents("./include/config.php", "$newcontent") === false) {
-      @error_log(date('c') . " [admin][settings] write config.php failed (save session)\n", 3, __DIR__ . '/../logs/admin_errors.log');
-      render_admin_error('Gagal menyimpan. File config.php tidak bisa ditulis.', './admin.php?id=settings&session=' . $session);
-    }
-  }
-  if (function_exists('opcache_invalidate')) {
-    @opcache_invalidate(__DIR__ . '/../include/config.php', true);
+  $save = app_db_upsert_session($session, $sesname, [
+    'iphost' => $siphost,
+    'userhost' => $suserhost,
+    'passwdhost' => $spasswdhost,
+    'hotspotname' => $shotspotname,
+    'dnsname' => $sdnsname,
+    'currency' => $scurrency,
+    'areload' => $sreload,
+    'iface' => $siface,
+    'infolp' => $sinfolp,
+    'idleto' => $sidleto,
+    'livereport' => $slivereport,
+    'hotspot_server' => $shotspotserver,
+  ]);
+  if (empty($save['ok'])) {
+    @error_log(date('c') . " [admin][settings] db update failed (save session)\n", 3, __DIR__ . '/../logs/admin_errors.log');
+    render_admin_error($save['message'] ?? 'Gagal menyimpan. Database tidak bisa ditulis.', './admin.php?id=settings&session=' . $session);
   }
   $_SESSION["connect"] = "";
   $save_message = 'Konfigurasi router berhasil disimpan.';
