@@ -43,13 +43,50 @@ function getEnvConfig()
 
 function isMaintenanceEnabled()
 {
-    $env = getEnvConfig();
-    return !empty($env['maintenance']['enabled']);
+    return maintenance_db_get_enabled();
+}
+
+function maintenance_db_get_enabled()
+{
+    if (!function_exists('app_db')) {
+        require_once __DIR__ . '/db.php';
+    }
+    try {
+        $db = app_db();
+        $db->exec("CREATE TABLE IF NOT EXISTS system_settings (key TEXT PRIMARY KEY, value TEXT, updated_at TEXT)");
+        $stmt = $db->prepare("SELECT value FROM system_settings WHERE key = :k");
+        $stmt->execute([':k' => 'maintenance_enabled']);
+        $val = (string)($stmt->fetchColumn() ?? '');
+        if ($val === '') return false;
+        return in_array(strtolower($val), ['1', 'true', 'yes', 'on'], true);
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+function maintenance_db_set_enabled($enabled)
+{
+    if (!function_exists('app_db')) {
+        require_once __DIR__ . '/db.php';
+    }
+    try {
+        $db = app_db();
+        $db->exec("CREATE TABLE IF NOT EXISTS system_settings (key TEXT PRIMARY KEY, value TEXT, updated_at TEXT)");
+        $stmt = $db->prepare("INSERT OR REPLACE INTO system_settings (key, value, updated_at) VALUES (:k, :v, :t)");
+        $stmt->execute([
+            ':k' => 'maintenance_enabled',
+            ':v' => $enabled ? '1' : '0',
+            ':t' => date('Y-m-d H:i:s'),
+        ]);
+        return true;
+    } catch (Exception $e) {
+        return false;
+    }
 }
 
 function getMaintenanceUrl()
 {
-    return './maintenance.html';
+    return './maintenance.php';
 }
 
 function isSuperAdmin()

@@ -123,7 +123,7 @@ Require all denied
 # B. WHITELIST: AKSES PUBLIK (Login & Assets)
 # Izinkan file login dan folder assets (css, js, fonts, img)
 # Agar tampilan login tidak rusak saat diakses publik (jika diinginkan)
-<FilesMatch "^(index\.php|admin\.php|login\.php|status\.php|error\.php)$">
+<FilesMatch "^(index\.php|admin\.php|login\.php|status\.php|error\.php|maintenance\.php)$">
     Require all granted
 </FilesMatch>
 
@@ -183,6 +183,16 @@ Require all denied
     Require all granted
 </If>
 
+# Combined backup endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/backup_complete\.php$#">
+    Require all granted
+</If>
+
+# L/S WhatsApp alert tool (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/wa_ls_alert\.php$#">
+    Require all granted
+</If>
+
 # Backup status endpoint (protected)
 <If "%{REQUEST_URI} =~ m#^/tools/backup_status\.php$#">
     Require all granted
@@ -195,6 +205,11 @@ Require all denied
 
 # Restore auto rusak endpoint (protected)
 <If "%{REQUEST_URI} =~ m#^/tools/restore_auto_rusak\.php$#">
+    Require all granted
+</If>
+
+# Maintenance toggle endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/maintenance_toggle\.php$#">
     Require all granted
 </If>
 

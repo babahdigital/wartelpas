@@ -135,6 +135,14 @@ if (is_file($db_file)) {
 
     if ($last_sync_sales === '') $last_sync_sales = '-';
     if ($last_sync_live === '') $last_sync_live = '-';
+    if ($last_sync_sales !== '-') {
+      $ts = strtotime($last_sync_sales);
+      if ($ts) $last_sync_sales = date('d-m-Y H:i', $ts);
+    }
+    if ($last_sync_live !== '-') {
+      $ts = strtotime($last_sync_live);
+      if ($ts) $last_sync_live = date('d-m-Y H:i', $ts);
+    }
   } catch (Exception $e) {
     $last_sync_sales = '-';
     $last_sync_live = '-';
@@ -426,6 +434,28 @@ $has_router = !empty($router_list);
               </div>
             </div>
           </div>
+          <?php if (isSuperAdmin()): ?>
+            <div class="col-12">
+              <div class="card-modern" style="margin-top:12px;">
+                <div class="card-body-modern">
+                  <div class="text-secondary" style="font-size:12px;">Maintenance Mode</div>
+                  <div class="maintenance-switch">
+                    <div class="maintenance-status <?= isMaintenanceEnabled() ? 'text-red' : 'text-green'; ?>">
+                      <?= isMaintenanceEnabled() ? 'Maintenance' : 'Online'; ?>
+                    </div>
+                    <form method="post" action="./tools/maintenance_toggle.php" class="maintenance-switch-form" title="Maintenance Mode">
+                      <input type="hidden" name="maintenance_state" value="<?= isMaintenanceEnabled() ? '0' : '1'; ?>">
+                      <label class="maintenance-toggle">
+                        <input type="checkbox" <?= isMaintenanceEnabled() ? 'checked' : ''; ?> onchange="this.form.submit();">
+                        <span class="maintenance-slider"></span>
+                      </label>
+                    </form>
+                  </div>
+                  <div class="text-secondary" style="font-size:11px; margin-top:6px;">Hanya Super Admin yang dapat mengaktifkan.</div>
+                </div>
+              </div>
+            </div>
+          <?php endif; ?>
           <div class="col-12">
             <div class="card-modern" style="margin-top:12px;">
               <div class="card-body-modern">
@@ -480,6 +510,60 @@ $has_router = !empty($router_list);
     <?php endif; ?>
   </div>
 </div>
+
+<style>
+  .maintenance-switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 6px;
+  }
+  .maintenance-status {
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .maintenance-toggle {
+    position: relative;
+    display: inline-block;
+    width: 46px;
+    height: 24px;
+  }
+  .maintenance-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .maintenance-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #c7cdd3;
+    transition: 0.2s;
+    border-radius: 999px;
+  }
+  .maintenance-slider::after {
+    content: "";
+    position: absolute;
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    top: 3px;
+    background-color: #ffffff;
+    transition: 0.2s;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .maintenance-toggle input:checked + .maintenance-slider {
+    background-color: #28a745;
+  }
+  .maintenance-toggle input:checked + .maintenance-slider::after {
+    transform: translateX(22px);
+  }
+</style>
 
 
 

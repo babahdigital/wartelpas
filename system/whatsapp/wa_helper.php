@@ -180,12 +180,11 @@ function wa_send_text($message, $target = '', $category = '') {
     }
 
     if ($target === '') {
-        $target = $defaultTarget;
-        if ($target === '') {
-            $list = wa_get_active_recipients($category);
-            if (!empty($list)) {
-                $target = implode(',', $list);
-            }
+        $list = $category !== '' ? wa_get_active_recipients($category) : [];
+        if (!empty($list)) {
+            $target = implode(',', $list);
+        } else {
+            $target = $defaultTarget;
         }
     }
     $target = wa_normalize_target($target, $country);
@@ -247,12 +246,11 @@ function wa_send_file($message, $filePath, $target = '', $category = 'report') {
     }
 
     if ($target === '') {
-        $target = $defaultTarget;
-        if ($target === '') {
-            $list = wa_get_active_recipients($category);
-            if (!empty($list)) {
-                $target = implode(',', $list);
-            }
+        $list = $category !== '' ? wa_get_active_recipients($category) : [];
+        if (!empty($list)) {
+            $target = implode(',', $list);
+        } else {
+            $target = $defaultTarget;
         }
     }
     $target = wa_normalize_target($target, $country);

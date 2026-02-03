@@ -41,9 +41,6 @@ $env = [
         'letters' => 'A-F',
         'suffixes' => ['10', '30'],
     ],
-    'maintenance' => [
-        'enabled' => false,
-    ],
     'retur_request' => [
         'enabled' => false,
     ],
