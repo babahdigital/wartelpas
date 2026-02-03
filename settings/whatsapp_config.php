@@ -476,6 +476,8 @@ foreach ($wa_recipients as $rec) {
     }
     .wa-log-table th, .wa-log-table td { white-space: nowrap; }
     .wa-log-table td.wa-log-message { max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wa-log-stack { display: flex; flex-direction: column; gap: 2px; }
+    .wa-log-sub { font-size: 11px; color: #8b98a7; }
     .wa-popup-row { margin-bottom: 10px; }
     .wa-popup-switches { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
 </style>
@@ -626,8 +628,7 @@ foreach ($wa_recipients as $rec) {
                         <table class="table wa-log-table" style="min-width:760px;">
                             <thead>
                                 <tr>
-                                    <th>Tanggal</th>
-                                    <th>Jam</th>
+                                    <th>Waktu</th>
                                     <th>Target</th>
                                     <th>Status</th>
                                     <th>Pesan</th>
@@ -636,7 +637,7 @@ foreach ($wa_recipients as $rec) {
                             </thead>
                             <tbody>
                                 <?php if (empty($wa_logs)): ?>
-                                    <tr><td colspan="6" style="text-align:center;">Belum ada log.</td></tr>
+                                    <tr><td colspan="5" style="text-align:center;">Belum ada log.</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($wa_logs as $log): ?>
                                         <?php
@@ -647,14 +648,28 @@ foreach ($wa_recipients as $rec) {
                                             $ts = $created !== '' ? strtotime($created) : false;
                                             $date = $ts ? date('d-m-Y', $ts) : '-';
                                             $time = $ts ? date('H:i', $ts) : '-';
-                                            $target_label = wa_display_target($log['target'] ?? '', $wa_label_map);
+                                            $target_raw = trim((string)($log['target'] ?? ''));
+                                            $target_label = wa_display_target($target_raw, $wa_label_map);
+                                            $target_name = isset($wa_label_map[$target_raw]) ? $wa_label_map[$target_raw] : $target_label;
+                                            $target_sub = isset($wa_label_map[$target_raw]) ? $target_label : '';
                                             $has_file = trim((string)($log['pdf_file'] ?? '')) !== '';
                                             $file_badge = $has_file ? 'wa-badge wa-badge-blue' : 'wa-badge wa-badge-gray';
                                         ?>
                                         <tr>
-                                            <td><?= htmlspecialchars($date); ?></td>
-                                            <td><?= htmlspecialchars($time); ?></td>
-                                            <td><?= htmlspecialchars($target_label); ?></td>
+                                            <td>
+                                                <div class="wa-log-stack">
+                                                    <span><?= htmlspecialchars($date); ?></span>
+                                                    <span class="wa-log-sub"><?= htmlspecialchars($time); ?></span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="wa-log-stack">
+                                                    <span><?= htmlspecialchars($target_name); ?></span>
+                                                    <?php if ($target_sub !== ''): ?>
+                                                        <span class="wa-log-sub"><?= htmlspecialchars($target_sub); ?></span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </td>
                                             <td><span class="<?= $status_badge; ?>"><?= htmlspecialchars($log['status'] ?? '-'); ?></span></td>
                                             <td class="wa-log-message" title="<?= htmlspecialchars($msg); ?>"><?= htmlspecialchars($msg); ?></td>
                                             <td><span class="<?= $file_badge; ?>"><?= $has_file ? 'PDF' : 'Text'; ?></span></td>
