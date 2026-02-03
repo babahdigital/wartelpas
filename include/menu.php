@@ -30,6 +30,38 @@ if (file_exists($envFile)) {
 $backupKey = $env['backup']['secret'] ?? '';
 $has_router_session = app_db_first_session_id() !== '';
 
+$last_sync_sales = '-';
+$last_sync_live = '-';
+$last_sync_sales_full = '-';
+$last_sync_live_full = '-';
+try {
+    $system_cfg = $env['system'] ?? [];
+    $db_rel = $system_cfg['db_file'] ?? 'db_data/babahdigital_main.db';
+    if (preg_match('/^[A-Za-z]:\\|^\//', $db_rel)) {
+        $stats_db = $db_rel;
+    } else {
+        $stats_db = dirname(__DIR__) . '/' . ltrim($db_rel, '/');
+    }
+    if (is_file($stats_db)) {
+        $db_sync = new PDO('sqlite:' . $stats_db);
+        $db_sync->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $last_sync_sales_full = (string)$db_sync->query("SELECT MAX(sync_date) FROM sales_history")->fetchColumn();
+        $last_sync_live_full = (string)$db_sync->query("SELECT MAX(sync_date) FROM live_sales")->fetchColumn();
+        if ($last_sync_sales_full === '') $last_sync_sales_full = '-';
+        if ($last_sync_live_full === '') $last_sync_live_full = '-';
+    }
+} catch (Exception $e) {
+    $last_sync_sales_full = '-';
+    $last_sync_live_full = '-';
+}
+
+if ($last_sync_sales_full !== '-' && strlen($last_sync_sales_full) >= 16) {
+    $last_sync_sales = substr($last_sync_sales_full, 11, 5);
+}
+if ($last_sync_live_full !== '-' && strlen($last_sync_live_full) >= 16) {
+    $last_sync_live = substr($last_sync_live_full, 11, 5);
+}
+
 $menu_retur_pending = 0;
 $menu_retur_list = [];
 $menu_retur_visible = (isOperator() || isSuperAdmin());
@@ -533,8 +565,8 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                     <span class="retur-pill-count" id="retur-menu-count"><?= (int)$menu_retur_pending ?></span>
                 </a>
             <?php endif; ?>
-            <span class="timer-badge" title="Waktu Saat Ini">
-                <i class="fa fa-clock-o"></i> <span id="timer_val">--:--</span>
+            <span class="timer-badge" title="Live: <?= htmlspecialchars($last_sync_live_full); ?> | Sales: <?= htmlspecialchars($last_sync_sales_full); ?>">
+                <i class="fa fa-clock-o"></i> L: <span><?= htmlspecialchars($last_sync_live); ?></span> S: <span><?= htmlspecialchars($last_sync_sales); ?></span>
             </span>
             <span id="db-status" class="db-status" title="Kesehatan Database">
                 <i class="fa fa-heart"></i>
