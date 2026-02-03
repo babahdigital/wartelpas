@@ -128,10 +128,50 @@ function validate_wa_target($target, $type, &$error) {
     return $target;
 }
 
+function wa_format_log_message($msg) {
+    $msg = trim((string)$msg);
+    if ($msg === '') return '-';
+    if (stripos($msg, 'permintaan retur baru') !== false) {
+        return 'Permintaan Retur';
+    }
+    if (stripos($msg, 'laporan settlement harian') !== false) {
+        return 'Settlement Harian';
+    }
+    if (stripos($msg, 'laporan pdf') !== false) {
+        return 'Laporan PDF';
+    }
+    if (stripos($msg, 'laporan') !== false) {
+        return 'Laporan';
+    }
+    if (mb_strlen($msg) > 60) {
+        return mb_substr($msg, 0, 57) . '...';
+    }
+    return $msg;
+}
+
+function wa_display_target($target, array $label_map) {
+    $target = trim((string)$target);
+    if ($target === '') return '-';
+    if (isset($label_map[$target]) && $label_map[$target] !== '') {
+        return $label_map[$target];
+    }
+    if (stripos($target, '@g.us') !== false) {
+        return 'Group';
+    }
+    $clean = preg_replace('/\D+/', '', $target);
+    if ($clean === '') return $target;
+    $start = substr($clean, 0, 4);
+    $end = substr($clean, -3);
+    return $start . '****' . $end;
+}
+
 if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'add_recipient') {
     $label = sanitize_wa_label($_POST['wa_new_label'] ?? '');
     $target_raw = sanitize_wa_target($_POST['wa_new_target'] ?? '');
     $type = $_POST['wa_new_type'] ?? 'number';
+    $active = isset($_POST['wa_new_active']) ? 1 : 0;
+    $receive_retur = isset($_POST['wa_new_receive_retur']) ? 1 : 0;
+    $receive_report = isset($_POST['wa_new_receive_report']) ? 1 : 0;
     $err = '';
     $validated_target = validate_wa_target($target_raw, $type, $err);
     if ($validated_target === false) {
@@ -156,11 +196,14 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'add_recipient') {
                 ]);
                 $save_message = 'Penerima WhatsApp diperbarui.';
             } else {
-                $stmtAdd = $stats_db->prepare("INSERT INTO whatsapp_recipients (label, target, target_type, active, receive_retur, receive_report, created_at, updated_at) VALUES (:label, :target, :type, 1, 1, 1, :now, :now)");
+                $stmtAdd = $stats_db->prepare("INSERT INTO whatsapp_recipients (label, target, target_type, active, receive_retur, receive_report, created_at, updated_at) VALUES (:label, :target, :type, :active, :retur, :report, :now, :now)");
                 $stmtAdd->execute([
                     ':label' => $label,
                     ':target' => $validated_target,
                     ':type' => $type,
+                    ':active' => $active,
+                    ':retur' => $receive_retur,
+                    ':report' => $receive_report,
                     ':now' => $now,
                 ]);
                 $save_message = 'Penerima WhatsApp berhasil ditambahkan.';
@@ -352,6 +395,15 @@ if ($stats_db) {
         $wa_logs = $stmtLog->fetchAll(PDO::FETCH_ASSOC) ?: [];
     } catch (Exception $e) {
         $wa_logs = [];
+    }
+}
+
+$wa_label_map = [];
+foreach ($wa_recipients as $rec) {
+    $t = trim((string)($rec['target'] ?? ''));
+    $l = trim((string)($rec['label'] ?? ''));
+    if ($t !== '' && $l !== '') {
+        $wa_label_map[$t] = $l;
     }
 }
 ?>
