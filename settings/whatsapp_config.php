@@ -551,7 +551,7 @@ foreach ($wa_recipients as $rec) {
                                     <?php endif; ?>
                                 </select>
                             </div>
-                            <div class="input-group-modern" style="margin-bottom:8px; align-items:flex-start;">
+                            <div class="input-group-modern" style="margin-bottom:8px;">
                                 <div class="input-icon"><i class="fa fa-comment"></i></div>
                                 <textarea class="form-control-modern" name="wa_test_message" rows="3" placeholder="Pesan test"></textarea>
                             </div>
