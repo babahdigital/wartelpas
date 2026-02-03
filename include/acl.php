@@ -84,3 +84,75 @@ function requireSuperAdmin($redirectUrl = './admin.php?id=sessions', $message = 
         exit;
     }
 }
+
+function is_password_hash($value)
+{
+    if (!is_string($value) || $value === '') return false;
+    if (!function_exists('password_get_info')) return false;
+    $info = password_get_info($value);
+    return isset($info['algo']) && $info['algo'] !== 0;
+}
+
+function hash_password_value($plain)
+{
+    return password_hash((string)$plain, PASSWORD_DEFAULT);
+}
+
+function verify_password_compat($plain, $stored)
+{
+    if ($stored === '') return false;
+    if (is_password_hash($stored)) {
+        return password_verify((string)$plain, (string)$stored);
+    }
+    if (hash_equals((string)$stored, (string)$plain)) {
+        return true;
+    }
+    if (function_exists('decrypt')) {
+        return hash_equals((string)decrypt((string)$stored), (string)$plain);
+    }
+    return false;
+}
+
+function update_admin_password_hash($oldStored, $newHash)
+{
+    $cfgFile = __DIR__ . '/config.php';
+    if (!is_file($cfgFile) || !is_writable($cfgFile)) return false;
+    $content = @file_get_contents($cfgFile);
+    if ($content === false) return false;
+    $oldToken = "mikhmon>|>" . $oldStored;
+    $newToken = "mikhmon>|>" . $newHash;
+    if (strpos($content, $oldToken) === false) return false;
+    $newContent = str_replace($oldToken, $newToken, $content);
+    return @file_put_contents($cfgFile, $newContent) !== false;
+}
+
+function update_operator_password_hash($newHash)
+{
+    $envFile = __DIR__ . '/env.php';
+    if (is_file($envFile) && is_writable($envFile)) {
+        $content = @file_get_contents($envFile);
+        if ($content !== false) {
+            $pattern = "/('operator_pass'\s*=>\s*)'[^']*'/";
+            $replacement = "${1}'" . $newHash . "'";
+            $newContent = preg_replace($pattern, $replacement, $content, 1);
+            if ($newContent !== null && $newContent !== $content) {
+                if (@file_put_contents($envFile, $newContent) !== false) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    $overrideFile = __DIR__ . '/operator_pass.php';
+    $payload = "<?php\n\$operator_pass_override = '" . addslashes($newHash) . "';\n";
+    return @file_put_contents($overrideFile, $payload) !== false;
+}
+
+function get_operator_password_override()
+{
+    $overrideFile = __DIR__ . '/operator_pass.php';
+    if (!is_file($overrideFile)) return '';
+    $operator_pass_override = '';
+    include $overrideFile;
+    return is_string($operator_pass_override) ? $operator_pass_override : '';
+}

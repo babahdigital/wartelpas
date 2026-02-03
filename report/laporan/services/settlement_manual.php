@@ -35,14 +35,72 @@ function respond_json($payload) {
 }
 
 function append_settlement_debug($file, $message) {
+    global $debugMaxBytes, $archiveDir;
     $line = date('Y-m-d H:i:s') . "\t" . $message . "\n";
     @file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
+    if ($debugMaxBytes > 0 && is_file($file) && @filesize($file) > $debugMaxBytes) {
+        if (isset($archiveDir) && $archiveDir !== '' && is_dir($archiveDir)) {
+            $rotated = $archiveDir . '/settlement_manual_debug_' . date('Ymd_His') . '.log';
+            @rename($file, $rotated);
+        } else {
+            @file_put_contents($file, '');
+        }
+    }
 }
 
 function append_settlement_log($file, $topic, $message) {
     $time = date('H:i:s');
     $line = $time . "\t" . $topic . "\t" . $message . "\n";
     @file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
+}
+
+function prune_settlement_logs($logDir, $archiveDir, $keepDays, $archiveKeepDays) {
+    $now = time();
+    $keepDays = (int)$keepDays;
+    $archiveKeepDays = (int)$archiveKeepDays;
+    if ($keepDays <= 0) return;
+    $cutoff = $now - ($keepDays * 86400);
+    $files = glob($logDir . '/settlement_*_????-??-??.log');
+    if (is_array($files)) {
+        foreach ($files as $file) {
+            $base = basename($file);
+            if (preg_match('/_(\d{4}-\d{2}-\d{2})\.log$/', $base, $m)) {
+                $ts = strtotime($m[1]);
+                if ($ts !== false && $ts < $cutoff) {
+                    if (is_dir($archiveDir)) {
+                        @rename($file, $archiveDir . '/' . $base);
+                    } else {
+                        @unlink($file);
+                    }
+                }
+            }
+        }
+    }
+    if ($archiveKeepDays > 0 && is_dir($archiveDir)) {
+        $archiveFiles = glob($archiveDir . '/settlement_*.log');
+        if (is_array($archiveFiles)) {
+            foreach ($archiveFiles as $file) {
+                if (@filemtime($file) < ($now - ($archiveKeepDays * 86400))) {
+                    @unlink($file);
+                }
+            }
+        }
+    }
+}
+
+function prune_settlement_cache($logDir, $cacheKeepHours) {
+    $cacheKeepHours = (int)$cacheKeepHours;
+    if ($cacheKeepHours <= 0) return;
+    $cutoff = time() - ($cacheKeepHours * 3600);
+    $targets = array_merge(
+        glob($logDir . '/settlement_router_cache_*.json') ?: [],
+        glob($logDir . '/settlement_active_*.txt') ?: []
+    );
+    foreach ($targets as $file) {
+        if (@filemtime($file) < $cutoff) {
+            @unlink($file);
+        }
+    }
 }
 
 function normalize_log_timestamp($time, $date) {
@@ -328,6 +386,21 @@ $logDir = preg_match('/^[A-Za-z]:\\\\|^\//', $log_rel) ? $log_rel : ($root_dir .
 if (!is_dir($logDir)) {
     @mkdir($logDir, 0755, true);
 }
+$archiveDir = $logDir . '/settlement_archive';
+if (!is_dir($archiveDir)) {
+    @mkdir($archiveDir, 0755, true);
+}
+$settle_cfg = $env['security']['settlement_log'] ?? [];
+$keepDays = isset($settle_cfg['keep_days']) ? (int)$settle_cfg['keep_days'] : 14;
+$archiveKeepDays = isset($settle_cfg['archive_keep_days']) ? (int)$settle_cfg['archive_keep_days'] : 60;
+$debugMaxMb = isset($settle_cfg['debug_max_mb']) ? (int)$settle_cfg['debug_max_mb'] : 1;
+$debugMaxBytes = max(0, $debugMaxMb) * 1024 * 1024;
+$logMaxLines = isset($settle_cfg['max_lines']) ? (int)$settle_cfg['max_lines'] : 400;
+$debugMaxLines = isset($settle_cfg['debug_lines']) ? (int)$settle_cfg['debug_lines'] : 200;
+$cacheKeepHours = isset($settle_cfg['cache_keep_hours']) ? (int)$settle_cfg['cache_keep_hours'] : 24;
+$logMaxLines = max(50, $logMaxLines);
+$debugMaxLines = max(50, $debugMaxLines);
+$cacheKeepHours = max(1, $cacheKeepHours);
 $debugFile = $logDir . '/settlement_manual_debug.log';
 $db_rel = $system_cfg['db_file'] ?? 'db_data/mikhmon_stats.db';
 if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
@@ -379,6 +452,9 @@ $safe_date = preg_replace('/[^0-9-]/', '', $date);
 $logFile = $logDir . '/settlement_' . $safe_session . '_' . $safe_date . '.log';
 $cacheFile = $logDir . '/settlement_router_cache_' . $safe_session . '_' . $safe_date . '.json';
 $activeDateFile = $logDir . '/settlement_active_' . $safe_session . '.txt';
+
+prune_settlement_logs($logDir, $archiveDir, $keepDays, $archiveKeepDays);
+prune_settlement_cache($logDir, $cacheKeepHours);
 
 try {
     $db = new PDO('sqlite:' . $dbFile);
@@ -447,8 +523,8 @@ if ($action === 'logs') {
             $lines = @file($effectiveLogFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
             if (is_array($lines)) {
                 $lineCount = count($lines);
-                if (count($lines) > 400) {
-                    $lines = array_slice($lines, -400);
+                if (count($lines) > $logMaxLines) {
+                    $lines = array_slice($lines, -$logMaxLines);
                 }
                 $effectiveDate = $date;
                 $baseName = basename($effectiveLogFile);
@@ -542,8 +618,8 @@ if ($action === 'logs') {
             $debugLines = [];
             if (is_file($debugFile)) {
                 $debugLines = @file($debugFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-                if (is_array($debugLines) && count($debugLines) > 200) {
-                    $debugLines = array_slice($debugLines, -200);
+                if (is_array($debugLines) && count($debugLines) > $debugMaxLines) {
+                    $debugLines = array_slice($debugLines, -$debugMaxLines);
                 }
             }
             if (!empty($debugLines)) {

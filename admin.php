@@ -28,6 +28,10 @@ if (file_exists($envFile)) {
 }
 $op_user = $env['auth']['operator_user'] ?? '';
 $op_pass = $env['auth']['operator_pass'] ?? '';
+$op_override = get_operator_password_override();
+if ($op_override !== '') {
+  $op_pass = $op_override;
+}
 
 ob_start("ob_gzhandler");
 
@@ -129,7 +133,11 @@ if ($id == "login" || substr($url, -1) == "p") {
     } else {
     $user = $_POST['user'];
     $pass = $_POST['pass'];
-    if ($user == $useradm && $pass == decrypt($passadm)) {
+    if ($user == $useradm && verify_password_compat($pass, $passadm)) {
+      if (!is_password_hash($passadm)) {
+        $newHash = hash_password_value($pass);
+        update_admin_password_hash($passadm, $newHash);
+      }
       $_SESSION["mikhmon"] = $user;
       $_SESSION["mikhmon_level"] = "superadmin";
 
@@ -161,7 +169,18 @@ if ($id == "login" || substr($url, -1) == "p") {
       }
       // AKHIR MODIFIKASI
     
-    } elseif ($op_user !== "" && $op_pass !== "" && $user == $op_user && $pass == $op_pass) {
+    } elseif ($op_user !== "" && $op_pass !== "" && $user == $op_user) {
+      $op_ok = false;
+      if (is_password_hash($op_pass)) {
+        $op_ok = password_verify((string)$pass, (string)$op_pass);
+      } else {
+        $op_ok = hash_equals((string)$op_pass, (string)$pass);
+      }
+      if ($op_ok && !is_password_hash($op_pass)) {
+        $newHash = hash_password_value($pass);
+        update_operator_password_hash($newHash);
+      }
+      if ($op_ok) {
       $_SESSION["mikhmon"] = $user;
       $_SESSION["mikhmon_level"] = "operator";
 
@@ -184,6 +203,7 @@ if ($id == "login" || substr($url, -1) == "p") {
         echo "<script>window.location='./?session=" . $first_session . "'</script>";
       } else {
         echo "<script>window.location='./error.php?code=403'</script>";
+      }
       }
     } else {
       $error = '<div style="width: 100%; padding:5px 0px 5px 0px; border-radius:5px;" class="bg-danger"><i class="fa fa-ban"></i> Alert!<br>Invalid username or password.</div>';

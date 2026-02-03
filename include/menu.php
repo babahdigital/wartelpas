@@ -523,6 +523,15 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
             <span id="db-status" class="db-status" title="Kesehatan Database">
                 <i class="fa fa-heart"></i>
             </span>
+            <?php if ($is_superadmin): ?>
+                <a class="logout-btn" href="./admin.php?id=sessions" title="<?= $_admin_settings ?>">
+                    <i class="fa fa-gear"></i>
+                </a>
+            <?php elseif (isOperator()): ?>
+                <a class="logout-btn" href="javascript:void(0)" title="Ubah Password" onclick="openPasswordPopup()">
+                    <i class="fa fa-gear"></i>
+                </a>
+            <?php endif; ?>
             <a id="logout" href="./admin.php?id=logout" title="<?= $_logout ?>"><i class="fa fa-sign-out fa-lg"></i></a>
         </div>
     </nav>
@@ -609,6 +618,10 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                 <a class="logout-btn" href="./admin.php?id=sessions" title="<?= $_admin_settings ?>">
                     <i class="fa fa-gear"></i>
                 </a>
+            <?php elseif (isOperator()): ?>
+                <a class="logout-btn" href="javascript:void(0)" title="Ubah Password" onclick="openPasswordPopup()">
+                    <i class="fa fa-gear"></i>
+                </a>
             <?php endif; ?>
             <a id="logout" class="logout-btn" href="./?hotspot=logout&session=<?= $session; ?>" title="<?= $_logout ?>">
                 <i class="fa fa-sign-out fa-lg"></i>
@@ -678,6 +691,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
     window.__returBlokNames = <?= json_encode(($env['blok']['names'] ?? []), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     window.__returSession = <?= json_encode($session); ?>;
     window.__backupKey = <?= json_encode($is_superadmin ? $backupKey : '') ?>;
+
 
     document.addEventListener('DOMContentLoaded', function(){
         if (window.jQuery) {

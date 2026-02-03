@@ -25,11 +25,16 @@ if ($key === '' && isset($_SERVER['HTTP_X_TOOLS_KEY'])) {
 if ($key === '' && isset($_SERVER['HTTP_X_BACKUP_KEY'])) {
     $key = (string)$_SERVER['HTTP_X_BACKUP_KEY'];
 }
+$key = trim((string)$key);
+if ($key === '' && isset($_SERVER['HTTP_X_WARTELPAS_KEY'])) {
+    $key = trim((string)$_SERVER['HTTP_X_WARTELPAS_KEY']);
+}
 $is_valid_key = $secret_token !== '' && hash_equals($secret_token, (string)$key);
 
 if (!$is_valid_key) {
     requireLogin('../admin.php?id=login');
     requireSuperAdmin('../admin.php?id=sessions');
+    $is_valid_key = true;
 } else {
     if (!isset($_SESSION['mikhmon'])) {
         $_SESSION['mikhmon'] = 'tools';
@@ -44,6 +49,7 @@ if (!$is_valid_key) {
 
 $scope = strtolower(trim($_GET['scope'] ?? 'basic'));
 $purgeSettlement = isset($_GET['purge']) && $_GET['purge'] === '1';
+$keepLatestSettlement = isset($_GET['keep_latest']) && $_GET['keep_latest'] === '1';
 $maxMb = isset($_GET['max_mb']) ? (int)$_GET['max_mb'] : 0;
 
 $logDir = $root_dir . '/logs';
@@ -53,6 +59,7 @@ if (!is_dir($logDir)) {
 }
 
 $targets = [];
+$deleteTargets = [];
 $targets[] = $logDir . '/usage_ingest.log';
 $targets[] = $logDir . '/live_ingest.log';
 
@@ -72,12 +79,30 @@ if ($scope === 'all') {
 
 if ($purgeSettlement) {
     $settlementLogs = glob($logDir . '/settlement_*.log') ?: [];
+    if ($keepLatestSettlement && !empty($settlementLogs)) {
+        $latest = '';
+        $latestTime = 0;
+        foreach ($settlementLogs as $file) {
+            if (!is_file($file)) continue;
+            $mtime = @filemtime($file) ?: 0;
+            if ($mtime >= $latestTime) {
+                $latestTime = $mtime;
+                $latest = $file;
+            }
+        }
+        if ($latest !== '') {
+            $settlementLogs = array_values(array_filter($settlementLogs, function($f) use ($latest) {
+                return $f !== $latest;
+            }));
+        }
+    }
     foreach ($settlementLogs as $file) {
-        $targets[] = $file;
+        $deleteTargets[] = $file;
     }
 }
 
 $targets = array_values(array_unique($targets));
+$deleteTargets = array_values(array_unique($deleteTargets));
 
 $debugTargets = [];
 if ($scope === 'all') {
@@ -120,6 +145,25 @@ foreach ($targets as $file) {
     }
 }
 
+foreach ($deleteTargets as $file) {
+    if (!file_exists($file) || is_dir($file)) {
+        $skipped++;
+        continue;
+    }
+    if ($maxMb > 0) {
+        $size = @filesize($file);
+        if ($size !== false && $size < ($maxMb * 1024 * 1024)) {
+            $skipped++;
+            continue;
+        }
+    }
+    if (@unlink($file)) {
+        $deleted++;
+    } else {
+        $errors++;
+    }
+}
+
 foreach ($debugTargets as $file) {
     if (!file_exists($file) || is_dir($file)) {
         continue;
@@ -131,4 +175,4 @@ foreach ($debugTargets as $file) {
     }
 }
 
-echo "OK cleared=" . $cleared . " skipped=" . $skipped . " deleted=" . $deleted . " errors=" . $errors . " scope=" . $scope . " purge_settlement=" . ($purgeSettlement ? '1' : '0');
+echo "OK cleared=" . $cleared . " skipped=" . $skipped . " deleted=" . $deleted . " errors=" . $errors . " scope=" . $scope . " purge_settlement=" . ($purgeSettlement ? '1' : '0') . " keep_latest=" . ($keepLatestSettlement ? '1' : '0');

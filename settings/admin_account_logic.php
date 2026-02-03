@@ -19,20 +19,27 @@ if (!is_writable('./include/config.php')) {
 }
 
 $suseradm = $_POST['useradm'] ?? '';
-$spassadm = encrypt($_POST['passadm'] ?? '');
+$new_passadm = trim((string)($_POST['passadm'] ?? ''));
+$update_passadm = ($new_passadm !== '');
+$spassadm = $update_passadm ? hash_password_value($new_passadm) : $passadm;
 $qrbt = $_POST['qrbt'] ?? '';
 
 $cari = array('1' => "mikhmon<|<$useradm", "mikhmon>|>$passadm");
 $ganti = array('1' => "mikhmon<|<$suseradm", "mikhmon>|>$spassadm");
 
-for ($i = 1; $i < 3; $i++) {
-    $content = file_get_contents("./include/config.php");
-    $newcontent = str_replace((string)$cari[$i], (string)$ganti[$i], "$content");
-    $write_ok = file_put_contents("./include/config.php", "$newcontent");
-    if ($write_ok === false) {
-        echo "<script>alert('Gagal menyimpan. Periksa permission config.php.'); window.location='./admin.php?id=operator-access';</script>";
-        exit;
-    }
+$content = file_get_contents("./include/config.php");
+if ($content === false) {
+    echo "<script>alert('Gagal menyimpan. File config.php tidak bisa dibaca.'); window.location='./admin.php?id=operator-access';</script>";
+    exit;
+}
+$content = str_replace((string)$cari[1], (string)$ganti[1], $content);
+if ($update_passadm) {
+    $content = str_replace((string)$cari[2], (string)$ganti[2], $content);
+}
+$write_ok = file_put_contents("./include/config.php", $content);
+if ($write_ok === false) {
+    echo "<script>alert('Gagal menyimpan. Periksa permission config.php.'); window.location='./admin.php?id=operator-access';</script>";
+    exit;
 }
 
 $gen = '<?php $qrbt="' . $qrbt . '";?>';

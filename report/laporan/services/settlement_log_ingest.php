@@ -15,7 +15,9 @@ if (file_exists($envFile)) {
 }
 require_once($root_dir . '/include/config.php');
 
-$logDir = $root_dir . '/logs';
+$system_cfg = $env['system'] ?? [];
+$log_rel = $system_cfg['log_dir'] ?? 'logs';
+$logDir = preg_match('/^[A-Za-z]:\\\\|^\//', $log_rel) ? $log_rel : ($root_dir . '/' . trim($log_rel, '/'));
 if (!is_dir($logDir)) {
     @mkdir($logDir, 0755, true);
 }
@@ -24,9 +26,11 @@ $archiveDir = $logDir . '/settlement_archive';
 if (!is_dir($archiveDir)) {
     @mkdir($archiveDir, 0755, true);
 }
-$keepDays = 14;
-$archiveKeepDays = 60;
-$debugMaxBytes = 1024 * 1024; // 1MB
+$cfg_settle = $env['security']['settlement_log'] ?? [];
+$keepDays = isset($cfg_settle['keep_days']) ? (int)$cfg_settle['keep_days'] : 14;
+$archiveKeepDays = isset($cfg_settle['archive_keep_days']) ? (int)$cfg_settle['archive_keep_days'] : 60;
+$debugMaxMb = isset($cfg_settle['debug_max_mb']) ? (int)$cfg_settle['debug_max_mb'] : 1;
+$debugMaxBytes = max(0, $debugMaxMb) * 1024 * 1024;
 function append_debug_log($file, $message) {
     $line = date('Y-m-d H:i:s') . "\t" . $message . "\n";
     @file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
@@ -65,7 +69,6 @@ $force_date = $_GET['force_date'] ?? '';
 $topic = $_GET['topic'] ?? 'script,info';
 $msg = $_GET['msg'] ?? '';
 
-$cfg_settle = $env['security']['settlement_log'] ?? [];
 $secret = $cfg_settle['token'] ?? '';
 if ($secret === '') {
     $secret = getenv('WARTELPAS_SETTLE_LOG_TOKEN');

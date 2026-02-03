@@ -20,6 +20,9 @@ $op_pass = $env['auth']['operator_pass'] ?? '';
 <?php if (!isSuperAdmin()): ?>
     <div class="admin-empty">Akses ditolak. Hubungi Superadmin.</div>
 <?php else: ?>
+<script>
+    window.__isSuperAdminFlag = true;
+</script>
 <form autocomplete="off" method="post" action="">
     <div class="row">
         <div class="col-6">
@@ -40,9 +43,11 @@ $op_pass = $env['auth']['operator_pass'] ?? '';
                         <label class="form-label">Password Admin</label>
                         <div class="input-group-modern">
                             <div class="input-icon"><i class="fa fa-lock"></i></div>
-                            <input class="form-control-modern" type="password" id="passadm" name="passadm" value="<?= htmlspecialchars(decrypt($passadm ?? '')); ?>" required>
-                            <div class="toggle-pass" onclick="Pass('passadm')"><i class="fa fa-eye"></i></div>
+                            <input class="form-control-modern" type="text" value="Disembunyikan" readonly>
                         </div>
+                        <small style="display:block; margin-top:6px; color:var(--text-secondary);">
+                            Ubah password lewat tombol "Ubah Password" di bawah.
+                        </small>
                     </div>
 
                     <div class="form-group-modern">
@@ -83,8 +88,11 @@ $op_pass = $env['auth']['operator_pass'] ?? '';
                         <label class="form-label">Password Operator</label>
                         <div class="input-group-modern">
                             <div class="input-icon"><i class="fa fa-lock"></i></div>
-                            <input class="form-control-modern" type="password" value="<?= htmlspecialchars($op_pass); ?>" readonly>
+                            <input class="form-control-modern" type="text" value="Disembunyikan" readonly>
                         </div>
+                        <small style="display:block; margin-top:6px; color:var(--text-secondary);">
+                            Operator bisa ubah lewat tombol gear di samping logout.
+                        </small>
                     </div>
 
                     <div class="checkbox-wrapper">
@@ -123,6 +131,9 @@ $op_pass = $env['auth']['operator_pass'] ?? '';
                 </div>
             </div>
             <div style="text-align: right;">
+                <button type="button" class="btn-action" style="width: 100%; justify-content: center; padding: 12px; margin-bottom: 10px;" onclick="openPasswordPopup()">
+                    <i class="fa fa-lock"></i> Ubah Password
+                </button>
                 <button type="submit" name="save" class="btn-action btn-primary-m" style="width: 100%; justify-content: center; padding: 12px;">
                     <i class="fa fa-save"></i> Simpan Data Admin & Operator
                 </button>

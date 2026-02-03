@@ -128,6 +128,127 @@
 })();
 
 (function() {
+  function getFlag(name, fallback) {
+    if (typeof window[name] !== 'undefined') return !!window[name];
+    return !!fallback;
+  }
+
+  function setPasswordPopupAlert(type, text) {
+    var alertEl = document.querySelector('.m-popup-backdrop.show .m-alert');
+    if (!alertEl) return;
+    alertEl.className = 'm-alert m-alert-' + (type || 'info');
+    alertEl.classList.remove('m-popup-hidden');
+    alertEl.innerHTML = '<div>' + (text || '') + '</div>';
+  }
+
+  function clearPasswordPopupAlert() {
+    var alertEl = document.querySelector('.m-popup-backdrop.show .m-alert');
+    if (!alertEl) return;
+    alertEl.className = 'm-alert m-popup-hidden';
+    alertEl.innerHTML = '';
+  }
+
+  window.openPasswordPopup = function() {
+    if (!window.MikhmonPopup) return;
+    var isSuper = getFlag('__isSuperAdminFlag', false);
+    var html = '';
+    if (isSuper) {
+      html = '' +
+        '<div class="m-pass-form">' +
+          '<div class="m-pass-row">' +
+            '<label class="m-pass-label">Password Admin Saat Ini</label>' +
+            '<input id="pw-current" type="password" class="m-pass-input" placeholder="Password saat ini" />' +
+          '</div>' +
+          '<div class="m-pass-row">' +
+            '<label class="m-pass-label">Password Admin Baru</label>' +
+            '<input id="pw-new" type="password" class="m-pass-input" placeholder="Minimal 6 karakter" />' +
+          '</div>' +
+          '<div class="m-pass-row">' +
+            '<label class="m-pass-label">Konfirmasi Password Admin</label>' +
+            '<input id="pw-confirm" type="password" class="m-pass-input" placeholder="Ulangi password admin" />' +
+          '</div>' +
+          '<div class="m-pass-divider"></div>' +
+          '<div class="m-pass-row">' +
+            '<label class="m-pass-label">Password Operator Baru (Opsional)</label>' +
+            '<input id="pw-op-new" type="password" class="m-pass-input" placeholder="Kosongkan jika tidak diubah" />' +
+          '</div>' +
+          '<div class="m-pass-row">' +
+            '<label class="m-pass-label">Konfirmasi Password Operator</label>' +
+            '<input id="pw-op-confirm" type="password" class="m-pass-input" placeholder="Ulangi password operator" />' +
+          '</div>' +
+        '</div>';
+    } else {
+      html = '' +
+        '<div class="m-pass-form">' +
+          '<div class="m-pass-row">' +
+            '<label class="m-pass-label">Password Operator Saat Ini</label>' +
+            '<input id="pw-op-current" type="password" class="m-pass-input" placeholder="Password saat ini" />' +
+          '</div>' +
+          '<div class="m-pass-row">' +
+            '<label class="m-pass-label">Password Operator Baru</label>' +
+            '<input id="pw-op-new" type="password" class="m-pass-input" placeholder="Minimal 6 karakter" />' +
+          '</div>' +
+          '<div class="m-pass-row">' +
+            '<label class="m-pass-label">Konfirmasi Password Operator</label>' +
+            '<input id="pw-op-confirm" type="password" class="m-pass-input" placeholder="Ulangi password operator" />' +
+          '</div>' +
+        '</div>';
+    }
+
+    window.MikhmonPopup.open({
+      title: 'Ubah Password',
+      iconClass: 'fa fa-lock',
+      statusIcon: 'fa fa-key',
+      statusColor: '#f59e0b',
+      cardClass: 'is-pass',
+      messageHtml: html,
+      buttons: [
+        {
+          label: 'Simpan',
+          className: 'm-btn m-btn-success',
+          close: false,
+          onClick: function() {
+            clearPasswordPopupAlert();
+            var current = (document.getElementById('pw-current') || {}).value || '';
+            var next = (document.getElementById('pw-new') || {}).value || '';
+            var confirm = (document.getElementById('pw-confirm') || {}).value || '';
+            var opNext = (document.getElementById('pw-op-new') || {}).value || '';
+            var opConfirm = (document.getElementById('pw-op-confirm') || {}).value || '';
+            var opCurrent = (document.getElementById('pw-op-current') || {}).value || '';
+            var payload = new URLSearchParams();
+            payload.append('current_password', current.trim());
+            payload.append('new_password', next.trim());
+            payload.append('confirm_password', confirm.trim());
+            payload.append('operator_password', opNext.trim());
+            payload.append('operator_confirm', opConfirm.trim());
+            payload.append('operator_current', opCurrent.trim());
+
+            fetch('./settings/password_update.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: payload.toString()
+            })
+            .then(function(r){ return r.json(); })
+            .then(function(res){
+              if (res && res.ok) {
+                setPasswordPopupAlert('info', res.message || 'Password berhasil diperbarui.');
+                setTimeout(function(){ window.MikhmonPopup.close(); }, 900);
+              } else {
+                setPasswordPopupAlert('danger', (res && res.message) ? res.message : 'Gagal memperbarui password.');
+              }
+            })
+            .catch(function(){
+              setPasswordPopupAlert('danger', 'Gagal memperbarui password.');
+            });
+          }
+        },
+        { label: 'Batal', className: 'm-btn m-btn-cancel' }
+      ]
+    });
+  };
+})();
+
+(function() {
   function getSession() {
     return window.__returSession || '';
   }
