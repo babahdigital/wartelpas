@@ -611,6 +611,9 @@ if ($load == "hotspot") {
     $dataIncome = [];
     $dataQty = [];
     for ($d = $startDay; $d <= $endDay; $d++) {
+        if ($d === 3) {
+            continue;
+        }
         $categories[] = (string)$d;
         $dataIncome[] = $dailyIncome[$d] ?? 0;
         $dataQty[] = $dailyQty[$d] ?? 0;
