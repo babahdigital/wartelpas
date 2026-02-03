@@ -347,6 +347,20 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     $action_blocked = false;
     $action_error = '';
     $action_message = '';
+        if (isOperator()) {
+          if (in_array($act, ['delete', 'delete_user_full', 'delete_status'], true) && !operator_can('delete_user')) {
+            $action_blocked = true;
+            $action_error = 'Akses ditolak. Hapus user hanya untuk role yang diizinkan.';
+          }
+          if ($act === 'batch_delete' && !operator_can('delete_block_router')) {
+            $action_blocked = true;
+            $action_error = 'Akses ditolak. Hapus blok (router) hanya untuk role yang diizinkan.';
+          }
+          if ($act === 'delete_block_full' && !operator_can('delete_block_full')) {
+            $action_blocked = true;
+            $action_error = 'Akses ditolak. Hapus blok total hanya untuk role yang diizinkan.';
+          }
+        }
     $hist_action = null;
     $is_rusak_target = false;
     $new_user = '';
@@ -1042,13 +1056,15 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         } catch (Exception $e) {}
 
         if ($delete_settlement && $delete_date !== '') {
-          try {
-            $stmtChk = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='settlement_log' LIMIT 1");
-            if ($stmtChk && $stmtChk->fetchColumn()) {
-              $stmt = $db->prepare("DELETE FROM settlement_log WHERE report_date = :d");
-              $stmt->execute([':d' => $delete_date]);
-            }
-          } catch (Exception $e) {}
+          if (!(isset($_SESSION['mikhmon']) && isOperator() && !operator_can('reset_settlement'))) {
+            try {
+              $stmtChk = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='settlement_log' LIMIT 1");
+              if ($stmtChk && $stmtChk->fetchColumn()) {
+                $stmt = $db->prepare("DELETE FROM settlement_log WHERE report_date = :d");
+                $stmt->execute([':d' => $delete_date]);
+              }
+            } catch (Exception $e) {}
+          }
         }
 
         $summary_helper = $root_dir . '/report/laporan/sales_summary_helper.php';

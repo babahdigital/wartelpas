@@ -304,6 +304,8 @@
     if (!blokLabel) return;
     suspendAutoRefresh = true;
     const isAdmin = !!window.isSuperAdmin;
+    const canDeleteBlockRouter = isAdmin || !!window.canDeleteBlockRouter;
+    const canDeleteBlockFull = isAdmin || !!window.canDeleteBlockFull;
     const firstMessage = `
       <div style="text-align:left;">
         <div style="font-weight:600; font-size:15px; margin-bottom:8px; color:#fff;">
@@ -312,7 +314,8 @@
         <div style="font-size:13px; color:#b8c7ce; margin-bottom:15px;">
           Silakan pilih metode penghapusan di bawah ini:
         </div>
-        ${isAdmin ? '' : '<div class="popup-note"><i class="fa fa-lock"></i> Hapus Total dikunci (Khusus Superadmin).</div>'}
+        ${!canDeleteBlockFull ? '<div class="popup-note"><i class="fa fa-lock"></i> Hapus Total dikunci (Khusus Superadmin/izin).</div>' : ''}
+        ${!canDeleteBlockRouter ? '<div class="popup-note"><i class="fa fa-lock"></i> Hapus Router dikunci (izin khusus).</div>' : ''}
       </div>`;
     let choice = null;
     try {
@@ -330,7 +333,8 @@
                 <span class="btn-rich-desc">User offline, Laporan/Uang TETAP ADA.</span>
               </div>`,
             value: 'router', 
-            className: 'overlay-btn-warning' 
+            className: 'overlay-btn-warning',
+            disabled: !canDeleteBlockRouter
           },
           { 
             label: `
@@ -341,7 +345,7 @@
               </div>`,
             value: 'full', 
             className: 'overlay-btn-danger', 
-            disabled: !isAdmin 
+            disabled: !canDeleteBlockFull
           },
           { 
             label: `

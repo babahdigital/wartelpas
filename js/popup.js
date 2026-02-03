@@ -892,6 +892,7 @@
     var el = document.getElementById('db-status');
     var restoreBtn = document.getElementById('db-restore');
     if (!el) return;
+    var canRestoreFlag = (typeof window.__canRestoreFlag === 'undefined') ? !!window.__isSuperAdminFlag : !!window.__canRestoreFlag;
     fetch('./tools/db_check.php?key=' + encodeURIComponent(window.__backupKey || ''))
       .then(function(resp) {
         if (!resp.ok) throw new Error('bad');
@@ -902,14 +903,20 @@
         var ok = low.indexOf('db error') === -1 && low.indexOf('not found') === -1 && low.indexOf('forbidden') === -1;
         el.classList.remove('db-ok', 'db-error');
         el.classList.add(ok ? 'db-ok' : 'db-error');
-        if (restoreBtn && !window.__isSuperAdminFlag) {
-          restoreBtn.style.display = ok ? 'none' : 'inline-flex';
+        if (restoreBtn) {
+          if (!canRestoreFlag) {
+            restoreBtn.style.display = 'none';
+          } else if (!window.__isSuperAdminFlag) {
+            restoreBtn.style.display = ok ? 'inline-flex' : 'inline-flex';
+          }
         }
       })
       .catch(function() {
         el.classList.remove('db-ok');
         el.classList.add('db-error');
-        if (restoreBtn && !window.__isSuperAdminFlag) restoreBtn.style.display = 'inline-flex';
+        if (restoreBtn) {
+          restoreBtn.style.display = canRestoreFlag ? 'inline-flex' : 'none';
+        }
       });
   };
 

@@ -51,7 +51,7 @@ error_reporting(0);
 		<script src="admin_assets/admin.js?v=<?= $adminJsVer; ?>" defer></script>
 		<?php endif; ?>
 		<script src="js/pace.min.js"></script>
-		<script src="js/popup.js" defer></script>
+		<script src="js/popup.js?v=<?= @filemtime(__DIR__ . '/../js/popup.js') ?: time(); ?>" defer></script>
 		<script src="js/tooltips.js" defer></script>
 
 	</head>

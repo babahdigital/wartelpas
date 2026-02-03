@@ -1,5 +1,5 @@
 <?php
-if (!isset($_POST['save'])) {
+if (!isset($_POST['save']) && (($_POST['operator_action'] ?? '') !== 'delete')) {
     return;
 }
 
@@ -24,6 +24,17 @@ if (isOperator()) {
 
 $suseradm = $_POST['useradm'] ?? '';
 $sopuser = $_POST['operator_user'] ?? '';
+$op_id = $_POST['operator_id'] ?? '';
+$op_action = $_POST['operator_action'] ?? '';
+$op_active = !empty($_POST['operator_active']);
+$op_password = trim((string)($_POST['operator_password'] ?? ''));
+$perm_delete_user = !empty($_POST['access_delete_user']);
+$perm_delete_block_router = !empty($_POST['access_delete_block_router']);
+$perm_delete_block_full = !empty($_POST['access_delete_block_full']);
+$perm_audit_manual = !empty($_POST['access_audit_manual']);
+$perm_reset_settlement = !empty($_POST['access_reset_settlement']);
+$perm_backup_only = !empty($_POST['access_backup_only']);
+$perm_restore_only = !empty($_POST['access_restore_only']);
 $new_passadm = trim((string)($_POST['passadm'] ?? ''));
 $update_passadm = ($new_passadm !== '');
 
@@ -50,14 +61,48 @@ if ($suseradm === '') {
 
 app_db_set_admin($suseradm, $spassadm);
 
-if ($sopuser !== '') {
-    $op_row = app_db_get_operator();
-    $op_pass = $op_row['password'] ?? '';
-    if ($op_pass === '') {
-        $env = getEnvConfig();
-        $op_pass = $env['auth']['operator_pass'] ?? '';
+if ($op_action === 'delete' && $op_id !== '' && $op_id !== 'new') {
+    app_db_delete_operator((int)$op_id);
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode(['ok' => true, 'message' => 'Operator dihapus.']);
+        exit;
     }
-    app_db_set_operator($sopuser, $op_pass);
+    header('Location: ./admin.php?id=operator-access&saved=1');
+    exit;
+}
+
+if ($sopuser !== '') {
+    if ($op_id === 'new' || $op_id === '') {
+        if ($op_password === '') {
+            if ($isAjax) {
+                http_response_code(400);
+                header('Content-Type: application/json');
+                echo json_encode(['ok' => false, 'message' => 'Password operator baru wajib diisi.']);
+                exit;
+            }
+            header('Location: ./admin.php?id=operator-access&error=empty-username');
+            exit;
+        }
+        $op_hash = hash_password_value($op_password);
+        $new_id = app_db_create_operator($sopuser, $op_hash, $op_active);
+        $op_id = (string)$new_id;
+    } else {
+        $op_hash = $op_password !== '' ? hash_password_value($op_password) : null;
+        app_db_update_operator((int)$op_id, $sopuser, $op_hash, $op_active);
+    }
+}
+
+if ($op_id !== '' && $op_id !== 'new') {
+    app_db_set_operator_permissions_for((int)$op_id, [
+        'delete_user' => $perm_delete_user,
+        'delete_block_router' => $perm_delete_block_router,
+        'delete_block_full' => $perm_delete_block_full,
+        'audit_manual' => $perm_audit_manual,
+        'reset_settlement' => $perm_reset_settlement,
+        'backup_only' => $perm_backup_only,
+        'restore_only' => $perm_restore_only,
+    ]);
 }
 
 if ($isAjax) {

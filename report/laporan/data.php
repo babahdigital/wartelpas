@@ -657,6 +657,14 @@ if (isset($db) && $db instanceof PDO && isset($_GET['hp_delete'])) {
 
 // Kunci audit manual (harian)
 if (isset($db) && $db instanceof PDO && isset($_GET['audit_lock'])) {
+    if ($is_operator && !operator_can('audit_manual')) {
+        $audit_error = 'Akses ditolak. Audit manual hanya untuk role yang diizinkan.';
+        $audit_redirect = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+        if (!headers_sent()) {
+            header('Location: ' . $audit_redirect);
+            exit;
+        }
+    }
     if ($is_operator) {
         $audit_error = 'Akses ditolak. Kunci audit hanya untuk Superadmin.';
         $audit_redirect = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
@@ -694,6 +702,14 @@ if (isset($db) && $db instanceof PDO && isset($_GET['audit_lock'])) {
 
 // Hapus audit manual rekap (harian)
 if (isset($db) && $db instanceof PDO && isset($_GET['audit_delete'])) {
+    if ($is_operator && !operator_can('audit_manual')) {
+        $audit_error = 'Akses ditolak. Audit manual hanya untuk role yang diizinkan.';
+        $audit_redirect = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+        if (!headers_sent()) {
+            header('Location: ' . $audit_redirect);
+            exit;
+        }
+    }
     if ($is_operator) {
         $audit_error = 'Akses ditolak. Hapus audit hanya untuk Superadmin.';
         $audit_redirect = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
@@ -1150,6 +1166,9 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
 // Simpan audit manual rekap harian (qty + uang)
 if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
     if (isset($_POST['audit_submit']) || isset($_POST['audit_blok'])) {
+        if ($is_operator && !operator_can('audit_manual')) {
+            $audit_error = 'Akses ditolak. Audit manual hanya untuk role yang diizinkan.';
+        }
         $audit_is_ajax = isset($_POST['ajax']) && $_POST['ajax'] === '1';
         $audit_blok_raw = trim($_POST['audit_blok'] ?? '');
         $audit_date = trim($_POST['audit_date'] ?? '');

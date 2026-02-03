@@ -9,6 +9,11 @@ if (!isset($_SESSION["mikhmon"]) || !isset($_GET['session'])) {
 
 require_once(__DIR__ . '/../../include/acl.php');
 $is_superadmin = isSuperAdmin();
+$is_operator = isOperator();
+$can_delete_user = ($is_superadmin || ($is_operator && operator_can('delete_user')));
+$can_delete_block_router = ($is_superadmin || ($is_operator && operator_can('delete_block_router')));
+$can_delete_block_full = ($is_superadmin || ($is_operator && operator_can('delete_block_full')));
+$can_delete_block = ($can_delete_block_router || $can_delete_block_full);
 
 $env = [];
 $envFile = __DIR__ . '/../../include/env.php';

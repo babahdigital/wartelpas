@@ -59,10 +59,18 @@ if (file_exists($envFile)) {
 }
 $opUser = '';
 $opPassStored = '';
-$opRow = app_db_get_operator();
+$opId = (int)($_SESSION['mikhmon_operator_id'] ?? 0);
+$opRow = $opId > 0 ? app_db_get_operator_by_id($opId) : [];
 if (!empty($opRow)) {
     $opUser = $opRow['username'] ?? '';
     $opPassStored = $opRow['password'] ?? '';
+}
+if ($opUser === '' && $opPassStored === '') {
+    $opRow = app_db_get_operator();
+    if (!empty($opRow)) {
+        $opUser = $opRow['username'] ?? '';
+        $opPassStored = $opRow['password'] ?? '';
+    }
 }
 if ($opUser === '' && $opPassStored === '') {
     $opUser = $env['auth']['operator_user'] ?? '';
@@ -104,7 +112,7 @@ if (isSuperAdmin() && $newPass !== '') {
 
 if ($opPass !== '') {
     $opHash = hash_password_value($opPass);
-    $ok = update_operator_password_hash($opHash);
+    $ok = update_operator_password_hash($opHash, $opId > 0 ? $opId : null);
     if (!$ok) {
         echo json_encode(['ok' => false, 'message' => 'Gagal menyimpan password operator.']);
         exit;

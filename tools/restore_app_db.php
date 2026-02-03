@@ -3,6 +3,9 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../include/acl.php';
+if (isset($_SESSION['mikhmon']) && isOperator()) {
+    respond_app_restore(false, 'Forbidden', [], 403);
+}
 require_once __DIR__ . '/../include/db.php';
 // Restore App Config DB (SQLite)
 ini_set('display_errors', 0);

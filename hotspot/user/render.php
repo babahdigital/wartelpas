@@ -185,7 +185,7 @@
           </div>
           <?php
             $status_labels = ['used' => 'Terpakai', 'retur' => 'Retur', 'rusak' => 'Rusak', 'ready' => 'Ready', 'vip' => 'Pengelola'];
-            $can_delete_status = in_array($req_status, array_keys($status_labels)) && $req_show === 'semua' && empty($filter_date);
+            $can_delete_status = in_array($req_status, array_keys($status_labels)) && $req_show === 'semua' && empty($filter_date) && !empty($can_delete_user);
             $status_label = $status_labels[$req_status] ?? '';
             $can_print_block = ($req_comm != '' && $req_status === 'ready');
             $can_print_status = ($req_comm != '' && $req_status === 'retur');
@@ -265,7 +265,7 @@
                   <i class="fa fa-trash"></i> Hapus <?= $status_label ?>
                 </button>
               <?php endif; ?>
-              <?php if ($req_status == 'all'): ?>
+              <?php if ($req_status == 'all' && !empty($can_delete_block)): ?>
                 <button type="button" class="btn btn-danger" style="height:40px;" onclick="openDeleteBlockPopup('<?= htmlspecialchars($req_comm, ENT_QUOTES) ?>')">
                   <i class="fa fa-trash"></i> Hapus Blok
                 </button>
@@ -287,6 +287,8 @@
       </div>
       <script>
         window.isSuperAdmin = <?= !empty($is_superadmin) ? 'true' : 'false' ?>;
+        window.canDeleteBlockRouter = <?= !empty($can_delete_block_router) ? 'true' : 'false' ?>;
+        window.canDeleteBlockFull = <?= !empty($can_delete_block_full) ? 'true' : 'false' ?>;
       </script>
       <div class="card-body p-0">
         <?php if ($debug_mode): ?>
@@ -470,7 +472,7 @@
                           <button type="button" class="btn-act btn-act-invalid" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'], ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'], ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'], ENT_QUOTES) ?>" data-login="<?= htmlspecialchars($u['login_time'], ENT_QUOTES) ?>" data-logout="<?= htmlspecialchars($u['logout_time'], ENT_QUOTES) ?>" data-bytes="<?= (int)$u['bytes'] ?>" data-uptime="<?= htmlspecialchars($u['uptime'], ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'], ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" onclick="actionRequestRusak(this,'./?hotspot=users&action=invalid&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','SET RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rusak"><i class="fa fa-ban"></i></button>
                         <?php endif; ?>
                       <?php endif; ?>
-                      <?php if (!empty($is_superadmin)): ?>
+                      <?php if (!empty($can_delete_user)): ?>
                         <?php $retur_pair_flag = ($is_retur || !empty($u['retur_ref_user']) || !empty($u['retur_ref'])); ?>
                         <button type="button" class="btn-act btn-act-delete" onclick="actionRequest('./?hotspot=users&action=delete_user_full&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Hapus total user <?= htmlspecialchars($u['name']) ?> (Router + DB)?<?= $retur_pair_flag ? ' [RETUR_PAIR]' : '' ?>')" title="Hapus Total"><i class="fa fa-trash"></i></button>
                       <?php endif; ?>
@@ -600,4 +602,4 @@
   window.openPrintPopup = openPrintPopup;
   window.openUnifiedPrintPopupWithCode = openUnifiedPrintPopupWithCode;
 </script>
-<script src="./hotspot/user/js/users.js"></script>
+<script src="./hotspot/user/js/users.js?v=<?= @filemtime(__DIR__ . '/js/users.js') ?: time(); ?>"></script>

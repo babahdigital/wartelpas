@@ -404,8 +404,10 @@
                     <span style="font-size:12px;color:#f39c12;align-self:center;">Audit terkunci</span>
                 <?php endif; ?>
             <?php endif; ?>
-            <button class="btn-print" type="button" id="btn-settlement" onclick="manualSettlement()" <?= (!empty($settled_today) ? 'disabled style="opacity:.6;cursor:not-allowed;"' : '') ?>>Settlement</button>
-            <?php if (!empty($settled_today)): ?>
+            <?php $can_settlement = (!$is_operator || operator_can('reset_settlement')); ?>
+            <?php $settlement_btn_disabled = (!empty($settled_today) || !$can_settlement) ? 'disabled style="opacity:.6;cursor:not-allowed;"' : ''; ?>
+            <button class="btn-print" type="button" id="btn-settlement" onclick="manualSettlement()" <?= $settlement_btn_disabled ?>>Settlement</button>
+            <?php if (!empty($settled_today) && $can_settlement): ?>
                 <button class="btn-print" type="button" id="btn-settlement-reset" onclick="openSettlementResetModal()" style="background:#ff9800;color:#fff;">Reset</button>
             <?php endif; ?>
         </div>
@@ -1078,7 +1080,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                                         <i class="fa fa-search"></i>
                                     </button>
                                 <?php endif; ?>
-                                <?php $audit_btn_disabled = ((!$is_superadmin && !$is_operator) || $is_locked_row) ? 'disabled style="opacity:.5;cursor:not-allowed;"' : ''; ?>
+                                <?php $audit_btn_disabled = ((!$is_superadmin && !$is_operator) || ($is_operator && !operator_can('audit_manual')) || $is_locked_row) ? 'disabled style="opacity:.5;cursor:not-allowed;"' : ''; ?>
                                 <?php $profile_qty_json = htmlspecialchars(json_encode($profile_qty_map), ENT_QUOTES); ?>
                                 <button type="button" class="btn-act" onclick="openAuditEdit(this)" <?= $audit_btn_disabled ?>
                                     data-blok="<?= htmlspecialchars($ar['blok_name'] ?? ''); ?>"

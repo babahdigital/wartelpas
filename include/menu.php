@@ -503,13 +503,26 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
 
         <div class="nav-right">
             <?php $is_superadmin = isSuperAdmin(); ?>
-            <?php if ($is_superadmin): ?>
-                <a id="db-backup" class="db-tools" style="display:none" href="javascript:void(0)" title="Backup Database" onclick="runBackupAjax()">
-                    <i class="fa fa-database"></i> Backup
-                </a>
-                <a id="db-restore" class="db-tools" href="javascript:void(0)" title="Restore Backup Terbaru" onclick="runRestoreAjax()">
-                    <i class="fa fa-history"></i> Restore
-                </a>
+            <?php $can_backup = $is_superadmin || (isOperator() && (operator_can('backup_only') || operator_can('restore_only'))); ?>
+            <?php if ($can_backup): ?>
+                <?php if ($is_superadmin || (isOperator() && operator_can('backup_only'))): ?>
+                    <a id="db-backup" class="db-tools" style="display:none" href="javascript:void(0)" title="Backup Database Utama" onclick="runBackupAjax()">
+                        <i class="fa fa-database"></i> Backup
+                    </a>
+                <?php endif; ?>
+                <?php if ($is_superadmin || (isOperator() && operator_can('restore_only'))): ?>
+                    <a id="db-restore" class="db-tools" href="javascript:void(0)" title="Restore Database Utama" onclick="runRestoreAjax()">
+                        <i class="fa fa-history"></i> Restore
+                    </a>
+                <?php endif; ?>
+                <?php if ($is_superadmin): ?>
+                    <a id="db-app-backup" class="db-tools" style="display:none" href="javascript:void(0)" title="Backup Konfigurasi" onclick="runAppBackupAjax()">
+                        <i class="fa fa-database"></i> Backup CFG
+                    </a>
+                    <a id="db-app-restore" class="db-tools" href="javascript:void(0)" title="Restore Konfigurasi" onclick="runAppRestoreAjax()">
+                        <i class="fa fa-history"></i> Restore CFG
+                    </a>
+                <?php endif; ?>
             <?php endif; ?>
             <?php if ($menu_retur_visible): ?>
                 <a class="retur-pill <?= $menu_retur_pending > 0 ? '' : 'is-zero' ?>" id="retur-menu-pill" href="javascript:void(0)" onclick="return openReturMenuPopup(event);" title="Permintaan Retur Pending">
@@ -594,13 +607,26 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
 
         <div class="nav-right">
             <?php $is_superadmin = isSuperAdmin(); ?>
-            <?php if ($is_superadmin): ?>
-                <a id="db-backup" class="db-tools" style="display:none" href="javascript:void(0)" title="Backup Database" onclick="runBackupAjax()">
-                    <i class="fa fa-database"></i> Backup
-                </a>
-                <a id="db-restore" class="db-tools" href="javascript:void(0)" title="Restore Backup Terbaru" onclick="runRestoreAjax()">
-                    <i class="fa fa-history"></i> Restore
-                </a>
+            <?php $can_backup = $is_superadmin || (isOperator() && (operator_can('backup_only') || operator_can('restore_only'))); ?>
+            <?php if ($can_backup): ?>
+                <?php if ($is_superadmin || (isOperator() && operator_can('backup_only'))): ?>
+                    <a id="db-backup" class="db-tools" style="display:none" href="javascript:void(0)" title="Backup Database Utama" onclick="runBackupAjax()">
+                        <i class="fa fa-database"></i> Backup
+                    </a>
+                <?php endif; ?>
+                <?php if ($is_superadmin || (isOperator() && operator_can('restore_only'))): ?>
+                    <a id="db-restore" class="db-tools" href="javascript:void(0)" title="Restore Database Utama" onclick="runRestoreAjax()">
+                        <i class="fa fa-history"></i> Restore
+                    </a>
+                <?php endif; ?>
+                <?php if ($is_superadmin): ?>
+                    <a id="db-app-backup" class="db-tools" style="display:none" href="javascript:void(0)" title="Backup Konfigurasi" onclick="runAppBackupAjax()">
+                        <i class="fa fa-database"></i> Backup CFG
+                    </a>
+                    <a id="db-app-restore" class="db-tools" href="javascript:void(0)" title="Restore Konfigurasi" onclick="runAppRestoreAjax()">
+                        <i class="fa fa-history"></i> Restore CFG
+                    </a>
+                <?php endif; ?>
             <?php endif; ?>
             <?php if ($menu_retur_visible): ?>
                 <a class="retur-pill <?= $menu_retur_pending > 0 ? '' : 'is-zero' ?>" id="retur-menu-pill" href="javascript:void(0)" onclick="return openReturMenuPopup(event);" title="Permintaan Retur Pending">
@@ -687,6 +713,8 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
     }
 
     window.__isSuperAdminFlag = <?= json_encode($is_superadmin); ?>;
+    window.__canBackupFlag = <?= json_encode($is_superadmin || (isOperator() && operator_can('backup_only'))); ?>;
+    window.__canRestoreFlag = <?= json_encode($is_superadmin || (isOperator() && operator_can('restore_only'))); ?>;
     window.__returMenuData = <?= json_encode(['count' => $menu_retur_pending, 'items' => $menu_retur_list], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     window.__returBlokNames = <?= json_encode(($env['blok']['names'] ?? []), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     window.__returSession = <?= json_encode($session); ?>;

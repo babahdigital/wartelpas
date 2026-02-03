@@ -184,7 +184,7 @@ foreach ($router_list as $router_item) {
 <div class="row" style="margin-bottom: 10px;">
   <div class="col-12" style="display:flex; align-items:center; justify-content:space-between;">
     <h2 style="margin:0; font-weight:300;">Dashboard <strong style="font-weight:700;">Utama</strong></h2>
-    <?php if (isSuperAdmin()): ?>
+    <?php if (isSuperAdmin() || (isOperator() && (operator_can('backup_only') || operator_can('restore_only')))): ?>
       <a class="btn-action btn-primary-m" data-no-ajax="1" href="./admin.php?id=settings&session=new-<?= rand(1111,9999); ?>">
         <i class="fa fa-plus-circle"></i> Tambah Router Baru
       </a>
@@ -225,7 +225,7 @@ foreach ($router_list as $router_item) {
         <?php endif; ?>
       </div>
     </div>
-    <?php if (isSuperAdmin()): ?>
+    <?php if (isSuperAdmin() || (isOperator() && (operator_can('backup_only') || operator_can('restore_only')))): ?>
       <div class="card-modern" style="margin-top: 20px;">
         <div class="card-header-modern">
           <h3><i class="fa fa-database text-blue"></i> Backup & Restore</h3>
@@ -235,24 +235,30 @@ foreach ($router_list as $router_item) {
           <div style="font-size:16px; font-weight:700;" class="<?= $backup_status_class; ?>"><?= htmlspecialchars($backup_status_label); ?> <span class="badge" style="margin-left:6px;"><?= htmlspecialchars($backup_status_badge); ?></span></div>
           <div style="font-size:11px; color: var(--text-muted); margin:6px 0 14px;">File: <?= htmlspecialchars($backup_status_detail); ?></div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button id="db-backup" class="btn-action btn-outline" onclick="runBackupAjax()">
-              <i class="fa fa-database"></i> Backup Sekarang
-            </button>
-            <button id="db-restore" class="btn-action btn-outline" onclick="runRestoreAjax()">
-              <i class="fa fa-history"></i> Restore
-            </button>
+            <?php if (isSuperAdmin() || (isOperator() && operator_can('backup_only'))): ?>
+              <button id="db-backup" class="btn-action btn-outline" onclick="runBackupAjax()">
+                <i class="fa fa-database"></i> Backup Sekarang
+              </button>
+            <?php endif; ?>
+            <?php if (isSuperAdmin() || (isOperator() && operator_can('restore_only'))): ?>
+              <button id="db-restore" class="btn-action btn-outline" onclick="runRestoreAjax()">
+                <i class="fa fa-history"></i> Restore
+              </button>
+            <?php endif; ?>
           </div>
           <div style="height:12px;"></div>
           <div class="text-secondary" style="font-size:12px; margin-bottom:8px;">Konfigurasi (App DB)</div>
           <div style="font-size:16px; font-weight:700;" class="<?= $app_backup_class; ?>"><?= htmlspecialchars($app_backup_label); ?> <span class="badge" style="margin-left:6px;"><?= htmlspecialchars($app_backup_badge); ?></span></div>
           <div style="font-size:11px; color: var(--text-muted); margin:6px 0 14px;">File: <?= htmlspecialchars($app_backup_detail); ?></div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button id="db-app-backup" class="btn-action btn-outline" onclick="runAppBackupAjax()">
-              <i class="fa fa-database"></i> Backup Konfigurasi
-            </button>
-            <button id="db-app-restore" class="btn-action btn-outline" onclick="runAppRestoreAjax()">
-              <i class="fa fa-history"></i> Restore Konfigurasi
-            </button>
+            <?php if (isSuperAdmin()): ?>
+              <button id="db-app-backup" class="btn-action btn-outline" onclick="runAppBackupAjax()">
+                <i class="fa fa-database"></i> Backup Konfigurasi
+              </button>
+              <button id="db-app-restore" class="btn-action btn-outline" onclick="runAppRestoreAjax()">
+                <i class="fa fa-history"></i> Restore Konfigurasi
+              </button>
+            <?php endif; ?>
           </div>
         </div>
       </div>

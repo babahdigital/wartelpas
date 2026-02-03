@@ -64,6 +64,20 @@ function isOperator()
     return isset($_SESSION['mikhmon_level']) && $_SESSION['mikhmon_level'] === 'operator';
 }
 
+function operator_can($permission)
+{
+    if (isSuperAdmin()) return true;
+    if (!isOperator()) return false;
+    require_once __DIR__ . '/db.php';
+    $opId = isset($_SESSION['mikhmon_operator_id']) ? (int)$_SESSION['mikhmon_operator_id'] : 0;
+    if ($opId > 0 && function_exists('app_db_get_operator_permissions_for')) {
+        $perms = app_db_get_operator_permissions_for($opId);
+    } else {
+        $perms = app_db_get_operator_permissions();
+    }
+    return !empty($perms[$permission]);
+}
+
 function requireLogin($redirectUrl = './admin.php?id=login')
 {
     if (!isset($_SESSION['mikhmon'])) {
@@ -124,10 +138,19 @@ function update_admin_password_hash($oldStored, $newHash)
     return true;
 }
 
-function update_operator_password_hash($newHash)
+function update_operator_password_hash($newHash, $operatorId = null)
 {
     if (!is_string($newHash) || $newHash === '') return false;
     require_once __DIR__ . '/db.php';
+    $opId = $operatorId !== null ? (int)$operatorId : (int)($_SESSION['mikhmon_operator_id'] ?? 0);
+    if ($opId > 0 && function_exists('app_db_update_operator')) {
+        $opRow = app_db_get_operator_by_id($opId);
+        $username = $opRow['username'] ?? '';
+        if ($username === '') return false;
+        app_db_update_operator($opId, $username, $newHash, !empty($opRow['is_active']));
+        return true;
+    }
+
     $op = app_db_get_operator();
     $username = $op['username'] ?? '';
     if ($username === '') {

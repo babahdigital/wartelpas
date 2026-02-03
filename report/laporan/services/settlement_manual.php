@@ -34,6 +34,11 @@ function respond_json($payload) {
     exit;
 }
 
+$restricted_actions = ['start', 'reset'];
+if (isset($_SESSION['mikhmon']) && isOperator() && in_array($action, $restricted_actions, true) && !operator_can('reset_settlement')) {
+    respond_json(['ok' => false, 'message' => 'Akses ditolak.']);
+}
+
 function append_settlement_debug($file, $message) {
     global $debugMaxBytes, $archiveDir;
     $line = date('Y-m-d H:i:s') . "\t" . $message . "\n";

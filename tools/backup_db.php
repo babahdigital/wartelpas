@@ -3,6 +3,9 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../include/acl.php';
+if (isset($_SESSION['mikhmon']) && isOperator() && !operator_can('backup_only')) {
+    respond_backup(false, 'Forbidden', [], 403);
+}
 // Simple DB backup endpoint (protected)
 ini_set('display_errors', 0);
 error_reporting(0);
@@ -46,24 +49,26 @@ if ($key === '' && isset($_SERVER['HTTP_X_TOOLS_KEY'])) {
 }
 $is_valid_key = $secret !== '' && hash_equals($secret, (string)$key);
 
-if (!$is_valid_key) {
+$allow_session = isset($_SESSION['mikhmon']) && (isSuperAdmin() || (isOperator() && operator_can('backup_only')));
+
+if (!$is_valid_key && !$allow_session) {
     requireLogin('../admin.php?id=login');
     requireSuperAdmin('../admin.php?id=sessions');
-} else {
+} elseif ($is_valid_key) {
     if (!isset($_SESSION['mikhmon'])) {
         $_SESSION['mikhmon'] = 'tools';
         $_SESSION['mikhmon_level'] = 'superadmin';
     }
 }
 
-if (!$is_valid_key) {
+if (!$is_valid_key && !$allow_session) {
     respond_backup(false, 'Forbidden', [], 403);
 }
 
 $allowedIpList = isset($env['backup']['allowed_ips']) && is_array($env['backup']['allowed_ips'])
     ? $env['backup']['allowed_ips']
     : ['127.0.0.1', '::1', '10.10.83.1', '172.19.0.1'];
-if (!empty($_SERVER['REMOTE_ADDR']) && !empty($allowedIpList)) {
+if (!$allow_session && !empty($_SERVER['REMOTE_ADDR']) && !empty($allowedIpList)) {
     $clientIp = (string)$_SERVER['REMOTE_ADDR'];
     if (!in_array($clientIp, $allowedIpList, true)) {
         respond_backup(false, 'IP not allowed', [], 403);

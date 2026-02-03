@@ -198,30 +198,54 @@ if ($id == "login" || ($basename === 'admin.php' && empty($id))) {
       }
       // AKHIR MODIFIKASI
     
-    } elseif ($op_user !== "" && $op_pass !== "" && $user == $op_user) {
-      $op_ok = false;
-      if (is_password_hash($op_pass)) {
-        $op_ok = password_verify((string)$pass, (string)$op_pass);
-      } else {
-        $op_ok = hash_equals((string)$op_pass, (string)$pass);
-      }
-      if ($op_ok && !is_password_hash($op_pass)) {
-        $newHash = hash_password_value($pass);
-        update_operator_password_hash($newHash);
-      }
-      if ($op_ok) {
-      $_SESSION["mikhmon"] = $user;
-      $_SESSION["mikhmon_level"] = "operator";
-
-      $first_session = app_db_first_session_id();
-
-      if ($first_session != "") {
-        echo "<script>window.location='./?session=" . $first_session . "'</script>";
-      } else {
-        echo "<script>window.location='./error.php?code=403'</script>";
-      }
-      }
     } else {
+      $op_ok = false;
+      $op_row = app_db_get_operator_by_username($user);
+      if (!empty($op_row) && !empty($op_row['id']) && !empty($op_row['is_active'])) {
+        $op_pass_db = $op_row['password'] ?? '';
+        $op_ok = verify_password_compat($pass, $op_pass_db);
+        if ($op_ok && !is_password_hash($op_pass_db)) {
+          $newHash = hash_password_value($pass);
+          update_operator_password_hash($newHash, (int)$op_row['id']);
+        }
+        if ($op_ok) {
+          $_SESSION["mikhmon"] = $user;
+          $_SESSION["mikhmon_level"] = "operator";
+          $_SESSION["mikhmon_operator_id"] = (int)$op_row['id'];
+          $first_session = app_db_first_session_id();
+          if ($first_session != "") {
+            echo "<script>window.location='./?session=" . $first_session . "'</script>";
+          } else {
+            echo "<script>window.location='./error.php?code=403'</script>";
+          }
+          return;
+        }
+      }
+
+      if ($op_user !== "" && $op_pass !== "" && $user == $op_user) {
+        $op_ok = false;
+        if (is_password_hash($op_pass)) {
+          $op_ok = password_verify((string)$pass, (string)$op_pass);
+        } else {
+          $op_ok = hash_equals((string)$op_pass, (string)$pass);
+        }
+        if ($op_ok && !is_password_hash($op_pass)) {
+          $newHash = hash_password_value($pass);
+          update_operator_password_hash($newHash);
+        }
+        if ($op_ok) {
+          $_SESSION["mikhmon"] = $user;
+          $_SESSION["mikhmon_level"] = "operator";
+          $first_session = app_db_first_session_id();
+          if ($first_session != "") {
+            echo "<script>window.location='./?session=" . $first_session . "'</script>";
+          } else {
+            echo "<script>window.location='./error.php?code=403'</script>";
+          }
+          return;
+        }
+      }
+
       $error = '<div style="width: 100%; padding:5px 0px 5px 0px; border-radius:5px;" class="bg-danger"><i class="fa fa-ban"></i> Alert!<br>Invalid username or password.</div>';
     }
     }
