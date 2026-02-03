@@ -432,6 +432,7 @@ foreach ($wa_recipients as $rec) {
     .wa-badge-purple { background: rgba(168,85,247,0.2); color: #d8b4fe; }
     .wa-badge-green { background: rgba(34,197,94,0.2); color: #86efac; }
     .wa-badge-red { background: rgba(239,68,68,0.2); color: #fca5a5; }
+    .wa-badge-gray { background: rgba(148,163,184,0.2); color: #cbd5db; }
     .wa-switch {
         display: inline-flex;
         align-items: center;
@@ -472,6 +473,8 @@ foreach ($wa_recipients as $rec) {
         flex-direction: column;
         gap: 4px;
     }
+    .wa-log-table th, .wa-log-table td { white-space: nowrap; }
+    .wa-log-table td.wa-log-message { max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 </style>
 
 <div class="card-modern">
@@ -521,39 +524,43 @@ foreach ($wa_recipients as $rec) {
                 </div>
                 <div class="col-6">
                     <div class="form-group-modern">
-                        <div class="wa-section-title">Target Notifikasi</div>
-                        <div class="wa-muted">Pilih nomor/group untuk menerima notifikasi global.</div>
+                        <div class="wa-section-title">Test Sender WhatsApp</div>
+                        <div class="wa-muted">Kirim pesan uji ke target manual atau pilih dari daftar penerima. Setiap penerima memiliki izin notifikasi masing-masing.</div>
                     </div>
                     <div class="form-group-modern">
-                        <label class="form-label">Target Notifikasi (nomor / group)</label>
-                        <div class="input-group-modern" style="align-items:flex-start;">
-                            <div class="input-icon"><i class="fa fa-phone"></i></div>
-                            <textarea class="form-control-modern" name="wa_notify_target" rows="4" placeholder="62812xxxxxxx&#10;120363xxxx@g.us&#10;(pisahkan dengan enter atau koma)"><?= htmlspecialchars($wa_notify_target_list); ?></textarea>
-                        </div>
-                        <small class="wa-muted" style="display:block; margin-top:6px;">Kosongkan untuk memakai daftar penerima di menu WhatsApp.</small>
-                    </div>
-                    <div class="form-group-modern">
-                        <label class="form-label">Ambil dari daftar penerima</label>
-                        <div class="input-group-modern">
-                            <div class="input-icon"><i class="fa fa-users"></i></div>
-                            <select class="form-control-modern" id="waTargetSelect">
-                                <option value="">-- Pilih Nomor / Group --</option>
-                                <?php if (!empty($wa_recipients)): ?>
-                                    <?php foreach ($wa_recipients as $rec): ?>
-                                        <?php
-                                            $label = trim((string)($rec['label'] ?? ''));
-                                            $target = trim((string)($rec['target'] ?? ''));
-                                            $type = (string)($rec['target_type'] ?? 'number');
-                                            $show = $label !== '' ? ($label . ' - ' . $target) : $target;
-                                        ?>
-                                        <option value="<?= htmlspecialchars($target); ?>">[<?= htmlspecialchars($type); ?>] <?= htmlspecialchars($show); ?></option>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </select>
-                        </div>
-                        <button class="btn-action btn-default-m" type="button" id="waAddTargetBtn" style="margin-top:8px;">
-                            <i class="fa fa-plus"></i> Tambah ke Target Notifikasi
-                        </button>
+                        <form method="post" action="./admin.php?id=whatsapp">
+                            <input type="hidden" name="wa_action" value="test_send">
+                            <div class="input-group-modern" style="margin-bottom:8px;">
+                                <div class="input-icon"><i class="fa fa-phone"></i></div>
+                                <input class="form-control-modern" type="text" name="wa_test_target" placeholder="Target (opsional, jika tidak pilih dropdown)">
+                            </div>
+                            <div class="input-group-modern" style="margin-bottom:8px;">
+                                <div class="input-icon"><i class="fa fa-list"></i></div>
+                                <select class="form-control-modern" name="wa_test_target_select">
+                                    <option value="">-- Pilih dari daftar penerima --</option>
+                                    <?php if (!empty($wa_recipients)): ?>
+                                        <?php foreach ($wa_recipients as $rec): ?>
+                                            <?php
+                                                $label = trim((string)($rec['label'] ?? ''));
+                                                $target = trim((string)($rec['target'] ?? ''));
+                                                $type = (string)($rec['target_type'] ?? 'number');
+                                                $show = $label !== '' ? ($label . ' - ' . $target) : $target;
+                                            ?>
+                                            <option value="<?= htmlspecialchars($target); ?>">[<?= htmlspecialchars($type); ?>] <?= htmlspecialchars($show); ?></option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </select>
+                            </div>
+                            <div class="input-group-modern" style="margin-bottom:8px; align-items:flex-start;">
+                                <div class="input-icon"><i class="fa fa-comment"></i></div>
+                                <textarea class="form-control-modern" name="wa_test_message" rows="3" placeholder="Pesan test"></textarea>
+                            </div>
+                            <div style="display:flex; justify-content:flex-end;">
+                                <button class="btn-action btn-primary-m" type="submit">
+                                    <i class="fa fa-paper-plane"></i> Kirim Test
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -564,154 +571,46 @@ foreach ($wa_recipients as $rec) {
             </div>
         </form>
 
-        <div class="row" style="margin-top: 20px;">
-            <div class="col-6">
-                <div class="form-group-modern">
-                    <label class="form-label">Daftarkan Nomor / Group</label>
-                    <small class="wa-muted" style="display:block; margin-bottom:6px;">Isi label dan nomor/group baru untuk daftar penerima.</small>
-                    <form method="post" action="./admin.php?id=whatsapp">
-                        <input type="hidden" name="wa_action" value="add_recipient">
-                        <div class="input-group-modern" style="margin-bottom:8px;">
-                            <div class="input-icon"><i class="fa fa-user"></i></div>
-                            <input class="form-control-modern" type="text" name="wa_new_label" placeholder="Nama / Label">
-                        </div>
-                        <div class="input-group-modern" style="margin-bottom:8px;">
-                            <div class="input-icon"><i class="fa fa-phone"></i></div>
-                            <input class="form-control-modern" type="text" name="wa_new_target" placeholder="62812xxxxxxx atau 1203xxxx@g.us">
-                        </div>
-                        <div class="input-group-modern" style="margin-bottom:8px;">
-                            <div class="input-icon"><i class="fa fa-tag"></i></div>
-                            <select class="form-control-modern" name="wa_new_type">
-                                <option value="number">Nomor</option>
-                                <option value="group">Group</option>
-                            </select>
-                        </div>
-                        <div style="display:flex; justify-content:flex-end;">
-                            <button class="btn-action btn-primary-m" type="submit">
-                                <i class="fa fa-plus"></i> Tambah
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="form-group-modern">
-                    <label class="form-label">Test Sender WhatsApp</label>
-                    <small class="wa-muted" style="display:block; margin-bottom:6px;">Kirim pesan uji ke target manual atau pilih dari daftar.</small>
-                    <form method="post" action="./admin.php?id=whatsapp">
-                        <input type="hidden" name="wa_action" value="test_send">
-                        <div class="input-group-modern" style="margin-bottom:8px;">
-                            <div class="input-icon"><i class="fa fa-phone"></i></div>
-                            <input class="form-control-modern" type="text" name="wa_test_target" placeholder="Target (opsional, jika tidak pilih dropdown)">
-                        </div>
-                        <div class="input-group-modern" style="margin-bottom:8px;">
-                            <div class="input-icon"><i class="fa fa-list"></i></div>
-                            <select class="form-control-modern" name="wa_test_target_select">
-                                <option value="">-- Pilih dari daftar penerima --</option>
-                                <?php if (!empty($wa_recipients)): ?>
-                                    <?php foreach ($wa_recipients as $rec): ?>
-                                        <?php
-                                            $label = trim((string)($rec['label'] ?? ''));
-                                            $target = trim((string)($rec['target'] ?? ''));
-                                            $type = (string)($rec['target_type'] ?? 'number');
-                                            $show = $label !== '' ? ($label . ' - ' . $target) : $target;
-                                        ?>
-                                        <option value="<?= htmlspecialchars($target); ?>">[<?= htmlspecialchars($type); ?>] <?= htmlspecialchars($show); ?></option>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </select>
-                        </div>
-                        <div class="input-group-modern" style="margin-bottom:8px; align-items:flex-start;">
-                            <div class="input-icon"><i class="fa fa-comment"></i></div>
-                            <textarea class="form-control-modern" name="wa_test_message" rows="3" placeholder="Pesan test"></textarea>
-                        </div>
-                        <div style="display:flex; justify-content:flex-end;">
-                            <button class="btn-action btn-primary-m" type="submit">
-                                <i class="fa fa-paper-plane"></i> Kirim Test
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
         <div class="row" style="margin-top: 10px;">
             <div class="col-12">
                 <div class="form-group-modern">
-                    <label class="form-label">Daftar Penerima (Opsi per Member)</label>
-                    <small class="wa-muted" style="display:block; margin-bottom:8px;">Setiap penerima memiliki izin notifikasi masing-masing.</small>
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                        <label class="form-label" style="margin:0;">Daftar Penerima</label>
+                        <a class="btn-action btn-outline" href="javascript:void(0)" onclick="openWaRecipientPopup('new')" style="padding:6px 10px; font-size:12px;">
+                            <i class="fa fa-plus"></i> Tambah Penerima
+                        </a>
+                    </div>
+                    <small class="wa-muted" style="display:block; margin-bottom:8px;">Kelola izin notifikasi per member (aktif, retur, laporan).</small>
                     <?php if ($stats_db_error !== ''): ?>
                         <div class="alert alert-danger" style="margin-bottom:10px;">Gagal membaca DB WhatsApp: <?= htmlspecialchars($stats_db_error); ?></div>
                     <?php endif; ?>
-                    <div style="overflow:auto;">
-                        <table class="table" style="min-width:820px;">
-                            <thead>
-                                <tr>
-                                    <th>Label</th>
-                                    <th>Target</th>
-                                    <th>Tipe</th>
-                                    <th>Aktif</th>
-                                    <th>Notif Retur</th>
-                                    <th>Notif Laporan</th>
-                                    <th>Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (empty($wa_recipients)): ?>
-                                    <tr><td colspan="7" style="text-align:center;">Belum ada penerima.</td></tr>
-                                <?php else: ?>
-                                    <?php foreach ($wa_recipients as $rec): ?>
-                                        <?php
-                                            $type = (string)($rec['target_type'] ?? 'number');
-                                            $type_badge = strtolower($type) === 'group' ? 'wa-badge wa-badge-purple' : 'wa-badge wa-badge-blue';
-                                        ?>
-                                        <?php $form_id = 'wa-rec-' . (int)($rec['id'] ?? 0); ?>
-                                        <tr>
-                                            <td>
-                                                <input class="form-control-modern" type="text" name="wa_label" value="<?= htmlspecialchars($rec['label'] ?? ''); ?>" style="min-width:140px;" form="<?= $form_id; ?>">
-                                            </td>
-                                            <td>
-                                                <div class="wa-cell-stack">
-                                                    <span><?= htmlspecialchars($rec['target'] ?? '-'); ?></span>
-                                                </div>
-                                            </td>
-                                            <td><span class="<?= $type_badge; ?>"><?= htmlspecialchars($type); ?></span></td>
-                                            <td>
-                                                <label class="wa-switch">
-                                                    <input type="checkbox" name="wa_active" <?= ((int)($rec['active'] ?? 1) === 1) ? 'checked' : ''; ?> form="<?= $form_id; ?>">
-                                                    <span class="wa-switch-slider"></span>
-                                                </label>
-                                            </td>
-                                            <td>
-                                                <label class="wa-switch">
-                                                    <input type="checkbox" name="wa_receive_retur" <?= ((int)($rec['receive_retur'] ?? 1) === 1) ? 'checked' : ''; ?> form="<?= $form_id; ?>">
-                                                    <span class="wa-switch-slider"></span>
-                                                </label>
-                                            </td>
-                                            <td>
-                                                <label class="wa-switch">
-                                                    <input type="checkbox" name="wa_receive_report" <?= ((int)($rec['receive_report'] ?? 1) === 1) ? 'checked' : ''; ?> form="<?= $form_id; ?>">
-                                                    <span class="wa-switch-slider"></span>
-                                                </label>
-                                            </td>
-                                            <td>
-                                                <div style="display:flex; gap:6px;">
-                                                    <button class="btn-action btn-primary-m" type="submit" name="wa_action" value="update_recipient" title="Simpan" style="padding:6px 10px;" form="<?= $form_id; ?>">
-                                                        <i class="fa fa-save"></i>
-                                                    </button>
-                                                    <button class="btn-action btn-danger-m" type="submit" name="wa_action" value="delete_recipient" title="Hapus" style="padding:6px 10px;" onclick="return confirm('Hapus penerima ini?');" form="<?= $form_id; ?>">
-                                                        <i class="fa fa-trash"></i>
-                                                    </button>
-                                                </div>
-                                                <form id="<?= $form_id; ?>" method="post" action="./admin.php?id=whatsapp" style="display:none;">
-                                                    <input type="hidden" name="wa_id" value="<?= (int)($rec['id'] ?? 0); ?>">
-                                                </form>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
+                    <div style="margin-top:8px;">
+                        <?php if (empty($wa_recipients)): ?>
+                            <div class="admin-empty" style="padding:10px;">Belum ada penerima.</div>
+                        <?php else: ?>
+                            <?php foreach ($wa_recipients as $rec): ?>
+                                <?php
+                                    $active = !empty($rec['active']);
+                                    $type = strtolower((string)($rec['target_type'] ?? 'number'));
+                                    $icon = $active ? 'fa-user' : 'fa-user-times';
+                                    $label = trim((string)($rec['label'] ?? ''));
+                                    $target = trim((string)($rec['target'] ?? ''));
+                                    $name = $label !== '' ? $label : wa_display_target($target, $wa_label_map);
+                                    $type_badge = $type === 'group' ? 'wa-badge wa-badge-purple' : 'wa-badge wa-badge-blue';
+                                ?>
+                                <div class="router-item" style="margin-bottom:8px;">
+                                    <div class="router-icon"><i class="fa <?= $icon; ?>"></i></div>
+                                    <div class="router-info">
+                                        <span class="router-name"><?= htmlspecialchars($name); ?></span>
+                                        <span class="router-session">Target: <?= htmlspecialchars(wa_display_target($target, $wa_label_map)); ?> | <span class="<?= $type_badge; ?>"><?= htmlspecialchars($type); ?></span></span>
+                                    </div>
+                                    <div class="router-actions">
+                                        <a href="javascript:void(0)" title="Edit" onclick="openWaRecipientPopup(<?= (int)($rec['id'] ?? 0); ?>)"><i class="fa fa-pencil"></i></a>
+                                        <a href="javascript:void(0)" title="Hapus" onclick="submitWaRecipientDelete(<?= (int)($rec['id'] ?? 0); ?>)" style="margin-left:6px; color:#dc2626;"><i class="fa fa-trash"></i></a>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -722,10 +621,11 @@ foreach ($wa_recipients as $rec) {
                 <div class="form-group-modern">
                     <label class="form-label">Log WhatsApp Terkirim</label>
                     <div style="overflow:auto;">
-                        <table class="table" style="min-width:640px;">
+                        <table class="table wa-log-table" style="min-width:760px;">
                             <thead>
                                 <tr>
-                                    <th>Waktu</th>
+                                    <th>Tanggal</th>
+                                    <th>Jam</th>
                                     <th>Target</th>
                                     <th>Status</th>
                                     <th>Pesan</th>
@@ -734,21 +634,28 @@ foreach ($wa_recipients as $rec) {
                             </thead>
                             <tbody>
                                 <?php if (empty($wa_logs)): ?>
-                                    <tr><td colspan="5" style="text-align:center;">Belum ada log.</td></tr>
+                                    <tr><td colspan="6" style="text-align:center;">Belum ada log.</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($wa_logs as $log): ?>
                                         <?php
-                                            $msg = (string)($log['message'] ?? '');
-                                            if (strlen($msg) > 120) $msg = substr($msg, 0, 117) . '...';
+                                            $msg = wa_format_log_message($log['message'] ?? '');
                                             $status = strtolower((string)($log['status'] ?? ''));
                                             $status_badge = strpos($status, 'success') !== false ? 'wa-badge wa-badge-green' : (strpos($status, 'fail') !== false || strpos($status, 'error') !== false ? 'wa-badge wa-badge-red' : 'wa-badge wa-badge-blue');
+                                            $created = (string)($log['created_at'] ?? '');
+                                            $ts = $created !== '' ? strtotime($created) : false;
+                                            $date = $ts ? date('d-m-Y', $ts) : '-';
+                                            $time = $ts ? date('H:i', $ts) : '-';
+                                            $target_label = wa_display_target($log['target'] ?? '', $wa_label_map);
+                                            $has_file = trim((string)($log['pdf_file'] ?? '')) !== '';
+                                            $file_badge = $has_file ? 'wa-badge wa-badge-blue' : 'wa-badge wa-badge-gray';
                                         ?>
                                         <tr>
-                                            <td><?= htmlspecialchars($log['created_at'] ?? '-'); ?></td>
-                                            <td><?= htmlspecialchars($log['target'] ?? '-'); ?></td>
+                                            <td><?= htmlspecialchars($date); ?></td>
+                                            <td><?= htmlspecialchars($time); ?></td>
+                                            <td><?= htmlspecialchars($target_label); ?></td>
                                             <td><span class="<?= $status_badge; ?>"><?= htmlspecialchars($log['status'] ?? '-'); ?></span></td>
-                                            <td><?= htmlspecialchars($msg); ?></td>
-                                            <td><?= htmlspecialchars($log['pdf_file'] ?? '-'); ?></td>
+                                            <td class="wa-log-message" title="<?= htmlspecialchars($msg); ?>"><?= htmlspecialchars($msg); ?></td>
+                                            <td><span class="<?= $file_badge; ?>"><?= $has_file ? 'PDF' : 'Text'; ?></span></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
