@@ -1,15 +1,16 @@
 <?php
 
 require_once __DIR__ . '/../../include/db_helpers.php';
+require_once __DIR__ . '/../../include/db.php';
 
 function wa_get_env_config() {
-    $root_dir = dirname(__DIR__, 2);
-    $env = [];
-    $envFile = $root_dir . '/include/env.php';
-    if (file_exists($envFile)) {
-        require $envFile;
+    static $cache = null;
+    if ($cache !== null) {
+        return $cache;
     }
-    return $env['whatsapp'] ?? [];
+    $cfg = app_db_get_whatsapp_config();
+    $cache = is_array($cfg) ? $cfg : [];
+    return $cache;
 }
 
 function wa_normalize_target($target, $countryCode = '62') {

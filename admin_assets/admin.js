@@ -194,6 +194,7 @@
         var form = event.target;
         if (!form || form.tagName !== 'FORM') return;
         if (!shell.contains(form)) return;
+        if (form.getAttribute('data-no-ajax') === '1') return;
 
         var viewName = form.getAttribute('data-admin-form') || '';
         var activeView = shell.querySelector('.view-section.active');
@@ -202,7 +203,7 @@
             viewName = activeView.getAttribute('data-view') || '';
         }
         if (viewName === 'settings' && !shell.getAttribute('data-session')) return;
-        if (viewName !== 'settings' && viewName !== 'whatsapp') return;
+        if (viewName !== 'settings' && viewName !== 'whatsapp' && viewName !== 'operator') return;
         if (!activeView || !activeView.contains(form)) {
             activeView = shell.querySelector('[data-view="' + viewName + '"]') || activeView;
         }
@@ -221,15 +222,58 @@
             ? 'admin.php?id=admin-content&section=whatsapp'
             : (viewName === 'settings'
                 ? 'admin.php?id=admin-content&section=settings&session=' + encodeURIComponent(shell.getAttribute('data-session') || '')
-                : window.location.href);
+                : 'admin.php?id=admin-content&section=operator');
         fetch(postUrl, {
             method: 'POST',
             body: formData,
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
             credentials: 'same-origin'
         }).then(function (res) {
-            return res.text();
-        }).then(function (html) {
+            var contentType = (res.headers.get('content-type') || '').toLowerCase();
+            if (contentType.indexOf('application/json') !== -1) {
+                return res.json().then(function (json) { return { type: 'json', data: json }; });
+            }
+            return res.text().then(function (html) { return { type: 'html', data: html }; });
+        }).then(function (payload) {
+            if (viewName === 'operator') {
+                if (payload.type === 'json') {
+                    var ok = payload.data && payload.data.ok;
+                    var message = (payload.data && payload.data.message) || (ok ? 'Data tersimpan.' : 'Gagal menyimpan data.');
+                    if (typeof window.notify === 'function') {
+                        window.notify(message, ok ? 'success' : 'error');
+                    } else {
+                        var targetView = activeView || shell.querySelector('[data-view="operator"]');
+                        if (targetView) {
+                            targetView.insertAdjacentHTML('afterbegin',
+                                '<div class="alert ' + (ok ? 'alert-success' : 'alert-danger') + '" style="margin-bottom: 12px;">' + message + '</div>'
+                            );
+                        }
+                    }
+                    return;
+                }
+
+                var opView = activeView || shell.querySelector('[data-view="operator"]');
+                if (opView && typeof payload.data === 'string') {
+                    if (payload.data.trim() !== '') {
+                        opView.innerHTML = payload.data;
+                        opView.setAttribute('data-loaded', '1');
+                        executeInlineScripts(opView);
+                        var existingAlert = opView.querySelector('.alert');
+                        if (!existingAlert) {
+                            opView.insertAdjacentHTML('afterbegin',
+                                '<div class="alert alert-success" style="margin-bottom: 15px; padding: 15px; border-radius: 10px;">Data admin & operator tersimpan.</div>'
+                            );
+                        }
+                    } else {
+                        opView.insertAdjacentHTML('afterbegin',
+                            '<div class="alert alert-success" style="margin-bottom: 15px; padding: 15px; border-radius: 10px;">Data admin & operator tersimpan.</div>'
+                        );
+                    }
+                }
+                return;
+            }
+
+            var html = payload.data;
             if (viewName === 'whatsapp' || viewName === 'settings') {
                 activeView.innerHTML = html;
                 activeView.setAttribute('data-loaded', '1');
@@ -272,11 +316,19 @@
                 if (viewName === 'whatsapp' && window.history && window.history.replaceState) {
                     window.history.replaceState({}, document.title, 'admin.php?id=whatsapp');
                 }
-            } else {
+            } else if (viewName !== 'operator') {
                 loadSection('settings', shell.getAttribute('data-session'));
             }
         }).catch(function () {
-            showMessage(activeView, 'Gagal menyimpan data.');
+            if (viewName === 'operator') {
+                if (typeof window.notify === 'function') {
+                    window.notify('Gagal menyimpan data.', 'error');
+                } else {
+                    showMessage(activeView, 'Gagal menyimpan data.');
+                }
+            } else {
+                showMessage(activeView, 'Gagal menyimpan data.');
+            }
         }).finally(function () {
             if (submitBtn) {
                 submitBtn.disabled = false;

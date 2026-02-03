@@ -1,7 +1,7 @@
 services:
   mikhmon:
     build: . 
-    container_name: mikhmon-pi-final
+    container_name: wartelpas
     restart: always
     ports:
       - "8081:80"
@@ -24,7 +24,6 @@ services:
       - /home/abdullah/.config/rclone/rclone.conf:/var/www/html/config/rclone.conf:ro
       - ./include:/var/www/html/include
       - ./settings:/var/www/html/settings
-      - ./include/readcfg.php:/var/www/html/include/readcfg.php
       - ./custom.ini:/usr/local/etc/php/conf.d/custom.ini
       - ./.htaccess:/var/www/html/.htaccess
 
@@ -73,8 +72,4 @@ services:
       # ==========================================
       # 6. INCLUDE LAINNYA
       # ==========================================
-      - ./include/menu.php:/var/www/html/include/menu.php
-      - ./include/login.php:/var/www/html/include/login.php
-      - ./include/headhtml.php:/var/www/html/include/headhtml.php
-      - ./include/acl.php:/var/www/html/include/acl.php
       - ./system/scheduler.php:/var/www/html/system/scheduler.php

@@ -15,6 +15,9 @@ if (file_exists($envFile)) {
 
 require_once __DIR__ . '/admin_account_logic.php';
 
+$admin_row = app_db_get_admin();
+$useradm = $admin_row['username'] ?? '';
+
 $op_db = app_db_get_operator();
 $op_user = $op_db['username'] ?? '';
 $op_pass = $op_db['password'] ?? '';
@@ -30,7 +33,14 @@ if ($op_user === '' && $op_pass === '') {
 <script>
     window.__isSuperAdminFlag = true;
 </script>
-<form autocomplete="off" method="post" action="">
+<?php if (isset($_GET['saved'])): ?>
+    <div class="alert alert-success" style="margin-bottom: 15px; padding: 15px; border-radius: 10px;">Data admin & operator tersimpan.</div>
+<?php elseif (isset($_GET['error']) && $_GET['error'] === 'empty-username'): ?>
+    <div class="alert alert-danger" style="margin-bottom: 15px;">Gagal menyimpan. Username tidak boleh kosong.</div>
+<?php elseif (isset($_GET['error']) && $_GET['error'] === 'forbidden'): ?>
+    <div class="alert alert-danger" style="margin-bottom: 15px;">Akses ditolak. Hubungi Superadmin.</div>
+<?php endif; ?>
+<form autocomplete="off" method="post" action="./admin.php?id=operator-access" data-admin-form="operator">
     <div class="row">
         <div class="col-6">
             <div class="card-modern">
@@ -76,7 +86,7 @@ if ($op_user === '' && $op_pass === '') {
                         <label class="form-label">Username Operator</label>
                         <div class="input-group-modern">
                             <div class="input-icon"><i class="fa fa-user"></i></div>
-                            <input class="form-control-modern" type="text" value="<?= htmlspecialchars($op_user); ?>" readonly>
+                            <input class="form-control-modern" type="text" name="operator_user" value="<?= htmlspecialchars($op_user); ?>" required>
                         </div>
                     </div>
 

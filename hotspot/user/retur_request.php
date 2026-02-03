@@ -36,7 +36,8 @@ $envFile = $root_dir . '/include/env.php';
 if (file_exists($envFile)) {
     require $envFile;
 }
-$wa_cfg = $env['whatsapp'] ?? [];
+require_once $root_dir . '/include/db.php';
+$wa_cfg = app_db_get_whatsapp_config();
 $helperFile = $root_dir . '/hotspot/user/helpers.php';
 if (file_exists($helperFile)) {
     require_once $helperFile;

@@ -208,7 +208,7 @@ if (file_exists($tmpl_onlogin) && file_exists($tmpl_onlogout) && $base_url !== '
 }
 ?>
 
-<form autocomplete="off" method="post" action="" name="settings" data-admin-form="settings">
+<form autocomplete="off" method="post" action="" name="settings" data-admin-form="settings" data-no-ajax="1">
   <div class="row">
     <div class="col-12">
       <div class="card-modern">
@@ -295,7 +295,7 @@ if (file_exists($tmpl_onlogin) && file_exists($tmpl_onlogout) && $base_url !== '
                         <label class="form-label">Nama Hotspot</label>
                         <div class="input-group-modern">
                           <div class="input-icon"><i class="fa fa-wifi"></i></div>
-                          <input class="form-control-modern" type="text" maxlength="50" name="hotspotname" title="Hotspot Name" value="<?= $hotspotname; ?>" required="1"/>
+                          <input class="form-control-modern" type="text" maxlength="50" name="hotspotname" title="Hotspot Name" placeholder="contoh: wartelpas" value="<?= $hotspotname; ?>" required="1"/>
                         </div>
                       </div>
                     </div>
@@ -356,7 +356,7 @@ if (file_exists($tmpl_onlogin) && file_exists($tmpl_onlogout) && $base_url !== '
                         <label class="form-label">Traffic Interface</label>
                         <div class="input-group-modern">
                           <div class="input-icon"><i class="fa fa-exchange"></i></div>
-                          <input class="form-control-modern" type="number" min="1" max="99" name="iface" title="Traffic Interface" value="<?= $iface; ?>" required="1"/>
+                          <input class="form-control-modern" type="text" name="iface" title="Traffic Interface" placeholder="contoh: ether1 atau 1" value="<?= $iface; ?>" required="1"/>
                         </div>
                       </div>
                     </div>

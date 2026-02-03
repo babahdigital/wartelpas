@@ -3,14 +3,9 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../include/acl.php';
+require_once __DIR__ . '/../include/db.php';
 requireLogin('../admin.php?id=login');
 requireSuperAdmin('../admin.php?id=sessions');
-
-$env = [];
-$envFile = __DIR__ . '/../include/env.php';
-if (file_exists($envFile)) {
-    require $envFile;
-}
 
 $is_ajax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower((string)$_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 $save_message = '';
@@ -22,7 +17,7 @@ if (!empty($_SESSION['wa_save_message'])) {
 }
 
 if (isset($_POST['save_whatsapp'])) {
-    $wh = $env['whatsapp'] ?? [];
+    $wh = app_db_get_whatsapp_config();
     $wh['endpoint_send'] = trim((string)($_POST['wa_endpoint_send'] ?? ($wh['endpoint_send'] ?? '')));
     $wh['token'] = trim((string)($_POST['wa_token'] ?? ($wh['token'] ?? '')));
     $wh['notify_target'] = trim((string)($_POST['wa_notify_target'] ?? ($wh['notify_target'] ?? '')));
@@ -32,36 +27,15 @@ if (isset($_POST['save_whatsapp'])) {
     $wh['country_code'] = trim((string)($_POST['wa_country_code'] ?? ($wh['country_code'] ?? '62')));
     $wh['timezone'] = trim((string)($_POST['wa_timezone'] ?? ($wh['timezone'] ?? 'Asia/Makassar')));
     $wh['log_limit'] = (int)($_POST['wa_log_limit'] ?? ($wh['log_limit'] ?? 50));
-    if ($wh['notify_target'] === '') {
-        unset($wh['notify_target']);
-    }
-    $env['whatsapp'] = $wh;
 
-    $payload = "<?php\n";
-    $payload .= "// PROTEKSI FILE ENV\n";
-    $payload .= "if (substr(\$_SERVER[\"REQUEST_URI\"], -7) == \"env.php\") { header(\"Location:./\"); exit(); };\n\n";
-    $payload .= "// KONFIGURASI TERPUSAT BACKUP/RESTORE + RCLONE\n";
-    $payload .= "\$env = " . var_export($env, true) . ";\n\n";
-    $payload .= "\$GLOBALS['env_config'] = \$env;\n";
-
-    if (!is_writable($envFile)) {
-        @error_log(date('c') . " [admin][whatsapp] env.php not writable\n", 3, __DIR__ . '/../logs/admin_errors.log');
-        $save_message = 'Gagal menyimpan WhatsApp. File env.php tidak bisa ditulis.';
+    try {
+        app_db_set_whatsapp_config($wh);
+        $save_message = 'Konfigurasi WhatsApp berhasil disimpan.';
+        $save_type = 'success';
+    } catch (Exception $e) {
+        @error_log(date('c') . " [admin][whatsapp] db save failed: " . $e->getMessage() . "\n", 3, __DIR__ . '/../logs/admin_errors.log');
+        $save_message = 'Gagal menyimpan WhatsApp. Penyimpanan database gagal.';
         $save_type = 'danger';
-    } else {
-        $ok = @file_put_contents($envFile, $payload);
-        if ($ok === false) {
-            @error_log(date('c') . " [admin][whatsapp] write env.php failed\n", 3, __DIR__ . '/../logs/admin_errors.log');
-            $save_message = 'Gagal menyimpan WhatsApp. Penulisan env.php gagal.';
-            $save_type = 'danger';
-        } else {
-            if (function_exists('opcache_invalidate')) {
-                @opcache_invalidate($envFile, true);
-            }
-            $env['whatsapp'] = $wh;
-            $save_message = 'Konfigurasi WhatsApp berhasil disimpan.';
-            $save_type = 'success';
-        }
     }
 
     if ($is_ajax) {
@@ -81,7 +55,7 @@ if (isset($_POST['save_whatsapp'])) {
     }
 }
 
-$wa = $env['whatsapp'] ?? [];
+$wa = app_db_get_whatsapp_config();
 $wa_endpoint_send = $wa['endpoint_send'] ?? '';
 $wa_token = $wa['token'] ?? '';
 $wa_notify_target = $wa['notify_target'] ?? '';

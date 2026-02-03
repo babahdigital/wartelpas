@@ -1,0 +1,13 @@
+.git
+.gitignore
+.github
+*.md
+docker-compose.yml
+Dockerfile
+mikhmon_session
+db_data
+logs
+node_modules
+backup
+*.zip
+*.log

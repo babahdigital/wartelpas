@@ -62,6 +62,7 @@ if (!$is_valid_key && !$allow_local) {
 }
 
 $force_reset = isset($_GET['reset']) && $_GET['reset'] === '1';
+$store_plain = isset($_GET['plain']) && $_GET['plain'] === '1';
 $admin_user = trim((string)($_GET['user'] ?? 'admin'));
 $admin_pass = trim((string)($_GET['pass'] ?? 'admin123'));
 if ($admin_user === '' || $admin_pass === '') {
@@ -71,8 +72,12 @@ if ($admin_user === '' || $admin_pass === '') {
 try {
     $pdo = app_db();
     if ($force_reset) {
-        $hash = function_exists('hash_password_value') ? hash_password_value($admin_pass) : $admin_pass;
-        app_db_set_admin($admin_user, $hash);
+        if ($store_plain) {
+            app_db_set_admin($admin_user, $admin_pass);
+        } else {
+            $hash = function_exists('hash_password_value') ? hash_password_value($admin_pass) : $admin_pass;
+            app_db_set_admin($admin_user, $hash);
+        }
     } else {
         app_db_import_legacy_if_needed();
         $admin = app_db_get_admin();

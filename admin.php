@@ -65,6 +65,15 @@ $c = $_GET['c'];
 $router = $_GET['router'];
 $logo = $_GET['logo'];
 
+if ($id === 'operator-access' && isset($_POST['save'])) {
+  include_once('./settings/admin_account_logic.php');
+}
+
+if ($id === 'settings' && isset($_POST['save'])) {
+  include_once('./settings/settings.php');
+  exit;
+}
+
 if ($id === 'settings' && empty($session) && !empty($router) && explode('-', $router)[0] === 'new') {
   echo "<script>window.location='./admin.php?id=settings&session=" . $router . "'</script>";
   exit;
@@ -96,7 +105,9 @@ if ($_SESSION['theme'] == "") {
 
 // load config
 include('./include/config.php');
-include('./include/readcfg.php');
+if (!empty($session) && isset($data[$session]) && is_array($data[$session])) {
+  include('./include/readcfg.php');
+}
 
 include_once('./lib/routeros_api.class.php');
 include_once('./lib/formatbytesbites.php');

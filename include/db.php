@@ -75,6 +75,20 @@ function app_db_init(PDO $pdo)
         hotspot_server TEXT,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     );");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS whatsapp_config (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        endpoint_send TEXT,
+        token TEXT,
+        notify_target TEXT,
+        notify_request_enabled INTEGER NOT NULL DEFAULT 1,
+        notify_retur_enabled INTEGER NOT NULL DEFAULT 1,
+        notify_refund_enabled INTEGER NOT NULL DEFAULT 1,
+        country_code TEXT,
+        timezone TEXT,
+        log_limit INTEGER NOT NULL DEFAULT 50,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );");
 }
 
 function app_db_seed_default_admin(PDO $pdo)
@@ -219,6 +233,84 @@ function app_db_set_operator($username, $password)
     $stmt->execute([
         ':u' => (string)$username,
         ':p' => (string)$password,
+    ]);
+}
+
+function app_db_read_whatsapp_env()
+{
+    $env = [];
+    $envFile = __DIR__ . '/env.php';
+    if (file_exists($envFile)) {
+        require $envFile;
+    }
+    $wh = $env['whatsapp'] ?? [];
+    return is_array($wh) ? $wh : [];
+}
+
+function app_db_get_whatsapp_config()
+{
+    $pdo = app_db();
+    $stmt = $pdo->query('SELECT * FROM whatsapp_config WHERE id = 1');
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row) {
+        $fromEnv = app_db_read_whatsapp_env();
+        $hasEnv = false;
+        foreach ($fromEnv as $val) {
+            if ($val !== '' && $val !== null) {
+                $hasEnv = true;
+                break;
+            }
+        }
+        if ($hasEnv) {
+            app_db_set_whatsapp_config($fromEnv);
+            $stmt = $pdo->query('SELECT * FROM whatsapp_config WHERE id = 1');
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+    }
+
+    return [
+        'endpoint_send' => isset($row['endpoint_send']) && $row['endpoint_send'] !== '' ? (string)$row['endpoint_send'] : 'https://api.fonnte.com/send',
+        'token' => isset($row['token']) ? (string)$row['token'] : '',
+        'notify_target' => isset($row['notify_target']) ? (string)$row['notify_target'] : '',
+        'notify_request_enabled' => isset($row['notify_request_enabled']) ? (int)$row['notify_request_enabled'] : 1,
+        'notify_retur_enabled' => isset($row['notify_retur_enabled']) ? (int)$row['notify_retur_enabled'] : 1,
+        'notify_refund_enabled' => isset($row['notify_refund_enabled']) ? (int)$row['notify_refund_enabled'] : 1,
+        'country_code' => isset($row['country_code']) && $row['country_code'] !== '' ? (string)$row['country_code'] : '62',
+        'timezone' => isset($row['timezone']) && $row['timezone'] !== '' ? (string)$row['timezone'] : 'Asia/Makassar',
+        'log_limit' => isset($row['log_limit']) ? (int)$row['log_limit'] : 50,
+    ];
+}
+
+function app_db_set_whatsapp_config(array $data)
+{
+    $pdo = app_db();
+    $endpoint = trim((string)($data['endpoint_send'] ?? 'https://api.fonnte.com/send'));
+    $token = trim((string)($data['token'] ?? ''));
+    $notify_target = trim((string)($data['notify_target'] ?? ''));
+    $notify_request_enabled = !empty($data['notify_request_enabled']) ? 1 : 0;
+    $notify_retur_enabled = !empty($data['notify_retur_enabled']) ? 1 : 0;
+    $notify_refund_enabled = !empty($data['notify_refund_enabled']) ? 1 : 0;
+    $country_code = trim((string)($data['country_code'] ?? '62'));
+    $timezone = trim((string)($data['timezone'] ?? 'Asia/Makassar'));
+    $log_limit = isset($data['log_limit']) ? (int)$data['log_limit'] : 50;
+    if ($log_limit <= 0) {
+        $log_limit = 50;
+    }
+
+    $stmt = $pdo->prepare("INSERT OR REPLACE INTO whatsapp_config
+        (id, endpoint_send, token, notify_target, notify_request_enabled, notify_retur_enabled, notify_refund_enabled, country_code, timezone, log_limit, updated_at)
+        VALUES (1, :endpoint_send, :token, :notify_target, :nreq, :nret, :nref, :country_code, :timezone, :log_limit, CURRENT_TIMESTAMP)");
+    $stmt->execute([
+        ':endpoint_send' => $endpoint,
+        ':token' => $token,
+        ':notify_target' => $notify_target,
+        ':nreq' => $notify_request_enabled,
+        ':nret' => $notify_retur_enabled,
+        ':nref' => $notify_refund_enabled,
+        ':country_code' => $country_code,
+        ':timezone' => $timezone,
+        ':log_limit' => $log_limit,
     ]);
 }
 

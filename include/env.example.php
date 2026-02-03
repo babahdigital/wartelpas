@@ -47,14 +47,6 @@ $env = [
     'retur_request' => [
         'enabled' => false,
     ],
-    'whatsapp' => [
-        'endpoint_send' => 'https://api.fonnte.com/send',
-        'token' => '',
-        'country_code' => '62',
-        'timezone' => 'Asia/Makassar',
-        'log_limit' => 50,
-        'notify_target' => '',
-    ],
     'rclone' => [
         'enable' => false,
         'download' => false,
