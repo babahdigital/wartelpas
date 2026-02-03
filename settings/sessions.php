@@ -366,7 +366,7 @@ $has_router = !empty($router_list);
           <div class="col-6">
             <div class="card-modern" style="margin-bottom:12px;">
               <div class="card-body-modern">
-                <div class="text-secondary" style="font-size:12px;">Backup Status</div>
+                <div class="text-secondary" style="font-size:12px;">Backup OK (Main)</div>
                 <div style="font-size:18px; font-weight:700;" class="<?= $backup_status_class; ?>"><?= htmlspecialchars($backup_status_label); ?> <span class="badge"><?= htmlspecialchars($backup_status_badge); ?></span></div>
               </div>
             </div>
@@ -374,24 +374,24 @@ $has_router = !empty($router_list);
           <div class="col-6">
             <div class="card-modern" style="margin-bottom:12px;">
               <div class="card-body-modern">
-                <div class="text-secondary" style="font-size:12px;">Build Date</div>
-                <div style="font-size:18px; font-weight:700;"><?= htmlspecialchars($build_label); ?></div>
+                <div class="text-secondary" style="font-size:12px;">Backup OK (App)</div>
+                <div style="font-size:18px; font-weight:700;" class="<?= $app_backup_class; ?>"><?= htmlspecialchars($app_backup_label); ?> <span class="badge"><?= htmlspecialchars($app_backup_badge); ?></span></div>
               </div>
             </div>
           </div>
           <div class="col-6">
             <div class="card-modern">
               <div class="card-body-modern">
-                <div class="text-secondary" style="font-size:12px;">Mode Server</div>
-                <div style="font-size:18px; font-weight:700;"><?= htmlspecialchars($server_mode); ?></div>
+                <div class="text-secondary" style="font-size:12px;">Cloud (Main)</div>
+                <div style="font-size:18px; font-weight:700;" class="<?= $cloud_backup_class; ?>"><?= htmlspecialchars($cloud_backup_label); ?> <span class="badge"><?= htmlspecialchars($cloud_backup_badge); ?></span></div>
               </div>
             </div>
           </div>
           <div class="col-6">
             <div class="card-modern">
               <div class="card-body-modern">
-                <div class="text-secondary" style="font-size:12px;">PHP Version</div>
-                <div style="font-size:18px; font-weight:700;"><?= htmlspecialchars($php_label); ?></div>
+                <div class="text-secondary" style="font-size:12px;">Cloud (App)</div>
+                <div style="font-size:18px; font-weight:700;" class="<?= $app_cloud_class; ?>"><?= htmlspecialchars($app_cloud_label); ?> <span class="badge"><?= htmlspecialchars($app_cloud_badge); ?></span></div>
               </div>
             </div>
           </div>
