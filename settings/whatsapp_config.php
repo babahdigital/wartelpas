@@ -450,6 +450,7 @@ if (isset($_POST['save_whatsapp'])) {
     $wh['notify_retur_enabled'] = !empty($_POST['wa_notify_retur_enabled']);
     $wh['notify_refund_enabled'] = !empty($_POST['wa_notify_refund_enabled']);
     $wh['notify_ls_enabled'] = !empty($_POST['wa_notify_ls_enabled']);
+    $wh['notify_todo_enabled'] = !empty($_POST['wa_notify_todo_enabled']);
     $wh['country_code'] = trim((string)($wh['country_code'] ?? '62'));
     if ($wh['country_code'] === '') {
         $wh['country_code'] = '62';
@@ -503,6 +504,7 @@ $wa_notify_request_enabled = !empty($wa['notify_request_enabled']);
 $wa_notify_retur_enabled = !empty($wa['notify_retur_enabled']);
 $wa_notify_refund_enabled = !empty($wa['notify_refund_enabled']);
 $wa_notify_ls_enabled = !empty($wa['notify_ls_enabled']);
+$wa_notify_todo_enabled = !empty($wa['notify_todo_enabled']);
 $wa_log_limit = isset($wa['log_limit']) ? (int)$wa['log_limit'] : 50;
 
 if ($stats_db) {
@@ -634,6 +636,7 @@ foreach ($wa_recipients as $rec) {
             <input type="hidden" name="wa_notify_ls_enabled" value="<?= $wa_notify_ls_enabled ? '1' : '0'; ?>">
             <input type="hidden" name="wa_notify_retur_enabled" value="<?= $wa_notify_retur_enabled ? '1' : '0'; ?>">
             <input type="hidden" name="wa_notify_refund_enabled" value="<?= $wa_notify_refund_enabled ? '1' : '0'; ?>">
+            <input type="hidden" name="wa_notify_todo_enabled" value="<?= $wa_notify_todo_enabled ? '1' : '0'; ?>">
             <div class="row">
                 <div class="col-6">
                     <div class="form-group-modern">
@@ -658,6 +661,37 @@ foreach ($wa_recipients as $rec) {
                             <input class="form-control-modern" type="number" min="1" max="500" name="wa_log_limit" value="<?= (int)$wa_log_limit; ?>">
                         </div>
                         <small class="wa-muted" style="display:block; margin-top:6px;">Jumlah log terakhir yang ditampilkan di bawah.</small>
+                    </div>
+                    <div class="form-group-modern" style="margin-top:10px;">
+                        <div class="wa-section-title">Notifikasi Otomatis</div>
+                        <div class="wa-muted">Aktif/nonaktifkan jenis notifikasi yang dikirim via WhatsApp.</div>
+                        <div class="wa-popup-switches" style="margin-top:8px;">
+                            <label class="wa-switch">
+                                <input type="checkbox" name="wa_notify_request_enabled" value="1" <?= $wa_notify_request_enabled ? 'checked' : ''; ?>>
+                                <span class="wa-switch-slider"></span>
+                                <span style="font-size:12px; color:#cbd5db;">Notif Request</span>
+                            </label>
+                            <label class="wa-switch">
+                                <input type="checkbox" name="wa_notify_retur_enabled" value="1" <?= $wa_notify_retur_enabled ? 'checked' : ''; ?>>
+                                <span class="wa-switch-slider"></span>
+                                <span style="font-size:12px; color:#cbd5db;">Notif Retur</span>
+                            </label>
+                            <label class="wa-switch">
+                                <input type="checkbox" name="wa_notify_refund_enabled" value="1" <?= $wa_notify_refund_enabled ? 'checked' : ''; ?>>
+                                <span class="wa-switch-slider"></span>
+                                <span style="font-size:12px; color:#cbd5db;">Notif Refund</span>
+                            </label>
+                            <label class="wa-switch">
+                                <input type="checkbox" name="wa_notify_ls_enabled" value="1" <?= $wa_notify_ls_enabled ? 'checked' : ''; ?>>
+                                <span class="wa-switch-slider"></span>
+                                <span style="font-size:12px; color:#cbd5db;">Notif L/S</span>
+                            </label>
+                            <label class="wa-switch">
+                                <input type="checkbox" name="wa_notify_todo_enabled" value="1" <?= $wa_notify_todo_enabled ? 'checked' : ''; ?>>
+                                <span class="wa-switch-slider"></span>
+                                <span style="font-size:12px; color:#cbd5db;">Notif Todo</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
                 <div class="col-6">
