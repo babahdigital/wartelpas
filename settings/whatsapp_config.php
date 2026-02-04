@@ -576,6 +576,8 @@ foreach ($wa_recipients as $rec) {
         align-items: center;
         gap: 8px;
         cursor: pointer;
+        margin: 7px 0;
+        padding-right: 20px;
     }
     .wa-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
     .wa-switch-slider {
