@@ -363,21 +363,9 @@ try {
                 echo "OK";
                 exit;
             }
-            $seq = 1;
-            $stmtSeq = $db->prepare("SELECT COALESCE(MAX(seq),0) FROM login_events WHERE username = :u AND date_key = :dk");
-            $stmtSeq->execute([':u' => $user, ':dk' => $date_key]);
-            $seq = (int)$stmtSeq->fetchColumn() + 1;
-            $stmtIns = $db->prepare("INSERT INTO login_events (username, customer_name, room_name, login_time, logout_time, seq, date_key, created_at, updated_at)
-                VALUES (:u, :cn, :rn, NULL, :lt, :seq, :dk, :now, :now)");
-            $stmtIns->execute([
-                ':u' => $user,
-                ':cn' => $customer_name,
-                ':rn' => $room_name,
-                ':lt' => $dt,
-                ':seq' => $seq,
-                ':dk' => $date_key,
-                ':now' => $now
-            ]);
+            @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | orphan_logout_skip | user=" . $user . " | dt=" . $dt . "\n", FILE_APPEND);
+            echo "OK";
+            exit;
         }
     }
 
