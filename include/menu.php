@@ -49,6 +49,46 @@ try {
         $today = date('Y-m-d');
         $now_ts = time();
         $late_minutes = 60;
+        $todo_cfg = $env['todo'] ?? [];
+        $audit_after = (string)($todo_cfg['audit_after'] ?? '18:00');
+        $settlement_open = (string)($todo_cfg['settlement_open'] ?? $audit_after);
+        $settlement_close = (string)($todo_cfg['settlement_close'] ?? '23:59');
+        $phone_after = (string)($todo_cfg['phone_after'] ?? $audit_after);
+
+        $parse_time = function($timeStr) use ($today) {
+            $timeStr = trim((string)$timeStr);
+            if ($timeStr === '' || !preg_match('/^\d{2}:\d{2}$/', $timeStr)) return null;
+            return strtotime($today . ' ' . $timeStr);
+        };
+        $audit_ts = $parse_time($audit_after);
+        $settle_open_ts = $parse_time($settlement_open);
+        $settle_close_ts = $parse_time($settlement_close);
+        $phone_ts = $parse_time($phone_after);
+        $is_after_audit = $audit_ts ? ($now_ts >= $audit_ts) : false;
+        $is_after_phone = $phone_ts ? ($now_ts >= $phone_ts) : false;
+        $is_settlement_window = $settle_open_ts && $settle_close_ts
+            ? ($now_ts >= $settle_open_ts && $now_ts <= $settle_close_ts)
+            : false;
+
+        $todo_next = $_SERVER['REQUEST_URI'] ?? '';
+        if ($todo_next === '') $todo_next = './?session=' . urlencode($session);
+
+        $db_sync->exec("CREATE TABLE IF NOT EXISTS todo_ack (key TEXT, report_date TEXT, ack_at TEXT, PRIMARY KEY (key, report_date))");
+        $todo_is_ack = function($key, $date) use ($db_sync) {
+            $stmt = $db_sync->prepare("SELECT ack_at FROM todo_ack WHERE key = :k AND report_date = :d LIMIT 1");
+            $stmt->execute([':k' => $key, ':d' => $date]);
+            $val = (string)$stmt->fetchColumn();
+            return $val !== '';
+        };
+        $todo_ack_url = function($key) use ($session, $todo_next) {
+            $qs = http_build_query([
+                'session' => $session,
+                'key' => $key,
+                'date' => date('Y-m-d'),
+                'next' => $todo_next
+            ]);
+            return './tools/todo_ack.php?' . $qs;
+        };
 
         // Live Sales stale detection
         $last_live_full = '-';
@@ -116,7 +156,7 @@ try {
         }
 
         $report_url = './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($today);
-        if (!$audit_locked_today) {
+        if ($is_after_audit && !$audit_locked_today) {
             $todo_list[] = [
                 'id' => 'audit_pending',
                 'title' => 'Audit belum dikunci',
@@ -126,7 +166,7 @@ try {
                 'action_url' => $report_url,
                 'action_target' => '_self'
             ];
-        } elseif (!$settled_today) {
+        } elseif ($audit_locked_today && !$settled_today && $is_settlement_window) {
             $todo_list[] = [
                 'id' => 'settlement_pending',
                 'title' => 'Settlement belum dilakukan',
@@ -150,14 +190,28 @@ try {
         } catch (Exception $e) {
             $hp_count = 0;
         }
+        $hp_needs_review = false;
         if ($hp_count === 0) {
+            $hp_needs_review = true;
+        } elseif ($hp_last !== '') {
+            $hp_last_ts = strtotime($hp_last);
+            if ($hp_last_ts) {
+                if (date('Y-m-d', $hp_last_ts) !== $today) {
+                    $hp_needs_review = true;
+                } elseif ($phone_ts && $hp_last_ts < $phone_ts && $now_ts >= $phone_ts) {
+                    $hp_needs_review = true;
+                }
+            }
+        }
+        if ($is_after_phone && $hp_needs_review && !$todo_is_ack('hp_review', $today)) {
+            $hp_last_text = $hp_last !== '' ? date('d-m-Y H:i', strtotime($hp_last)) : '-';
             $todo_list[] = [
                 'id' => 'hp_review',
                 'title' => 'Input Handphone belum ditinjau',
-                'desc' => 'Belum ada input Handphone hari ini. Mohon tinjau data Handphone.',
+                'desc' => 'Belum ada update Handphone harian. Terakhir: ' . $hp_last_text . '. Mohon tinjau data Handphone.',
                 'level' => 'info',
-                'action_label' => 'Buka Input HP',
-                'action_url' => $report_url,
+                'action_label' => 'Sesuai',
+                'action_url' => $todo_ack_url('hp_review'),
                 'action_target' => '_self'
             ];
         }

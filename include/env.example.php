@@ -44,6 +44,12 @@ $env = [
     'retur_request' => [
         'enabled' => false,
     ],
+    'todo' => [
+        'audit_after' => '18:00',
+        'settlement_open' => '18:00',
+        'settlement_close' => '23:59',
+        'phone_after' => '18:00',
+    ],
     'rclone' => [
         'enable' => false,
         'download' => false,

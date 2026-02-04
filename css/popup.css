@@ -321,6 +321,10 @@
 
 .todo-row:last-child td { border-bottom: none; }
 
+.todo-row.todo-danger td { background: rgba(239, 68, 68, 0.06); }
+.todo-row.todo-warn td { background: rgba(245, 158, 11, 0.06); }
+.todo-row.todo-info td { background: rgba(59, 130, 246, 0.06); }
+
 .todo-action-dash { color: var(--popup-muted); }
 
 .todo-item-head {
