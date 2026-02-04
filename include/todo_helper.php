@@ -265,10 +265,37 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                     if ($sel < 0 || $kb > 0) {
                         $val = $sel < 0 ? $sel : (0 - $kb);
                         $abs = number_format(abs((int)$val), 0, ",", ".");
+                        $blok_list = '';
+                        try {
+                            $stmtBlok = $db_sync->prepare("SELECT blok_name, SUM(COALESCE(selisih_setoran,0)) AS sel, SUM(COALESCE(kurang_bayar_amt,0)) AS kb
+                                FROM audit_rekap_manual
+                                WHERE report_date = :d
+                                GROUP BY blok_name
+                                HAVING sel < 0 OR kb > 0
+                                ORDER BY blok_name ASC
+                                LIMIT 10");
+                            $stmtBlok->execute([':d' => $yesterday]);
+                            $rows = $stmtBlok->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                            $parts = [];
+                            foreach ($rows as $br) {
+                                $bname = trim((string)($br['blok_name'] ?? ''));
+                                if ($bname === '') $bname = '-';
+                                $bsel = (int)($br['sel'] ?? 0);
+                                $bkb = (int)($br['kb'] ?? 0);
+                                $sub = [];
+                                if ($bsel < 0) $sub[] = 'selisih ' . number_format(abs($bsel), 0, ",", ".");
+                                if ($bkb > 0) $sub[] = 'kurang ' . number_format($bkb, 0, ",", ".");
+                                $parts[] = $bname . ' (' . implode(' + ', $sub) . ')';
+                            }
+                            if (!empty($parts)) {
+                                $blok_list = ' Blok: ' . implode(', ', $parts) . '.';
+                            }
+                        } catch (Exception $e) {
+                        }
                         $todo_list[] = [
                             'id' => 'audit_kurang_' . $yesterday,
                             'title' => 'Audit kurang bayar (Kemarin)',
-                            'desc' => 'Terdapat kekurangan Rp ' . $abs . ' pada audit tanggal ' . $yesterday_label . '.',
+                            'desc' => 'Terdapat kekurangan Rp ' . $abs . ' pada audit tanggal ' . $yesterday_label . '.' . $blok_list,
                             'level' => 'danger',
                             'action_label' => 'Buka Tanggal ' . $yesterday_label,
                             'action_url' => './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($yesterday),
@@ -297,10 +324,37 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                     if ($selT < 0 || $kbT > 0) {
                         $valT = $selT < 0 ? $selT : (0 - $kbT);
                         $absT = number_format(abs((int)$valT), 0, ",", ".");
+                        $blok_list = '';
+                        try {
+                            $stmtBlok = $db_sync->prepare("SELECT blok_name, SUM(COALESCE(selisih_setoran,0)) AS sel, SUM(COALESCE(kurang_bayar_amt,0)) AS kb
+                                FROM audit_rekap_manual
+                                WHERE report_date = :d
+                                GROUP BY blok_name
+                                HAVING sel < 0 OR kb > 0
+                                ORDER BY blok_name ASC
+                                LIMIT 10");
+                            $stmtBlok->execute([':d' => $today]);
+                            $rows = $stmtBlok->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                            $parts = [];
+                            foreach ($rows as $br) {
+                                $bname = trim((string)($br['blok_name'] ?? ''));
+                                if ($bname === '') $bname = '-';
+                                $bsel = (int)($br['sel'] ?? 0);
+                                $bkb = (int)($br['kb'] ?? 0);
+                                $sub = [];
+                                if ($bsel < 0) $sub[] = 'selisih ' . number_format(abs($bsel), 0, ",", ".");
+                                if ($bkb > 0) $sub[] = 'kurang ' . number_format($bkb, 0, ",", ".");
+                                $parts[] = $bname . ' (' . implode(' + ', $sub) . ')';
+                            }
+                            if (!empty($parts)) {
+                                $blok_list = ' Blok: ' . implode(', ', $parts) . '.';
+                            }
+                        } catch (Exception $e) {
+                        }
                         $todo_list[] = [
                             'id' => 'audit_kurang_' . $today,
                             'title' => 'Audit kurang bayar (Hari Ini)',
-                            'desc' => 'Terdapat kekurangan Rp ' . $absT . ' pada audit tanggal ' . $today_label . '.',
+                            'desc' => 'Terdapat kekurangan Rp ' . $absT . ' pada audit tanggal ' . $today_label . '.' . $blok_list,
                             'level' => 'danger',
                             'action_label' => 'Buka Tanggal ' . $today_label,
                             'action_url' => $today_report_url,
@@ -336,8 +390,35 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 if ($kbV > 0) {
                     $parts[] = 'kurang bayar Rp ' . number_format($kbV, 0, ",", ".");
                 }
+                $blok_list = '';
+                try {
+                    $stmtBlok = $db_sync->prepare("SELECT blok_name, SUM(COALESCE(selisih_setoran,0)) AS sel, SUM(COALESCE(kurang_bayar_amt,0)) AS kb
+                        FROM audit_rekap_manual
+                        WHERE report_date = :d
+                        GROUP BY blok_name
+                        HAVING sel < 0 OR kb > 0
+                        ORDER BY blok_name ASC
+                        LIMIT 10");
+                    $stmtBlok->execute([':d' => $rdate]);
+                    $rows = $stmtBlok->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                    $partsBlok = [];
+                    foreach ($rows as $br) {
+                        $bname = trim((string)($br['blok_name'] ?? ''));
+                        if ($bname === '') $bname = '-';
+                        $bsel = (int)($br['sel'] ?? 0);
+                        $bkb = (int)($br['kb'] ?? 0);
+                        $sub = [];
+                        if ($bsel < 0) $sub[] = 'selisih ' . number_format(abs($bsel), 0, ",", ".");
+                        if ($bkb > 0) $sub[] = 'kurang ' . number_format($bkb, 0, ",", ".");
+                        $partsBlok[] = $bname . ' (' . implode(' + ', $sub) . ')';
+                    }
+                    if (!empty($partsBlok)) {
+                        $blok_list = ' Blok: ' . implode(', ', $partsBlok) . '.';
+                    }
+                } catch (Exception $e) {
+                }
                 $rlabel = $format_ddmmyyyy($rdate);
-                $desc = 'Terdapat ' . implode(' + ', $parts) . ' pada audit tanggal ' . $rlabel . '.';
+                $desc = 'Terdapat ' . implode(' + ', $parts) . ' pada audit tanggal ' . $rlabel . '.' . $blok_list;
                 $todo_list[] = [
                     'id' => 'audit_kurang_' . $rdate,
                     'title' => 'Audit kurang bayar',
@@ -365,10 +446,32 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 if ($rdate === '') continue;
                 $rlabel = $format_ddmmyyyy($rdate);
                 $amt = number_format((int)($rr['total_refund'] ?? 0), 0, ",", ".");
+                $blok_list = '';
+                try {
+                    $stmtBlok = $db_sync->prepare("SELECT blok_name, SUM(COALESCE(refund_amt,0)) AS total_refund
+                        FROM audit_rekap_manual
+                        WHERE COALESCE(refund_amt,0) > 0 AND COALESCE(is_locked,0) = 0 AND report_date = :d
+                        GROUP BY blok_name
+                        ORDER BY blok_name ASC
+                        LIMIT 10");
+                    $stmtBlok->execute([':d' => $rdate]);
+                    $rows = $stmtBlok->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                    $parts = [];
+                    foreach ($rows as $br) {
+                        $bname = trim((string)($br['blok_name'] ?? ''));
+                        if ($bname === '') $bname = '-';
+                        $bamt = number_format((int)($br['total_refund'] ?? 0), 0, ",", ".");
+                        $parts[] = $bname . ' (Rp ' . $bamt . ')';
+                    }
+                    if (!empty($parts)) {
+                        $blok_list = ' Blok: ' . implode(', ', $parts) . '.';
+                    }
+                } catch (Exception $e) {
+                }
                 $todo_list[] = [
                     'id' => 'refund_pending_' . $rdate,
                     'title' => 'Refund belum diaudit',
-                    'desc' => 'Ada refund Rp ' . $amt . ' yang belum diaudit untuk tanggal ' . $rlabel . '.',
+                    'desc' => 'Ada refund Rp ' . $amt . ' yang belum diaudit untuk tanggal ' . $rlabel . '.' . $blok_list,
                     'level' => 'warn',
                     'action_label' => 'Buka Tanggal ' . $rlabel,
                     'action_url' => './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($rdate),
