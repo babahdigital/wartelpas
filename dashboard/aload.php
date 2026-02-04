@@ -853,6 +853,10 @@ if ($load == "logs") {
                                 $statusRaw = 'used';
                             }
                         }
+                    } elseif ($ts !== false) {
+                        if ($statusRaw === 'online' && $ts < ($now_ts - 3600)) {
+                            $statusRaw = 'used';
+                        }
                     }
                     $log['uptime'] = $uptimeRaw;
                     $log['status'] = $statusRaw !== '' ? $statusRaw : ($log['status'] ?? 'USED');
