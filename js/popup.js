@@ -291,6 +291,33 @@
     return data;
   }
 
+  function getStuckData() {
+    var data = window.__stuckMenuData || { count: 0, items: [] };
+    if (!Array.isArray(data.items)) data.items = [];
+    if (typeof data.count === 'undefined' || data.count === null) {
+      data.count = data.items.length || 0;
+    } else {
+      data.count = Number(data.count || 0);
+    }
+    return data;
+  }
+
+  function getReturView() {
+    return window.__returViewTab || 'requests';
+  }
+
+  function setReturView(val) {
+    window.__returViewTab = (val === 'stuck') ? 'stuck' : 'requests';
+  }
+
+  function getStuckFilter() {
+    return window.__stuckFilter || '';
+  }
+
+  function setStuckFilter(val) {
+    window.__stuckFilter = String(val || '');
+  }
+
   function setReturData(data) {
     window.__returMenuData = data;
   }
@@ -723,11 +750,24 @@
           window.openReturMenuPopup();
           return;
         }
+        if (target.getAttribute && target.getAttribute('data-retur-view')) {
+          e.preventDefault();
+          e.stopPropagation();
+          var view = target.getAttribute('data-retur-view') || 'requests';
+          setReturView(view);
+          window.openReturMenuPopup();
+          return;
+        }
         if (target.getAttribute && target.getAttribute('data-retur-print')) {
           e.preventDefault();
           e.stopPropagation();
           var type = target.getAttribute('data-retur-print') || 'all';
           openReturPrint(type);
+          return;
+        }
+        if (target.getAttribute && target.getAttribute('data-stuck-search')) {
+          e.preventDefault();
+          e.stopPropagation();
           return;
         }
         if (target.getAttribute && target.getAttribute('data-retur-action')) {
@@ -743,6 +783,14 @@
           return;
         }
         target = target.parentNode;
+      }
+    });
+
+    document.addEventListener('input', function(e) {
+      var target = e.target;
+      if (target && target.getAttribute && target.getAttribute('data-stuck-search')) {
+        setStuckFilter(target.value || '');
+        window.openReturMenuPopup();
       }
     });
   }
@@ -763,8 +811,12 @@
     var data = getReturData();
     var items = data.items || [];
     var count = data.count;
+    var stuckData = getStuckData();
+    var stuckItems = stuckData.items || [];
+    var stuckCount = stuckData.count || 0;
     var session = getSession();
     var filter = getReturFilter();
+    var view = getReturView();
     var counts = getReturCounts(items);
     var actionMsg = window.__returLastMessage || null;
     window.__returLastMessage = null;
@@ -814,6 +866,19 @@
       }).join('');
     }
 
+    function formatBytesShort(val) {
+      var num = parseFloat(val || 0);
+      if (!isFinite(num) || num <= 0) return '0B';
+      var units = ['B','KB','MB','GB','TB'];
+      var idx = 0;
+      while (num >= 1024 && idx < units.length - 1) {
+        num = num / 1024;
+        idx++;
+      }
+      var fixed = (idx === 0) ? 0 : (num < 10 ? 2 : 1);
+      return num.toFixed(fixed).replace(/\.0+$|(?<=\.\d)0+$/, '') + units[idx];
+    }
+
     var tableHtml = filteredItems.length ?
       '<div class="retur-table-wrapper">' +
         '<table class="retur-table">' +
@@ -835,6 +900,61 @@
         '</table>' +
       '</div>' :
       '<div class="retur-empty">Tidak ada permintaan retur.</div>';
+
+    var stuckFilter = getStuckFilter();
+    var stuckNeedle = String(stuckFilter || '').toLowerCase();
+    var stuckFiltered = stuckItems.filter(function(it) {
+      if (!stuckNeedle) return true;
+      var fields = [it.user, it.ip, it.mac, it.reason, it.profile, it.server];
+      for (var i = 0; i < fields.length; i++) {
+        var f = String(fields[i] || '').toLowerCase();
+        if (f && f.indexOf(stuckNeedle) !== -1) return true;
+      }
+      return false;
+    });
+    var stuckRows = '';
+    if (stuckFiltered.length) {
+      stuckRows = stuckFiltered.map(function(it) {
+        var bin = parseInt(it.bytes_in || 0, 10) || 0;
+        var bout = parseInt(it.bytes_out || 0, 10) || 0;
+        var total = bin + bout;
+        return '<tr>' +
+          '<td class="retur-col-date retur-col-center">' + escapeHtml(it.ts || '-') + '</td>' +
+          '<td class="retur-col-voucher-cell retur-col-center"><span class="retur-col-voucher">' + escapeHtml(it.user || '-') + '</span></td>' +
+          '<td class="retur-col-center">' + escapeHtml(it.ip || '-') + '</td>' +
+          '<td class="retur-col-center">' + escapeHtml(it.mac || '-') + '</td>' +
+          '<td class="retur-col-center">' + escapeHtml(it.uptime || '-') + '</td>' +
+          '<td class="retur-col-center">' + escapeHtml(formatBytesShort(bin)) + '</td>' +
+          '<td class="retur-col-center">' + escapeHtml(formatBytesShort(bout)) + '</td>' +
+          '<td class="retur-col-center">' + escapeHtml(formatBytesShort(total)) + '</td>' +
+          '<td class="retur-col-center">' + escapeHtml(it.reason || '-') + '</td>' +
+          '<td class="retur-col-center">' + escapeHtml(it.profile || '-') + '</td>' +
+          '<td class="retur-col-center">' + escapeHtml(it.server || '-') + '</td>' +
+          '</tr>';
+      }).join('');
+    }
+    var stuckTableHtml = stuckFiltered.length ?
+      '<div class="retur-table-wrapper">' +
+        '<table class="retur-table">' +
+          '<thead>' +
+            '<tr>' +
+              '<th class="retur-col-date retur-col-center">Waktu</th>' +
+              '<th class="retur-col-voucher-cell retur-col-center">Voucher</th>' +
+              '<th class="retur-col-center">IP</th>' +
+              '<th class="retur-col-center">MAC</th>' +
+              '<th class="retur-col-center">Uptime</th>' +
+              '<th class="retur-col-center">In</th>' +
+              '<th class="retur-col-center">Out</th>' +
+              '<th class="retur-col-center">Total</th>' +
+              '<th class="retur-col-center">Reason</th>' +
+              '<th class="retur-col-center">Profil</th>' +
+              '<th class="retur-col-center">Server</th>' +
+            '</tr>' +
+          '</thead>' +
+          '<tbody>' + stuckRows + '</tbody>' +
+        '</table>' +
+      '</div>' :
+      '<div class="retur-empty">Tidak ada data stuck hari ini.</div>';
 
     var msgHtml = '';
     if (actionMsg && actionMsg.text) {
