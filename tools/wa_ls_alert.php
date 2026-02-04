@@ -47,6 +47,13 @@ function wa_alert_should_send($db, $key, $intervalMinutes) {
     return $diffMin >= $intervalMinutes;
 }
 
+function wa_alert_last_sent($db, $key) {
+    $db->exec("CREATE TABLE IF NOT EXISTS whatsapp_alerts (key TEXT PRIMARY KEY, last_sent TEXT)");
+    $stmt = $db->prepare("SELECT last_sent FROM whatsapp_alerts WHERE key = :k");
+    $stmt->execute([':k' => $key]);
+    return (string)($stmt->fetchColumn() ?: '');
+}
+
 function wa_alert_mark_sent($db, $key) {
     $stmt = $db->prepare("INSERT OR REPLACE INTO whatsapp_alerts (key, last_sent) VALUES (:k, :t)");
     $stmt->execute([':k' => $key, ':t' => date('Y-m-d H:i:s')]);
@@ -131,7 +138,14 @@ if ($template === '') {
 }
 
 foreach ($alerts as $a) {
-    if (!wa_alert_should_send($db, $a['key'], $repeat_minutes)) continue;
+    if ($a['key'] === 'ls_sales') {
+        $last_sent = wa_alert_last_sent($db, $a['key']);
+        if ($last_sent !== '' && substr($last_sent, 0, 10) === date('Y-m-d')) {
+            continue;
+        }
+    } else {
+        if (!wa_alert_should_send($db, $a['key'], $repeat_minutes)) continue;
+    }
     $msg = function_exists('wa_render_template')
         ? wa_render_template($template, [
             'type' => $a['type'],
