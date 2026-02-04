@@ -85,15 +85,6 @@ foreach ($todo_items as $item) {
         $line .= ' - ' . $desc;
     }
     $line = preg_replace('/\s+/', ' ', $line);
-    if (function_exists('mb_strlen')) {
-        if (mb_strlen($line) > 140) {
-            $line = mb_substr($line, 0, 137) . '...';
-        }
-    } else {
-        if (strlen($line) > 140) {
-            $line = substr($line, 0, 137) . '...';
-        }
-    }
     $lines[] = $idx . '. ' . $line;
     $idx++;
 }

@@ -278,9 +278,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                             $rows = $stmtBlok->fetchAll(PDO::FETCH_ASSOC) ?: [];
                             $parts = [];
                             foreach ($rows as $br) {
-                                $bname = trim((string)($br['blok_name'] ?? ''));
-                                if ($bname === '') $bname = '-';
-                                $bname = str_replace('-', ' ', $bname);
+                                $bname = $format_block_label($br['blok_name'] ?? '');
                                 $bsel = (int)($br['sel'] ?? 0);
                                 $bkb = (int)($br['kb'] ?? 0);
                                 $sub = [];
@@ -306,6 +304,16 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 } catch (Exception $e) {
                 }
             }
+
+            $format_block_label = function($name) {
+                $name = trim((string)$name);
+                if ($name === '') return '-';
+                $name = str_replace('-', ' ', $name);
+                $name = preg_replace('/^BLOK\s+/i', '', $name);
+                $name = trim($name);
+                if ($name === '') return '-';
+                return 'BLOK ' . strtoupper($name);
+            };
 
             // Kurang bayar hari ini
             try {
@@ -338,9 +346,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                             $rows = $stmtBlok->fetchAll(PDO::FETCH_ASSOC) ?: [];
                             $parts = [];
                             foreach ($rows as $br) {
-                                $bname = trim((string)($br['blok_name'] ?? ''));
-                                if ($bname === '') $bname = '-';
-                                $bname = str_replace('-', ' ', $bname);
+                                $bname = $format_block_label($br['blok_name'] ?? '');
                                 $bsel = (int)($br['sel'] ?? 0);
                                 $bkb = (int)($br['kb'] ?? 0);
                                 $sub = [];
@@ -405,9 +411,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                     $rows = $stmtBlok->fetchAll(PDO::FETCH_ASSOC) ?: [];
                     $partsBlok = [];
                     foreach ($rows as $br) {
-                        $bname = trim((string)($br['blok_name'] ?? ''));
-                        if ($bname === '') $bname = '-';
-                        $bname = str_replace('-', ' ', $bname);
+                        $bname = $format_block_label($br['blok_name'] ?? '');
                         $bsel = (int)($br['sel'] ?? 0);
                         $bkb = (int)($br['kb'] ?? 0);
                         $sub = [];
@@ -461,9 +465,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                     $rows = $stmtBlok->fetchAll(PDO::FETCH_ASSOC) ?: [];
                     $parts = [];
                     foreach ($rows as $br) {
-                        $bname = trim((string)($br['blok_name'] ?? ''));
-                        if ($bname === '') $bname = '-';
-                        $bname = str_replace('-', ' ', $bname);
+                        $bname = $format_block_label($br['blok_name'] ?? '');
                         $bamt = number_format((int)($br['total_refund'] ?? 0), 0, ",", ".");
                         $parts[] = $bname . ' (Rp ' . $bamt . ')';
                     }
