@@ -884,14 +884,23 @@
     var restoreBtn = document.getElementById('db-restore');
     if (!el) return;
     var canRestoreFlag = (typeof window.__canRestoreFlag === 'undefined') ? !!window.__isSuperAdminFlag : !!window.__canRestoreFlag;
-    fetch('./tools/db_check.php?key=' + encodeURIComponent(window.__backupKey || ''))
-      .then(function(resp) {
-        if (!resp.ok) throw new Error('bad');
-        return resp.text();
-      })
-      .then(function(txt) {
-        var low = txt ? txt.toLowerCase() : '';
-        var ok = low.indexOf('db error') === -1 && low.indexOf('not found') === -1 && low.indexOf('forbidden') === -1;
+    var key = encodeURIComponent(window.__backupKey || '');
+    var reqMain = fetch('./tools/db_check.php?key=' + key).then(function(resp) {
+      if (!resp.ok) throw new Error('bad');
+      return resp.text();
+    });
+    var reqApp = fetch('./tools/db_check_app.php?key=' + key).then(function(resp) {
+      if (!resp.ok) throw new Error('bad');
+      return resp.text();
+    });
+
+    Promise.all([reqMain, reqApp])
+      .then(function(list) {
+        var lowMain = list[0] ? list[0].toLowerCase() : '';
+        var lowApp = list[1] ? list[1].toLowerCase() : '';
+        var okMain = lowMain.indexOf('db error') === -1 && lowMain.indexOf('not found') === -1 && lowMain.indexOf('forbidden') === -1;
+        var okApp = lowApp.indexOf('db error') === -1 && lowApp.indexOf('not found') === -1 && lowApp.indexOf('forbidden') === -1;
+        var ok = okMain && okApp;
         el.classList.remove('db-ok', 'db-error');
         el.classList.add(ok ? 'db-ok' : 'db-error');
         if (restoreBtn) {

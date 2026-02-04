@@ -35,17 +35,26 @@ try {
     exit(1);
 }
 
-function wa_alert_should_send($db, $key) {
+function wa_alert_should_send($db, $key, $intervalMinutes) {
     $db->exec("CREATE TABLE IF NOT EXISTS whatsapp_alerts (key TEXT PRIMARY KEY, last_sent TEXT)");
     $stmt = $db->prepare("SELECT last_sent FROM whatsapp_alerts WHERE key = :k");
     $stmt->execute([':k' => $key]);
     $last = (string)($stmt->fetchColumn() ?: '');
-    return $last === '';
+    if ($last === '') return true;
+    $ts = strtotime($last);
+    if (!$ts) return true;
+    $diffMin = (int)floor((time() - $ts) / 60);
+    return $diffMin >= $intervalMinutes;
 }
 
 function wa_alert_mark_sent($db, $key) {
     $stmt = $db->prepare("INSERT OR REPLACE INTO whatsapp_alerts (key, last_sent) VALUES (:k, :t)");
     $stmt->execute([':k' => $key, ':t' => date('Y-m-d H:i:s')]);
+}
+
+function wa_alert_clear($db, $key) {
+    $stmt = $db->prepare("DELETE FROM whatsapp_alerts WHERE key = :k");
+    $stmt->execute([':k' => $key]);
 }
 
 function wa_pick_last_sync($db, $table) {
@@ -54,20 +63,29 @@ function wa_pick_last_sync($db, $table) {
     $col = '';
     if (in_array('sync_date', $names, true)) {
         $col = 'sync_date';
-    } elseif (in_array('created_at', $names, true)) {
-        $col = 'created_at';
     } elseif ($table === 'live_sales' && in_array('sale_datetime', $names, true)) {
         $col = 'sale_datetime';
+    } elseif (in_array('created_at', $names, true)) {
+        $col = 'created_at';
     }
     if ($col === '') return '-';
     $val = (string)$db->query("SELECT MAX($col) FROM $table")->fetchColumn();
     return $val !== '' ? $val : '-';
 }
 
+function wa_format_alert_time($value) {
+    if ($value === '-' || $value === '') return 'Tidak ada data';
+    $ts = strtotime($value);
+    if (!$ts) return $value;
+    return date('d-m-Y H:i', $ts);
+}
+
 $last_sales = wa_pick_last_sync($db, 'sales_history');
 $last_live = wa_pick_last_sync($db, 'live_sales');
 
 $late_minutes = 60;
+$repeat_minutes = isset($_GET['repeat']) ? (int)$_GET['repeat'] : 60;
+if ($repeat_minutes <= 0) $repeat_minutes = 60;
 $alerts = [];
 
 $live_ts = ($last_live !== '-') ? strtotime($last_live) : false;
@@ -76,7 +94,7 @@ if ($last_live === '-' || ($live_diff !== null && $live_diff >= $late_minutes)) 
     $alerts[] = [
         'key' => 'ls_live',
         'type' => 'Live',
-        'time' => $last_live === '-' ? 'Tidak ada data' : $last_live,
+        'time' => wa_format_alert_time($last_live),
         'minutes' => $live_diff !== null ? $live_diff : '-'
     ];
 }
@@ -87,9 +105,19 @@ if ($last_sales === '-' || ($sales_diff !== null && $sales_diff >= $late_minutes
     $alerts[] = [
         'key' => 'ls_sales',
         'type' => 'Sales',
-        'time' => $last_sales === '-' ? 'Tidak ada data' : $last_sales,
+        'time' => wa_format_alert_time($last_sales),
         'minutes' => $sales_diff !== null ? $sales_diff : '-'
     ];
+}
+
+// Reset state when normal
+if (!empty($alerts)) {
+    $activeKeys = array_map(function($a){ return $a['key']; }, $alerts);
+    if (!in_array('ls_live', $activeKeys, true)) wa_alert_clear($db, 'ls_live');
+    if (!in_array('ls_sales', $activeKeys, true)) wa_alert_clear($db, 'ls_sales');
+} else {
+    wa_alert_clear($db, 'ls_live');
+    wa_alert_clear($db, 'ls_sales');
 }
 
 if (!function_exists('wa_send_text')) {
@@ -103,7 +131,7 @@ if ($template === '') {
 }
 
 foreach ($alerts as $a) {
-    if (!wa_alert_should_send($db, $a['key'])) continue;
+    if (!wa_alert_should_send($db, $a['key'], $repeat_minutes)) continue;
     $msg = function_exists('wa_render_template')
         ? wa_render_template($template, [
             'type' => $a['type'],

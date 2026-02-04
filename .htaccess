@@ -132,6 +132,11 @@ Require all denied
     Require all granted
 </If>
 
+# App DB check endpoint (protected by key)
+<If "%{REQUEST_URI} =~ m#^/tools/db_check_app\.php$#">
+    Require all granted
+</If>
+
 # Realtime ingest endpoint (allow direct access by path)
 <If "%{REQUEST_URI} =~ m#^/report/laporan/services/live_ingest\.php$#">
     <RequireAny>

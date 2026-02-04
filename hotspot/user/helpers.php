@@ -345,6 +345,118 @@ if (!function_exists('get_user_history_from_db')) {
   }
 }
 
+// Helper: Ambil meta voucher (nama/kamar/blok/profile/usage)
+if (!function_exists('get_voucher_meta_info')) {
+  function get_voucher_meta_info($db, $voucher_code) {
+    $info = [
+      'customer_name' => '',
+      'room_name' => '',
+      'blok_name' => '',
+      'profile' => '',
+      'bytes' => 0,
+      'uptime' => '',
+      'last_status' => ''
+    ];
+    if (!$db) return $info;
+    $voucher_code = trim((string)$voucher_code);
+    if ($voucher_code === '') return $info;
+
+    try {
+      $stmt = $db->prepare("SELECT customer_name, room_name, blok_name, validity, last_bytes, last_uptime, last_status, raw_comment FROM login_history WHERE username = :u LIMIT 1");
+      $stmt->execute([':u' => $voucher_code]);
+      $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+      if ($row) {
+        $cn = trim((string)($row['customer_name'] ?? ''));
+        $rn = trim((string)($row['room_name'] ?? ''));
+        $bn = trim((string)($row['blok_name'] ?? ''));
+        $pv = trim((string)($row['validity'] ?? ''));
+        if ($info['customer_name'] === '' && $cn !== '') $info['customer_name'] = $cn;
+        if ($info['room_name'] === '' && $rn !== '') $info['room_name'] = $rn;
+        if ($info['blok_name'] === '' && $bn !== '') $info['blok_name'] = $bn;
+        if ($info['profile'] === '' && $pv !== '') {
+          $info['profile'] = function_exists('normalize_profile_label') ? normalize_profile_label($pv) : $pv;
+        }
+        if ($info['blok_name'] === '' && !empty($row['raw_comment']) && function_exists('extract_blok_name')) {
+          $info['blok_name'] = extract_blok_name($row['raw_comment']);
+        }
+        $info['bytes'] = (int)($row['last_bytes'] ?? 0);
+        $info['uptime'] = (string)($row['last_uptime'] ?? '');
+        $info['last_status'] = (string)($row['last_status'] ?? '');
+      }
+    } catch (Exception $e) {
+      // silent
+    }
+
+    try {
+      if ($info['customer_name'] === '' || $info['room_name'] === '' || $info['blok_name'] === '' || $info['profile'] === '') {
+        $stmt = $db->prepare("SELECT customer_name, room_name, blok_name, profile_name FROM login_meta_queue WHERE voucher_code = :u ORDER BY created_at DESC LIMIT 1");
+        $stmt->execute([':u' => $voucher_code]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        if ($row) {
+          $cn = trim((string)($row['customer_name'] ?? ''));
+          $rn = trim((string)($row['room_name'] ?? ''));
+          $bn = trim((string)($row['blok_name'] ?? ''));
+          $pv = trim((string)($row['profile_name'] ?? ''));
+          if ($info['customer_name'] === '' && $cn !== '') $info['customer_name'] = $cn;
+          if ($info['room_name'] === '' && $rn !== '') $info['room_name'] = $rn;
+          if ($info['blok_name'] === '' && $bn !== '') $info['blok_name'] = $bn;
+          if ($info['profile'] === '' && $pv !== '') {
+            $info['profile'] = function_exists('normalize_profile_label') ? normalize_profile_label($pv) : $pv;
+          }
+        }
+      }
+    } catch (Exception $e) {
+      // silent
+    }
+
+    try {
+      if ($info['customer_name'] === '' || $info['room_name'] === '' || $info['blok_name'] === '' || $info['profile'] === '') {
+        $stmt = $db->prepare("SELECT customer_name, room_name, blok_name, validity FROM sales_history WHERE username = :u ORDER BY sale_date DESC, raw_date DESC LIMIT 1");
+        $stmt->execute([':u' => $voucher_code]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        if ($row) {
+          $cn = trim((string)($row['customer_name'] ?? ''));
+          $rn = trim((string)($row['room_name'] ?? ''));
+          $bn = trim((string)($row['blok_name'] ?? ''));
+          $pv = trim((string)($row['validity'] ?? ''));
+          if ($info['customer_name'] === '' && $cn !== '') $info['customer_name'] = $cn;
+          if ($info['room_name'] === '' && $rn !== '') $info['room_name'] = $rn;
+          if ($info['blok_name'] === '' && $bn !== '') $info['blok_name'] = $bn;
+          if ($info['profile'] === '' && $pv !== '') {
+            $info['profile'] = function_exists('normalize_profile_label') ? normalize_profile_label($pv) : $pv;
+          }
+        }
+      }
+    } catch (Exception $e) {
+      // silent
+    }
+
+    try {
+      if ($info['customer_name'] === '' || $info['room_name'] === '' || $info['blok_name'] === '' || $info['profile'] === '') {
+        $stmt = $db->prepare("SELECT customer_name, room_name, blok_name, validity FROM live_sales WHERE username = :u ORDER BY sale_date DESC, raw_date DESC LIMIT 1");
+        $stmt->execute([':u' => $voucher_code]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        if ($row) {
+          $cn = trim((string)($row['customer_name'] ?? ''));
+          $rn = trim((string)($row['room_name'] ?? ''));
+          $bn = trim((string)($row['blok_name'] ?? ''));
+          $pv = trim((string)($row['validity'] ?? ''));
+          if ($info['customer_name'] === '' && $cn !== '') $info['customer_name'] = $cn;
+          if ($info['room_name'] === '' && $rn !== '') $info['room_name'] = $rn;
+          if ($info['blok_name'] === '' && $bn !== '') $info['blok_name'] = $bn;
+          if ($info['profile'] === '' && $pv !== '') {
+            $info['profile'] = function_exists('normalize_profile_label') ? normalize_profile_label($pv) : $pv;
+          }
+        }
+      }
+    } catch (Exception $e) {
+      // silent
+    }
+
+    return $info;
+  }
+}
+
 // Helper: Limit VIP harian
 if (!function_exists('ensure_vip_daily_table')) {
   function ensure_vip_daily_table($db) {

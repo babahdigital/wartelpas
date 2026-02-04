@@ -10,6 +10,21 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
   $root_dir = dirname(__DIR__, 2);
   require_once($root_dir . '/include/acl.php');
   require_once(__DIR__ . '/helpers.php');
+  $wa_cfg = [];
+  $waHelper = $root_dir . '/system/whatsapp/wa_helper.php';
+  if (file_exists($waHelper)) {
+    require_once $waHelper;
+  }
+  $formatBytesFile = $root_dir . '/lib/formatbytesbites.php';
+  if (file_exists($formatBytesFile)) {
+    require_once $formatBytesFile;
+  }
+  if (function_exists('app_db_get_whatsapp_config')) {
+    $wa_cfg = app_db_get_whatsapp_config();
+  }
+  if (!is_array($wa_cfg)) {
+    $wa_cfg = [];
+  }
   $env = [];
   $envFile = $root_dir . '/include/env.php';
   if (file_exists($envFile)) {
@@ -54,6 +69,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
   $act = $_POST['action'] ?? $_GET['action'];
   $retur_request_id = null;
   $retur_request_note = '';
+  $retur_request_meta = null;
   $api_print_cache = [];
   $api_print = function($path, $params = []) use ($API, &$api_print_cache) {
     $key = $path . '|' . md5(json_encode($params));
@@ -63,6 +79,64 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     $res = $API->comm($path, $params);
     $api_print_cache[$key] = $res;
     return $res;
+  };
+  $send_retur_status_wa = function(array $payload) use ($wa_cfg) {
+    if (!function_exists('wa_send_text')) return;
+    $type_label = strtoupper((string)($payload['type_label'] ?? 'RETUR'));
+    $notify_all = !isset($wa_cfg['notify_request_enabled']) || $wa_cfg['notify_request_enabled'] === true || $wa_cfg['notify_request_enabled'] === 1 || $wa_cfg['notify_request_enabled'] === '1';
+    $notify_refund = !isset($wa_cfg['notify_refund_enabled']) || $wa_cfg['notify_refund_enabled'] === true || $wa_cfg['notify_refund_enabled'] === 1 || $wa_cfg['notify_refund_enabled'] === '1';
+    $notify_retur = !isset($wa_cfg['notify_retur_enabled']) || $wa_cfg['notify_retur_enabled'] === true || $wa_cfg['notify_retur_enabled'] === 1 || $wa_cfg['notify_retur_enabled'] === '1';
+    $should_send = $notify_all && (($type_label === 'REFUND') ? $notify_refund : $notify_retur);
+    if (!$should_send) return;
+
+    $decision_label = strtoupper((string)($payload['decision_label'] ?? ''));
+    $status_label = strtoupper((string)($payload['status_label'] ?? $decision_label));
+    $name_label = (string)($payload['name_label'] ?? '-');
+    $blok_label = (string)($payload['blok_label'] ?? '-');
+    $room_label = (string)($payload['room_label'] ?? '-');
+    $profile_label = (string)($payload['profile_label'] ?? '-');
+    $voucher_code = (string)($payload['voucher_code'] ?? '-');
+    $reason_msg = (string)($payload['reason_msg'] ?? '-');
+    $note_msg = (string)($payload['note_msg'] ?? '-');
+    $bytes_label = (string)($payload['bytes_label'] ?? '-');
+    $uptime_label = (string)($payload['uptime_label'] ?? '-');
+    $template_id = (string)($payload['template_id'] ?? '');
+
+    $tpl = $template_id !== '' && function_exists('wa_get_template_body') ? wa_get_template_body($template_id) : '';
+    if ($tpl !== '' && function_exists('wa_render_template')) {
+      $msg = wa_render_template($tpl, [
+        'type' => $type_label,
+        'status' => $status_label,
+        'nama' => $name_label,
+        'blok' => $blok_label,
+        'kamar' => $room_label,
+        'profil' => $profile_label,
+        'voucher' => $voucher_code,
+        'alasan' => $reason_msg,
+        'note' => $note_msg,
+        'bytes' => $bytes_label,
+        'uptime' => $uptime_label
+      ]);
+    } else {
+      $line = '────────────';
+      $title = $decision_label !== '' ? $decision_label : $status_label;
+      if ($title === '') $title = 'UPDATE';
+      $msg = "🔔 *PERMINTAAN " . $type_label . " " . $title . "*\n" .
+        $line . "\n" .
+        "Status: *" . ($status_label !== '' ? $status_label : $title) . "*\n\n" .
+        "👤 *Data Pengguna*\n" .
+        "• Nama : " . $name_label . "\n" .
+        "• Blok : " . $blok_label . "\n" .
+        "• Kamar : " . $room_label . "\n" .
+        "• Profil : " . $profile_label . "\n\n" .
+        "🎫 *Detail Tiket*\n" .
+        "• Voucher : *`" . $voucher_code . "`*\n" .
+        "• Alasan : _\"" . $reason_msg . "\"_\n" .
+        "• Catatan : _\"" . $note_msg . "\"_\n" .
+        "• Pemakaian : " . $bytes_label . " • " . $uptime_label . "\n\n" .
+        $line;
+    }
+    wa_send_text($msg, '', 'retur');
   };
   if ($act === 'login_events') {
     header('Content-Type: application/json');
@@ -141,7 +215,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $action_error = 'Permintaan tidak ditemukan.';
     } else {
       try {
-        $stmt = $db->prepare("SELECT status, voucher_code, reason, request_type, customer_name FROM retur_requests WHERE id = :id");
+        $stmt = $db->prepare("SELECT status, voucher_code, reason, request_type, customer_name, blok_name FROM retur_requests WHERE id = :id");
         $stmt->execute([':id' => $req_id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         $st = strtolower((string)($row['status'] ?? ''));
@@ -157,6 +231,41 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           ]);
           $action_blocked = false;
           $action_message = 'Permintaan retur ditolak.';
+          if (function_exists('get_voucher_meta_info')) {
+            $voucher_code = (string)($row['voucher_code'] ?? '');
+            $meta = get_voucher_meta_info($db, $voucher_code);
+            $type_label = strtolower((string)($row['request_type'] ?? 'retur')) === 'pengembalian' ? 'REFUND' : 'RETUR';
+            $name_label = (string)($row['customer_name'] ?? '');
+            if ($name_label === '' && !empty($meta['customer_name'])) $name_label = (string)$meta['customer_name'];
+            if ($name_label === '') $name_label = '-';
+            $room_label = !empty($meta['room_name']) ? (string)$meta['room_name'] : '-';
+            $blok_raw = (string)($row['blok_name'] ?? '');
+            if ($blok_raw === '' && !empty($meta['blok_name'])) $blok_raw = (string)$meta['blok_name'];
+            $blok_label = $blok_raw !== '' && function_exists('normalize_blok_label') ? normalize_blok_label($blok_raw) : $blok_raw;
+            if ($blok_label === '') $blok_label = '-';
+            $profile_label = !empty($meta['profile']) ? (string)$meta['profile'] : '-';
+            $bytes_val = (int)($meta['bytes'] ?? 0);
+            $bytes_label = function_exists('formatBytes') ? formatBytes($bytes_val, 2) : (string)$bytes_val;
+            $uptime_label = (string)($meta['uptime'] ?? '');
+            if ($uptime_label === '') $uptime_label = '-';
+            $reason_msg = str_replace('"', "'", (string)($row['reason'] ?? '-'));
+            $note_msg = str_replace('"', "'", (string)$note);
+            $send_retur_status_wa([
+              'template_id' => 'retur_rejected',
+              'type_label' => $type_label,
+              'decision_label' => 'DITOLAK',
+              'status_label' => 'DITOLAK',
+              'name_label' => $name_label,
+              'blok_label' => $blok_label,
+              'room_label' => $room_label,
+              'profile_label' => $profile_label,
+              'voucher_code' => $voucher_code,
+              'reason_msg' => $reason_msg,
+              'note_msg' => $note_msg,
+              'bytes_label' => $bytes_label,
+              'uptime_label' => $uptime_label
+            ]);
+          }
         }
       } catch (Exception $e) {
         $action_blocked = true;
@@ -209,7 +318,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $action_error = 'Permintaan tidak ditemukan.';
     } else {
       try {
-        $stmt = $db->prepare("SELECT status, request_type, voucher_code, reason, customer_name FROM retur_requests WHERE id = :id");
+        $stmt = $db->prepare("SELECT status, request_type, voucher_code, reason, customer_name, blok_name FROM retur_requests WHERE id = :id");
         $stmt->execute([':id' => $req_id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         $st = strtolower((string)($row['status'] ?? ''));
@@ -229,6 +338,41 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           ]);
           $action_blocked = false;
           $action_message = 'Permintaan retur ditandai RUSAK.';
+          if (function_exists('get_voucher_meta_info')) {
+            $voucher_code = (string)($row['voucher_code'] ?? '');
+            $meta = get_voucher_meta_info($db, $voucher_code);
+            $type_label = strtolower((string)($row['request_type'] ?? 'retur')) === 'pengembalian' ? 'REFUND' : 'RETUR';
+            $name_label = (string)($row['customer_name'] ?? '');
+            if ($name_label === '' && !empty($meta['customer_name'])) $name_label = (string)$meta['customer_name'];
+            if ($name_label === '') $name_label = '-';
+            $room_label = !empty($meta['room_name']) ? (string)$meta['room_name'] : '-';
+            $blok_raw = (string)($row['blok_name'] ?? '');
+            if ($blok_raw === '' && !empty($meta['blok_name'])) $blok_raw = (string)$meta['blok_name'];
+            $blok_label = $blok_raw !== '' && function_exists('normalize_blok_label') ? normalize_blok_label($blok_raw) : $blok_raw;
+            if ($blok_label === '') $blok_label = '-';
+            $profile_label = !empty($meta['profile']) ? (string)$meta['profile'] : '-';
+            $bytes_val = (int)($meta['bytes'] ?? 0);
+            $bytes_label = function_exists('formatBytes') ? formatBytes($bytes_val, 2) : (string)$bytes_val;
+            $uptime_label = (string)($meta['uptime'] ?? '');
+            if ($uptime_label === '') $uptime_label = '-';
+            $reason_msg = str_replace('"', "'", (string)($row['reason'] ?? '-'));
+            $note_msg = str_replace('"', "'", (string)($note !== '' ? $note : 'Ditandai RUSAK.'));
+            $send_retur_status_wa([
+              'template_id' => 'retur_approved',
+              'type_label' => $type_label,
+              'decision_label' => 'DISETUJUI',
+              'status_label' => 'RUSAK',
+              'name_label' => $name_label,
+              'blok_label' => $blok_label,
+              'room_label' => $room_label,
+              'profile_label' => $profile_label,
+              'voucher_code' => $voucher_code,
+              'reason_msg' => $reason_msg,
+              'note_msg' => $note_msg,
+              'bytes_label' => $bytes_label,
+              'uptime_label' => $uptime_label
+            ]);
+          }
         }
       } catch (Exception $e) {
         $action_blocked = true;
@@ -280,7 +424,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $action_error = 'Permintaan tidak ditemukan.';
     } else {
       try {
-        $stmt = $db->prepare("SELECT id, voucher_code, status, reason FROM retur_requests WHERE id = :id");
+        $stmt = $db->prepare("SELECT id, voucher_code, status, reason, request_type, customer_name, blok_name FROM retur_requests WHERE id = :id");
         $stmt->execute([':id' => $req_id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$row) {
@@ -297,6 +441,13 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           } else {
             $retur_request_id = (int)$row['id'];
             $retur_request_note = 'Disetujui operator.';
+            $retur_request_meta = [
+              'voucher_code' => $voucher,
+              'request_type' => (string)($row['request_type'] ?? 'retur'),
+              'customer_name' => (string)($row['customer_name'] ?? ''),
+              'reason' => (string)($row['reason'] ?? ''),
+              'blok_name' => (string)($row['blok_name'] ?? '')
+            ];
             $_GET['name'] = $voucher;
             $_GET['c'] = 'Retur Request: ' . trim((string)($row['reason'] ?? ''));
             $act = 'retur';
@@ -2124,6 +2275,41 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           ':rb' => (string)($_SESSION['mikhmon'] ?? 'operator'),
           ':rn' => $retur_request_note !== '' ? $retur_request_note : 'Disetujui operator.'
         ]);
+        if (is_array($retur_request_meta) && function_exists('get_voucher_meta_info')) {
+          $voucher_code = (string)($retur_request_meta['voucher_code'] ?? '');
+          $meta = get_voucher_meta_info($db, $voucher_code);
+          $type_label = strtolower((string)($retur_request_meta['request_type'] ?? 'retur')) === 'pengembalian' ? 'REFUND' : 'RETUR';
+          $name_label = (string)($retur_request_meta['customer_name'] ?? '');
+          if ($name_label === '' && !empty($meta['customer_name'])) $name_label = (string)$meta['customer_name'];
+          if ($name_label === '') $name_label = '-';
+          $room_label = !empty($meta['room_name']) ? (string)$meta['room_name'] : '-';
+          $blok_raw = (string)($retur_request_meta['blok_name'] ?? '');
+          if ($blok_raw === '' && !empty($meta['blok_name'])) $blok_raw = (string)$meta['blok_name'];
+          $blok_label = $blok_raw !== '' && function_exists('normalize_blok_label') ? normalize_blok_label($blok_raw) : $blok_raw;
+          if ($blok_label === '') $blok_label = '-';
+          $profile_label = !empty($meta['profile']) ? (string)$meta['profile'] : '-';
+          $bytes_val = (int)($meta['bytes'] ?? 0);
+          $bytes_label = function_exists('formatBytes') ? formatBytes($bytes_val, 2) : (string)$bytes_val;
+          $uptime_label = (string)($meta['uptime'] ?? '');
+          if ($uptime_label === '') $uptime_label = '-';
+          $reason_msg = str_replace('"', "'", (string)($retur_request_meta['reason'] ?? '-'));
+          $note_msg = str_replace('"', "'", (string)($retur_request_note !== '' ? $retur_request_note : 'Disetujui operator.'));
+          $send_retur_status_wa([
+            'template_id' => 'retur_approved',
+            'type_label' => $type_label,
+            'decision_label' => 'DISETUJUI',
+            'status_label' => 'DISETUJUI',
+            'name_label' => $name_label,
+            'blok_label' => $blok_label,
+            'room_label' => $room_label,
+            'profile_label' => $profile_label,
+            'voucher_code' => $voucher_code,
+            'reason_msg' => $reason_msg,
+            'note_msg' => $note_msg,
+            'bytes_label' => $bytes_label,
+            'uptime_label' => $uptime_label
+          ]);
+        }
       }
     } catch (Exception $e) {}
   }

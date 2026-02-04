@@ -3,7 +3,19 @@
     "id": "retur_request",
     "name": "Permintaan Retur/Refund",
     "category": "retur",
-    "body": "🔔 *PERMINTAAN {{TYPE}} BARU*\n────────────\nStatus: ⏳ *PENDING*\n\n👤 *Data Pengguna*\n• Nama : {{NAMA}}\n• Blok : {{BLOK}}\n• Profil : {{PROFIL}}\n\n🎫 *Detail Tiket*\n• Voucher : *`{{VOUCHER}}`*\n• Alasan : _\"{{ALASAN}}\"_\n\n────────────\nMohon segera diverifikasi melalui dashboard admin."
+    "body": "🔔 *PERMINTAAN {{TYPE}} BARU*\n────────────\nStatus: ⏳ *PENDING*\n\n👤 *Data Pengguna*\n• Nama : {{NAMA}}\n• Blok : {{BLOK}}\n• Kamar : {{KAMAR}}\n• Profil : {{PROFIL}}\n\n🎫 *Detail Tiket*\n• Voucher : *`{{VOUCHER}}`*\n• Alasan : _\"{{ALASAN}}\"_\n\n────────────\nMohon segera diverifikasi melalui dashboard admin."
+  },
+  {
+    "id": "retur_approved",
+    "name": "Retur/Refund Disetujui",
+    "category": "retur",
+    "body": "✅ *PERMINTAAN {{TYPE}} DISETUJUI*\n────────────\nStatus: *{{STATUS}}*\n\n👤 *Data Pengguna*\n• Nama : {{NAMA}}\n• Blok : {{BLOK}}\n• Kamar : {{KAMAR}}\n• Profil : {{PROFIL}}\n\n🎫 *Detail Tiket*\n• Voucher : *`{{VOUCHER}}`*\n• Alasan : _\"{{ALASAN}}\"_\n• Catatan : _\"{{NOTE}}\"_\n• Pemakaian : {{BYTES}} • {{UPTIME}}\n\n────────────"
+  },
+  {
+    "id": "retur_rejected",
+    "name": "Retur/Refund Ditolak",
+    "category": "retur",
+    "body": "❌ *PERMINTAAN {{TYPE}} DITOLAK*\n────────────\nStatus: *DITOLAK*\n\n👤 *Data Pengguna*\n• Nama : {{NAMA}}\n• Blok : {{BLOK}}\n• Kamar : {{KAMAR}}\n• Profil : {{PROFIL}}\n\n🎫 *Detail Tiket*\n• Voucher : *`{{VOUCHER}}`*\n• Alasan : _\"{{ALASAN}}\"_\n• Catatan : _\"{{NOTE}}\"_\n• Pemakaian : {{BYTES}} • {{UPTIME}}\n\n────────────"
   },
   {
     "id": "settlement_report",

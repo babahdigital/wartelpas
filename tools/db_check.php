@@ -50,6 +50,13 @@ try {
     $db = new PDO('sqlite:' . $dbFile);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
+    $mainQuick = '';
+    try {
+        $mainQuick = (string)$db->query('PRAGMA quick_check;')->fetchColumn();
+    } catch (Exception $e) {
+        $mainQuick = 'error';
+    }
+
     $cols = [];
     foreach ($db->query("PRAGMA table_info(login_history)") as $row) {
         $cols[] = $row['name'];
@@ -72,6 +79,7 @@ try {
     echo "<h3>login_history (latest 50)</h3>";
     echo "<p>DB Path: " . htmlspecialchars($dbReal) . "</p>";
     echo "<p>Writable: " . (is_writable(dirname($dbFile)) ? 'yes' : 'no') . " | File exists: " . (file_exists($dbFile) ? 'yes' : 'no') . "</p>";
+    echo "<p>Quick Check: " . htmlspecialchars($mainQuick !== '' ? $mainQuick : '-') . "</p>";
     echo "<p>Total rows: " . htmlspecialchars((string)($countRow['cnt'] ?? '0')) . "</p>";
     echo "<p>Columns: " . htmlspecialchars(implode(', ', $cols)) . "</p>";
     echo "<table border='1' cellspacing='0' cellpadding='6'>";
@@ -89,6 +97,29 @@ try {
         echo "</tr>";
     }
     echo "</tbody></table>";
+
+    // App DB health check
+    require_once __DIR__ . '/../include/db.php';
+    $appDbFile = app_db_path();
+    $appDbReal = realpath($appDbFile) ?: $appDbFile;
+    echo "<h3>app_db health</h3>";
+    echo "<p>App DB Path: " . htmlspecialchars($appDbReal) . "</p>";
+    echo "<p>Writable: " . (is_writable(dirname($appDbFile)) ? 'yes' : 'no') . " | File exists: " . (file_exists($appDbFile) ? 'yes' : 'no') . "</p>";
+    if (!file_exists($appDbFile)) {
+        echo "App DB not found";
+    } else {
+        try {
+            $appDb = new PDO('sqlite:' . $appDbFile);
+            $appDb->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $appQuick = (string)$appDb->query('PRAGMA quick_check;')->fetchColumn();
+            echo "<p>Quick Check: " . htmlspecialchars($appQuick !== '' ? $appQuick : '-') . "</p>";
+            if (strtolower($appQuick) !== 'ok') {
+                echo "App DB error: quick_check failed";
+            }
+        } catch (Exception $e) {
+            echo "App DB error: " . htmlspecialchars($e->getMessage());
+        }
+    }
 } catch (Exception $e) {
     http_response_code(500);
     echo "DB error: " . htmlspecialchars($e->getMessage());

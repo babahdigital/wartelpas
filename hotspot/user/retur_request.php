@@ -119,6 +119,7 @@ $reason = trim((string)($payload['reason'] ?? ''));
 $contact_phone = trim((string)($payload['contact_phone'] ?? ''));
 $blok_name = trim((string)($payload['blok_name'] ?? ''));
 $customer_name = trim((string)($payload['user_name'] ?? $payload['customer_name'] ?? ''));
+$room_name = trim((string)($payload['room_name'] ?? $payload['room'] ?? $payload['kamar'] ?? ''));
 $profile_name = trim((string)($payload['profile_name'] ?? $payload['profile'] ?? ''));
 
 if ($session_param === '') {
@@ -156,6 +157,9 @@ if ($blok_name !== '' && strlen($blok_name) > 30) {
 }
 if ($customer_name !== '' && strlen($customer_name) > 80) {
     $customer_name = substr($customer_name, 0, 80);
+}
+if ($room_name !== '' && strlen($room_name) > 40) {
+    $room_name = substr($room_name, 0, 40);
 }
 if ($profile_name !== '' && strlen($profile_name) > 40) {
     $profile_name = substr($profile_name, 0, 40);
@@ -234,12 +238,18 @@ try {
 
     $hist = null;
     try {
-        $stmt = $db->prepare("SELECT blok_name, raw_comment, validity FROM login_history WHERE username = :u LIMIT 1");
+        $stmt = $db->prepare("SELECT blok_name, raw_comment, validity, customer_name, room_name FROM login_history WHERE username = :u LIMIT 1");
         $stmt->execute([':u' => $voucher_code]);
         $hist = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     } catch (Exception $e) {}
 
     $raw_comment = $hist['raw_comment'] ?? '';
+    if ($customer_name === '' && !empty($hist['customer_name'])) {
+        $customer_name = (string)$hist['customer_name'];
+    }
+    if ($room_name === '' && !empty($hist['room_name'])) {
+        $room_name = (string)$hist['room_name'];
+    }
     if ($blok_name === '' && !empty($hist['blok_name'])) {
         $blok_name = (string)$hist['blok_name'];
     }
@@ -258,6 +268,21 @@ try {
     $profile_label = '';
     if (!empty($hist['validity']) && function_exists('normalize_profile_label')) {
         $profile_label = normalize_profile_label($hist['validity']);
+    }
+    if (function_exists('get_voucher_meta_info')) {
+        $meta_info = get_voucher_meta_info($db, $voucher_code);
+        if ($customer_name === '' && !empty($meta_info['customer_name'])) {
+            $customer_name = (string)$meta_info['customer_name'];
+        }
+        if ($room_name === '' && !empty($meta_info['room_name'])) {
+            $room_name = (string)$meta_info['room_name'];
+        }
+        if ($blok_name === '' && !empty($meta_info['blok_name'])) {
+            $blok_name = (string)$meta_info['blok_name'];
+        }
+        if ($profile_label === '' && !empty($meta_info['profile'])) {
+            $profile_label = (string)$meta_info['profile'];
+        }
     }
     if ($profile_label === '' && $raw_comment !== '' && preg_match('/\bprofile\s*:\s*([^|]+)/i', $raw_comment, $m)) {
         $profile_label = function_exists('normalize_profile_label') ? normalize_profile_label($m[1]) : trim((string)$m[1]);
@@ -346,6 +371,7 @@ try {
         $should_send = $notify_all && (($type_label === 'REFUND') ? $notify_refund : $notify_retur);
         if ($should_send) {
             $name_label = $customer_name !== '' ? $customer_name : '-';
+            $room_label = $room_name !== '' ? $room_name : '-';
             $contact_label = $contact_phone !== '' ? $contact_phone : '-';
             $reason_msg = str_replace('"', "'", $reason);
             $tpl = function_exists('wa_get_template_body') ? wa_get_template_body('retur_request') : '';
@@ -354,6 +380,7 @@ try {
                     'type' => $type_label,
                     'nama' => $name_label,
                     'blok' => $blok_short,
+                    'kamar' => $room_label,
                     'profil' => $profile_label,
                     'voucher' => $voucher_code,
                     'alasan' => $reason_msg
@@ -366,6 +393,7 @@ try {
                     "👤 *Data Pengguna*\n" .
                     "• Nama : " . $name_label . "\n" .
                     "• Blok : " . $blok_short . "\n" .
+                    "• Kamar : " . $room_label . "\n" .
                     "• Profil : " . $profile_label . "\n\n" .
                     "🎫 *Detail Tiket*\n" .
                     "• Voucher : *`" . $voucher_code . "`*\n" .

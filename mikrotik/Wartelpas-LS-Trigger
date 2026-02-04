@@ -3,7 +3,7 @@
 :if ($lsTriggerLock = true) do={ :log warning "LS ALERT: masih berjalan, skip"; :return; }
 :set lsTriggerLock true;
 
-:local url "http://wartelpas.sobigidul.net/tools/wa_ls_alert.php?session=S3c7x9_LB&key=WartelpasSecureKey";
+:local url "http://wartelpas.sobigidul.net/tools/wa_ls_alert.php?session=S3c7x9_LB&key=WartelpasSecureKey&repeat=60";
 
 :do {
  /tool fetch url=$url keep-result=no;

@@ -128,7 +128,9 @@ if (is_file($db_file)) {
     $live_names = array_map(function($c){ return $c['name'] ?? ''; }, $live_cols);
     $live_col = in_array('sync_date', $live_names, true)
       ? 'sync_date'
-      : (in_array('created_at', $live_names, true) ? 'created_at' : (in_array('sale_datetime', $live_names, true) ? 'sale_datetime' : ''));
+      : (in_array('sale_datetime', $live_names, true)
+        ? 'sale_datetime'
+        : (in_array('created_at', $live_names, true) ? 'created_at' : ''));
     if ($live_col !== '') {
       $last_sync_live = (string)$db_sync->query("SELECT MAX($live_col) FROM live_sales")->fetchColumn();
     }
