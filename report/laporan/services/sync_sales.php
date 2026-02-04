@@ -199,6 +199,33 @@ try {
     die("Error DB: " . $e->getMessage());
 }
 
+// Guard: tolak sync jika live_sales terlihat berhenti (kecuali force=1)
+$force = isset($_GET['force']) && $_GET['force'] === '1';
+$guardMinutes = 15;
+try {
+    $today = date('Y-m-d');
+    $stmtLive = $db->prepare("SELECT COUNT(*) AS cnt, MAX(sale_datetime) AS last_dt FROM live_sales WHERE sale_date = :d AND sync_status = 'pending'");
+    $stmtLive->execute([':d' => $today]);
+    $rowLive = $stmtLive->fetch(PDO::FETCH_ASSOC) ?: [];
+    $pendingCnt = (int)($rowLive['cnt'] ?? 0);
+    $lastDt = (string)($rowLive['last_dt'] ?? '');
+    $lastTs = $lastDt !== '' ? strtotime($lastDt) : 0;
+    if (!$force && $pendingCnt > 0 && $lastTs > 0) {
+        $gap = time() - $lastTs;
+        if ($gap > ($guardMinutes * 60)) {
+            $msg = "Error: Live sales berhenti di {$lastDt}. Sync ditolak (gunakan force=1 jika yakin).";
+            log_sync_sales("guard=stale pending={$pendingCnt} last={$lastDt} gap={$gap}s");
+            die($msg);
+        }
+    }
+    if (!$force && $pendingCnt > 0 && $lastTs === 0) {
+        log_sync_sales("guard=stale pending={$pendingCnt} last=unknown");
+        die("Error: Live sales belum lengkap. Sync ditolak (gunakan force=1 jika yakin).");
+    }
+} catch (Exception $e) {
+    log_sync_sales('guard_error=' . $e->getMessage());
+}
+
 // 5. EKSEKUSI
 $API = new RouterosAPI();
 
