@@ -14,7 +14,7 @@
     backdrop = document.createElement('div');
     backdrop.className = 'm-popup-backdrop';
     backdrop.innerHTML = '' +
-      '<div class="m-modal-card">' +
+      '<div class="m-modal-card" style="max-width: none; width: 560px;">' +
         '<div class="m-modal-header">' +
           '<h4 class="m-modal-title"><i class="fa fa-info-circle"></i><span></span></h4>' +
           '<button class="m-close-x" type="button">&times;</button>' +
