@@ -46,12 +46,6 @@ if ($q !== '') {
     }));
 }
 
-require_once $root_dir . '/lib/formatbytesbites.php';
-
-function stuck_fmt_bytes($bytes) {
-    if (!function_exists('formatBytes')) return (string)$bytes;
-    return formatBytes((int)$bytes, 2);
-}
 ?>
 <div class="row">
     <div class="col-12">
@@ -104,9 +98,9 @@ function stuck_fmt_bytes($bytes) {
                                         <td><?= htmlspecialchars($r['ip'] ?? '-'); ?></td>
                                         <td><?= htmlspecialchars($r['mac'] ?? '-'); ?></td>
                                         <td><?= htmlspecialchars($r['uptime'] ?? '-'); ?></td>
-                                        <td><?= htmlspecialchars(stuck_fmt_bytes($bin)); ?></td>
-                                        <td><?= htmlspecialchars(stuck_fmt_bytes($bout)); ?></td>
-                                        <td><?= htmlspecialchars(stuck_fmt_bytes($total)); ?></td>
+                                        <td><?= htmlspecialchars((string)$bin); ?></td>
+                                        <td><?= htmlspecialchars((string)$bout); ?></td>
+                                        <td><?= htmlspecialchars((string)$total); ?></td>
                                         <td><?= htmlspecialchars($r['reason'] ?? '-'); ?></td>
                                         <td><?= htmlspecialchars($r['profile'] ?? '-'); ?></td>
                                         <td><?= htmlspecialchars($r['server'] ?? '-'); ?></td>
