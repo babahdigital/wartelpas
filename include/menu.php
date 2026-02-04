@@ -143,6 +143,8 @@ if ($last_sync_live_full !== '-') {
 
 $menu_retur_pending = 0;
 $menu_retur_list = [];
+$menu_stuck_count = 0;
+$menu_stuck_list = [];
 $menu_retur_visible = (isOperator() || isSuperAdmin());
 if ($menu_retur_visible) {
     $root_dir = dirname(__DIR__);
@@ -176,6 +178,34 @@ if ($menu_retur_visible) {
         $menu_retur_pending = 0;
         $menu_retur_list = [];
     }
+
+    $log_dir = $root_dir . '/logs';
+    $today = date('Y-m-d');
+    $log_file = $log_dir . '/stuck_kick_' . $today . '.log';
+    if (is_file($log_file)) {
+        $lines = @file($log_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+        if (!empty($lines)) {
+            $lines = array_reverse($lines);
+            $lines = array_slice($lines, 0, 200);
+            foreach ($lines as $line) {
+                $item = json_decode($line, true);
+                if (!is_array($item)) continue;
+                $menu_stuck_list[] = [
+                    'ts' => (string)($item['ts'] ?? ''),
+                    'user' => (string)($item['user'] ?? ''),
+                    'ip' => (string)($item['ip'] ?? ''),
+                    'mac' => (string)($item['mac'] ?? ''),
+                    'uptime' => (string)($item['uptime'] ?? ''),
+                    'bytes_in' => (int)($item['bytes_in'] ?? 0),
+                    'bytes_out' => (int)($item['bytes_out'] ?? 0),
+                    'reason' => (string)($item['reason'] ?? ''),
+                    'profile' => (string)($item['profile'] ?? ''),
+                    'server' => (string)($item['server'] ?? '')
+                ];
+            }
+        }
+    }
+    $menu_stuck_count = count($menu_stuck_list);
 }
 
 $btnmenuactive = "font-weight: bold;background-color: #f9f9f9; color: #000000";
@@ -258,9 +288,6 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
 } elseif ($report == "audit_session") {
     $saudit = "active";
     $mpage = $_audit_log;
-} elseif ($report == "stuck_log") {
-    $sstuck = "active";
-    $mpage = "Stuck Kick Log";
 } elseif ($report == "whatsapp") {
     $swhatsapp = "active";
     $mpage = "WhatsApp";
@@ -700,13 +727,12 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
             </li>
 
             <li class="nav-item" onclick="toggleMobileSub(this)">
-                <a class="nav-link <?= trim($sselling . ' ' . $saudit . ' ' . $sstuck); ?>" href="javascript:void(0)">
+                <a class="nav-link <?= trim($sselling . ' ' . $saudit); ?>" href="javascript:void(0)">
                     <i class="fa fa-money"></i> <?= $_report ?> <i class="fa fa-caret-down" style="margin-left:auto;font-size:10px;"></i>
                 </a>
                 <div class="dropdown-menu">
                     <a class="dropdown-item" href="./?report=selling&idbl=<?= strtolower(date("M")) . date("Y"); ?>&session=<?= $session; ?>"><i class="fa fa-line-chart"></i> <?= $_report ?></a>
                     <a class="dropdown-item audit-item" href="./?report=audit_session&session=<?= $session; ?>"><i class="fa fa-check-square-o"></i> <?= $_audit_log ?></a>
-                    <a class="dropdown-item" href="./?report=stuck_log&session=<?= $session; ?>"><i class="fa fa-exclamation-triangle"></i> Stuck Kick Log</a>
                 </div>
             </li>
 
@@ -829,6 +855,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
     window.__returMenuData = <?= json_encode(['count' => $menu_retur_pending, 'items' => $menu_retur_list], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     window.__returBlokNames = <?= json_encode(($env['blok']['names'] ?? []), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     window.__returSession = <?= json_encode($session); ?>;
+    window.__stuckMenuData = <?= json_encode(['count' => $menu_stuck_count, 'items' => $menu_stuck_list], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     window.__backupKey = <?= json_encode($is_superadmin ? $backupKey : '') ?>;
 
 
