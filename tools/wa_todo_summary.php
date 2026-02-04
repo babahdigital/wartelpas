@@ -20,13 +20,6 @@ if (!function_exists('wa_send_text')) {
     exit(1);
 }
 
-$cfg = app_db_get_whatsapp_config();
-$notify_todo_enabled = !isset($cfg['notify_todo_enabled']) || $cfg['notify_todo_enabled'] === true || $cfg['notify_todo_enabled'] === 1 || $cfg['notify_todo_enabled'] === '1';
-if (!$notify_todo_enabled) {
-    echo "Notif Todo nonaktif.\n";
-    exit(0);
-}
-
 $system_cfg = $env['system'] ?? [];
 $db_rel = $system_cfg['db_file'] ?? 'db_data/babahdigital_main.db';
 if (preg_match('/^[A-Za-z]:\\|^\//', $db_rel)) {
