@@ -114,7 +114,8 @@ try {
             }
         }
 
-        if ($last_live_full === '-' || ($live_diff !== null && $live_diff >= $late_minutes)) {
+        if (($last_live_full === '-' || ($live_diff !== null && $live_diff >= $late_minutes))
+            && !$todo_is_ack('live_sales_stale', $today)) {
             $desc = 'Terakhir: ' . ($live_title !== '-' ? $live_title : 'Tidak ada data');
             if ($live_diff !== null) $desc .= ' (selisih ' . $live_diff . ' menit)';
             $desc .= '. Hubungi administrator jika masih belum normal.';
