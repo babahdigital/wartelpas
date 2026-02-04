@@ -42,6 +42,8 @@ $last_sync_sales_class = 'sync-ok';
 $last_sync_live_class = 'sync-ok';
 $last_sync_sales_blink = 'blink-slow';
 $last_sync_live_blink = 'blink-slow';
+$last_sync_live_pending = 0;
+$last_sync_pending_class = 'sync-ok';
 $db_sync = null;
 try {
     $system_cfg = $env['system'] ?? [];
@@ -72,6 +74,9 @@ try {
         if ($live_col !== '') {
             $last_sync_live_full = (string)$db_sync->query("SELECT MAX($live_col) FROM live_sales")->fetchColumn();
         }
+        if (in_array('sync_status', $live_names, true)) {
+            $last_sync_live_pending = (int)$db_sync->query("SELECT COUNT(*) FROM live_sales WHERE sync_status = 'pending'")->fetchColumn();
+        }
 
         if ($last_sync_sales_full === '') $last_sync_sales_full = '-';
         if ($last_sync_live_full === '') $last_sync_live_full = '-';
@@ -101,6 +106,12 @@ if ($last_sync_live_full !== '-') {
         $last_sync_live_title = date('d-m-Y H:i', $ts);
         $last_sync_live_short = date('d-m-y', $ts);
     }
+}
+
+if ($last_sync_live_pending > 0) {
+    $last_sync_pending_class = 'sync-pending';
+} else {
+    $last_sync_pending_class = 'sync-zero';
 }
 
 $now_ts = time();
@@ -730,10 +741,11 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                     <span class="retur-pill-count" id="retur-menu-count"><?= (int)$menu_retur_pending ?></span>
                 </a>
             <?php endif; ?>
-            <span class="timer-badge" title="Live: <?= htmlspecialchars($last_sync_live_title); ?> | Sales: <?= htmlspecialchars($last_sync_sales_title); ?>">
+            <span class="timer-badge" title="Live: <?= htmlspecialchars($last_sync_live_title); ?> | Sales: <?= htmlspecialchars($last_sync_sales_title); ?> | Pending: <?= (int)$last_sync_live_pending ?>">
                 <i class="fa fa-clock-o"></i>
                 L: <span class="sync-pill <?= $last_sync_live_class; ?> <?= $last_sync_live_blink; ?>"><?= htmlspecialchars($last_sync_live_short); ?></span>
                 S: <span class="sync-pill <?= $last_sync_sales_class; ?> <?= $last_sync_sales_blink; ?>"><?= htmlspecialchars($last_sync_sales_short); ?></span>
+                P: <span class="sync-pill <?= $last_sync_pending_class; ?>"><?= (int)$last_sync_live_pending ?></span>
             </span>
             <span id="db-status" class="db-status" title="Kesehatan Database">
                 <i class="fa fa-heart"></i>
@@ -828,8 +840,11 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                     <span class="retur-pill-count" id="retur-menu-count"><?= (int)$menu_retur_pending ?></span>
                 </a>
             <?php endif; ?>
-            <span class="timer-badge" title="Live: <?= htmlspecialchars($last_sync_live_title); ?> | Sales: <?= htmlspecialchars($last_sync_sales_title); ?>">
-                <i class="fa fa-clock-o"></i> L: <span><?= htmlspecialchars($last_sync_live_short); ?></span> S: <span><?= htmlspecialchars($last_sync_sales_short); ?></span>
+            <span class="timer-badge" title="Live: <?= htmlspecialchars($last_sync_live_title); ?> | Sales: <?= htmlspecialchars($last_sync_sales_title); ?> | Pending: <?= (int)$last_sync_live_pending ?>">
+                <i class="fa fa-clock-o"></i>
+                L: <span class="sync-pill <?= $last_sync_live_class; ?> <?= $last_sync_live_blink; ?>"><?= htmlspecialchars($last_sync_live_short); ?></span>
+                S: <span class="sync-pill <?= $last_sync_sales_class; ?> <?= $last_sync_sales_blink; ?>"><?= htmlspecialchars($last_sync_sales_short); ?></span>
+                P: <span class="sync-pill <?= $last_sync_pending_class; ?>"><?= (int)$last_sync_live_pending ?></span>
             </span>
             <span id="db-status" class="db-status" title="Kesehatan Database">
                 <i class="fa fa-heart"></i>
