@@ -48,9 +48,27 @@ function wa_todo_last_sent($db, $key) {
     return (string)($stmt->fetchColumn() ?: '');
 }
 
-function wa_todo_mark_sent($db, $key) {
-    $stmt = $db->prepare("INSERT OR REPLACE INTO whatsapp_alerts (key, last_sent) VALUES (:k, :t)");
-    $stmt->execute([':k' => $key, ':t' => date('Y-m-d H:i:s')]);
+function wa_todo_last_hash($db, $key) {
+    $db->exec("CREATE TABLE IF NOT EXISTS whatsapp_alerts (key TEXT PRIMARY KEY, last_sent TEXT)");
+    $cols = $db->query("PRAGMA table_info(whatsapp_alerts)")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $colNames = array_map(function($c){ return $c['name'] ?? ''; }, $cols);
+    if (!in_array('last_hash', $colNames, true)) {
+        $db->exec("ALTER TABLE whatsapp_alerts ADD COLUMN last_hash TEXT");
+    }
+    $stmt = $db->prepare("SELECT last_hash FROM whatsapp_alerts WHERE key = :k");
+    $stmt->execute([':k' => $key]);
+    return (string)($stmt->fetchColumn() ?: '');
+}
+
+function wa_todo_mark_sent($db, $key, $hash = '') {
+    $db->exec("CREATE TABLE IF NOT EXISTS whatsapp_alerts (key TEXT PRIMARY KEY, last_sent TEXT)");
+    $cols = $db->query("PRAGMA table_info(whatsapp_alerts)")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $colNames = array_map(function($c){ return $c['name'] ?? ''; }, $cols);
+    if (!in_array('last_hash', $colNames, true)) {
+        $db->exec("ALTER TABLE whatsapp_alerts ADD COLUMN last_hash TEXT");
+    }
+    $stmt = $db->prepare("INSERT OR REPLACE INTO whatsapp_alerts (key, last_sent, last_hash) VALUES (:k, :t, :h)");
+    $stmt->execute([':k' => $key, ':t' => date('Y-m-d H:i:s'), ':h' => (string)$hash]);
 }
 
 function wa_todo_clear($db, $key) {
@@ -59,17 +77,19 @@ function wa_todo_clear($db, $key) {
 }
 
 $force = isset($_GET['force']) && (string)$_GET['force'] === '1';
-$last_sent = wa_todo_last_sent($db, 'todo_summary');
-if (!$force && $last_sent !== '' && substr($last_sent, 0, 10) === date('Y-m-d')) {
-    echo "Sudah dikirim hari ini.\n";
-    exit(0);
-}
 
 $backupKey = $env['backup']['secret'] ?? '';
 $todo_items = app_collect_todo_items($env, '', $backupKey);
 if (empty($todo_items)) {
     wa_todo_clear($db, 'todo_summary');
     echo "Tidak ada todo.\n";
+    exit(0);
+}
+
+$payload_hash = md5(json_encode($todo_items));
+$last_hash = wa_todo_last_hash($db, 'todo_summary');
+if (!$force && $last_hash !== '' && $last_hash === $payload_hash) {
+    echo "Tidak ada todo baru.\n";
     exit(0);
 }
 
@@ -111,7 +131,7 @@ $msg = function_exists('wa_render_template')
 
 $res = wa_send_text($msg, '', 'todo');
 if (!empty($res['ok'])) {
-    wa_todo_mark_sent($db, 'todo_summary');
+    wa_todo_mark_sent($db, 'todo_summary', $payload_hash);
     echo "OK\n";
     exit(0);
 }
