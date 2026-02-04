@@ -1218,12 +1218,6 @@ foreach ($wa_recipients as $rec) {
                             onClick: function(){
                                 var target = (document.getElementById('wa-tpl-test-target') || {}).value || '';
                                 var body = (document.getElementById('wa-tpl-body') || {}).value || '';
-                                if (!body.trim()) {
-                                    return;
-                                }
-                                if (!target.trim()) {
-                                    return;
-                                }
                                 submitWaTemplateTest({
                                     wa_action: 'test_template',
                                     wa_test_target_select: target.trim(),
