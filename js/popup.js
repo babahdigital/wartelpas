@@ -967,28 +967,40 @@
       '<button type="button" class="retur-print-btn-inline" data-retur-print="all">Print Semua</button>' +
     '</div>';
 
+    var viewTabsHtml = '<div class="retur-tabs" style="margin-bottom:8px;">' +
+        '<button type="button" class="retur-tab ' + (view === 'requests' ? 'is-active' : '') + '" data-retur-view="requests">Permintaan</button>' +
+        '<button type="button" class="retur-tab ' + (view === 'stuck' ? 'is-active' : '') + '" data-retur-view="stuck">Stuck (' + stuckCount + ')</button>' +
+      '</div>';
+
+    var requestTabsHtml = '<div class="retur-tabs">' +
+        '<button type="button" class="retur-tab ' + (filter === 'pending' ? 'is-active' : '') + '" data-retur-filter="pending">Pending (' + (counts.pending || 0) + ')</button>' +
+        '<button type="button" class="retur-tab ' + (filter === 'approved' ? 'is-active' : '') + '" data-retur-filter="approved">Approved (' + (counts.approved || 0) + ')</button>' +
+        '<button type="button" class="retur-tab ' + (filter === 'rejected' ? 'is-active' : '') + '" data-retur-filter="rejected">Rejected (' + (counts.rejected || 0) + ')</button>' +
+        '<button type="button" class="retur-tab ' + (filter === 'retur' ? 'is-active' : '') + '" data-retur-filter="retur">Retur (' + (counts.retur || 0) + ')</button>' +
+        '<button type="button" class="retur-tab ' + (filter === 'refund' ? 'is-active' : '') + '" data-retur-filter="refund">Refund (' + (counts.refund || 0) + ')</button>' +
+        '<button type="button" class="retur-tab ' + (filter === 'all' ? 'is-active' : '') + '" data-retur-filter="all">Semua (' + (counts.all || 0) + ')</button>' +
+      '</div>';
+
+    var stuckSearchHtml = '<div class="retur-info-bar" style="justify-content:space-between;">' +
+        '<span>Total Stuck: <strong>' + stuckCount + '</strong></span>' +
+        '<input type="text" class="retur-search" placeholder="Cari voucher/IP/MAC..." value="' + escapeHtml(stuckFilter) + '" data-stuck-search="1" style="max-width:220px;">' +
+      '</div>';
+
     var infoHtml = '<div class="retur-info-bar">' +
       '<span>Permintaan Pending: <strong>' + count + '</strong></span>' +
       '<span class="retur-info-right">Realtime Update</span>' +
       '</div>' +
       '<div class="retur-header">' +
-        '<div class="retur-tabs">' +
-          '<button type="button" class="retur-tab ' + (filter === 'pending' ? 'is-active' : '') + '" data-retur-filter="pending">Pending (' + (counts.pending || 0) + ')</button>' +
-          '<button type="button" class="retur-tab ' + (filter === 'approved' ? 'is-active' : '') + '" data-retur-filter="approved">Approved (' + (counts.approved || 0) + ')</button>' +
-          '<button type="button" class="retur-tab ' + (filter === 'rejected' ? 'is-active' : '') + '" data-retur-filter="rejected">Rejected (' + (counts.rejected || 0) + ')</button>' +
-          '<button type="button" class="retur-tab ' + (filter === 'retur' ? 'is-active' : '') + '" data-retur-filter="retur">Retur (' + (counts.retur || 0) + ')</button>' +
-          '<button type="button" class="retur-tab ' + (filter === 'refund' ? 'is-active' : '') + '" data-retur-filter="refund">Refund (' + (counts.refund || 0) + ')</button>' +
-          '<button type="button" class="retur-tab ' + (filter === 'all' ? 'is-active' : '') + '" data-retur-filter="all">Semua (' + (counts.all || 0) + ')</button>' +
-        '</div>' +
-        printHtml +
-      '</div>' + msgHtml;
+        viewTabsHtml +
+        (view === 'requests' ? (requestTabsHtml + printHtml) : '') +
+      '</div>' + msgHtml + (view === 'stuck' ? stuckSearchHtml : '');
 
     window.MikhmonPopup.open({
       title: 'Manajemen Retur',
       iconClass: 'fa fa-undo',
       statusIcon: 'fa fa-inbox',
       statusColor: count > 0 ? '#f59e0b' : '#22c55e',
-      messageHtml: '<div class="retur-popup-container">' + infoHtml + tableHtml + '</div>',
+      messageHtml: '<div class="retur-popup-container">' + infoHtml + (view === 'stuck' ? stuckTableHtml : tableHtml) + '</div>',
       buttons: [
         { label: 'Buka Halaman Pengguna', className: 'm-btn m-btn-primary', onClick: function(){ window.location.href = './?hotspot=users&session=' + encodeURIComponent(session); } },
         { label: 'Tutup', className: 'm-btn m-btn-cancel' }
