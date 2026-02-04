@@ -377,12 +377,21 @@
     return '<span class="' + cls + '">' + escapeHtml(text) + '</span>';
   }
 
+  function toTitleCase(name) {
+    return String(name || '')
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b\w/g, function(ch) { return ch.toUpperCase(); });
+  }
+
   function openUserResumePopup(payload) {
     if (!window.MikhmonPopup) return;
     var user = payload.user || '-';
+    var customerName = toTitleCase(payload.customer || '-');
     var rows = [
       ['User', user],
-      ['Nama', payload.customer || '-'],
+      ['Nama', customerName || '-'],
       ['Blok', formatBlokLabel(payload.blok || '-')],
       ['Kamar', payload.room || '-'],
       ['Profil', payload.profile || '-'],
