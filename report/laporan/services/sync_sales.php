@@ -31,6 +31,18 @@ if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
 $expected_hotspot = $system_cfg['hotspot_server'] ?? 'wartel';
 require_once($root_dir . '/include/config.php');
 
+$log_rel = $system_cfg['log_dir'] ?? 'logs';
+$logDir = preg_match('/^[A-Za-z]:\\\\|^\//', $log_rel) ? $log_rel : ($root_dir . '/' . trim($log_rel, '/'));
+if (!is_dir($logDir)) {
+    @mkdir($logDir, 0755, true);
+}
+$syncLogFile = $logDir . '/sync_sales.log';
+function log_sync_sales($message) {
+    global $syncLogFile;
+    $line = date('Y-m-d H:i:s') . "\t" . $message . "\n";
+    @file_put_contents($syncLogFile, $line, FILE_APPEND | LOCK_EX);
+}
+
 // Optional IP allowlist (comma-separated), e.g. "127.0.0.1,192.168.1.10"
 $allowlist_raw = getenv('WARTELPAS_SYNC_ALLOWLIST');
 $cfg_sync_sales = $env['security']['sync_sales'] ?? [];
@@ -46,6 +58,7 @@ if (!empty($allowed)) {
     $remote_ip = $_SERVER['REMOTE_ADDR'] ?? '';
     if ($remote_ip === '' || !in_array($remote_ip, $allowed, true)) {
         http_response_code(403);
+        log_sync_sales('reject=ip ip=' . $remote_ip);
         die("Error: IP tidak diizinkan.");
     }
 }
@@ -63,14 +76,18 @@ if ($secret_token === '') {
 }
 if (!isset($_GET['key']) || $_GET['key'] !== $secret_token) {
     http_response_code(403);
+    log_sync_sales('reject=token ip=' . ($_SERVER['REMOTE_ADDR'] ?? '-'));
     die("Error: Token Salah.");
 }
 
 $session = isset($_GET['session']) ? $_GET['session'] : '';
 if ($session === '' || !isset($data[$session])) {
     http_response_code(403);
+    log_sync_sales('reject=session ip=' . ($_SERVER['REMOTE_ADDR'] ?? '-') . ' session=' . $session);
     die("Error: Session tidak valid.");
 }
+
+log_sync_sales('start session=' . $session . ' ip=' . ($_SERVER['REMOTE_ADDR'] ?? '-'));
 
 // 2. LIBRARY API
 require_once($root_dir . '/lib/routeros_api.class.php');
@@ -80,6 +97,7 @@ if (file_exists($root_dir . '/report/laporan/helpers.php')) {
 }
 
 if (!isset($hotspot_server) || $hotspot_server !== $expected_hotspot) {
+    log_sync_sales('skip=wrong_hotspot expected=' . $expected_hotspot . ' got=' . ($hotspot_server ?? ''));
     die("Error: Hanya untuk server wartel.");
 }
 
@@ -177,6 +195,7 @@ try {
         try { $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_live_user_date ON live_sales(username, sale_date)"); } catch(Exception $e) {}
         try { $db->exec("ALTER TABLE live_sales ADD COLUMN sprice_snapshot INTEGER"); } catch (Exception $e) {}
 } catch (PDOException $e) {
+    log_sync_sales('db_error=' . $e->getMessage());
     die("Error DB: " . $e->getMessage());
 }
 
@@ -431,6 +450,7 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
         }
     }
 
+    log_sync_sales("done count={$count} invalid={$skip_invalid_format} blok_skip={$skip_blok} dup={$skip_duplicate}");
     echo "Sukses: $count laporan penjualan dipindahkan ke Database & dihapus dari MikroTik.\n";
     if ($debug) {
         echo "Debug: invalid_format={$skip_invalid_format}, blok_kosong={$skip_blok}, duplikat={$skip_duplicate}\n";
@@ -444,6 +464,7 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
     }
     
 } else {
+    log_sync_sales('router_login_failed host=' . ($use_ip ?? '-'));
     echo "Gagal Login MikroTik.";
 }
 ?>

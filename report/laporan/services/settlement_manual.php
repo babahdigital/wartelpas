@@ -59,6 +59,44 @@ function append_settlement_log($file, $topic, $message) {
     @file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
 }
 
+function run_sync_sales($session, $env, $logFile, $debugFile) {
+    $system_cfg = $env['system'] ?? [];
+    $base_url = rtrim((string)($system_cfg['base_url'] ?? ''), '/');
+    if ($base_url === '') {
+        append_settlement_log($logFile, 'system,warning', 'SETTLE: SYNC SALES dilewati (base_url kosong).');
+        return ['ok' => false, 'message' => 'base_url kosong'];
+    }
+
+    $cfg = $env['security']['sync_sales'] ?? [];
+    $token = $cfg['token'] ?? '';
+    if ($token === '') {
+        $token = $env['backup']['secret'] ?? '';
+    }
+    if ($token === '') {
+        append_settlement_log($logFile, 'system,warning', 'SETTLE: SYNC SALES dilewati (token kosong).');
+        return ['ok' => false, 'message' => 'token kosong'];
+    }
+
+    $url = $base_url . '/report/laporan/services/sync_sales.php?key=' . urlencode($token) . '&session=' . urlencode($session);
+    $ctx = stream_context_create([
+        'http' => [
+            'timeout' => 20,
+            'header' => "User-Agent: WartelPas-Settlement\r\n"
+        ]
+    ]);
+    $res = @file_get_contents($url, false, $ctx);
+    if ($res === false) {
+        append_settlement_log($logFile, 'system,error', 'SETTLE: SYNC SALES gagal dipanggil.');
+        append_settlement_debug($debugFile, 'sync_sales_error=url_failed url=' . $url);
+        return ['ok' => false, 'message' => 'call_failed'];
+    }
+
+    $short = trim((string)$res);
+    $short = preg_replace('/\s+/', ' ', $short);
+    append_settlement_log($logFile, 'system,info', 'SETTLE: SYNC SALES: ' . $short);
+    return ['ok' => true, 'message' => $short];
+}
+
 function prune_settlement_logs($logDir, $archiveDir, $keepDays, $archiveKeepDays) {
     $now = time();
     $keepDays = (int)$keepDays;
@@ -477,6 +515,7 @@ try {
     )");
     try { $db->exec("ALTER TABLE settlement_log ADD COLUMN completed_at DATETIME"); } catch (Exception $e) {}
     try { $db->exec("ALTER TABLE settlement_log ADD COLUMN auto_rusak_at DATETIME"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE settlement_log ADD COLUMN sales_sync_at DATETIME"); } catch (Exception $e) {}
     try { $db->exec("ALTER TABLE settlement_log ADD COLUMN wa_report_sent_at DATETIME"); } catch (Exception $e) {}
     try { $db->exec("ALTER TABLE settlement_log ADD COLUMN wa_report_status TEXT"); } catch (Exception $e) {}
     try { $db->exec("ALTER TABLE login_history ADD COLUMN auto_rusak INTEGER DEFAULT 0"); } catch (Exception $e) {}
@@ -706,6 +745,18 @@ if ($action === 'logs') {
                     ':m' => 'AUTO RUSAK: ' . $autoCount . ' user',
                     ':d' => $date
                 ]);
+            }
+        } catch (Exception $e) {}
+
+        try {
+            $stmtSS = $db->prepare("SELECT sales_sync_at FROM settlement_log WHERE report_date = :d LIMIT 1");
+            $stmtSS->execute([':d' => $date]);
+            $salesSynced = (string)($stmtSS->fetchColumn() ?: '');
+            if ($salesSynced === '') {
+                $res = run_sync_sales($session, $env, $logFile, $debugFile);
+                $syncMsg = $res['ok'] ? 'SYNC SALES: OK' : 'SYNC SALES: GAGAL';
+                $stmtSSU = $db->prepare("UPDATE settlement_log SET sales_sync_at = CURRENT_TIMESTAMP, message = CASE WHEN message IS NULL OR message = '' THEN :m ELSE message || ' | ' || :m END WHERE report_date = :d");
+                $stmtSSU->execute([':m' => $syncMsg, ':d' => $date]);
             }
         } catch (Exception $e) {}
     }

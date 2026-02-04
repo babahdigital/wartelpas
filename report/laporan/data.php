@@ -199,6 +199,7 @@ if (file_exists($dbFile)) {
             message TEXT
         )");
         try { $db->exec("ALTER TABLE settlement_log ADD COLUMN completed_at DATETIME"); } catch (Exception $e) {}
+        try { $db->exec("ALTER TABLE settlement_log ADD COLUMN sales_sync_at DATETIME"); } catch (Exception $e) {}
         try { $db->exec("ALTER TABLE settlement_log ADD COLUMN wa_report_sent_at DATETIME"); } catch (Exception $e) {}
         try { $db->exec("ALTER TABLE settlement_log ADD COLUMN wa_report_status TEXT"); } catch (Exception $e) {}
         $db->exec("CREATE TABLE IF NOT EXISTS phone_block_daily (
