@@ -852,6 +852,10 @@ if ($load == "logs") {
                             if ($statusRaw === 'online' && $end_ts < ($now_ts - 60)) {
                                 $statusRaw = 'used';
                             }
+                        } else {
+                            if ($statusRaw === 'online' && $ts < ($now_ts - 3600)) {
+                                $statusRaw = 'used';
+                            }
                         }
                     } elseif ($ts !== false) {
                         if ($statusRaw === 'online' && $ts < ($now_ts - 3600)) {
