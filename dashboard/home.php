@@ -115,6 +115,21 @@ else {
             $('#kpi-income').text('Rp ' + data.income);
             $('#kpi-est').text('Proyeksi: Rp ' + data.est_income);
 
+            if (data.ls_live_short !== undefined) {
+                $('#ls-live').text(data.ls_live_short || '--')
+                    .attr('class', 'sync-pill ' + (data.ls_live_class || 'sync-warn') + ' ' + (data.ls_live_blink || ''));
+            }
+            if (data.ls_sales_short !== undefined) {
+                $('#ls-sales').text(data.ls_sales_short || '--')
+                    .attr('class', 'sync-pill ' + (data.ls_sales_class || 'sync-warn') + ' ' + (data.ls_sales_blink || ''));
+            }
+            var pendingVal = parseInt(data.ls_pending || 0, 10);
+            var pendingClass = pendingVal > 0 ? 'sync-pending' : 'sync-zero';
+            $('#ls-pending').text(pendingVal).attr('class', 'sync-pill ' + pendingClass);
+            $('#ls-live-diff').text((data.ls_live_diff || '-') + 'm');
+            $('#ls-sales-diff').text((data.ls_sales_diff || '-') + 'm');
+            $('#ls-strip').attr('title', 'Live: ' + (data.ls_live_title || '-') + ' | Sales: ' + (data.ls_sales_title || '-') + ' | Pending: ' + pendingVal);
+
             if (parseInt(data.ghost || 0, 10) > 0) {
                 $('#ghost-tag').show();
             } else {
@@ -270,6 +285,34 @@ for ($i = 5; $i >= 0; $i--) {
 }
 ?>
 
+<style>
+    .ls-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin: 8px 0 16px;
+        padding: 8px 12px;
+        border-radius: 10px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.08);
+        color: var(--text-dim);
+        font-size: 12px;
+    }
+    .ls-strip .ls-label { font-weight: 700; color: var(--text-main); }
+    .ls-strip .ls-item { display: inline-flex; align-items: center; gap: 6px; }
+    .ls-strip .ls-diff { font-size: 10px; color: var(--text-dim); }
+    .sync-pill { display:inline-block; padding:1px 6px; border-radius:10px; font-weight:700; font-size:11px; }
+    .sync-ok { color:#16a34a; background:rgba(22,163,74,0.12); }
+    .sync-warn { color:#f59e0b; background:rgba(245,158,11,0.12); }
+    .sync-late { color:#ef4444; background:rgba(239,68,68,0.15); }
+    .sync-pending { color:#ef4444; background:rgba(239,68,68,0.2); }
+    .sync-zero { color:#94a3b8; background:rgba(148,163,184,0.15); }
+    .blink-slow { animation: syncBlink 2.4s ease-in-out infinite; }
+    .blink-fast { animation: syncBlink 1.2s ease-in-out infinite; }
+    @keyframes syncBlink { 50% { opacity: 0.35; } }
+</style>
+
 <div id="reloadHome" class="main-content">
     <div id="loading-halus"></div>
     <div class="row-kpi">
@@ -296,6 +339,13 @@ for ($i = 5; $i >= 0; $i--) {
             <div class="label" id="audit-val">Selisih: Rp 0</div>
             <div class="audit-detail" id="audit-detail"></div>
         </div>
+    </div>
+
+    <div class="ls-strip" id="ls-strip" title="Live: - | Sales: - | Pending: 0">
+        <span class="ls-label">L/S</span>
+        <span class="ls-item">Live <span id="ls-live" class="sync-pill sync-warn">--</span> <span class="ls-diff" id="ls-live-diff">-m</span></span>
+        <span class="ls-item">Sales <span id="ls-sales" class="sync-pill sync-warn">--</span> <span class="ls-diff" id="ls-sales-diff">-m</span></span>
+        <span class="ls-item">Pending <span id="ls-pending" class="sync-pill sync-zero">0</span></span>
     </div>
 
     <div class="dashboard-grid">

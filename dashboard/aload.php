@@ -133,7 +133,18 @@ if ($load == "live_data") {
         'est_income' => '0',
         'ghost' => 0,
         'audit_status' => 'CLEAR',
-        'audit_val' => '0'
+        'audit_val' => '0',
+        'ls_live_short' => '--',
+        'ls_sales_short' => '--',
+        'ls_live_title' => '-',
+        'ls_sales_title' => '-',
+        'ls_live_class' => 'sync-warn',
+        'ls_sales_class' => 'sync-warn',
+        'ls_live_blink' => '',
+        'ls_sales_blink' => '',
+        'ls_live_diff' => '-',
+        'ls_sales_diff' => '-',
+        'ls_pending' => 0
     ];
 
     $counthotspotactive = 0;
