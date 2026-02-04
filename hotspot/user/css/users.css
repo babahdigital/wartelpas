@@ -276,7 +276,7 @@ body { overflow-y: scroll; scrollbar-gutter: stable; }
 .users-table th:nth-child(7), .users-table td:nth-child(7) { width: 14%; }
 .users-table th:nth-child(8), .users-table td:nth-child(8) { width: 8%; }
 .users-table th:nth-child(9), .users-table td:nth-child(9) { width: 8%; }
-.users-table th:nth-child(10), .users-table td:nth-child(10) { width: 120px; }
+.users-table th:nth-child(10), .users-table td:nth-child(10) { width: 180px; overflow: visible; text-overflow: clip; white-space: nowrap; }
 
 /* Stabilkan wrapper tabel agar tidak geser saat scrollbar muncul */
 .table-responsive { scrollbar-gutter: stable; }
