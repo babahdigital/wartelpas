@@ -66,6 +66,11 @@
   margin-bottom: 0;
 }
 
+.m-modal-card.is-retur .m-modal-body {
+  max-height: 70vh;
+  overflow: auto;
+}
+
 .m-modal-card.is-pass .m-status-text {
   text-align: left;
 }
