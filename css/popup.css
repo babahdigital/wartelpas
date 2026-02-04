@@ -316,7 +316,7 @@
 }
 
 .todo-col-level { width: 70px; }
-.todo-col-title { width: 180px; }
+.todo-col-title { width: 180px; text-align: left;}
 .todo-col-action { width: 120px; text-align: right; white-space: nowrap; }
 
 .todo-row:last-child td { border-bottom: none; }
