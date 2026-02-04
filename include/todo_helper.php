@@ -497,7 +497,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
             } catch (Exception $e) {
                 $hp_count = 0;
             }
-            if (!$todo_is_ack('hp_review', $today)) {
+            if ($is_after_phone && !$todo_is_ack('hp_review', $today)) {
                 $hp_last_text = $hp_last !== '' ? date('d-m-Y H:i', strtotime($hp_last)) : '-';
                 $hp_hint = $hp_count === 0 ? 'Belum ada data Handphone hari ini.' : 'Belum ada konfirmasi Handphone hari ini.';
                 $todo_list[] = [
