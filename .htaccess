@@ -223,6 +223,11 @@ Require all denied
     Require all granted
 </If>
 
+# Todo WA endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/wa_todo_summary\.php$#">
+    Require all granted
+</If>
+
 # Maintenance toggle endpoint (protected)
 <If "%{REQUEST_URI} =~ m#^/other/repair_login_events\.php$#">
     Require all granted

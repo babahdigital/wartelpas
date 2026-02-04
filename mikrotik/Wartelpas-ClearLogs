@@ -1,8 +1,0 @@
-:log info "MAINTENANCE: Mulai pembersihan log server...";
-:local url "http://wartelpas.sobigidul.net/tools/clear_logs.php?key=WartelpasSecureKey&session=S3c7x9_LB&scope=all&purge=1&max_mb=0";
-:do {
-	/tool fetch url=$url mode=http keep-result=no;
-	:log info "MAINTENANCE: Log server telah dibersihkan.";
-} on-error={
-	:log warning "MAINTENANCE: Gagal membersihkan log server.";
-}
