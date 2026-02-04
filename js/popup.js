@@ -248,6 +248,65 @@
 })();
 
 (function() {
+  function escapeHtml(str) {
+    return String(str || '').replace(/[&<>"']/g, function(s) {
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[s];
+    });
+  }
+
+  function getTodoData() {
+    return window.__todoMenuData || { count: 0, items: [] };
+  }
+
+  function buildTodoHtml(data) {
+    var items = Array.isArray(data.items) ? data.items : [];
+    if (!items.length) {
+      return '<div class="todo-popup-container"><div class="todo-empty">Tidak ada todo untuk saat ini.</div></div>';
+    }
+    var html = '<div class="todo-popup-container">';
+    items.forEach(function(it){
+      var level = (it.level || 'info').toLowerCase();
+      var title = escapeHtml(it.title || 'Todo');
+      var desc = escapeHtml(it.desc || '');
+      var actionLabel = escapeHtml(it.action_label || 'Buka');
+      var actionUrl = String(it.action_url || '');
+      var actionTarget = String(it.action_target || '_self');
+      html += '<div class="todo-item todo-' + level + '">';
+      html += '  <div class="todo-item-head">';
+      html += '    <span class="todo-level">' + level.toUpperCase() + '</span>';
+      html += '    <strong class="todo-title">' + title + '</strong>';
+      html += '  </div>';
+      html += '  <div class="todo-desc">' + desc + '</div>';
+      if (actionUrl) {
+        html += '  <div class="todo-actions">';
+        html += '    <a class="todo-action-btn" href="' + escapeHtml(actionUrl) + '" target="' + escapeHtml(actionTarget) + '">' + actionLabel + '</a>';
+        html += '  </div>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  window.openTodoMenuPopup = function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!window.MikhmonPopup) return;
+    var data = getTodoData();
+    window.MikhmonPopup.open({
+      title: 'Notifikasi & Todo',
+      iconClass: 'fa fa-bell',
+      statusIcon: 'fa fa-bell',
+      statusColor: '#f59e0b',
+      cardClass: 'is-retur',
+      messageHtml: buildTodoHtml(data),
+      buttons: [
+        { label: 'Tutup', className: 'm-btn m-btn-cancel' }
+      ]
+    });
+  };
+})();
+
+(function() {
   function getSession() {
     return window.__returSession || '';
   }

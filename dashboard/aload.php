@@ -133,18 +133,7 @@ if ($load == "live_data") {
         'est_income' => '0',
         'ghost' => 0,
         'audit_status' => 'CLEAR',
-        'audit_val' => '0',
-        'ls_live_short' => '--',
-        'ls_sales_short' => '--',
-        'ls_live_title' => '-',
-        'ls_sales_title' => '-',
-        'ls_live_class' => 'sync-warn',
-        'ls_sales_class' => 'sync-warn',
-        'ls_live_blink' => '',
-        'ls_sales_blink' => '',
-        'ls_live_diff' => '-',
-        'ls_sales_diff' => '-',
-        'ls_pending' => 0
+        'audit_val' => '0'
     ];
 
     $counthotspotactive = 0;
@@ -189,79 +178,6 @@ if ($load == "live_data") {
             $hasSales = table_exists($db, 'sales_history');
             $hasLive = table_exists($db, 'live_sales');
             $hasLogin = table_exists($db, 'login_history');
-
-            $ls_state = [
-                'live' => [
-                    'full' => '-',
-                    'short' => '-',
-                    'title' => '-',
-                    'class' => 'sync-ok',
-                    'blink' => 'blink-slow',
-                    'diff' => '-'
-                ],
-                'sales' => [
-                    'full' => '-',
-                    'short' => '-',
-                    'title' => '-',
-                    'class' => 'sync-ok',
-                    'blink' => 'blink-slow',
-                    'diff' => '-'
-                ],
-                'pending' => 0
-            ];
-            $now_ts = time();
-            $warn_minutes = 15;
-            $late_minutes = 60;
-
-            if ($hasSales) {
-                $sales_cols = $db->query("PRAGMA table_info(sales_history)")->fetchAll(PDO::FETCH_ASSOC) ?: [];
-                $sales_names = array_map(function($c){ return $c['name'] ?? ''; }, $sales_cols);
-                $sales_col = in_array('sync_date', $sales_names, true)
-                    ? 'sync_date'
-                    : (in_array('created_at', $sales_names, true) ? 'created_at' : '');
-                if ($sales_col !== '') {
-                    $ls_state['sales']['full'] = (string)$db->query("SELECT MAX($sales_col) FROM sales_history")->fetchColumn();
-                }
-            }
-
-            if ($hasLive) {
-                $live_cols = $db->query("PRAGMA table_info(live_sales)")->fetchAll(PDO::FETCH_ASSOC) ?: [];
-                $live_names = array_map(function($c){ return $c['name'] ?? ''; }, $live_cols);
-                $live_col = in_array('sync_date', $live_names, true)
-                    ? 'sync_date'
-                    : (in_array('sale_datetime', $live_names, true)
-                        ? 'sale_datetime'
-                        : (in_array('created_at', $live_names, true) ? 'created_at' : ''));
-                if ($live_col !== '') {
-                    $ls_state['live']['full'] = (string)$db->query("SELECT MAX($live_col) FROM live_sales")->fetchColumn();
-                }
-                if (in_array('sync_status', $live_names, true)) {
-                    $ls_state['pending'] = (int)$db->query("SELECT COUNT(*) FROM live_sales WHERE sync_status = 'pending'")->fetchColumn();
-                }
-            }
-
-            foreach (['live', 'sales'] as $k) {
-                $full = $ls_state[$k]['full'];
-                if ($full !== '-' && $full !== '') {
-                    $ts = strtotime($full);
-                    if ($ts) {
-                        $ls_state[$k]['short'] = date('H:i', $ts);
-                        $ls_state[$k]['title'] = date('d-m-Y H:i', $ts);
-                        $diff_min = (int)floor(($now_ts - $ts) / 60);
-                        $ls_state[$k]['diff'] = (string)$diff_min;
-                        if ($diff_min >= $late_minutes) {
-                            $ls_state[$k]['class'] = 'sync-late';
-                            $ls_state[$k]['blink'] = 'blink-fast';
-                        } elseif ($diff_min >= $warn_minutes) {
-                            $ls_state[$k]['class'] = 'sync-warn';
-                        }
-                    } else {
-                        $ls_state[$k]['class'] = 'sync-warn';
-                    }
-                } else {
-                    $ls_state[$k]['class'] = 'sync-warn';
-                }
-            }
 
             $rows = [];
             $loginSelect = $hasLogin
@@ -501,17 +417,6 @@ if ($load == "live_data") {
             $dataResponse['income'] = number_format($sumIncome, 0, ",", ".");
             $dataResponse['gross_income'] = number_format($sumGrossToday, 0, ",", ".");
             $dataResponse['est_income'] = number_format($estIncome, 0, ",", ".");
-            $dataResponse['ls_live_short'] = $ls_state['live']['short'];
-            $dataResponse['ls_sales_short'] = $ls_state['sales']['short'];
-            $dataResponse['ls_live_title'] = $ls_state['live']['title'];
-            $dataResponse['ls_sales_title'] = $ls_state['sales']['title'];
-            $dataResponse['ls_live_class'] = $ls_state['live']['class'];
-            $dataResponse['ls_sales_class'] = $ls_state['sales']['class'];
-            $dataResponse['ls_live_blink'] = $ls_state['live']['blink'];
-            $dataResponse['ls_sales_blink'] = $ls_state['sales']['blink'];
-            $dataResponse['ls_live_diff'] = $ls_state['live']['diff'];
-            $dataResponse['ls_sales_diff'] = $ls_state['sales']['diff'];
-            $dataResponse['ls_pending'] = $ls_state['pending'];
 
             $stmtAudit = $db->prepare("SELECT SUM(selisih_qty) AS ghost_qty, SUM(selisih_setoran) AS selisih
                 FROM audit_rekap_manual WHERE report_date = :d");

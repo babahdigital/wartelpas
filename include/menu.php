@@ -30,20 +30,9 @@ if (file_exists($envFile)) {
 $backupKey = $env['backup']['secret'] ?? '';
 $has_router_session = app_db_first_session_id() !== '';
 
-$last_sync_sales = '-';
-$last_sync_live = '-';
-$last_sync_sales_full = '-';
-$last_sync_live_full = '-';
-$last_sync_sales_title = '-';
-$last_sync_live_title = '-';
-$last_sync_sales_short = '-';
-$last_sync_live_short = '-';
-$last_sync_sales_class = 'sync-ok';
-$last_sync_live_class = 'sync-ok';
-$last_sync_sales_blink = 'blink-slow';
-$last_sync_live_blink = 'blink-slow';
-$last_sync_live_pending = 0;
-$last_sync_pending_class = 'sync-ok';
+$todo_list = [];
+$todo_count = 0;
+$todo_badge_class = 'todo-ok';
 $db_sync = null;
 try {
     $system_cfg = $env['system'] ?? [];
@@ -57,13 +46,12 @@ try {
         $db_sync = new PDO('sqlite:' . $stats_db);
         $db_sync->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        $sales_cols = $db_sync->query("PRAGMA table_info(sales_history)")->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        $sales_names = array_map(function($c){ return $c['name'] ?? ''; }, $sales_cols);
-        $sales_col = in_array('sync_date', $sales_names, true) ? 'sync_date' : (in_array('created_at', $sales_names, true) ? 'created_at' : '');
-        if ($sales_col !== '') {
-            $last_sync_sales_full = (string)$db_sync->query("SELECT MAX($sales_col) FROM sales_history")->fetchColumn();
-        }
+        $today = date('Y-m-d');
+        $now_ts = time();
+        $late_minutes = 60;
 
+        // Live Sales stale detection
+        $last_live_full = '-';
         $live_cols = $db_sync->query("PRAGMA table_info(live_sales)")->fetchAll(PDO::FETCH_ASSOC) ?: [];
         $live_names = array_map(function($c){ return $c['name'] ?? ''; }, $live_cols);
         $live_col = in_array('sync_date', $live_names, true)
@@ -72,84 +60,114 @@ try {
                 ? 'sale_datetime'
                 : (in_array('created_at', $live_names, true) ? 'created_at' : ''));
         if ($live_col !== '') {
-            $last_sync_live_full = (string)$db_sync->query("SELECT MAX($live_col) FROM live_sales")->fetchColumn();
+            $last_live_full = (string)$db_sync->query("SELECT MAX($live_col) FROM live_sales")->fetchColumn();
         }
-        if (in_array('sync_status', $live_names, true)) {
-            $last_sync_live_pending = (int)$db_sync->query("SELECT COUNT(*) FROM live_sales WHERE sync_status = 'pending'")->fetchColumn();
+        if ($last_live_full === '') $last_live_full = '-';
+
+        $live_diff = null;
+        $live_title = '-';
+        if ($last_live_full !== '-') {
+            $ts = strtotime($last_live_full);
+            if ($ts) {
+                $live_title = date('d-m-Y H:i', $ts);
+                $live_diff = (int)floor(($now_ts - $ts) / 60);
+            }
         }
 
-        if ($last_sync_sales_full === '') $last_sync_sales_full = '-';
-        if ($last_sync_live_full === '') $last_sync_live_full = '-';
+        if ($last_live_full === '-' || ($live_diff !== null && $live_diff >= $late_minutes)) {
+            $desc = 'Terakhir: ' . ($live_title !== '-' ? $live_title : 'Tidak ada data');
+            if ($live_diff !== null) $desc .= ' (selisih ' . $live_diff . ' menit)';
+            $desc .= '. Pastikan scheduler live_ingest aktif di MikroTik.';
+            $action_url = '';
+            $action_label = '';
+            if (isSuperAdmin() && $backupKey !== '') {
+                $action_url = './report/laporan/services/sync_sales.php?key=' . urlencode($backupKey) . '&session=' . urlencode($session) . '&force=1';
+                $action_label = 'Sync Sales (Force)';
+            }
+            $todo_list[] = [
+                'id' => 'live_sales_stale',
+                'title' => 'Live Sales tidak update',
+                'desc' => $desc,
+                'level' => 'danger',
+                'action_label' => $action_label,
+                'action_url' => $action_url,
+                'action_target' => '_blank'
+            ];
+        }
+
+        // Audit & Settlement status
+        $audit_locked_today = false;
+        try {
+            $stmtLock = $db_sync->prepare("SELECT COUNT(*) FROM audit_rekap_manual WHERE report_date = :d AND COALESCE(is_locked,0) = 1");
+            $stmtLock->execute([':d' => $today]);
+            $audit_locked_today = (int)$stmtLock->fetchColumn() > 0;
+        } catch (Exception $e) {
+            $audit_locked_today = false;
+        }
+
+        $settled_today = false;
+        try {
+            $stmtSet = $db_sync->prepare("SELECT status FROM settlement_log WHERE report_date = :d LIMIT 1");
+            $stmtSet->execute([':d' => $today]);
+            $srow = $stmtSet->fetch(PDO::FETCH_ASSOC);
+            $settled_today = $srow && strtolower((string)$srow['status']) === 'done';
+        } catch (Exception $e) {
+            $settled_today = false;
+        }
+
+        $report_url = './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($today);
+        if (!$audit_locked_today) {
+            $todo_list[] = [
+                'id' => 'audit_pending',
+                'title' => 'Audit belum dikunci',
+                'desc' => 'Lengkapi audit harian terlebih dahulu sebelum settlement.',
+                'level' => 'warn',
+                'action_label' => 'Buka Laporan Harian',
+                'action_url' => $report_url,
+                'action_target' => '_self'
+            ];
+        } elseif (!$settled_today) {
+            $todo_list[] = [
+                'id' => 'settlement_pending',
+                'title' => 'Settlement belum dilakukan',
+                'desc' => 'Audit sudah dikunci, lanjutkan settlement harian.',
+                'level' => 'warn',
+                'action_label' => 'Buka Settlement',
+                'action_url' => $report_url,
+                'action_target' => '_self'
+            ];
+        }
+
+        // Handphone input review
+        $hp_count = 0;
+        $hp_last = '';
+        try {
+            $stmtHp = $db_sync->prepare("SELECT COUNT(*) AS cnt, MAX(updated_at) AS last_upd FROM phone_block_daily WHERE report_date = :d");
+            $stmtHp->execute([':d' => $today]);
+            $hp_row = $stmtHp->fetch(PDO::FETCH_ASSOC) ?: [];
+            $hp_count = (int)($hp_row['cnt'] ?? 0);
+            $hp_last = (string)($hp_row['last_upd'] ?? '');
+        } catch (Exception $e) {
+            $hp_count = 0;
+        }
+        if ($hp_count === 0) {
+            $todo_list[] = [
+                'id' => 'hp_review',
+                'title' => 'Input Handphone belum ditinjau',
+                'desc' => 'Belum ada input Handphone hari ini. Mohon tinjau data Handphone.',
+                'level' => 'info',
+                'action_label' => 'Buka Input HP',
+                'action_url' => $report_url,
+                'action_target' => '_self'
+            ];
+        }
     }
 } catch (Exception $e) {
-    $last_sync_sales_full = '-';
-    $last_sync_live_full = '-';
+    $todo_list = [];
 }
 
-if ($last_sync_sales_full !== '-' && strlen($last_sync_sales_full) >= 16) {
-    $last_sync_sales = substr($last_sync_sales_full, 11, 5);
-}
-if ($last_sync_live_full !== '-' && strlen($last_sync_live_full) >= 16) {
-    $last_sync_live = substr($last_sync_live_full, 11, 5);
-}
-
-if ($last_sync_sales_full !== '-') {
-    $ts = strtotime($last_sync_sales_full);
-    if ($ts) {
-        $last_sync_sales_title = date('d-m-Y H:i', $ts);
-        $last_sync_sales_short = date('d-m-y', $ts);
-    }
-}
-if ($last_sync_live_full !== '-') {
-    $ts = strtotime($last_sync_live_full);
-    if ($ts) {
-        $last_sync_live_title = date('d-m-Y H:i', $ts);
-        $last_sync_live_short = date('d-m-y', $ts);
-    }
-}
-
-if ($last_sync_live_pending > 0) {
-    $last_sync_pending_class = 'sync-pending';
-} else {
-    $last_sync_pending_class = 'sync-zero';
-}
-
-$now_ts = time();
-$warn_minutes = 15;
-$late_minutes = 60;
-if ($last_sync_sales_full !== '-') {
-    $ts = strtotime($last_sync_sales_full);
-    if ($ts) {
-        $diff_min = (int)floor(($now_ts - $ts) / 60);
-        if ($diff_min >= $late_minutes) {
-            $last_sync_sales_class = 'sync-late';
-            $last_sync_sales_blink = 'blink-fast';
-        } elseif ($diff_min >= $warn_minutes) {
-            $last_sync_sales_class = 'sync-warn';
-        }
-    } else {
-        $last_sync_sales_class = 'sync-warn';
-    }
-} else {
-    $last_sync_sales_class = 'sync-warn';
-}
-
-if ($last_sync_live_full !== '-') {
-    $ts = strtotime($last_sync_live_full);
-    if ($ts) {
-        $diff_min = (int)floor(($now_ts - $ts) / 60);
-        if ($diff_min >= $late_minutes) {
-            $last_sync_live_class = 'sync-late';
-            $last_sync_live_blink = 'blink-fast';
-        } elseif ($diff_min >= $warn_minutes) {
-            $last_sync_live_class = 'sync-warn';
-        }
-    } else {
-        $last_sync_live_class = 'sync-warn';
-    }
-} else {
-    $last_sync_live_class = 'sync-warn';
-}
+$todo_count = count($todo_list);
+$todo_badge_class = $todo_count > 0 ? 'todo-warn' : 'todo-ok';
 
 
 $menu_retur_pending = 0;
@@ -525,17 +543,43 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         background: #94a3b8;
         color: #111827;
     }
-    .timer-badge {
-        background: rgba(255,255,255,0.05);
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        color: var(--nav-text);
+    .todo-pill {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        border: 1px solid rgba(255,255,255,0.1);
+        padding: 6px 12px;
+        border-radius: 18px;
+        background: rgba(255, 193, 7, 0.15);
+        color: #facc15;
+        border: 1px solid rgba(255, 193, 7, 0.35);
+        font-weight: 700;
+        font-size: 12px;
+        text-decoration: none;
         white-space: nowrap;
+    }
+    .todo-pill i { font-size: 12px; }
+    .todo-pill-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 6px;
+        border-radius: 10px;
+        background: #facc15;
+        color: #111827;
+        font-weight: 800;
+        font-size: 10px;
+        line-height: 1;
+    }
+    .todo-pill.is-zero {
+        background: rgba(148, 163, 184, 0.18);
+        color: #94a3b8;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+    }
+    .todo-pill.is-zero .todo-pill-count {
+        background: #94a3b8;
+        color: #111827;
     }
     .db-tools {
         display: inline-flex;
@@ -741,12 +785,10 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                     <span class="retur-pill-count" id="retur-menu-count"><?= (int)$menu_retur_pending ?></span>
                 </a>
             <?php endif; ?>
-            <span class="timer-badge" title="Live: <?= htmlspecialchars($last_sync_live_title); ?> | Sales: <?= htmlspecialchars($last_sync_sales_title); ?> | Pending: <?= (int)$last_sync_live_pending ?>">
-                <i class="fa fa-clock-o"></i>
-                L: <span class="sync-pill <?= $last_sync_live_class; ?> <?= $last_sync_live_blink; ?>"><?= htmlspecialchars($last_sync_live_short); ?></span>
-                S: <span class="sync-pill <?= $last_sync_sales_class; ?> <?= $last_sync_sales_blink; ?>"><?= htmlspecialchars($last_sync_sales_short); ?></span>
-                P: <span class="sync-pill <?= $last_sync_pending_class; ?>"><?= (int)$last_sync_live_pending ?></span>
-            </span>
+            <a class="todo-pill <?= $todo_count > 0 ? '' : 'is-zero' ?>" id="todo-menu-pill" href="javascript:void(0)" onclick="return openTodoMenuPopup(event);" title="Notifikasi & Todo">
+                <i class="fa fa-bell"></i> Todo
+                <span class="todo-pill-count" id="todo-menu-count"><?= (int)$todo_count ?></span>
+            </a>
             <span id="db-status" class="db-status" title="Kesehatan Database">
                 <i class="fa fa-heart"></i>
             </span>
@@ -840,12 +882,10 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                     <span class="retur-pill-count" id="retur-menu-count"><?= (int)$menu_retur_pending ?></span>
                 </a>
             <?php endif; ?>
-            <span class="timer-badge" title="Live: <?= htmlspecialchars($last_sync_live_title); ?> | Sales: <?= htmlspecialchars($last_sync_sales_title); ?> | Pending: <?= (int)$last_sync_live_pending ?>">
-                <i class="fa fa-clock-o"></i>
-                L: <span class="sync-pill <?= $last_sync_live_class; ?> <?= $last_sync_live_blink; ?>"><?= htmlspecialchars($last_sync_live_short); ?></span>
-                S: <span class="sync-pill <?= $last_sync_sales_class; ?> <?= $last_sync_sales_blink; ?>"><?= htmlspecialchars($last_sync_sales_short); ?></span>
-                P: <span class="sync-pill <?= $last_sync_pending_class; ?>"><?= (int)$last_sync_live_pending ?></span>
-            </span>
+            <a class="todo-pill <?= $todo_count > 0 ? '' : 'is-zero' ?>" id="todo-menu-pill" href="javascript:void(0)" onclick="return openTodoMenuPopup(event);" title="Notifikasi & Todo">
+                <i class="fa fa-bell"></i> Todo
+                <span class="todo-pill-count" id="todo-menu-count"><?= (int)$todo_count ?></span>
+            </a>
             <span id="db-status" class="db-status" title="Kesehatan Database">
                 <i class="fa fa-heart"></i>
             </span>
@@ -876,15 +916,6 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
 <style>
     .btn-print.btn-default-dark { background:#343a40; color:#fff; border:1px solid #4b5259; }
     .btn-print.btn-default-dark:hover { background:#3d434a; color:#fff; }
-    .sync-pill { display:inline-block; padding:1px 6px; border-radius:10px; font-weight:700; font-size:11px; }
-    .sync-ok { color:#16a34a; background:rgba(22,163,74,0.12); }
-    .sync-warn { color:#f59e0b; background:rgba(245,158,11,0.12); }
-    .sync-late { color:#ef4444; background:rgba(239,68,68,0.15); }
-    .sync-pending { color:#ef4444; background:rgba(239,68,68,0.2); }
-    .sync-zero { color:#94a3b8; background:rgba(148,163,184,0.15); }
-    .blink-slow { animation: syncBlink 2.4s ease-in-out infinite; }
-    .blink-fast { animation: syncBlink 1.2s ease-in-out infinite; }
-    @keyframes syncBlink { 50% { opacity: 0.35; } }
 </style>
 
 <script>
@@ -934,6 +965,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
     window.__canBackupFlag = <?= json_encode($is_superadmin || (isOperator() && operator_can('backup_only'))); ?>;
     window.__canRestoreFlag = <?= json_encode($is_superadmin || (isOperator() && operator_can('restore_only'))); ?>;
     window.__returMenuData = <?= json_encode(['count' => $menu_retur_pending, 'items' => $menu_retur_list], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+    window.__todoMenuData = <?= json_encode(['count' => $todo_count, 'items' => $todo_list], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     window.__returBlokNames = <?= json_encode(($env['blok']['names'] ?? []), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     window.__returSession = <?= json_encode($session); ?>;
     window.__stuckMenuData = <?= json_encode(['count' => $menu_stuck_count, 'items' => $menu_stuck_list], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;

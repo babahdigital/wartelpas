@@ -25,6 +25,7 @@ include/config_legacy.php
 /db_data/*.db-*
 /db_data/*.restore-tmp*
 /db_data/backups/
+/db_data/backups_app/
 
 # Runtime/session folders
 /mikhmon/session/
@@ -35,8 +36,8 @@ include/config_legacy.php
 # IDE Setting (VS Code / Jetbrains)
 .vscode/sftp.json
 .idea/
-/dev
-/mikrotik
+/dev/*
+/mikrotik/*
 wartelpas.code-workspace
 
 # Dokumen internal (jangan diunggah)
