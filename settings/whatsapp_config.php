@@ -803,6 +803,7 @@ foreach ($wa_recipients as $rec) {
 
         <form id="waRecipientForm" method="post" action="./admin.php?id=whatsapp" style="display:none;"></form>
         <form id="waTemplateForm" method="post" action="./admin.php?id=whatsapp" style="display:none;"></form>
+        <form id="waTemplateTestForm" method="post" action="./admin.php?id=whatsapp" style="display:none;"></form>
 
         <div class="row" style="margin-top: 10px;">
             <div class="col-12">
@@ -909,6 +910,34 @@ foreach ($wa_recipients as $rec) {
                     form.appendChild(input);
                 });
                 form.submit();
+            }
+
+            function submitWaTemplateTest(payload) {
+                var form = document.getElementById('waTemplateTestForm');
+                if (!form) return;
+                form.innerHTML = '';
+                Object.keys(payload || {}).forEach(function(key){
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key;
+                    input.value = payload[key];
+                    form.appendChild(input);
+                });
+                form.submit();
+            }
+
+            function buildRecipientOptions() {
+                var opts = '<option value="">-- Pilih target --</option>';
+                if (!Array.isArray(window.__waRecipients)) return opts;
+                window.__waRecipients.forEach(function(rec){
+                    var target = (rec && rec.target) ? String(rec.target) : '';
+                    if (!target) return;
+                    var label = (rec && rec.label) ? String(rec.label) : '';
+                    var type = (rec && rec.target_type) ? String(rec.target_type) : 'number';
+                    var show = label ? (label + ' - ' + target) : target;
+                    opts += '<option value="' + target.replace(/"/g,'&quot;') + '">[' + type + '] ' + show.replace(/"/g,'&quot;') + '</option>';
+                });
+                return opts;
             }
 
             function openWaRecipientPopup(recId) {
@@ -1068,6 +1097,11 @@ foreach ($wa_recipients as $rec) {
                             '<label class="m-pass-label">Isi Template</label>' +
                             '<textarea id="wa-tpl-body" class="m-pass-input" rows="6" placeholder="Isi pesan..." style="min-height: 150px; max-width: 100%; overflow: hidden; display: block;">' + (data.body || '') + '</textarea>' +
                         '</div>' +
+                        '<div class="wa-popup-row">' +
+                            '<label class="m-pass-label">Test Kirim</label>' +
+                            '<select id="wa-tpl-test-target" class="m-pass-input">' + buildRecipientOptions() + '</select>' +
+                            '<div class="wa-help" style="margin-top:6px;"><i class="fa fa-info-circle"></i> Test akan mengirim isi template ke target pilihan.</div>' +
+                        '</div>' +
                     '</div>';
 
                 window.MikhmonPopup.open({
@@ -1079,6 +1113,26 @@ foreach ($wa_recipients as $rec) {
                     messageHtml: html,
                     buttons: [
                         { label: 'Batal', className: 'm-btn m-btn-cancel' },
+                        {
+                            label: 'Test Kirim',
+                            className: 'm-btn m-btn-warning',
+                            close: false,
+                            onClick: function(){
+                                var target = (document.getElementById('wa-tpl-test-target') || {}).value || '';
+                                var body = (document.getElementById('wa-tpl-body') || {}).value || '';
+                                if (!body.trim()) {
+                                    return;
+                                }
+                                if (!target.trim()) {
+                                    return;
+                                }
+                                submitWaTemplateTest({
+                                    wa_action: 'test_send',
+                                    wa_test_target_select: target.trim(),
+                                    wa_test_message: body
+                                });
+                            }
+                        },
                         {
                             label: 'Simpan',
                             className: 'm-btn m-btn-success',
