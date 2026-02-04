@@ -880,6 +880,8 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
     .sync-ok { color:#16a34a; background:rgba(22,163,74,0.12); }
     .sync-warn { color:#f59e0b; background:rgba(245,158,11,0.12); }
     .sync-late { color:#ef4444; background:rgba(239,68,68,0.15); }
+    .sync-pending { color:#ef4444; background:rgba(239,68,68,0.2); }
+    .sync-zero { color:#94a3b8; background:rgba(148,163,184,0.15); }
     .blink-slow { animation: syncBlink 2.4s ease-in-out infinite; }
     .blink-fast { animation: syncBlink 1.2s ease-in-out infinite; }
     @keyframes syncBlink { 50% { opacity: 0.35; } }

@@ -90,6 +90,17 @@ function wa_format_alert_time($value) {
 $last_sales = wa_pick_last_sync($db, 'sales_history');
 $last_live = wa_pick_last_sync($db, 'live_sales');
 
+$pending_live = 0;
+try {
+    $live_cols = $db->query("PRAGMA table_info(live_sales)")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $live_names = array_map(function($c){ return $c['name'] ?? ''; }, $live_cols);
+    if (in_array('sync_status', $live_names, true)) {
+        $pending_live = (int)$db->query("SELECT COUNT(*) FROM live_sales WHERE sync_status = 'pending'")->fetchColumn();
+    }
+} catch (Exception $e) {
+    $pending_live = 0;
+}
+
 $late_minutes = 60;
 $repeat_minutes = isset($_GET['repeat']) ? (int)$_GET['repeat'] : 60;
 if ($repeat_minutes <= 0) $repeat_minutes = 60;
@@ -97,23 +108,26 @@ $alerts = [];
 
 $live_ts = ($last_live !== '-') ? strtotime($last_live) : false;
 $live_diff = $live_ts ? (int)floor((time() - $live_ts) / 60) : null;
+$live_diff_txt = $live_diff !== null ? (string)$live_diff : '-';
+$sales_diff_txt = '-';
 if ($last_live === '-' || ($live_diff !== null && $live_diff >= $late_minutes)) {
     $alerts[] = [
         'key' => 'ls_live',
         'type' => 'Live',
         'time' => wa_format_alert_time($last_live),
-        'minutes' => $live_diff !== null ? $live_diff : '-'
+        'minutes' => $live_diff_txt
     ];
 }
 
 $sales_ts = ($last_sales !== '-') ? strtotime($last_sales) : false;
 $sales_diff = $sales_ts ? (int)floor((time() - $sales_ts) / 60) : null;
+$sales_diff_txt = $sales_diff !== null ? (string)$sales_diff : '-';
 if ($last_sales === '-' || ($sales_diff !== null && $sales_diff >= $late_minutes)) {
     $alerts[] = [
         'key' => 'ls_sales',
         'type' => 'Sales',
         'time' => wa_format_alert_time($last_sales),
-        'minutes' => $sales_diff !== null ? $sales_diff : '-'
+        'minutes' => $sales_diff_txt
     ];
 }
 
@@ -134,7 +148,7 @@ if (!function_exists('wa_send_text')) {
 
 $template = function_exists('wa_get_template_body') ? wa_get_template_body('ls_alert') : '';
 if ($template === '') {
-    $template = "⚠️ *L/S {{TYPE}} TELAT*\nTerakhir: {{TIME}}\nSelisih: {{MINUTES}} menit.";
+    $template = "⚠️ *L/S {{TYPE}} TELAT*\nLive terakhir: {{LIVE_TIME}} ({{LIVE_MINUTES}} menit)\nSales terakhir: {{SALES_TIME}} ({{SALES_MINUTES}} menit)\nPending Live: {{PENDING}}\nDetail: {{TIME}} | {{MINUTES}} menit.";
 }
 
 foreach ($alerts as $a) {
@@ -146,13 +160,23 @@ foreach ($alerts as $a) {
     } else {
         if (!wa_alert_should_send($db, $a['key'], $repeat_minutes)) continue;
     }
+    $templateData = [
+        'type' => $a['type'],
+        'time' => $a['time'],
+        'minutes' => (string)$a['minutes'],
+        'pending' => (string)$pending_live,
+        'live_time' => wa_format_alert_time($last_live),
+        'live_minutes' => $live_diff_txt,
+        'sales_time' => wa_format_alert_time($last_sales),
+        'sales_minutes' => $sales_diff_txt
+    ];
     $msg = function_exists('wa_render_template')
-        ? wa_render_template($template, [
-            'type' => $a['type'],
-            'time' => $a['time'],
-            'minutes' => (string)$a['minutes']
-        ])
-        : str_replace(['{{TYPE}}','{{TIME}}','{{MINUTES}}'], [$a['type'],$a['time'],(string)$a['minutes']], $template);
+        ? wa_render_template($template, $templateData)
+        : str_replace(
+            ['{{TYPE}}','{{TIME}}','{{MINUTES}}','{{PENDING}}','{{LIVE_TIME}}','{{LIVE_MINUTES}}','{{SALES_TIME}}','{{SALES_MINUTES}}'],
+            [$a['type'],$a['time'],(string)$a['minutes'],(string)$pending_live,wa_format_alert_time($last_live),$live_diff_txt,wa_format_alert_time($last_sales),$sales_diff_txt],
+            $template
+        );
     wa_send_text($msg, '', 'ls');
     wa_alert_mark_sent($db, $a['key']);
 }
