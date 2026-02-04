@@ -264,6 +264,14 @@
       return '<div class="todo-popup-container"><div class="todo-empty">Tidak ada todo untuk saat ini.</div></div>';
     }
     var html = '<div class="todo-popup-container">';
+    html += '<div class="todo-table-wrapper">';
+    html += '<table class="todo-table">';
+    html += '<thead><tr>' +
+      '<th class="todo-col-level">Level</th>' +
+      '<th class="todo-col-title">Todo</th>' +
+      '<th class="todo-col-desc">Info</th>' +
+      '<th class="todo-col-action">Aksi</th>' +
+      '</tr></thead><tbody>';
     items.forEach(function(it){
       var level = (it.level || 'info').toLowerCase();
       var title = escapeHtml(it.title || 'Todo');
@@ -271,20 +279,17 @@
       var actionLabel = escapeHtml(it.action_label || 'Buka');
       var actionUrl = String(it.action_url || '');
       var actionTarget = String(it.action_target || '_self');
-      html += '<div class="todo-item todo-' + level + '">';
-      html += '  <div class="todo-item-head">';
-      html += '    <span class="todo-level">' + level.toUpperCase() + '</span>';
-      html += '    <strong class="todo-title">' + title + '</strong>';
-      html += '  </div>';
-      html += '  <div class="todo-desc">' + desc + '</div>';
-      if (actionUrl) {
-        html += '  <div class="todo-actions">';
-        html += '    <a class="todo-action-btn" href="' + escapeHtml(actionUrl) + '" target="' + escapeHtml(actionTarget) + '">' + actionLabel + '</a>';
-        html += '  </div>';
-      }
-      html += '</div>';
+      var actionHtml = actionUrl
+        ? '<a class="todo-action-btn" href="' + escapeHtml(actionUrl) + '" target="' + escapeHtml(actionTarget) + '">' + actionLabel + '</a>'
+        : '<span class="todo-action-dash">-</span>';
+      html += '<tr class="todo-row todo-' + level + '">' +
+        '<td class="todo-col-level"><span class="todo-level">' + level.toUpperCase() + '</span></td>' +
+        '<td class="todo-col-title"><strong class="todo-title">' + title + '</strong></td>' +
+        '<td class="todo-col-desc"><div class="todo-desc">' + desc + '</div></td>' +
+        '<td class="todo-col-action">' + actionHtml + '</td>' +
+        '</tr>';
     });
-    html += '</div>';
+    html += '</tbody></table></div></div>';
     return html;
   }
 
