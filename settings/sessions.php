@@ -25,7 +25,6 @@ require_once __DIR__ . '/../include/acl.php';
 requireLogin('../admin.php?id=login');
 include_once __DIR__ . '/../include/version.php';
 require_once __DIR__ . '/../include/db_helpers.php';
-require_once __DIR__ . '/../include/app_settings.php';
 
 $is_operator = isOperator();
 $version_raw = $_SESSION['v'] ?? '';
@@ -34,15 +33,6 @@ $version_label = $version_parts[0] ?? '-';
 $build_label = $version_parts[1] ?? '-';
 $server_mode = isMaintenanceEnabled() ? 'Maintenance' : 'Online';
 $php_label = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . '.x';
-
-$env = [];
-$envFile = __DIR__ . '/../include/env.php';
-if (file_exists($envFile)) {
-  require $envFile;
-}
-$todo_cfg = $env['todo'] ?? [];
-$todo_wa_default = isset($todo_cfg['wa_enabled']) ? ($todo_cfg['wa_enabled'] ? '1' : '0') : '1';
-$todo_wa_enabled = app_setting_get('todo_wa_enabled', $todo_wa_default);
 
 
 $backup_status_label = 'Belum ada';
@@ -464,26 +454,6 @@ $has_router = !empty($router_list);
                     </form>
                   </div>
                   <div class="text-secondary" style="font-size:11px; margin-top:6px;">Hanya Super Admin yang dapat mengaktifkan.</div>
-                </div>
-              </div>
-            </div>
-            <div class="col-12">
-              <div class="card-modern" style="margin-top:12px;">
-                <div class="card-body-modern">
-                  <div class="text-secondary" style="font-size:12px;">Notifikasi WA Todo</div>
-                  <div class="maintenance-switch">
-                    <div class="maintenance-status <?= $todo_wa_enabled === '1' ? 'text-green' : 'text-secondary'; ?>">
-                      <?= $todo_wa_enabled === '1' ? 'Aktif' : 'Nonaktif'; ?>
-                    </div>
-                    <form method="post" action="./tools/todo_wa_toggle.php" class="maintenance-switch-form" title="Notifikasi WA Todo">
-                      <input type="hidden" name="todo_wa_state" value="<?= $todo_wa_enabled === '1' ? '0' : '1'; ?>">
-                      <label class="maintenance-toggle">
-                        <input type="checkbox" <?= $todo_wa_enabled === '1' ? 'checked' : ''; ?> onchange="this.form.submit();">
-                        <span class="maintenance-slider"></span>
-                      </label>
-                    </form>
-                  </div>
-                  <div class="text-secondary" style="font-size:11px; margin-top:6px;">Mengirim ringkasan todo via WhatsApp.</div>
                 </div>
               </div>
             </div>
