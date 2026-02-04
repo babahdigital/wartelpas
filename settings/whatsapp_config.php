@@ -1179,11 +1179,7 @@ foreach ($wa_recipients as $rec) {
                         '</div>' +
                         '<div class="wa-popup-row">' +
                             '<label class="m-pass-label">Isi Template</label>' +
-                            '<textarea id="wa-tpl-body" class="m-pass-input" rows="6" placeholder="Isi pesan..." style="min-height: 150px; max-width: 100%; overflow: hidden; display: block;">' + (data.body || '') + '</textarea>' +
-                        '</div>' +
-                        '<div class="wa-popup-row">' +
-                            '<label class="m-pass-label">Test Kirim</label>' +
-                            '<div class="wa-help" style="margin-top:6px; font-size: 16px; color: #999;"><i class="fa fa-info-circle" style="font-size: 14px; !important"></i> Test akan mengirim ke penerima aktif sesuai kategori.</div>' +
+                            '<textarea id="wa-tpl-body" class="m-pass-input" rows="6" placeholder="Isi pesan..." style="min-height: 150px; max-width: 100%; min-width: 100%; overflow: hidden; display: block;">' + (data.body || '') + '</textarea>' +
                         '</div>' +
                     '</div>';
 
