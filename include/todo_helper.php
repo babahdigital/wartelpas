@@ -280,6 +280,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                             foreach ($rows as $br) {
                                 $bname = trim((string)($br['blok_name'] ?? ''));
                                 if ($bname === '') $bname = '-';
+                                $bname = str_replace('-', ' ', $bname);
                                 $bsel = (int)($br['sel'] ?? 0);
                                 $bkb = (int)($br['kb'] ?? 0);
                                 $sub = [];
@@ -288,7 +289,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                                 $parts[] = $bname . ' (' . implode(' + ', $sub) . ')';
                             }
                             if (!empty($parts)) {
-                                $blok_list = ' Blok: ' . implode(', ', $parts) . '.';
+                                $blok_list = ' ' . implode(', ', $parts) . '.';
                             }
                         } catch (Exception $e) {
                         }
@@ -339,6 +340,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                             foreach ($rows as $br) {
                                 $bname = trim((string)($br['blok_name'] ?? ''));
                                 if ($bname === '') $bname = '-';
+                                $bname = str_replace('-', ' ', $bname);
                                 $bsel = (int)($br['sel'] ?? 0);
                                 $bkb = (int)($br['kb'] ?? 0);
                                 $sub = [];
@@ -347,7 +349,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                                 $parts[] = $bname . ' (' . implode(' + ', $sub) . ')';
                             }
                             if (!empty($parts)) {
-                                $blok_list = ' Blok: ' . implode(', ', $parts) . '.';
+                                $blok_list = ' ' . implode(', ', $parts) . '.';
                             }
                         } catch (Exception $e) {
                         }
@@ -405,6 +407,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                     foreach ($rows as $br) {
                         $bname = trim((string)($br['blok_name'] ?? ''));
                         if ($bname === '') $bname = '-';
+                        $bname = str_replace('-', ' ', $bname);
                         $bsel = (int)($br['sel'] ?? 0);
                         $bkb = (int)($br['kb'] ?? 0);
                         $sub = [];
@@ -413,7 +416,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                         $partsBlok[] = $bname . ' (' . implode(' + ', $sub) . ')';
                     }
                     if (!empty($partsBlok)) {
-                        $blok_list = ' Blok: ' . implode(', ', $partsBlok) . '.';
+                        $blok_list = ' ' . implode(', ', $partsBlok) . '.';
                     }
                 } catch (Exception $e) {
                 }
@@ -460,11 +463,12 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                     foreach ($rows as $br) {
                         $bname = trim((string)($br['blok_name'] ?? ''));
                         if ($bname === '') $bname = '-';
+                        $bname = str_replace('-', ' ', $bname);
                         $bamt = number_format((int)($br['total_refund'] ?? 0), 0, ",", ".");
                         $parts[] = $bname . ' (Rp ' . $bamt . ')';
                     }
                     if (!empty($parts)) {
-                        $blok_list = ' Blok: ' . implode(', ', $parts) . '.';
+                        $blok_list = ' ' . implode(', ', $parts) . '.';
                     }
                 } catch (Exception $e) {
                 }
