@@ -351,7 +351,9 @@
 
   function buildInfoTable(rows) {
     var body = rows.map(function(r) {
-      return '<tr><td class="retur-col-left">' + escapeHtml(r[0]) + '</td><td class="retur-col-left">' + escapeHtml(r[1]) + '</td></tr>';
+      var label = escapeHtml(r[0]);
+      var value = r[2] === true ? (r[1] || '') : escapeHtml(r[1]);
+      return '<tr><td class="retur-col-left">' + label + '</td><td class="retur-col-left">' + value + '</td></tr>';
     }).join('');
     return '<div class="retur-table-wrapper" style="max-height:none;">' +
       '<table class="retur-table">' +
@@ -359,6 +361,20 @@
         '<tbody>' + body + '</tbody>' +
       '</table>' +
     '</div>';
+  }
+
+  function buildStatusBadge(status) {
+    var s = String(status || '').toUpperCase();
+    var cls = 'status-badge st-ready';
+    var text = s || '-';
+    if (s === 'ONLINE') { cls = 'status-badge st-online'; }
+    else if (s === 'TERPAKAI') { cls = 'status-badge st-used'; }
+    else if (s === 'RUSAK') { cls = 'status-badge st-rusak'; }
+    else if (s === 'RETUR') { cls = 'status-badge st-retur'; }
+    else if (s === 'VIP') { cls = 'status-badge st-vip'; text = 'PENGELOLA'; }
+    else if (s === 'INVALID') { cls = 'status-badge st-invalid'; }
+    else if (s === 'READY') { cls = 'status-badge st-ready'; }
+    return '<span class="' + cls + '">' + escapeHtml(text) + '</span>';
   }
 
   function openUserResumePopup(payload) {
@@ -372,7 +388,7 @@
       ['Profil', payload.profile || '-'],
       ['IP', payload.ip || '-'],
       ['MAC', payload.mac || '-'],
-      ['Status', payload.status || '-'],
+      ['Status', buildStatusBadge(payload.status || '-'), true],
       ['First Login', payload.firstLogin || '-'],
       ['Login', payload.loginTime || '-'],
       ['Logout', payload.logoutTime || '-'],

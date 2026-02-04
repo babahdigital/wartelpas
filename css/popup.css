@@ -257,6 +257,23 @@
   color: var(--popup-text);
 }
 
+.retur-popup-container .status-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.retur-popup-container .st-online { background: #3498db; color: #fff; }
+.retur-popup-container .st-ready { background: #4b545c; color: #ccc; border: 1px solid #6c757d; }
+.retur-popup-container .st-rusak { background: #f39c12; color: #fff; }
+.retur-popup-container .st-invalid { background: #e74c3c; color: #fff; }
+.retur-popup-container .st-retur { background: #8e44ad; color: #fff; }
+.retur-popup-container .st-used { background: #17a2b8; color: #fff; }
+.retur-popup-container .st-vip { background: #f1c40f; color: #111; border: 1px solid #d4ac0d; }
+
 .retur-info-bar {
   display: flex;
   align-items: center;
