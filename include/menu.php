@@ -76,6 +76,12 @@ try {
         if ($todo_next === '') $todo_next = './?session=' . urlencode($session);
 
         $db_sync->exec("CREATE TABLE IF NOT EXISTS todo_ack (key TEXT, report_date TEXT, ack_at TEXT, PRIMARY KEY (key, report_date))");
+        $format_ddmmyyyy = function($dateStr) {
+            $dateStr = trim((string)$dateStr);
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateStr)) return $dateStr;
+            $parts = explode('-', $dateStr);
+            return $parts[2] . '-' . $parts[1] . '-' . $parts[0];
+        };
         $todo_is_ack = function($key, $date) use ($db_sync) {
             $stmt = $db_sync->prepare("SELECT ack_at FROM todo_ack WHERE key = :k AND report_date = :d LIMIT 1");
             $stmt->execute([':k' => $key, ':d' => $date]);
@@ -259,6 +265,8 @@ try {
         // Audit missing / kurang bayar
         $yesterday = date('Y-m-d', strtotime('-1 day'));
         $today_report_url = './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($today);
+        $today_label = $format_ddmmyyyy($today);
+        $yesterday_label = $format_ddmmyyyy($yesterday);
         try {
             $stmtAuditCount = $db_sync->prepare("SELECT COUNT(*) FROM audit_rekap_manual WHERE report_date = :d");
             $stmtAuditCount->execute([':d' => $yesterday]);
@@ -270,9 +278,9 @@ try {
             $todo_list[] = [
                 'id' => 'audit_missing_' . $yesterday,
                 'title' => 'Audit belum diisi (Kemarin)',
-                'desc' => 'Audit harian tanggal ' . $yesterday . ' belum diinput. Lengkapi agar laporan akurat.',
+                'desc' => 'Audit harian tanggal ' . $yesterday_label . ' belum diinput. Lengkapi agar laporan akurat.',
                 'level' => 'danger',
-                'action_label' => 'Buka Tanggal ' . $yesterday,
+                'action_label' => 'Buka Tanggal ' . $yesterday_label,
                 'action_url' => './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($yesterday),
                 'action_target' => '_self'
             ];
@@ -289,9 +297,9 @@ try {
                     $todo_list[] = [
                         'id' => 'audit_kurang_' . $yesterday,
                         'title' => 'Audit kurang bayar (Kemarin)',
-                        'desc' => 'Terdapat kekurangan Rp ' . $abs . ' pada audit tanggal ' . $yesterday . '.',
+                        'desc' => 'Terdapat kekurangan Rp ' . $abs . ' pada audit tanggal ' . $yesterday_label . '.',
                         'level' => 'danger',
-                        'action_label' => 'Buka Tanggal ' . $yesterday,
+                        'action_label' => 'Buka Tanggal ' . $yesterday_label,
                         'action_url' => './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($yesterday),
                         'action_target' => '_self'
                     ];
@@ -321,9 +329,9 @@ try {
                     $todo_list[] = [
                         'id' => 'audit_kurang_' . $today,
                         'title' => 'Audit kurang bayar (Hari Ini)',
-                        'desc' => 'Terdapat kekurangan Rp ' . $absT . ' pada audit tanggal ' . $today . '.',
+                        'desc' => 'Terdapat kekurangan Rp ' . $absT . ' pada audit tanggal ' . $today_label . '.',
                         'level' => 'danger',
-                        'action_label' => 'Buka Tanggal ' . $today,
+                        'action_label' => 'Buka Tanggal ' . $today_label,
                         'action_url' => $today_report_url,
                         'action_target' => '_self'
                     ];
@@ -346,13 +354,14 @@ try {
         foreach ($refund_rows as $rr) {
             $rdate = (string)($rr['report_date'] ?? '');
             if ($rdate === '') continue;
+            $rlabel = $format_ddmmyyyy($rdate);
             $amt = number_format((int)($rr['total_refund'] ?? 0), 0, ",", ".");
             $todo_list[] = [
                 'id' => 'refund_pending_' . $rdate,
                 'title' => 'Refund belum diaudit',
-                'desc' => 'Ada refund Rp ' . $amt . ' yang belum diaudit untuk tanggal ' . $rdate . '.',
+                'desc' => 'Ada refund Rp ' . $amt . ' yang belum diaudit untuk tanggal ' . $rlabel . '.',
                 'level' => 'warn',
-                'action_label' => 'Buka Tanggal ' . $rdate,
+                'action_label' => 'Buka Tanggal ' . $rlabel,
                 'action_url' => './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($rdate),
                 'action_target' => '_self'
             ];
