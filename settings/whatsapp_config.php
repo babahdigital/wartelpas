@@ -447,15 +447,8 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'test_send') {
 if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'test_template') {
     $tpl_body = trim((string)($_POST['wa_tpl_body'] ?? ''));
     $tpl_category = trim((string)($_POST['wa_tpl_category'] ?? ''));
-    $test_target = trim((string)($_POST['wa_test_target'] ?? ''));
-    if ($test_target === '' && !empty($_POST['wa_test_target_select'])) {
-        $test_target = trim((string)$_POST['wa_test_target_select']);
-    }
     if ($tpl_body === '') {
         $save_message = 'Isi template wajib diisi.';
-        $save_type = 'warning';
-    } elseif ($test_target === '') {
-        $save_message = 'Target test wajib diisi.';
         $save_type = 'warning';
     } else {
         $wa_helper_file = __DIR__ . '/../system/whatsapp/wa_helper.php';
@@ -463,6 +456,12 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'test_template') {
             require_once $wa_helper_file;
         }
         $message = $tpl_body;
+        $category_key = strtolower($tpl_category);
+        $targets = function_exists('wa_get_active_recipients') ? wa_get_active_recipients($category_key) : [];
+        if ($category_key !== 'test' && empty($targets)) {
+            $save_message = 'Tidak ada penerima aktif untuk kategori ini.';
+            $save_type = 'warning';
+        }
         if (strtolower($tpl_category) === 'todo') {
             $todo_helper = __DIR__ . '/../include/todo_helper.php';
             if (file_exists($todo_helper)) {
@@ -515,7 +514,8 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'test_template') {
 
         if ($save_message === '') {
             if (function_exists('wa_send_text')) {
-                $res = wa_send_text($message, $test_target, 'test');
+                $send_category = $category_key !== '' ? $category_key : 'test';
+                $res = wa_send_text($message, '', $send_category);
                 if (!empty($res['ok'])) {
                     $save_message = 'Test WhatsApp terkirim.';
                     $save_type = 'success';
@@ -1024,20 +1024,6 @@ foreach ($wa_recipients as $rec) {
                 form.submit();
             }
 
-            function buildRecipientOptions() {
-                var opts = '<option value="">-- Pilih target --</option>';
-                if (!Array.isArray(window.__waRecipients)) return opts;
-                window.__waRecipients.forEach(function(rec){
-                    var target = (rec && rec.target) ? String(rec.target) : '';
-                    if (!target) return;
-                    var label = (rec && rec.label) ? String(rec.label) : '';
-                    var type = (rec && rec.target_type) ? String(rec.target_type) : 'number';
-                    var show = label ? (label + ' - ' + target) : target;
-                    opts += '<option value="' + target.replace(/"/g,'&quot;') + '">[' + type + '] ' + show.replace(/"/g,'&quot;') + '</option>';
-                });
-                return opts;
-            }
-
             function openWaRecipientPopup(recId) {
                 if (!window.MikhmonPopup) return;
                 var isNew = !recId || recId === 'new';
@@ -1197,8 +1183,7 @@ foreach ($wa_recipients as $rec) {
                         '</div>' +
                         '<div class="wa-popup-row">' +
                             '<label class="m-pass-label">Test Kirim</label>' +
-                            '<select id="wa-tpl-test-target" class="m-pass-input">' + buildRecipientOptions() + '</select>' +
-                            '<div class="wa-help" style="margin-top:6px;"><i class="fa fa-info-circle"></i> Test akan mengirim isi template ke target pilihan.</div>' +
+                            '<div class="wa-help" style="margin-top:6px;"><i class="fa fa-info-circle"></i> Test akan mengirim ke penerima aktif sesuai kategori.</div>' +
                         '</div>' +
                     '</div>';
 
@@ -1216,11 +1201,9 @@ foreach ($wa_recipients as $rec) {
                             className: 'm-btn m-btn-warning',
                             close: false,
                             onClick: function(){
-                                var target = (document.getElementById('wa-tpl-test-target') || {}).value || '';
                                 var body = (document.getElementById('wa-tpl-body') || {}).value || '';
                                 submitWaTemplateTest({
                                     wa_action: 'test_template',
-                                    wa_test_target_select: target.trim(),
                                     wa_tpl_category: (document.getElementById('wa-tpl-category') || {}).value || '',
                                     wa_tpl_body: body
                                 });
