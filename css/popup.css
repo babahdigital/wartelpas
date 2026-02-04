@@ -269,6 +269,20 @@
 
 .retur-info-right { font-size: 11px; opacity: 0.8; }
 
+.retur-search {
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--popup-border);
+  background: #1b1f24;
+  color: var(--popup-text);
+  padding: 0 10px;
+  font-size: 12px;
+  outline: none;
+}
+
+.retur-search::placeholder { color: var(--popup-muted); }
+.retur-search:focus { border-color: var(--popup-primary); box-shadow: 0 0 0 2px rgba(47, 129, 247, 0.15); }
+
 .retur-table-wrapper {
   border: 1px solid var(--popup-border);
   border-radius: 8px;
