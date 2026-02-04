@@ -134,6 +134,9 @@ if ($profile_label !== '' && $profile_label !== '-') {
 }
 
 $total_uptime_sec = get_cumulative_uptime_from_events_db($db, $user, $date_key, $logout_time_real, $max_session_seconds);
+if ($max_session_seconds > 0 && $total_uptime_sec > $max_session_seconds) {
+    $total_uptime_sec = $max_session_seconds;
+}
 $relogin_events = get_relogin_events_db($db, $user, $date_key);
 
 $first_login_norm = normalize_dt($first_login_real);
