@@ -33,6 +33,7 @@ $_SESSION['filter_year'] = (int)date("Y");
 if (file_exists($root . '/include/config.php')) include($root . '/include/config.php');
 if (file_exists($root . '/include/readcfg.php')) include($root . '/include/readcfg.php');
 if (file_exists($root . '/include/env.php')) include($root . '/include/env.php');
+if (file_exists($root . '/include/auto_rusak.php')) include_once($root . '/include/auto_rusak.php');
 if (file_exists($root . '/lib/routeros_api.class.php')) include_once($root . '/lib/routeros_api.class.php');
 if (file_exists($root . '/lib/formatbytesbites.php')) include_once($root . '/lib/formatbytesbites.php');
 if (file_exists($root . '/report/laporan/helpers.php')) include_once($root . '/report/laporan/helpers.php');
@@ -844,21 +845,43 @@ if ($load == "logs") {
                     $lastLogin = $loginMap[$uname]['last_login_real'] ?? '';
                     $uptimeRaw = $loginMap[$uname]['last_uptime'] ?? '';
                     $statusRaw = strtolower((string)($loginMap[$uname]['last_status'] ?? ''));
+                    $validityRaw = (string)($loginMap[$uname]['validity'] ?? '');
+                    $commentRaw = (string)($loginMap[$uname]['raw_comment'] ?? '');
                     $ts = $lastLogin ? strtotime($lastLogin) : false;
                     if ($ts !== false && $uptimeRaw !== '') {
                         $uptimeSec = parse_uptime_seconds($uptimeRaw);
+                        $profile_minutes = 0;
+                        if (function_exists('auto_rusak_profile_minutes')) {
+                            $profile_minutes = auto_rusak_profile_minutes($validityRaw, $commentRaw);
+                        }
+                        if ($profile_minutes <= 0 && function_exists('detect_profile_kind_from_label')) {
+                            $profile_minutes = (int)detect_profile_kind_from_label($validityRaw);
+                        }
+                        if ($profile_minutes <= 0) {
+                            $profile_minutes = 10;
+                        }
+                        $allowed_end = $ts + ($profile_minutes * 60);
                         if ($uptimeSec > 0) {
-                            $end_ts = $ts + $uptimeSec;
-                            if ($statusRaw === 'online' && $end_ts < ($now_ts - 60)) {
-                                $statusRaw = 'used';
-                            }
+                            $end_ts = max($allowed_end, $ts + $uptimeSec);
                         } else {
-                            if ($statusRaw === 'online' && $ts < ($now_ts - 3600)) {
-                                $statusRaw = 'used';
-                            }
+                            $end_ts = $allowed_end;
+                        }
+                        if ($statusRaw === 'online' && $end_ts < ($now_ts - 60)) {
+                            $statusRaw = 'used';
                         }
                     } elseif ($ts !== false) {
-                        if ($statusRaw === 'online' && $ts < ($now_ts - 3600)) {
+                        $profile_minutes = 0;
+                        if (function_exists('auto_rusak_profile_minutes')) {
+                            $profile_minutes = auto_rusak_profile_minutes($validityRaw, $commentRaw);
+                        }
+                        if ($profile_minutes <= 0 && function_exists('detect_profile_kind_from_label')) {
+                            $profile_minutes = (int)detect_profile_kind_from_label($validityRaw);
+                        }
+                        if ($profile_minutes <= 0) {
+                            $profile_minutes = 10;
+                        }
+                        $allowed_end = $ts + ($profile_minutes * 60);
+                        if ($statusRaw === 'online' && $allowed_end < ($now_ts - 60)) {
                             $statusRaw = 'used';
                         }
                     }
