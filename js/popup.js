@@ -279,6 +279,19 @@
     return val;
   }
 
+  function formatBytesShort(val) {
+    var num = parseFloat(val || 0);
+    if (!isFinite(num) || num <= 0) return '0B';
+    var units = ['B','KB','MB','GB','TB'];
+    var idx = 0;
+    while (num >= 1024 && idx < units.length - 1) {
+      num = num / 1024;
+      idx++;
+    }
+    var fixed = (idx === 0) ? 0 : (num < 10 ? 2 : 1);
+    return num.toFixed(fixed).replace(/\.0+$|(?<=\.\d)0+$/, '') + units[idx];
+  }
+
   function getReturData() {
     var data = window.__returMenuData || { count: 0, items: [] };
     if (!Array.isArray(data.items)) data.items = [];
@@ -316,6 +329,115 @@
 
   function setStuckFilter(val) {
     window.__stuckFilter = String(val || '');
+  }
+
+  function findStuckForUser(user) {
+    var data = getStuckData();
+    var items = data.items || [];
+    var key = String(user || '').toLowerCase();
+    for (var i = 0; i < items.length; i++) {
+      if (String(items[i].user || '').toLowerCase() === key) return items[i];
+    }
+    return null;
+  }
+
+  function buildInfoTable(rows) {
+    var body = rows.map(function(r) {
+      return '<tr><td class="retur-col-left">' + escapeHtml(r[0]) + '</td><td class="retur-col-left">' + escapeHtml(r[1]) + '</td></tr>';
+    }).join('');
+    return '<div class="retur-table-wrapper" style="max-height:none;">' +
+      '<table class="retur-table">' +
+        '<thead><tr><th class="retur-col-left">Info</th><th class="retur-col-left">Deskripsi</th></tr></thead>' +
+        '<tbody>' + body + '</tbody>' +
+      '</table>' +
+    '</div>';
+  }
+
+  function openUserResumePopup(payload) {
+    if (!window.MikhmonPopup) return;
+    var user = payload.user || '-';
+    var rows = [
+      ['User', user],
+      ['Nama', payload.customer || '-'],
+      ['Blok', formatBlokLabel(payload.blok || '-')],
+      ['Kamar', payload.room || '-'],
+      ['Profil', payload.profile || '-'],
+      ['IP', payload.ip || '-'],
+      ['MAC', payload.mac || '-'],
+      ['Status', payload.status || '-'],
+      ['First Login', payload.firstLogin || '-'],
+      ['Login', payload.loginTime || '-'],
+      ['Logout', payload.logoutTime || '-'],
+      ['Bytes', formatBytesShort(payload.bytes || 0)],
+      ['Uptime', payload.uptime || '0s'],
+      ['Last Used', payload.lastUsed || '-'],
+      ['Relogin', String(payload.relogin || 0)]
+    ];
+
+    var stuck = findStuckForUser(user);
+    var stuckHtml = '';
+    if (stuck) {
+      var bin = parseInt(stuck.bytes_in || 0, 10) || 0;
+      var bout = parseInt(stuck.bytes_out || 0, 10) || 0;
+      var total = bin + bout;
+      var stuckRows = [
+        ['Waktu', stuck.ts || '-'],
+        ['Reason', stuck.reason || '-'],
+        ['Uptime', stuck.uptime || '-'],
+        ['Bytes In', formatBytesShort(bin)],
+        ['Bytes Out', formatBytesShort(bout)],
+        ['Total', formatBytesShort(total)],
+        ['IP', stuck.ip || '-'],
+        ['MAC', stuck.mac || '-'],
+        ['Profil', stuck.profile || '-'],
+        ['Server', stuck.server || '-']
+      ];
+      stuckHtml = '<div style="margin-top:12px;font-size:12px;color:#9aa0a6;">Log Stuck (Hari Ini)</div>' + buildInfoTable(stuckRows);
+    }
+
+    window.MikhmonPopup.open({
+      title: 'Detail User',
+      iconClass: 'fa fa-eye',
+      statusIcon: 'fa fa-user',
+      statusColor: '#2f81f7',
+      messageHtml: '<div class="retur-popup-container">' + buildInfoTable(rows) + stuckHtml + '</div>',
+      buttons: [
+        { label: 'Tutup', className: 'm-btn m-btn-cancel' }
+      ],
+      cardClass: 'is-retur'
+    });
+  }
+
+  if (!window.__userResumeBound) {
+    window.__userResumeBound = true;
+    document.addEventListener('click', function(e) {
+      var target = e.target;
+      while (target && target !== document) {
+        if (target.getAttribute && target.getAttribute('data-user-resume')) {
+          e.preventDefault();
+          e.stopPropagation();
+          openUserResumePopup({
+            user: target.getAttribute('data-user') || '',
+            customer: target.getAttribute('data-customer') || '',
+            room: target.getAttribute('data-room') || '',
+            blok: target.getAttribute('data-blok') || '',
+            profile: target.getAttribute('data-profile') || '',
+            ip: target.getAttribute('data-ip') || '',
+            mac: target.getAttribute('data-mac') || '',
+            status: target.getAttribute('data-status') || '',
+            firstLogin: target.getAttribute('data-first-login') || '',
+            loginTime: target.getAttribute('data-login-time') || '',
+            logoutTime: target.getAttribute('data-logout-time') || '',
+            bytes: target.getAttribute('data-bytes') || 0,
+            uptime: target.getAttribute('data-uptime') || '',
+            lastUsed: target.getAttribute('data-last-used') || '',
+            relogin: target.getAttribute('data-relogin') || 0
+          });
+          return;
+        }
+        target = target.parentNode;
+      }
+    });
   }
 
   function setReturData(data) {
@@ -875,19 +997,6 @@
           (showActionColumn ? ('<td class="retur-col-action retur-col-center">' + actionHtml + '</td>') : '') +
           '</tr>';
       }).join('');
-    }
-
-    function formatBytesShort(val) {
-      var num = parseFloat(val || 0);
-      if (!isFinite(num) || num <= 0) return '0B';
-      var units = ['B','KB','MB','GB','TB'];
-      var idx = 0;
-      while (num >= 1024 && idx < units.length - 1) {
-        num = num / 1024;
-        idx++;
-      }
-      var fixed = (idx === 0) ? 0 : (num < 10 ? 2 : 1);
-      return num.toFixed(fixed).replace(/\.0+$|(?<=\.\d)0+$/, '') + units[idx];
     }
 
     var tableHtml = filteredItems.length ?

@@ -23,7 +23,7 @@ body { overflow-y: scroll; scrollbar-gutter: stable; }
 .id-badge { font-family: 'Courier New', monospace; background: #3d454d; color: #fff; padding: 3px 6px; border-radius: 4px; font-weight: bold; border: 1px solid #56606a; }
 .btn-act { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 4px; border: none; color: white; transition: all 0.2s; margin: 0 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 .btn-act, .btn, button, .search-clear-btn, .custom-select-solid { cursor: pointer; }
-.btn-act-print { background: var(--c-blue); } .btn-act-retur { background: var(--c-orange); } .btn-act-invalid { background: var(--c-red); } .btn-act-enable { background: #16a34a; } .btn-act-delete { background: #7f1d1d; } .btn-act-info { background: #0ea5e9; } .btn-act-warning { background: #f59e0b; color: #111; }
+.btn-act-print { background: var(--c-blue); } .btn-act-eye { background: #4b5563; } .btn-act-retur { background: var(--c-orange); } .btn-act-invalid { background: var(--c-red); } .btn-act-enable { background: #16a34a; } .btn-act-delete { background: #7f1d1d; } .btn-act-info { background: #0ea5e9; } .btn-act-warning { background: #f59e0b; color: #111; }
 
 .overlay-actions {
   display: flex;
