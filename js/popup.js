@@ -279,8 +279,14 @@
       var actionLabel = escapeHtml(it.action_label || 'Buka');
       var actionUrl = String(it.action_url || '');
       var actionTarget = String(it.action_target || '_self');
+      var actionAjax = !!it.action_ajax;
+      var actionAck = String(it.action_ack || '');
       var actionHtml = actionUrl
-        ? '<a class="todo-action-btn" href="' + escapeHtml(actionUrl) + '" target="' + escapeHtml(actionTarget) + '">' + actionLabel + '</a>'
+        ? '<a class="todo-action-btn" href="' + escapeHtml(actionUrl) + '" ' +
+          (actionAjax ? 'data-todo-action="1"' : '') +
+          ' data-todo-ack="' + escapeHtml(actionAck) + '"' +
+          ' data-todo-id="' + escapeHtml(it.id || '') + '"' +
+          ' target="' + escapeHtml(actionTarget) + '">' + actionLabel + '</a>'
         : '<span class="todo-action-dash">-</span>';
       html += '<tr class="todo-row todo-' + level + '">' +
         '<td class="todo-col-level"><span class="todo-level">' + level.toUpperCase() + '</span></td>' +
@@ -293,10 +299,7 @@
     return html;
   }
 
-  window.openTodoMenuPopup = function(e) {
-    if (e && e.preventDefault) e.preventDefault();
-    if (!window.MikhmonPopup) return;
-    var data = getTodoData();
+  function renderTodoPopup(data) {
     window.MikhmonPopup.open({
       title: 'Notifikasi & Todo',
       iconClass: 'fa fa-bell',
@@ -308,6 +311,84 @@
         { label: 'Tutup', className: 'm-btn m-btn-cancel' }
       ]
     });
+  }
+
+  function updateTodoDataAfterAck(todoId) {
+    var data = getTodoData();
+    if (!data || !Array.isArray(data.items)) return data;
+    data.items = data.items.filter(function(it){ return String(it.id || '') !== String(todoId || ''); });
+    data.count = data.items.length;
+    window.__todoMenuData = data;
+    var countEl = document.getElementById('todo-menu-count');
+    if (countEl) countEl.textContent = data.count;
+    return data;
+  }
+
+  document.addEventListener('click', function(ev){
+    var target = ev.target;
+    if (!target) return;
+    if (target.closest) target = target.closest('.todo-action-btn');
+    if (!target || !target.getAttribute) return;
+    if (target.getAttribute('data-todo-action') !== '1') return;
+    ev.preventDefault();
+
+    var url = target.getAttribute('href');
+    var ackUrl = target.getAttribute('data-todo-ack') || '';
+    var todoId = target.getAttribute('data-todo-id') || '';
+    if (!url) return;
+
+    target.classList.add('is-loading');
+    fetch(url, { method: 'GET' })
+      .then(function(r){ return r.text(); })
+      .then(function(txt){
+        var ok = /Sukses|OK|berhasil/i.test(txt);
+        var msg = ok
+          ? 'Berhasil. Todo ditutup.'
+          : 'Gagal. Hubungi administrator.';
+        if (window.MikhmonPopup) {
+          window.MikhmonPopup.open({
+            title: 'Notifikasi & Todo',
+            iconClass: ok ? 'fa fa-check-circle' : 'fa fa-exclamation-triangle',
+            statusIcon: ok ? 'fa fa-check-circle' : 'fa fa-exclamation-triangle',
+            statusColor: ok ? '#22c55e' : '#f59e0b',
+            cardClass: 'is-retur',
+            messageHtml: '<div class="todo-popup-container"><div class="todo-empty">' + escapeHtml(msg) + '</div></div>',
+            buttons: [
+              { label: 'Kembali', className: 'm-btn m-btn-cancel', close: true }
+            ]
+          });
+        }
+        if (ok && ackUrl) {
+          return fetch(ackUrl, { method: 'GET' }).then(function(){
+            updateTodoDataAfterAck(todoId);
+          });
+        }
+      })
+      .catch(function(){
+        if (window.MikhmonPopup) {
+          window.MikhmonPopup.open({
+            title: 'Notifikasi & Todo',
+            iconClass: 'fa fa-exclamation-triangle',
+            statusIcon: 'fa fa-exclamation-triangle',
+            statusColor: '#f59e0b',
+            cardClass: 'is-retur',
+            messageHtml: '<div class="todo-popup-container"><div class="todo-empty">Gagal. Hubungi administrator.</div></div>',
+            buttons: [
+              { label: 'Tutup', className: 'm-btn m-btn-cancel' }
+            ]
+          });
+        }
+      })
+      .finally(function(){
+        target.classList.remove('is-loading');
+      });
+  });
+
+  window.openTodoMenuPopup = function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!window.MikhmonPopup) return;
+    var data = getTodoData();
+    renderTodoPopup(data);
   };
 })();
 

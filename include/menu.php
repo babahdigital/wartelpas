@@ -117,7 +117,7 @@ try {
         if ($last_live_full === '-' || ($live_diff !== null && $live_diff >= $late_minutes)) {
             $desc = 'Terakhir: ' . ($live_title !== '-' ? $live_title : 'Tidak ada data');
             if ($live_diff !== null) $desc .= ' (selisih ' . $live_diff . ' menit)';
-            $desc .= '. Pastikan scheduler live_ingest aktif di MikroTik.';
+            $desc .= '. Hubungi administrator jika masih belum normal.';
             $action_url = '';
             $action_label = '';
             if (isSuperAdmin() && $backupKey !== '') {
@@ -131,6 +131,8 @@ try {
                 'level' => 'danger',
                 'action_label' => $action_label,
                 'action_url' => $action_url,
+                'action_ajax' => $action_url !== '',
+                'action_ack' => $todo_ack_url('live_sales_stale'),
                 'action_target' => '_blank'
             ];
         }
