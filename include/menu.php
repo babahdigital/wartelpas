@@ -256,6 +256,75 @@ try {
             ];
         }
 
+        // Audit yesterday missing / kurang bayar
+        $yesterday = date('Y-m-d', strtotime('-1 day'));
+        try {
+            $stmtAuditCount = $db_sync->prepare("SELECT COUNT(*) FROM audit_rekap_manual WHERE report_date = :d");
+            $stmtAuditCount->execute([':d' => $yesterday]);
+            $audit_y_count = (int)$stmtAuditCount->fetchColumn();
+        } catch (Exception $e) {
+            $audit_y_count = 0;
+        }
+        if ($audit_y_count === 0) {
+            $todo_list[] = [
+                'id' => 'audit_missing_' . $yesterday,
+                'title' => 'Audit belum diisi (Kemarin)',
+                'desc' => 'Audit harian tanggal ' . $yesterday . ' belum diinput. Lengkapi agar laporan akurat.',
+                'level' => 'danger',
+                'action_label' => 'Buka Tanggal ' . $yesterday,
+                'action_url' => './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($yesterday),
+                'action_target' => '_self'
+            ];
+        } else {
+            try {
+                $stmtSel = $db_sync->prepare("SELECT SUM(COALESCE(selisih_setoran,0)) AS sel, SUM(COALESCE(kurang_bayar_amt,0)) AS kb FROM audit_rekap_manual WHERE report_date = :d");
+                $stmtSel->execute([':d' => $yesterday]);
+                $rowSel = $stmtSel->fetch(PDO::FETCH_ASSOC) ?: [];
+                $sel = (int)($rowSel['sel'] ?? 0);
+                $kb = (int)($rowSel['kb'] ?? 0);
+                if ($sel < 0 || $kb > 0) {
+                    $val = $sel < 0 ? $sel : (0 - $kb);
+                    $abs = number_format(abs((int)$val), 0, ",", ".");
+                    $todo_list[] = [
+                        'id' => 'audit_kurang_' . $yesterday,
+                        'title' => 'Audit kurang bayar (Kemarin)',
+                        'desc' => 'Terdapat kekurangan Rp ' . $abs . ' pada audit tanggal ' . $yesterday . '.',
+                        'level' => 'danger',
+                        'action_label' => 'Buka Tanggal ' . $yesterday,
+                        'action_url' => './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($yesterday),
+                        'action_target' => '_self'
+                    ];
+                }
+            } catch (Exception $e) {
+            }
+        }
+
+        // Refund belum diaudit (semua tanggal yang belum locked)
+        try {
+            $stmtRefund = $db_sync->query("SELECT report_date, SUM(COALESCE(refund_amt,0)) AS total_refund
+                FROM audit_rekap_manual
+                WHERE COALESCE(refund_amt,0) > 0 AND COALESCE(is_locked,0) = 0
+                GROUP BY report_date
+                ORDER BY report_date DESC");
+            $refund_rows = $stmtRefund ? $stmtRefund->fetchAll(PDO::FETCH_ASSOC) : [];
+        } catch (Exception $e) {
+            $refund_rows = [];
+        }
+        foreach ($refund_rows as $rr) {
+            $rdate = (string)($rr['report_date'] ?? '');
+            if ($rdate === '') continue;
+            $amt = number_format((int)($rr['total_refund'] ?? 0), 0, ",", ".");
+            $todo_list[] = [
+                'id' => 'refund_pending_' . $rdate,
+                'title' => 'Refund belum diaudit',
+                'desc' => 'Ada refund Rp ' . $amt . ' yang belum diaudit untuk tanggal ' . $rdate . '.',
+                'level' => 'warn',
+                'action_label' => 'Buka Tanggal ' . $rdate,
+                'action_url' => './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($rdate),
+                'action_target' => '_self'
+            ];
+        }
+
         // Handphone input review
         $hp_count = 0;
         $hp_last = '';
