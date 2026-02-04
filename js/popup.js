@@ -22,7 +22,7 @@
         '<div class="m-modal-body">' +
           '<div class="m-status-info">' +
             '<i class="fa fa-info-circle"></i>' +
-            '<div class="m-status-text"></div>' +
+            '<div class="m-status-text" style="padding-top: 0!important;"></div>' +
           '</div>' +
           '<div class="m-alert m-alert-info m-popup-hidden"></div>' +
         '</div>' +
