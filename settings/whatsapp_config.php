@@ -444,6 +444,104 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'test_send') {
     }
 }
 
+if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'test_template') {
+    $tpl_body = trim((string)($_POST['wa_tpl_body'] ?? ''));
+    $tpl_category = trim((string)($_POST['wa_tpl_category'] ?? ''));
+    $test_target = trim((string)($_POST['wa_test_target'] ?? ''));
+    if ($test_target === '' && !empty($_POST['wa_test_target_select'])) {
+        $test_target = trim((string)$_POST['wa_test_target_select']);
+    }
+    if ($tpl_body === '') {
+        $save_message = 'Isi template wajib diisi.';
+        $save_type = 'warning';
+    } elseif ($test_target === '') {
+        $save_message = 'Target test wajib diisi.';
+        $save_type = 'warning';
+    } else {
+        $wa_helper_file = __DIR__ . '/../system/whatsapp/wa_helper.php';
+        if (file_exists($wa_helper_file)) {
+            require_once $wa_helper_file;
+        }
+        $message = $tpl_body;
+        if (strtolower($tpl_category) === 'todo') {
+            $todo_helper = __DIR__ . '/../include/todo_helper.php';
+            if (file_exists($todo_helper)) {
+                require_once $todo_helper;
+            }
+            $env = [];
+            $envFile = __DIR__ . '/../include/env.php';
+            if (file_exists($envFile)) {
+                require $envFile;
+            }
+            $backupKey = $env['backup']['secret'] ?? '';
+            $items = function_exists('app_collect_todo_items') ? app_collect_todo_items($env, '', $backupKey) : [];
+            if (empty($items)) {
+                $save_message = 'Tidak ada data todo untuk dikirim.';
+                $save_type = 'warning';
+            } else {
+                $max_items = 20;
+                $lines = [];
+                $idx = 1;
+                foreach ($items as $it) {
+                    if ($idx > $max_items) break;
+                    $title = trim((string)($it['title'] ?? ''));
+                    $desc = trim((string)($it['desc'] ?? ''));
+                    $line = $title;
+                    if ($desc !== '') $line .= ' - ' . $desc;
+                    $line = preg_replace('/\s+/', ' ', $line);
+                    if (function_exists('mb_strlen')) {
+                        if (mb_strlen($line) > 140) $line = mb_substr($line, 0, 137) . '...';
+                    } else {
+                        if (strlen($line) > 140) $line = substr($line, 0, 137) . '...';
+                    }
+                    $lines[] = $idx . '. ' . $line;
+                    $idx++;
+                }
+                $remaining = count($items) - count($lines);
+                if ($remaining > 0) $lines[] = '+ ' . $remaining . ' lainnya';
+                $list_text = implode("\n", $lines);
+                $vars = [
+                    'date' => date('d-m-Y'),
+                    'count' => (string)count($items),
+                    'list' => $list_text
+                ];
+                if (function_exists('wa_render_template')) {
+                    $message = wa_render_template($tpl_body, $vars);
+                } else {
+                    $message = str_replace(['{{DATE}}','{{COUNT}}','{{LIST}}'], [$vars['date'],$vars['count'],$vars['list']], $tpl_body);
+                }
+            }
+        }
+
+        if ($save_message === '') {
+            if (function_exists('wa_send_text')) {
+                $res = wa_send_text($message, $test_target, 'test');
+                if (!empty($res['ok'])) {
+                    $save_message = 'Test WhatsApp terkirim.';
+                    $save_type = 'success';
+                } else {
+                    $save_message = 'Test WhatsApp gagal: ' . ($res['message'] ?? 'error');
+                    $save_type = 'danger';
+                }
+            } else {
+                $save_message = 'WA helper tidak tersedia.';
+                $save_type = 'danger';
+            }
+        }
+    }
+
+    if (!$is_ajax) {
+        $_SESSION['wa_save_message'] = $save_message;
+        $_SESSION['wa_save_type'] = $save_type;
+        if (!headers_sent()) {
+            header('Location: ./admin.php?id=whatsapp');
+        } else {
+            echo "<script>window.location='./admin.php?id=whatsapp';</script>";
+        }
+        exit;
+    }
+}
+
 if (isset($_POST['save_whatsapp'])) {
     $wh = app_db_get_whatsapp_config();
     $wh['endpoint_send'] = trim((string)($_POST['wa_endpoint_send'] ?? ($wh['endpoint_send'] ?? '')));
@@ -1127,9 +1225,10 @@ foreach ($wa_recipients as $rec) {
                                     return;
                                 }
                                 submitWaTemplateTest({
-                                    wa_action: 'test_send',
+                                    wa_action: 'test_template',
                                     wa_test_target_select: target.trim(),
-                                    wa_test_message: body
+                                    wa_tpl_category: (document.getElementById('wa-tpl-category') || {}).value || '',
+                                    wa_tpl_body: body
                                 });
                             }
                         },
