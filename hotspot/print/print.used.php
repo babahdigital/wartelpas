@@ -71,12 +71,15 @@ $comment = $urow['comment'] ?? '';
 $profile = $urow['profile'] ?? '';
 
 $hist = get_user_history_from_db($db, $user);
+$meta = function_exists('get_voucher_meta_info') ? get_voucher_meta_info($db, $user) : [];
 $blok = $hist['blok_name'] ?? '';
 if ($blok === '') {
     $blok = extract_blok_name($comment);
 }
 $blok_label = normalize_blok_label($blok ?: extract_blok_name($comment));
 $profile_label = normalize_profile_label($profile);
+$room_name = (string)($meta['room_name'] ?? '');
+$customer_name = (string)($meta['customer_name'] ?? '');
 $hist_ip = $hist['ip_address'] ?? '';
 $hist_mac = $hist['mac_address'] ?? '';
 $c_ipmac = extract_ip_mac_from_comment($comment);
@@ -163,7 +166,9 @@ $relogin_date_label_safe = htmlspecialchars($relogin_date_label, ENT_QUOTES);
 
 $detail_rows = [
     ['User', $user],
+    ['Nama', $customer_name !== '' ? $customer_name : '-'],
     ['Blok', $blok_label !== '' ? $blok_label : '-'],
+    ['Kamar', $room_name !== '' ? $room_name : '-'],
     ['Profile', $profile_label !== '' ? $profile_label : '-'],
     ['IP', $ip_addr ?: '-'],
     ['MAC', $mac_addr ?: '-'],
@@ -178,6 +183,23 @@ $detail_rows = [
 
 if ($api_connected) {
     $API->disconnect();
+}
+
+$stuck_info = null;
+if ($db) {
+    $log_file = __DIR__ . '/../../logs/stuck_kick_' . date('Y-m-d') . '.log';
+    if (is_file($log_file)) {
+        $lines = @file($log_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+        if (!empty($lines)) {
+            foreach (array_reverse($lines) as $line) {
+                $item = json_decode($line, true);
+                if (!is_array($item)) continue;
+                if (strcasecmp((string)($item['user'] ?? ''), $user) !== 0) continue;
+                $stuck_info = $item;
+                break;
+            }
+        }
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -230,6 +252,26 @@ if ($api_connected) {
                         <td><?= htmlspecialchars(format_dmy($ev['logout_time'] ?? '')) ?></td>
                     </tr>
                 <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
+
+    <?php if (!empty($stuck_info)): ?>
+        <div class="section-title">Log Stuck Kick (Hari Ini)</div>
+        <table>
+            <thead>
+                <tr><th>Info</th><th>Nilai</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Waktu</td><td><?= htmlspecialchars((string)($stuck_info['ts'] ?? '-'), ENT_QUOTES) ?></td></tr>
+                <tr><td>Reason</td><td><?= htmlspecialchars((string)($stuck_info['reason'] ?? '-'), ENT_QUOTES) ?></td></tr>
+                <tr><td>Uptime</td><td><?= htmlspecialchars((string)($stuck_info['uptime'] ?? '-'), ENT_QUOTES) ?></td></tr>
+                <tr><td>Bytes In</td><td><?= htmlspecialchars(function_exists('formatBytes') ? formatBytes((int)($stuck_info['bytes_in'] ?? 0), 2) : (string)($stuck_info['bytes_in'] ?? 0), ENT_QUOTES) ?></td></tr>
+                <tr><td>Bytes Out</td><td><?= htmlspecialchars(function_exists('formatBytes') ? formatBytes((int)($stuck_info['bytes_out'] ?? 0), 2) : (string)($stuck_info['bytes_out'] ?? 0), ENT_QUOTES) ?></td></tr>
+                <tr><td>IP</td><td><?= htmlspecialchars((string)($stuck_info['ip'] ?? '-'), ENT_QUOTES) ?></td></tr>
+                <tr><td>MAC</td><td><?= htmlspecialchars((string)($stuck_info['mac'] ?? '-'), ENT_QUOTES) ?></td></tr>
+                <tr><td>Profil</td><td><?= htmlspecialchars((string)($stuck_info['profile'] ?? '-'), ENT_QUOTES) ?></td></tr>
+                <tr><td>Server</td><td><?= htmlspecialchars((string)($stuck_info['server'] ?? '-'), ENT_QUOTES) ?></td></tr>
             </tbody>
         </table>
     <?php endif; ?>

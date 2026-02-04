@@ -782,6 +782,17 @@
           }
           return;
         }
+        if (target.getAttribute && target.getAttribute('data-stuck-print')) {
+          e.preventDefault();
+          e.stopPropagation();
+          var user = target.getAttribute('data-stuck-user') || '';
+          if (user) {
+            var session = getSession();
+            var url = './hotspot/print/print.used.php?user=' + encodeURIComponent(user) + '&session=' + encodeURIComponent(session);
+            window.open(url, '_blank');
+          }
+          return;
+        }
         target = target.parentNode;
       }
     });
@@ -918,9 +929,18 @@
         var bin = parseInt(it.bytes_in || 0, 10) || 0;
         var bout = parseInt(it.bytes_out || 0, 10) || 0;
         var total = bin + bout;
+        var blokLabel = formatBlokLabel(it.blok_name || '-');
+        var roomLabel = it.room_name || '-';
+        var nameLabel = it.customer_name || '-';
+        var printBtn = '<a class="btn-act btn-act-print" href="#" title="Print" data-stuck-print="1" data-stuck-user="' + escapeHtml(it.user || '') + '">' +
+          '<i class="fa fa-print"></i>' +
+        '</a>';
         return '<tr>' +
           '<td class="retur-col-date retur-col-center">' + escapeHtml(it.ts || '-') + '</td>' +
           '<td class="retur-col-voucher-cell retur-col-center"><span class="retur-col-voucher">' + escapeHtml(it.user || '-') + '</span></td>' +
+          '<td class="retur-col-name retur-col-left">' + escapeHtml(nameLabel) + '</td>' +
+          '<td class="retur-col-blok retur-col-center">' + escapeHtml(blokLabel) + '</td>' +
+          '<td class="retur-col-room retur-col-center">' + escapeHtml(roomLabel) + '</td>' +
           '<td class="retur-col-center">' + escapeHtml(it.ip || '-') + '</td>' +
           '<td class="retur-col-center">' + escapeHtml(it.mac || '-') + '</td>' +
           '<td class="retur-col-center">' + escapeHtml(it.uptime || '-') + '</td>' +
@@ -930,6 +950,7 @@
           '<td class="retur-col-center">' + escapeHtml(it.reason || '-') + '</td>' +
           '<td class="retur-col-center">' + escapeHtml(it.profile || '-') + '</td>' +
           '<td class="retur-col-center">' + escapeHtml(it.server || '-') + '</td>' +
+          '<td class="retur-col-action retur-col-center">' + printBtn + '</td>' +
           '</tr>';
       }).join('');
     }
@@ -940,6 +961,9 @@
             '<tr>' +
               '<th class="retur-col-date retur-col-center">Waktu</th>' +
               '<th class="retur-col-voucher-cell retur-col-center">Voucher</th>' +
+              '<th class="retur-col-name retur-col-left">Nama</th>' +
+              '<th class="retur-col-blok retur-col-center">Blok</th>' +
+              '<th class="retur-col-room retur-col-center">Kamar</th>' +
               '<th class="retur-col-center">IP</th>' +
               '<th class="retur-col-center">MAC</th>' +
               '<th class="retur-col-center">Uptime</th>' +
@@ -949,6 +973,7 @@
               '<th class="retur-col-center">Reason</th>' +
               '<th class="retur-col-center">Profil</th>' +
               '<th class="retur-col-center">Server</th>' +
+              '<th class="retur-col-action retur-col-center">Aksi</th>' +
             '</tr>' +
           '</thead>' +
           '<tbody>' + stuckRows + '</tbody>' +

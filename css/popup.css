@@ -323,6 +323,7 @@
 .retur-col-profile { width: 50px; }
 .retur-col-type { width: 60px; }
 .retur-col-name { width: 120px; }
+.retur-col-room { width: 90px; }
 .retur-col-status { width: 80px; }
 .retur-col-action { width: 70px; }
 
@@ -527,6 +528,7 @@
 
 .retur-table .btn-act-approve { background: #16a34a; }
 .retur-table .btn-act-reject { background: #ef4444; }
+.retur-table .btn-act-print { background: #3b82f6; }
 
 .eligibility-wrap {
   display: flex;

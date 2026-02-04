@@ -182,6 +182,7 @@ if ($menu_retur_visible) {
     $log_dir = $root_dir . '/logs';
     $today = date('Y-m-d');
     $log_file = $log_dir . '/stuck_kick_' . $today . '.log';
+    $raw_stuck_items = [];
     if (is_file($log_file)) {
         $lines = @file($log_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
         if (!empty($lines)) {
@@ -190,20 +191,83 @@ if ($menu_retur_visible) {
             foreach ($lines as $line) {
                 $item = json_decode($line, true);
                 if (!is_array($item)) continue;
-                $menu_stuck_list[] = [
-                    'ts' => (string)($item['ts'] ?? ''),
-                    'user' => (string)($item['user'] ?? ''),
-                    'ip' => (string)($item['ip'] ?? ''),
-                    'mac' => (string)($item['mac'] ?? ''),
-                    'uptime' => (string)($item['uptime'] ?? ''),
-                    'bytes_in' => (int)($item['bytes_in'] ?? 0),
-                    'bytes_out' => (int)($item['bytes_out'] ?? 0),
-                    'reason' => (string)($item['reason'] ?? ''),
-                    'profile' => (string)($item['profile'] ?? ''),
-                    'server' => (string)($item['server'] ?? '')
-                ];
+                $raw_stuck_items[] = $item;
             }
         }
+    }
+
+    $stuck_hist_map = [];
+    $stuck_meta_map = [];
+    if (!empty($raw_stuck_items) && $db_menu) {
+        $user_keys = [];
+        foreach ($raw_stuck_items as $it) {
+            $u = strtolower(trim((string)($it['user'] ?? '')));
+            if ($u !== '') $user_keys[$u] = true;
+        }
+        $users = array_keys($user_keys);
+        if (!empty($users)) {
+            $placeholders = implode(',', array_fill(0, count($users), '?'));
+            try {
+                $stmt = $db_menu->prepare("SELECT username, customer_name, room_name, blok_name, validity FROM login_history WHERE username IN ($placeholders)");
+                $stmt->execute($users);
+                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $u = strtolower(trim((string)($row['username'] ?? '')));
+                    if ($u === '') continue;
+                    $stuck_hist_map[$u] = [
+                        'customer_name' => trim((string)($row['customer_name'] ?? '')),
+                        'room_name' => trim((string)($row['room_name'] ?? '')),
+                        'blok_name' => trim((string)($row['blok_name'] ?? '')),
+                        'profile_name' => trim((string)($row['validity'] ?? ''))
+                    ];
+                }
+            } catch (Exception $e) {}
+            try {
+                $stmt = $db_menu->prepare("SELECT voucher_code, customer_name, room_name, blok_name, profile_name FROM login_meta_queue WHERE voucher_code IN ($placeholders) ORDER BY created_at DESC");
+                $stmt->execute($users);
+                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $u = strtolower(trim((string)($row['voucher_code'] ?? '')));
+                    if ($u === '' || isset($stuck_meta_map[$u])) continue;
+                    $stuck_meta_map[$u] = [
+                        'customer_name' => trim((string)($row['customer_name'] ?? '')),
+                        'room_name' => trim((string)($row['room_name'] ?? '')),
+                        'blok_name' => trim((string)($row['blok_name'] ?? '')),
+                        'profile_name' => trim((string)($row['profile_name'] ?? ''))
+                    ];
+                }
+            } catch (Exception $e) {}
+        }
+    }
+
+    foreach ($raw_stuck_items as $item) {
+        $user = (string)($item['user'] ?? '');
+        $u_key = strtolower(trim($user));
+        $hist = $stuck_hist_map[$u_key] ?? [];
+        $meta = $stuck_meta_map[$u_key] ?? [];
+        $customer_name = (string)($hist['customer_name'] ?? '');
+        if ($customer_name === '' && !empty($meta['customer_name'])) $customer_name = (string)$meta['customer_name'];
+        $room_name = (string)($hist['room_name'] ?? '');
+        if ($room_name === '' && !empty($meta['room_name'])) $room_name = (string)$meta['room_name'];
+        $blok_name = (string)($hist['blok_name'] ?? '');
+        if ($blok_name === '' && !empty($meta['blok_name'])) $blok_name = (string)$meta['blok_name'];
+        $profile_name = (string)($item['profile'] ?? '');
+        if ($profile_name === '' && !empty($hist['profile_name'])) $profile_name = (string)$hist['profile_name'];
+        if ($profile_name === '' && !empty($meta['profile_name'])) $profile_name = (string)$meta['profile_name'];
+
+        $menu_stuck_list[] = [
+            'ts' => (string)($item['ts'] ?? ''),
+            'user' => $user,
+            'ip' => (string)($item['ip'] ?? ''),
+            'mac' => (string)($item['mac'] ?? ''),
+            'uptime' => (string)($item['uptime'] ?? ''),
+            'bytes_in' => (int)($item['bytes_in'] ?? 0),
+            'bytes_out' => (int)($item['bytes_out'] ?? 0),
+            'reason' => (string)($item['reason'] ?? ''),
+            'profile' => $profile_name,
+            'server' => (string)($item['server'] ?? ''),
+            'customer_name' => $customer_name,
+            'room_name' => $room_name,
+            'blok_name' => $blok_name
+        ];
     }
     $menu_stuck_count = count($menu_stuck_list);
 }
