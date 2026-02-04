@@ -554,18 +554,34 @@ if (!function_exists('get_cumulative_uptime_from_events_db')) {
         $stmt->bindValue($k, $v);
       }
       $stmt->execute();
+      $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
       $total = 0;
       $fallback_ts = !empty($fallback_logout) ? strtotime($fallback_logout) : 0;
-      while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $login_time = $row['login_time'] ?? '';
-        $logout_time = $row['logout_time'] ?? '';
+      $row_count = count($rows);
+      for ($i = 0; $i < $row_count; $i++) {
+        $login_time = $rows[$i]['login_time'] ?? '';
+        $logout_time = $rows[$i]['logout_time'] ?? '';
         if (empty($login_time)) continue;
         $login_ts = strtotime($login_time);
         if (!$login_ts) continue;
+
         $logout_ts = !empty($logout_time) ? strtotime($logout_time) : 0;
-        if (!$logout_ts && $fallback_ts && $fallback_ts >= $login_ts) {
-          $logout_ts = $fallback_ts;
+        if (!$logout_ts) {
+          $next_login_ts = 0;
+          for ($j = $i + 1; $j < $row_count; $j++) {
+            $next_login = $rows[$j]['login_time'] ?? '';
+            if ($next_login !== '') {
+              $next_login_ts = strtotime($next_login);
+              if ($next_login_ts) break;
+            }
+          }
+          if ($next_login_ts && $next_login_ts >= $login_ts) {
+            $logout_ts = $next_login_ts;
+          } elseif ($fallback_ts && $fallback_ts >= $login_ts) {
+            $logout_ts = $fallback_ts;
+          }
         }
+
         if ($logout_ts && $logout_ts >= $login_ts) {
           $total += ($logout_ts - $login_ts);
         }
