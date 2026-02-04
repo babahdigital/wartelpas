@@ -198,6 +198,11 @@ Require all denied
     Require all granted
 </If>
 
+# Stuck kick log ingest endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/stuck_log_ingest\.php$#">
+    Require all granted
+</If>
+
 # Backup status endpoint (protected)
 <If "%{REQUEST_URI} =~ m#^/tools/backup_status\.php$#">
     Require all granted

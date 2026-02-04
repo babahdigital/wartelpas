@@ -258,6 +258,9 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
 } elseif ($report == "audit_session") {
     $saudit = "active";
     $mpage = $_audit_log;
+} elseif ($report == "stuck_log") {
+    $sstuck = "active";
+    $mpage = "Stuck Kick Log";
 } elseif ($report == "whatsapp") {
     $swhatsapp = "active";
     $mpage = "WhatsApp";
@@ -697,12 +700,13 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
             </li>
 
             <li class="nav-item" onclick="toggleMobileSub(this)">
-                <a class="nav-link <?= trim($sselling . ' ' . $saudit); ?>" href="javascript:void(0)">
+                <a class="nav-link <?= trim($sselling . ' ' . $saudit . ' ' . $sstuck); ?>" href="javascript:void(0)">
                     <i class="fa fa-money"></i> <?= $_report ?> <i class="fa fa-caret-down" style="margin-left:auto;font-size:10px;"></i>
                 </a>
                 <div class="dropdown-menu">
                     <a class="dropdown-item" href="./?report=selling&idbl=<?= strtolower(date("M")) . date("Y"); ?>&session=<?= $session; ?>"><i class="fa fa-line-chart"></i> <?= $_report ?></a>
                     <a class="dropdown-item audit-item" href="./?report=audit_session&session=<?= $session; ?>"><i class="fa fa-check-square-o"></i> <?= $_audit_log ?></a>
+                    <a class="dropdown-item" href="./?report=stuck_log&session=<?= $session; ?>"><i class="fa fa-exclamation-triangle"></i> Stuck Kick Log</a>
                 </div>
             </li>
 
