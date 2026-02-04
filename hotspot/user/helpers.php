@@ -540,7 +540,7 @@ if (!function_exists('set_vip_daily_usage')) {
 
 // Helper: Total uptime dari event login (standalone)
 if (!function_exists('get_cumulative_uptime_from_events_db')) {
-  function get_cumulative_uptime_from_events_db($db, $username, $date_key = '', $fallback_logout = '') {
+  function get_cumulative_uptime_from_events_db($db, $username, $date_key = '', $fallback_logout = '', $max_session_seconds = 0) {
     if (!$db || empty($username)) return 0;
     $params = [':u' => $username];
     $where = "username = :u";
@@ -565,7 +565,8 @@ if (!function_exists('get_cumulative_uptime_from_events_db')) {
         $login_ts = strtotime($login_time);
         if (!$login_ts) continue;
 
-        $logout_ts = !empty($logout_time) ? strtotime($logout_time) : 0;
+        $logout_missing = empty($logout_time);
+        $logout_ts = !$logout_missing ? strtotime($logout_time) : 0;
         if (!$logout_ts) {
           $next_login_ts = 0;
           for ($j = $i + 1; $j < $row_count; $j++) {
@@ -579,6 +580,13 @@ if (!function_exists('get_cumulative_uptime_from_events_db')) {
             $logout_ts = $next_login_ts;
           } elseif ($fallback_ts && $fallback_ts >= $login_ts) {
             $logout_ts = $fallback_ts;
+          }
+        }
+
+        if ($logout_missing && $max_session_seconds > 0) {
+          $cap_ts = $login_ts + (int)$max_session_seconds;
+          if (!$logout_ts || $logout_ts > $cap_ts) {
+            $logout_ts = $cap_ts;
           }
         }
 

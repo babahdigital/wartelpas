@@ -146,7 +146,17 @@ if (!empty($first_login_real)) {
     $date_key = date('Y-m-d', strtotime($first_login_real));
 }
 
-$total_uptime_sec = get_cumulative_uptime_from_events_db($db, $user, $date_key, $logout_time_real);
+$max_session_seconds = 0;
+if ($profile_label !== '' && $profile_label !== '-') {
+    if (preg_match('/\b10\b/i', $profile_label)) $max_session_seconds = 10 * 60;
+    elseif (preg_match('/\b30\b/i', $profile_label)) $max_session_seconds = 30 * 60;
+} else {
+    $kind = detect_profile_kind_unified($profile, $comment, $blok, $uptime);
+    if ($kind === '10') $max_session_seconds = 10 * 60;
+    elseif ($kind === '30') $max_session_seconds = 30 * 60;
+}
+
+$total_uptime_sec = get_cumulative_uptime_from_events_db($db, $user, $date_key, $logout_time_real, $max_session_seconds);
 $relogin_events = get_relogin_events_db($db, $user, $date_key);
 
 $first_login_norm = normalize_dt($first_login_real);
