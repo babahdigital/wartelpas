@@ -4,10 +4,16 @@
 *.md
 docker-compose.yml
 Dockerfile
-mikhmon_session
+session
 db_data
 logs
 node_modules
 backup
 *.zip
 *.log
+.profile
+.vscode
+.idea
+dev
+mikrotik
+other
