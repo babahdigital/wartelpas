@@ -54,6 +54,7 @@ try {
         $settlement_open = (string)($todo_cfg['settlement_open'] ?? $audit_after);
         $settlement_close = (string)($todo_cfg['settlement_close'] ?? '23:59');
         $phone_after = (string)($todo_cfg['phone_after'] ?? $audit_after);
+        $settle_running_minutes = (int)($todo_cfg['settlement_running_minutes'] ?? 20);
 
         $parse_time = function($timeStr) use ($today) {
             $timeStr = trim((string)$timeStr);
@@ -69,6 +70,7 @@ try {
         $is_settlement_window = $settle_open_ts && $settle_close_ts
             ? ($now_ts >= $settle_open_ts && $now_ts <= $settle_close_ts)
             : false;
+        $is_settlement_after_close = $settle_close_ts ? ($now_ts > $settle_close_ts) : false;
 
         $todo_next = $_SERVER['REQUEST_URI'] ?? '';
         if ($todo_next === '') $todo_next = './?session=' . urlencode($session);
@@ -106,12 +108,20 @@ try {
 
         $live_diff = null;
         $live_title = '-';
+        $live_pending_today = 0;
         if ($last_live_full !== '-') {
             $ts = strtotime($last_live_full);
             if ($ts) {
                 $live_title = date('d-m-Y H:i', $ts);
                 $live_diff = (int)floor(($now_ts - $ts) / 60);
             }
+        }
+        try {
+            $stmtPend = $db_sync->prepare("SELECT COUNT(*) FROM live_sales WHERE sync_status = 'pending' AND (sale_date = :d OR substr(sale_datetime,1,10) = :d)");
+            $stmtPend->execute([':d' => $today]);
+            $live_pending_today = (int)$stmtPend->fetchColumn();
+        } catch (Exception $e) {
+            $live_pending_today = 0;
         }
 
         if (($last_live_full === '-' || ($live_diff !== null && $live_diff >= $late_minutes))
@@ -149,11 +159,23 @@ try {
         }
 
         $settled_today = false;
+        $settle_status = '';
+        $settle_triggered = '';
+        $settle_completed = '';
+        $settle_sales_sync_at = '';
+        $settle_message = '';
         try {
-            $stmtSet = $db_sync->prepare("SELECT status FROM settlement_log WHERE report_date = :d LIMIT 1");
+            $stmtSet = $db_sync->prepare("SELECT status, triggered_at, completed_at, sales_sync_at, message FROM settlement_log WHERE report_date = :d LIMIT 1");
             $stmtSet->execute([':d' => $today]);
             $srow = $stmtSet->fetch(PDO::FETCH_ASSOC);
-            $settled_today = $srow && strtolower((string)$srow['status']) === 'done';
+            if ($srow) {
+                $settle_status = strtolower((string)($srow['status'] ?? ''));
+                $settle_triggered = (string)($srow['triggered_at'] ?? '');
+                $settle_completed = (string)($srow['completed_at'] ?? '');
+                $settle_sales_sync_at = (string)($srow['sales_sync_at'] ?? '');
+                $settle_message = (string)($srow['message'] ?? '');
+            }
+            $settled_today = $settle_status === 'done';
         } catch (Exception $e) {
             $settled_today = false;
         }
@@ -178,6 +200,59 @@ try {
                 'action_label' => 'Buka Settlement',
                 'action_url' => $report_url,
                 'action_target' => '_self'
+            ];
+        } elseif ($audit_locked_today && !$settled_today && $is_settlement_after_close) {
+            $todo_list[] = [
+                'id' => 'settlement_overdue',
+                'title' => 'Settlement terlewat',
+                'desc' => 'Jam settlement sudah lewat. Lakukan settlement agar laporan akurat.',
+                'level' => 'danger',
+                'action_label' => 'Buka Settlement',
+                'action_url' => $report_url,
+                'action_target' => '_self'
+            ];
+        }
+
+        if ($settle_status === 'failed') {
+            $todo_list[] = [
+                'id' => 'settlement_failed',
+                'title' => 'Settlement gagal',
+                'desc' => 'Proses settlement gagal. Ulangi settlement atau hubungi administrator.',
+                'level' => 'danger',
+                'action_label' => 'Buka Settlement',
+                'action_url' => $report_url,
+                'action_target' => '_self'
+            ];
+        }
+
+        if ($settle_status === 'running' && $settle_triggered !== '') {
+            $trigger_ts = strtotime($settle_triggered);
+            if ($trigger_ts && ($now_ts - $trigger_ts) > ($settle_running_minutes * 60)) {
+                $todo_list[] = [
+                    'id' => 'settlement_stuck',
+                    'title' => 'Settlement masih berjalan',
+                    'desc' => 'Settlement berjalan terlalu lama. Cek status settlement.',
+                    'level' => 'warn',
+                    'action_label' => 'Buka Settlement',
+                    'action_url' => $report_url,
+                    'action_target' => '_self'
+                ];
+            }
+        }
+
+        if ($settled_today && $live_pending_today > 0) {
+            $todo_list[] = [
+                'id' => 'live_pending_after_settle',
+                'title' => 'Live Sales masih pending',
+                'desc' => 'Masih ada ' . $live_pending_today . ' transaksi live pending setelah settlement. Lakukan sync ulang.',
+                'level' => 'warn',
+                'action_label' => (isSuperAdmin() && $backupKey !== '') ? 'Sync Sales (Force)' : 'Buka Settlement',
+                'action_url' => (isSuperAdmin() && $backupKey !== '')
+                    ? './report/laporan/services/sync_sales.php?key=' . urlencode($backupKey) . '&session=' . urlencode($session) . '&force=1'
+                    : $report_url,
+                'action_ajax' => (isSuperAdmin() && $backupKey !== ''),
+                'action_ack' => (isSuperAdmin() && $backupKey !== '') ? $todo_ack_url('live_pending_after_settle') : '',
+                'action_target' => (isSuperAdmin() && $backupKey !== '') ? '_blank' : '_self'
             ];
         }
 
