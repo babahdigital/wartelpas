@@ -13,20 +13,3 @@
 }
 
 :set backfillMetaLock false;
-
-# --- TODO WA SUMMARY (contoh scheduler) ---
-:global todoWaLock;
-:if ([:typeof $todoWaLock] = "nothing") do={ :set todoWaLock false; }
-:if ($todoWaLock = true) do={ :log warning "TODO WA: masih berjalan, skip"; :return; }
-:set todoWaLock true;
-
-:local todoUrl "http://wartelpas.sobigidul.net/tools/wa_todo_summary.php";
-
-:do {
- /tool fetch url=$todoUrl keep-result=no;
- :log info "TODO WA: OK";
-} on-error={
- :log warning "TODO WA: Gagal koneksi";
-}
-
-:set todoWaLock false;
