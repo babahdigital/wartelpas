@@ -550,7 +550,7 @@ foreach($all_users as $u) {
     if ($is_active) {
       $uptime = $uptime_active != '' ? $uptime_active : ($uptime_user != '' ? $uptime_user : '0s');
     } else {
-      $uptime = $uptime_user != '' ? $uptime_user : ($uptime_hist != '' ? $uptime_hist : '0s');
+      $uptime = ($uptime_hist != '' && $uptime_hist != '0s') ? $uptime_hist : ($uptime_user != '' ? $uptime_user : '0s');
     }
 
     // Jika RUSAK dan data kosong, pakai history
