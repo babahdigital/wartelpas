@@ -1183,7 +1183,7 @@ foreach ($wa_recipients as $rec) {
                         '</div>' +
                         '<div class="wa-popup-row">' +
                             '<label class="m-pass-label">Test Kirim</label>' +
-                            '<div class="wa-help" style="margin-top:6px;"><i class="fa fa-info-circle"></i> Test akan mengirim ke penerima aktif sesuai kategori.</div>' +
+                            '<div class="wa-help" style="margin-top:6px;"><i class="fa fa-info-circle" style="font-size: 14px;"></i> Test akan mengirim ke penerima aktif sesuai kategori.</div>' +
                         '</div>' +
                     '</div>';
 
