@@ -953,9 +953,12 @@ if ($load == "logs") {
         if ($profileDisplay === '') $profileDisplay = '-';
 
         $statusLabel = strtoupper((string)($log['status'] ?? 'USED'));
+        if ($statusLabel === 'USED') {
+            $statusLabel = 'TERPAKAI';
+        }
         $statusColor = '#6c757d';
         if ($statusLabel === 'ONLINE') $statusColor = '#2ecc71';
-        elseif ($statusLabel === 'USED') $statusColor = '#00c0ef';
+        elseif ($statusLabel === 'TERPAKAI') $statusColor = '#00c0ef';
         elseif ($statusLabel === 'RUSAK') $statusColor = '#e74c3c';
         elseif ($statusLabel === 'RETUR') $statusColor = '#f39c12';
         elseif ($statusLabel === 'INVALID') $statusColor = '#9b59b6';
