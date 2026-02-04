@@ -66,6 +66,36 @@ if (!function_exists('format_room_short_local')) {
     }
 }
 
+if (!function_exists('parse_uptime_seconds')) {
+    function parse_uptime_seconds($uptime) {
+        $uptime = trim((string)$uptime);
+        if ($uptime === '') return 0;
+        $total = 0;
+        if (preg_match('/^(\d+):(\d{2}):(\d{2})$/', $uptime, $m)) {
+            return ((int)$m[1] * 3600) + ((int)$m[2] * 60) + (int)$m[3];
+        }
+        if (preg_match('/^(\d+)d\s*(\d{1,2}:\d{2}:\d{2})$/', $uptime, $m)) {
+            $total += (int)$m[1] * 86400;
+            $total += parse_uptime_seconds($m[2]);
+            return $total;
+        }
+        if (preg_match_all('/(\d+)(w|d|h|m|s)/', $uptime, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $mt) {
+                $val = (int)$mt[1];
+                switch ($mt[2]) {
+                    case 'w': $total += $val * 604800; break;
+                    case 'd': $total += $val * 86400; break;
+                    case 'h': $total += $val * 3600; break;
+                    case 'm': $total += $val * 60; break;
+                    case 's': $total += $val; break;
+                }
+            }
+            return $total;
+        }
+        return 0;
+    }
+}
+
 if (!function_exists('norm_date_from_raw_report')) {
     function norm_date_from_raw_report($raw_date) {
         $raw = trim((string)$raw_date);
@@ -808,11 +838,24 @@ if ($load == "logs") {
                     ];
                 }
                 $rekeyed = [];
+                $now_ts = time();
                 foreach ($finalLogs as $k => $log) {
                     $uname = $log['username'] ?? '';
                     $lastLogin = $loginMap[$uname]['last_login_real'] ?? '';
-                    $log['uptime'] = $loginMap[$uname]['last_uptime'] ?? '';
-                    $log['status'] = $loginMap[$uname]['last_status'] ?? ($log['status'] ?? 'USED');
+                    $uptimeRaw = $loginMap[$uname]['last_uptime'] ?? '';
+                    $statusRaw = strtolower((string)($loginMap[$uname]['last_status'] ?? ''));
+                    $ts = $lastLogin ? strtotime($lastLogin) : false;
+                    if ($ts !== false && $uptimeRaw !== '') {
+                        $uptimeSec = parse_uptime_seconds($uptimeRaw);
+                        if ($uptimeSec > 0) {
+                            $end_ts = $ts + $uptimeSec;
+                            if ($statusRaw === 'online' && $end_ts < ($now_ts - 60)) {
+                                $statusRaw = 'used';
+                            }
+                        }
+                    }
+                    $log['uptime'] = $uptimeRaw;
+                    $log['status'] = $statusRaw !== '' ? $statusRaw : ($log['status'] ?? 'USED');
                     $log['customer_name'] = $loginMap[$uname]['customer_name'] ?? '';
                     $log['room_name'] = $loginMap[$uname]['room_name'] ?? '';
                     $log['blok_name'] = $loginMap[$uname]['blok_name'] ?? '';
