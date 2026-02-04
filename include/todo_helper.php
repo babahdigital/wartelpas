@@ -311,6 +311,44 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 }
             }
 
+            // Kurang bayar tanggal lain
+            try {
+                $stmtKb = $db_sync->query("SELECT report_date, SUM(COALESCE(selisih_setoran,0)) AS sel, SUM(COALESCE(kurang_bayar_amt,0)) AS kb
+                    FROM audit_rekap_manual
+                    GROUP BY report_date
+                    HAVING sel < 0 OR kb > 0
+                    ORDER BY report_date DESC
+                    LIMIT 20");
+                $kb_rows = $stmtKb ? $stmtKb->fetchAll(PDO::FETCH_ASSOC) : [];
+            } catch (Exception $e) {
+                $kb_rows = [];
+            }
+            foreach ($kb_rows as $kr) {
+                $rdate = (string)($kr['report_date'] ?? '');
+                if ($rdate === '' || $rdate === $today || $rdate === $yesterday) continue;
+                $selV = (int)($kr['sel'] ?? 0);
+                $kbV = (int)($kr['kb'] ?? 0);
+                if ($selV >= 0 && $kbV <= 0) continue;
+                $parts = [];
+                if ($selV < 0) {
+                    $parts[] = 'selisih Rp ' . number_format(abs($selV), 0, ",", ".");
+                }
+                if ($kbV > 0) {
+                    $parts[] = 'kurang bayar Rp ' . number_format($kbV, 0, ",", ".");
+                }
+                $rlabel = $format_ddmmyyyy($rdate);
+                $desc = 'Terdapat ' . implode(' + ', $parts) . ' pada audit tanggal ' . $rlabel . '.';
+                $todo_list[] = [
+                    'id' => 'audit_kurang_' . $rdate,
+                    'title' => 'Audit kurang bayar',
+                    'desc' => $desc,
+                    'level' => 'danger',
+                    'action_label' => 'Buka Tanggal ' . $rlabel,
+                    'action_url' => './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($rdate),
+                    'action_target' => '_self'
+                ];
+            }
+
             // Refund belum diaudit (semua tanggal yang belum locked)
             try {
                 $stmtRefund = $db_sync->query("SELECT report_date, SUM(COALESCE(refund_amt,0)) AS total_refund
