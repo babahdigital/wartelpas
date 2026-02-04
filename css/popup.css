@@ -278,6 +278,7 @@
   padding: 0 10px;
   font-size: 12px;
   outline: none;
+  margin-right: 0;
 }
 
 .retur-search::placeholder { color: var(--popup-muted); }
