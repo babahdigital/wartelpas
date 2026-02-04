@@ -86,6 +86,12 @@ $c_ipmac = extract_ip_mac_from_comment($comment);
 $ip_addr = $hist_ip ?: ($c_ipmac['ip'] ?? '');
 $mac_addr = $hist_mac ?: ($c_ipmac['mac'] ?? '');
 
+$normalize_room_label = function($room) {
+    $room = trim((string)$room);
+    if ($room === '' || $room === '-') return '-';
+    return trim(preg_replace('/^\s*(kamar|kmr|room)\s+/i', '', $room));
+};
+
 $bytes_total = ($urow['bytes-in'] ?? 0) + ($urow['bytes-out'] ?? 0);
 $bytes_active = ($arow['bytes-in'] ?? 0) + ($arow['bytes-out'] ?? 0);
 $bytes_hist = (int)($hist['last_bytes'] ?? 0);
@@ -168,7 +174,7 @@ $detail_rows = [
     ['User', $user],
     ['Nama', $customer_name !== '' ? $customer_name : '-'],
     ['Blok', $blok_label !== '' ? $blok_label : '-'],
-    ['Kamar', $room_name !== '' ? $room_name : '-'],
+    ['Kamar', $normalize_room_label($room_name !== '' ? $room_name : '-')],
     ['Profile', $profile_label !== '' ? $profile_label : '-'],
     ['IP', $ip_addr ?: '-'],
     ['MAC', $mac_addr ?: '-'],
