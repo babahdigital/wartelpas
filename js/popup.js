@@ -385,6 +385,18 @@
       .replace(/\b\w/g, function(ch) { return ch.toUpperCase(); });
   }
 
+  function formatDateIndo(dateStr) {
+    var raw = String(dateStr || '').trim();
+    if (!raw || raw === '-') return '-';
+    var parts = raw.split(' ');
+    var datePart = parts[0] || '';
+    var timePart = parts[1] || '';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return raw;
+    var d = datePart.split('-');
+    var formatted = d[2] + '-' + d[1] + '-' + d[0];
+    return timePart ? (formatted + ' ' + timePart) : formatted;
+  }
+
   function normalizeRoomLabel(room) {
     var val = String(room || '').trim();
     if (!val || val === '-') return '-';
@@ -405,12 +417,12 @@
       ['IP', payload.ip || '-'],
       ['MAC', payload.mac || '-'],
       ['Status', buildStatusBadge(payload.status || '-'), true],
-      ['First Login', payload.firstLogin || '-'],
-      ['Login', payload.loginTime || '-'],
-      ['Logout', payload.logoutTime || '-'],
+      ['First Login', formatDateIndo(payload.firstLogin || '-')],
+      ['Login', formatDateIndo(payload.loginTime || '-')],
+      ['Logout', formatDateIndo(payload.logoutTime || '-')],
       ['Bytes', formatBytesShort(payload.bytes || 0)],
       ['Uptime', payload.uptime || '0s'],
-      ['Last Used', payload.lastUsed || '-'],
+      ['Last Used', formatDateIndo(payload.lastUsed || '-')],
       ['Relogin', String(payload.relogin || 0)]
     ];
 
