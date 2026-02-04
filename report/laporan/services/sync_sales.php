@@ -143,7 +143,7 @@ try {
                                 full_raw_data TEXT UNIQUE,
                                 sync_date DATETIME DEFAULT CURRENT_TIMESTAMP
                             )");
-                    try { $db->exec("DROP INDEX IF EXISTS idx_sales_user_date"); } catch(Exception $e) {}
+                    try { $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_sales_user_date ON sales_history(username, sale_date)"); } catch(Exception $e) {}
         try { $db->exec("ALTER TABLE sales_history ADD COLUMN raw_time TEXT"); } catch(Exception $e) {}
         try { $db->exec("ALTER TABLE sales_history ADD COLUMN sale_date TEXT"); } catch(Exception $e) {}
         try { $db->exec("ALTER TABLE sales_history ADD COLUMN sale_time TEXT"); } catch(Exception $e) {}
@@ -192,7 +192,7 @@ try {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             synced_at DATETIME
         )");
-        try { $db->exec("DROP INDEX IF EXISTS idx_live_user_date"); } catch(Exception $e) {}
+        try { $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_live_user_date ON live_sales(username, sale_date)"); } catch(Exception $e) {}
         try { $db->exec("ALTER TABLE live_sales ADD COLUMN sprice_snapshot INTEGER"); } catch (Exception $e) {}
 } catch (PDOException $e) {
     log_sync_sales('db_error=' . $e->getMessage());
@@ -308,6 +308,18 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
             elseif (strpos($cmt_low, 'rusak') !== false) $status = 'rusak';
             elseif (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
 
+            if ($username !== '' && $sale_date !== '') {
+                $dupStmt = $db->prepare("SELECT 1 FROM sales_history WHERE username = :u AND sale_date = :d LIMIT 1");
+                $dupStmt->execute([':u' => $username, ':d' => $sale_date]);
+                if ($dupStmt->fetchColumn()) {
+                    $skip_duplicate++;
+                    $API->write('/system/script/remove', false);
+                    $API->write('=.id=' . $s['.id']);
+                    $API->read();
+                    continue;
+                }
+            }
+
             // Simpan ke DB
             $stmt->bindValue(':rd', $raw_date);
             $stmt->bindValue(':rt', $raw_time);
@@ -331,9 +343,6 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
             $stmt->bindValue(':raw', $rawData); // Simpan mentahannya juga buat jaga2
             
             if ($stmt->execute()) {
-                if ($stmt->rowCount() === 0) {
-                    $skip_duplicate++;
-                }
                 // JIKA BERHASIL SIMPAN -> HAPUS DARI MIKROTIK
                 $API->write('/system/script/remove', false);
                 $API->write('=.id=' . $s['.id']);
