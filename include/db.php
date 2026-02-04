@@ -199,6 +199,7 @@ function app_db_migrate_operator_legacy(PDO $pdo)
         notify_retur_enabled INTEGER NOT NULL DEFAULT 1,
         notify_refund_enabled INTEGER NOT NULL DEFAULT 1,
         notify_ls_enabled INTEGER NOT NULL DEFAULT 1,
+        notify_todo_enabled INTEGER NOT NULL DEFAULT 1,
         country_code TEXT,
         timezone TEXT,
         log_limit INTEGER NOT NULL DEFAULT 50,
@@ -600,6 +601,9 @@ function app_db_get_whatsapp_config()
         if (!in_array('notify_ls_enabled', $colNames, true)) {
             $pdo->exec("ALTER TABLE whatsapp_config ADD COLUMN notify_ls_enabled INTEGER NOT NULL DEFAULT 1");
         }
+        if (!in_array('notify_todo_enabled', $colNames, true)) {
+            $pdo->exec("ALTER TABLE whatsapp_config ADD COLUMN notify_todo_enabled INTEGER NOT NULL DEFAULT 1");
+        }
     } catch (Exception $e) {}
     $stmt = $pdo->query('SELECT * FROM whatsapp_config WHERE id = 1');
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -628,6 +632,7 @@ function app_db_get_whatsapp_config()
         'notify_retur_enabled' => isset($row['notify_retur_enabled']) ? (int)$row['notify_retur_enabled'] : 1,
         'notify_refund_enabled' => isset($row['notify_refund_enabled']) ? (int)$row['notify_refund_enabled'] : 1,
         'notify_ls_enabled' => isset($row['notify_ls_enabled']) ? (int)$row['notify_ls_enabled'] : 1,
+        'notify_todo_enabled' => isset($row['notify_todo_enabled']) ? (int)$row['notify_todo_enabled'] : 1,
         'country_code' => isset($row['country_code']) && $row['country_code'] !== '' ? (string)$row['country_code'] : '62',
         'timezone' => isset($row['timezone']) && $row['timezone'] !== '' ? (string)$row['timezone'] : 'Asia/Makassar',
         'log_limit' => isset($row['log_limit']) ? (int)$row['log_limit'] : 50,
@@ -644,6 +649,7 @@ function app_db_set_whatsapp_config(array $data)
     $notify_retur_enabled = !empty($data['notify_retur_enabled']) ? 1 : 0;
     $notify_refund_enabled = !empty($data['notify_refund_enabled']) ? 1 : 0;
     $notify_ls_enabled = !empty($data['notify_ls_enabled']) ? 1 : 0;
+    $notify_todo_enabled = !empty($data['notify_todo_enabled']) ? 1 : 0;
     $country_code = trim((string)($data['country_code'] ?? '62'));
     $timezone = trim((string)($data['timezone'] ?? 'Asia/Makassar'));
     $log_limit = isset($data['log_limit']) ? (int)$data['log_limit'] : 50;
@@ -652,8 +658,8 @@ function app_db_set_whatsapp_config(array $data)
     }
 
     $stmt = $pdo->prepare("INSERT OR REPLACE INTO whatsapp_config
-        (id, endpoint_send, token, notify_target, notify_request_enabled, notify_retur_enabled, notify_refund_enabled, notify_ls_enabled, country_code, timezone, log_limit, updated_at)
-        VALUES (1, :endpoint_send, :token, :notify_target, :nreq, :nret, :nref, :nls, :country_code, :timezone, :log_limit, CURRENT_TIMESTAMP)");
+        (id, endpoint_send, token, notify_target, notify_request_enabled, notify_retur_enabled, notify_refund_enabled, notify_ls_enabled, notify_todo_enabled, country_code, timezone, log_limit, updated_at)
+        VALUES (1, :endpoint_send, :token, :notify_target, :nreq, :nret, :nref, :nls, :ntodo, :country_code, :timezone, :log_limit, CURRENT_TIMESTAMP)");
     $stmt->execute([
         ':endpoint_send' => $endpoint,
         ':token' => $token,
@@ -662,6 +668,7 @@ function app_db_set_whatsapp_config(array $data)
         ':nret' => $notify_retur_enabled,
         ':nref' => $notify_refund_enabled,
         ':nls' => $notify_ls_enabled,
+        ':ntodo' => $notify_todo_enabled,
         ':country_code' => $country_code,
         ':timezone' => $timezone,
         ':log_limit' => $log_limit,

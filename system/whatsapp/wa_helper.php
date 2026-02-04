@@ -149,6 +149,8 @@ function wa_get_active_recipients($category = '') {
             $where .= " AND receive_retur = 1";
         } elseif ($category === 'report') {
             $where .= " AND receive_report = 1";
+        } elseif ($category === 'todo') {
+            $where .= " AND receive_report = 1";
         } elseif ($category === 'ls') {
             $where .= " AND receive_ls = 1";
         }
@@ -171,11 +173,19 @@ function wa_send_text($message, $target = '', $category = '') {
     $country = trim((string)($cfg['country_code'] ?? '62'));
     $defaultTarget = trim((string)($cfg['notify_target'] ?? ''));
     $notify_ls_enabled = !isset($cfg['notify_ls_enabled']) || $cfg['notify_ls_enabled'] === true || $cfg['notify_ls_enabled'] === 1 || $cfg['notify_ls_enabled'] === '1';
+    $notify_todo_enabled = !isset($cfg['notify_todo_enabled']) || $cfg['notify_todo_enabled'] === true || $cfg['notify_todo_enabled'] === 1 || $cfg['notify_todo_enabled'] === '1';
 
     if ($category === 'report' || $category === 'ls') {
         if (!$notify_ls_enabled) {
             wa_log_message($target, $message, 'failed: disabled', 'notif L/S nonaktif');
             return ['ok' => false, 'message' => 'Notif L/S nonaktif.'];
+        }
+    }
+
+    if ($category === 'todo') {
+        if (!$notify_todo_enabled) {
+            wa_log_message($target, $message, 'failed: disabled', 'notif Todo nonaktif');
+            return ['ok' => false, 'message' => 'Notif Todo nonaktif.'];
         }
     }
 
