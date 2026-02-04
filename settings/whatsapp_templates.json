@@ -40,5 +40,11 @@
     "name": "Alert L/S Telat",
     "category": "ls",
     "body": "⚠️ *L/S {{TYPE}} TELAT*\nTerakhir: {{TIME}}\nSelisih: {{MINUTES}} menit."
+  },
+  {
+    "id": "todo_summary",
+    "name": "Ringkasan Todo",
+    "category": "todo",
+    "body": "🔔 *TODO HARI INI* ({{DATE}})\nTotal: {{COUNT}}\n{{LIST}}"
   }
 ]
