@@ -385,15 +385,22 @@
       .replace(/\b\w/g, function(ch) { return ch.toUpperCase(); });
   }
 
+  function normalizeRoomLabel(room) {
+    var val = String(room || '').trim();
+    if (!val || val === '-') return '-';
+    return val.replace(/^\s*(kamar|kmr|room)\s+/i, '').trim();
+  }
+
   function openUserResumePopup(payload) {
     if (!window.MikhmonPopup) return;
     var user = payload.user || '-';
     var customerName = toTitleCase(payload.customer || '-');
+    var roomLabel = normalizeRoomLabel(payload.room || '-');
     var rows = [
       ['User', user],
       ['Nama', customerName || '-'],
       ['Blok', formatBlokLabel(payload.blok || '-')],
-      ['Kamar', payload.room || '-'],
+      ['Kamar', roomLabel || '-'],
       ['Profil', payload.profile || '-'],
       ['IP', payload.ip || '-'],
       ['MAC', payload.mac || '-'],
