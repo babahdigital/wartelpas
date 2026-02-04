@@ -112,6 +112,10 @@
     setButtons(opts.buttons);
     setCardClass(opts.cardClass || opts.sizeClass);
 
+    if (!document.body.getAttribute('data-popup-scroll')) {
+      document.body.setAttribute('data-popup-scroll', document.body.style.overflow || '');
+      document.body.style.overflow = 'hidden';
+    }
     backdrop.classList.add('show');
   }
 
@@ -119,6 +123,10 @@
     if (!backdrop) return;
     backdrop.classList.remove('show');
     clearAlert();
+    if (document.body.hasAttribute('data-popup-scroll')) {
+      document.body.style.overflow = document.body.getAttribute('data-popup-scroll') || '';
+      document.body.removeAttribute('data-popup-scroll');
+    }
   }
 
   window.MikhmonPopup = {
