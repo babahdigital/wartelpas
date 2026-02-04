@@ -136,6 +136,7 @@ function wa_get_active_recipients($category = '') {
             receive_retur INTEGER NOT NULL DEFAULT 1,
             receive_report INTEGER NOT NULL DEFAULT 1,
             receive_ls INTEGER NOT NULL DEFAULT 1,
+            receive_todo INTEGER NOT NULL DEFAULT 1,
             created_at TEXT,
             updated_at TEXT
         )");
@@ -144,13 +145,16 @@ function wa_get_active_recipients($category = '') {
         if (!in_array('receive_ls', $colNames, true)) {
             $db->exec("ALTER TABLE whatsapp_recipients ADD COLUMN receive_ls INTEGER NOT NULL DEFAULT 1");
         }
+        if (!in_array('receive_todo', $colNames, true)) {
+            $db->exec("ALTER TABLE whatsapp_recipients ADD COLUMN receive_todo INTEGER NOT NULL DEFAULT 1");
+        }
         $where = "active = 1";
         if ($category === 'retur') {
             $where .= " AND receive_retur = 1";
         } elseif ($category === 'report') {
             $where .= " AND receive_report = 1";
         } elseif ($category === 'todo') {
-            $where .= " AND receive_report = 1";
+            $where .= " AND receive_todo = 1";
         } elseif ($category === 'ls') {
             $where .= " AND receive_ls = 1";
         }
