@@ -305,7 +305,7 @@
       iconClass: 'fa fa-bell',
       statusIcon: 'fa fa-bell',
       statusColor: '#f59e0b',
-      cardClass: 'is-retur',
+      cardClass: 'is-todo',
       messageHtml: buildTodoHtml(data),
       buttons: [
         { label: 'Tutup', className: 'm-btn m-btn-cancel' }
@@ -351,7 +351,7 @@
             iconClass: ok ? 'fa fa-check-circle' : 'fa fa-exclamation-triangle',
             statusIcon: ok ? 'fa fa-check-circle' : 'fa fa-exclamation-triangle',
             statusColor: ok ? '#22c55e' : '#f59e0b',
-            cardClass: 'is-retur',
+            cardClass: 'is-todo',
             messageHtml: '<div class="todo-popup-container"><div class="todo-empty">' + escapeHtml(msg) + '</div></div>',
             buttons: [
               { label: 'Kembali', className: 'm-btn m-btn-cancel', close: true }
@@ -371,7 +371,7 @@
             iconClass: 'fa fa-exclamation-triangle',
             statusIcon: 'fa fa-exclamation-triangle',
             statusColor: '#f59e0b',
-            cardClass: 'is-retur',
+            cardClass: 'is-todo',
             messageHtml: '<div class="todo-popup-container"><div class="todo-empty">Gagal. Hubungi administrator.</div></div>',
             buttons: [
               { label: 'Tutup', className: 'm-btn m-btn-cancel' }

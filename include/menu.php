@@ -256,8 +256,9 @@ try {
             ];
         }
 
-        // Audit yesterday missing / kurang bayar
+        // Audit missing / kurang bayar
         $yesterday = date('Y-m-d', strtotime('-1 day'));
+        $today_report_url = './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($today);
         try {
             $stmtAuditCount = $db_sync->prepare("SELECT COUNT(*) FROM audit_rekap_manual WHERE report_date = :d");
             $stmtAuditCount->execute([':d' => $yesterday]);
@@ -299,6 +300,38 @@ try {
             }
         }
 
+        // Kurang bayar hari ini
+        try {
+            $stmtTodayAudit = $db_sync->prepare("SELECT COUNT(*) FROM audit_rekap_manual WHERE report_date = :d");
+            $stmtTodayAudit->execute([':d' => $today]);
+            $audit_t_count = (int)$stmtTodayAudit->fetchColumn();
+        } catch (Exception $e) {
+            $audit_t_count = 0;
+        }
+        if ($audit_t_count > 0) {
+            try {
+                $stmtSelT = $db_sync->prepare("SELECT SUM(COALESCE(selisih_setoran,0)) AS sel, SUM(COALESCE(kurang_bayar_amt,0)) AS kb FROM audit_rekap_manual WHERE report_date = :d");
+                $stmtSelT->execute([':d' => $today]);
+                $rowSelT = $stmtSelT->fetch(PDO::FETCH_ASSOC) ?: [];
+                $selT = (int)($rowSelT['sel'] ?? 0);
+                $kbT = (int)($rowSelT['kb'] ?? 0);
+                if ($selT < 0 || $kbT > 0) {
+                    $valT = $selT < 0 ? $selT : (0 - $kbT);
+                    $absT = number_format(abs((int)$valT), 0, ",", ".");
+                    $todo_list[] = [
+                        'id' => 'audit_kurang_' . $today,
+                        'title' => 'Audit kurang bayar (Hari Ini)',
+                        'desc' => 'Terdapat kekurangan Rp ' . $absT . ' pada audit tanggal ' . $today . '.',
+                        'level' => 'danger',
+                        'action_label' => 'Buka Tanggal ' . $today,
+                        'action_url' => $today_report_url,
+                        'action_target' => '_self'
+                    ];
+                }
+            } catch (Exception $e) {
+            }
+        }
+
         // Refund belum diaudit (semua tanggal yang belum locked)
         try {
             $stmtRefund = $db_sync->query("SELECT report_date, SUM(COALESCE(refund_amt,0)) AS total_refund
@@ -325,7 +358,7 @@ try {
             ];
         }
 
-        // Handphone input review
+        // Handphone input review (harian)
         $hp_count = 0;
         $hp_last = '';
         try {
@@ -337,25 +370,13 @@ try {
         } catch (Exception $e) {
             $hp_count = 0;
         }
-        $hp_needs_review = false;
-        if ($hp_count === 0) {
-            $hp_needs_review = true;
-        } elseif ($hp_last !== '') {
-            $hp_last_ts = strtotime($hp_last);
-            if ($hp_last_ts) {
-                if (date('Y-m-d', $hp_last_ts) !== $today) {
-                    $hp_needs_review = true;
-                } elseif ($phone_ts && $hp_last_ts < $phone_ts && $now_ts >= $phone_ts) {
-                    $hp_needs_review = true;
-                }
-            }
-        }
-        if ($is_after_phone && $hp_needs_review && !$todo_is_ack('hp_review', $today)) {
+        if ($is_after_phone && !$todo_is_ack('hp_review', $today)) {
             $hp_last_text = $hp_last !== '' ? date('d-m-Y H:i', strtotime($hp_last)) : '-';
+            $hp_hint = $hp_count === 0 ? 'Belum ada data Handphone hari ini.' : 'Belum ada konfirmasi Handphone hari ini.';
             $todo_list[] = [
                 'id' => 'hp_review',
                 'title' => 'Input Handphone belum ditinjau',
-                'desc' => 'Belum ada update Handphone harian. Terakhir: ' . $hp_last_text . '. Mohon tinjau data Handphone.',
+                'desc' => $hp_hint . ' Terakhir: ' . $hp_last_text . '. Mohon tinjau data Handphone.',
                 'level' => 'info',
                 'action_label' => 'Sesuai',
                 'action_url' => $todo_ack_url('hp_review'),

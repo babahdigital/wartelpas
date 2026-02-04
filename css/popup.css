@@ -58,6 +58,11 @@
   width: 92vw;
 }
 
+.m-modal-card.is-todo {
+  max-width: 900px;
+  width: 92vw;
+}
+
 .m-modal-card.is-retur .m-status-info i {
   display: none;
 }
@@ -68,6 +73,11 @@
 
 .m-modal-card.is-retur .m-modal-body {
   max-height: 60vh;
+  overflow: auto;
+}
+
+.m-modal-card.is-todo .m-modal-body {
+  max-height: 65vh;
   overflow: auto;
 }
 
