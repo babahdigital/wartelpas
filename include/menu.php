@@ -30,6 +30,21 @@ if (file_exists($envFile)) {
 $backupKey = $env['backup']['secret'] ?? '';
 $has_router_session = app_db_first_session_id() !== '';
 
+$operator_profile = [
+    'username' => '',
+    'full_name' => '',
+    'phone' => ''
+];
+if (isOperator()) {
+    $opId = (int)($_SESSION['mikhmon_operator_id'] ?? 0);
+    $opRow = $opId > 0 ? app_db_get_operator_by_id($opId) : app_db_get_operator();
+    if (!empty($opRow)) {
+        $operator_profile['username'] = (string)($opRow['username'] ?? '');
+        $operator_profile['full_name'] = (string)($opRow['full_name'] ?? '');
+        $operator_profile['phone'] = format_phone_display($opRow['phone'] ?? '');
+    }
+}
+
 require_once __DIR__ . '/todo_helper.php';
 
 $todo_list = app_collect_todo_items($env, $session ?? '', $backupKey);
@@ -831,6 +846,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
     window.__isSuperAdminFlag = <?= json_encode($is_superadmin); ?>;
     window.__canBackupFlag = <?= json_encode($is_superadmin || (isOperator() && operator_can('backup_only'))); ?>;
     window.__canRestoreFlag = <?= json_encode($is_superadmin || (isOperator() && operator_can('restore_only'))); ?>;
+    window.__operatorProfile = <?= json_encode($operator_profile, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     window.__returMenuData = <?= json_encode(['count' => $menu_retur_pending, 'items' => $menu_retur_list], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     window.__todoMenuData = <?= json_encode(['count' => $todo_count, 'items' => $todo_list], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     window.__returBlokNames = <?= json_encode(($env['blok']['names'] ?? []), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;

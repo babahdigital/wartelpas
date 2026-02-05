@@ -178,13 +178,47 @@ if ($id == "login" || ($basename === 'admin.php' && empty($id))) {
     include('./include/readcfg.php');
     $user = $_POST['user'];
     $pass = $_POST['pass'];
-    if ($user == $useradm && verify_password_compat($pass, $passadm)) {
+    $admin_ok = false;
+    $admin_source = '';
+    $admin_id = 0;
+
+    if (verify_env_superadmin($user, $pass)) {
+      $admin_ok = true;
+      $admin_source = 'env';
+    } else {
+      $admin_row = app_db_get_admin_by_username($user);
+      if (!empty($admin_row) && !empty($admin_row['id']) && !empty($admin_row['is_active'])) {
+        $admin_ok = verify_password_compat($pass, $admin_row['password'] ?? '');
+        if ($admin_ok && !is_password_hash($admin_row['password'] ?? '')) {
+          $newHash = hash_password_value($pass);
+          app_db_update_admin((int)$admin_row['id'], (string)$admin_row['username'], $newHash, !empty($admin_row['is_active']));
+        }
+        if ($admin_ok) {
+          $admin_source = 'db';
+          $admin_id = (int)$admin_row['id'];
+        }
+      }
+    }
+
+    if (!$admin_ok && $user == $useradm && verify_password_compat($pass, $passadm)) {
+      $admin_ok = true;
+      $admin_source = 'legacy';
       if (!is_password_hash($passadm)) {
         $newHash = hash_password_value($pass);
         update_admin_password_hash($passadm, $newHash);
       }
+    }
+
+    if ($admin_ok) {
       $_SESSION["mikhmon"] = $user;
       $_SESSION["mikhmon_level"] = "superadmin";
+      $_SESSION["mikhmon_admin_source"] = $admin_source;
+      $_SESSION["mikhmon_admin_user"] = $user;
+      if ($admin_id > 0) {
+        $_SESSION["mikhmon_admin_id"] = $admin_id;
+      } else {
+        unset($_SESSION["mikhmon_admin_id"]);
+      }
 
         // MODIFIKASI: Deteksi Router Otomatis
         $first_session = app_db_first_session_id();

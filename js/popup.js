@@ -156,13 +156,43 @@
     alertEl.innerHTML = '';
   }
 
+  function normalizePhoneInput(el) {
+    if (!el) return;
+    var v = (el.value || '').replace(/\D/g, '');
+    if (v.indexOf('62') === 0) {
+      v = '0' + v.slice(2);
+    }
+    if (v.indexOf('8') === 0) {
+      v = '0' + v;
+    }
+    if (v.indexOf('0') !== 0) {
+      v = '0' + v;
+    }
+    if (v.length >= 2 && v.slice(0, 2) !== '08') {
+      v = '08' + v.slice(2);
+    }
+    el.value = v.slice(0, 13);
+  }
+
+  function attachPhoneInput(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.setAttribute('inputmode', 'numeric');
+    el.setAttribute('pattern', '[0-9]*');
+    el.setAttribute('minlength', '10');
+    el.setAttribute('maxlength', '13');
+    el.addEventListener('input', function() { normalizePhoneInput(el); });
+    normalizePhoneInput(el);
+  }
+
   window.openPasswordPopup = function() {
     if (!window.MikhmonPopup) return;
     var isSuper = getFlag('__isSuperAdminFlag', false);
+    var opProfile = window.__operatorProfile || {};
     var html = '';
     if (isSuper) {
       html = '' +
-        '<div class="m-pass-form">' +
+        '<div class="m-pass-form m-pass-grid">' +
           '<div class="m-pass-row">' +
             '<label class="m-pass-label">Password Admin Saat Ini</label>' +
             '<input id="pw-current" type="password" class="m-pass-input" placeholder="Password saat ini" />' +
@@ -171,14 +201,22 @@
             '<label class="m-pass-label">Password Admin Baru</label>' +
             '<input id="pw-new" type="password" class="m-pass-input" placeholder="Minimal 6 karakter" />' +
           '</div>' +
-          '<div class="m-pass-row">' +
+          '<div class="m-pass-row m-span-2">' +
             '<label class="m-pass-label">Konfirmasi Password Admin</label>' +
             '<input id="pw-confirm" type="password" class="m-pass-input" placeholder="Ulangi password admin" />' +
           '</div>' +
         '</div>';
     } else {
       html = '' +
-        '<div class="m-pass-form">' +
+        '<div class="m-pass-form m-pass-grid">' +
+          '<div class="m-pass-row m-span-2">' +
+            '<label class="m-pass-label">Nama Lengkap</label>' +
+            '<input id="pw-op-name" type="text" class="m-pass-input" placeholder="Nama lengkap" value="' + (opProfile.full_name || '') + '" />' +
+          '</div>' +
+          '<div class="m-pass-row">' +
+            '<label class="m-pass-label">Nomor Telepon</label>' +
+            '<input id="pw-op-phone" type="text" class="m-pass-input" placeholder="08xxxxxxxxxx" value="' + (opProfile.phone || '') + '" />' +
+          '</div>' +
           '<div class="m-pass-row">' +
             '<label class="m-pass-label">Password Operator Saat Ini</label>' +
             '<input id="pw-op-current" type="password" class="m-pass-input" placeholder="Password saat ini" />' +
@@ -211,9 +249,11 @@
             var current = (document.getElementById('pw-current') || {}).value || '';
             var next = (document.getElementById('pw-new') || {}).value || '';
             var confirm = (document.getElementById('pw-confirm') || {}).value || '';
-            var opNext = '';
-            var opConfirm = '';
+            var opNext = (document.getElementById('pw-op-new') || {}).value || '';
+            var opConfirm = (document.getElementById('pw-op-confirm') || {}).value || '';
             var opCurrent = (document.getElementById('pw-op-current') || {}).value || '';
+            var opName = (document.getElementById('pw-op-name') || {}).value || '';
+            var opPhone = (document.getElementById('pw-op-phone') || {}).value || '';
             var payload = new URLSearchParams();
             payload.append('current_password', current.trim());
             payload.append('new_password', next.trim());
@@ -221,6 +261,9 @@
             payload.append('operator_password', opNext.trim());
             payload.append('operator_confirm', opConfirm.trim());
             payload.append('operator_current', opCurrent.trim());
+            opName = opName.trim().toLowerCase().replace(/\b\w+/g, function(w){ return w.charAt(0).toUpperCase() + w.slice(1); });
+            payload.append('operator_full_name', opName);
+            payload.append('operator_phone', opPhone.trim());
 
             fetch('./settings/password_update.php', {
               method: 'POST',
@@ -244,6 +287,9 @@
         { label: 'Batal', className: 'm-btn m-btn-cancel' }
       ]
     });
+    if (!isSuper) {
+      setTimeout(function(){ attachPhoneInput('pw-op-phone'); }, 0);
+    }
   };
 })();
 

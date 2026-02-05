@@ -946,6 +946,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             $db->rollBack();
           }
         }
+
         $deleted_list[] = $del_name;
       }
 

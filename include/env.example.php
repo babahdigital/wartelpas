@@ -10,8 +10,9 @@ $env = [
         'ghost_min_bytes' => 0,
     ],
     'auth' => [
-        'operator_user' => '',
-        'operator_pass' => '',
+        'superadmin_user' => '',
+        'superadmin_pass' => '',
+        'superadmins' => [],
     ],
     'backup' => [
         'secret' => 'CHANGE_ME',

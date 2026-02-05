@@ -5,6 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../include/acl.php';
 require_once __DIR__ . '/../include/db.php';
 require_once __DIR__ . '/../lib/routeros_api.class.php';
+require_once __DIR__ . '/../system/whatsapp/wa_helper.php';
 app_db_import_legacy_if_needed();
 requireLogin('../admin.php?id=login');
 header('Content-Type: application/json');
@@ -15,13 +16,16 @@ $confirmPass = trim((string)($_POST['confirm_password'] ?? ''));
 $opPass = trim((string)($_POST['operator_password'] ?? ''));
 $opConfirm = trim((string)($_POST['operator_confirm'] ?? ''));
 $opCurrent = trim((string)($_POST['operator_current'] ?? ''));
+$opFullName = format_full_name_title((string)($_POST['operator_full_name'] ?? ''));
+$opPhoneRaw = trim((string)($_POST['operator_phone'] ?? ''));
+$opPhone = normalize_phone_to_62($opPhoneRaw);
 
 if (isSuperAdmin() && $current === '') {
     echo json_encode(['ok' => false, 'message' => 'Password admin saat ini wajib diisi.']);
     exit;
 }
 
-if ($newPass === '' && $opPass === '') {
+if ($newPass === '' && $opPass === '' && $opFullName === '' && $opPhone === '') {
     echo json_encode(['ok' => false, 'message' => 'Tidak ada perubahan password.']);
     exit;
 }
@@ -47,9 +51,20 @@ if ($opPass !== '' && strlen($opPass) < 6) {
 }
 
 $adminPassStored = '';
-$adminRow = app_db_get_admin();
-if (!empty($adminRow)) {
+$adminSource = $_SESSION['mikhmon_admin_source'] ?? '';
+$adminId = (int)($_SESSION['mikhmon_admin_id'] ?? 0);
+$adminUser = $_SESSION['mikhmon_admin_user'] ?? '';
+if ($adminSource === 'env') {
+    $envAdmin = find_env_superadmin($adminUser);
+    $adminPassStored = $envAdmin['pass'] ?? '';
+} elseif ($adminId > 0) {
+    $adminRow = app_db_get_admin_by_id($adminId);
     $adminPassStored = $adminRow['password'] ?? '';
+} else {
+    $adminRow = app_db_get_admin();
+    if (!empty($adminRow)) {
+        $adminPassStored = $adminRow['password'] ?? '';
+    }
 }
 
 $env = [];
@@ -90,7 +105,21 @@ if (!isSuperAdmin()) {
         echo json_encode(['ok' => false, 'message' => 'Password operator saat ini salah.']);
         exit;
     }
+    if ($opPhoneRaw !== '' && !is_valid_phone_08($opPhoneRaw)) {
+        echo json_encode(['ok' => false, 'message' => 'Nomor telepon harus 08xxxxxxxx dan 10-13 digit.']);
+        exit;
+    }
 } else {
+    if ($adminSource === 'env') {
+        if (!verify_password_compat($current, $adminPassStored)) {
+            echo json_encode(['ok' => false, 'message' => 'Password admin saat ini salah.']);
+            exit;
+        }
+        if ($newPass !== '') {
+            echo json_encode(['ok' => false, 'message' => 'Akun superadmin ENV hanya bisa diubah lewat include/env.php.']);
+            exit;
+        }
+    }
     if (!verify_password_compat($current, $adminPassStored)) {
         echo json_encode(['ok' => false, 'message' => 'Password admin saat ini salah.']);
         exit;
@@ -99,7 +128,7 @@ if (!isSuperAdmin()) {
 
 $updated = [];
 
-if (isSuperAdmin() && $newPass !== '') {
+if (isSuperAdmin() && $newPass !== '' && $adminSource !== 'env') {
     $newHash = hash_password_value($newPass);
     $ok = update_admin_password_hash($adminPassStored, $newHash);
     if (!$ok) {
@@ -118,6 +147,24 @@ if ($opPass !== '') {
         exit;
     }
     $updated[] = 'operator';
+}
+
+if (!isSuperAdmin()) {
+    $opId = (int)($_SESSION['mikhmon_operator_id'] ?? 0);
+    if ($opId > 0) {
+        $opRow = app_db_get_operator_by_id($opId);
+        if (!empty($opRow)) {
+            $fullName = $opFullName !== '' ? $opFullName : ($opRow['full_name'] ?? '');
+            $phone = $opPhone !== '' ? $opPhone : ($opRow['phone'] ?? '');
+            app_db_update_operator($opId, $opRow['username'] ?? '', null, !empty($opRow['is_active']), $fullName, $phone);
+            if ($phone !== '') {
+                wa_upsert_recipient($fullName !== '' ? $fullName : ($opRow['username'] ?? ''), $phone);
+            }
+            if ($opFullName !== '' || $opPhone !== '') {
+                $updated[] = 'profil';
+            }
+        }
+    }
 }
 
 echo json_encode([

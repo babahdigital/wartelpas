@@ -46,5 +46,17 @@
     "name": "Ringkasan Todo",
     "category": "todo",
     "body": "🔔 *TODO HARI INI* ({{DATE}})\nTotal: {{COUNT}}\n{{LIST}}"
+  },
+  {
+    "id": "account_register",
+    "name": "Pendaftaran Akun",
+    "category": "account",
+    "body": "✅ *AKUN {{ROLE}} TERDAFTAR*\n────────────\nNama: {{FULL_NAME}}\nUsername: {{USERNAME}}\nPassword: *{{PASSWORD}}*\n\nDidaftarkan oleh: {{CREATED_BY}}\nWaktu: {{DATE}}\n────────────\nSilakan login dan ganti password Anda."
+  },
+  {
+    "id": "account_reset",
+    "name": "Reset Password Akun",
+    "category": "account",
+    "body": "🔁 *RESET PASSWORD {{ROLE}}*\n────────────\nNama: {{FULL_NAME}}\nUsername: {{USERNAME}}\nPassword Baru: *{{PASSWORD}}*\n\nDireset oleh: {{CREATED_BY}}\nWaktu: {{DATE}}\n────────────\nSilakan login dan ganti password Anda."
   }
 ]

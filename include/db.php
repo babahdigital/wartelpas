@@ -52,6 +52,17 @@ function app_db_init(PDO $pdo)
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     );");
 
+    $pdo->exec("CREATE TABLE IF NOT EXISTS admin_users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL,
+        full_name TEXT,
+        phone TEXT,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );");
+
     $pdo->exec("CREATE TABLE IF NOT EXISTS operator_account (
         id INTEGER PRIMARY KEY CHECK (id = 1),
         username TEXT NOT NULL,
@@ -63,6 +74,8 @@ function app_db_init(PDO $pdo)
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL UNIQUE,
         password TEXT NOT NULL,
+        full_name TEXT,
+        phone TEXT,
         is_active INTEGER NOT NULL DEFAULT 1,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -100,6 +113,10 @@ function app_db_init(PDO $pdo)
     try { $pdo->exec("ALTER TABLE operator_permissions ADD COLUMN delete_block_full INTEGER NOT NULL DEFAULT 0"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE operator_permissions ADD COLUMN backup_only INTEGER NOT NULL DEFAULT 0"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE operator_permissions ADD COLUMN restore_only INTEGER NOT NULL DEFAULT 0"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE admin_users ADD COLUMN full_name TEXT"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE admin_users ADD COLUMN phone TEXT"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE operator_users ADD COLUMN full_name TEXT"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE operator_users ADD COLUMN phone TEXT"); } catch (Exception $e) {}
 
 
 function app_db_migrate_operator_legacy(PDO $pdo)
@@ -316,12 +333,20 @@ function app_db_import_legacy_if_needed()
         app_db_seed_default_admin($pdo);
     }
 
+    app_db_migrate_admin_legacy($pdo);
     app_db_migrate_operator_legacy($pdo);
 }
 
 function app_db_get_admin()
 {
     $pdo = app_db();
+    try {
+        $stmt = $pdo->query('SELECT id, username, password, full_name, phone, is_active FROM admin_users ORDER BY id ASC LIMIT 1');
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (is_array($row)) {
+            return $row;
+        }
+    } catch (Exception $e) {}
     $stmt = $pdo->query('SELECT username, password FROM admin_account WHERE id = 1');
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     return is_array($row) ? $row : [];
@@ -330,6 +355,19 @@ function app_db_get_admin()
 function app_db_set_admin($username, $password)
 {
     $pdo = app_db();
+    try {
+        $stmt = $pdo->query('SELECT id FROM admin_users ORDER BY id ASC LIMIT 1');
+        $id = $stmt->fetchColumn();
+        if ($id) {
+            $stmt = $pdo->prepare('UPDATE admin_users SET username = :u, password = :p, is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
+            $stmt->execute([
+                ':u' => (string)$username,
+                ':p' => (string)$password,
+                ':id' => (int)$id,
+            ]);
+            return;
+        }
+    } catch (Exception $e) {}
     $stmt = $pdo->prepare('INSERT OR REPLACE INTO admin_account (id, username, password, updated_at) VALUES (1, :u, :p, CURRENT_TIMESTAMP)');
     $stmt->execute([
         ':u' => (string)$username,
@@ -337,11 +375,117 @@ function app_db_set_admin($username, $password)
     ]);
 }
 
+function app_db_migrate_admin_legacy(PDO $pdo)
+{
+    try {
+        $count = (int)$pdo->query('SELECT COUNT(*) FROM admin_users')->fetchColumn();
+    } catch (Exception $e) {
+        $count = 0;
+    }
+    if ($count > 0) {
+        return;
+    }
+
+    $username = '';
+    $password = '';
+    try {
+        $row = $pdo->query('SELECT username, password FROM admin_account WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
+        if (is_array($row)) {
+            $username = (string)($row['username'] ?? '');
+            $password = (string)($row['password'] ?? '');
+        }
+    } catch (Exception $e) {}
+
+    if ($username === '' || $password === '') {
+        return;
+    }
+
+    try {
+        $stmt = $pdo->prepare('INSERT INTO admin_users (username, password, is_active, created_at, updated_at) VALUES (:u, :p, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)');
+        $stmt->execute([':u' => $username, ':p' => $password]);
+    } catch (Exception $e) {}
+}
+
+function app_db_list_admins()
+{
+    $pdo = app_db();
+    try {
+        $stmt = $pdo->query('SELECT id, username, full_name, phone, is_active, created_at, updated_at FROM admin_users ORDER BY id ASC');
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return is_array($rows) ? $rows : [];
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+function app_db_get_admin_by_id($id)
+{
+    $pdo = app_db();
+    $stmt = $pdo->prepare('SELECT id, username, password, full_name, phone, is_active FROM admin_users WHERE id = :id');
+    $stmt->execute([':id' => (int)$id]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return is_array($row) ? $row : [];
+}
+
+function app_db_get_admin_by_username($username)
+{
+    $pdo = app_db();
+    $stmt = $pdo->prepare('SELECT id, username, password, full_name, phone, is_active FROM admin_users WHERE username = :u');
+    $stmt->execute([':u' => (string)$username]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return is_array($row) ? $row : [];
+}
+
+function app_db_create_admin($username, $password, $active = 1, $full_name = '', $phone = '')
+{
+    $pdo = app_db();
+    $stmt = $pdo->prepare('INSERT INTO admin_users (username, password, full_name, phone, is_active, created_at, updated_at) VALUES (:u, :p, :fn, :ph, :a, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)');
+    $stmt->execute([
+        ':u' => (string)$username,
+        ':p' => (string)$password,
+        ':fn' => (string)$full_name,
+        ':ph' => (string)$phone,
+        ':a' => (int)!empty($active),
+    ]);
+    return (int)$pdo->lastInsertId();
+}
+
+function app_db_update_admin($id, $username, $password = null, $active = 1, $full_name = '', $phone = '')
+{
+    $pdo = app_db();
+    if ($password !== null && $password !== '') {
+        $stmt = $pdo->prepare('UPDATE admin_users SET username = :u, password = :p, full_name = :fn, phone = :ph, is_active = :a, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
+        return $stmt->execute([
+            ':u' => (string)$username,
+            ':p' => (string)$password,
+            ':fn' => (string)$full_name,
+            ':ph' => (string)$phone,
+            ':a' => (int)!empty($active),
+            ':id' => (int)$id,
+        ]);
+    }
+    $stmt = $pdo->prepare('UPDATE admin_users SET username = :u, full_name = :fn, phone = :ph, is_active = :a, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
+    return $stmt->execute([
+        ':u' => (string)$username,
+        ':fn' => (string)$full_name,
+        ':ph' => (string)$phone,
+        ':a' => (int)!empty($active),
+        ':id' => (int)$id,
+    ]);
+}
+
+function app_db_delete_admin($id)
+{
+    $pdo = app_db();
+    $stmt = $pdo->prepare('DELETE FROM admin_users WHERE id = :id');
+    return $stmt->execute([':id' => (int)$id]);
+}
+
 function app_db_get_operator()
 {
     $pdo = app_db();
     try {
-        $stmt = $pdo->query('SELECT id, username, password, is_active FROM operator_users ORDER BY id ASC LIMIT 1');
+        $stmt = $pdo->query('SELECT id, username, password, full_name, phone, is_active FROM operator_users ORDER BY id ASC LIMIT 1');
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (is_array($row)) {
             return $row;
@@ -375,7 +519,7 @@ function app_db_list_operators()
 {
     $pdo = app_db();
     try {
-        $stmt = $pdo->query('SELECT id, username, is_active, created_at, updated_at FROM operator_users ORDER BY id ASC');
+        $stmt = $pdo->query('SELECT id, username, full_name, phone, is_active, created_at, updated_at FROM operator_users ORDER BY id ASC');
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         return is_array($rows) ? $rows : [];
     } catch (Exception $e) {
@@ -386,7 +530,7 @@ function app_db_list_operators()
 function app_db_get_operator_by_id($id)
 {
     $pdo = app_db();
-    $stmt = $pdo->prepare('SELECT id, username, password, is_active FROM operator_users WHERE id = :id');
+    $stmt = $pdo->prepare('SELECT id, username, password, full_name, phone, is_active FROM operator_users WHERE id = :id');
     $stmt->execute([':id' => (int)$id]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     return is_array($row) ? $row : [];
@@ -395,39 +539,45 @@ function app_db_get_operator_by_id($id)
 function app_db_get_operator_by_username($username)
 {
     $pdo = app_db();
-    $stmt = $pdo->prepare('SELECT id, username, password, is_active FROM operator_users WHERE username = :u');
+    $stmt = $pdo->prepare('SELECT id, username, password, full_name, phone, is_active FROM operator_users WHERE username = :u');
     $stmt->execute([':u' => (string)$username]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     return is_array($row) ? $row : [];
 }
 
-function app_db_create_operator($username, $password, $active = 1)
+function app_db_create_operator($username, $password, $active = 1, $full_name = '', $phone = '')
 {
     $pdo = app_db();
-    $stmt = $pdo->prepare('INSERT INTO operator_users (username, password, is_active, created_at, updated_at) VALUES (:u, :p, :a, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)');
+    $stmt = $pdo->prepare('INSERT INTO operator_users (username, password, full_name, phone, is_active, created_at, updated_at) VALUES (:u, :p, :fn, :ph, :a, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)');
     $stmt->execute([
         ':u' => (string)$username,
         ':p' => (string)$password,
+        ':fn' => (string)$full_name,
+        ':ph' => (string)$phone,
         ':a' => (int)!empty($active),
     ]);
     return (int)$pdo->lastInsertId();
 }
 
-function app_db_update_operator($id, $username, $password = null, $active = 1)
+function app_db_update_operator($id, $username, $password = null, $active = 1, $full_name = '', $phone = '')
 {
     $pdo = app_db();
     if ($password !== null && $password !== '') {
-        $stmt = $pdo->prepare('UPDATE operator_users SET username = :u, password = :p, is_active = :a, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
+        $stmt = $pdo->prepare('UPDATE operator_users SET username = :u, password = :p, full_name = :fn, phone = :ph, is_active = :a, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
         $stmt->execute([
             ':u' => (string)$username,
             ':p' => (string)$password,
+            ':fn' => (string)$full_name,
+            ':ph' => (string)$phone,
             ':a' => (int)!empty($active),
             ':id' => (int)$id,
         ]);
     } else {
-        $stmt = $pdo->prepare('UPDATE operator_users SET username = :u, is_active = :a, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
+        $stmt = $pdo->prepare('UPDATE operator_users SET username = :u, full_name = :fn, phone = :ph, is_active = :a, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
         $stmt->execute([
             ':u' => (string)$username,
+            ':fn' => (string)$full_name,
+            ':ph' => (string)$phone,
             ':a' => (int)!empty($active),
             ':id' => (int)$id,
         ]);

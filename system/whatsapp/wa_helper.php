@@ -170,6 +170,119 @@ function wa_get_active_recipients($category = '') {
     return $targets;
 }
 
+function wa_upsert_recipient($label, $target, $targetType = 'number')
+{
+    $cfg = wa_get_env_config();
+    $country = trim((string)($cfg['country_code'] ?? '62'));
+    $target = wa_normalize_target_single($target, $country);
+    if ($target === '') return false;
+
+    $dbFile = get_stats_db_path();
+    try {
+        $db = new PDO('sqlite:' . $dbFile);
+        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $db->exec("PRAGMA journal_mode=WAL;");
+        $db->exec("PRAGMA busy_timeout=5000;");
+        $db->exec("CREATE TABLE IF NOT EXISTS whatsapp_recipients (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            label TEXT,
+            target TEXT NOT NULL,
+            target_type TEXT NOT NULL DEFAULT 'number',
+            active INTEGER NOT NULL DEFAULT 1,
+            receive_retur INTEGER NOT NULL DEFAULT 1,
+            receive_report INTEGER NOT NULL DEFAULT 1,
+            receive_ls INTEGER NOT NULL DEFAULT 1,
+            receive_todo INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT,
+            updated_at TEXT
+        )");
+        $cols = $db->query("PRAGMA table_info(whatsapp_recipients)")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $colNames = array_map(function($c){ return $c['name'] ?? ''; }, $cols);
+        if (!in_array('receive_ls', $colNames, true)) {
+            $db->exec("ALTER TABLE whatsapp_recipients ADD COLUMN receive_ls INTEGER NOT NULL DEFAULT 1");
+        }
+        if (!in_array('receive_todo', $colNames, true)) {
+            $db->exec("ALTER TABLE whatsapp_recipients ADD COLUMN receive_todo INTEGER NOT NULL DEFAULT 1");
+        }
+
+        $stmt = $db->prepare("SELECT id FROM whatsapp_recipients WHERE target = :t LIMIT 1");
+        $stmt->execute([':t' => $target]);
+        $id = (int)$stmt->fetchColumn();
+        $now = date('Y-m-d H:i:s');
+        if ($id > 0) {
+            $stmt = $db->prepare("UPDATE whatsapp_recipients SET label = :l, target_type = :tt, active = 1, receive_retur = 0, receive_report = 0, receive_ls = 0, receive_todo = 0, updated_at = :u WHERE id = :id");
+            $stmt->execute([
+                ':l' => (string)$label,
+                ':tt' => (string)$targetType,
+                ':u' => $now,
+                ':id' => $id,
+            ]);
+        } else {
+            $stmt = $db->prepare("INSERT INTO whatsapp_recipients (label, target, target_type, active, receive_retur, receive_report, receive_ls, receive_todo, created_at, updated_at)
+                VALUES (:l, :t, :tt, 1, 0, 0, 0, 0, :c, :u)");
+            $stmt->execute([
+                ':l' => (string)$label,
+                ':t' => (string)$target,
+                ':tt' => (string)$targetType,
+                ':c' => $now,
+                ':u' => $now,
+            ]);
+        }
+        return true;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+function wa_delete_recipient($target = '', $label = '')
+{
+    $cfg = wa_get_env_config();
+    $country = trim((string)($cfg['country_code'] ?? '62'));
+    $target = wa_normalize_target_single($target, $country);
+    $label = trim((string)$label);
+    if ($target === '' && $label === '') return false;
+
+    $dbFile = get_stats_db_path();
+    try {
+        $db = new PDO('sqlite:' . $dbFile);
+        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $db->exec("PRAGMA journal_mode=WAL;");
+        $db->exec("PRAGMA busy_timeout=5000;");
+        $db->exec("CREATE TABLE IF NOT EXISTS whatsapp_recipients (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            label TEXT,
+            target TEXT NOT NULL,
+            target_type TEXT NOT NULL DEFAULT 'number',
+            active INTEGER NOT NULL DEFAULT 1,
+            receive_retur INTEGER NOT NULL DEFAULT 1,
+            receive_report INTEGER NOT NULL DEFAULT 1,
+            receive_ls INTEGER NOT NULL DEFAULT 1,
+            receive_todo INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT,
+            updated_at TEXT
+        )");
+        if ($target !== '') {
+            $stmt = $db->prepare("DELETE FROM whatsapp_recipients WHERE target = :t");
+            $stmt->execute([':t' => $target]);
+        }
+        if ($label !== '') {
+            $stmt = $db->prepare("DELETE FROM whatsapp_recipients WHERE label = :l");
+            $stmt->execute([':l' => $label]);
+        }
+        return true;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+function wa_send_template_message($templateId, array $vars = [], $target = '')
+{
+    $body = wa_get_template_body($templateId);
+    if ($body === '') return ['ok' => false, 'message' => 'Template tidak ditemukan.'];
+    $message = wa_render_template($body, $vars);
+    return wa_send_text($message, $target, '');
+}
+
 function wa_send_text($message, $target = '', $category = '') {
     $cfg = wa_get_env_config();
     $endpoint = trim((string)($cfg['endpoint_send'] ?? 'https://api.fonnte.com/send'));

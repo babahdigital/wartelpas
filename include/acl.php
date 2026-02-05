@@ -41,6 +41,119 @@ function getEnvConfig()
     return $GLOBALS['env_config'];
 }
 
+function get_env_superadmins()
+{
+    $env = getEnvConfig();
+    $auth = $env['auth'] ?? [];
+
+    $entries = [];
+    $singleUser = $auth['superadmin_user'] ?? '';
+    $singlePass = $auth['superadmin_pass'] ?? '';
+    if ($singleUser !== '' || $singlePass !== '') {
+        $entries[] = ['user' => (string)$singleUser, 'pass' => (string)$singlePass];
+    }
+
+    $list = $auth['superadmins'] ?? [];
+    if (is_array($list)) {
+        foreach ($list as $key => $value) {
+            if (is_array($value)) {
+                $u = $value['user'] ?? $value['username'] ?? '';
+                $p = $value['pass'] ?? $value['password'] ?? '';
+                if ($u !== '' || $p !== '') {
+                    $entries[] = ['user' => (string)$u, 'pass' => (string)$p];
+                }
+                continue;
+            }
+            if (is_string($key) && $key !== '') {
+                $entries[] = ['user' => (string)$key, 'pass' => (string)$value];
+            }
+        }
+    }
+
+    return $entries;
+}
+
+function find_env_superadmin($username)
+{
+    $username = (string)$username;
+    if ($username === '') return [];
+    foreach (get_env_superadmins() as $entry) {
+        if (!empty($entry['user']) && $entry['user'] === $username) {
+            return $entry;
+        }
+    }
+    return [];
+}
+
+function verify_env_superadmin($username, $password)
+{
+    $entry = find_env_superadmin($username);
+    if (empty($entry)) return false;
+    return verify_password_compat((string)$password, (string)($entry['pass'] ?? ''));
+}
+
+function normalize_phone_to_62($phone, $countryCode = '62')
+{
+    $phone = trim((string)$phone);
+    if ($phone === '') return '';
+    $digits = preg_replace('/\D+/', '', $phone);
+    if ($digits === '') return '';
+    if ($digits[0] === '0') {
+        $digits = $countryCode . substr($digits, 1);
+    }
+    if ($countryCode !== '' && strpos($digits, $countryCode) !== 0) {
+        $digits = $countryCode . $digits;
+    }
+    return $digits;
+}
+
+function format_phone_display($phone, $countryCode = '62')
+{
+    $phone = trim((string)$phone);
+    if ($phone === '') return '';
+    $digits = preg_replace('/\D+/', '', $phone);
+    if ($digits === '') return '';
+    if ($countryCode !== '' && strpos($digits, $countryCode) === 0) {
+        return '0' . substr($digits, strlen($countryCode));
+    }
+    if ($digits[0] !== '0') {
+        return '0' . $digits;
+    }
+    return $digits;
+}
+
+function format_full_name_title($name)
+{
+    $name = trim((string)$name);
+    if ($name === '') return '';
+    if (function_exists('mb_convert_case')) {
+        return mb_convert_case(mb_strtolower($name, 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
+    }
+    return ucwords(strtolower($name));
+}
+
+function is_valid_simple_username($value)
+{
+    $value = (string)$value;
+    if ($value === '') return false;
+    return preg_match('/^[a-z0-9]+$/', $value) === 1;
+}
+
+function is_valid_phone_length($phone, $min = 10, $max = 13)
+{
+    $digits = preg_replace('/\D+/', '', (string)$phone);
+    $len = strlen($digits);
+    return $len >= (int)$min && $len <= (int)$max;
+}
+
+function is_valid_phone_08($phone, $min = 10, $max = 13)
+{
+    $digits = preg_replace('/\D+/', '', (string)$phone);
+    if ($digits === '') return false;
+    if (!is_valid_phone_length($digits, $min, $max)) return false;
+    return strpos($digits, '08') === 0;
+}
+
 function isMaintenanceEnabled()
 {
     return maintenance_db_get_enabled();
@@ -168,6 +281,18 @@ function update_admin_password_hash($oldStored, $newHash)
 {
     if (!is_string($newHash) || $newHash === '') return false;
     require_once __DIR__ . '/db.php';
+    $source = $_SESSION['mikhmon_admin_source'] ?? '';
+    if ($source === 'env') {
+        return false;
+    }
+    $adminId = (int)($_SESSION['mikhmon_admin_id'] ?? 0);
+    if ($adminId > 0 && function_exists('app_db_update_admin')) {
+        $admin = app_db_get_admin_by_id($adminId);
+        $username = $admin['username'] ?? '';
+        if ($username === '') return false;
+        app_db_update_admin($adminId, $username, $newHash, !empty($admin['is_active']));
+        return true;
+    }
     $admin = app_db_get_admin();
     $username = $admin['username'] ?? '';
     if ($username === '') return false;
