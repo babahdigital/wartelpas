@@ -228,11 +228,6 @@ Require all denied
     Require all granted
 </If>
 
-# Maintenance toggle endpoint (protected)
-<If "%{REQUEST_URI} =~ m#^/other/repair_login_events\.php$#">
-    Require all granted
-</If>
-
 # Clear logs endpoint (protected)
 <If "%{REQUEST_URI} =~ m#^/tools/clear_logs\.php$#">
     Require all granted

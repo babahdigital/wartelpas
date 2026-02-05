@@ -60,8 +60,40 @@ $app_cloud_class = 'text-secondary';
 $app_backup_dir = __DIR__ . '/../db_data/backups_app';
 $app_db_file = function_exists('app_db_path') ? app_db_path() : (__DIR__ . '/../db_data/babahdigital_app.db');
 $app_db_base = pathinfo($app_db_file, PATHINFO_FILENAME);
+$db_sync = null;
+$today = date('Y-m-d');
+$summary_sales_total = 0;
+$summary_sales_count = 0;
+$summary_live_pending = 0;
+$summary_refund_total = 0;
+$summary_kurang_sisa = 0;
+$audit_locked_today = false;
+$settlement_status = '-';
+$settlement_label = '-';
+$last_sync_sales_age = '-';
+$last_sync_live_age = '-';
+$todo_count = 0;
+$todo_kurang_count = 0;
+$todo_refund_count = 0;
+$todo_phone_count = 0;
+$todo_live_stale = 0;
+$todo_live_pending = 0;
+$wa_rec_total = 0;
+$wa_rec_active = 0;
+$wa_rec_retur = 0;
+$wa_rec_report = 0;
+$wa_rec_ls = 0;
+$wa_rec_todo = 0;
+$wa_last_sent = '-';
+$wa_last_status = '-';
+$disk_free_label = '-';
+$disk_total_label = '-';
+$uptime_label = '-';
+$format_rp = function ($num) {
+  return number_format((int)$num, 0, ",", ".");
+};
 if (is_dir($backup_dir)) {
-  $today = date('Ymd');
+  $backup_today = date('Ymd');
   $files = glob($backup_dir . '/' . $db_base . '_*.db') ?: [];
   $latest = '';
   if (!empty($files)) {
@@ -72,7 +104,7 @@ if (is_dir($backup_dir)) {
   }
   $today_files = [];
   foreach ($files as $f) {
-    if (preg_match('/' . preg_quote($db_base, '/') . '_' . $today . '_\d{6}\.db$/', basename($f))) {
+    if (preg_match('/' . preg_quote($db_base, '/') . '_' . $backup_today . '_\d{6}\.db$/', basename($f))) {
       $today_files[] = $f;
     }
   }
@@ -139,16 +171,204 @@ if (is_file($db_file)) {
     if ($last_sync_live === '') $last_sync_live = '-';
     if ($last_sync_sales !== '-') {
       $ts = strtotime($last_sync_sales);
-      if ($ts) $last_sync_sales = date('d-m-Y H:i', $ts);
+      if ($ts) {
+        $last_sync_sales_age = (int)floor((time() - $ts) / 60);
+        $last_sync_sales = date('d-m-Y H:i', $ts);
+      }
     }
     if ($last_sync_live !== '-') {
       $ts = strtotime($last_sync_live);
-      if ($ts) $last_sync_live = date('d-m-Y H:i', $ts);
+      if ($ts) {
+        $last_sync_live_age = (int)floor((time() - $ts) / 60);
+        $last_sync_live = date('d-m-Y H:i', $ts);
+      }
     }
+
+    $stmtSales = $db_sync->prepare("SELECT SUM(COALESCE(price_snapshot, price, 0) * COALESCE(NULLIF(qty,0),1)) AS total, COUNT(1) AS cnt
+      FROM sales_history
+      WHERE (sale_date = :d OR substr(sale_datetime,1,10) = :d)
+        AND COALESCE(is_rusak,0) = 0 AND COALESCE(is_retur,0) = 0 AND COALESCE(is_invalid,0) = 0");
+    $stmtSales->execute([':d' => $today]);
+    $rowSales = $stmtSales->fetch(PDO::FETCH_ASSOC) ?: [];
+    $sales_total = (int)($rowSales['total'] ?? 0);
+    $sales_count = (int)($rowSales['cnt'] ?? 0);
+
+    $stmtPend = $db_sync->prepare("SELECT COUNT(1) AS cnt, SUM(COALESCE(price_snapshot, price, 0) * COALESCE(NULLIF(qty,0),1)) AS total
+      FROM live_sales
+      WHERE sync_status = 'pending'
+        AND (sale_date = :d OR substr(sale_datetime,1,10) = :d)
+        AND COALESCE(is_rusak,0) = 0 AND COALESCE(is_retur,0) = 0 AND COALESCE(is_invalid,0) = 0");
+    $stmtPend->execute([':d' => $today]);
+    $rowPend = $stmtPend->fetch(PDO::FETCH_ASSOC) ?: [];
+    $summary_live_pending = (int)($rowPend['cnt'] ?? 0);
+    $live_total = (int)($rowPend['total'] ?? 0);
+
+    $summary_sales_total = $sales_total + $live_total;
+    $summary_sales_count = $sales_count + $summary_live_pending;
+
+    $stmtRefund = $db_sync->prepare("SELECT SUM(COALESCE(refund_amt,0)) FROM audit_rekap_manual WHERE report_date = :d");
+    $stmtRefund->execute([':d' => $today]);
+    $summary_refund_total = (int)$stmtRefund->fetchColumn();
+
+    $stmtKurang = $db_sync->prepare("SELECT SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg, SUM(COALESCE(kurang_bayar_amt,0)) AS kb
+      FROM audit_rekap_manual WHERE report_date = :d");
+    $stmtKurang->execute([':d' => $today]);
+    $rowKurang = $stmtKurang->fetch(PDO::FETCH_ASSOC) ?: [];
+    $neg = (int)($rowKurang['neg'] ?? 0);
+    $kb = (int)($rowKurang['kb'] ?? 0);
+    $summary_kurang_sisa = max(0, $neg - $kb);
+
+    $stmtLock = $db_sync->prepare("SELECT COUNT(*) FROM audit_rekap_manual WHERE report_date = :d AND COALESCE(is_locked,0) = 1");
+    $stmtLock->execute([':d' => $today]);
+    $audit_locked_today = ((int)$stmtLock->fetchColumn() > 0);
+
+    try {
+      $stmtSet = $db_sync->prepare("SELECT status FROM settlement_log WHERE report_date = :d LIMIT 1");
+      $stmtSet->execute([':d' => $today]);
+      $settlement_status = strtolower((string)$stmtSet->fetchColumn());
+      if ($settlement_status === '') $settlement_status = '-';
+    } catch (Exception $e) {
+      $settlement_status = '-';
+    }
+    $status_map = [
+      'done' => 'Selesai',
+      'running' => 'Berjalan',
+      'failed' => 'Gagal',
+      'queued' => 'Antri',
+      'pending' => 'Belum',
+      '-' => '-'
+    ];
+    $settlement_label = $status_map[$settlement_status] ?? ucfirst($settlement_status);
   } catch (Exception $e) {
     $last_sync_sales = '-';
     $last_sync_live = '-';
+    $last_sync_sales_age = '-';
+    $last_sync_live_age = '-';
   }
+}
+
+$env = [];
+$envFile = __DIR__ . '/../include/env.php';
+if (file_exists($envFile)) {
+  require $envFile;
+}
+require_once __DIR__ . '/../include/todo_helper.php';
+$backupKey = $env['backup']['secret'] ?? '';
+$todo_list = app_collect_todo_items($env, $active_session, $backupKey);
+$todo_count = count($todo_list);
+foreach ($todo_list as $todo) {
+  $tid = (string)($todo['id'] ?? '');
+  if ($tid === 'live_sales_stale') $todo_live_stale++;
+  if ($tid === 'live_pending_after_settle') $todo_live_pending++;
+  if ($tid === 'hp_review') $todo_phone_count++;
+  if (strpos($tid, 'audit_kurang_') === 0) $todo_kurang_count++;
+  if (strpos($tid, 'refund_pending_') === 0) $todo_refund_count++;
+}
+
+try {
+  if ($db_sync) {
+    $cols = $db_sync->query("PRAGMA table_info(whatsapp_recipients)")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $colNames = array_map(function($c){ return $c['name'] ?? ''; }, $cols);
+    if (!empty($colNames)) {
+      $has_retur = in_array('receive_retur', $colNames, true);
+      $has_report = in_array('receive_report', $colNames, true);
+      $has_ls = in_array('receive_ls', $colNames, true);
+      $has_todo = in_array('receive_todo', $colNames, true);
+      $sql = "SELECT COUNT(*) AS total, SUM(CASE WHEN active=1 THEN 1 ELSE 0 END) AS active";
+      if ($has_retur) $sql .= ", SUM(CASE WHEN active=1 AND receive_retur=1 THEN 1 ELSE 0 END) AS rr";
+      if ($has_report) $sql .= ", SUM(CASE WHEN active=1 AND receive_report=1 THEN 1 ELSE 0 END) AS rp";
+      if ($has_ls) $sql .= ", SUM(CASE WHEN active=1 AND receive_ls=1 THEN 1 ELSE 0 END) AS rl";
+      if ($has_todo) $sql .= ", SUM(CASE WHEN active=1 AND receive_todo=1 THEN 1 ELSE 0 END) AS rt";
+      $sql .= " FROM whatsapp_recipients";
+      $row = $db_sync->query($sql)->fetch(PDO::FETCH_ASSOC) ?: [];
+      $wa_rec_total = (int)($row['total'] ?? 0);
+      $wa_rec_active = (int)($row['active'] ?? 0);
+      $wa_rec_retur = (int)($row['rr'] ?? 0);
+      $wa_rec_report = (int)($row['rp'] ?? 0);
+      $wa_rec_ls = (int)($row['rl'] ?? 0);
+      $wa_rec_todo = (int)($row['rt'] ?? 0);
+    }
+
+    $logExists = $db_sync->query("SELECT name FROM sqlite_master WHERE type='table' AND name='whatsapp_logs'")->fetchColumn();
+    if ($logExists) {
+      $row = $db_sync->query("SELECT status, created_at FROM whatsapp_logs ORDER BY id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: [];
+      $wa_last_status = (string)($row['status'] ?? '-');
+      $wa_last_sent = (string)($row['created_at'] ?? '-');
+      if ($wa_last_sent !== '-' && $wa_last_sent !== '') {
+        $ts = strtotime($wa_last_sent);
+        if ($ts) $wa_last_sent = date('d-m-Y H:i', $ts);
+      } else {
+        $wa_last_sent = '-';
+      }
+    }
+  }
+} catch (Exception $e) {
+}
+
+$disk_free = @disk_free_space(__DIR__);
+$disk_total = @disk_total_space(__DIR__);
+if ($disk_free !== false && $disk_total !== false && $disk_total > 0) {
+  $disk_free_label = number_format($disk_free / (1024 * 1024 * 1024), 1, ",", ".") . ' GB';
+  $disk_total_label = number_format($disk_total / (1024 * 1024 * 1024), 1, ",", ".") . ' GB';
+}
+
+$cpu_load_label = '-';
+try {
+  $loads = function_exists('sys_getloadavg') ? @sys_getloadavg() : false;
+  if (is_array($loads) && isset($loads[0])) {
+    $cpu_load_label = number_format((float)$loads[0], 2, ",", ".");
+  }
+} catch (Exception $e) {
+  $cpu_load_label = '-';
+}
+
+$ram_used_label = '-';
+$ram_total_label = '-';
+$ram_used_pct = '-';
+try {
+  if (is_readable('/proc/meminfo')) {
+    $meminfo = @file_get_contents('/proc/meminfo');
+    if ($meminfo !== false) {
+      $mem_total = 0;
+      $mem_avail = 0;
+      foreach (explode("\n", $meminfo) as $line) {
+        if (strpos($line, 'MemTotal:') === 0) {
+          $mem_total = (int)filter_var($line, FILTER_SANITIZE_NUMBER_INT);
+        } elseif (strpos($line, 'MemAvailable:') === 0) {
+          $mem_avail = (int)filter_var($line, FILTER_SANITIZE_NUMBER_INT);
+        }
+      }
+      if ($mem_total > 0) {
+        $used = max(0, $mem_total - $mem_avail);
+        $ram_total_label = number_format($mem_total / (1024 * 1024), 2, ",", ".") . ' GB';
+        $ram_used_label = number_format($used / (1024 * 1024), 2, ",", ".") . ' GB';
+        $ram_used_pct = number_format(($used / $mem_total) * 100, 1, ",", ".") . '%';
+      }
+    }
+  }
+} catch (Exception $e) {
+  $ram_used_label = '-';
+}
+
+$uptime_label = '-';
+try {
+  if (is_readable('/proc/uptime')) {
+    $raw = trim((string)@file_get_contents('/proc/uptime'));
+    $parts = preg_split('/\s+/', $raw);
+    $secs = (int)floor((float)($parts[0] ?? 0));
+    if ($secs > 0) {
+      $days = (int)floor($secs / 86400);
+      $hours = (int)floor(($secs % 86400) / 3600);
+      $mins = (int)floor(($secs % 3600) / 60);
+      $chunks = [];
+      if ($days > 0) $chunks[] = $days . ' hari';
+      if ($hours > 0 || $days > 0) $chunks[] = $hours . ' jam';
+      $chunks[] = $mins . ' menit';
+      $uptime_label = implode(' ', $chunks);
+    }
+  }
+} catch (Exception $e) {
+  $uptime_label = '-';
 }
 
 $cloud_log_file = __DIR__ . '/../logs/backup_db.log';
@@ -191,7 +411,7 @@ if (is_file($cloud_log_file) && is_readable($cloud_log_file)) {
 }
 
 if (is_dir($app_backup_dir)) {
-  $today = date('Ymd');
+  $backup_today = date('Ymd');
   $files = glob($app_backup_dir . '/' . $app_db_base . '_*.db') ?: [];
   $latest = '';
   if (!empty($files)) {
@@ -202,7 +422,7 @@ if (is_dir($app_backup_dir)) {
   }
   $today_files = [];
   foreach ($files as $f) {
-    if (preg_match('/' . preg_quote($app_db_base, '/') . '_' . $today . '_\d{6}\.db$/', basename($f))) {
+    if (preg_match('/' . preg_quote($app_db_base, '/') . '_' . $backup_today . '_\d{6}\.db$/', basename($f))) {
       $today_files[] = $f;
     }
   }
@@ -325,12 +545,13 @@ $has_router = !empty($router_list);
     <div class="card-modern">
       <div class="card-header-modern">
         <h3><i class="fa fa-server text-blue"></i> Daftar Router Tersedia</h3>
-        <span class="badge"><?= $active_count; ?> ACTIVE</span>
+        <span class="badge" style="margin-left: 10px;"><?= $active_count; ?> ACTIVE</span>
         <span class="pointer" title="Muat ulang daftar" onclick="window.location.reload();" style="margin-left:auto; color:var(--text-secondary);">
           <i class="fa fa-refresh"></i>
         </span>
       </div>
       <div class="card-body-modern">
+          <div class="text-secondary" style="font-size:12px; margin-bottom:10px;">Total Router: <strong><?= count($router_list); ?></strong> · Aktif: <strong><?= $active_count; ?></strong></div>
         <?php if (empty($router_list)): ?>
           <div class="admin-empty">Belum ada router.</div>
         <?php else: ?>
@@ -353,70 +574,220 @@ $has_router = !empty($router_list);
         <?php endif; ?>
       </div>
     </div>
-    <?php if (isSuperAdmin() || (isOperator() && (operator_can('backup_only') || operator_can('restore_only')))): ?>
-      <div class="card-modern" style="margin-top: 20px;">
-        <div class="card-header-modern">
-          <h3><i class="fa fa-database text-blue"></i> Backup & Restore</h3>
-        </div>
-        <div class="card-body-modern">
-          <div class="text-secondary" style="font-size:12px; margin-bottom:8px;">Status Terakhir</div>
-          <div style="font-size:16px; font-weight:700;" class="<?= $backup_status_class; ?>">Main DB: <?= htmlspecialchars($backup_status_label); ?> <span class="badge" style="margin-left:6px;"><?= htmlspecialchars($backup_status_badge); ?></span></div>
-          <div style="font-size:11px; color: var(--text-muted); margin:6px 0 10px;">File: <?= htmlspecialchars($backup_status_detail); ?></div>
-          <div style="font-size:16px; font-weight:700;" class="<?= $cloud_backup_class; ?>">Cloud: <?= htmlspecialchars($cloud_backup_label); ?> <span class="badge" style="margin-left:6px;"><?= htmlspecialchars($cloud_backup_badge); ?></span></div>
-          <div style="font-size:11px; color: var(--text-muted); margin:6px 0 14px;">Status: <?= htmlspecialchars($cloud_backup_detail); ?></div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <?php if (isSuperAdmin() || (isOperator() && operator_can('backup_only'))): ?>
-              <button id="db-backup" class="btn-action btn-outline" onclick="runBackupAjax()">
-                <i class="fa fa-database"></i> Backup Sekarang
-              </button>
-            <?php endif; ?>
-            <?php if (isSuperAdmin() || (isOperator() && operator_can('restore_only'))): ?>
-              <button id="db-restore" class="btn-action btn-outline" onclick="runRestoreAjax()">
-                <i class="fa fa-history"></i> Restore
-              </button>
-            <?php endif; ?>
+
+    <div class="card-modern" style="margin-top: 20px;">
+      <div class="card-header-modern">
+        <h3><i class="fa fa-refresh text-blue"></i> Status Sinkronisasi</h3>
+      </div>
+      <div class="card-body-modern">
+        <div class="row">
+          <div class="col-6">
+            <div class="card-modern">
+              <div class="card-body-modern">
+                <div class="text-secondary" style="font-size:12px;">Sinkronisasi Sales</div>
+                <div style="font-size:14px; font-weight:700;"><?= htmlspecialchars($last_sync_sales); ?><?= $last_sync_sales_age !== '-' ? ' · ' . (int)$last_sync_sales_age . ' menit' : ''; ?></div>
+              </div>
+            </div>
           </div>
-          <div style="height:12px;"></div>
-          <div class="text-secondary" style="font-size:12px; margin-bottom:8px;">Konfigurasi (App DB)</div>
-          <div style="font-size:16px; font-weight:700;" class="<?= $app_backup_class; ?>">App DB: <?= htmlspecialchars($app_backup_label); ?> <span class="badge" style="margin-left:6px;"><?= htmlspecialchars($app_backup_badge); ?></span></div>
-          <div style="font-size:11px; color: var(--text-muted); margin:6px 0 10px;">File: <?= htmlspecialchars($app_backup_detail); ?></div>
-          <div style="font-size:16px; font-weight:700;" class="<?= $app_cloud_class; ?>">App Cloud: <?= htmlspecialchars($app_cloud_label); ?> <span class="badge" style="margin-left:6px;"><?= htmlspecialchars($app_cloud_badge); ?></span></div>
-          <div style="font-size:11px; color: var(--text-muted); margin:6px 0 14px;">Status: <?= htmlspecialchars($app_cloud_detail); ?></div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <?php if (isSuperAdmin()): ?>
-              <button id="db-app-backup" class="btn-action btn-outline" onclick="runAppBackupAjax()">
-                <i class="fa fa-database"></i> Backup Konfigurasi
-              </button>
-              <button id="db-app-restore" class="btn-action btn-outline" onclick="runAppRestoreAjax()">
-                <i class="fa fa-history"></i> Restore Konfigurasi
-              </button>
-            <?php endif; ?>
+          <div class="col-6">
+            <div class="card-modern">
+              <div class="card-body-modern">
+                <div class="text-secondary" style="font-size:12px;">Sinkronisasi Live</div>
+                <div style="font-size:14px; font-weight:700;"><?= htmlspecialchars($last_sync_live); ?><?= $last_sync_live_age !== '-' ? ' · ' . (int)$last_sync_live_age . ' menit' : ''; ?></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    <?php endif; ?>
-  </div>
+    </div>
 
-  <div class="col-6">
-    <div class="card-modern">
+    <div class="card-modern" style="margin-top: 20px;">
       <div class="card-header-modern">
-        <h3><i class="fa fa-info-circle text-green"></i> Status Sistem Mikhmon</h3>
+        <h3><i class="fa fa-line-chart text-blue"></i> Ringkasan Hari Ini</h3>
       </div>
       <div class="card-body-modern">
         <div class="row">
           <div class="col-6">
             <div class="card-modern" style="margin-bottom:12px;">
               <div class="card-body-modern">
-                <div class="text-secondary" style="font-size:12px;">Backup Status</div>
-                <div style="font-size:18px; font-weight:700;" class="<?= $backup_status_class; ?>"><?= htmlspecialchars($backup_status_label); ?> <span class="badge"><?= htmlspecialchars($backup_status_badge); ?></span></div>
+                <div class="text-secondary" style="font-size:12px;">Total Penjualan (Realtime)</div>
+                <div style="font-size:18px; font-weight:700;">Rp <?= $format_rp($summary_sales_total); ?></div>
+                <div class="text-secondary" style="font-size:11px; margin-top:6px;">Transaksi (sync + live): <?= (int)$summary_sales_count; ?></div>
               </div>
             </div>
           </div>
           <div class="col-6">
             <div class="card-modern" style="margin-bottom:12px;">
               <div class="card-body-modern">
-                <div class="text-secondary" style="font-size:12px;">Build Date</div>
-                <div style="font-size:18px; font-weight:700;"><?= htmlspecialchars($build_label); ?></div>
+                <div class="text-secondary" style="font-size:12px;">Live Pending</div>
+                <div style="font-size:18px; font-weight:700;"><?= (int)$summary_live_pending; ?></div>
+                <div class="text-secondary" style="font-size:11px; margin-top:6px;">Butuh sync ulang</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="card-modern" style="margin-bottom:12px;">
+              <div class="card-body-modern">
+                <div class="text-secondary" style="font-size:12px;">Refund Total</div>
+                <div style="font-size:18px; font-weight:700;">Rp <?= $format_rp($summary_refund_total); ?></div>
+                <div class="text-secondary" style="font-size:11px; margin-top:6px;">Audit hari ini</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="card-modern" style="margin-bottom:12px;">
+              <div class="card-body-modern">
+                <div class="text-secondary" style="font-size:12px;">Kurang Bayar Sisa</div>
+                <div style="font-size:18px; font-weight:700;">Rp <?= $format_rp($summary_kurang_sisa); ?></div>
+                <div class="text-secondary" style="font-size:11px; margin-top:6px;">Setelah tagih</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="card-modern" style="margin-bottom:12px;">
+              <div class="card-body-modern">
+                <div class="text-secondary" style="font-size:12px;">Audit</div>
+                <div style="font-size:18px; font-weight:700;"><?= $audit_locked_today ? 'Terkunci' : 'Belum'; ?></div>
+                <div class="text-secondary" style="font-size:11px; margin-top:6px;">Status hari ini</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="card-modern" style="margin-bottom:12px;">
+              <div class="card-body-modern">
+                <div class="text-secondary" style="font-size:12px;">Settlement</div>
+                <div style="font-size:18px; font-weight:700;"><?= htmlspecialchars($settlement_label); ?></div>
+                <div class="text-secondary" style="font-size:11px; margin-top:6px;">Status hari ini</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-modern" style="margin-top: 20px; padding-bottom:18px;">
+      <div class="card-header-modern">
+        <h3><i class="fa fa-bell text-yellow"></i> Todo & Alert</h3>
+        <span class="badge"><?= (int)$todo_count; ?></span>
+      </div>
+      <div class="card-body-modern">
+        <div class="row">
+          <div class="col-6">
+            <div class="text-secondary" style="font-size:12px;">Audit Kurang Bayar</div>
+            <div style="font-size:16px; font-weight:700;"><?= (int)$todo_kurang_count; ?> item</div>
+          </div>
+          <div class="col-6">
+            <div class="text-secondary" style="font-size:12px;">Refund Pending</div>
+            <div style="font-size:16px; font-weight:700;"><?= (int)$todo_refund_count; ?> item</div>
+          </div>
+          <div class="col-6" style="margin-top:12px;">
+            <div class="text-secondary" style="font-size:12px;">Handphone Review</div>
+            <div style="font-size:16px; font-weight:700;"><?= (int)$todo_phone_count; ?> item</div>
+          </div>
+          <div class="col-6" style="margin-top:12px;">
+            <div class="text-secondary" style="font-size:12px;">Live Sales Stale</div>
+            <div style="font-size:16px; font-weight:700;"><?= (int)$todo_live_stale; ?> item</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6">
+    <?php if (isSuperAdmin() || (isOperator() && (operator_can('backup_only') || operator_can('restore_only')))): ?>
+      <div class="card-modern">
+        <div class="card-header-modern">
+          <h3><i class="fa fa-database text-blue"></i> Backup & Restore</h3>
+        </div>
+        <div class="card-body-modern">
+          <div class="row">
+            <div class="col-6">
+              <div class="card-modern" style="margin-bottom:12px;">
+                <div class="card-body-modern">
+                  <div class="text-secondary" style="font-size:12px;">Main DB</div>
+                  <div style="font-size:16px; font-weight:700;" class="<?= $backup_status_class; ?>">
+                    <?= htmlspecialchars($backup_status_label); ?> <span class="badge" style="margin-left:6px;"><?= htmlspecialchars($backup_status_badge); ?></span>
+                  </div>
+                  <div style="font-size:12px; margin-top:6px;" class="<?= $cloud_backup_class; ?>">
+                    Cloud: <?= htmlspecialchars($cloud_backup_label); ?> <span class="badge" style="margin-left:6px;"><?= htmlspecialchars($cloud_backup_badge); ?></span>
+                  </div>
+                  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                    <?php if (isSuperAdmin() || (isOperator() && operator_can('backup_only'))): ?>
+                      <button id="db-backup" class="btn-action btn-outline" onclick="runBackupAjax()">
+                        <i class="fa fa-database"></i> Backup
+                      </button>
+                    <?php endif; ?>
+                    <?php if (isSuperAdmin() || (isOperator() && operator_can('restore_only'))): ?>
+                      <button id="db-restore" class="btn-action btn-outline" onclick="runRestoreAjax()">
+                        <i class="fa fa-history"></i> Restore
+                      </button>
+                    <?php endif; ?>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="card-modern" style="margin-bottom:12px;">
+                <div class="card-body-modern">
+                  <div class="text-secondary" style="font-size:12px;">Konfigurasi (App DB)</div>
+                  <div style="font-size:16px; font-weight:700;" class="<?= $app_backup_class; ?>">
+                    <?= htmlspecialchars($app_backup_label); ?> <span class="badge" style="margin-left:6px;"><?= htmlspecialchars($app_backup_badge); ?></span>
+                  </div>
+                  <div style="font-size:12px; margin-top:6px;" class="<?= $app_cloud_class; ?>">
+                    Cloud: <?= htmlspecialchars($app_cloud_label); ?> <span class="badge" style="margin-left:6px;"><?= htmlspecialchars($app_cloud_badge); ?></span>
+                  </div>
+                  <?php if (isSuperAdmin()): ?>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                      <button id="db-app-backup" class="btn-action btn-outline" onclick="runAppBackupAjax()">
+                        <i class="fa fa-database"></i> Backup
+                      </button>
+                      <button id="db-app-restore" class="btn-action btn-outline" onclick="runAppRestoreAjax()">
+                        <i class="fa fa-history"></i> Restore
+                      </button>
+                    </div>
+                  <?php endif; ?>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    <?php endif; ?>
+
+    <?php if (isSuperAdmin()): ?>
+      <div class="card-modern" style="margin-top: 20px;">
+        <div class="card-header-modern">
+          <h3><i class="fa fa-toggle-on text-green"></i> Maintenance Mode</h3>
+        </div>
+        <div class="card-body-modern">
+          <div class="maintenance-switch">
+            <div class="maintenance-status <?= isMaintenanceEnabled() ? 'text-red' : 'text-green'; ?>">
+              <?= isMaintenanceEnabled() ? 'Maintenance' : 'Online'; ?>
+            </div>
+            <form method="post" action="./tools/maintenance_toggle.php" class="maintenance-switch-form" title="Maintenance Mode">
+              <input type="hidden" name="maintenance_state" value="<?= isMaintenanceEnabled() ? '0' : '1'; ?>">
+              <label class="maintenance-toggle">
+                <input type="checkbox" <?= isMaintenanceEnabled() ? 'checked' : ''; ?> onchange="this.form.submit();">
+                <span class="maintenance-slider"></span>
+              </label>
+            </form>
+          </div>
+          <div class="text-secondary" style="font-size:11px; margin-top:6px;">Hanya Super Admin yang dapat mengaktifkan.</div>
+        </div>
+      </div>
+    <?php endif; ?>
+
+    <div class="card-modern" style="margin-top: 20px;">
+      <div class="card-header-modern">
+        <h3><i class="fa fa-info-circle text-green"></i> Status Server</h3>
+      </div>
+      <div class="card-body-modern">
+        <div class="row">
+          <div class="col-6">
+            <div class="card-modern" style="margin-bottom:12px;">
+              <div class="card-body-modern">
+                <div class="text-secondary" style="font-size:12px;">Uptime Server</div>
+                <div style="font-size:18px; font-weight:700;"><?= htmlspecialchars($uptime_label); ?></div>
               </div>
             </div>
           </div>
@@ -436,80 +807,65 @@ $has_router = !empty($router_list);
               </div>
             </div>
           </div>
-          <?php if (isSuperAdmin()): ?>
-            <div class="col-12">
-              <div class="card-modern" style="margin-top:12px;">
-                <div class="card-body-modern">
-                  <div class="text-secondary" style="font-size:12px;">Maintenance Mode</div>
-                  <div class="maintenance-switch">
-                    <div class="maintenance-status <?= isMaintenanceEnabled() ? 'text-red' : 'text-green'; ?>">
-                      <?= isMaintenanceEnabled() ? 'Maintenance' : 'Online'; ?>
-                    </div>
-                    <form method="post" action="./tools/maintenance_toggle.php" class="maintenance-switch-form" title="Maintenance Mode">
-                      <input type="hidden" name="maintenance_state" value="<?= isMaintenanceEnabled() ? '0' : '1'; ?>">
-                      <label class="maintenance-toggle">
-                        <input type="checkbox" <?= isMaintenanceEnabled() ? 'checked' : ''; ?> onchange="this.form.submit();">
-                        <span class="maintenance-slider"></span>
-                      </label>
-                    </form>
-                  </div>
-                  <div class="text-secondary" style="font-size:11px; margin-top:6px;">Hanya Super Admin yang dapat mengaktifkan.</div>
-                </div>
+          <div class="col-6">
+            <div class="card-modern">
+              <div class="card-body-modern">
+                <div class="text-secondary" style="font-size:12px;">CPU Load (1m)</div>
+                <div style="font-size:18px; font-weight:700;"><?= htmlspecialchars($cpu_load_label); ?></div>
               </div>
             </div>
-          <?php endif; ?>
-          <div class="col-12">
-            <div class="card-modern" style="margin-top:12px;">
+          </div>
+          <div class="col-6" style="margin-top:12px;">
+            <div class="card-modern">
               <div class="card-body-modern">
-                <div class="text-secondary" style="font-size:12px;">Last Sync</div>
-                <div style="display:flex; flex-wrap:wrap; gap:12px;">
-                  <div style="font-size:14px; font-weight:700;">Sales: <?= htmlspecialchars($last_sync_sales); ?></div>
-                  <div style="font-size:14px; font-weight:700;">Live: <?= htmlspecialchars($last_sync_live); ?></div>
+                <div class="text-secondary" style="font-size:12px;">RAM Terpakai</div>
+                <div style="font-size:18px; font-weight:700;"><?= htmlspecialchars($ram_used_label); ?></div>
+                <div class="text-secondary" style="font-size:11px; margin-top:6px;">Total: <?= htmlspecialchars($ram_total_label); ?> · <?= htmlspecialchars($ram_used_pct); ?></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-6" style="margin-top:12px;">
+            <div class="card-modern">
+              <div class="card-body-modern">
+                <div class="text-secondary" style="font-size:12px;">Disk Free</div>
+                <div style="font-size:18px; font-weight:700;">
+                  <?= htmlspecialchars($disk_free_label); ?>
                 </div>
+                <div class="text-secondary" style="font-size:11px; margin-top:6px;">Total: <?= htmlspecialchars($disk_total_label); ?></div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-    <?php if (isSuperAdmin()): ?>
-      <?php
-        $log_file = __DIR__ . '/../logs/admin_errors.log';
-        $log_lines = [];
-        if (is_file($log_file) && is_readable($log_file)) {
-          $fp = fopen($log_file, 'r');
-          if ($fp) {
-            $buffer = '';
-            $chunk_size = 8192;
-            fseek($fp, 0, SEEK_END);
-            $pos = ftell($fp);
-            while ($pos > 0 && substr_count($buffer, "\n") < 30) {
-              $seek = max($pos - $chunk_size, 0);
-              $read = $pos - $seek;
-              fseek($fp, $seek);
-              $buffer = fread($fp, $read) . $buffer;
-              $pos = $seek;
-            }
-            fclose($fp);
-            $log_lines = array_filter(explode("\n", trim($buffer)));
-            $log_lines = array_slice($log_lines, -10);
-          }
-        }
-      ?>
-      <div class="card-modern" style="margin-top: 20px;">
-        <div class="card-header-modern">
-          <h3><i class="fa fa-exclamation-triangle text-secondary"></i> Log Admin (Terakhir)</h3>
-          <span class="badge"><?= count($log_lines); ?> baris</span>
-        </div>
-        <div class="card-body-modern">
-          <?php if (empty($log_lines)): ?>
-            <div class="admin-empty">Belum ada error.</div>
-          <?php else: ?>
-            <pre class="script-area" style="height: 220px; margin: 0;"><?php foreach ($log_lines as $line) { echo htmlspecialchars($line) . "\n"; } ?></pre>
-          <?php endif; ?>
+
+    <div class="card-modern" style="margin-top: 20px;">
+      <div class="card-header-modern">
+        <h3><i class="fa fa-whatsapp text-green"></i> WhatsApp</h3>
+      </div>
+      <div class="card-body-modern">
+        <div class="row">
+          <div class="col-6">
+            <div class="text-secondary" style="font-size:12px;">Recipient Aktif</div>
+            <div style="font-size:16px; font-weight:700;"><?= (int)$wa_rec_active; ?> / <?= (int)$wa_rec_total; ?></div>
+          </div>
+          <div class="col-6">
+            <div class="text-secondary" style="font-size:12px;">Last Send</div>
+            <div style="font-size:16px; font-weight:700;"><?= htmlspecialchars($wa_last_sent); ?></div>
+            <div class="text-secondary" style="font-size:11px; margin-top:6px;">Status: <?= htmlspecialchars($wa_last_status); ?></div>
+          </div>
+          <div class="col-12" style="margin-top:12px;">
+            <div class="text-secondary" style="font-size:12px;">Kategori Aktif</div>
+            <div style="display:flex; flex-wrap:wrap; gap:12px; font-size:13px; font-weight:600;">
+              <div>Retur: <?= (int)$wa_rec_retur; ?></div>
+              <div>Report: <?= (int)$wa_rec_report; ?></div>
+              <div>L/S: <?= (int)$wa_rec_ls; ?></div>
+              <div>Todo: <?= (int)$wa_rec_todo; ?></div>
+            </div>
+          </div>
         </div>
       </div>
-    <?php endif; ?>
+    </div>
   </div>
 </div>
 
