@@ -324,14 +324,14 @@ function vip_whitelist_render_form($status, $error, $ips, $ip_names, $htaccessPa
 
             <?php if ($status): ?>
                 <div class="m-alert m-alert-info" data-auto-close="1" style="margin-bottom:12px; position:relative;">
-                    <i class="fa fa-check-circle"></i>
+                    <i class="fa fa-check-circle" style="font-size: 16px !important;"></i>
                     <div><?= htmlspecialchars($status) ?></div>
                     <button type="button" aria-label="Close" onclick="this.parentElement.style.display='none';" style="position:absolute; right:10px; top:8px; background:transparent; border:none; color:inherit; font-size:16px; cursor:pointer;">×</button>
                 </div>
             <?php endif; ?>
             <?php if ($error): ?>
                 <div class="m-alert m-alert-danger" data-auto-close="1" style="margin-bottom:12px; position:relative;">
-                    <i class="fa fa-exclamation-triangle"></i>
+                    <i class="fa fa-exclamation-triangle" style="font-size: 16px !important;"></i>
                     <div><?= htmlspecialchars($error) ?></div>
                     <button type="button" aria-label="Close" onclick="this.parentElement.style.display='none';" style="position:absolute; right:10px; top:8px; background:transparent; border:none; color:inherit; font-size:16px; cursor:pointer;">×</button>
                 </div>
