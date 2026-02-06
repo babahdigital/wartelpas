@@ -535,6 +535,18 @@
                 </div>
             <?php endif; ?>
         </div>
+        <?php if ($req_show === 'harian' && !empty($audit_rows) && isset($audit_expected_setoran_calc_total) && $audit_expected_setoran_calc_total > 0): ?>
+            <?php
+                $audit_expected_diff = (int)$audit_expected_setoran_calc_total - (int)$audit_expected_setoran_adj_total;
+            ?>
+            <?php if ($audit_expected_diff !== 0): ?>
+                <div style="margin-top:10px;background:#2b2b2b;border:1px solid #555;border-left:5px solid #f39c12;padding:10px 12px;border-radius:6px;color:#f3c969;">
+                    <i class="fa fa-exclamation-triangle"></i>
+                    Target Sistem audit berbeda dengan hitung transaksi. DB: Rp <?= number_format((int)$audit_expected_setoran_adj_total,0,',','.') ?> | Hitung: Rp <?= number_format((int)$audit_expected_setoran_calc_total,0,',','.') ?> | Selisih: Rp <?= number_format((int)$audit_expected_diff,0,',','.') ?>.
+                    Kemungkinan data terhapus/kurang sinkron. Jalankan Rebuild Target Sistem.
+                </div>
+            <?php endif; ?>
+        <?php endif; ?>
         <?php if (!empty($audit_ghost_hint)): ?>
             <div style="margin-top:8px;color:#fca5a5;">
                 Indikasi Anomali: <b><?= htmlspecialchars($audit_ghost_hint) ?></b>

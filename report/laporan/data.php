@@ -1475,6 +1475,7 @@ if ($req_show === 'harian' && isset($db) && $db instanceof PDO) {
         $stmtAudit->execute([':d' => $filter_date]);
         $audit_rows = $stmtAudit->fetchAll(PDO::FETCH_ASSOC);
         $rows_src = [];
+        $audit_expected_setoran_calc_total = 0;
         if (function_exists('fetch_rows_for_audit')) {
             try {
                 $rows_src = fetch_rows_for_audit($db, $filter_date);
@@ -1497,7 +1498,9 @@ if ($req_show === 'harian' && isset($db) && $db instanceof PDO) {
             [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($ar);
             if (!empty($rows_src) && function_exists('calc_expected_for_block') && function_exists('normalize_block_name')) {
                 $expected = calc_expected_for_block($rows_src, $filter_date, normalize_block_name($ar['blok_name'] ?? ''));
-                $expected_adj_setoran = (int)($expected['net'] ?? $expected_adj_setoran);
+                $expected_calc = (int)($expected['net'] ?? $expected_adj_setoran);
+                $expected_adj_setoran = $expected_calc;
+                $audit_expected_setoran_calc_total += $expected_calc;
             }
             $audit_expected_setoran_adj_total += (int)$expected_adj_setoran;
             $audit_selisih_setoran_adj_total += (int)$manual_setoran - (int)$expected_adj_setoran - $refund_amt + $kurang_bayar_amt;
