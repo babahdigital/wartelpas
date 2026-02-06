@@ -183,6 +183,10 @@ try {
     $ip_names = [];
 }
 
+if (empty($ips) && !empty($ip_names)) {
+    $ips = array_keys($ip_names);
+}
+
 // Handle POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $add_ip = trim((string)($_POST['add_ip'] ?? ''));
