@@ -17,6 +17,8 @@ if (!isSuperAdmin()) {
 
 $htaccessPath = dirname(__DIR__) . '/.htaccess';
 $is_embed = isset($_GET['embed']) && $_GET['embed'] === '1';
+$vip_whitelist_no_render = isset($vip_whitelist_no_render) ? (bool)$vip_whitelist_no_render : false;
+$vip_whitelist_action = isset($vip_whitelist_action) ? (string)$vip_whitelist_action : '';
 $status = '';
 $error = '';
 $ips = [];
@@ -188,7 +190,7 @@ if (empty($ips) && !empty($ip_names)) {
 }
 
 // Handle POST
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vip_whitelist'])) {
     $add_ip = trim((string)($_POST['add_ip'] ?? ''));
     $add_name = trim((string)($_POST['add_name'] ?? ''));
     $keep_ips = $_POST['keep_ips'] ?? [];
@@ -285,6 +287,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+function vip_whitelist_render_form($status, $error, $ips, $ip_names, $htaccessPath, $action = '') {
+        $action = (string)$action;
+        $action_attr = $action !== '' ? (' action="' . htmlspecialchars($action) . '"') : '';
+        ?>
+        <div class="vip-shell">
+            <div class="card-modern" style="margin-bottom:16px;">
+                <div class="card-header-modern" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <div class="vip-title"><i class="fa fa-shield"></i> VIP Whitelist Generator (.htaccess)</div>
+                        <div class="vip-meta">File: <?= htmlspecialchars($htaccessPath) ?></div>
+                    </div>
+                </div>
+                <div class="card-body-modern">
+                    <?php if ($status): ?>
+                        <div class="alert alert-success" style="margin-bottom:12px;"><?= htmlspecialchars($status) ?></div>
+                    <?php endif; ?>
+                    <?php if ($error): ?>
+                        <div class="alert alert-danger" style="margin-bottom:12px;"><?= htmlspecialchars($error) ?></div>
+                    <?php endif; ?>
+
+                    <form method="post"<?= $action_attr; ?>>
+                        <input type="hidden" name="vip_whitelist" value="1">
+                        <div class="vip-grid" style="margin-bottom:12px;">
+                            <div class="form-group-modern">
+                                <label class="form-label">Nama</label>
+                                <input type="text" name="add_name" class="m-pass-input" placeholder="Nama pemilik" required>
+                            </div>
+                            <div class="form-group-modern">
+                                <label class="form-label">IP</label>
+                                <input type="text" name="add_ip" class="m-pass-input" placeholder="Contoh: 10.10.0.6" required>
+                            </div>
+                        </div>
+                        <div style="margin-bottom:16px;">
+                            <button type="submit" class="btn-action"><i class="fa fa-save"></i> Simpan & Terapkan</button>
+                        </div>
+
+                        <div class="form-group-modern">
+                            <label class="form-label">Daftar IP VIP (aktif)</label>
+                            <?php if (empty($ips)): ?>
+                                <div class="admin-empty" style="padding:10px;">Belum ada IP VIP.</div>
+                            <?php else: ?>
+                                <div style="overflow:auto;">
+                                    <table class="table table-sm vip-table">
+                                        <thead>
+                                            <tr>
+                                                <th>IP</th>
+                                                <th>Nama</th>
+                                                <th style="width:80px;">Hapus</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($ips as $ip): ?>
+                                                <tr>
+                                                    <td class="ip-cell">
+                                                        <?= htmlspecialchars($ip) ?>
+                                                        <input type="hidden" name="keep_ips[]" value="<?= htmlspecialchars($ip) ?>">
+                                                    </td>
+                                                    <td>
+                                                        <input type="text" name="keep_name[<?= htmlspecialchars($ip) ?>]" class="m-pass-input" value="<?= htmlspecialchars($ip_names[$ip] ?? '') ?>" required>
+                                                    </td>
+                                                    <td style="text-align:center;">
+                                                        <input type="checkbox" name="remove_ips[]" value="<?= htmlspecialchars($ip) ?>">
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            <?php endif; ?>
+                            <div class="vip-note" style="margin-top:8px;">Centang kolom hapus untuk mengeluarkan IP. Backup otomatis tersimpan di .htaccess.bak</div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <?php
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -307,76 +387,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body>
-    <div class="vip-shell">
-        <div class="card-modern" style="margin-bottom:16px;">
-            <div class="card-header-modern" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-                <div>
-                    <div class="vip-title"><i class="fa fa-shield"></i> VIP Whitelist Generator (.htaccess)</div>
-                    <div class="vip-meta">File: <?= htmlspecialchars($htaccessPath) ?></div>
-                </div>
-            </div>
-            <div class="card-body-modern">
-
-                <?php if ($status): ?>
-                    <div class="alert alert-success" style="margin-bottom:12px;"><?= htmlspecialchars($status) ?></div>
-                <?php endif; ?>
-                <?php if ($error): ?>
-                    <div class="alert alert-danger" style="margin-bottom:12px;"><?= htmlspecialchars($error) ?></div>
-                <?php endif; ?>
-
-                <form method="post">
-                    <div class="vip-grid" style="margin-bottom:12px;">
-                        <div class="form-group-modern">
-                            <label class="form-label">Nama</label>
-                            <input type="text" name="add_name" class="m-pass-input" placeholder="Nama pemilik" required>
-                        </div>
-                        <div class="form-group-modern">
-                            <label class="form-label">IP</label>
-                            <input type="text" name="add_ip" class="m-pass-input" placeholder="Contoh: 10.10.0.6" required>
-                        </div>
-                    </div>
-                    <div style="margin-bottom:16px;">
-                        <button type="submit" class="btn-action"><i class="fa fa-save"></i> Simpan & Terapkan</button>
-                    </div>
-
-                    <div class="form-group-modern">
-                        <label class="form-label">Daftar IP VIP (aktif)</label>
-                        <?php if (empty($ips)): ?>
-                            <div class="admin-empty" style="padding:10px;">Belum ada IP VIP.</div>
-                        <?php else: ?>
-                            <div style="overflow:auto;">
-                                <table class="table table-sm vip-table">
-                                    <thead>
-                                        <tr>
-                                            <th>IP</th>
-                                            <th>Nama</th>
-                                            <th style="width:80px;">Hapus</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($ips as $ip): ?>
-                                            <tr>
-                                                <td class="ip-cell">
-                                                    <?= htmlspecialchars($ip) ?>
-                                                    <input type="hidden" name="keep_ips[]" value="<?= htmlspecialchars($ip) ?>">
-                                                </td>
-                                                <td>
-                                                    <input type="text" name="keep_name[<?= htmlspecialchars($ip) ?>]" class="m-pass-input" value="<?= htmlspecialchars($ip_names[$ip] ?? '') ?>" required>
-                                                </td>
-                                                <td style="text-align:center;">
-                                                    <input type="checkbox" name="remove_ips[]" value="<?= htmlspecialchars($ip) ?>">
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        <?php endif; ?>
-                        <div class="vip-note" style="margin-top:8px;">Centang kolom hapus untuk mengeluarkan IP. Backup otomatis tersimpan di .htaccess.bak</div>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+    <?php if (!$vip_whitelist_no_render): ?>
+        <?php vip_whitelist_render_form($status, $error, $ips, $ip_names, $htaccessPath, $vip_whitelist_action); ?>
+    <?php endif; ?>
 </body>
 </html>

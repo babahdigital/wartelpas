@@ -7,6 +7,20 @@ requireLogin('../admin.php?id=login');
 require_once __DIR__ . '/../include/db.php';
 app_db_import_legacy_if_needed();
 
+$vip_popup_html = '';
+$vip_popup_autoshow = false;
+if (isSuperAdmin()) {
+    $vip_whitelist_no_render = true;
+    $vip_whitelist_action = './admin.php?id=' . htmlspecialchars($id ?: 'sessions');
+    ob_start();
+    include __DIR__ . '/../tools/htaccess_vip.php';
+    if (function_exists('vip_whitelist_render_form')) {
+        vip_whitelist_render_form($status ?? '', $error ?? '', $ips ?? [], $ip_names ?? [], $htaccessPath ?? '', $vip_whitelist_action);
+        $vip_popup_autoshow = (!empty($status) || !empty($error) || (!empty($_POST['vip_whitelist'])));
+    }
+    $vip_popup_html = ob_get_clean();
+}
+
 $active_tab = 'sessions';
 if ($id === 'settings') {
     $active_tab = 'settings';
@@ -70,7 +84,7 @@ $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-
                     <i class="fa fa-home"></i> Halaman Utama
                 </a>
                 <?php if (isSuperAdmin()): ?>
-                    <button type="button" class="btn-action btn-outline" style="font-size: 11px; padding: 6px 10px;" onclick="openVipWhitelist()">
+                    <button type="button" class="btn-action btn-outline" style="font-size: 11px; padding: 6px 10px;" onclick="openVipWhitelistPopup()">
                         <i class="fa fa-shield"></i> Whitelist IP
                     </button>
                 <?php endif; ?>
@@ -138,23 +152,24 @@ $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-
 </div>
 
 <?php if (isSuperAdmin()): ?>
-<div id="vipWhitelistModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.7); z-index:9999;">
-    <div style="position:absolute; inset:6% 6%; background:#0f172a; border:1px solid rgba(148,163,184,0.3); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.35); display:flex; flex-direction:column; overflow:hidden;">
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#111827; border-bottom:1px solid #1f2937;">
-            <div style="font-weight:700; color:#e5e7eb;"><i class="fa fa-shield"></i> Whitelist IP</div>
-            <button type="button" class="btn-action btn-outline" style="font-size:11px; padding:4px 10px;" onclick="closeVipWhitelist()">Tutup</button>
-        </div>
-        <iframe id="vipWhitelistFrame" src="./tools/htaccess_vip.php?embed=1" style="border:0; width:100%; height:100%; background:#0f172a;"></iframe>
-    </div>
-</div>
 <script>
-function openVipWhitelist(){
-    var modal = document.getElementById('vipWhitelistModal');
-    if (modal) { modal.style.display = 'block'; document.body.style.overflow = 'hidden'; }
+function openVipWhitelistPopup(){
+    if (!window.MikhmonPopup) return;
+    var html = <?= json_encode($vip_popup_html, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+    window.MikhmonPopup.open({
+        title: 'Whitelist IP',
+        iconClass: 'fa fa-shield',
+        statusIcon: 'fa fa-shield',
+        statusColor: '#3b82f6',
+        cardClass: 'is-large',
+        messageHtml: html,
+        buttons: [
+            { label: 'Tutup', className: 'm-btn m-btn-cancel' }
+        ]
+    });
 }
-function closeVipWhitelist(){
-    var modal = document.getElementById('vipWhitelistModal');
-    if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
-}
+<?php if ($vip_popup_autoshow): ?>
+setTimeout(openVipWhitelistPopup, 150);
+<?php endif; ?>
 </script>
 <?php endif; ?>
