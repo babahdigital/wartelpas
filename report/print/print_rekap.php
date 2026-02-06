@@ -930,7 +930,11 @@ $has_kurang_bayar = $total_audit_kurang_bayar > 0;
             .toolbar { display:none; } 
             .audit-summary-box { page-break-inside: avoid; }
             .dul-gap { margin-top: 25% !important; }
-            body { zoom: 0.9; }
+            body {
+                transform: scale(0.6);
+                transform-origin: top left;
+                width: 166.6667%;
+            }
         }
     </style>
 </head>
