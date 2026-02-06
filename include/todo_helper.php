@@ -524,6 +524,65 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 }
             }
 
+            // Target sistem kosong (expected_setoran=0) tapi ada setoran
+            try {
+                $stmtZero = $db_sync->prepare("SELECT report_date, blok_name FROM audit_rekap_manual WHERE report_date = :d AND COALESCE(expected_setoran,0)=0 AND COALESCE(actual_setoran,0)>0");
+                $stmtZero->execute([':d' => $today]);
+                $rowsZero = $stmtZero->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                if (!empty($rowsZero)) {
+                    $parts = [];
+                    foreach ($rowsZero as $zr) {
+                        $parts[] = $format_block_label($zr['blok_name'] ?? '');
+                    }
+                    $parts = array_values(array_unique(array_filter($parts)));
+                    $blok_list = !empty($parts) ? (' Blok: ' . implode(', ', $parts) . '.') : '';
+                    $todo_list[] = [
+                        'id' => 'audit_target_zero_' . $today,
+                        'title' => 'Target sistem audit kosong',
+                        'desc' => 'Ada target sistem 0 namun ada setoran pada audit tanggal ' . $today_label . '.' . $blok_list . ' Jalankan Rebuild Target Sistem.',
+                        'level' => 'warn',
+                        'action_label' => 'Buka Audit ' . $today_label,
+                        'action_url' => './?report=audit_session&session=' . urlencode($session) . '&show=harian&date=' . urlencode($today),
+                        'action_target' => '_self'
+                    ];
+                }
+            } catch (Exception $e) {
+            }
+
+            try {
+                $stmtZeroOther = $db_sync->query("SELECT report_date, GROUP_CONCAT(DISTINCT blok_name) AS blocks FROM audit_rekap_manual WHERE COALESCE(expected_setoran,0)=0 AND COALESCE(actual_setoran,0)>0 GROUP BY report_date ORDER BY report_date DESC LIMIT 10");
+                $zeroRows = $stmtZeroOther ? $stmtZeroOther->fetchAll(PDO::FETCH_ASSOC) : [];
+            } catch (Exception $e) {
+                $zeroRows = [];
+            }
+            foreach ($zeroRows as $zr) {
+                $rdate = (string)($zr['report_date'] ?? '');
+                if ($rdate === '' || $rdate === $today) continue;
+                $rlabel = $format_ddmmyyyy($rdate);
+                $blok_list = '';
+                $raw_blocks = (string)($zr['blocks'] ?? '');
+                if ($raw_blocks !== '') {
+                    $raw_parts = array_map('trim', explode(',', $raw_blocks));
+                    $parts = [];
+                    foreach ($raw_parts as $bp) {
+                        $parts[] = $format_block_label($bp);
+                    }
+                    $parts = array_values(array_unique(array_filter($parts)));
+                    if (!empty($parts)) {
+                        $blok_list = ' Blok: ' . implode(', ', $parts) . '.';
+                    }
+                }
+                $todo_list[] = [
+                    'id' => 'audit_target_zero_' . $rdate,
+                    'title' => 'Target sistem audit kosong',
+                    'desc' => 'Ada target sistem 0 namun ada setoran pada audit tanggal ' . $rlabel . '.' . $blok_list . ' Jalankan Rebuild Target Sistem.',
+                    'level' => 'warn',
+                    'action_label' => 'Buka Audit ' . $rlabel,
+                    'action_url' => './?report=audit_session&session=' . urlencode($session) . '&show=harian&date=' . urlencode($rdate),
+                    'action_target' => '_self'
+                ];
+            }
+
             // Piutang tanggal lain
             try {
                 $stmtKb = $db_sync->query("SELECT report_date, SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg, SUM(COALESCE(kurang_bayar_amt,0)) AS kb
