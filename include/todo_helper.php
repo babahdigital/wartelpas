@@ -343,6 +343,29 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 }
             }
 
+            // Cek target sistem audit vs perhitungan transaksi
+            if ($audit_t_count > 0 && function_exists('calc_expected_for_block') && function_exists('normalize_block_name')) {
+                try {
+                    $rows_src = $get_rows_src($today);
+                    if (!empty($rows_src)) {
+                        $stmtExpChk = $db_sync->prepare("SELECT blok_name, expected_setoran FROM audit_rekap_manual WHERE report_date = :d");
+                        $stmtExpChk->execute([':d' => $today]);
+                        foreach ($stmtExpChk->fetchAll(PDO::FETCH_ASSOC) as $ar) {
+                            $blok = normalize_block_name($ar['blok_name'] ?? '');
+                            if ($blok === '') continue;
+                            $expected = calc_expected_for_block($rows_src, $today, $blok);
+                            $exp_net = (int)($expected['net'] ?? 0);
+                            $exp_db = (int)($ar['expected_setoran'] ?? 0);
+                            if ($exp_net !== $exp_db) {
+                                $audit_rebuild_needed = true;
+                                break;
+                            }
+                        }
+                    }
+                } catch (Exception $e) {
+                }
+            }
+
             $audit_locked_today = false;
             try {
                 $stmtLock = $db_sync->prepare("SELECT COUNT(*) FROM audit_rekap_manual WHERE report_date = :d AND COALESCE(is_locked,0) = 1");
