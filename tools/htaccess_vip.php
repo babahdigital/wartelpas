@@ -351,7 +351,7 @@ function vip_whitelist_render_form($status, $error, $ips, $ip_names, $htaccessPa
                     </div>
                 </div>
                 <div style="margin-top:12px;">
-                    <button type="submit" class="m-btn m-btn-success"><i class="fa fa-save"></i> Simpan & Terapkan</button>
+                    <button type="submit" class="m-btn m-btn-success" style="font-size: 14px !important;"><i class="fa fa-save"></i> Simpan & Terapkan</button>
                 </div>
 
                 <div class="m-pass-divider" style="margin-top:14px;"></div>
