@@ -310,10 +310,18 @@ function vip_whitelist_render_form($status, $error, $ips, $ip_names, $htaccessPa
                 <input type="hidden" name="edit_ip_old" id="vip-edit-old" value="">
 
             <?php if ($status): ?>
-                <div class="m-alert m-alert-info" style="margin-bottom:12px;"><i class="fa fa-check-circle"></i> <?= htmlspecialchars($status) ?></div>
+                <div class="m-alert m-alert-info" data-auto-close="1" style="margin-bottom:12px; position:relative;">
+                    <i class="fa fa-check-circle"></i>
+                    <div><?= htmlspecialchars($status) ?></div>
+                    <button type="button" aria-label="Close" onclick="this.parentElement.style.display='none';" style="position:absolute; right:10px; top:8px; background:transparent; border:none; color:inherit; font-size:16px; cursor:pointer;">×</button>
+                </div>
             <?php endif; ?>
             <?php if ($error): ?>
-                <div class="m-alert m-alert-danger" style="margin-bottom:12px;"><i class="fa fa-exclamation-triangle"></i> <?= htmlspecialchars($error) ?></div>
+                <div class="m-alert m-alert-danger" data-auto-close="1" style="margin-bottom:12px; position:relative;">
+                    <i class="fa fa-exclamation-triangle"></i>
+                    <div><?= htmlspecialchars($error) ?></div>
+                    <button type="button" aria-label="Close" onclick="this.parentElement.style.display='none';" style="position:absolute; right:10px; top:8px; background:transparent; border:none; color:inherit; font-size:16px; cursor:pointer;">×</button>
+                </div>
             <?php endif; ?>
 
             <form method="post"<?= $action_attr; ?> id="vip-whitelist-form">
@@ -359,6 +367,15 @@ function vip_whitelist_render_form($status, $error, $ips, $ip_names, $htaccessPa
 
                 <div class="vip-note" style="margin-top:8px;">Klik ikon edit untuk mengubah nama/IP. Klik ikon hapus untuk mengeluarkan IP. Backup otomatis tersimpan di .htaccess.bak</div>
             </form>
+            <script>
+            (function(){
+                var alerts = document.querySelectorAll('.m-popup-backdrop.show [data-auto-close="1"]');
+                if (!alerts || !alerts.length) return;
+                setTimeout(function(){
+                    alerts.forEach(function(el){ if (el && el.style.display !== 'none') el.style.display = 'none'; });
+                }, 3000);
+            })();
+            </script>
         </div>
         <?php
 }
