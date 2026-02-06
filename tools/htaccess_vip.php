@@ -350,7 +350,7 @@ function vip_whitelist_render_form($status, $error, $ips, $ip_names, $htaccessPa
                         <input type="text" name="add_ip" id="vip-add-ip" class="m-pass-input" placeholder="Contoh: 10.10.0.6" required>
                     </div>
                 </div>
-                <div style="margin-top:12px;">
+                <div style="margin-top:12px; text-align: left;">
                     <button type="submit" class="m-btn m-btn-success"><i class="fa fa-save" style="font-size: 14px !important;"></i> Simpan & Terapkan</button>
                 </div>
 
