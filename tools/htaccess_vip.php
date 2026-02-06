@@ -8,15 +8,18 @@ if (!isset($_SESSION["mikhmon"])) {
 }
 
 require_once __DIR__ . '/../include/acl.php';
+require_once __DIR__ . '/../include/db.php';
 if (!isSuperAdmin()) {
     echo "<div style='padding:14px;font-family:Arial;'>Akses ditolak.</div>";
     exit;
 }
 
 $htaccessPath = dirname(__DIR__) . '/.htaccess';
+$is_embed = isset($_GET['embed']) && $_GET['embed'] === '1';
 $status = '';
 $error = '';
 $ips = [];
+$ip_names = [];
 
 function normalize_ip_list($raw) {
     $raw = str_replace(["\r", "\n"], ' ', (string)$raw);
@@ -26,6 +29,26 @@ function normalize_ip_list($raw) {
         $p = trim($p);
         if ($p === '') continue;
         $out[] = $p;
+    }
+    return $out;
+}
+
+function parse_named_ip_lines($raw) {
+    $lines = preg_split('/\r?\n/', (string)$raw);
+    $out = [];
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '') continue;
+        if (strpos($line, '|') !== false) {
+            [$ip, $name] = array_map('trim', explode('|', $line, 2));
+            if ($ip !== '') $out[] = ['ip' => $ip, 'name' => $name];
+            continue;
+        }
+        $parts = preg_split('/[\s,;]+/', $line, -1, PREG_SPLIT_NO_EMPTY);
+        foreach ($parts as $ip) {
+            $ip = trim($ip);
+            if ($ip !== '') $out[] = ['ip' => $ip, 'name' => ''];
+        }
     }
     return $out;
 }
@@ -150,13 +173,43 @@ if (is_file($htaccessPath)) {
     }
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $add = normalize_ip_list($_POST['add_ips'] ?? '');
-    $keep = normalize_ip_list($_POST['keep_ips'] ?? '');
-    $final = [];
-    foreach (array_merge($keep, $add) as $ip) {
+try {
+    $pdo = app_db();
+    $pdo->exec("CREATE TABLE IF NOT EXISTS vip_whitelist (
+        ip TEXT PRIMARY KEY,
+        name TEXT,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )");
+    $stmt = $pdo->query("SELECT ip, name FROM vip_whitelist");
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $ip = (string)($row['ip'] ?? '');
         if ($ip === '') continue;
-        $final[$ip] = true;
+        $ip_names[$ip] = (string)($row['name'] ?? '');
+    }
+} catch (Exception $e) {
+    $ip_names = [];
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $add_lines = parse_named_ip_lines($_POST['add_ips'] ?? '');
+    $keep_ips = $_POST['keep_ips'] ?? [];
+    $keep_names = $_POST['keep_name'] ?? [];
+    $remove_ips = $_POST['remove_ips'] ?? [];
+    if (!is_array($keep_ips)) $keep_ips = [];
+    if (!is_array($keep_names)) $keep_names = [];
+    if (!is_array($remove_ips)) $remove_ips = [];
+
+    $final = [];
+    foreach ($keep_ips as $ip) {
+        $ip = trim((string)$ip);
+        if ($ip === '' || in_array($ip, $remove_ips, true)) continue;
+        $final[$ip] = trim((string)($keep_names[$ip] ?? ''));
+    }
+    foreach ($add_lines as $row) {
+        $ip = trim((string)($row['ip'] ?? ''));
+        if ($ip === '') continue;
+        $name = trim((string)($row['name'] ?? ''));
+        $final[$ip] = $name;
     }
     $ips = array_keys($final);
 
@@ -174,6 +227,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $updated = replace_requireany_blocks($updated, $ips);
             if (file_put_contents($htaccessPath, $updated) !== false) {
                 $status = 'Whitelist VIP diperbarui.';
+                try {
+                    $pdo = app_db();
+                    $pdo->exec("CREATE TABLE IF NOT EXISTS vip_whitelist (
+                        ip TEXT PRIMARY KEY,
+                        name TEXT,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    )");
+                    $pdo->beginTransaction();
+                    $stmtUp = $pdo->prepare("INSERT INTO vip_whitelist (ip, name, updated_at) VALUES (:ip, :name, CURRENT_TIMESTAMP)
+                        ON CONFLICT(ip) DO UPDATE SET name=excluded.name, updated_at=CURRENT_TIMESTAMP");
+                    foreach ($final as $ip => $name) {
+                        $stmtUp->execute([':ip' => $ip, ':name' => $name]);
+                    }
+                    if (!empty($final)) {
+                        $placeholders = implode(',', array_fill(0, count($final), '?'));
+                        $stmtDel = $pdo->prepare("DELETE FROM vip_whitelist WHERE ip NOT IN ($placeholders)");
+                        $stmtDel->execute(array_keys($final));
+                    } else {
+                        $pdo->exec("DELETE FROM vip_whitelist");
+                    }
+                    $pdo->commit();
+                } catch (Exception $e) {
+                }
             } else {
                 $error = 'Gagal menyimpan .htaccess.';
             }
@@ -187,20 +263,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta charset="UTF-8">
   <title>VIP Whitelist Generator</title>
   <style>
-    body { font-family: Arial, Helvetica, sans-serif; background:#0f172a; color:#e5e7eb; padding:20px; }
-    .card { background:#111827; border:1px solid #1f2937; border-radius:10px; padding:16px; max-width:900px; margin:0 auto; }
+        body { font-family: Arial, Helvetica, sans-serif; background:<?= $is_embed ? 'transparent' : '#0f172a' ?>; color:#e5e7eb; padding:<?= $is_embed ? '0' : '20px' ?>; }
+        .card { background:#111827; border:1px solid #1f2937; border-radius:10px; padding:16px; max-width:<?= $is_embed ? '100%' : '900px' ?>; margin:<?= $is_embed ? '0' : '0 auto' ?>; }
     .title { font-size:18px; font-weight:700; margin-bottom:10px; }
     .meta { font-size:12px; color:#9ca3af; margin-bottom:12px; }
     .ok { background:#14532d; color:#bbf7d0; padding:8px 10px; border-radius:6px; margin-bottom:10px; }
     .err { background:#7f1d1d; color:#fecaca; padding:8px 10px; border-radius:6px; margin-bottom:10px; }
     .row { display:flex; gap:12px; flex-wrap:wrap; }
     .col { flex:1 1 260px; }
-    textarea, input[type=text] { width:100%; background:#0b1220; color:#e5e7eb; border:1px solid #1f2937; border-radius:8px; padding:10px; }
+        textarea, input[type=text] { width:100%; background:#0b1220; color:#e5e7eb; border:1px solid #1f2937; border-radius:8px; padding:10px; }
     .btn { padding:10px 14px; border:0; border-radius:6px; background:#22c55e; color:#fff; cursor:pointer; font-weight:600; }
     .btn:disabled { opacity:0.6; cursor:not-allowed; }
     .list { margin:0; padding-left:18px; font-size:13px; }
     .note { font-size:12px; color:#cbd5e1; margin-top:8px; }
     label { font-size:12px; color:#cbd5db; display:block; margin-bottom:6px; }
+        table { width:100%; border-collapse: collapse; font-size:13px; }
+        th, td { border-bottom:1px solid #1f2937; padding:8px 6px; text-align:left; }
+        th { color:#9ca3af; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
+        .ip-cell { font-family: monospace; }
   </style>
 </head>
 <body>
@@ -216,22 +296,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endif; ?>
 
     <form method="post">
-      <div class="row">
-        <div class="col">
-          <label>Daftar IP VIP (aktif)</label>
-          <textarea name="keep_ips" rows="8" placeholder="Satu IP per baris"><?php echo htmlspecialchars(implode("\n", $ips)); ?></textarea>
-          <div class="note">IP di sini akan dipertahankan.</div>
-        </div>
-        <div class="col">
-          <label>Tambah IP baru</label>
-          <textarea name="add_ips" rows="8" placeholder="Pisahkan dengan koma/spasi/baris baru"></textarea>
-          <div class="note">Contoh: 10.10.0.6, 172.16.8.21</div>
-        </div>
-      </div>
-      <div style="margin-top:12px;">
-        <button type="submit" class="btn">Simpan & Terapkan</button>
-      </div>
-    </form>
+            <div class="row">
+                <div class="col" style="flex:1 1 520px;">
+                    <label>Daftar IP VIP (aktif)</label>
+                    <?php if (empty($ips)): ?>
+                        <div class="note">Belum ada IP VIP.</div>
+                    <?php else: ?>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>IP</th>
+                                    <th>Nama</th>
+                                    <th>Hapus</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($ips as $ip): ?>
+                                    <tr>
+                                        <td class="ip-cell">
+                                            <?= htmlspecialchars($ip) ?>
+                                            <input type="hidden" name="keep_ips[]" value="<?= htmlspecialchars($ip) ?>">
+                                        </td>
+                                        <td>
+                                            <input type="text" name="keep_name[<?= htmlspecialchars($ip) ?>]" value="<?= htmlspecialchars($ip_names[$ip] ?? '') ?>" placeholder="Nama pemilik">
+                                        </td>
+                                        <td style="text-align:center;">
+                                            <input type="checkbox" name="remove_ips[]" value="<?= htmlspecialchars($ip) ?>">
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php endif; ?>
+                    <div class="note">Centang kolom hapus untuk mengeluarkan IP.</div>
+                </div>
+                <div class="col">
+                    <label>Tambah IP baru</label>
+                    <textarea name="add_ips" rows="8" placeholder="Format: IP | Nama (opsional)
+Contoh:
+10.10.0.6 | Pak Andi
+172.16.8.21"></textarea>
+                    <div class="note">Pisahkan per baris. Nama boleh kosong.</div>
+                </div>
+            </div>
+            <div style="margin-top:12px;">
+                <button type="submit" class="btn">Simpan & Terapkan</button>
+            </div>
+        </form>
 
     <div class="note">Catatan: backup otomatis tersimpan di .htaccess.bak</div>
   </div>

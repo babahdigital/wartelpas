@@ -70,9 +70,9 @@ $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-
                     <i class="fa fa-home"></i> Halaman Utama
                 </a>
                 <?php if (isSuperAdmin()): ?>
-                    <a class="btn-action btn-outline" style="font-size: 11px; padding: 6px 10px;" data-no-ajax="1" href="./tools/htaccess_vip.php" target="_blank" rel="noopener">
+                    <button type="button" class="btn-action btn-outline" style="font-size: 11px; padding: 6px 10px;" onclick="openVipWhitelist()">
                         <i class="fa fa-shield"></i> Whitelist IP
-                    </a>
+                    </button>
                 <?php endif; ?>
             </div>
 
@@ -136,3 +136,25 @@ $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-
         </div>
     </div>
 </div>
+
+<?php if (isSuperAdmin()): ?>
+<div id="vipWhitelistModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.7); z-index:9999;">
+    <div style="position:absolute; inset:6% 6%; background:#0f172a; border:1px solid rgba(148,163,184,0.3); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.35); display:flex; flex-direction:column; overflow:hidden;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#111827; border-bottom:1px solid #1f2937;">
+            <div style="font-weight:700; color:#e5e7eb;"><i class="fa fa-shield"></i> Whitelist IP</div>
+            <button type="button" class="btn-action btn-outline" style="font-size:11px; padding:4px 10px;" onclick="closeVipWhitelist()">Tutup</button>
+        </div>
+        <iframe id="vipWhitelistFrame" src="./tools/htaccess_vip.php?embed=1" style="border:0; width:100%; height:100%; background:#0f172a;"></iframe>
+    </div>
+</div>
+<script>
+function openVipWhitelist(){
+    var modal = document.getElementById('vipWhitelistModal');
+    if (modal) { modal.style.display = 'block'; document.body.style.overflow = 'hidden'; }
+}
+function closeVipWhitelist(){
+    var modal = document.getElementById('vipWhitelistModal');
+    if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+}
+</script>
+<?php endif; ?>
