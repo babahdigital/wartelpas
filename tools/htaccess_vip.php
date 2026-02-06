@@ -33,24 +33,10 @@ function normalize_ip_list($raw) {
     return $out;
 }
 
-function parse_named_ip_lines($raw) {
-    $lines = preg_split('/\r?\n/', (string)$raw);
-    $out = [];
-    foreach ($lines as $line) {
-        $line = trim($line);
-        if ($line === '') continue;
-        if (strpos($line, '|') !== false) {
-            [$ip, $name] = array_map('trim', explode('|', $line, 2));
-            if ($ip !== '') $out[] = ['ip' => $ip, 'name' => $name];
-            continue;
-        }
-        $parts = preg_split('/[\s,;]+/', $line, -1, PREG_SPLIT_NO_EMPTY);
-        foreach ($parts as $ip) {
-            $ip = trim($ip);
-            if ($ip !== '') $out[] = ['ip' => $ip, 'name' => ''];
-        }
-    }
-    return $out;
+function is_valid_ip($ip) {
+    $ip = trim((string)$ip);
+    if ($ip === '') return false;
+    return filter_var($ip, FILTER_VALIDATE_IP) !== false;
 }
 
 function extract_vip_ips($content) {
@@ -191,7 +177,8 @@ try {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $add_lines = parse_named_ip_lines($_POST['add_ips'] ?? '');
+    $add_ip = trim((string)($_POST['add_ip'] ?? ''));
+    $add_name = trim((string)($_POST['add_name'] ?? ''));
     $keep_ips = $_POST['keep_ips'] ?? [];
     $keep_names = $_POST['keep_name'] ?? [];
     $remove_ips = $_POST['remove_ips'] ?? [];
@@ -203,17 +190,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach ($keep_ips as $ip) {
         $ip = trim((string)$ip);
         if ($ip === '' || in_array($ip, $remove_ips, true)) continue;
+        if (!is_valid_ip($ip)) continue;
         $final[$ip] = trim((string)($keep_names[$ip] ?? ''));
     }
-    foreach ($add_lines as $row) {
-        $ip = trim((string)($row['ip'] ?? ''));
-        if ($ip === '') continue;
-        $name = trim((string)($row['name'] ?? ''));
-        $final[$ip] = $name;
+    if ($add_ip !== '') {
+        if (!is_valid_ip($add_ip)) {
+            $error = 'IP tidak valid. Gunakan format IPv4/IPv6 yang benar.';
+        } else {
+            $final[$add_ip] = $add_name;
+        }
     }
     $ips = array_keys($final);
 
-    if (!is_file($htaccessPath) || !is_readable($htaccessPath) || !is_writable($htaccessPath)) {
+    if ($error !== '') {
+        // skip update
+    } elseif (!is_file($htaccessPath) || !is_readable($htaccessPath) || !is_writable($htaccessPath)) {
         $error = 'File .htaccess tidak dapat dibaca/ditulis.';
     } else {
         $content = file_get_contents($htaccessPath);
@@ -297,50 +288,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <form method="post">
             <div class="row">
-                <div class="col" style="flex:1 1 520px;">
-                    <label>Daftar IP VIP (aktif)</label>
-                    <?php if (empty($ips)): ?>
-                        <div class="note">Belum ada IP VIP.</div>
-                    <?php else: ?>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>IP</th>
-                                    <th>Nama</th>
-                                    <th>Hapus</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($ips as $ip): ?>
-                                    <tr>
-                                        <td class="ip-cell">
-                                            <?= htmlspecialchars($ip) ?>
-                                            <input type="hidden" name="keep_ips[]" value="<?= htmlspecialchars($ip) ?>">
-                                        </td>
-                                        <td>
-                                            <input type="text" name="keep_name[<?= htmlspecialchars($ip) ?>]" value="<?= htmlspecialchars($ip_names[$ip] ?? '') ?>" placeholder="Nama pemilik">
-                                        </td>
-                                        <td style="text-align:center;">
-                                            <input type="checkbox" name="remove_ips[]" value="<?= htmlspecialchars($ip) ?>">
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    <?php endif; ?>
-                    <div class="note">Centang kolom hapus untuk mengeluarkan IP.</div>
+                <div class="col">
+                    <label>Nama</label>
+                    <input type="text" name="add_name" placeholder="Nama pemilik (opsional)">
+                    <div class="note">Contoh: Pak Andi</div>
                 </div>
                 <div class="col">
-                    <label>Tambah IP baru</label>
-                    <textarea name="add_ips" rows="8" placeholder="Format: IP | Nama (opsional)
-Contoh:
-10.10.0.6 | Pak Andi
-172.16.8.21"></textarea>
-                    <div class="note">Pisahkan per baris. Nama boleh kosong.</div>
+                    <label>IP</label>
+                    <input type="text" name="add_ip" placeholder="Contoh: 10.10.0.6" required>
+                    <div class="note">Format IPv4/IPv6.</div>
                 </div>
             </div>
             <div style="margin-top:12px;">
                 <button type="submit" class="btn">Simpan & Terapkan</button>
+            </div>
+
+            <div style="margin-top:16px;">
+                <label>Daftar IP VIP (aktif)</label>
+                <?php if (empty($ips)): ?>
+                    <div class="note">Belum ada IP VIP.</div>
+                <?php else: ?>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>IP</th>
+                                <th>Nama</th>
+                                <th>Hapus</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($ips as $ip): ?>
+                                <tr>
+                                    <td class="ip-cell">
+                                        <?= htmlspecialchars($ip) ?>
+                                        <input type="hidden" name="keep_ips[]" value="<?= htmlspecialchars($ip) ?>">
+                                    </td>
+                                    <td>
+                                        <input type="text" name="keep_name[<?= htmlspecialchars($ip) ?>]" value="<?= htmlspecialchars($ip_names[$ip] ?? '') ?>" placeholder="Nama pemilik">
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <input type="checkbox" name="remove_ips[]" value="<?= htmlspecialchars($ip) ?>">
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+                <div class="note">Centang kolom hapus untuk mengeluarkan IP.</div>
             </div>
         </form>
 
