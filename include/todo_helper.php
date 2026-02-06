@@ -62,12 +62,13 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 $val = (string)$stmt->fetchColumn();
                 return $val !== '';
             };
-            $todo_ack_url = function ($key) use ($session, $todo_next, $can_todo_ack) {
+            $todo_ack_url = function ($key, $dateOverride = null) use ($session, $todo_next, $can_todo_ack) {
                 if (!$can_todo_ack) return '';
+                $ack_date = $dateOverride ?: date('Y-m-d');
                 $qs = http_build_query([
                     'session' => $session,
                     'key' => $key,
-                    'date' => date('Y-m-d'),
+                    'date' => $ack_date,
                     'next' => $todo_next
                 ]);
                 return './tools/todo_ack.php?' . $qs;
@@ -399,7 +400,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                     $neg = (int)($rowSel['neg'] ?? 0);
                     $kb = (int)($rowSel['kb'] ?? 0);
                     $remain = $neg - $kb;
-                    if ($remain > 0) {
+                    if ($remain > 0 && !$todo_is_ack('audit_kurang', $yesterday)) {
                         $abs = number_format($remain, 0, ",", ".");
                         $blok_list = '';
                         try {
@@ -429,10 +430,10 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                         $todo_list[] = [
                             'id' => 'audit_kurang_' . $yesterday,
                             'title' => 'Audit piutang (Kemarin)',
-                            'desc' => 'Terdapat kekurangan Rp ' . $abs . ' pada audit tanggal ' . $yesterday_label . '.' . $blok_list,
+                            'desc' => 'Terdapat kekurangan Rp ' . $abs . ' pada audit tanggal ' . $yesterday_label . '.' . $blok_list . ' Jika sudah ditagih, klik "Sesuai".',
                             'level' => 'danger',
-                            'action_label' => 'Buka Tanggal ' . $yesterday_label,
-                            'action_url' => './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($yesterday),
+                            'action_label' => 'Sesuai',
+                            'action_url' => $todo_ack_url('audit_kurang', $yesterday),
                             'action_target' => '_self'
                         ];
                     }
@@ -476,7 +477,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                             'desc' => 'Total pengeluaran hari ini 0. Jika memang tidak ada pengeluaran, klik "Sesuai".',
                             'level' => 'info',
                             'action_label' => 'Sesuai',
-                            'action_url' => $todo_ack_url('audit_expense_zero'),
+                            'action_url' => $todo_ack_url('audit_expense_zero', $today),
                             'action_target' => '_self'
                         ];
                     }
@@ -491,7 +492,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                     $negT = (int)($rowSelT['neg'] ?? 0);
                     $kbT = (int)($rowSelT['kb'] ?? 0);
                     $remainT = $negT - $kbT;
-                    if ($remainT > 0) {
+                    if ($remainT > 0 && !$todo_is_ack('audit_kurang', $today)) {
                         $absT = number_format($remainT, 0, ",", ".");
                         $blok_list = '';
                         try {
@@ -521,10 +522,10 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                         $todo_list[] = [
                             'id' => 'audit_kurang_' . $today,
                             'title' => 'Audit piutang (Hari Ini)',
-                            'desc' => 'Terdapat kekurangan Rp ' . $absT . ' pada audit tanggal ' . $today_label . '.' . $blok_list,
+                            'desc' => 'Terdapat kekurangan Rp ' . $absT . ' pada audit tanggal ' . $today_label . '.' . $blok_list . ' Jika sudah ditagih, klik "Sesuai".',
                             'level' => 'danger',
-                            'action_label' => 'Buka Tanggal ' . $today_label,
-                            'action_url' => $today_report_url,
+                            'action_label' => 'Sesuai',
+                            'action_url' => $todo_ack_url('audit_kurang', $today),
                             'action_target' => '_self'
                         ];
                     }
@@ -647,7 +648,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 $negV = (int)($kr['neg'] ?? 0);
                 $kbV = (int)($kr['kb'] ?? 0);
                 $remainV = $negV - $kbV;
-                if ($remainV <= 0) continue;
+                if ($remainV <= 0 || $todo_is_ack('audit_kurang', $rdate)) continue;
                 $parts = ['piutang Rp ' . number_format($remainV, 0, ",", ".")];
                 $blok_list = '';
                 try {
@@ -679,10 +680,10 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 $todo_list[] = [
                     'id' => 'audit_kurang_' . $rdate,
                     'title' => 'Audit piutang',
-                    'desc' => $desc,
+                    'desc' => $desc . ' Jika sudah ditagih, klik "Sesuai".',
                     'level' => 'danger',
-                    'action_label' => 'Buka Tanggal ' . $rlabel,
-                    'action_url' => './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($rdate),
+                    'action_label' => 'Sesuai',
+                    'action_url' => $todo_ack_url('audit_kurang', $rdate),
                     'action_target' => '_self'
                 ];
             }
