@@ -1,5 +1,10 @@
 <?php
 
+$helpersFile = __DIR__ . '/../report/laporan/helpers.php';
+if (file_exists($helpersFile)) {
+    require_once $helpersFile;
+}
+
 function app_collect_todo_items(array $env, $session = '', $backupKey = '')
 {
     $todo_list = [];
@@ -72,6 +77,121 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                     'next' => $todo_next
                 ]);
                 return './tools/todo_ack.php?' . $qs;
+            };
+
+            $profile_price_map = $env['pricing']['profile_prices'] ?? [];
+            $rows_src_cache = [];
+            $audit_rows_cache = [];
+
+            $get_rows_src = function ($date) use ($db_sync, &$rows_src_cache) {
+                if (isset($rows_src_cache[$date])) return $rows_src_cache[$date];
+                if (function_exists('fetch_rows_for_audit')) {
+                    $rows_src_cache[$date] = fetch_rows_for_audit($db_sync, $date);
+                } else {
+                    $rows_src_cache[$date] = [];
+                }
+                return $rows_src_cache[$date];
+            };
+
+            $get_audit_rows = function ($date) use ($db_sync, &$audit_rows_cache) {
+                if (isset($audit_rows_cache[$date])) return $audit_rows_cache[$date];
+                try {
+                    $stmt = $db_sync->prepare("SELECT report_date, blok_name, expected_setoran, actual_setoran, reported_qty, refund_amt, refund_desc, kurang_bayar_amt, kurang_bayar_desc, user_evidence FROM audit_rekap_manual WHERE report_date = :d");
+                    $stmt->execute([':d' => $date]);
+                    $audit_rows_cache[$date] = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                } catch (Exception $e) {
+                    $audit_rows_cache[$date] = [];
+                }
+                return $audit_rows_cache[$date];
+            };
+
+            $is_paid_desc = function ($desc) {
+                $desc = strtolower(trim((string)$desc));
+                if ($desc === '') return false;
+                return (strpos($desc, 'sudah dibayar') !== false
+                    || strpos($desc, 'lunas') !== false
+                    || strpos($desc, 'terbayar') !== false);
+            };
+
+            $calc_effective_selisih = function ($ar, $audit_date) use ($get_rows_src, $profile_price_map) {
+                $expected_setoran = (int)($ar['expected_setoran'] ?? 0);
+                $rows_src = $get_rows_src($audit_date);
+                if (!empty($rows_src) && function_exists('calc_expected_for_block') && function_exists('normalize_block_name')) {
+                    $expected = calc_expected_for_block($rows_src, $audit_date, normalize_block_name($ar['blok_name'] ?? ''));
+                    $expected_setoran = (int)($expected['net'] ?? $expected_setoran);
+                }
+
+                $actual_setoran = function_exists('normalize_actual_setoran')
+                    ? normalize_actual_setoran($ar)
+                    : (int)($ar['actual_setoran'] ?? 0);
+
+                $manual_display_qty = 0;
+                $manual_display_setoran = 0;
+                $has_manual_evidence = false;
+                $manual_setoran_override = false;
+                $profile_qty_map = [];
+                $status_count_map = [];
+
+                if (!empty($ar['user_evidence'])) {
+                    $evidence = json_decode((string)$ar['user_evidence'], true);
+                    if (is_array($evidence)) {
+                        $has_manual_evidence = true;
+                        $manual_setoran_override = !empty($evidence['manual_setoran']);
+                        if (!empty($evidence['profile_qty']) && is_array($evidence['profile_qty'])) {
+                            $raw_map = $evidence['profile_qty'];
+                            if (isset($raw_map['qty_10']) || isset($raw_map['qty_30'])) {
+                                $profile_qty_map['10menit'] = (int)($raw_map['qty_10'] ?? 0);
+                                $profile_qty_map['30menit'] = (int)($raw_map['qty_30'] ?? 0);
+                            } else {
+                                foreach ($raw_map as $k => $v) {
+                                    $key = strtolower(trim((string)$k));
+                                    if ($key === '') continue;
+                                    $profile_qty_map[$key] = (int)$v;
+                                }
+                            }
+                        }
+                        if (!empty($evidence['users']) && is_array($evidence['users'])) {
+                            foreach ($evidence['users'] as $ud) {
+                                $status = strtolower((string)($ud['last_status'] ?? ''));
+                                $kind = strtolower((string)($ud['profile_key'] ?? $ud['profile_kind'] ?? ''));
+                                if ($kind !== '' && preg_match('/^(\d+)$/', $kind, $m)) {
+                                    $kind = $m[1] . 'menit';
+                                }
+                                if ($kind === '') $kind = '10menit';
+                                if (!isset($status_count_map[$kind])) {
+                                    $status_count_map[$kind] = ['invalid' => 0, 'retur' => 0, 'rusak' => 0];
+                                }
+                                if ($status === 'invalid') $status_count_map[$kind]['invalid']++;
+                                elseif ($status === 'rusak') $status_count_map[$kind]['rusak']++;
+                            }
+                        }
+                    }
+                }
+
+                if ($has_manual_evidence) {
+                    foreach ($profile_qty_map as $k => $qty) {
+                        $qty = (int)$qty;
+                        $manual_display_qty += $qty;
+                        $counts = $status_count_map[$k] ?? ['invalid' => 0, 'retur' => 0, 'rusak' => 0];
+                        $money_qty = max(0, $qty - (int)$counts['rusak'] - (int)$counts['invalid']);
+                        $price_val = isset($profile_price_map[$k]) ? (int)$profile_price_map[$k] : (int)resolve_price_from_profile($k);
+                        $manual_display_setoran += ($money_qty * $price_val);
+                    }
+                    if ($manual_setoran_override || ($actual_setoran > 0 && $actual_setoran !== $manual_display_setoran)) {
+                        $manual_display_setoran = $actual_setoran;
+                    }
+                    if ($manual_display_qty === 0) {
+                        $manual_display_setoran = $actual_setoran;
+                    }
+                } else {
+                    $manual_display_setoran = $actual_setoran;
+                }
+
+                $selisih_raw = $manual_display_setoran - $expected_setoran;
+                $refund_amt = (int)($ar['refund_amt'] ?? 0);
+                $kurang_bayar_amt = (int)($ar['kurang_bayar_amt'] ?? 0);
+                $selisih_adj = $selisih_raw - $refund_amt + $kurang_bayar_amt;
+                return [$selisih_raw, $selisih_adj];
             };
 
             $settle_status_pre = '';
