@@ -143,6 +143,7 @@ $audit_manual_summary = [
   'total_refund' => 0,
   'total_kurang_bayar' => 0,
 ];
+$audit_expense_notes = [];
 $audit_refund_notes = [];
 $audit_kurang_bayar_notes = [];
 $daily_note_audit = '';
@@ -459,12 +460,22 @@ if (file_exists($dbFile)) {
             $audit_manual_summary['manual_setoran'] += (int)$manual_setoran;
             $audit_manual_summary['expected_setoran'] += (int)$expected_setoran;
             $audit_manual_summary['total_expenses'] += (int)$expense_amt;
+            $expense_desc = trim((string)($ar['expenses_desc'] ?? ''));
             $refund_amt = (int)($ar['refund_amt'] ?? 0);
             $refund_desc = trim((string)($ar['refund_desc'] ?? ''));
             $kurang_bayar_amt = (int)($ar['kurang_bayar_amt'] ?? 0);
             $kurang_bayar_desc = trim((string)($ar['kurang_bayar_desc'] ?? ''));
             $audit_manual_summary['total_refund'] += $refund_amt;
             $audit_manual_summary['total_kurang_bayar'] += $kurang_bayar_amt;
+
+            if ($expense_amt > 0) {
+              $blok_name = trim((string)($ar['blok_name'] ?? ''));
+              $audit_expense_notes[] = [
+                'blok' => $blok_name !== '' ? $blok_name : 'Tanpa Blok',
+                'expense_amt' => (int)$expense_amt,
+                'expense_desc' => $expense_desc,
+              ];
+            }
 
             if ($refund_amt > 0) {
               $blok_name = trim((string)($ar['blok_name'] ?? ''));
@@ -774,6 +785,25 @@ $file_title = trim($file_title, '-_');
                     (<?= htmlspecialchars($rn['refund_desc']) ?>)
                   <?php endif; ?>
                   — Selisih Rp <?= number_format((int)$rn['selisih_adj'],0,',','.') ?>
+                </li>
+              <?php endforeach; ?>
+            </ul>
+          </div>
+        <?php endif; ?>
+      </div>
+    <?php endif; ?>
+    <?php if (!empty($audit_manual_summary['total_expenses'])): ?>
+      <div style="margin-top:8px; padding:8px; border:1px solid #e5e7eb; background:#f8fafc; font-size:11px; color:#475569;">
+        <strong>Catatan Pengeluaran:</strong> Total pengeluaran tercatat Rp <?= number_format($audit_manual_summary['total_expenses'],0,',','.') ?>.
+        <?php if (!empty($audit_expense_notes)): ?>
+          <div style="margin-top:6px;">
+            <ul style="margin:6px 0 0 16px; padding:0;">
+              <?php foreach ($audit_expense_notes as $en): ?>
+                <li>
+                  Blok <?= htmlspecialchars((string)$en['blok']) ?>: Rp <?= number_format((int)$en['expense_amt'],0,',','.') ?>
+                  <?php if (!empty($en['expense_desc'])): ?>
+                    (<?= htmlspecialchars($en['expense_desc']) ?>)
+                  <?php endif; ?>
                 </li>
               <?php endforeach; ?>
             </ul>
