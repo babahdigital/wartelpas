@@ -458,10 +458,8 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                     $expRow = $stmtExp->fetch(PDO::FETCH_ASSOC) ?: [];
                     $expTotal = (int)($expRow['total'] ?? 0);
                     $expMissing = (int)($expRow['missing'] ?? 0);
-                    if ($expMissing > 0 || $expTotal <= 0) {
-                        $desc = $expMissing > 0
-                            ? 'Masih ada ' . $expMissing . ' data audit tanpa pengeluaran. Jika tidak ada pengeluaran, isi 0 di audit manual.'
-                            : 'Total pengeluaran hari ini masih 0. Jika tidak ada pengeluaran, pastikan isi 0 di audit manual.';
+                    if ($expMissing > 0) {
+                        $desc = 'Masih ada ' . $expMissing . ' data audit tanpa pengeluaran. Jika tidak ada pengeluaran, isi 0 di audit manual.';
                         $todo_list[] = [
                             'id' => 'audit_expense_missing_' . $today,
                             'title' => 'Pengeluaran audit belum diisi',
@@ -469,6 +467,16 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                             'level' => 'warn',
                             'action_label' => 'Buka Audit Hari Ini',
                             'action_url' => $today_report_url,
+                            'action_target' => '_self'
+                        ];
+                    } elseif ($expTotal <= 0 && $is_after_audit && !$todo_is_ack('audit_expense_zero', $today)) {
+                        $todo_list[] = [
+                            'id' => 'audit_expense_zero_' . $today,
+                            'title' => 'Pengeluaran harian (konfirmasi)',
+                            'desc' => 'Total pengeluaran hari ini 0. Jika memang tidak ada pengeluaran, klik "Sesuai".',
+                            'level' => 'info',
+                            'action_label' => 'Sesuai',
+                            'action_url' => $todo_ack_url('audit_expense_zero'),
                             'action_target' => '_self'
                         ];
                     }
@@ -517,6 +525,44 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                             'level' => 'danger',
                             'action_label' => 'Buka Tanggal ' . $today_label,
                             'action_url' => $today_report_url,
+                            'action_target' => '_self'
+                        ];
+                    }
+                } catch (Exception $e) {
+                }
+            }
+
+            // Refund hari ini
+            if ($audit_t_count > 0) {
+                try {
+                    $stmtRefT = $db_sync->prepare("SELECT SUM(COALESCE(refund_amt,0)) AS total FROM audit_rekap_manual WHERE report_date = :d");
+                    $stmtRefT->execute([':d' => $today]);
+                    $refT = (int)($stmtRefT->fetchColumn() ?: 0);
+                    if ($refT > 0) {
+                        $blok_list = '';
+                        try {
+                            $stmtRefB = $db_sync->prepare("SELECT blok_name, SUM(COALESCE(refund_amt,0)) AS total FROM audit_rekap_manual WHERE report_date = :d GROUP BY blok_name HAVING total > 0 ORDER BY blok_name ASC LIMIT 10");
+                            $stmtRefB->execute([':d' => $today]);
+                            $rows = $stmtRefB->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                            $parts = [];
+                            foreach ($rows as $br) {
+                                $bname = $format_block_label($br['blok_name'] ?? '');
+                                $btotal = (int)($br['total'] ?? 0);
+                                if ($btotal <= 0) continue;
+                                $parts[] = $bname . ' (refund ' . number_format($btotal, 0, ",", ".") . ')';
+                            }
+                            if (!empty($parts)) {
+                                $blok_list = ' ' . implode(', ', $parts) . '.';
+                            }
+                        } catch (Exception $e) {
+                        }
+                        $todo_list[] = [
+                            'id' => 'refund_pending_' . $today,
+                            'title' => 'Refund pending (Hari Ini)',
+                            'desc' => 'Terdapat refund Rp ' . number_format($refT, 0, ",", ".") . ' pada audit tanggal ' . $today_label . '.' . $blok_list,
+                            'level' => 'warn',
+                            'action_label' => 'Buka Audit ' . $today_label,
+                            'action_url' => './?report=audit_session&session=' . urlencode($session) . '&show=harian&date=' . urlencode($today),
                             'action_target' => '_self'
                         ];
                     }
@@ -637,6 +683,47 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                     'level' => 'danger',
                     'action_label' => 'Buka Tanggal ' . $rlabel,
                     'action_url' => './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($rdate),
+                    'action_target' => '_self'
+                ];
+            }
+
+            // Refund tanggal lain
+            try {
+                $stmtRefO = $db_sync->query("SELECT report_date, SUM(COALESCE(refund_amt,0)) AS total FROM audit_rekap_manual GROUP BY report_date HAVING total > 0 ORDER BY report_date DESC LIMIT 20");
+                $ref_rows = $stmtRefO ? $stmtRefO->fetchAll(PDO::FETCH_ASSOC) : [];
+            } catch (Exception $e) {
+                $ref_rows = [];
+            }
+            foreach ($ref_rows as $rr) {
+                $rdate = (string)($rr['report_date'] ?? '');
+                if ($rdate === '' || $rdate === $today) continue;
+                $refV = (int)($rr['total'] ?? 0);
+                if ($refV <= 0) continue;
+                $rlabel = $format_ddmmyyyy($rdate);
+                $blok_list = '';
+                try {
+                    $stmtRefB = $db_sync->prepare("SELECT blok_name, SUM(COALESCE(refund_amt,0)) AS total FROM audit_rekap_manual WHERE report_date = :d GROUP BY blok_name HAVING total > 0 ORDER BY blok_name ASC LIMIT 10");
+                    $stmtRefB->execute([':d' => $rdate]);
+                    $rows = $stmtRefB->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                    $parts = [];
+                    foreach ($rows as $br) {
+                        $bname = $format_block_label($br['blok_name'] ?? '');
+                        $btotal = (int)($br['total'] ?? 0);
+                        if ($btotal <= 0) continue;
+                        $parts[] = $bname . ' (refund ' . number_format($btotal, 0, ",", ".") . ')';
+                    }
+                    if (!empty($parts)) {
+                        $blok_list = ' ' . implode(', ', $parts) . '.';
+                    }
+                } catch (Exception $e) {
+                }
+                $todo_list[] = [
+                    'id' => 'refund_pending_' . $rdate,
+                    'title' => 'Refund pending',
+                    'desc' => 'Terdapat refund Rp ' . number_format($refV, 0, ",", ".") . ' pada audit tanggal ' . $rlabel . '.' . $blok_list,
+                    'level' => 'warn',
+                    'action_label' => 'Buka Audit ' . $rlabel,
+                    'action_url' => './?report=audit_session&session=' . urlencode($session) . '&show=harian&date=' . urlencode($rdate),
                     'action_target' => '_self'
                 ];
             }
