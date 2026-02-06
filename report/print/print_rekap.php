@@ -236,25 +236,33 @@ try {
         $db = new PDO('sqlite:' . $dbFile);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        $res = $db->query("SELECT 
-            sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
-            sh.username, sh.profile, sh.profile_snapshot,
-            sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
-            sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
-            sh.full_raw_data, lh.last_status, lh.last_bytes, lh.last_uptime, lh.raw_comment
-            FROM sales_history sh
-            LEFT JOIN login_history lh ON lh.username = sh.username
-            UNION ALL
-            SELECT 
-                ls.raw_date, ls.raw_time, ls.sale_date, ls.sale_time, ls.sale_datetime,
-                ls.username, ls.profile, ls.profile_snapshot,
-                ls.price, ls.price_snapshot, ls.sprice_snapshot, ls.validity,
-                ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
-            ls.full_raw_data, lh2.last_status, lh2.last_bytes, lh2.last_uptime, lh2.raw_comment
-            FROM live_sales ls
-            LEFT JOIN login_history lh2 ON lh2.username = ls.username
-            WHERE ls.sync_status = 'pending'
-            ORDER BY sale_datetime DESC, raw_date DESC");
+                $res = $db->query("SELECT 
+                        sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
+                        sh.username, sh.profile, sh.profile_snapshot,
+                        sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
+                        sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
+                        sh.full_raw_data, lh.last_status, lh.last_bytes, lh.last_uptime, lh.raw_comment
+                        FROM sales_history sh
+                        LEFT JOIN login_history lh ON lh.username = sh.username
+                        WHERE instr(lower(COALESCE(sh.comment,'')), 'vip') = 0
+                            AND instr(lower(COALESCE(sh.comment,'')), 'pengelola') = 0
+                            AND instr(lower(COALESCE(lh.raw_comment,'')), 'vip') = 0
+                            AND instr(lower(COALESCE(lh.raw_comment,'')), 'pengelola') = 0
+                        UNION ALL
+                        SELECT 
+                                ls.raw_date, ls.raw_time, ls.sale_date, ls.sale_time, ls.sale_datetime,
+                                ls.username, ls.profile, ls.profile_snapshot,
+                                ls.price, ls.price_snapshot, ls.sprice_snapshot, ls.validity,
+                                ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
+                        ls.full_raw_data, lh2.last_status, lh2.last_bytes, lh2.last_uptime, lh2.raw_comment
+                        FROM live_sales ls
+                        LEFT JOIN login_history lh2 ON lh2.username = ls.username
+                        WHERE ls.sync_status = 'pending'
+                            AND instr(lower(COALESCE(ls.comment,'')), 'vip') = 0
+                            AND instr(lower(COALESCE(ls.comment,'')), 'pengelola') = 0
+                            AND instr(lower(COALESCE(lh2.raw_comment,'')), 'vip') = 0
+                            AND instr(lower(COALESCE(lh2.raw_comment,'')), 'pengelola') = 0
+                        ORDER BY sale_datetime DESC, raw_date DESC");
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
 
         // Tambahkan data dari login_history untuk status rusak/retur/invalid
@@ -290,13 +298,15 @@ try {
                                 last_bytes,
                                 last_uptime
               FROM login_history
-              WHERE username != ''
+                  WHERE username != ''
                 AND $lhWhere
-                                AND (
-                                        instr(lower(COALESCE(NULLIF(last_status,''), '')), 'rusak') > 0
-                                        OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'retur') > 0
-                                        OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'invalid') > 0
-                                )");
+                AND instr(lower(COALESCE(raw_comment,'')), 'vip') = 0
+                AND instr(lower(COALESCE(raw_comment,'')), 'pengelola') = 0
+                        AND (
+                            instr(lower(COALESCE(NULLIF(last_status,''), '')), 'rusak') > 0
+                            OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'retur') > 0
+                            OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'invalid') > 0
+                        )");
             $stmtLh->execute([':d' => $filter_date]);
             $lhRows = $stmtLh->fetchAll(PDO::FETCH_ASSOC);
             if (!empty($lhRows)) {

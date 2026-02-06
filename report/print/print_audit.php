@@ -258,7 +258,9 @@ if (file_exists($dbFile)) {
                 LEFT JOIN login_history lh ON lh.username = sh.username
                 WHERE $dateFilter
                   AND instr(lower(COALESCE(sh.comment,'')), 'vip') = 0
+                  AND instr(lower(COALESCE(sh.comment,'')), 'pengelola') = 0
                   AND instr(lower(COALESCE(lh.raw_comment,'')), 'vip') = 0
+                  AND instr(lower(COALESCE(lh.raw_comment,'')), 'pengelola') = 0
                   $retur_filter_sh
               ) t";
             $stmt = $db->prepare($sumSql);
@@ -299,6 +301,7 @@ if (file_exists($dbFile)) {
               WHERE username != ''
                 AND $lhWhere
                 AND instr(lower(COALESCE(raw_comment,'')), 'vip') = 0
+                AND instr(lower(COALESCE(raw_comment,'')), 'pengelola') = 0
                 AND (
                   instr(lower(COALESCE(NULLIF(last_status,''), '')), 'rusak') > 0
                   OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'retur') > 0
@@ -355,7 +358,7 @@ if (file_exists($dbFile)) {
         }
 
         if (table_exists($db, 'live_sales')) {
-            $pendingSql = "SELECT COUNT(*) FROM live_sales WHERE sync_status='pending' AND $dateFilter AND instr(lower(COALESCE(comment,'')), 'vip') = 0 $retur_filter_ls";
+            $pendingSql = "SELECT COUNT(*) FROM live_sales WHERE sync_status='pending' AND $dateFilter AND instr(lower(COALESCE(comment,'')), 'vip') = 0 AND instr(lower(COALESCE(comment,'')), 'pengelola') = 0 $retur_filter_ls";
             $stmt = $db->prepare($pendingSql);
             foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
             foreach ($retur_filter_params as $k => $v) $stmt->bindValue($k, $v);
@@ -392,7 +395,9 @@ if (file_exists($dbFile)) {
                 LEFT JOIN login_history lh2 ON lh2.username = ls.username
                 WHERE ls.sync_status='pending' AND $dateFilter
                   AND instr(lower(COALESCE(ls.comment,'')), 'vip') = 0
+                  AND instr(lower(COALESCE(ls.comment,'')), 'pengelola') = 0
                   AND instr(lower(COALESCE(lh2.raw_comment,'')), 'vip') = 0
+                  AND instr(lower(COALESCE(lh2.raw_comment,'')), 'pengelola') = 0
                   $retur_filter_ls
               ) t";
             $stmt = $db->prepare($pendingSumSql);
@@ -419,7 +424,7 @@ if (file_exists($dbFile)) {
                 MIN(COALESCE(NULLIF(raw_date,''),'')) AS min_raw,
                 MAX(COALESCE(NULLIF(raw_date,''),'')) AS max_raw
                 FROM live_sales
-                WHERE sync_status='pending' AND $dateFilter AND instr(lower(COALESCE(comment,'')), 'vip') = 0";
+                WHERE sync_status='pending' AND $dateFilter AND instr(lower(COALESCE(comment,'')), 'vip') = 0 AND instr(lower(COALESCE(comment,'')), 'pengelola') = 0";
               $stmt = $db->prepare($rangeSql);
               foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
               $stmt->execute();

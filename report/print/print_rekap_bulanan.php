@@ -82,10 +82,13 @@ function build_sales_select(PDO $db, $table, $alias, $login_alias, $has_login, $
     ];
     $login_select = $has_login ? ($login_alias . '.last_status AS last_status, ' . $login_alias . '.last_bytes AS last_bytes') : "'' AS last_status, 0 AS last_bytes";
     $login_join = $has_login ? ('LEFT JOIN login_history ' . $login_alias . ' ON ' . $login_alias . '.username = ' . $alias . '.username') : '';
-    $where_pending = '';
+    $where_clauses = [];
     if ($pending_only && table_has_column($db, $table, 'sync_status')) {
-        $where_pending = ' WHERE ' . $alias . ".sync_status = 'pending'";
+        $where_clauses[] = $alias . ".sync_status = 'pending'";
     }
+    $where_clauses[] = "instr(lower(COALESCE(" . $alias . ".comment,'')), 'vip') = 0";
+    $where_clauses[] = "instr(lower(COALESCE(" . $alias . ".comment,'')), 'pengelola') = 0";
+    $where_pending = !empty($where_clauses) ? (' WHERE ' . implode(' AND ', $where_clauses)) : '';
     return 'SELECT ' . implode(', ', $parts) . ', ' . $login_select . ' FROM ' . $table . ' ' . $alias . ' ' . $login_join . $where_pending;
 }
 

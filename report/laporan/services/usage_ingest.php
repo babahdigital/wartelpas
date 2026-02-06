@@ -19,6 +19,10 @@ $envFile = $root_dir . '/include/env.php';
 if (file_exists($envFile)) {
     require $envFile;
 }
+$helpersFile = $root_dir . '/report/laporan/helpers.php';
+if (file_exists($helpersFile)) {
+    require_once $helpersFile;
+}
 $system_cfg = $env['system'] ?? [];
 $db_rel = $system_cfg['db_file'] ?? 'db_data/babahdigital_main.db';
 if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
@@ -113,6 +117,13 @@ if ($event !== 'login' && $event !== 'logout') {
 if ($user === '') {
     // jangan hard-fail agar MikroTik tidak error, tetapi catat log
     @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | missing user | " . $_SERVER['QUERY_STRING'] . "\n", FILE_APPEND);
+    echo "OK";
+    exit;
+}
+
+$vip_flag = trim((string)($_GET['vip'] ?? ''));
+if ($vip_flag === '1' || (function_exists('is_vip_comment') && is_vip_comment($comment))) {
+    @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | vip skip | user=" . $user . " | qs=" . ($_SERVER['QUERY_STRING'] ?? '') . "\n", FILE_APPEND);
     echo "OK";
     exit;
 }

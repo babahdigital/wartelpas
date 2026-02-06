@@ -1,5 +1,5 @@
 # SCRIPT MIKROTIK ON-LOGOUT (FINAL FIX)
-# Update: 2026-01-30 | Fix: Firewall Regex & Encode
+# Update: 2026-02-07 | Fix: Firewall Regex & Encode
 
 # --- KONFIGURASI ---
 :local baseUrl "{{BASE_URL}}";
@@ -60,6 +60,8 @@
     :if (([:find $currentComment "VIP"] != nil) || ([:find $currentComment "Pengelola"] != nil)) do={
         :set vipTag "VIP";
     }
+    :local isVip false;
+    :if ([:len $vipTag] > 0) do={ :set isVip true; }
 
     # 3. SET DATA LOGOUT
     :local cleanComment $currentComment;
@@ -73,11 +75,13 @@
     :do { /ip hotspot user set comment=$finalComment $uID; } on-error={}
 
     # 4. USAGE INGEST (LOGOUT)
-    :local usageUrl ($baseUrl . "/report/laporan/services/usage_ingest.php?key=" . [$urlEncode $usageKey] . "&session=" . [$urlEncode $session] . "&event=logout&user=" . [$urlEncode $username] . "&date=" . [$urlEncode $logoutDate] . "&time=" . [$urlEncode $logoutTime] . "&ip=" . [$urlEncode $userip] . "&mac=" . [$urlEncode $usermac] . "&uptime=" . [$urlEncode $userUptime]);
-    
-    :do { 
-        /tool fetch url=$usageUrl mode=http keep-result=no check-certificate=no; 
-    } on-error={ :log warning "LOGOUT: Gagal Fetch Usage"; }
+    :if (!$isVip) do={
+        :local usageUrl ($baseUrl . "/report/laporan/services/usage_ingest.php?key=" . [$urlEncode $usageKey] . "&session=" . [$urlEncode $session] . "&event=logout&user=" . [$urlEncode $username] . "&date=" . [$urlEncode $logoutDate] . "&time=" . [$urlEncode $logoutTime] . "&ip=" . [$urlEncode $userip] . "&mac=" . [$urlEncode $usermac] . "&uptime=" . [$urlEncode $userUptime]);
+        
+        :do { 
+            /tool fetch url=$usageUrl mode=http keep-result=no check-certificate=no; 
+        } on-error={ :log warning "LOGOUT: Gagal Fetch Usage"; }
+    }
 
     # 5. BERSIHKAN KONEKSI (Hanya jika Blok Info / Wartel)
     :if ([:len $blokInfo] > 0) do={

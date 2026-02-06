@@ -22,6 +22,10 @@ $envFile = $root_dir . '/include/env.php';
 if (file_exists($envFile)) {
     require $envFile;
 }
+$helpersFile = $root_dir . '/report/laporan/helpers.php';
+if (file_exists($helpersFile)) {
+    require_once $helpersFile;
+}
 $system_cfg = $env['system'] ?? [];
 $db_rel = $system_cfg['db_file'] ?? 'db_data/babahdigital_main.db';
 if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
@@ -262,6 +266,7 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
     $skip_invalid_format = 0;
     $skip_blok = 0;
     $skip_duplicate = 0;
+    $skip_vip = 0;
     $sample_names = [];
     $stmt = $db->prepare("INSERT OR IGNORE INTO sales_history (
         raw_date, raw_time, sale_date, sale_time, sale_datetime,
@@ -295,6 +300,13 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
             $profile  = isset($d[7]) ? $d[7] : ''; // Profil
             $validity = $d[6] ?? '';
             $comment  = isset($d[8]) ? $d[8] : ''; // Komentar
+            if (function_exists('is_vip_comment') && is_vip_comment($comment)) {
+                $skip_vip++;
+                $API->write('/system/script/remove', false);
+                $API->write('=.id=' . $s['.id']);
+                $API->read();
+                continue;
+            }
             $blok_name = '';
             if ($comment && preg_match('/\bblok\s*[-_]?\s*([A-Za-z0-9]+)/i', $comment, $m)) {
                 $blok_name = 'BLOK-' . strtoupper($m[1]);

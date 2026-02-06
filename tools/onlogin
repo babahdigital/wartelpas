@@ -1,6 +1,6 @@
 # SCRIPT MIKROTIK ON-LOGIN (FINAL FIX)
 # Fungsi: Force Send Live Report (No Validation Check)
-# Update: 2026-01-30
+# Update: 2026-02-07
 
 # --- KONFIGURASI ---
 :local baseUrl "{{BASE_URL}}";
@@ -64,6 +64,8 @@
         :if (([:find $comment "VIP"] != nil) || ([:find $comment "Pengelola"] != nil)) do={
             :set vipTag "VIP";
         }
+        :local isVip false;
+        :if ([:len $vipTag] > 0) do={ :set isVip true; }
 
         # 3. CEK LOG HARIAN (Mencegah Double Omset)
         :local hasLog [/system script find where comment="mikhmon" and source="$date" and name~"-\\|-$username-\\|-"];
@@ -92,23 +94,27 @@
             :if ([:len $vipTag] > 0 && [:find $newComment "VIP"] = nil) do={ :set newComment ("$newComment | VIP"); }
             # --- END: SCHEDULER & COMMENT ---
 
-            # 4. LIVE INGEST (SALES REPORT) - FORCE SEND
-            # Simpan DB Lokal
-            :local price "5000"; :local validity "1d"; :local pLabel "10Menit";
-            :if ($profile = "30Menit") do={ :set price "20000"; :set pLabel "30Menit"; }
-            
-            :local logTxt "$date-|-$time-|-$username-|-$price-|-$userip-|-$usermac-|-$validity-|-$pLabel-|-$blokInfo";
-            :do { /system script add name=$logTxt owner="$month$year" source="$date" comment="mikhmon"; } on-error={}
+            :if (!$isVip) do={
+                # 4. LIVE INGEST (SALES REPORT) - FORCE SEND
+                # Simpan DB Lokal
+                :local price "5000"; :local validity "1d"; :local pLabel "10Menit";
+                :if ($profile = "30Menit") do={ :set price "20000"; :set pLabel "30Menit"; }
+                
+                :local logTxt "$date-|-$time-|-$username-|-$price-|-$userip-|-$usermac-|-$validity-|-$pLabel-|-$blokInfo";
+                :do { /system script add name=$logTxt owner="$month$year" source="$date" comment="mikhmon"; } on-error={}
 
-            # KIRIM DATA (Hapus validasi, tambah Header)
-            :local liveUrl ($baseUrl . "/report/laporan/services/live_ingest.php");
-            :local postData ("data=" . [$urlEncode $logTxt] . "&key=" . [$urlEncode $key] . "&session=" . [$urlEncode $session]);
-            
-            :do {
-                # PENTING: Header Content-Type & check-certificate=no
-                /tool fetch url=$liveUrl http-method=post http-data=$postData http-header-field="content-type: application/x-www-form-urlencoded" mode=http keep-result=no check-certificate=no;
-                :log info "LOGIN: Data Sent for $username";
-            } on-error={ :log warning "LOGIN: Gagal Fetch Live Ingest"; }
+                # KIRIM DATA (Hapus validasi, tambah Header)
+                :local liveUrl ($baseUrl . "/report/laporan/services/live_ingest.php");
+                :local postData ("data=" . [$urlEncode $logTxt] . "&key=" . [$urlEncode $key] . "&session=" . [$urlEncode $session]);
+                
+                :do {
+                    # PENTING: Header Content-Type & check-certificate=no
+                    /tool fetch url=$liveUrl http-method=post http-data=$postData http-header-field="content-type: application/x-www-form-urlencoded" mode=http keep-result=no check-certificate=no;
+                    :log info "LOGIN: Data Sent for $username";
+                } on-error={ :log warning "LOGIN: Gagal Fetch Live Ingest"; }
+            } else={
+                :log info "LOGIN: VIP skip sales ingest for $username";
+            }
             
             # Update Comment User
             :if ([:len $uID] > 0) do={
@@ -117,10 +123,12 @@
         }
 
         # 5. USAGE INGEST (ONLINE STATUS)
-        :local useUrl ($baseUrl . "/report/laporan/services/usage_ingest.php?key=" . [$urlEncode $usageKey] . "&session=" . [$urlEncode $session] . "&event=login" . "&user=" . [$urlEncode $username] . "&date=" . [$urlEncode $date] . "&time=" . [$urlEncode $time] . "&ip=" . [$urlEncode $userip] . "&mac=" . [$urlEncode $usermac] . "&uptime=0s");
-        :do {
-            /tool fetch url=$useUrl mode=http keep-result=no check-certificate=no;
-        } on-error={ :log warning "LOGIN: Gagal Fetch Usage"; }
+        :if (!$isVip) do={
+            :local useUrl ($baseUrl . "/report/laporan/services/usage_ingest.php?key=" . [$urlEncode $usageKey] . "&session=" . [$urlEncode $session] . "&event=login" . "&user=" . [$urlEncode $username] . "&date=" . [$urlEncode $date] . "&time=" . [$urlEncode $time] . "&ip=" . [$urlEncode $userip] . "&mac=" . [$urlEncode $usermac] . "&uptime=0s");
+            :do {
+                /tool fetch url=$useUrl mode=http keep-result=no check-certificate=no;
+            } on-error={ :log warning "LOGIN: Gagal Fetch Usage"; }
+        }
 
     } on-error={ :log error "LOGIN: Error Critical Script"; }
 }

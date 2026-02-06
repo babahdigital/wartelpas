@@ -145,7 +145,7 @@ if ($reason === '' || strlen($reason) < 5 || strlen($reason) > 200) {
     echo json_encode(['ok' => false, 'message' => 'Alasan minimal 5 karakter.']);
     exit;
 }
-if ($request_type === 'pengembalian' && (strlen($customer_name) < 2 || strlen($customer_name) > 80)) {
+if ($request_type === 'pengembalian' && $customer_name !== '' && (strlen($customer_name) < 2 || strlen($customer_name) > 80)) {
     echo json_encode(['ok' => false, 'message' => 'Nama lengkap minimal 2 karakter.']);
     exit;
 }
@@ -369,6 +369,11 @@ try {
                 $profile_label = normalize_profile_label($router_user['profile']);
             }
         }
+    }
+
+    if ($request_type === 'pengembalian' && strlen($customer_name) < 2) {
+        echo json_encode(['ok' => false, 'message' => 'Nama lengkap tidak ditemukan dari voucher. Mohon isi nama.']);
+        exit;
     }
 
     if ($blok_short === '' || $profile_label === '') {

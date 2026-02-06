@@ -183,6 +183,12 @@ try {
     $profile = $d[7] ?? '';
     $comment = $d[8] ?? '';
 
+    if (function_exists('is_vip_comment') && is_vip_comment($comment)) {
+        $logWrite(date('c') . " | vip skip | " . $raw . "\n");
+        echo "OK";
+        exit;
+    }
+
     $blok_name = '';
     if ($comment && preg_match('/\bblok\s*[-_]?\s*([A-Za-z0-9]+)/i', $comment, $m)) {
         $blok_name = 'BLOK-' . strtoupper($m[1]);

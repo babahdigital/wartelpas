@@ -311,7 +311,11 @@ if (file_exists($dbFile)) {
                     lh.customer_name, lh.room_name, lh.last_bytes, lh.last_status, lh.first_login_real
                 FROM sales_history sh
                 LEFT JOIN login_history lh ON lh.username = sh.username
-                WHERE $whereExpr";
+                                WHERE $whereExpr
+                                    AND instr(lower(COALESCE(sh.comment,'')), 'vip') = 0
+                                    AND instr(lower(COALESCE(sh.comment,'')), 'pengelola') = 0
+                                    AND instr(lower(COALESCE(lh.raw_comment,'')), 'vip') = 0
+                                    AND instr(lower(COALESCE(lh.raw_comment,'')), 'pengelola') = 0";
             }
             if (table_exists_local($db, 'live_sales')) {
                 $selects[] = "SELECT ls.raw_date, ls.raw_time, ls.sale_date, ls.sale_time, ls.sale_datetime,
@@ -321,7 +325,11 @@ if (file_exists($dbFile)) {
                     lh2.customer_name, lh2.room_name, lh2.last_bytes, lh2.last_status, lh2.first_login_real
                 FROM live_sales ls
                 LEFT JOIN login_history lh2 ON lh2.username = ls.username
-                WHERE $whereExpr AND ls.sync_status = 'pending'";
+                                WHERE $whereExpr AND ls.sync_status = 'pending'
+                                    AND instr(lower(COALESCE(ls.comment,'')), 'vip') = 0
+                                    AND instr(lower(COALESCE(ls.comment,'')), 'pengelola') = 0
+                                    AND instr(lower(COALESCE(lh2.raw_comment,'')), 'vip') = 0
+                                    AND instr(lower(COALESCE(lh2.raw_comment,'')), 'pengelola') = 0";
             }
             $sql = implode(" UNION ALL ", $selects) . " ORDER BY sale_time DESC";
             $stmt = $db->prepare($sql);

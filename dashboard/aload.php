@@ -342,7 +342,9 @@ if ($load == "live_data") {
                             sh.comment, sh.blok_name,
                             $loginSelect
                             FROM sales_history sh
-                            $loginJoin";
+                                                        $loginJoin
+                                                        WHERE instr(lower(COALESCE(sh.comment,'')), 'vip') = 0
+                                                            AND instr(lower(COALESCE(sh.comment,'')), 'pengelola') = 0";
                     }
                     if ($hasLive) {
                         $selects[] = "SELECT
@@ -352,7 +354,9 @@ if ($load == "live_data") {
                             $loginSelect2
                             FROM live_sales ls
                             $loginJoin2
-                            WHERE ls.sync_status = 'pending'";
+                                                        WHERE ls.sync_status = 'pending'
+                                                            AND instr(lower(COALESCE(ls.comment,'')), 'vip') = 0
+                                                            AND instr(lower(COALESCE(ls.comment,'')), 'pengelola') = 0";
                     }
 
                     if (!empty($selects)) {
@@ -388,7 +392,9 @@ if ($load == "live_data") {
                             FROM login_history
                             WHERE username != ''
                               AND (substr(login_time_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR login_date = :d)
-                              AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'");
+                                                            AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'
+                                                            AND instr(lower(COALESCE(raw_comment,'')), 'vip') = 0
+                                                            AND instr(lower(COALESCE(raw_comment,'')), 'pengelola') = 0");
                             $stmtFallback->execute([':d' => $today]);
                             $rows = $stmtFallback->fetchAll(PDO::FETCH_ASSOC);
                         }

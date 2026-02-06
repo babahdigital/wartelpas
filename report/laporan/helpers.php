@@ -818,7 +818,9 @@ function fetch_rows_for_audit(PDO $db, $audit_date) {
             " . ($hasLogin ? "lh.last_status" : "'' AS last_status") . "
             FROM sales_history sh
             " . ($hasLogin ? "LEFT JOIN login_history lh ON lh.username = sh.username" : "") . "
-            WHERE sh.sale_date = :d";
+                        WHERE sh.sale_date = :d
+                            AND instr(lower(COALESCE(sh.comment,'')), 'vip') = 0
+                            AND instr(lower(COALESCE(sh.comment,'')), 'pengelola') = 0";
         $stmt = $db->prepare($sql);
         $stmt->execute([':d' => $audit_date]);
         $rows = array_merge($rows, $stmt->fetchAll(PDO::FETCH_ASSOC));
@@ -834,7 +836,9 @@ function fetch_rows_for_audit(PDO $db, $audit_date) {
             " . ($hasLogin ? "lh2.last_status" : "'' AS last_status") . "
             FROM live_sales ls
             " . ($hasLogin ? "LEFT JOIN login_history lh2 ON lh2.username = ls.username" : "") . "
-            WHERE ls.sale_date = :d AND ls.sync_status = 'pending'";
+                        WHERE ls.sale_date = :d AND ls.sync_status = 'pending'
+                            AND instr(lower(COALESCE(ls.comment,'')), 'vip') = 0
+                            AND instr(lower(COALESCE(ls.comment,'')), 'pengelola') = 0";
         $stmt = $db->prepare($sql);
         $stmt->execute([':d' => $audit_date]);
         $rows = array_merge($rows, $stmt->fetchAll(PDO::FETCH_ASSOC));
@@ -872,7 +876,9 @@ function fetch_rows_for_audit(PDO $db, $audit_date) {
                                 substr(updated_at,1,10) = :d OR
                                 login_date = :d
                             )
-              AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'" );
+              AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'
+              AND instr(lower(COALESCE(raw_comment,'')), 'vip') = 0
+              AND instr(lower(COALESCE(raw_comment,'')), 'pengelola') = 0" );
         $stmtFallback->execute([':d' => $audit_date]);
         $rows = $stmtFallback->fetchAll(PDO::FETCH_ASSOC);
     }

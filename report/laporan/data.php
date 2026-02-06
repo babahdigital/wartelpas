@@ -285,7 +285,9 @@ if (file_exists($dbFile)) {
                     sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
                     sh.full_raw_data, $loginSelect
                     FROM sales_history sh
-                    $loginJoin";
+                                        $loginJoin
+                                        WHERE instr(lower(COALESCE(sh.comment,'')), 'vip') = 0
+                                            AND instr(lower(COALESCE(sh.comment,'')), 'pengelola') = 0";
             }
             if ($hasLive) {
                 $selects[] = "SELECT 
@@ -296,7 +298,9 @@ if (file_exists($dbFile)) {
                     ls.full_raw_data, $loginSelect2
                     FROM live_sales ls
                     $loginJoin2
-                    WHERE ls.sync_status = 'pending'";
+                                        WHERE ls.sync_status = 'pending'
+                                            AND instr(lower(COALESCE(ls.comment,'')), 'vip') = 0
+                                            AND instr(lower(COALESCE(ls.comment,'')), 'pengelola') = 0";
             }
 
             if (!empty($selects)) {
@@ -344,6 +348,8 @@ if (file_exists($dbFile)) {
                   FROM login_history
                   WHERE username != ''
                     AND $lhWhere
+                                        AND instr(lower(COALESCE(raw_comment,'')), 'vip') = 0
+                                        AND instr(lower(COALESCE(raw_comment,'')), 'pengelola') = 0
                                         AND (
                                                 instr(lower(COALESCE(NULLIF(last_status,''), '')), 'rusak') > 0
                                                 OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'retur') > 0
@@ -1153,7 +1159,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             }
         }
         if (table_exists($db, 'login_history')) {
-            $stmtOpt = $db->prepare("SELECT DISTINCT username FROM login_history WHERE username != '' AND (substr(login_time_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR login_date = :d) AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready' AND instr(lower(COALESCE(raw_comment,'')), 'vip') = 0");
+            $stmtOpt = $db->prepare("SELECT DISTINCT username FROM login_history WHERE username != '' AND (substr(login_time_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR login_date = :d) AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready' AND instr(lower(COALESCE(raw_comment,'')), 'vip') = 0 AND instr(lower(COALESCE(raw_comment,'')), 'pengelola') = 0");
             $stmtOpt->execute([':d' => $filter_date]);
             foreach ($stmtOpt->fetchAll(PDO::FETCH_COLUMN, 0) as $u) {
                 $u = trim((string)$u);
