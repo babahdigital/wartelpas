@@ -212,7 +212,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($error !== '') {
         // skip update
     } elseif (!is_file($htaccessPath) || !is_readable($htaccessPath) || !is_writable($htaccessPath)) {
-        $error = 'File .htaccess tidak dapat dibaca/ditulis.';
+        if (is_file($htaccessPath) && is_readable($htaccessPath)) {
+            @chmod($htaccessPath, 0666);
+        }
+        if (!is_file($htaccessPath) || !is_readable($htaccessPath) || !is_writable($htaccessPath)) {
+            $error = 'File .htaccess tidak dapat dibaca/ditulis. Pastikan file sudah di-mount ke container dan permission write untuk www-data.';
+        }
     } else {
         $content = file_get_contents($htaccessPath);
         if ($content === false) {
