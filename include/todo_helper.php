@@ -587,6 +587,62 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 return 'BLOK ' . strtoupper($name);
             };
 
+            // Settlement belum selesai (tanggal sebelumnya, bukan hari ini)
+            try {
+                $lookback_days = (int)($todo_cfg['settlement_unsettled_days'] ?? 31);
+                if ($lookback_days < 1) $lookback_days = 31;
+                $start_unsettled = date('Y-m-d', strtotime('-' . $lookback_days . ' days'));
+                $stmtAuditDates = $db_sync->prepare("SELECT DISTINCT report_date FROM audit_rekap_manual WHERE report_date >= :s AND report_date < :t ORDER BY report_date DESC");
+                $stmtAuditDates->execute([':s' => $start_unsettled, ':t' => $today]);
+                $audit_dates = $stmtAuditDates->fetchAll(PDO::FETCH_COLUMN, 0) ?: [];
+                $settled_map = [];
+                $status_map = [];
+                if (function_exists('table_exists') && table_exists($db_sync, 'settlement_log')) {
+                    $stmtSetPast = $db_sync->prepare("SELECT report_date, status FROM settlement_log WHERE report_date >= :s AND report_date < :t");
+                    $stmtSetPast->execute([':s' => $start_unsettled, ':t' => $today]);
+                    foreach ($stmtSetPast->fetchAll(PDO::FETCH_ASSOC) as $sr) {
+                        $d = (string)($sr['report_date'] ?? '');
+                        if ($d === '') continue;
+                        $st = strtolower((string)($sr['status'] ?? ''));
+                        $status_map[$d] = $st;
+                        if ($st === 'done') $settled_map[$d] = true;
+                    }
+                }
+
+                $unsettled_dates = [];
+                foreach ($audit_dates as $d) {
+                    $d = (string)$d;
+                    if ($d === '' || $d >= $today) continue;
+                    if (!isset($settled_map[$d])) {
+                        $unsettled_dates[$d] = $status_map[$d] ?? '';
+                    }
+                }
+
+                if (!empty($unsettled_dates)) {
+                    $dates = array_keys($unsettled_dates);
+                    sort($dates);
+                    $labels = [];
+                    $max_list = 6;
+                    foreach ($dates as $idx => $d) {
+                        if ($idx >= $max_list) break;
+                        $labels[] = $format_ddmmyyyy($d);
+                    }
+                    $remaining = count($dates) - count($labels);
+                    $tail = $remaining > 0 ? (' dan ' . $remaining . ' tanggal lainnya') : '';
+                    $desc = 'Belum settlement: ' . implode(', ', $labels) . $tail . '.';
+                    $todo_list[] = [
+                        'id' => 'settlement_unfinished_past',
+                        'title' => 'Settlement tanggal sebelumnya belum selesai',
+                        'desc' => $desc,
+                        'level' => 'warn',
+                        'action_label' => 'Buka Laporan Harian',
+                        'action_url' => './?report=selling&session=' . urlencode($session),
+                        'action_target' => '_self'
+                    ];
+                }
+            } catch (Exception $e) {
+            }
+
             // Piutang hari ini
             if ($audit_t_count > 0) {
                 try {
