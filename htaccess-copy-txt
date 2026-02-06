@@ -1,0 +1,414 @@
+# ====================================================
+# .HTACCESS WARTEL PAS - FULL ARMOR (TREE OPTIMIZED)
+# ====================================================
+
+# 1. SETTING DASAR & SECURITY HEADER
+Options -Indexes
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
+
+# Hardening PHP
+<IfModule mod_php7.c>
+    php_value max_execution_time 300
+    php_value memory_limit 256M
+</IfModule>
+<IfModule mod_php.c>
+    php_value max_execution_time 300
+    php_value memory_limit 256M
+</IfModule>
+
+# Security Headers (Anti-Iframe & Anti-Sniffing)
+<IfModule mod_headers.c>
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    Header always set X-Download-Options "noopen"
+    Header always set X-Permitted-Cross-Domain-Policies "none"
+    Header always set Cross-Origin-Opener-Policy "same-origin"
+    Header always set Cross-Origin-Resource-Policy "same-site"
+</IfModule>
+
+# Hardening tambahan
+<IfModule mod_rewrite.c>
+    RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK)$ [NC]
+    RewriteRule .* - [F]
+</IfModule>
+
+# Compression (Gzip)
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css text/javascript application/javascript application/json application/xml application/rss+xml image/svg+xml
+</IfModule>
+
+# Cache headers untuk asset statis
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 30 days"
+    ExpiresByType text/javascript "access plus 30 days"
+    ExpiresByType application/javascript "access plus 30 days"
+    ExpiresByType application/json "access plus 7 days"
+    ExpiresByType image/png "access plus 365 days"
+    ExpiresByType image/jpeg "access plus 365 days"
+    ExpiresByType image/gif "access plus 365 days"
+    ExpiresByType image/svg+xml "access plus 365 days"
+    ExpiresByType image/webp "access plus 365 days"
+    ExpiresByType font/woff "access plus 365 days"
+    ExpiresByType font/woff2 "access plus 365 days"
+</IfModule>
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js|png|jpe?g|gif|svg|webp|woff2?|ico)$">
+        Header set Cache-Control "public, max-age=2592000, immutable"
+    </FilesMatch>
+</IfModule>
+
+# 2. HALAMAN ERROR
+ErrorDocument 403 /error.php
+ErrorDocument 404 /error.php
+ErrorDocument 500 /error.php
+
+
+# ====================================================
+# 3. PROTEKSI FILE & FOLDER (DISESUAIKAN DENGAN TREE)
+# ====================================================
+
+# A. Blokir File Konfigurasi & Source Code
+# Mencegah download file config docker, nginx, git, env, dll
+<FilesMatch "^\.|\.(exe|bat|sh|sql|env|git|ini|yml|conf|log|db|bak|json|md|txt)$">
+    Require all denied
+</FilesMatch>
+
+<Files "Dockerfile">
+    Require all denied
+</Files>
+
+# B. Blokir Akses Langsung ke config.php
+<Files "config.php">
+    Require all denied
+</Files>
+
+# C. BLOKIR FOLDER SYSTEM & LOGIC (Backend)
+# Folder ini berisi script inti yang tidak boleh dipanggil langsung browser
+RedirectMatch 403 ^/include/.*$
+RedirectMatch 403 ^/process/.*$
+RedirectMatch 403 ^/system/(?!whatsapp/(?:.*\.(css|js)$|api\.php$)).*$
+RedirectMatch 403 ^/lib/.*$
+
+# D. BLOKIR FOLDER DATA SENSITIF (CRITICAL!)
+# Folder ini berisi session aktif, database, dan logs. HARAM diakses umum.
+RedirectMatch 403 ^/session/.*$
+RedirectMatch 403 ^/db_data/.*$
+RedirectMatch 403 ^/logs/.*$
+RedirectMatch 403 ^/mikhmon/.*$
+
+# E. BLOKIR TEMPLATE VOUCHER
+# Blokir semua php di folder voucher KECUALI print.php
+RedirectMatch 403 ^/voucher/(?!print\.php$).+\.php$
+
+# ====================================================
+# 4. LOGIKA DETEKSI IP
+# ====================================================
+SetEnvIf X-Forwarded-For "^10\.0\.0\.6($|,)" TAMU_VIP
+SetEnvIf X-Forwarded-For "^172\.16\.8\.21($|,)" TAMU_VIP
+SetEnvIf X-Forwarded-For "^10\.10\.83\.1($|,)" TAMU_VIP
+SetEnvIf X-Forwarded-For "^10\.10\.83\.2($|,)" TAMU_VIP
+SetEnvIf X-Real-IP "^10\.0\.0\.6$" TAMU_VIP
+SetEnvIf X-Real-IP "^172\.16\.8\.21$" TAMU_VIP
+SetEnvIf X-Real-IP "^10\.10\.83\.1$" TAMU_VIP
+SetEnvIf X-Real-IP "^10\.10\.83\.2$" TAMU_VIP
+SetEnvIf Remote_Addr "^10\.0\.0\.6$" TAMU_VIP
+SetEnvIf Remote_Addr "^172\.16\.8\.21$" TAMU_VIP
+SetEnvIf Remote_Addr "^10\.10\.83\.1$" TAMU_VIP
+SetEnvIf Remote_Addr "^10\.10\.83\.2$" TAMU_VIP
+
+# ====================================================
+# 5. GERBANG KEAMANAN UTAMA (GLOBAL)
+# ====================================================
+
+# A. DEFAULT: TOLAK SEMUA
+Require all denied
+
+# B. WHITELIST: AKSES PUBLIK (Login & Assets)
+# Izinkan file login dan folder assets (css, js, fonts, img)
+# Agar tampilan login tidak rusak saat diakses publik (jika diinginkan)
+<FilesMatch "^(index\.php|admin\.php|login\.php|status\.php|error\.php|maintenance\.php)$">
+    Require all granted
+</FilesMatch>
+
+# DB check endpoint (protected by key)
+<If "%{REQUEST_URI} =~ m#^/tools/db_check\.php$#">
+    Require all granted
+</If>
+
+# App DB check endpoint (protected by key)
+<If "%{REQUEST_URI} =~ m#^/tools/db_check_app\.php$#">
+    Require all granted
+</If>
+
+# Realtime ingest endpoint (allow direct access by path)
+<If "%{REQUEST_URI} =~ m#^/report/laporan/services/live_ingest\.php$#">
+    <RequireAny>
+        Require ip 10.10.83.1
+        Require ip 10.10.83.2
+        Require ip 172.18.0.1
+        Require ip 172.19.0.0/16
+        Require ip 127.0.0.1
+    </RequireAny>
+</If>
+
+<If "%{REQUEST_URI} =~ m#^/report/laporan/services/sync_stats\.php$#">
+    <RequireAny>
+        Require ip 10.10.83.1
+        Require ip 10.10.83.2
+        Require ip 172.18.0.1
+        Require ip 172.19.0.0/16
+        Require ip 127.0.0.1
+    </RequireAny>
+</If>
+
+<If "%{REQUEST_URI} =~ m#^/report/laporan/services/sync_sales\.php$#">
+    <RequireAny>
+        Require ip 10.10.83.1
+        Require ip 10.10.83.2
+        Require ip 172.18.0.1
+        Require ip 172.19.0.0/16
+        Require ip 127.0.0.1
+    </RequireAny>
+</If>
+
+# HP save endpoint (AJAX input)
+<If "%{REQUEST_URI} =~ m#^/report/laporan/services/hp_save\.php$#">
+    Require all granted
+</If>
+
+# Settlement log ingest endpoint
+<If "%{REQUEST_URI} =~ m#^/report/laporan/services/settlement_log_ingest\.php$#">
+    Require all granted
+</If>
+
+# Password update endpoint (requires session)
+<If "%{REQUEST_URI} =~ m#^/settings/password_update\.php$#">
+    Require all granted
+</If>
+
+# Backup DB endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/backup_db\.php$#">
+    Require all granted
+</If>
+
+# Combined backup endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/backup_complete\.php$#">
+    Require all granted
+</If>
+
+# L/S WhatsApp alert tool (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/wa_ls_alert\.php$#">
+    Require all granted
+</If>
+
+# Stuck kick log ingest endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/stuck_log_ingest\.php$#">
+    Require all granted
+</If>
+
+# Backup status endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/backup_status\.php$#">
+    Require all granted
+</If>
+
+# Restore DB endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/restore_db\.php$#">
+    Require all granted
+</If>
+
+# Restore auto rusak endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/restore_auto_rusak\.php$#">
+    Require all granted
+</If>
+
+# Maintenance toggle endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/maintenance_toggle\.php$#">
+    Require all granted
+</If>
+
+# Todo WA endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/wa_todo_summary\.php$#">
+    Require all granted
+</If>
+
+# Clear logs endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/clear_logs\.php$#">
+    Require all granted
+</If>
+
+# Cleanup deleted users endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/cleanup_deleted_users\.php$#">
+    Require all granted
+</If>
+
+# Sync rusak audit endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/sync_rusak_audit\.php$#">
+    Require all granted
+</If>
+
+# Clear block endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/clear_block\.php$#">
+    Require all granted
+</If>
+
+# Init app DB endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/init_app_db\.php$#">
+    Require all granted
+</If>
+
+# VIP whitelist generator (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/htaccess_vip\.php$#">
+    Require all granted
+</If>
+
+# Settlement sync fix endpoint (protected by session)
+<If "%{REQUEST_URI} =~ m#^/tools/settlement_sync_fix\.php#">
+    Require all granted
+</If>
+
+
+# Print report endpoints
+<If "%{REQUEST_URI} =~ m#^/report/print/print_rekap\.php$#">
+    Require all granted
+</If>
+<If "%{REQUEST_URI} =~ m#^/report/print/print_rekap_bulanan\.php$#">
+    Require all granted
+</If>
+<If "%{REQUEST_URI} =~ m#^/report/print/print_rekap_tahunan\.php$#">
+    Require all granted
+</If>
+
+<If "%{REQUEST_URI} =~ m#^/report/print/print_rincian\.php$#">
+    Require all granted
+</If>
+<If "%{REQUEST_URI} =~ m#^/report/print_audit\.php$#">
+     Require all granted
+</If>
+
+# Dashboard AJAX
+<If "%{REQUEST_URI} =~ m#^/dashboard/aload\.php$#">
+    <RequireAny>
+        Require env TAMU_VIP
+        Require ip 10.0.0.6
+        Require ip 172.16.8.21
+        Require ip 10.10.83.1
+        Require ip 10.10.83.2
+        Require ip 127.0.0.1
+        Require ip ::1
+    </RequireAny>
+</If>
+
+# AJAX/Backend folder restrictions (VIP only)
+<If "%{REQUEST_URI} =~ m#^/dashboard/.*\.php$#">
+    <RequireAny>
+        Require env TAMU_VIP
+        Require ip 10.0.0.6
+        Require ip 172.16.8.21
+        Require ip 10.10.83.1
+        Require ip 10.10.83.2
+        Require ip 127.0.0.1
+        Require ip ::1
+    </RequireAny>
+</If>
+
+<If "%{REQUEST_URI} =~ m#^/hotspot/(?!user/(retur_request|login_meta)\.php$).*\.php$#">
+    <RequireAny>
+        Require env TAMU_VIP
+        Require ip 10.0.0.6
+        Require ip 172.16.8.21
+        Require ip 10.10.83.1
+        Require ip 10.10.83.2
+        Require ip 127.0.0.1
+        Require ip ::1
+    </RequireAny>
+</If>
+
+<If "%{REQUEST_URI} =~ m#^/dhcp/.*\.php$#">
+    <RequireAny>
+        Require env TAMU_VIP
+        Require ip 10.0.0.6
+        Require ip 172.16.8.21
+        Require ip 10.10.83.1
+        Require ip 10.10.83.2
+        Require ip 127.0.0.1
+        Require ip ::1
+    </RequireAny>
+</If>
+
+<If "%{REQUEST_URI} =~ m#^/traffic/.*\.php$#">
+    <RequireAny>
+        Require env TAMU_VIP
+        Require ip 10.0.0.6
+        Require ip 172.16.8.21
+        Require ip 127.0.0.1
+        Require ip ::1
+    </RequireAny>
+</If>
+
+# Sync usage endpoint
+<If "%{REQUEST_URI} =~ m#^/report/laporan/services/sync_usage\.php$#">
+    Require all granted
+</If>
+
+# Retur request endpoint (public)
+<If "%{REQUEST_URI} =~ m#^/hotspot/user/retur_request\.php$#">
+    Require all granted
+</If>
+
+# Login Meta endpoint (public)
+<If "%{REQUEST_URI} =~ m#^/hotspot/user/login_meta\.php$#">
+    Require all granted
+</If>
+
+# Backfill Meta endpoint (restricted)
+<If "%{REQUEST_URI} =~ m#^/report/laporan/services/backfill_meta\.php$#">
+    <RequireAny>
+        Require env TAMU_VIP
+        Require ip 127.0.0.1
+        Require ip ::1
+    </RequireAny>
+</If>
+
+# Usage ingest endpoint (login/logout)
+<If "%{REQUEST_URI} =~ m#^/report/laporan/services/usage_ingest\.php$#">
+    Require all granted
+</If>
+
+<If "%{REQUEST_URI} =~ m#^/report/laporan/services/settlement_manual\.php$#">
+    Require all granted
+</If>
+
+# Izinkan akses folder assets
+<If "%{REQUEST_URI} =~ m#^/(css|js|img|fonts|lang)/#">
+    Require all granted
+</If>
+
+# C. WHITELIST: TAMU VIP (Dashboard Full Akses)
+# IP VIP boleh akses file AJAX (dashboard/, hotspot/, dll)
+<RequireAny>
+    Require env TAMU_VIP
+    Require ip 10.0.0.6
+    Require ip 172.16.8.21
+    Require ip 10.10.83.1
+    Require ip 10.10.83.2
+    Require ip 127.0.0.1
+    Require ip ::1
+</RequireAny>
+
+# ====================================================
+# 6. PINTU KHUSUS MIKROTIK (SYNC)
+# ====================================================
+
+# ====================================================
+# 7. PINTU KHUSUS PRINT VOUCHER
+# ====================================================
+<Files "print.php">
+    Require all granted
+</Files>
