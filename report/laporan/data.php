@@ -1474,6 +1474,14 @@ if ($req_show === 'harian' && isset($db) && $db instanceof PDO) {
         $stmtAudit = $db->prepare("SELECT * FROM audit_rekap_manual WHERE report_date = :d ORDER BY blok_name");
         $stmtAudit->execute([':d' => $filter_date]);
         $audit_rows = $stmtAudit->fetchAll(PDO::FETCH_ASSOC);
+        $rows_src = [];
+        if (function_exists('fetch_rows_for_audit')) {
+            try {
+                $rows_src = fetch_rows_for_audit($db, $filter_date);
+            } catch (Exception $e) {
+                $rows_src = [];
+            }
+        }
         foreach ($audit_rows as $ar) {
             $audit_total_expected_qty += (int)($ar['expected_qty'] ?? 0);
             $audit_total_reported_qty += (int)($ar['reported_qty'] ?? 0);
@@ -1487,6 +1495,10 @@ if ($req_show === 'harian' && isset($db) && $db instanceof PDO) {
             $audit_total_selisih_qty += (int)($ar['selisih_qty'] ?? 0);
             $audit_total_selisih_setoran += (int)($ar['selisih_setoran'] ?? 0) - $refund_amt + $kurang_bayar_amt;
             [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($ar);
+            if (!empty($rows_src) && function_exists('calc_expected_for_block') && function_exists('normalize_block_name')) {
+                $expected = calc_expected_for_block($rows_src, $filter_date, normalize_block_name($ar['blok_name'] ?? ''));
+                $expected_adj_setoran = (int)($expected['net'] ?? $expected_adj_setoran);
+            }
             $audit_expected_setoran_adj_total += (int)$expected_adj_setoran;
             $audit_selisih_setoran_adj_total += (int)$manual_setoran - (int)$expected_adj_setoran - $refund_amt + $kurang_bayar_amt;
             $has_audit_adjusted = true;
