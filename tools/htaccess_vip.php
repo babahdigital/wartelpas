@@ -228,7 +228,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $setenvLines = build_setenv_lines($ips);
             $updated = replace_vip_block($content, $setenvLines);
             $updated = replace_requireany_blocks($updated, $ips);
-            if (file_put_contents($htaccessPath, $updated) !== false) {
+            $writeOk = @file_put_contents($htaccessPath, $updated);
+            if ($writeOk !== false) {
                 $status = 'Whitelist VIP diperbarui.';
                 try {
                     $pdo = app_db();
@@ -254,7 +255,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } catch (Exception $e) {
                 }
             } else {
+                $err = error_get_last();
+                $perm = is_file($htaccessPath) ? substr(sprintf('%o', fileperms($htaccessPath)), -4) : '-';
+                $w = is_writable($htaccessPath) ? 'yes' : 'no';
                 $error = 'Gagal menyimpan .htaccess.';
+                if (!empty($err['message'])) {
+                    $error .= ' (' . $err['message'] . ')';
+                }
+                $error .= ' [perm=' . $perm . ' writable=' . $w . ']';
             }
         }
     }
