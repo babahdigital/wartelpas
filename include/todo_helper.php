@@ -394,7 +394,17 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 ];
             } else {
                 try {
-                    $stmtSel = $db_sync->prepare("SELECT SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg, SUM(COALESCE(kurang_bayar_amt,0)) AS kb FROM audit_rekap_manual WHERE report_date = :d");
+                    $stmtSel = $db_sync->prepare("SELECT
+                        SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg,
+                        SUM(CASE
+                            WHEN COALESCE(kurang_bayar_amt,0) > 0 THEN COALESCE(kurang_bayar_amt,0)
+                            WHEN lower(COALESCE(kurang_bayar_desc,'')) LIKE '%sudah dibayar%'
+                                OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%lunas%'
+                                OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%terbayar%'
+                                THEN CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END
+                            ELSE 0
+                        END) AS kb
+                        FROM audit_rekap_manual WHERE report_date = :d");
                     $stmtSel->execute([':d' => $yesterday]);
                     $rowSel = $stmtSel->fetch(PDO::FETCH_ASSOC) ?: [];
                     $neg = (int)($rowSel['neg'] ?? 0);
@@ -404,7 +414,16 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                         $abs = number_format($remain, 0, ",", ".");
                         $blok_list = '';
                         try {
-                            $stmtBlok = $db_sync->prepare("SELECT blok_name, SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg, SUM(COALESCE(kurang_bayar_amt,0)) AS kb
+                            $stmtBlok = $db_sync->prepare("SELECT blok_name,
+                                SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg,
+                                SUM(CASE
+                                    WHEN COALESCE(kurang_bayar_amt,0) > 0 THEN COALESCE(kurang_bayar_amt,0)
+                                    WHEN lower(COALESCE(kurang_bayar_desc,'')) LIKE '%sudah dibayar%'
+                                        OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%lunas%'
+                                        OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%terbayar%'
+                                        THEN CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END
+                                    ELSE 0
+                                END) AS kb
                                 FROM audit_rekap_manual
                                 WHERE report_date = :d
                                 GROUP BY blok_name
@@ -486,7 +505,17 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
             }
             if ($audit_t_count > 0) {
                 try {
-                    $stmtSelT = $db_sync->prepare("SELECT SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg, SUM(COALESCE(kurang_bayar_amt,0)) AS kb FROM audit_rekap_manual WHERE report_date = :d");
+                    $stmtSelT = $db_sync->prepare("SELECT
+                        SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg,
+                        SUM(CASE
+                            WHEN COALESCE(kurang_bayar_amt,0) > 0 THEN COALESCE(kurang_bayar_amt,0)
+                            WHEN lower(COALESCE(kurang_bayar_desc,'')) LIKE '%sudah dibayar%'
+                                OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%lunas%'
+                                OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%terbayar%'
+                                THEN CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END
+                            ELSE 0
+                        END) AS kb
+                        FROM audit_rekap_manual WHERE report_date = :d");
                     $stmtSelT->execute([':d' => $today]);
                     $rowSelT = $stmtSelT->fetch(PDO::FETCH_ASSOC) ?: [];
                     $negT = (int)($rowSelT['neg'] ?? 0);
@@ -496,7 +525,16 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                         $absT = number_format($remainT, 0, ",", ".");
                         $blok_list = '';
                         try {
-                            $stmtBlok = $db_sync->prepare("SELECT blok_name, SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg, SUM(COALESCE(kurang_bayar_amt,0)) AS kb
+                            $stmtBlok = $db_sync->prepare("SELECT blok_name,
+                                SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg,
+                                SUM(CASE
+                                    WHEN COALESCE(kurang_bayar_amt,0) > 0 THEN COALESCE(kurang_bayar_amt,0)
+                                    WHEN lower(COALESCE(kurang_bayar_desc,'')) LIKE '%sudah dibayar%'
+                                        OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%lunas%'
+                                        OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%terbayar%'
+                                        THEN CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END
+                                    ELSE 0
+                                END) AS kb
                                 FROM audit_rekap_manual
                                 WHERE report_date = :d
                                 GROUP BY blok_name
@@ -632,7 +670,16 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
 
             // Piutang tanggal lain
             try {
-                $stmtKb = $db_sync->query("SELECT report_date, SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg, SUM(COALESCE(kurang_bayar_amt,0)) AS kb
+                $stmtKb = $db_sync->query("SELECT report_date,
+                    SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg,
+                    SUM(CASE
+                        WHEN COALESCE(kurang_bayar_amt,0) > 0 THEN COALESCE(kurang_bayar_amt,0)
+                        WHEN lower(COALESCE(kurang_bayar_desc,'')) LIKE '%sudah dibayar%'
+                            OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%lunas%'
+                            OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%terbayar%'
+                            THEN CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END
+                        ELSE 0
+                    END) AS kb
                     FROM audit_rekap_manual
                     GROUP BY report_date
                     HAVING (neg - kb) > 0
@@ -652,7 +699,16 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 $parts = ['piutang Rp ' . number_format($remainV, 0, ",", ".")];
                 $blok_list = '';
                 try {
-                    $stmtBlok = $db_sync->prepare("SELECT blok_name, SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg, SUM(COALESCE(kurang_bayar_amt,0)) AS kb
+                    $stmtBlok = $db_sync->prepare("SELECT blok_name,
+                        SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg,
+                        SUM(CASE
+                            WHEN COALESCE(kurang_bayar_amt,0) > 0 THEN COALESCE(kurang_bayar_amt,0)
+                            WHEN lower(COALESCE(kurang_bayar_desc,'')) LIKE '%sudah dibayar%'
+                                OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%lunas%'
+                                OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%terbayar%'
+                                THEN CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END
+                            ELSE 0
+                        END) AS kb
                         FROM audit_rekap_manual
                         WHERE report_date = :d
                         GROUP BY blok_name
