@@ -897,9 +897,10 @@ if (file_exists($dbFile)) {
     .modal-footer { padding:12px 16px; display:flex; justify-content:flex-end; gap:8px; border-top:1px solid #3a4046; }
     .form-input { width:100%; background:#2a3036; color:#e5e7eb; border:1px solid #3a4046; border-radius:4px; padding:8px 10px; }
     .modal-note { font-size:11px; color:#9ca3af; margin-top:6px; }
+    body.modal-open { overflow: hidden; }
 </style>
 
-<div id="auditNoteModal" class="modal-backdrop" onclick="if(event.target===this){closeAuditNoteModal();}">
+<div id="auditNoteModal" class="modal-backdrop">
     <div class="modal-card">
         <div class="modal-header">
             <div class="modal-title"><i class="fa fa-sticky-note-o"></i> Catatan / Insiden Audit</div>
@@ -926,6 +927,7 @@ if (file_exists($dbFile)) {
         var modal = document.getElementById('auditNoteModal');
         if (modal) {
             modal.style.display = 'flex';
+            document.body.classList.add('modal-open');
             var noteInput = modal.querySelector('textarea[name="note_text"]');
             if (noteInput) noteInput.focus();
         }
@@ -933,6 +935,7 @@ if (file_exists($dbFile)) {
     function closeAuditNoteModal(){
         var modal = document.getElementById('auditNoteModal');
         if (modal) modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
     }
 </script>
 <?php endif; ?>
