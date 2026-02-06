@@ -580,6 +580,7 @@ $file_title = trim($file_title, '-_');
     @page { margin: 8mm; }
     @media print {
       .toolbar { display: none; }
+      html, body { zoom: 0.6; }
     }
 </style>
 </head>
@@ -588,6 +589,18 @@ $file_title = trim($file_title, '-_');
       <button class="btn" onclick="window.print()">Print / Download PDF</button>
       <button class="btn" onclick="shareReport()">Share</button>
   </div>
+
+  <script>
+    (function(){
+      function setPrintZoom(enable){
+        var z = enable ? '0.6' : '';
+        document.documentElement.style.zoom = z;
+        document.body.style.zoom = z;
+      }
+      window.addEventListener('beforeprint', function(){ setPrintZoom(true); });
+      window.addEventListener('afterprint', function(){ setPrintZoom(false); });
+    })();
+  </script>
 
     <div style="border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
       <h1 style="margin:0;">Laporan Audit Keuangan</h1>
