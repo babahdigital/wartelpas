@@ -13,6 +13,11 @@ chmod -R 777 /var/www/html/logs
 chmod -R 777 /var/www/html/report
 chmod -R 777 /var/www/html/voucher
 
+# 1b. Pastikan .htaccess bisa ditulis
+if [ -f "/var/www/html/.htaccess" ]; then
+    chmod 666 /var/www/html/.htaccess || true
+fi
+
 # 2. Pastikan file konfigurasi bisa ditulis oleh web server
 if [ -f "/var/www/html/include/config.php" ]; then
     chmod 666 /var/www/html/include/config.php || true
