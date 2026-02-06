@@ -196,10 +196,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vip_whitelist'])) {
     $keep_ips = $_POST['keep_ips'] ?? [];
     $keep_names = $_POST['keep_name'] ?? [];
     $remove_ips = $_POST['remove_ips'] ?? [];
+    $remove_ip_single = trim((string)($_POST['remove_ip_single'] ?? ''));
     
     if (!is_array($keep_ips)) $keep_ips = [];
     if (!is_array($keep_names)) $keep_names = [];
     if (!is_array($remove_ips)) $remove_ips = [];
+    if ($remove_ip_single !== '' && !in_array($remove_ip_single, $remove_ips, true)) {
+        $remove_ips[] = $remove_ip_single;
+    }
 
     $final = [];
     foreach ($keep_ips as $ip) {
@@ -293,9 +297,6 @@ function vip_whitelist_render_form($status, $error, $ips, $ip_names, $htaccessPa
         $action_attr = $action !== '' ? (' action="' . htmlspecialchars($action) . '"') : '';
         ?>
         <div>
-            <div class="m-status-info">
-                <i class="fa fa-shield" style="color:#3b82f6;"></i>
-            </div>
             <div class="m-status-text" style="text-align:center; padding-top:0; margin-bottom:12px;">
                 VIP Whitelist Generator (.htaccess)<br>
                 <span style="font-size:12px;color:#9ca3af;">File: <?= htmlspecialchars($htaccessPath) ?></span>
@@ -308,16 +309,17 @@ function vip_whitelist_render_form($status, $error, $ips, $ip_names, $htaccessPa
                 <div class="m-alert m-alert-danger" style="margin-bottom:12px;"><i class="fa fa-exclamation-triangle"></i> <?= htmlspecialchars($error) ?></div>
             <?php endif; ?>
 
-            <form method="post"<?= $action_attr; ?>>
+            <form method="post"<?= $action_attr; ?> id="vip-whitelist-form">
                 <input type="hidden" name="vip_whitelist" value="1">
+                <input type="hidden" name="remove_ip_single" id="vip-remove-ip" value="">
                 <div class="m-pass-form m-pass-grid">
                     <div class="m-pass-row">
                         <label class="m-pass-label">Nama</label>
-                        <input type="text" name="add_name" class="m-pass-input" placeholder="Nama pemilik" required>
+                        <input type="text" name="add_name" id="vip-add-name" class="m-pass-input" placeholder="Nama pemilik" required>
                     </div>
                     <div class="m-pass-row">
                         <label class="m-pass-label">IP</label>
-                        <input type="text" name="add_ip" class="m-pass-input" placeholder="Contoh: 10.10.0.6" required>
+                        <input type="text" name="add_ip" id="vip-add-ip" class="m-pass-input" placeholder="Contoh: 10.10.0.6" required>
                     </div>
                 </div>
                 <div style="margin-top:12px;">
@@ -331,27 +333,53 @@ function vip_whitelist_render_form($status, $error, $ips, $ip_names, $htaccessPa
                     <div class="admin-empty" style="padding:10px;">Belum ada IP VIP.</div>
                 <?php else: ?>
                     <?php foreach ($ips as $ip): ?>
-                        <div class="router-item" style="margin-bottom:8px; align-items:flex-start;">
+                        <?php $nameVal = (string)($ip_names[$ip] ?? ''); ?>
+                        <div class="router-item" style="margin-bottom:8px;">
                             <div class="router-icon"><i class="fa fa-shield"></i></div>
-                            <div class="router-info" style="gap:4px;">
-                                <span class="router-name"><?= htmlspecialchars($ip) ?></span>
-                                <span class="router-session">Nama</span>
-                                <input type="hidden" name="keep_ips[]" value="<?= htmlspecialchars($ip) ?>">
-                                <input type="text" name="keep_name[<?= htmlspecialchars($ip) ?>]" class="m-pass-input" value="<?= htmlspecialchars($ip_names[$ip] ?? '') ?>" required>
+                            <div class="router-info">
+                                <span class="router-name"><?= htmlspecialchars($nameVal !== '' ? $nameVal : $ip) ?></span>
+                                <span class="router-session">IP: <?= htmlspecialchars($ip) ?></span>
                             </div>
-                            <div class="router-actions" style="display:flex; align-items:center;">
-                                <label class="custom-check" style="margin:0;">
-                                    <input type="checkbox" name="remove_ips[]" value="<?= htmlspecialchars($ip) ?>">
-                                    <span class="checkmark"></span>
-                                    <span class="check-label">Hapus</span>
-                                </label>
+                            <div class="router-actions">
+                                <a href="javascript:void(0)" title="Edit" class="vip-edit" data-ip="<?= htmlspecialchars($ip) ?>" data-name="<?= htmlspecialchars($nameVal) ?>"><i class="fa fa-pencil"></i></a>
+                                <a href="javascript:void(0)" title="Hapus" class="vip-remove" data-ip="<?= htmlspecialchars($ip) ?>" style="margin-left:6px; color:#dc2626;"><i class="fa fa-trash"></i></a>
                             </div>
+                            <input type="hidden" name="keep_ips[]" value="<?= htmlspecialchars($ip) ?>">
+                            <input type="hidden" name="keep_name[<?= htmlspecialchars($ip) ?>]" value="<?= htmlspecialchars($nameVal) ?>">
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
 
-                <div class="vip-note" style="margin-top:8px;">Centang kolom hapus untuk mengeluarkan IP. Backup otomatis tersimpan di .htaccess.bak</div>
+                <div class="vip-note" style="margin-top:8px;">Klik ikon edit untuk mengubah nama/IP. Klik ikon hapus untuk mengeluarkan IP. Backup otomatis tersimpan di .htaccess.bak</div>
             </form>
+            <script>
+            (function(){
+                var form = document.getElementById('vip-whitelist-form');
+                if (!form) return;
+                var nameInput = document.getElementById('vip-add-name');
+                var ipInput = document.getElementById('vip-add-ip');
+                var removeInput = document.getElementById('vip-remove-ip');
+                var edits = form.querySelectorAll('.vip-edit');
+                var removes = form.querySelectorAll('.vip-remove');
+                edits.forEach(function(btn){
+                    btn.addEventListener('click', function(){
+                        if (nameInput) nameInput.value = this.getAttribute('data-name') || '';
+                        if (ipInput) ipInput.value = this.getAttribute('data-ip') || '';
+                        if (removeInput) removeInput.value = '';
+                        if (nameInput) nameInput.focus();
+                    });
+                });
+                removes.forEach(function(btn){
+                    btn.addEventListener('click', function(){
+                        var ip = this.getAttribute('data-ip') || '';
+                        if (!ip) return;
+                        if (!confirm('Hapus IP ' + ip + '?')) return;
+                        if (removeInput) removeInput.value = ip;
+                        form.submit();
+                    });
+                });
+            })();
+            </script>
         </div>
         <?php
 }
