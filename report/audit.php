@@ -851,28 +851,6 @@ if (file_exists($dbFile)) {
             </div>
         <?php endif; ?>
 
-        <?php if ($audit_manual_summary['total_expenses'] > 0): ?>
-            <div class="summary-card" style="border:1px solid #3a4046;background:#1f2327;margin-top:10px;">
-                <div style="font-size:12px;color:#f0b35a;">
-                    <strong>Catatan Pengeluaran:</strong> Total pengeluaran tercatat Rp <?= number_format($audit_manual_summary['total_expenses'],0,',','.') ?>.
-                </div>
-                <?php if (!empty($audit_expense_notes)): ?>
-                    <div style="margin-top:8px;">
-                        <ul style="margin:6px 0 0 16px; padding:0; color:#e2e8f0; font-size:12px;">
-                            <?php foreach ($audit_expense_notes as $en): ?>
-                                <li>
-                                    Blok <?= htmlspecialchars((string)$en['blok']) ?>: Rp <?= number_format((int)$en['expense_amt'],0,',','.') ?>
-                                    <?php if (!empty($en['expense_desc'])): ?>
-                                        (<?= htmlspecialchars($en['expense_desc']) ?>)
-                                    <?php endif; ?>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    </div>
-                <?php endif; ?>
-            </div>
-        <?php endif; ?>
-
         <?php if ($audit_manual_summary['total_kurang_bayar'] > 0): ?>
             <div class="summary-card" style="border:1px solid #3a4046;background:#1f2327;margin-top:10px;">
                 <div style="font-size:12px;color:#cbd5f5;">
@@ -890,6 +868,28 @@ if (file_exists($dbFile)) {
                                         (<?= htmlspecialchars($rn['kurang_bayar_desc']) ?>)
                                     <?php endif; ?>
                                     — Selisih Rp <?= number_format((int)$rn['selisih_adj'],0,',','.') ?>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($audit_manual_summary['total_expenses'] > 0): ?>
+            <div class="summary-card" style="border:1px solid #3a4046;background:#1f2327;margin-top:10px;">
+                <div style="font-size:12px;color:#f0b35a;">
+                    <strong>Catatan Pengeluaran:</strong> Total pengeluaran tercatat Rp <?= number_format($audit_manual_summary['total_expenses'],0,',','.') ?>.
+                </div>
+                <?php if (!empty($audit_expense_notes)): ?>
+                    <div style="margin-top:8px;">
+                        <ul style="margin:6px 0 0 16px; padding:0; color:#e2e8f0; font-size:12px;">
+                            <?php foreach ($audit_expense_notes as $en): ?>
+                                <li>
+                                    Blok <?= htmlspecialchars((string)$en['blok']) ?>: Rp <?= number_format((int)$en['expense_amt'],0,',','.') ?>
+                                    <?php if (!empty($en['expense_desc'])): ?>
+                                        (<?= htmlspecialchars($en['expense_desc']) ?>)
+                                    <?php endif; ?>
                                 </li>
                             <?php endforeach; ?>
                         </ul>
