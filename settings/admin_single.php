@@ -167,6 +167,48 @@ function openVipWhitelistPopup(){
             { label: 'Tutup', className: 'm-btn m-btn-cancel' }
         ]
     });
+    setTimeout(bindVipWhitelistPopupHandlers, 50);
+}
+
+function bindVipWhitelistPopupHandlers(){
+    var backdrop = document.querySelector('.m-popup-backdrop.show');
+    if (!backdrop) return;
+    var form = backdrop.querySelector('#vip-whitelist-form');
+    if (!form) return;
+    var nameInput = backdrop.querySelector('#vip-add-name');
+    var ipInput = backdrop.querySelector('#vip-add-ip');
+    var removeInput = backdrop.querySelector('#vip-remove-ip');
+    var editInput = backdrop.querySelector('#vip-edit-old');
+    var edits = backdrop.querySelectorAll('.vip-edit');
+    var removes = backdrop.querySelectorAll('.vip-remove');
+
+    edits.forEach(function(btn){
+        btn.addEventListener('click', function(){
+            var ip = this.getAttribute('data-ip') || '';
+            var name = this.getAttribute('data-name') || '';
+            if (nameInput) nameInput.value = name;
+            if (ipInput) ipInput.value = ip;
+            if (editInput) editInput.value = ip;
+            if (removeInput) removeInput.value = '';
+            if (nameInput) nameInput.required = true;
+            if (ipInput) ipInput.required = true;
+            if (nameInput) nameInput.focus();
+        });
+    });
+
+    removes.forEach(function(btn){
+        btn.addEventListener('click', function(){
+            var ip = this.getAttribute('data-ip') || '';
+            if (!ip) return;
+            if (!confirm('Hapus IP ' + ip + '?')) return;
+            if (removeInput) removeInput.value = ip;
+            if (editInput) editInput.value = '';
+            if (nameInput) nameInput.required = false;
+            if (ipInput) ipInput.required = false;
+            form.noValidate = true;
+            form.submit();
+        });
+    });
 }
 <?php if ($vip_popup_autoshow): ?>
 setTimeout(openVipWhitelistPopup, 150);

@@ -193,6 +193,7 @@ if (empty($ips) && !empty($ip_names)) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vip_whitelist'])) {
     $add_ip = trim((string)($_POST['add_ip'] ?? ''));
     $add_name = trim((string)($_POST['add_name'] ?? ''));
+    $edit_ip_old = trim((string)($_POST['edit_ip_old'] ?? ''));
     $keep_ips = $_POST['keep_ips'] ?? [];
     $keep_names = $_POST['keep_name'] ?? [];
     $remove_ips = $_POST['remove_ips'] ?? [];
@@ -209,6 +210,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vip_whitelist'])) {
     foreach ($keep_ips as $ip) {
         $ip = trim((string)$ip);
         if ($ip === '' || in_array($ip, $remove_ips, true)) continue;
+        if ($edit_ip_old !== '' && $ip === $edit_ip_old) continue;
         if (!is_valid_ip($ip)) continue;
         $name = trim((string)($keep_names[$ip] ?? ''));
         if ($name === '') {
@@ -216,6 +218,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vip_whitelist'])) {
             break;
         }
         $final[$ip] = $name;
+    }
+
+    if ($error === '' && $edit_ip_old !== '' && $add_ip === '') {
+        $error = 'IP wajib diisi untuk edit.';
     }
 
     if ($add_ip !== '') {
@@ -301,6 +307,7 @@ function vip_whitelist_render_form($status, $error, $ips, $ip_names, $htaccessPa
                 VIP Whitelist Generator (.htaccess)<br>
                 <span style="font-size:12px;color:#9ca3af;">File: <?= htmlspecialchars($htaccessPath) ?></span>
             </div>
+                <input type="hidden" name="edit_ip_old" id="vip-edit-old" value="">
 
             <?php if ($status): ?>
                 <div class="m-alert m-alert-info" style="margin-bottom:12px;"><i class="fa fa-check-circle"></i> <?= htmlspecialchars($status) ?></div>
@@ -352,34 +359,6 @@ function vip_whitelist_render_form($status, $error, $ips, $ip_names, $htaccessPa
 
                 <div class="vip-note" style="margin-top:8px;">Klik ikon edit untuk mengubah nama/IP. Klik ikon hapus untuk mengeluarkan IP. Backup otomatis tersimpan di .htaccess.bak</div>
             </form>
-            <script>
-            (function(){
-                var form = document.getElementById('vip-whitelist-form');
-                if (!form) return;
-                var nameInput = document.getElementById('vip-add-name');
-                var ipInput = document.getElementById('vip-add-ip');
-                var removeInput = document.getElementById('vip-remove-ip');
-                var edits = form.querySelectorAll('.vip-edit');
-                var removes = form.querySelectorAll('.vip-remove');
-                edits.forEach(function(btn){
-                    btn.addEventListener('click', function(){
-                        if (nameInput) nameInput.value = this.getAttribute('data-name') || '';
-                        if (ipInput) ipInput.value = this.getAttribute('data-ip') || '';
-                        if (removeInput) removeInput.value = '';
-                        if (nameInput) nameInput.focus();
-                    });
-                });
-                removes.forEach(function(btn){
-                    btn.addEventListener('click', function(){
-                        var ip = this.getAttribute('data-ip') || '';
-                        if (!ip) return;
-                        if (!confirm('Hapus IP ' + ip + '?')) return;
-                        if (removeInput) removeInput.value = ip;
-                        form.submit();
-                    });
-                });
-            })();
-            </script>
         </div>
         <?php
 }
