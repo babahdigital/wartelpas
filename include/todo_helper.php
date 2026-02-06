@@ -400,7 +400,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                     $neg = (int)($rowSel['neg'] ?? 0);
                     $kb = (int)($rowSel['kb'] ?? 0);
                     $remain = $neg - $kb;
-                    if ($remain > 0 && !$todo_is_ack('audit_kurang', $yesterday)) {
+                    if ($remain > 0) {
                         $abs = number_format($remain, 0, ",", ".");
                         $blok_list = '';
                         try {
@@ -430,10 +430,10 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                         $todo_list[] = [
                             'id' => 'audit_kurang_' . $yesterday,
                             'title' => 'Audit piutang (Kemarin)',
-                            'desc' => 'Terdapat kekurangan Rp ' . $abs . ' pada audit tanggal ' . $yesterday_label . '.' . $blok_list . ' Jika sudah ditagih, klik "Sesuai".',
+                            'desc' => 'Terdapat kekurangan Rp ' . $abs . ' pada audit tanggal ' . $yesterday_label . '.' . $blok_list,
                             'level' => 'danger',
-                            'action_label' => 'Sesuai',
-                            'action_url' => $todo_ack_url('audit_kurang', $yesterday),
+                            'action_label' => 'Buka Tanggal ' . $yesterday_label,
+                            'action_url' => './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($yesterday),
                             'action_target' => '_self'
                         ];
                     }
@@ -492,7 +492,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                     $negT = (int)($rowSelT['neg'] ?? 0);
                     $kbT = (int)($rowSelT['kb'] ?? 0);
                     $remainT = $negT - $kbT;
-                    if ($remainT > 0 && !$todo_is_ack('audit_kurang', $today)) {
+                    if ($remainT > 0) {
                         $absT = number_format($remainT, 0, ",", ".");
                         $blok_list = '';
                         try {
@@ -522,10 +522,10 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                         $todo_list[] = [
                             'id' => 'audit_kurang_' . $today,
                             'title' => 'Audit piutang (Hari Ini)',
-                            'desc' => 'Terdapat kekurangan Rp ' . $absT . ' pada audit tanggal ' . $today_label . '.' . $blok_list . ' Jika sudah ditagih, klik "Sesuai".',
+                            'desc' => 'Terdapat kekurangan Rp ' . $absT . ' pada audit tanggal ' . $today_label . '.' . $blok_list,
                             'level' => 'danger',
-                            'action_label' => 'Sesuai',
-                            'action_url' => $todo_ack_url('audit_kurang', $today),
+                            'action_label' => 'Buka Tanggal ' . $today_label,
+                            'action_url' => $today_report_url,
                             'action_target' => '_self'
                         ];
                     }
@@ -562,8 +562,8 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                             'title' => 'Refund pending (Hari Ini)',
                             'desc' => 'Terdapat refund Rp ' . number_format($refT, 0, ",", ".") . ' pada audit tanggal ' . $today_label . '.' . $blok_list,
                             'level' => 'warn',
-                            'action_label' => 'Buka Audit ' . $today_label,
-                            'action_url' => './?report=audit_session&session=' . urlencode($session) . '&show=harian&date=' . urlencode($today),
+                            'action_label' => 'Buka Tanggal ' . $today_label,
+                            'action_url' => './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($today),
                             'action_target' => '_self'
                         ];
                     }
@@ -648,7 +648,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 $negV = (int)($kr['neg'] ?? 0);
                 $kbV = (int)($kr['kb'] ?? 0);
                 $remainV = $negV - $kbV;
-                if ($remainV <= 0 || $todo_is_ack('audit_kurang', $rdate)) continue;
+                if ($remainV <= 0) continue;
                 $parts = ['piutang Rp ' . number_format($remainV, 0, ",", ".")];
                 $blok_list = '';
                 try {
@@ -680,10 +680,10 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 $todo_list[] = [
                     'id' => 'audit_kurang_' . $rdate,
                     'title' => 'Audit piutang',
-                    'desc' => $desc . ' Jika sudah ditagih, klik "Sesuai".',
+                    'desc' => $desc,
                     'level' => 'danger',
-                    'action_label' => 'Sesuai',
-                    'action_url' => $todo_ack_url('audit_kurang', $rdate),
+                    'action_label' => 'Buka Tanggal ' . $rlabel,
+                    'action_url' => './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($rdate),
                     'action_target' => '_self'
                 ];
             }
@@ -723,8 +723,8 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                     'title' => 'Refund pending',
                     'desc' => 'Terdapat refund Rp ' . number_format($refV, 0, ",", ".") . ' pada audit tanggal ' . $rlabel . '.' . $blok_list,
                     'level' => 'warn',
-                    'action_label' => 'Buka Audit ' . $rlabel,
-                    'action_url' => './?report=audit_session&session=' . urlencode($session) . '&show=harian&date=' . urlencode($rdate),
+                    'action_label' => 'Buka Tanggal ' . $rlabel,
+                    'action_url' => './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($rdate),
                     'action_target' => '_self'
                 ];
             }
