@@ -175,16 +175,21 @@ try {
 
 $seen_sales = [];
 $seen_user_day = [];
+$retur_ref_map_global = [];
+foreach ($rows as $r) {
+    $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
+    if ($sale_date === '' || strpos((string)$sale_date, $filter_year) !== 0) continue;
+
+    $ref_user = extract_retur_user_from_ref($r['comment'] ?? '');
+    if ($ref_user !== '') {
+        $retur_ref_map_global[strtolower($ref_user)] = true;
+    }
+}
 foreach ($rows as $r) {
     $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
     if ($sale_date === '' || strpos((string)$sale_date, $filter_year) !== 0) continue;
 
     $username = $r['username'] ?? '';
-    if ($username !== '' && $sale_date !== '') {
-        $user_day_key = $username . '|' . $sale_date;
-        if (isset($seen_user_day[$user_day_key])) continue;
-        $seen_user_day[$user_day_key] = true;
-    }
     $raw_key = trim((string)($r['full_raw_data'] ?? ''));
     $unique_key = '';
     if ($raw_key !== '') {
@@ -197,6 +202,16 @@ foreach ($rows as $r) {
     }
     if ($unique_key !== '' && isset($seen_sales[$unique_key])) continue;
     if ($unique_key !== '') $seen_sales[$unique_key] = true;
+
+    if ($username !== '' && isset($retur_ref_map_global[strtolower($username)])) {
+        continue;
+    }
+
+    if ($username !== '' && $sale_date !== '') {
+        $user_day_key = $username . '|' . $sale_date;
+        if (isset($seen_user_day[$user_day_key])) continue;
+        $seen_user_day[$user_day_key] = true;
+    }
 
     $status = strtolower((string)($r['status'] ?? ''));
     $lh_status = strtolower((string)($r['last_status'] ?? ''));
