@@ -514,58 +514,32 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 ];
             } else {
                 try {
-                    $stmtSel = $db_sync->prepare("SELECT
-                        SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg,
-                        SUM(CASE
-                            WHEN COALESCE(kurang_bayar_amt,0) > 0 THEN COALESCE(kurang_bayar_amt,0)
-                            WHEN lower(COALESCE(kurang_bayar_desc,'')) LIKE '%sudah dibayar%'
-                                OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%lunas%'
-                                OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%terbayar%'
-                                THEN CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END
-                            ELSE 0
-                        END) AS kb
-                        FROM audit_rekap_manual WHERE report_date = :d");
-                    $stmtSel->execute([':d' => $yesterday]);
-                    $rowSel = $stmtSel->fetch(PDO::FETCH_ASSOC) ?: [];
-                    $neg = (int)($rowSel['neg'] ?? 0);
-                    $kb = (int)($rowSel['kb'] ?? 0);
-                    $remain = $neg - $kb;
+                    $rows_y = $get_audit_rows($yesterday);
+                    $remain = 0;
+                    $block_rem = [];
+                    foreach ($rows_y as $ar) {
+                        [$ss_raw] = $calc_effective_selisih($ar, $yesterday);
+                        if ($ss_raw >= 0) continue;
+                        $neg = -$ss_raw;
+                        $kb_amt = (int)($ar['kurang_bayar_amt'] ?? 0);
+                        $kb_desc = (string)($ar['kurang_bayar_desc'] ?? '');
+                        $paid = 0;
+                        if ($kb_amt > 0) $paid = $kb_amt;
+                        elseif ($is_paid_desc($kb_desc)) $paid = $neg;
+                        $rem = $neg - $paid;
+                        if ($rem <= 0) continue;
+                        $remain += $rem;
+                        $bname = $format_block_label($ar['blok_name'] ?? '');
+                        $block_rem[$bname] = ($block_rem[$bname] ?? 0) + $rem;
+                    }
                     if ($remain > 0) {
                         $abs = number_format($remain, 0, ",", ".");
-                        $blok_list = '';
-                        try {
-                            $stmtBlok = $db_sync->prepare("SELECT blok_name,
-                                SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg,
-                                SUM(CASE
-                                    WHEN COALESCE(kurang_bayar_amt,0) > 0 THEN COALESCE(kurang_bayar_amt,0)
-                                    WHEN lower(COALESCE(kurang_bayar_desc,'')) LIKE '%sudah dibayar%'
-                                        OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%lunas%'
-                                        OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%terbayar%'
-                                        THEN CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END
-                                    ELSE 0
-                                END) AS kb
-                                FROM audit_rekap_manual
-                                WHERE report_date = :d
-                                GROUP BY blok_name
-                                HAVING (neg - kb) > 0
-                                ORDER BY blok_name ASC
-                                LIMIT 10");
-                            $stmtBlok->execute([':d' => $yesterday]);
-                            $rows = $stmtBlok->fetchAll(PDO::FETCH_ASSOC) ?: [];
-                            $parts = [];
-                            foreach ($rows as $br) {
-                                $bname = $format_block_label($br['blok_name'] ?? '');
-                                $bneg = (int)($br['neg'] ?? 0);
-                                $bkb = (int)($br['kb'] ?? 0);
-                                $brem = $bneg - $bkb;
-                                if ($brem <= 0) continue;
-                                $parts[] = $bname . ' (kurang ' . number_format($brem, 0, ",", ".") . ')';
-                            }
-                            if (!empty($parts)) {
-                                $blok_list = ' ' . implode(', ', $parts) . '.';
-                            }
-                        } catch (Exception $e) {
+                        $parts = [];
+                        foreach ($block_rem as $bname => $brem) {
+                            if ($brem <= 0) continue;
+                            $parts[] = $bname . ' (kurang ' . number_format($brem, 0, ",", ".") . ')';
                         }
+                        $blok_list = !empty($parts) ? (' ' . implode(', ', $parts) . '.') : '';
                         $todo_list[] = [
                             'id' => 'audit_kurang_' . $yesterday,
                             'title' => 'Audit piutang (Kemarin)',
@@ -625,58 +599,32 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
             }
             if ($audit_t_count > 0) {
                 try {
-                    $stmtSelT = $db_sync->prepare("SELECT
-                        SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg,
-                        SUM(CASE
-                            WHEN COALESCE(kurang_bayar_amt,0) > 0 THEN COALESCE(kurang_bayar_amt,0)
-                            WHEN lower(COALESCE(kurang_bayar_desc,'')) LIKE '%sudah dibayar%'
-                                OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%lunas%'
-                                OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%terbayar%'
-                                THEN CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END
-                            ELSE 0
-                        END) AS kb
-                        FROM audit_rekap_manual WHERE report_date = :d");
-                    $stmtSelT->execute([':d' => $today]);
-                    $rowSelT = $stmtSelT->fetch(PDO::FETCH_ASSOC) ?: [];
-                    $negT = (int)($rowSelT['neg'] ?? 0);
-                    $kbT = (int)($rowSelT['kb'] ?? 0);
-                    $remainT = $negT - $kbT;
+                    $rows_t = $get_audit_rows($today);
+                    $remainT = 0;
+                    $block_rem = [];
+                    foreach ($rows_t as $ar) {
+                        [$ss_raw] = $calc_effective_selisih($ar, $today);
+                        if ($ss_raw >= 0) continue;
+                        $neg = -$ss_raw;
+                        $kb_amt = (int)($ar['kurang_bayar_amt'] ?? 0);
+                        $kb_desc = (string)($ar['kurang_bayar_desc'] ?? '');
+                        $paid = 0;
+                        if ($kb_amt > 0) $paid = $kb_amt;
+                        elseif ($is_paid_desc($kb_desc)) $paid = $neg;
+                        $rem = $neg - $paid;
+                        if ($rem <= 0) continue;
+                        $remainT += $rem;
+                        $bname = $format_block_label($ar['blok_name'] ?? '');
+                        $block_rem[$bname] = ($block_rem[$bname] ?? 0) + $rem;
+                    }
                     if ($remainT > 0) {
                         $absT = number_format($remainT, 0, ",", ".");
-                        $blok_list = '';
-                        try {
-                            $stmtBlok = $db_sync->prepare("SELECT blok_name,
-                                SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg,
-                                SUM(CASE
-                                    WHEN COALESCE(kurang_bayar_amt,0) > 0 THEN COALESCE(kurang_bayar_amt,0)
-                                    WHEN lower(COALESCE(kurang_bayar_desc,'')) LIKE '%sudah dibayar%'
-                                        OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%lunas%'
-                                        OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%terbayar%'
-                                        THEN CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END
-                                    ELSE 0
-                                END) AS kb
-                                FROM audit_rekap_manual
-                                WHERE report_date = :d
-                                GROUP BY blok_name
-                                HAVING (neg - kb) > 0
-                                ORDER BY blok_name ASC
-                                LIMIT 10");
-                            $stmtBlok->execute([':d' => $today]);
-                            $rows = $stmtBlok->fetchAll(PDO::FETCH_ASSOC) ?: [];
-                            $parts = [];
-                            foreach ($rows as $br) {
-                                $bname = $format_block_label($br['blok_name'] ?? '');
-                                $bneg = (int)($br['neg'] ?? 0);
-                                $bkb = (int)($br['kb'] ?? 0);
-                                $brem = $bneg - $bkb;
-                                if ($brem <= 0) continue;
-                                $parts[] = $bname . ' (kurang ' . number_format($brem, 0, ",", ".") . ')';
-                            }
-                            if (!empty($parts)) {
-                                $blok_list = ' ' . implode(', ', $parts) . '.';
-                            }
-                        } catch (Exception $e) {
+                        $parts = [];
+                        foreach ($block_rem as $bname => $brem) {
+                            if ($brem <= 0) continue;
+                            $parts[] = $bname . ' (kurang ' . number_format($brem, 0, ",", ".") . ')';
                         }
+                        $blok_list = !empty($parts) ? (' ' . implode(', ', $parts) . '.') : '';
                         $todo_list[] = [
                             'id' => 'audit_kurang_' . $today,
                             'title' => 'Audit piutang (Hari Ini)',
@@ -694,43 +642,26 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
             // Refund hari ini (selisih plus belum dicatat)
             if ($audit_t_count > 0) {
                 try {
-                    $stmtRefT = $db_sync->prepare("SELECT
-                        SUM(CASE WHEN selisih_setoran > 0 THEN selisih_setoran ELSE 0 END) AS pos,
-                        SUM(COALESCE(refund_amt,0)) AS refunded
-                        FROM audit_rekap_manual WHERE report_date = :d");
-                    $stmtRefT->execute([':d' => $today]);
-                    $refRow = $stmtRefT->fetch(PDO::FETCH_ASSOC) ?: [];
-                    $posT = (int)($refRow['pos'] ?? 0);
-                    $refundedT = (int)($refRow['refunded'] ?? 0);
-                    $remainT = $posT - $refundedT;
+                    $rows_t = $get_audit_rows($today);
+                    $remainT = 0;
+                    $block_rem = [];
+                    foreach ($rows_t as $ar) {
+                        [$ss_raw] = $calc_effective_selisih($ar, $today);
+                        if ($ss_raw <= 0) continue;
+                        $refund_amt = (int)($ar['refund_amt'] ?? 0);
+                        $rem = $ss_raw - $refund_amt;
+                        if ($rem <= 0) continue;
+                        $remainT += $rem;
+                        $bname = $format_block_label($ar['blok_name'] ?? '');
+                        $block_rem[$bname] = ($block_rem[$bname] ?? 0) + $rem;
+                    }
                     if ($remainT > 0) {
-                        $blok_list = '';
-                        try {
-                            $stmtRefB = $db_sync->prepare("SELECT blok_name,
-                                SUM(CASE WHEN selisih_setoran > 0 THEN selisih_setoran ELSE 0 END) AS pos,
-                                SUM(COALESCE(refund_amt,0)) AS refunded
-                                FROM audit_rekap_manual
-                                WHERE report_date = :d
-                                GROUP BY blok_name
-                                HAVING (pos - refunded) > 0
-                                ORDER BY blok_name ASC
-                                LIMIT 10");
-                            $stmtRefB->execute([':d' => $today]);
-                            $rows = $stmtRefB->fetchAll(PDO::FETCH_ASSOC) ?: [];
-                            $parts = [];
-                            foreach ($rows as $br) {
-                                $bname = $format_block_label($br['blok_name'] ?? '');
-                                $bpos = (int)($br['pos'] ?? 0);
-                                $bref = (int)($br['refunded'] ?? 0);
-                                $brem = $bpos - $bref;
-                                if ($brem <= 0) continue;
-                                $parts[] = $bname . ' (lebih ' . number_format($brem, 0, ",", ".") . ')';
-                            }
-                            if (!empty($parts)) {
-                                $blok_list = ' ' . implode(', ', $parts) . '.';
-                            }
-                        } catch (Exception $e) {
+                        $parts = [];
+                        foreach ($block_rem as $bname => $brem) {
+                            if ($brem <= 0) continue;
+                            $parts[] = $bname . ' (lebih ' . number_format($brem, 0, ",", ".") . ')';
                         }
+                        $blok_list = !empty($parts) ? (' ' . implode(', ', $parts) . '.') : '';
                         $todo_list[] = [
                             'id' => 'refund_pending_' . $today,
                             'title' => 'Refund belum dicatat (Hari Ini)',
@@ -806,69 +737,41 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
 
             // Piutang tanggal lain
             try {
-                $stmtKb = $db_sync->query("SELECT report_date,
-                    SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg,
-                    SUM(CASE
-                        WHEN COALESCE(kurang_bayar_amt,0) > 0 THEN COALESCE(kurang_bayar_amt,0)
-                        WHEN lower(COALESCE(kurang_bayar_desc,'')) LIKE '%sudah dibayar%'
-                            OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%lunas%'
-                            OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%terbayar%'
-                            THEN CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END
-                        ELSE 0
-                    END) AS kb
-                    FROM audit_rekap_manual
-                    GROUP BY report_date
-                    HAVING (neg - kb) > 0
-                    ORDER BY report_date DESC
-                    LIMIT 20");
-                $kb_rows = $stmtKb ? $stmtKb->fetchAll(PDO::FETCH_ASSOC) : [];
+                $stmtDates = $db_sync->query("SELECT DISTINCT report_date FROM audit_rekap_manual ORDER BY report_date DESC LIMIT 20");
+                $date_rows = $stmtDates ? $stmtDates->fetchAll(PDO::FETCH_COLUMN, 0) : [];
             } catch (Exception $e) {
-                $kb_rows = [];
+                $date_rows = [];
             }
-            foreach ($kb_rows as $kr) {
-                $rdate = (string)($kr['report_date'] ?? '');
+            foreach ($date_rows as $rdate) {
+                $rdate = (string)$rdate;
                 if ($rdate === '' || $rdate === $today || $rdate === $yesterday) continue;
-                $negV = (int)($kr['neg'] ?? 0);
-                $kbV = (int)($kr['kb'] ?? 0);
-                $remainV = $negV - $kbV;
-                if ($remainV <= 0) continue;
-                $parts = ['piutang Rp ' . number_format($remainV, 0, ",", ".")];
-                $blok_list = '';
-                try {
-                    $stmtBlok = $db_sync->prepare("SELECT blok_name,
-                        SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg,
-                        SUM(CASE
-                            WHEN COALESCE(kurang_bayar_amt,0) > 0 THEN COALESCE(kurang_bayar_amt,0)
-                            WHEN lower(COALESCE(kurang_bayar_desc,'')) LIKE '%sudah dibayar%'
-                                OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%lunas%'
-                                OR lower(COALESCE(kurang_bayar_desc,'')) LIKE '%terbayar%'
-                                THEN CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END
-                            ELSE 0
-                        END) AS kb
-                        FROM audit_rekap_manual
-                        WHERE report_date = :d
-                        GROUP BY blok_name
-                        HAVING (neg - kb) > 0
-                        ORDER BY blok_name ASC
-                        LIMIT 10");
-                    $stmtBlok->execute([':d' => $rdate]);
-                    $rows = $stmtBlok->fetchAll(PDO::FETCH_ASSOC) ?: [];
-                    $partsBlok = [];
-                    foreach ($rows as $br) {
-                        $bname = $format_block_label($br['blok_name'] ?? '');
-                        $bneg = (int)($br['neg'] ?? 0);
-                        $bkb = (int)($br['kb'] ?? 0);
-                        $brem = $bneg - $bkb;
-                        if ($brem <= 0) continue;
-                        $partsBlok[] = $bname . ' (kurang ' . number_format($brem, 0, ",", ".") . ')';
-                    }
-                    if (!empty($partsBlok)) {
-                        $blok_list = ' ' . implode(', ', $partsBlok) . '.';
-                    }
-                } catch (Exception $e) {
+                $rows_r = $get_audit_rows($rdate);
+                $remainV = 0;
+                $block_rem = [];
+                foreach ($rows_r as $ar) {
+                    [$ss_raw] = $calc_effective_selisih($ar, $rdate);
+                    if ($ss_raw >= 0) continue;
+                    $neg = -$ss_raw;
+                    $kb_amt = (int)($ar['kurang_bayar_amt'] ?? 0);
+                    $kb_desc = (string)($ar['kurang_bayar_desc'] ?? '');
+                    $paid = 0;
+                    if ($kb_amt > 0) $paid = $kb_amt;
+                    elseif ($is_paid_desc($kb_desc)) $paid = $neg;
+                    $rem = $neg - $paid;
+                    if ($rem <= 0) continue;
+                    $remainV += $rem;
+                    $bname = $format_block_label($ar['blok_name'] ?? '');
+                    $block_rem[$bname] = ($block_rem[$bname] ?? 0) + $rem;
                 }
+                if ($remainV <= 0) continue;
+                $parts = [];
+                foreach ($block_rem as $bname => $brem) {
+                    if ($brem <= 0) continue;
+                    $parts[] = $bname . ' (kurang ' . number_format($brem, 0, ",", ".") . ')';
+                }
+                $blok_list = !empty($parts) ? (' ' . implode(', ', $parts) . '.') : '';
                 $rlabel = $format_ddmmyyyy($rdate);
-                $desc = 'Terdapat ' . implode(' + ', $parts) . ' pada audit tanggal ' . $rlabel . '.' . $blok_list;
+                $desc = 'Terdapat piutang Rp ' . number_format($remainV, 0, ",", ".") . ' pada audit tanggal ' . $rlabel . '.' . $blok_list;
                 $todo_list[] = [
                     'id' => 'audit_kurang_' . $rdate,
                     'title' => 'Audit piutang',
@@ -881,54 +784,30 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
             }
 
             // Refund tanggal lain (selisih plus belum dicatat)
-            try {
-                $stmtRefO = $db_sync->query("SELECT report_date,
-                    SUM(CASE WHEN selisih_setoran > 0 THEN selisih_setoran ELSE 0 END) AS pos,
-                    SUM(COALESCE(refund_amt,0)) AS refunded
-                    FROM audit_rekap_manual
-                    GROUP BY report_date
-                    HAVING (pos - refunded) > 0
-                    ORDER BY report_date DESC
-                    LIMIT 20");
-                $ref_rows = $stmtRefO ? $stmtRefO->fetchAll(PDO::FETCH_ASSOC) : [];
-            } catch (Exception $e) {
-                $ref_rows = [];
-            }
-            foreach ($ref_rows as $rr) {
-                $rdate = (string)($rr['report_date'] ?? '');
+            foreach ($date_rows as $rdate) {
+                $rdate = (string)$rdate;
                 if ($rdate === '' || $rdate === $today) continue;
-                $posV = (int)($rr['pos'] ?? 0);
-                $refV = (int)($rr['refunded'] ?? 0);
-                $remainV = $posV - $refV;
-                if ($remainV <= 0) continue;
-                $rlabel = $format_ddmmyyyy($rdate);
-                $blok_list = '';
-                try {
-                    $stmtRefB = $db_sync->prepare("SELECT blok_name,
-                        SUM(CASE WHEN selisih_setoran > 0 THEN selisih_setoran ELSE 0 END) AS pos,
-                        SUM(COALESCE(refund_amt,0)) AS refunded
-                        FROM audit_rekap_manual
-                        WHERE report_date = :d
-                        GROUP BY blok_name
-                        HAVING (pos - refunded) > 0
-                        ORDER BY blok_name ASC
-                        LIMIT 10");
-                    $stmtRefB->execute([':d' => $rdate]);
-                    $rows = $stmtRefB->fetchAll(PDO::FETCH_ASSOC) ?: [];
-                    $parts = [];
-                    foreach ($rows as $br) {
-                        $bname = $format_block_label($br['blok_name'] ?? '');
-                        $bpos = (int)($br['pos'] ?? 0);
-                        $bref = (int)($br['refunded'] ?? 0);
-                        $brem = $bpos - $bref;
-                        if ($brem <= 0) continue;
-                        $parts[] = $bname . ' (lebih ' . number_format($brem, 0, ",", ".") . ')';
-                    }
-                    if (!empty($parts)) {
-                        $blok_list = ' ' . implode(', ', $parts) . '.';
-                    }
-                } catch (Exception $e) {
+                $rows_r = $get_audit_rows($rdate);
+                $remainV = 0;
+                $block_rem = [];
+                foreach ($rows_r as $ar) {
+                    [$ss_raw] = $calc_effective_selisih($ar, $rdate);
+                    if ($ss_raw <= 0) continue;
+                    $refund_amt = (int)($ar['refund_amt'] ?? 0);
+                    $rem = $ss_raw - $refund_amt;
+                    if ($rem <= 0) continue;
+                    $remainV += $rem;
+                    $bname = $format_block_label($ar['blok_name'] ?? '');
+                    $block_rem[$bname] = ($block_rem[$bname] ?? 0) + $rem;
                 }
+                if ($remainV <= 0) continue;
+                $parts = [];
+                foreach ($block_rem as $bname => $brem) {
+                    if ($brem <= 0) continue;
+                    $parts[] = $bname . ' (lebih ' . number_format($brem, 0, ",", ".") . ')';
+                }
+                $blok_list = !empty($parts) ? (' ' . implode(', ', $parts) . '.') : '';
+                $rlabel = $format_ddmmyyyy($rdate);
                 $todo_list[] = [
                     'id' => 'refund_pending_' . $rdate,
                     'title' => 'Refund belum dicatat',
