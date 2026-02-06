@@ -910,7 +910,7 @@ if (file_exists($dbFile)) {
             <input type="hidden" name="note_date" value="<?= htmlspecialchars($filter_date) ?>">
             <div class="modal-body">
                 <label style="font-size:12px;color:#cbd5e1;">Catatan hari ini</label>
-                <textarea name="note_text" rows="5" class="form-input" maxlength="500" placeholder="Tulis keterangan di sini..." style="width: 100%; max-width: 465px; min-width: 465px; margin-top: 10px; max-height: 100px;"><?= htmlspecialchars($daily_note_alert) ?></textarea>
+                <textarea name="note_text" rows="5" class="form-input" maxlength="500" placeholder="Tulis keterangan di sini..." style="width: 100%; max-width: 465px; min-width: 465px; margin-top: 10px; max-height: 100px; min-height: 80px;"><?= htmlspecialchars($daily_note_alert) ?></textarea>
                 <div class="modal-note">Maksimal 500 karakter. Kosongkan untuk menghapus catatan hari ini.</div>
             </div>
             <div class="modal-footer">
