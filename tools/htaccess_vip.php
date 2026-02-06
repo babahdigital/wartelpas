@@ -362,23 +362,21 @@ function vip_whitelist_render_form($status, $error, $ips, $ip_names, $htaccessPa
                 <?php else: ?>
                     <?php foreach ($ips as $ip): ?>
                         <?php $nameVal = (string)($ip_names[$ip] ?? ''); ?>
-                        <div class="router-item" style="margin-bottom:8px;">
+                        <div class="router-item" style="margin-bottom:8px; text-align: left;">
                             <div class="router-icon"><i class="fa fa-shield" style="font-size: 14px !important;"></i></div>
                             <div class="router-info">
                                 <span class="router-name"><?= htmlspecialchars($nameVal !== '' ? $nameVal : $ip) ?></span>
                                 <span class="router-session">IP: <?= htmlspecialchars($ip) ?></span>
                             </div>
                             <div class="router-actions">
-                                <a href="javascript:void(0)" title="Edit" class="vip-edit" data-ip="<?= htmlspecialchars($ip) ?>" data-name="<?= htmlspecialchars($nameVal) ?>"><i class="fa fa-pencil"></i></a>
-                                <a href="javascript:void(0)" title="Hapus" class="vip-remove" data-ip="<?= htmlspecialchars($ip) ?>" style="margin-left:6px; color:#dc2626;"><i class="fa fa-trash"></i></a>
+                                <a href="javascript:void(0)" title="Edit" class="vip-edit" data-ip="<?= htmlspecialchars($ip) ?>" data-name="<?= htmlspecialchars($nameVal) ?>"><i class="fa fa-pencil" style="font-size: 14px !important;"></i></a>
+                                <a href="javascript:void(0)" title="Hapus" class="vip-remove" data-ip="<?= htmlspecialchars($ip) ?>" style="margin-left:6px; color:#dc2626;"><i class="fa fa-trash" style="font-size: 14px !important;"></i></a>
                             </div>
                             <input type="hidden" name="keep_ips[]" value="<?= htmlspecialchars($ip) ?>">
                             <input type="hidden" name="keep_name[<?= htmlspecialchars($ip) ?>]" value="<?= htmlspecialchars($nameVal) ?>">
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
-
-                <div class="vip-note" style="margin-top:8px;">Klik ikon edit untuk mengubah nama/IP. Klik ikon hapus untuk mengeluarkan IP. Backup otomatis tersimpan di .htaccess.bak</div>
             </form>
             <script>
             (function(){
