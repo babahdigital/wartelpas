@@ -570,6 +570,7 @@ $unique_laku_users = [];
 $system_incidents_by_block = [];
 $rusak_user_map = [];
 $retur_ref_map = [];
+$retur_ref_map_global = [];
 
 foreach ($rows as $r) {
     $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
@@ -625,6 +626,7 @@ foreach ($rows as $r) {
         if ($ref_user !== '') {
             if (!isset($retur_ref_map[$block])) $retur_ref_map[$block] = [];
             $retur_ref_map[$block][strtolower($ref_user)] = true;
+            $retur_ref_map_global[strtolower($ref_user)] = true;
         }
     }
     if ($status === 'rusak') {
@@ -646,11 +648,6 @@ foreach ($rows as $r) {
     if (!$match) continue;
 
     $username = $r['username'] ?? '';
-    if ($username !== '' && $sale_date !== '') {
-        $user_day_key = $username . '|' . $sale_date;
-        if (isset($seen_user_day[$user_day_key])) continue;
-        $seen_user_day[$user_day_key] = true;
-    }
     $raw_key = trim((string)($r['full_raw_data'] ?? ''));
     $unique_key = '';
     if ($raw_key !== '') {
@@ -723,6 +720,16 @@ foreach ($rows as $r) {
         continue;
     }
     $block = normalize_block_name($r['blok_name'] ?? '', $comment);
+
+    if ($username !== '' && isset($retur_ref_map_global[strtolower($username)])) {
+        continue;
+    }
+
+    if ($username !== '' && $sale_date !== '') {
+        $user_day_key = $username . '|' . $sale_date;
+        if (isset($seen_user_day[$user_day_key])) continue;
+        $seen_user_day[$user_day_key] = true;
+    }
 
     if ($price <= 0) {
         $price = resolve_price_from_profile($profile);
