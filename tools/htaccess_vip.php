@@ -356,30 +356,3 @@ function vip_whitelist_render_form($status, $error, $ips, $ip_names, $htaccessPa
         <?php
 }
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <title>VIP Whitelist Generator</title>
-    <link rel="stylesheet" href="../admin_assets/admin.css">
-    <link rel="stylesheet" href="../css/admin.css">
-    <link rel="stylesheet" href="../css/popup.css">
-    <style>
-                body { background:<?= $is_embed ? 'transparent' : '#0f172a' ?>; padding:<?= $is_embed ? '0' : '16px' ?>; }
-                .vip-shell { max-width: <?= $is_embed ? '100%' : '820px' ?>; margin: 0 auto; }
-                .router-item .m-pass-input { height: 34px; }
-                .vip-note { font-size:12px; color:var(--text-secondary); }
-    </style>
-</head>
-<body>
-    <?php if (!$vip_whitelist_no_render): ?>
-        <div class="vip-shell">
-            <div class="card-modern">
-                <div class="card-body-modern">
-                    <?php vip_whitelist_render_form($status, $error, $ips, $ip_names, $htaccessPath, $vip_whitelist_action); ?>
-                </div>
-            </div>
-        </div>
-    <?php endif; ?>
-</body>
-</html>
