@@ -24,6 +24,12 @@ $error = '';
 $ips = [];
 $ip_names = [];
 
+if (!empty($_SESSION['vip_whitelist_flash']) && is_array($_SESSION['vip_whitelist_flash'])) {
+    $status = (string)($_SESSION['vip_whitelist_flash']['status'] ?? '');
+    $error = (string)($_SESSION['vip_whitelist_flash']['error'] ?? '');
+    unset($_SESSION['vip_whitelist_flash']);
+}
+
 // Helper functions
 function normalize_ip_list($raw) {
     $raw = str_replace(["\r", "\n"], ' ', (string)$raw);
@@ -295,6 +301,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vip_whitelist'])) {
                 }
             }
         }
+    }
+
+    if ($vip_whitelist_action !== '') {
+        $_SESSION['vip_whitelist_flash'] = ['status' => $status, 'error' => $error];
+        $_SESSION['vip_whitelist_autoshow'] = 1;
+        header('Location: ' . $vip_whitelist_action);
+        exit;
     }
 }
 

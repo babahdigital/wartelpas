@@ -10,13 +10,19 @@ app_db_import_legacy_if_needed();
 $vip_popup_html = '';
 $vip_popup_autoshow = false;
 if (isSuperAdmin()) {
+    if (!empty($_SESSION['vip_whitelist_autoshow'])) {
+        $vip_popup_autoshow = true;
+        unset($_SESSION['vip_whitelist_autoshow']);
+    }
     $vip_whitelist_no_render = true;
     $vip_whitelist_action = './admin.php?id=' . htmlspecialchars($id ?: 'sessions');
     ob_start();
     include __DIR__ . '/../tools/htaccess_vip.php';
     if (function_exists('vip_whitelist_render_form')) {
         vip_whitelist_render_form($status ?? '', $error ?? '', $ips ?? [], $ip_names ?? [], $htaccessPath ?? '', $vip_whitelist_action);
-        $vip_popup_autoshow = (!empty($status) || !empty($error) || (!empty($_POST['vip_whitelist'])));
+        if (!empty($status) || !empty($error) || (!empty($_POST['vip_whitelist']))) {
+            $vip_popup_autoshow = true;
+        }
     }
     $vip_popup_html = ob_get_clean();
 }
