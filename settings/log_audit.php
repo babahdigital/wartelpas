@@ -236,7 +236,7 @@ if (!empty($system_rows)) {
         </div>
         <form method="get" action="" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <input type="hidden" name="id" value="log-audit">
-            <input type="date" name="date" value="<?= htmlspecialchars($filter_date) ?>" class="form-control" style="max-width:160px;">
+            <input type="date" name="date" value="<?= htmlspecialchars($filter_date) ?>" class="form-control" style="max-width:160px;" onchange="this.form.submit()">
             <input type="text" name="action" placeholder="Aksi" value="<?= htmlspecialchars($filter_action) ?>" class="form-control" style="max-width:140px;">
             <input type="text" name="actor" placeholder="Actor" value="<?= htmlspecialchars($filter_actor) ?>" class="form-control" style="max-width:140px;">
             <select name="result" class="form-control" style="max-width:130px;">
