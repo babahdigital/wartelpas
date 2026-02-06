@@ -207,6 +207,9 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     if (!isOperator() && !isSuperAdmin()) {
       $action_blocked = true;
       $action_error = 'Akses ditolak.';
+    } elseif (isOperator() && !operator_can('retur_voucher')) {
+      $action_blocked = true;
+      $action_error = 'Akses ditolak. Retur hanya untuk role yang diizinkan.';
     } elseif (!$db) {
       $action_blocked = true;
       $action_error = 'Gagal: database belum siap.';
@@ -310,6 +313,9 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     if (!isOperator() && !isSuperAdmin()) {
       $action_blocked = true;
       $action_error = 'Akses ditolak.';
+    } elseif (isOperator() && !operator_can('mark_rusak')) {
+      $action_blocked = true;
+      $action_error = 'Akses ditolak. Set RUSAK hanya untuk role yang diizinkan.';
     } elseif (!$db) {
       $action_blocked = true;
       $action_error = 'Gagal: database belum siap.';
@@ -416,6 +422,9 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     if (!isOperator() && !isSuperAdmin()) {
       $action_blocked = true;
       $action_error = 'Akses ditolak.';
+    } elseif (isOperator() && !operator_can('retur_voucher')) {
+      $action_blocked = true;
+      $action_error = 'Akses ditolak. Retur hanya untuk role yang diizinkan.';
     } elseif (!$db) {
       $action_blocked = true;
       $action_error = 'Gagal: database belum siap.';
@@ -503,6 +512,14 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             $action_blocked = true;
             $action_error = 'Akses ditolak. Hapus user hanya untuk role yang diizinkan.';
           }
+          if (in_array($act, ['invalid', 'check_rusak', 'rollback'], true) && !operator_can('mark_rusak')) {
+            $action_blocked = true;
+            $action_error = 'Akses ditolak. Set RUSAK hanya untuk role yang diizinkan.';
+          }
+          if ($act === 'retur' && !operator_can('retur_voucher')) {
+            $action_blocked = true;
+            $action_error = 'Akses ditolak. Retur hanya untuk role yang diizinkan.';
+          }
           if ($act === 'batch_delete' && !operator_can('delete_block_router')) {
             $action_blocked = true;
             $action_error = 'Akses ditolak. Hapus blok (router) hanya untuk role yang diizinkan.';
@@ -588,6 +605,23 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $uptime_limit = $limits['uptime'];
       $is_active = isset($arow['user']);
       $hist_check = $hist_action ?: get_user_history($name);
+      if (empty($urow) && !empty($hist_check)) {
+        $hist_bytes = (int)($hist_check['last_bytes'] ?? 0);
+        $hist_uptime = (string)($hist_check['last_uptime'] ?? '');
+        if ($hist_bytes > 0 && $hist_bytes > $bytes) {
+          $bytes = $hist_bytes;
+        }
+        if ($hist_uptime !== '' && $hist_uptime !== '0s') {
+          $uptime = $hist_uptime;
+          $uptime_sec = uptime_to_seconds($uptime);
+        }
+        if ($profile_name === '' && !empty($hist_check['validity'])) {
+          $profile_name = (string)$hist_check['validity'];
+          $limits = resolve_rusak_limits($profile_name);
+          $bytes_limit = $limits['bytes'];
+          $uptime_limit = $limits['uptime'];
+        }
+      }
       $first_login_real = $hist_check['first_login_real'] ?? ($hist_check['login_time_real'] ?? '');
       $fallback_logout = $hist_check['logout_time_real'] ?? ($hist_check['last_login_real'] ?? '');
       $total_uptime_sec = get_cumulative_uptime_from_events($name, $first_login_real, $fallback_logout);
@@ -619,7 +653,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $criteria = [
         'offline' => !$is_active,
         'bytes_ok' => $bytes <= $bytes_limit,
-        'total_uptime_ok' => true,
+        'total_uptime_ok' => $uptime_sec <= $uptime_limit,
         'first_login_ok' => !empty($first_login_real)
       ];
       if (ob_get_length()) {
@@ -757,9 +791,9 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     }
 
     if (!$action_blocked && $act == 'delete_user_full') {
-      if (!isSuperAdmin()) {
+      if (!(isSuperAdmin() || (isOperator() && operator_can('delete_user')))) {
         $action_blocked = true;
-        $action_error = 'Akses ditolak. Hanya Superadmin.';
+        $action_error = 'Akses ditolak. Hapus user hanya untuk role yang diizinkan.';
       } elseif ($name == '') {
         $action_blocked = true;
         $action_error = 'User tidak ditemukan.';
@@ -770,9 +804,9 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     }
 
     if (!$action_blocked && $act == 'delete_block_full') {
-      if (!isSuperAdmin()) {
+      if (!(isSuperAdmin() || (isOperator() && operator_can('delete_block_full')))) {
         $action_blocked = true;
-        $action_error = 'Akses ditolak. Hanya Superadmin.';
+        $action_error = 'Akses ditolak. Hapus blok total hanya untuk role yang diizinkan.';
       } elseif (trim((string)$blok) === '') {
         $action_blocked = true;
         $action_error = 'Blok tidak ditemukan.';
@@ -1208,7 +1242,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         } catch (Exception $e) {}
 
         if ($delete_settlement && $delete_date !== '') {
-          if (!(isset($_SESSION['mikhmon']) && isOperator() && !operator_can('reset_settlement'))) {
+          if (!(isset($_SESSION['mikhmon']) && isOperator() && !operator_can('settlement_reset'))) {
             try {
               $stmtChk = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='settlement_log' LIMIT 1");
               if ($stmtChk && $stmtChk->fetchColumn()) {

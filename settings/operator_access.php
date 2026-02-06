@@ -100,16 +100,26 @@ $op_perms = ($op_id !== '' && $op_id !== 'new')
         'delete_user' => false,
         'delete_block_router' => false,
         'delete_block_full' => false,
+        'mark_rusak' => false,
+        'retur_voucher' => false,
         'audit_manual' => false,
         'reset_settlement' => false,
+        'settlement_run' => false,
+        'settlement_reset' => false,
+        'sync_sales_force' => false,
         'backup_only' => false,
         'restore_only' => false,
     ];
 $perm_delete_user = !empty($op_perms['delete_user']);
 $perm_delete_block_router = !empty($op_perms['delete_block_router']);
 $perm_delete_block_full = !empty($op_perms['delete_block_full']);
+$perm_mark_rusak = !empty($op_perms['mark_rusak']);
+$perm_retur_voucher = !empty($op_perms['retur_voucher']);
 $perm_audit_manual = !empty($op_perms['audit_manual']);
 $perm_reset_settlement = !empty($op_perms['reset_settlement']);
+$perm_settlement_run = !empty($op_perms['settlement_run']);
+$perm_settlement_reset = !empty($op_perms['settlement_reset']);
+$perm_sync_sales_force = !empty($op_perms['sync_sales_force']);
 $perm_backup_only = !empty($op_perms['backup_only']);
 $perm_restore_only = !empty($op_perms['restore_only']);
 
@@ -140,8 +150,13 @@ $operator_defaults = [
         'delete_user' => false,
         'delete_block_router' => false,
         'delete_block_full' => false,
+        'mark_rusak' => false,
+        'retur_voucher' => false,
         'audit_manual' => false,
         'reset_settlement' => false,
+            'settlement_run' => false,
+            'settlement_reset' => false,
+            'sync_sales_force' => false,
         'backup_only' => false,
         'restore_only' => false,
     ],
@@ -479,6 +494,16 @@ $operator_defaults = [
                                 '<span class="check-label">Hapus Blok (Router + DB)</span>' +
                             '</label>' +
                             '<label class="custom-check">' +
+                                '<input id="perm-mark-rusak" type="checkbox" ' + (perms.mark_rusak ? 'checked' : '') + '>' +
+                                '<span class="checkmark"></span>' +
+                                '<span class="check-label">Set RUSAK Voucher</span>' +
+                            '</label>' +
+                            '<label class="custom-check">' +
+                                '<input id="perm-retur-voucher" type="checkbox" ' + (perms.retur_voucher ? 'checked' : '') + '>' +
+                                '<span class="checkmark"></span>' +
+                                '<span class="check-label">Retur Voucher</span>' +
+                            '</label>' +
+                            '<label class="custom-check">' +
                                 '<input id="perm-audit-manual" type="checkbox" ' + (perms.audit_manual ? 'checked' : '') + '>' +
                                 '<span class="checkmark"></span>' +
                                 '<span class="check-label">Edit Audit Manual</span>' +
@@ -486,9 +511,19 @@ $operator_defaults = [
                         '</div>' +
                         '<div class="col-6">' +
                             '<label class="custom-check">' +
-                                '<input id="perm-reset-settlement" type="checkbox" ' + (perms.reset_settlement ? 'checked' : '') + '>' +
+                                '<input id="perm-settlement-run" type="checkbox" ' + (perms.settlement_run ? 'checked' : '') + '>' +
+                                '<span class="checkmark"></span>' +
+                                '<span class="check-label">Jalankan Settlement</span>' +
+                            '</label>' +
+                            '<label class="custom-check">' +
+                                '<input id="perm-settlement-reset" type="checkbox" ' + (perms.settlement_reset ? 'checked' : '') + '>' +
                                 '<span class="checkmark"></span>' +
                                 '<span class="check-label">Reset Settlement</span>' +
+                            '</label>' +
+                            '<label class="custom-check">' +
+                                '<input id="perm-sync-sales-force" type="checkbox" ' + (perms.sync_sales_force ? 'checked' : '') + '>' +
+                                '<span class="checkmark"></span>' +
+                                '<span class="check-label">Sync Sales (Force)</span>' +
                             '</label>' +
                             '<label class="custom-check">' +
                                 '<input id="perm-backup-only" type="checkbox" ' + (perms.backup_only ? 'checked' : '') + '>' +
@@ -552,8 +587,12 @@ $operator_defaults = [
                         setHiddenInput('access_delete_user', document.getElementById('perm-delete-user').checked ? '1' : '');
                         setHiddenInput('access_delete_block_router', document.getElementById('perm-delete-block-router').checked ? '1' : '');
                         setHiddenInput('access_delete_block_full', document.getElementById('perm-delete-block-full').checked ? '1' : '');
+                        setHiddenInput('access_mark_rusak', document.getElementById('perm-mark-rusak').checked ? '1' : '');
+                        setHiddenInput('access_retur_voucher', document.getElementById('perm-retur-voucher').checked ? '1' : '');
                         setHiddenInput('access_audit_manual', document.getElementById('perm-audit-manual').checked ? '1' : '');
-                        setHiddenInput('access_reset_settlement', document.getElementById('perm-reset-settlement').checked ? '1' : '');
+                        setHiddenInput('access_settlement_run', document.getElementById('perm-settlement-run').checked ? '1' : '');
+                        setHiddenInput('access_settlement_reset', document.getElementById('perm-settlement-reset').checked ? '1' : '');
+                        setHiddenInput('access_sync_sales_force', document.getElementById('perm-sync-sales-force').checked ? '1' : '');
                         setHiddenInput('access_backup_only', document.getElementById('perm-backup-only').checked ? '1' : '');
                         setHiddenInput('access_restore_only', document.getElementById('perm-restore-only').checked ? '1' : '');
                         setHiddenInput('save_admin', '');
@@ -727,8 +766,13 @@ if ($flash) {
                     <input type="hidden" id="operator-perm-delete-user" name="access_delete_user" value="">
                     <input type="hidden" id="operator-perm-delete-block-router" name="access_delete_block_router" value="">
                     <input type="hidden" id="operator-perm-delete-block-full" name="access_delete_block_full" value="">
+                    <input type="hidden" id="operator-perm-mark-rusak" name="access_mark_rusak" value="">
+                    <input type="hidden" id="operator-perm-retur-voucher" name="access_retur_voucher" value="">
                     <input type="hidden" id="operator-perm-audit-manual" name="access_audit_manual" value="">
                     <input type="hidden" id="operator-perm-reset-settlement" name="access_reset_settlement" value="">
+                    <input type="hidden" id="operator-perm-settlement-run" name="access_settlement_run" value="">
+                    <input type="hidden" id="operator-perm-settlement-reset" name="access_settlement_reset" value="">
+                    <input type="hidden" id="operator-perm-sync-sales-force" name="access_sync_sales_force" value="">
                     <input type="hidden" id="operator-perm-backup-only" name="access_backup_only" value="">
                     <input type="hidden" id="operator-perm-restore-only" name="access_restore_only" value="">
                     <input type="hidden" id="save-operator-input" name="save_operator" value="">

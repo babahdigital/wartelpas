@@ -420,6 +420,8 @@
                         $is_disabled = !empty($u['is_disabled']);
                         $can_enable = false;
                         $can_mark_rusak = $is_used && !$is_online;
+                        $can_mark_rusak_action = !empty($can_mark_rusak_action);
+                        $can_retur_action = !empty($can_retur_voucher);
                       ?>
                       <?php if (in_array($req_status, ['all','ready','vip','used','rusak','online','retur'], true)): ?>
                         <?php if ($is_used && in_array($req_status, ['all','used'], true)): ?>
@@ -450,9 +452,13 @@
                             '&date=' . urlencode($filter_date);
                         ?>
                         <?php if ($is_rusak): ?>
-                          <button type="button" class="btn-act btn-act-retur" onclick="actionRequest('./?hotspot=users&action=retur&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&p=<?= urlencode($u['profile']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','RETUR Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Retur"><i class="fa fa-exchange"></i></button>
-                          <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=rollback&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','Rollback RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rollback"><i class="fa fa-undo"></i></button>
-                          <?php if ($can_enable): ?>
+                          <?php if ($can_retur_action): ?>
+                            <button type="button" class="btn-act btn-act-retur" onclick="actionRequest('./?hotspot=users&action=retur&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&p=<?= urlencode($u['profile']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','RETUR Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Retur"><i class="fa fa-exchange"></i></button>
+                          <?php endif; ?>
+                          <?php if ($can_mark_rusak_action): ?>
+                            <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=rollback&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','Rollback RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rollback"><i class="fa fa-undo"></i></button>
+                            <?php if ($can_enable): ?>
+                            <?php endif; ?>
                           <?php endif; ?>
                         <?php elseif ($is_ready): ?>
                           <?php $vip_disabled = $vip_limit_reached; ?>
@@ -474,7 +480,7 @@
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>&download=1&img=1','_blank')" title="Download Voucher (PNG)"><i class="fa fa-download"></i></button>
                           <button type="button" class="btn-act btn-act-warning" onclick="actionRequest('./?hotspot=users&action=unvip&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Keluarkan <?= htmlspecialchars($u['name']) ?> dari Pengelola?')" title="Batalkan Pengelola"><i class="fa fa-star-o"></i></button>
-                        <?php elseif ($can_mark_rusak): ?>
+                        <?php elseif ($can_mark_rusak && $can_mark_rusak_action): ?>
                           <button type="button" class="btn-act btn-act-invalid" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'], ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'], ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'], ENT_QUOTES) ?>" data-login="<?= htmlspecialchars($u['login_time'], ENT_QUOTES) ?>" data-logout="<?= htmlspecialchars($u['logout_time'], ENT_QUOTES) ?>" data-bytes="<?= (int)$u['bytes'] ?>" data-uptime="<?= htmlspecialchars($u['uptime'], ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'], ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" onclick="actionRequestRusak(this,'./?hotspot=users&action=invalid&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','SET RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rusak"><i class="fa fa-ban"></i></button>
                         <?php endif; ?>
                       <?php endif; ?>

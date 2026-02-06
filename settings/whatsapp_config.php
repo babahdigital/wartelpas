@@ -208,11 +208,11 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'add_recipient') {
     $label = sanitize_wa_label($_POST['wa_new_label'] ?? '');
     $target_raw = sanitize_wa_target($_POST['wa_new_target'] ?? '');
     $type = $_POST['wa_new_type'] ?? 'number';
-    $active = isset($_POST['wa_new_active']) ? 1 : 0;
-    $receive_retur = isset($_POST['wa_new_receive_retur']) ? 1 : 0;
-    $receive_report = isset($_POST['wa_new_receive_report']) ? 1 : 0;
-    $receive_ls = isset($_POST['wa_new_receive_ls']) ? 1 : 0;
-    $receive_todo = isset($_POST['wa_new_receive_todo']) ? 1 : 0;
+    $active = !empty($_POST['wa_new_active']) ? 1 : 0;
+    $receive_retur = !empty($_POST['wa_new_receive_retur']) ? 1 : 0;
+    $receive_report = !empty($_POST['wa_new_receive_report']) ? 1 : 0;
+    $receive_ls = !empty($_POST['wa_new_receive_ls']) ? 1 : 0;
+    $receive_todo = !empty($_POST['wa_new_receive_todo']) ? 1 : 0;
     $err = '';
     $validated_target = validate_wa_target($target_raw, $type, $err);
     if ($validated_target === false) {
@@ -274,11 +274,11 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'update_recipient') {
     $id = (int)($_POST['wa_id'] ?? 0);
     if ($stats_db && $id > 0) {
         $label = sanitize_wa_label($_POST['wa_label'] ?? '');
-        $active = isset($_POST['wa_active']) ? 1 : 0;
-        $receive_retur = isset($_POST['wa_receive_retur']) ? 1 : 0;
-        $receive_report = isset($_POST['wa_receive_report']) ? 1 : 0;
-        $receive_ls = isset($_POST['wa_receive_ls']) ? 1 : 0;
-        $receive_todo = isset($_POST['wa_receive_todo']) ? 1 : 0;
+        $active = !empty($_POST['wa_active']) ? 1 : 0;
+        $receive_retur = !empty($_POST['wa_receive_retur']) ? 1 : 0;
+        $receive_report = !empty($_POST['wa_receive_report']) ? 1 : 0;
+        $receive_ls = !empty($_POST['wa_receive_ls']) ? 1 : 0;
+        $receive_todo = !empty($_POST['wa_receive_todo']) ? 1 : 0;
         try {
             $stmtUp = $stats_db->prepare("UPDATE whatsapp_recipients SET label = :label, active = :active, receive_retur = :retur, receive_report = :report, receive_ls = :ls, receive_todo = :todo, updated_at = :now WHERE id = :id");
             $stmtUp->execute([

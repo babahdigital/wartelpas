@@ -14,6 +14,8 @@ $can_delete_user = ($is_superadmin || ($is_operator && operator_can('delete_user
 $can_delete_block_router = ($is_superadmin || ($is_operator && operator_can('delete_block_router')));
 $can_delete_block_full = ($is_superadmin || ($is_operator && operator_can('delete_block_full')));
 $can_delete_block = ($can_delete_block_router || $can_delete_block_full);
+$can_mark_rusak_action = ($is_superadmin || ($is_operator && operator_can('mark_rusak')));
+$can_retur_voucher = ($is_superadmin || ($is_operator && operator_can('retur_voucher')));
 
 $env = [];
 $envFile = __DIR__ . '/../../include/env.php';

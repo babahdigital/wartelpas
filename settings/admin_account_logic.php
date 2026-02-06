@@ -48,8 +48,13 @@ $op_phone = normalize_phone_to_62($op_phone_raw);
 $perm_delete_user = !empty($_POST['access_delete_user']);
 $perm_delete_block_router = !empty($_POST['access_delete_block_router']);
 $perm_delete_block_full = !empty($_POST['access_delete_block_full']);
+$perm_mark_rusak = !empty($_POST['access_mark_rusak']);
+$perm_retur_voucher = !empty($_POST['access_retur_voucher']);
 $perm_audit_manual = !empty($_POST['access_audit_manual']);
 $perm_reset_settlement = !empty($_POST['access_reset_settlement']);
+$perm_settlement_run = !empty($_POST['access_settlement_run']);
+$perm_settlement_reset = !empty($_POST['access_settlement_reset']);
+$perm_sync_sales_force = !empty($_POST['access_sync_sales_force']);
 $perm_backup_only = !empty($_POST['access_backup_only']);
 $perm_restore_only = !empty($_POST['access_restore_only']);
 $new_passadm = trim((string)($_POST['passadm'] ?? ''));
@@ -505,8 +510,13 @@ if ($save_operator) {
             'delete_user' => $perm_delete_user,
             'delete_block_router' => $perm_delete_block_router,
             'delete_block_full' => $perm_delete_block_full,
+            'mark_rusak' => $perm_mark_rusak,
+            'retur_voucher' => $perm_retur_voucher,
             'audit_manual' => $perm_audit_manual,
             'reset_settlement' => $perm_reset_settlement,
+            'settlement_run' => $perm_settlement_run,
+            'settlement_reset' => $perm_settlement_reset,
+            'sync_sales_force' => $perm_sync_sales_force,
             'backup_only' => $perm_backup_only,
             'restore_only' => $perm_restore_only,
         ]);

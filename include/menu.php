@@ -56,7 +56,7 @@ $menu_retur_pending = 0;
 $menu_retur_list = [];
 $menu_stuck_count = 0;
 $menu_stuck_list = [];
-$menu_retur_visible = (isOperator() || isSuperAdmin());
+$menu_retur_visible = (isSuperAdmin() || (isOperator() && operator_can('retur_voucher')));
 if ($menu_retur_visible) {
     $root_dir = dirname(__DIR__);
     $system_cfg = $env['system'] ?? [];

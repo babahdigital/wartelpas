@@ -509,7 +509,7 @@ $print_time = date('d-m-Y H:i:s');
         </div>
         <?php if ($show_kurang_bayar): ?>
         <div class="summary-card" style="border-color:#86efac;">
-            <div class="summary-title" style="color:#16a34a;">Kurang Bayar</div>
+            <div class="summary-title" style="color:#16a34a;">Piutang</div>
             <div class="summary-value" style="color:#16a34a;"><?= $cur ?> <?= number_format((int)$total_kurang_bayar_year,0,',','.') ?></div>
         </div>
         <?php endif; ?>
@@ -586,7 +586,7 @@ $print_time = date('d-m-Y H:i:s');
                         <b>Rp <?= number_format((int)$total_refund_year, 0, ',', '.') ?></b>
                     <?php endif; ?>
                     <?php if ($total_kurang_bayar_year > 0): ?>
-                        serta Total Kurang Bayar sebesar:
+                        serta Total Piutang sebesar:
                         <b>Rp <?= number_format((int)$total_kurang_bayar_year, 0, ',', '.') ?></b>
                     <?php endif; ?>
                 </td>

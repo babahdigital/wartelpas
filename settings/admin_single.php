@@ -16,6 +16,8 @@ if ($id === 'settings') {
     $active_tab = 'operator';
 } elseif ($id === 'whatsapp') {
     $active_tab = 'whatsapp';
+} elseif ($id === 'settlement-audit') {
+    $active_tab = 'settlement-audit';
 }
 
 $active_session = $session ?? '';
@@ -47,6 +49,9 @@ $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-
                 <a class="nav-btn <?= $active_tab === 'operator' ? 'active' : ''; ?>" data-tab="operator" href="./admin.php?id=operator-access">
                     <i class="fa fa-users"></i> Akses Operator
                 </a>
+                <a class="nav-btn <?= $active_tab === 'settlement-audit' ? 'active' : ''; ?>" data-tab="settlement-audit" href="./admin.php?id=settlement-audit">
+                    <i class="fa fa-clipboard"></i> Audit Settlement
+                </a>
                 <a class="nav-btn <?= $active_tab === 'whatsapp' ? 'active' : ''; ?>" data-tab="whatsapp" href="./admin.php?id=whatsapp">
                     <i class="fa fa-whatsapp"></i> WhatsApp
                 </a>
@@ -65,6 +70,9 @@ $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-
                     <i class="fa fa-home"></i> Halaman Utama
                 </a>
                 <?php if (isSuperAdmin()): ?>
+                    <a class="btn-action btn-outline" style="font-size: 11px; padding: 6px 10px;" data-no-ajax="1" href="./tools/htaccess_vip.php" target="_blank" rel="noopener">
+                        <i class="fa fa-shield"></i> Whitelist IP
+                    </a>
                 <?php endif; ?>
             </div>
 
@@ -108,6 +116,14 @@ $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-
                 <?php include __DIR__ . '/operator_access.php'; ?>
             <?php else: ?>
                 <div class="admin-async" data-section="operator"></div>
+            <?php endif; ?>
+        </div>
+
+        <div class="view-section <?= $active_tab === 'settlement-audit' ? 'active' : ''; ?>" data-view="settlement-audit" style="display: <?= $active_tab === 'settlement-audit' ? 'block' : 'none'; ?>;">
+            <?php if ($active_tab === 'settlement-audit'): ?>
+                <?php include __DIR__ . '/settlement_audit.php'; ?>
+            <?php else: ?>
+                <div class="admin-async" data-section="settlement-audit"></div>
             <?php endif; ?>
         </div>
 

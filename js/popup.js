@@ -388,9 +388,10 @@
       .then(function(r){ return r.text(); })
       .then(function(txt){
         var ok = /Sukses|OK|berhasil/i.test(txt);
+        var rawMsg = String(txt || '').trim();
         var msg = ok
-          ? 'Berhasil. Todo ditutup.'
-          : 'Gagal. Hubungi administrator.';
+          ? (ackUrl ? 'Berhasil. Todo ditutup.' : 'Berhasil.')
+          : (rawMsg !== '' ? rawMsg : 'Gagal. Hubungi administrator.');
         if (window.MikhmonPopup) {
           window.MikhmonPopup.open({
             title: 'Notifikasi & Todo',
@@ -404,10 +405,13 @@
             ]
           });
         }
-        if (ok && ackUrl) {
-          return fetch(ackUrl, { method: 'GET' }).then(function(){
-            updateTodoDataAfterAck(todoId);
-          });
+        if (ok) {
+          if (ackUrl) {
+            return fetch(ackUrl, { method: 'GET' }).then(function(){
+              updateTodoDataAfterAck(todoId);
+            });
+          }
+          updateTodoDataAfterAck(todoId);
         }
       })
       .catch(function(){

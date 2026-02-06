@@ -87,8 +87,13 @@ function app_db_init(PDO $pdo)
         delete_block INTEGER NOT NULL DEFAULT 0,
         delete_block_router INTEGER NOT NULL DEFAULT 0,
         delete_block_full INTEGER NOT NULL DEFAULT 0,
+        mark_rusak INTEGER NOT NULL DEFAULT 0,
+        retur_voucher INTEGER NOT NULL DEFAULT 0,
         audit_manual INTEGER NOT NULL DEFAULT 0,
         reset_settlement INTEGER NOT NULL DEFAULT 0,
+        settlement_run INTEGER NOT NULL DEFAULT 0,
+        settlement_reset INTEGER NOT NULL DEFAULT 0,
+        sync_sales_force INTEGER NOT NULL DEFAULT 0,
         backup_only INTEGER NOT NULL DEFAULT 0,
         restore_only INTEGER NOT NULL DEFAULT 0,
         backup_restore INTEGER NOT NULL DEFAULT 0,
@@ -101,8 +106,13 @@ function app_db_init(PDO $pdo)
         delete_block INTEGER NOT NULL DEFAULT 0,
         delete_block_router INTEGER NOT NULL DEFAULT 0,
         delete_block_full INTEGER NOT NULL DEFAULT 0,
+        mark_rusak INTEGER NOT NULL DEFAULT 0,
+        retur_voucher INTEGER NOT NULL DEFAULT 0,
         audit_manual INTEGER NOT NULL DEFAULT 0,
         reset_settlement INTEGER NOT NULL DEFAULT 0,
+        settlement_run INTEGER NOT NULL DEFAULT 0,
+        settlement_reset INTEGER NOT NULL DEFAULT 0,
+        sync_sales_force INTEGER NOT NULL DEFAULT 0,
         backup_only INTEGER NOT NULL DEFAULT 0,
         restore_only INTEGER NOT NULL DEFAULT 0,
         backup_restore INTEGER NOT NULL DEFAULT 0,
@@ -111,8 +121,18 @@ function app_db_init(PDO $pdo)
     );");
     try { $pdo->exec("ALTER TABLE operator_permissions ADD COLUMN delete_block_router INTEGER NOT NULL DEFAULT 0"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE operator_permissions ADD COLUMN delete_block_full INTEGER NOT NULL DEFAULT 0"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE operator_permissions ADD COLUMN mark_rusak INTEGER NOT NULL DEFAULT 0"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE operator_permissions ADD COLUMN retur_voucher INTEGER NOT NULL DEFAULT 0"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE operator_permissions ADD COLUMN settlement_run INTEGER NOT NULL DEFAULT 0"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE operator_permissions ADD COLUMN settlement_reset INTEGER NOT NULL DEFAULT 0"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE operator_permissions ADD COLUMN sync_sales_force INTEGER NOT NULL DEFAULT 0"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE operator_permissions ADD COLUMN backup_only INTEGER NOT NULL DEFAULT 0"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE operator_permissions ADD COLUMN restore_only INTEGER NOT NULL DEFAULT 0"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE operator_permissions_v2 ADD COLUMN mark_rusak INTEGER NOT NULL DEFAULT 0"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE operator_permissions_v2 ADD COLUMN retur_voucher INTEGER NOT NULL DEFAULT 0"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE operator_permissions_v2 ADD COLUMN settlement_run INTEGER NOT NULL DEFAULT 0"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE operator_permissions_v2 ADD COLUMN settlement_reset INTEGER NOT NULL DEFAULT 0"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE operator_permissions_v2 ADD COLUMN sync_sales_force INTEGER NOT NULL DEFAULT 0"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE admin_users ADD COLUMN full_name TEXT"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE admin_users ADD COLUMN phone TEXT"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE operator_users ADD COLUMN full_name TEXT"); } catch (Exception $e) {}
@@ -174,16 +194,22 @@ function app_db_migrate_operator_legacy(PDO $pdo)
     $restore_only = isset($perms['restore_only']) ? !empty($perms['restore_only']) : $backup_restore;
 
     try {
-        $stmt = $pdo->prepare('INSERT OR REPLACE INTO operator_permissions_v2 (operator_id, delete_user, delete_block, delete_block_router, delete_block_full, audit_manual, reset_settlement, backup_only, restore_only, backup_restore, updated_at)
-            VALUES (:id, :du, :db, :dbr, :dbf, :am, :rs, :bo, :ro, :br, CURRENT_TIMESTAMP)');
+        $legacy_reset = !empty($perms['reset_settlement']) ? 1 : 0;
+        $stmt = $pdo->prepare('INSERT OR REPLACE INTO operator_permissions_v2 (operator_id, delete_user, delete_block, delete_block_router, delete_block_full, mark_rusak, retur_voucher, audit_manual, reset_settlement, settlement_run, settlement_reset, sync_sales_force, backup_only, restore_only, backup_restore, updated_at)
+            VALUES (:id, :du, :db, :dbr, :dbf, :mr, :rv, :am, :rs, :sr, :sre, :ssf, :bo, :ro, :br, CURRENT_TIMESTAMP)');
         $stmt->execute([
             ':id' => $opId,
             ':du' => !empty($perms['delete_user']) ? 1 : 0,
             ':db' => ($delete_block || $delete_block_router || $delete_block_full) ? 1 : 0,
             ':dbr' => $delete_block_router ? 1 : 0,
             ':dbf' => $delete_block_full ? 1 : 0,
+            ':mr' => !empty($perms['mark_rusak']) ? 1 : 0,
+            ':rv' => !empty($perms['retur_voucher']) ? 1 : 0,
             ':am' => !empty($perms['audit_manual']) ? 1 : 0,
-            ':rs' => !empty($perms['reset_settlement']) ? 1 : 0,
+            ':rs' => $legacy_reset,
+            ':sr' => $legacy_reset,
+            ':sre' => $legacy_reset,
+            ':ssf' => $legacy_reset,
             ':bo' => $backup_only ? 1 : 0,
             ':ro' => $restore_only ? 1 : 0,
             ':br' => ($backup_restore || $backup_only || $restore_only) ? 1 : 0,
@@ -596,7 +622,7 @@ function app_db_get_operator_permissions_for($operator_id)
     $pdo = app_db();
     $row = [];
     try {
-        $stmt = $pdo->prepare('SELECT delete_user, delete_block, delete_block_router, delete_block_full, audit_manual, reset_settlement, backup_only, restore_only, backup_restore FROM operator_permissions_v2 WHERE operator_id = :id');
+        $stmt = $pdo->prepare('SELECT delete_user, delete_block, delete_block_router, delete_block_full, mark_rusak, retur_voucher, audit_manual, reset_settlement, settlement_run, settlement_reset, sync_sales_force, backup_only, restore_only, backup_restore FROM operator_permissions_v2 WHERE operator_id = :id');
         $stmt->execute([':id' => (int)$operator_id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
@@ -608,8 +634,13 @@ function app_db_get_operator_permissions_for($operator_id)
             'delete_block' => false,
             'delete_block_router' => false,
             'delete_block_full' => false,
+            'mark_rusak' => false,
+            'retur_voucher' => false,
             'audit_manual' => false,
             'reset_settlement' => false,
+            'settlement_run' => false,
+            'settlement_reset' => false,
+            'sync_sales_force' => false,
             'backup_only' => false,
             'restore_only' => false,
             'backup_restore' => false,
@@ -621,13 +652,24 @@ function app_db_get_operator_permissions_for($operator_id)
     $legacy_backup_restore = !empty($row['backup_restore']);
     $backup_only = array_key_exists('backup_only', $row) ? !empty($row['backup_only']) : $legacy_backup_restore;
     $restore_only = array_key_exists('restore_only', $row) ? !empty($row['restore_only']) : $legacy_backup_restore;
+    $legacy_reset = !empty($row['reset_settlement']);
+    $settlement_run = array_key_exists('settlement_run', $row) ? !empty($row['settlement_run']) : $legacy_reset;
+    $settlement_reset = array_key_exists('settlement_reset', $row) ? !empty($row['settlement_reset']) : $legacy_reset;
+    $sync_sales_force = array_key_exists('sync_sales_force', $row) ? !empty($row['sync_sales_force']) : $legacy_reset;
+    $mark_rusak = array_key_exists('mark_rusak', $row) ? !empty($row['mark_rusak']) : false;
+    $retur_voucher = array_key_exists('retur_voucher', $row) ? !empty($row['retur_voucher']) : false;
     return [
         'delete_user' => !empty($row['delete_user']),
         'delete_block' => $legacy_delete_block || $delete_block_router || $delete_block_full,
         'delete_block_router' => $delete_block_router,
         'delete_block_full' => $delete_block_full,
+        'mark_rusak' => $mark_rusak,
+        'retur_voucher' => $retur_voucher,
         'audit_manual' => !empty($row['audit_manual']),
-        'reset_settlement' => !empty($row['reset_settlement']),
+        'reset_settlement' => $legacy_reset,
+        'settlement_run' => $settlement_run,
+        'settlement_reset' => $settlement_reset,
+        'sync_sales_force' => $sync_sales_force,
         'backup_only' => $backup_only,
         'restore_only' => $restore_only,
         'backup_restore' => ($backup_only || $restore_only || $legacy_backup_restore),
@@ -643,16 +685,25 @@ function app_db_set_operator_permissions_for($operator_id, array $perms)
     $backup_only = !empty($perms['backup_only']);
     $restore_only = !empty($perms['restore_only']);
     $backup_restore = !empty($perms['backup_restore']) || $backup_only || $restore_only;
-    $stmt = $pdo->prepare('INSERT OR REPLACE INTO operator_permissions_v2 (operator_id, delete_user, delete_block, delete_block_router, delete_block_full, audit_manual, reset_settlement, backup_only, restore_only, backup_restore, updated_at)
-        VALUES (:id, :du, :db, :dbr, :dbf, :am, :rs, :bo, :ro, :br, CURRENT_TIMESTAMP)');
+    $settlement_run = !empty($perms['settlement_run']);
+    $settlement_reset = !empty($perms['settlement_reset']);
+    $sync_sales_force = !empty($perms['sync_sales_force']);
+    $legacy_reset = !empty($perms['reset_settlement']) || $settlement_run || $settlement_reset || $sync_sales_force;
+    $stmt = $pdo->prepare('INSERT OR REPLACE INTO operator_permissions_v2 (operator_id, delete_user, delete_block, delete_block_router, delete_block_full, mark_rusak, retur_voucher, audit_manual, reset_settlement, settlement_run, settlement_reset, sync_sales_force, backup_only, restore_only, backup_restore, updated_at)
+        VALUES (:id, :du, :db, :dbr, :dbf, :mr, :rv, :am, :rs, :sr, :sre, :ssf, :bo, :ro, :br, CURRENT_TIMESTAMP)');
     $stmt->execute([
         ':id' => (int)$operator_id,
         ':du' => !empty($perms['delete_user']) ? 1 : 0,
         ':db' => $delete_block ? 1 : 0,
         ':dbr' => $delete_block_router ? 1 : 0,
         ':dbf' => $delete_block_full ? 1 : 0,
+        ':mr' => !empty($perms['mark_rusak']) ? 1 : 0,
+        ':rv' => !empty($perms['retur_voucher']) ? 1 : 0,
         ':am' => !empty($perms['audit_manual']) ? 1 : 0,
-        ':rs' => !empty($perms['reset_settlement']) ? 1 : 0,
+        ':rs' => $legacy_reset ? 1 : 0,
+        ':sr' => $settlement_run ? 1 : 0,
+        ':sre' => $settlement_reset ? 1 : 0,
+        ':ssf' => $sync_sales_force ? 1 : 0,
         ':bo' => $backup_only ? 1 : 0,
         ':ro' => $restore_only ? 1 : 0,
         ':br' => $backup_restore ? 1 : 0,
@@ -663,7 +714,7 @@ function app_db_get_operator_permissions()
 {
     $pdo = app_db();
     try {
-        $stmt = $pdo->query('SELECT delete_user, delete_block, delete_block_router, delete_block_full, audit_manual, reset_settlement, backup_only, restore_only, backup_restore FROM operator_permissions WHERE id = 1');
+        $stmt = $pdo->query('SELECT delete_user, delete_block, delete_block_router, delete_block_full, mark_rusak, retur_voucher, audit_manual, reset_settlement, settlement_run, settlement_reset, sync_sales_force, backup_only, restore_only, backup_restore FROM operator_permissions WHERE id = 1');
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         $row = [];
@@ -676,19 +727,48 @@ function app_db_get_operator_permissions()
             $row = [];
         }
     }
+    if (empty($row)) {
+        return [
+            'delete_user' => false,
+            'delete_block' => false,
+            'delete_block_router' => false,
+            'delete_block_full' => false,
+            'mark_rusak' => false,
+            'retur_voucher' => false,
+            'audit_manual' => false,
+            'reset_settlement' => false,
+            'settlement_run' => false,
+            'settlement_reset' => false,
+            'sync_sales_force' => false,
+            'backup_only' => false,
+            'restore_only' => false,
+            'backup_restore' => false,
+        ];
+    }
     $legacy_delete_block = !empty($row['delete_block']);
     $delete_block_router = array_key_exists('delete_block_router', $row) ? !empty($row['delete_block_router']) : $legacy_delete_block;
     $delete_block_full = array_key_exists('delete_block_full', $row) ? !empty($row['delete_block_full']) : $legacy_delete_block;
     $legacy_backup_restore = !empty($row['backup_restore']);
     $backup_only = array_key_exists('backup_only', $row) ? !empty($row['backup_only']) : $legacy_backup_restore;
     $restore_only = array_key_exists('restore_only', $row) ? !empty($row['restore_only']) : $legacy_backup_restore;
+    $legacy_reset = !empty($row['reset_settlement']);
+    $settlement_run = array_key_exists('settlement_run', $row) ? !empty($row['settlement_run']) : $legacy_reset;
+    $settlement_reset = array_key_exists('settlement_reset', $row) ? !empty($row['settlement_reset']) : $legacy_reset;
+    $sync_sales_force = array_key_exists('sync_sales_force', $row) ? !empty($row['sync_sales_force']) : $legacy_reset;
+    $mark_rusak = array_key_exists('mark_rusak', $row) ? !empty($row['mark_rusak']) : false;
+    $retur_voucher = array_key_exists('retur_voucher', $row) ? !empty($row['retur_voucher']) : false;
     return [
         'delete_user' => !empty($row['delete_user']),
         'delete_block' => $legacy_delete_block || $delete_block_router || $delete_block_full,
         'delete_block_router' => $delete_block_router,
         'delete_block_full' => $delete_block_full,
+        'mark_rusak' => $mark_rusak,
+        'retur_voucher' => $retur_voucher,
         'audit_manual' => !empty($row['audit_manual']),
-        'reset_settlement' => !empty($row['reset_settlement']),
+        'reset_settlement' => $legacy_reset,
+        'settlement_run' => $settlement_run,
+        'settlement_reset' => $settlement_reset,
+        'sync_sales_force' => $sync_sales_force,
         'backup_only' => $backup_only,
         'restore_only' => $restore_only,
         'backup_restore' => ($backup_only || $restore_only || $legacy_backup_restore),
@@ -705,15 +785,24 @@ function app_db_set_operator_permissions(array $perms)
     $restore_only = !empty($perms['restore_only']);
     $backup_restore = !empty($perms['backup_restore']) || $backup_only || $restore_only;
     try {
-        $stmt = $pdo->prepare('INSERT OR REPLACE INTO operator_permissions (id, delete_user, delete_block, delete_block_router, delete_block_full, audit_manual, reset_settlement, backup_only, restore_only, backup_restore, updated_at)
-            VALUES (1, :du, :db, :dbr, :dbf, :am, :rs, :bo, :ro, :br, CURRENT_TIMESTAMP)');
+        $settlement_run = !empty($perms['settlement_run']);
+        $settlement_reset = !empty($perms['settlement_reset']);
+        $sync_sales_force = !empty($perms['sync_sales_force']);
+        $legacy_reset = !empty($perms['reset_settlement']) || $settlement_run || $settlement_reset || $sync_sales_force;
+        $stmt = $pdo->prepare('INSERT OR REPLACE INTO operator_permissions (id, delete_user, delete_block, delete_block_router, delete_block_full, mark_rusak, retur_voucher, audit_manual, reset_settlement, settlement_run, settlement_reset, sync_sales_force, backup_only, restore_only, backup_restore, updated_at)
+            VALUES (1, :du, :db, :dbr, :dbf, :mr, :rv, :am, :rs, :sr, :sre, :ssf, :bo, :ro, :br, CURRENT_TIMESTAMP)');
         $stmt->execute([
             ':du' => !empty($perms['delete_user']) ? 1 : 0,
             ':db' => $delete_block ? 1 : 0,
             ':dbr' => $delete_block_router ? 1 : 0,
             ':dbf' => $delete_block_full ? 1 : 0,
+            ':mr' => !empty($perms['mark_rusak']) ? 1 : 0,
+            ':rv' => !empty($perms['retur_voucher']) ? 1 : 0,
             ':am' => !empty($perms['audit_manual']) ? 1 : 0,
-            ':rs' => !empty($perms['reset_settlement']) ? 1 : 0,
+            ':rs' => $legacy_reset ? 1 : 0,
+            ':sr' => $settlement_run ? 1 : 0,
+            ':sre' => $settlement_reset ? 1 : 0,
+            ':ssf' => $sync_sales_force ? 1 : 0,
             ':bo' => $backup_only ? 1 : 0,
             ':ro' => $restore_only ? 1 : 0,
             ':br' => $backup_restore ? 1 : 0,
@@ -771,6 +860,17 @@ function app_db_get_whatsapp_config()
             app_db_set_whatsapp_config($fromEnv);
             $stmt = $pdo->query('SELECT * FROM whatsapp_config WHERE id = 1');
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+    }
+
+    if ($row) {
+        $fromEnv = app_db_read_whatsapp_env();
+        if (is_array($fromEnv) && !empty($fromEnv)) {
+            foreach (['endpoint_send','token','notify_target','country_code','timezone'] as $key) {
+                if ((empty($row[$key]) || $row[$key] === null) && !empty($fromEnv[$key])) {
+                    $row[$key] = $fromEnv[$key];
+                }
+            }
         }
     }
 

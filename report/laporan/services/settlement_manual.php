@@ -34,9 +34,13 @@ function respond_json($payload) {
     exit;
 }
 
-$restricted_actions = ['start', 'reset'];
-if (isset($_SESSION['mikhmon']) && isOperator() && in_array($action, $restricted_actions, true) && !operator_can('reset_settlement')) {
-    respond_json(['ok' => false, 'message' => 'Akses ditolak.']);
+if (isset($_SESSION['mikhmon']) && isOperator()) {
+    if ($action === 'start' && !operator_can('settlement_run')) {
+        respond_json(['ok' => false, 'message' => 'Akses ditolak.']);
+    }
+    if ($action === 'reset' && !operator_can('settlement_reset')) {
+        respond_json(['ok' => false, 'message' => 'Akses ditolak.']);
+    }
 }
 
 function append_settlement_debug($file, $message) {
@@ -59,7 +63,7 @@ function append_settlement_log($file, $topic, $message) {
     @file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
 }
 
-function run_sync_sales($session, $env, $logFile, $debugFile) {
+function run_sync_sales($session, $env, $logFile, $debugFile, $force = false) {
     $system_cfg = $env['system'] ?? [];
     $base_url = rtrim((string)($system_cfg['base_url'] ?? ''), '/');
     if ($base_url === '') {
@@ -78,6 +82,9 @@ function run_sync_sales($session, $env, $logFile, $debugFile) {
     }
 
     $url = $base_url . '/report/laporan/services/sync_sales.php?key=' . urlencode($token) . '&session=' . urlencode($session);
+    if ($force) {
+        $url .= '&force=1';
+    }
     $ctx = stream_context_create([
         'http' => [
             'timeout' => 20,
@@ -505,6 +512,17 @@ try {
     $db->exec("PRAGMA journal_mode=WAL;");
     $db->exec("PRAGMA synchronous=NORMAL;");
     $db->exec("PRAGMA busy_timeout=5000;");
+    $db->exec("CREATE TABLE IF NOT EXISTS settlement_actions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        report_date TEXT,
+        action TEXT,
+        actor TEXT,
+        role TEXT,
+        ip_address TEXT,
+        result TEXT,
+        message TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )");
     $db->exec("CREATE TABLE IF NOT EXISTS settlement_log (
         report_date TEXT PRIMARY KEY,
         status TEXT,
@@ -526,6 +544,27 @@ try {
 }
 
 append_settlement_debug($debugFile, 'action=' . $action . ' session=' . $session . ' date=' . $date . ' db=' . $dbFile . ' log=' . $logFile);
+
+function log_settlement_action(PDO $db, $date, $action, $result, $message = '') {
+    $actor = (string)($_SESSION['mikhmon'] ?? '');
+    $role = isOperator() ? 'operator' : (isSuperAdmin() ? 'superadmin' : 'user');
+    $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
+    if (is_string($ip) && strpos($ip, ',') !== false) {
+        $ip = trim(explode(',', $ip)[0]);
+    }
+    try {
+        $stmt = $db->prepare("INSERT INTO settlement_actions (report_date, action, actor, role, ip_address, result, message) VALUES (:d, :a, :u, :r, :ip, :res, :m)");
+        $stmt->execute([
+            ':d' => $date,
+            ':a' => $action,
+            ':u' => $actor,
+            ':r' => $role,
+            ':ip' => $ip,
+            ':res' => $result,
+            ':m' => (string)$message
+        ]);
+    } catch (Exception $e) {}
+}
 
 try {
     $stmt = $db->prepare("SELECT status FROM settlement_log WHERE report_date = :d LIMIT 1");
@@ -753,7 +792,7 @@ if ($action === 'logs') {
             $stmtSS->execute([':d' => $date]);
             $salesSynced = (string)($stmtSS->fetchColumn() ?: '');
             if ($salesSynced === '') {
-                $res = run_sync_sales($session, $env, $logFile, $debugFile);
+                $res = run_sync_sales($session, $env, $logFile, $debugFile, true);
                 $syncMsg = $res['ok'] ? 'SYNC SALES: OK' : 'SYNC SALES: GAGAL';
                 $stmtSSU = $db->prepare("UPDATE settlement_log SET sales_sync_at = CURRENT_TIMESTAMP, message = CASE WHEN message IS NULL OR message = '' THEN :m ELSE message || ' | ' || :m END WHERE report_date = :d");
                 $stmtSSU->execute([':m' => $syncMsg, ':d' => $date]);
@@ -854,14 +893,22 @@ if ($action === 'wa_report') {
 }
 
 if ($action === 'reset') {
+    $actor = (string)($_SESSION['mikhmon'] ?? '');
+    $actor_role = isOperator() ? 'operator' : (isSuperAdmin() ? 'superadmin' : 'user');
+    $reset_msg = 'RESET by ' . ($actor !== '' ? $actor : 'unknown') . ' (' . $actor_role . ')';
     try {
-        $stmtR = $db->prepare("DELETE FROM settlement_log WHERE report_date = :d");
-        $stmtR->execute([':d' => $date]);
+        $stmtIns = $db->prepare("INSERT OR IGNORE INTO settlement_log (report_date, status, triggered_at, completed_at, source, message) VALUES (:d, 'reset', NULL, NULL, 'manual', :m)");
+        $stmtIns->execute([':d' => $date, ':m' => $reset_msg]);
+        $stmtR = $db->prepare("UPDATE settlement_log SET status = 'reset', triggered_at = NULL, completed_at = NULL, source = 'manual', message = CASE WHEN message IS NULL OR message = '' THEN :m ELSE message || ' | ' || :m END WHERE report_date = :d");
+        $stmtR->execute([':d' => $date, ':m' => $reset_msg]);
     } catch (Exception $e) {}
+    append_settlement_log($logFile, 'system,warning', $reset_msg);
+    log_settlement_action($db, $date, 'reset', 'ok', $reset_msg);
     respond_json(['ok' => true, 'message' => 'Reset berhasil.']);
 }
 
 if ($action === 'start') {
+    log_settlement_action($db, $date, 'start', 'requested', 'Settlement diminta');
     $latestLogFile = '';
     $pattern = $logDir . '/settlement_' . $safe_session . '_*.log';
     $candidates = glob($pattern);
@@ -940,11 +987,13 @@ if ($action === 'start') {
             $API->disconnect();
             append_settlement_debug($debugFile, 'script_run=' . $script_name);
             append_settlement_log($logFile, 'system,info', 'SETTLE: Script dijalankan: ' . $script_name);
+            log_settlement_action($db, $date, 'start', 'ok', 'Script dijalankan: ' . $script_name);
         }
     } catch (Exception $e) {
         $errMsg = $e->getMessage();
         append_settlement_debug($debugFile, 'api_error=' . $errMsg);
         append_settlement_log($logFile, 'system,error', 'SETTLE: API error ' . $errMsg);
+        log_settlement_action($db, $date, 'start', 'failed', 'API error: ' . $errMsg);
     }
 
     if (!$connected) {
@@ -952,6 +1001,7 @@ if ($action === 'start') {
             append_settlement_debug($debugFile, 'connect_error=' . $errMsg);
         }
         append_settlement_log($logFile, 'system,error', 'SETTLE: Gagal konek ke MikroTik.');
+        log_settlement_action($db, $date, 'start', 'failed', 'Gagal konek ke MikroTik.');
         respond_json(['ok' => false, 'message' => 'Gagal konek ke MikroTik.']);
     }
 

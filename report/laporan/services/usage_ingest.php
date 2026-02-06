@@ -87,6 +87,13 @@ $time = trim($_GET['time'] ?? '');
 $ip = trim($_GET['ip'] ?? '');
 $mac = trim($_GET['mac'] ?? '');
 $uptime = trim($_GET['uptime'] ?? '');
+$bytes_in_raw = $_GET['bytes_in'] ?? ($_GET['bytes-in'] ?? ($_GET['bi'] ?? ''));
+$bytes_out_raw = $_GET['bytes_out'] ?? ($_GET['bytes-out'] ?? ($_GET['bo'] ?? ''));
+$bytes_total_raw = $_GET['bytes'] ?? ($_GET['bytes_total'] ?? ($_GET['total_bytes'] ?? ''));
+$bytes_in = is_numeric($bytes_in_raw) ? (int)$bytes_in_raw : 0;
+$bytes_out = is_numeric($bytes_out_raw) ? (int)$bytes_out_raw : 0;
+$bytes_total = is_numeric($bytes_total_raw) ? (int)$bytes_total_raw : 0;
+$last_bytes = $bytes_total > 0 ? $bytes_total : ($bytes_in + $bytes_out);
 $comment = trim($_GET['comment'] ?? '');
 $customer_name = trim($_GET['customer_name'] ?? ($_GET['nama'] ?? ''));
 $room_name = trim($_GET['room'] ?? ($_GET['kamar'] ?? ''));
@@ -284,14 +291,15 @@ try {
     $status = $event === 'login' ? 'online' : 'terpakai';
 
     $stmt = $db->prepare("INSERT INTO login_history (
-        username, customer_name, room_name, blok_name, validity, price, ip_address, mac_address, last_uptime, raw_comment,
+        username, customer_name, room_name, blok_name, validity, price, ip_address, mac_address, last_uptime, last_bytes, raw_comment,
         login_time_real, logout_time_real, first_login_real, last_login_real, last_status, updated_at, login_count
     ) VALUES (
-        :u, :cn, :rn, :bn, :vf, :pr, :ip, :mac, :up, :raw, :ltr, :lor, :flr, :llr, :st, :upd, :cnt
+        :u, :cn, :rn, :bn, :vf, :pr, :ip, :mac, :up, :lb, :raw, :ltr, :lor, :flr, :llr, :st, :upd, :cnt
     ) ON CONFLICT(username) DO UPDATE SET
         ip_address = CASE WHEN excluded.ip_address != '' AND excluded.ip_address != '-' THEN excluded.ip_address ELSE login_history.ip_address END,
         mac_address = CASE WHEN excluded.mac_address != '' AND excluded.mac_address != '-' THEN excluded.mac_address ELSE login_history.mac_address END,
         last_uptime = COALESCE(NULLIF(excluded.last_uptime, ''), login_history.last_uptime),
+        last_bytes = CASE WHEN excluded.last_bytes IS NOT NULL AND excluded.last_bytes > 0 THEN excluded.last_bytes ELSE COALESCE(login_history.last_bytes, 0) END,
         raw_comment = CASE WHEN excluded.raw_comment != '' THEN excluded.raw_comment ELSE login_history.raw_comment END,
         customer_name = CASE WHEN excluded.customer_name != '' THEN excluded.customer_name ELSE login_history.customer_name END,
         room_name = CASE WHEN excluded.room_name != '' THEN excluded.room_name ELSE login_history.room_name END,
@@ -317,6 +325,7 @@ try {
         ':ip' => $ip,
         ':mac' => $mac,
         ':up' => $uptime,
+        ':lb' => $last_bytes > 0 ? $last_bytes : null,
         ':raw' => $comment,
         ':ltr' => $event === 'login' ? $dt : null,
         ':lor' => $event === 'logout' ? $dt : null,

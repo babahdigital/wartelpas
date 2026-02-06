@@ -3,8 +3,9 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../../../include/acl.php';
-if (isset($_SESSION['mikhmon']) && isOperator()) {
-    requireSuperAdmin('../../../admin.php?id=sessions');
+if (isset($_SESSION['mikhmon']) && isOperator() && !operator_can('sync_sales_force')) {
+    http_response_code(403);
+    die("Error: Akses ditolak.");
 }
 // FILE: report/laporan/services/sync_sales.php
 // Created by Gemini AI for Pak Dul
@@ -478,6 +479,24 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
     }
 
     log_sync_sales("done count={$count} invalid={$skip_invalid_format} blok_skip={$skip_blok} dup={$skip_duplicate}");
+
+    try {
+        if (table_exists($db, 'settlement_log')) {
+            $today = date('Y-m-d');
+            $stmt = $db->prepare("UPDATE settlement_log
+                SET sales_sync_at = CURRENT_TIMESTAMP,
+                    message = CASE
+                        WHEN message IS NULL OR message = '' THEN 'SYNC SALES: OK'
+                        WHEN instr(message, 'SYNC SALES: GAGAL') > 0 THEN replace(message, 'SYNC SALES: GAGAL', 'SYNC SALES: OK')
+                        WHEN instr(message, 'SYNC SALES: OK') > 0 THEN message
+                        ELSE message || ' | SYNC SALES: OK'
+                    END
+                WHERE report_date = :d");
+            $stmt->execute([':d' => $today]);
+        }
+    } catch (Exception $e) {
+        log_sync_sales('settlement_log_update_failed=' . $e->getMessage());
+    }
     echo "Sukses: $count laporan penjualan dipindahkan ke Database & dihapus dari MikroTik.\n";
     if ($debug) {
         echo "Debug: invalid_format={$skip_invalid_format}, blok_kosong={$skip_blok}, duplikat={$skip_duplicate}\n";

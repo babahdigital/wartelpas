@@ -26,6 +26,8 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
             $phone_after = (string)($todo_cfg['phone_after'] ?? $audit_after);
             $settle_running_minutes = (int)($todo_cfg['settlement_running_minutes'] ?? 20);
             $is_super = function_exists('isSuperAdmin') ? isSuperAdmin() : false;
+            $is_operator = function_exists('isOperator') ? isOperator() : false;
+            $can_force_sync = $is_super || ($is_operator && function_exists('operator_can') && operator_can('sync_sales_force'));
 
             $parse_time = function ($timeStr) use ($today) {
                 $timeStr = trim((string)$timeStr);
@@ -69,6 +71,46 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 return './tools/todo_ack.php?' . $qs;
             };
 
+            $settle_status_pre = '';
+            $settle_message_pre = '';
+            $settle_sales_sync_at_pre = '';
+            $sync_failed = false;
+            try {
+                $stmtSetPre = $db_sync->prepare("SELECT status, message, sales_sync_at FROM settlement_log WHERE report_date = :d LIMIT 1");
+                $stmtSetPre->execute([':d' => $today]);
+                $srowPre = $stmtSetPre->fetch(PDO::FETCH_ASSOC) ?: [];
+                $settle_status_pre = strtolower((string)($srowPre['status'] ?? ''));
+                $settle_message_pre = (string)($srowPre['message'] ?? '');
+                $settle_sales_sync_at_pre = (string)($srowPre['sales_sync_at'] ?? '');
+                if ($settle_status_pre === 'done' && stripos($settle_message_pre, 'SYNC SALES: GAGAL') !== false) {
+                    $sync_failed = true;
+                }
+            } catch (Exception $e) {
+                $sync_failed = false;
+            }
+
+            if ($sync_failed) {
+                try {
+                    $sales_cols = $db_sync->query("PRAGMA table_info(sales_history)")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                    $sales_names = array_map(function ($c) { return $c['name'] ?? ''; }, $sales_cols);
+                    $sales_col = in_array('sync_date', $sales_names, true)
+                        ? 'sync_date'
+                        : (in_array('created_at', $sales_names, true) ? 'created_at' : '');
+                    if ($sales_col !== '') {
+                        $last_sales_sync = (string)$db_sync->query("SELECT MAX($sales_col) FROM sales_history")->fetchColumn();
+                        if ($last_sales_sync !== '') {
+                            $last_ts = strtotime($last_sales_sync);
+                            $settle_ts = $settle_sales_sync_at_pre !== '' ? strtotime($settle_sales_sync_at_pre) : 0;
+                            if ($last_ts && (!$settle_ts || $last_ts > $settle_ts)) {
+                                $sync_failed = false;
+                            }
+                        }
+                    }
+                } catch (Exception $e) {
+                    $sync_failed = $sync_failed;
+                }
+            }
+
             // Live Sales stale detection
             $last_live_full = '-';
             $live_cols = $db_sync->query("PRAGMA table_info(live_sales)")->fetchAll(PDO::FETCH_ASSOC) ?: [];
@@ -101,14 +143,36 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 $live_pending_today = 0;
             }
 
-            if (($last_live_full === '-' || ($live_diff !== null && $live_diff >= $late_minutes))
-                && !$todo_is_ack('live_sales_stale', $today)) {
+            $is_live_ack = $todo_is_ack('live_sales_stale', $today);
+            if ($sync_failed && !$todo_is_ack('sync_sales_failed', $today)) {
+                $can_sync_fix = $is_super || ($is_operator && function_exists('operator_can') && operator_can('sync_sales_force'));
+                $desc = 'Sync sales gagal. Jalankan sync ulang agar laporan final akurat.';
+                $desc .= ' Terakhir: ' . ($live_title !== '-' ? $live_title : 'Tidak ada data');
+                if ($live_diff !== null) $desc .= ' (selisih ' . $live_diff . ' menit)';
+                if ($settle_message_pre !== '') {
+                    $desc .= ' (' . $settle_message_pre . ')';
+                }
+                $action_url = $can_sync_fix ? ('./tools/settlement_sync_fix.php?session=' . urlencode($session) . '&force=1') : '';
+                $action_label = $can_sync_fix ? 'Bersihkan Status' : '';
+                $todo_list[] = [
+                    'id' => 'sync_sales_failed',
+                    'title' => 'Sync Sales Gagal',
+                    'desc' => $desc,
+                    'level' => 'danger',
+                    'action_label' => $action_label,
+                    'action_url' => $action_url,
+                    'action_ajax' => $can_sync_fix,
+                    'action_ack' => '',
+                    'action_target' => '_blank'
+                ];
+            } elseif (($last_live_full === '-' || ($live_diff !== null && $live_diff >= $late_minutes))
+                && !$is_live_ack) {
                 $desc = 'Terakhir: ' . ($live_title !== '-' ? $live_title : 'Tidak ada data');
                 if ($live_diff !== null) $desc .= ' (selisih ' . $live_diff . ' menit)';
                 $desc .= '. Hubungi administrator jika masih belum normal.';
                 $action_url = '';
                 $action_label = '';
-                if ($is_super && $backupKey !== '') {
+                if ($can_force_sync && $backupKey !== '') {
                     $action_url = './report/laporan/services/sync_sales.php?key=' . urlencode($backupKey) . '&session=' . urlencode($session) . '&force=1';
                     $action_label = 'Sync Sales (Force)';
                 }
@@ -126,6 +190,36 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
             }
 
             // Audit & Settlement status
+            $audit_t_count = 0;
+            try {
+                $stmtTodayAudit = $db_sync->prepare("SELECT COUNT(*) FROM audit_rekap_manual WHERE report_date = :d");
+                $stmtTodayAudit->execute([':d' => $today]);
+                $audit_t_count = (int)$stmtTodayAudit->fetchColumn();
+            } catch (Exception $e) {
+                $audit_t_count = 0;
+            }
+
+            $audit_rebuild_needed = false;
+            if (isset($_GET['debug_audit_todo']) && $_GET['debug_audit_todo'] === '1') {
+                $audit_rebuild_needed = true;
+            }
+            if ($audit_t_count > 0) {
+                try {
+                    $stmtAuditChk = $db_sync->prepare("SELECT expected_qty, reported_qty, expected_setoran, actual_setoran, selisih_qty, selisih_setoran FROM audit_rekap_manual WHERE report_date = :d");
+                    $stmtAuditChk->execute([':d' => $today]);
+                    foreach ($stmtAuditChk->fetchAll(PDO::FETCH_ASSOC) as $ar) {
+                        $calc_qty = (int)($ar['reported_qty'] ?? 0) - (int)($ar['expected_qty'] ?? 0);
+                        $calc_set = (int)($ar['actual_setoran'] ?? 0) - (int)($ar['expected_setoran'] ?? 0);
+                        if ($calc_qty !== (int)($ar['selisih_qty'] ?? 0) || $calc_set !== (int)($ar['selisih_setoran'] ?? 0)) {
+                            $audit_rebuild_needed = true;
+                            break;
+                        }
+                    }
+                } catch (Exception $e) {
+                    $audit_rebuild_needed = false;
+                }
+            }
+
             $audit_locked_today = false;
             try {
                 $stmtLock = $db_sync->prepare("SELECT COUNT(*) FROM audit_rekap_manual WHERE report_date = :d AND COALESCE(is_locked,0) = 1");
@@ -158,30 +252,30 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
             }
 
             $report_url = './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($today);
-            if ($is_after_audit && !$audit_locked_today) {
+            if ($is_after_audit && $audit_t_count === 0) {
                 $todo_list[] = [
-                    'id' => 'audit_pending',
-                    'title' => 'Audit belum dikunci',
+                    'id' => 'audit_missing_today',
+                    'title' => 'Audit hari ini belum diisi',
                     'desc' => 'Lengkapi audit harian terlebih dahulu sebelum settlement.',
                     'level' => 'warn',
                     'action_label' => 'Buka Laporan Harian',
                     'action_url' => $report_url,
                     'action_target' => '_self'
                 ];
-            } elseif ($audit_locked_today && !$settled_today && $is_settlement_window) {
+            } elseif ($audit_t_count > 0 && !$settled_today && $is_settlement_window) {
                 $todo_list[] = [
                     'id' => 'settlement_pending',
-                    'title' => 'Settlement belum dilakukan',
-                    'desc' => 'Audit sudah dikunci, lanjutkan settlement harian.',
+                    'title' => 'Audit hari ini belum di settlement',
+                    'desc' => 'Audit sudah terisi, lanjutkan settlement harian.',
                     'level' => 'warn',
                     'action_label' => 'Buka Settlement',
                     'action_url' => $report_url,
                     'action_target' => '_self'
                 ];
-            } elseif ($audit_locked_today && !$settled_today && $is_settlement_after_close) {
+            } elseif ($audit_t_count > 0 && !$settled_today && $is_settlement_after_close) {
                 $todo_list[] = [
                     'id' => 'settlement_overdue',
-                    'title' => 'Settlement terlewat',
+                    'title' => 'Audit hari ini belum di settlement',
                     'desc' => 'Jam settlement sudah lewat. Lakukan settlement agar laporan akurat.',
                     'level' => 'danger',
                     'action_label' => 'Buka Settlement',
@@ -202,6 +296,21 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 ];
             }
 
+            if ($audit_rebuild_needed) {
+                $can_rebuild = $is_super || ($is_operator && function_exists('operator_can') && operator_can('audit_manual'));
+                if ($can_rebuild) {
+                    $todo_list[] = [
+                        'id' => 'audit_rebuild_needed',
+                        'title' => 'Audit perlu diperbaiki',
+                        'desc' => 'Ditemukan selisih audit yang tidak sesuai. Jalankan perbaikan audit agar data sinkron.',
+                        'level' => 'warn',
+                        'action_label' => 'Perbaiki Audit',
+                        'action_url' => './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($today) . '&audit_rebuild=1',
+                        'action_target' => '_self'
+                    ];
+                }
+            }
+
             if ($settle_status === 'running' && $settle_triggered !== '') {
                 $trigger_ts = strtotime($settle_triggered);
                 if ($trigger_ts && ($now_ts - $trigger_ts) > ($settle_running_minutes * 60)) {
@@ -217,23 +326,48 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 }
             }
 
-            if ($settled_today && $live_pending_today > 0) {
+            if ($settled_today && $live_pending_today > 0 && $is_after_audit) {
+                $pending_after_settle = $live_pending_today;
+                if ($settle_completed !== '') {
+                    try {
+                        $stmtPendAfter = $db_sync->prepare("SELECT COUNT(*) FROM live_sales WHERE sync_status = 'pending' AND (sale_datetime <= :cutoff OR sale_date <= :d)");
+                        $stmtPendAfter->execute([
+                            ':cutoff' => $settle_completed,
+                            ':d' => $today
+                        ]);
+                        $pending_after_settle = (int)$stmtPendAfter->fetchColumn();
+                    } catch (Exception $e) {
+                        $pending_after_settle = $live_pending_today;
+                    }
+                }
+                if ($pending_after_settle <= 0) {
+                    $pending_after_settle = 0;
+                }
+                if ($pending_after_settle === 0) {
+                    // no stale pending after settlement
+                } else {
+                $sync_label = ($can_force_sync && $backupKey !== '') ? 'Sync Sales (Force)' : 'Hubungi Admin (Sync Sales)';
+                $sync_url = ($can_force_sync && $backupKey !== '')
+                    ? './report/laporan/services/sync_sales.php?key=' . urlencode($backupKey) . '&session=' . urlencode($session) . '&force=1'
+                    : '';
+                $sync_ajax = ($can_force_sync && $backupKey !== '');
+                $sync_ack = ($can_force_sync && $backupKey !== '') ? $todo_ack_url('live_pending_after_settle') : '';
+                $sync_target = ($can_force_sync && $backupKey !== '') ? '_blank' : '_self';
                 $todo_list[] = [
                     'id' => 'live_pending_after_settle',
                     'title' => 'Live Sales masih pending',
-                    'desc' => 'Masih ada ' . $live_pending_today . ' transaksi live pending setelah settlement. Lakukan sync ulang.',
+                    'desc' => 'Masih ada ' . $pending_after_settle . ' transaksi live pending setelah settlement. Lakukan sync ulang.',
                     'level' => 'warn',
-                    'action_label' => ($is_super && $backupKey !== '') ? 'Sync Sales (Force)' : 'Buka Settlement',
-                    'action_url' => ($is_super && $backupKey !== '')
-                        ? './report/laporan/services/sync_sales.php?key=' . urlencode($backupKey) . '&session=' . urlencode($session) . '&force=1'
-                        : $report_url,
-                    'action_ajax' => ($is_super && $backupKey !== ''),
-                    'action_ack' => ($is_super && $backupKey !== '') ? $todo_ack_url('live_pending_after_settle') : '',
-                    'action_target' => ($is_super && $backupKey !== '') ? '_blank' : '_self'
+                    'action_label' => $sync_label,
+                    'action_url' => $sync_url,
+                    'action_ajax' => $sync_ajax,
+                    'action_ack' => $sync_ack,
+                    'action_target' => $sync_target
                 ];
+                }
             }
 
-            // Audit missing / kurang bayar
+            // Audit missing / piutang
             $yesterday = date('Y-m-d', strtotime('-1 day'));
             $today_report_url = './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($today);
             $today_label = $format_ddmmyyyy($today);
@@ -292,7 +426,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                         }
                         $todo_list[] = [
                             'id' => 'audit_kurang_' . $yesterday,
-                            'title' => 'Audit kurang bayar (Kemarin)',
+                            'title' => 'Audit piutang (Kemarin)',
                             'desc' => 'Terdapat kekurangan Rp ' . $abs . ' pada audit tanggal ' . $yesterday_label . '.' . $blok_list,
                             'level' => 'danger',
                             'action_label' => 'Buka Tanggal ' . $yesterday_label,
@@ -314,13 +448,30 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 return 'BLOK ' . strtoupper($name);
             };
 
-            // Kurang bayar hari ini
-            try {
-                $stmtTodayAudit = $db_sync->prepare("SELECT COUNT(*) FROM audit_rekap_manual WHERE report_date = :d");
-                $stmtTodayAudit->execute([':d' => $today]);
-                $audit_t_count = (int)$stmtTodayAudit->fetchColumn();
-            } catch (Exception $e) {
-                $audit_t_count = 0;
+            // Piutang hari ini
+            if ($audit_t_count > 0) {
+                try {
+                    $stmtExp = $db_sync->prepare("SELECT COUNT(*) AS cnt, SUM(COALESCE(expenses_amt,0)) AS total, SUM(CASE WHEN expenses_amt IS NULL OR expenses_amt = '' THEN 1 ELSE 0 END) AS missing FROM audit_rekap_manual WHERE report_date = :d");
+                    $stmtExp->execute([':d' => $today]);
+                    $expRow = $stmtExp->fetch(PDO::FETCH_ASSOC) ?: [];
+                    $expTotal = (int)($expRow['total'] ?? 0);
+                    $expMissing = (int)($expRow['missing'] ?? 0);
+                    if ($expMissing > 0 || $expTotal <= 0) {
+                        $desc = $expMissing > 0
+                            ? 'Masih ada ' . $expMissing . ' data audit tanpa pengeluaran. Jika tidak ada pengeluaran, isi 0 di audit manual.'
+                            : 'Total pengeluaran hari ini masih 0. Jika tidak ada pengeluaran, pastikan isi 0 di audit manual.';
+                        $todo_list[] = [
+                            'id' => 'audit_expense_missing_' . $today,
+                            'title' => 'Pengeluaran audit belum diisi',
+                            'desc' => $desc,
+                            'level' => 'warn',
+                            'action_label' => 'Buka Audit Hari Ini',
+                            'action_url' => $today_report_url,
+                            'action_target' => '_self'
+                        ];
+                    }
+                } catch (Exception $e) {
+                }
             }
             if ($audit_t_count > 0) {
                 try {
@@ -359,7 +510,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                         }
                         $todo_list[] = [
                             'id' => 'audit_kurang_' . $today,
-                            'title' => 'Audit kurang bayar (Hari Ini)',
+                            'title' => 'Audit piutang (Hari Ini)',
                             'desc' => 'Terdapat kekurangan Rp ' . $absT . ' pada audit tanggal ' . $today_label . '.' . $blok_list,
                             'level' => 'danger',
                             'action_label' => 'Buka Tanggal ' . $today_label,
@@ -371,7 +522,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 }
             }
 
-            // Kurang bayar tanggal lain
+            // Piutang tanggal lain
             try {
                 $stmtKb = $db_sync->query("SELECT report_date, SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg, SUM(COALESCE(kurang_bayar_amt,0)) AS kb
                     FROM audit_rekap_manual
@@ -390,7 +541,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 $kbV = (int)($kr['kb'] ?? 0);
                 $remainV = $negV - $kbV;
                 if ($remainV <= 0) continue;
-                $parts = ['kurang bayar Rp ' . number_format($remainV, 0, ",", ".")];
+                $parts = ['piutang Rp ' . number_format($remainV, 0, ",", ".")];
                 $blok_list = '';
                 try {
                     $stmtBlok = $db_sync->prepare("SELECT blok_name, SUM(CASE WHEN selisih_setoran < 0 THEN -selisih_setoran ELSE 0 END) AS neg, SUM(COALESCE(kurang_bayar_amt,0)) AS kb
@@ -420,7 +571,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 $desc = 'Terdapat ' . implode(' + ', $parts) . ' pada audit tanggal ' . $rlabel . '.' . $blok_list;
                 $todo_list[] = [
                     'id' => 'audit_kurang_' . $rdate,
-                    'title' => 'Audit kurang bayar',
+                    'title' => 'Audit piutang',
                     'desc' => $desc,
                     'level' => 'danger',
                     'action_label' => 'Buka Tanggal ' . $rlabel,

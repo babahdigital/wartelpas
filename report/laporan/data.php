@@ -113,6 +113,9 @@ $audit_total_expenses_period = 0;
 $audit_period_rows = [];
 $has_audit_adjusted = false;
 $audit_locked_today = false;
+$audit_rebuild_needed = false;
+$audit_rebuild_message = '';
+$audit_rebuild_error = '';
 $current_daily_note = '';
 $wa_report_status = '';
 $wa_report_sent_at = '';
@@ -1166,6 +1169,26 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
 
 // Simpan audit manual rekap harian (qty + uang)
 if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
+    $can_audit_rebuild = (!empty($is_superadmin) || ($is_operator && function_exists('operator_can') && operator_can('audit_manual')));
+    if (isset($_GET['audit_rebuild']) && $_GET['audit_rebuild'] === '1') {
+        if (!$can_audit_rebuild) {
+            $audit_rebuild_error = 'Akses ditolak. Perbaikan audit hanya untuk role yang diizinkan.';
+        } elseif (function_exists('rebuild_audit_expected_for_date')) {
+            $updated = rebuild_audit_expected_for_date($db, $filter_date);
+            $audit_rebuild_message = 'Audit diperbarui: ' . (int)$updated . ' blok.';
+            $redirect = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date) . '&audit_rebuild_done=1&audit_rebuild_count=' . (int)$updated;
+            if (!headers_sent()) {
+                header('Location: ' . $redirect);
+                exit;
+            }
+        } else {
+            $audit_rebuild_error = 'Fitur perbaikan audit tidak tersedia.';
+        }
+    }
+    if (isset($_GET['audit_rebuild_done']) && $_GET['audit_rebuild_done'] === '1') {
+        $count = isset($_GET['audit_rebuild_count']) ? (int)$_GET['audit_rebuild_count'] : 0;
+        $audit_rebuild_message = 'Audit diperbarui: ' . $count . ' blok.';
+    }
     if (isset($_POST['audit_submit']) || isset($_POST['audit_blok'])) {
         if ($is_operator && !operator_can('audit_manual')) {
             $audit_error = 'Akses ditolak. Audit manual hanya untuk role yang diizinkan.';
@@ -1247,7 +1270,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             $audit_error = 'Keterangan pengembalian wajib diisi.';
         }
         if ($audit_error === '' && ($audit_kurang_bayar_amt > 0 && $audit_kurang_bayar_desc === '')) {
-            $audit_error = 'Keterangan kurang bayar wajib diisi.';
+            $audit_error = 'Keterangan piutang wajib diisi.';
         }
         if ($audit_error === '' && $audit_blok !== 'BLOK-LAIN') {
             if ($req_show !== 'harian') {
@@ -1276,14 +1299,11 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
             $audit_expected_setoran = (int)($expected['net'] ?? 0);
             $audit_selisih_qty = $audit_qty - $audit_expected_qty;
             $audit_selisih_setoran = $audit_setoran - $audit_expected_setoran;
-            if ($audit_exp_amt > 0 && $audit_exp_desc !== '') {
-                $audit_setoran = $audit_setoran + $audit_exp_amt;
-            }
             if ($audit_refund_amt > 0 && $audit_selisih_setoran <= 0) {
                 $audit_error = 'Pengembalian hanya boleh jika selisih setoran lebih setor.';
             }
             if ($audit_error === '' && $audit_kurang_bayar_amt > 0 && $audit_selisih_setoran >= 0) {
-                $audit_error = 'Kurang bayar hanya boleh jika selisih setoran kurang setor.';
+                $audit_error = 'Piutang hanya boleh jika selisih setoran kurang setor.';
             }
             $max_refund = max(0, $audit_setoran - $audit_exp_amt);
             if ($audit_error === '' && $audit_refund_amt > $max_refund) {
@@ -1444,7 +1464,8 @@ if ($req_show === 'harian' && isset($db) && $db instanceof PDO) {
             $audit_total_expected_qty += (int)($ar['expected_qty'] ?? 0);
             $audit_total_reported_qty += (int)($ar['reported_qty'] ?? 0);
             $audit_total_expected_setoran += (int)($ar['expected_setoran'] ?? 0);
-            $audit_total_actual_setoran += (int)($ar['actual_setoran'] ?? 0);
+            $normalized_actual = function_exists('normalize_actual_setoran') ? normalize_actual_setoran($ar) : (int)($ar['actual_setoran'] ?? 0);
+            $audit_total_actual_setoran += (int)$normalized_actual;
             $refund_amt = (int)($ar['refund_amt'] ?? 0);
             $kurang_bayar_amt = (int)($ar['kurang_bayar_amt'] ?? 0);
             $audit_total_refund += $refund_amt;
@@ -1462,7 +1483,7 @@ if ($req_show === 'harian' && isset($db) && $db instanceof PDO) {
 }
 if ($req_show !== 'harian' && isset($db) && $db instanceof PDO) {
     try {
-        $stmtAudit = $db->prepare("SELECT report_date, expected_setoran, actual_setoran, user_evidence, refund_amt, kurang_bayar_amt, expenses_amt FROM audit_rekap_manual WHERE report_date LIKE :p");
+        $stmtAudit = $db->prepare("SELECT report_date, expected_setoran, actual_setoran, selisih_setoran, user_evidence, refund_amt, kurang_bayar_amt, expenses_amt FROM audit_rekap_manual WHERE report_date LIKE :p");
         $stmtAudit->execute([':p' => $filter_date . '%']);
         foreach ($stmtAudit->fetchAll(PDO::FETCH_ASSOC) as $ar) {
             $d = (string)($ar['report_date'] ?? '');
@@ -1509,6 +1530,23 @@ if ($req_show !== 'harian' && !empty($audit_period_rows)) {
 }
 
 $has_audit_rows = !empty($audit_rows);
+$can_audit_rebuild = (!empty($is_superadmin) || ($is_operator && function_exists('operator_can') && operator_can('audit_manual')));
+if ($req_show === 'harian' && $has_audit_rows && $can_audit_rebuild && function_exists('fetch_rows_for_audit') && function_exists('calc_expected_for_block')) {
+    $rows_src = fetch_rows_for_audit($db, $filter_date);
+    if (!empty($rows_src)) {
+        foreach ($audit_rows as $ar) {
+            $blok = (string)($ar['blok_name'] ?? '');
+            if ($blok === '') continue;
+            $expected = calc_expected_for_block($rows_src, $filter_date, $blok);
+            $exp_qty = (int)($expected['qty'] ?? 0);
+            $exp_set = (int)($expected['net'] ?? 0);
+            if ($exp_qty !== (int)($ar['expected_qty'] ?? 0) || $exp_set !== (int)($ar['expected_setoran'] ?? 0)) {
+                $audit_rebuild_needed = true;
+                break;
+            }
+        }
+    }
+}
 $audit_ghost_hint = $has_audit_rows ? build_ghost_hint($audit_total_selisih_qty, $audit_selisih_setoran_adj_total) : '';
 
 if (empty($list) && $last_available_date !== '' && $filter_date !== $last_available_date) {

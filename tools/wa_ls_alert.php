@@ -15,6 +15,20 @@ if (file_exists($helperFile)) {
 }
 
 $system_cfg = $env['system'] ?? [];
+$todo_cfg = $env['todo'] ?? [];
+$audit_after = (string)($todo_cfg['audit_after'] ?? '18:00');
+$settlement_close = (string)($todo_cfg['settlement_close'] ?? $audit_after);
+$parse_time = function ($timeStr) {
+    $timeStr = trim((string)$timeStr);
+    if ($timeStr === '' || !preg_match('/^\d{2}:\d{2}$/', $timeStr)) return null;
+    return strtotime(date('Y-m-d') . ' ' . $timeStr);
+};
+$close_ts = $parse_time($settlement_close);
+$now_ts = time();
+if ($close_ts && $now_ts < $close_ts) {
+    echo "SKIP: sebelum jam tutup\n";
+    exit(0);
+}
 $db_rel = $system_cfg['db_file'] ?? 'db_data/babahdigital_main.db';
 if (preg_match('/^[A-Za-z]:\\|^\//', $db_rel)) {
     $stats_db = $db_rel;

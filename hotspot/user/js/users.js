@@ -217,10 +217,15 @@
           <span>${statusText}</span>
         </div>`;
 
+      const bytesRaw = values.bytes;
+      const bytesText = (bytesRaw === 0 || bytesRaw === '0' || bytesRaw === '' || bytesRaw == null)
+        ? '0 B'
+        : bytesRaw;
+      const bytesLabel = bytesText === '0 B' ? '0 Byte' : bytesText;
       const items = [
         { label: `Offline (Tidak aktif)`, ok: !!criteria.offline, value: values.online === 'Tidak' ? 'Offline' : 'Online' },
-        { label: `Usage < ${limits.bytes || '-'}`, ok: !!criteria.bytes_ok, value: values.bytes || '-' },
-        { label: `Uptime (Info)`, ok: true, value: values.total_uptime || '-' },
+        { label: `Usage < ${limits.bytes || '-'}`, ok: !!criteria.bytes_ok, value: bytesLabel || '-' },
+        { label: `Uptime < ${limits.uptime || '-'}`, ok: !!criteria.total_uptime_ok, value: values.uptime || values.total_uptime || '-' },
         { label: `History Login`, ok: !!criteria.first_login_ok, value: values.first_login !== '-' ? 'Ada' : 'Kosong' }
       ];
 
@@ -560,7 +565,7 @@
     const criteria = {
       offline,
       bytes_ok: bytes <= limits.bytes,
-      total_uptime_ok: true,
+      total_uptime_ok: uptimeSec <= limits.uptime,
       first_login_ok: !!firstLogin
     };
     const ok = criteria.offline && criteria.bytes_ok && criteria.first_login_ok;

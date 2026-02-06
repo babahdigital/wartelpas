@@ -637,7 +637,7 @@ $has_router = !empty($router_list);
           <div class="col-6">
             <div class="card-modern" style="margin-bottom:12px;">
               <div class="card-body-modern">
-                <div class="text-secondary" style="font-size:12px;">Kurang Bayar Sisa</div>
+                <div class="text-secondary" style="font-size:12px;">Piutang Sisa</div>
                 <div style="font-size:18px; font-weight:700;">Rp <?= $format_rp($summary_kurang_sisa); ?></div>
                 <div class="text-secondary" style="font-size:11px; margin-top:6px;">Setelah tagih</div>
               </div>
@@ -673,7 +673,7 @@ $has_router = !empty($router_list);
       <div class="card-body-modern">
         <div class="row">
           <div class="col-6">
-            <div class="text-secondary" style="font-size:12px;">Audit Kurang Bayar</div>
+            <div class="text-secondary" style="font-size:12px;">Audit Piutang</div>
             <div style="font-size:16px; font-weight:700;"><?= (int)$todo_kurang_count; ?> item</div>
           </div>
           <div class="col-6">

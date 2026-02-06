@@ -46,7 +46,7 @@ function calc_audit_adjusted_totals(array $ar) {
     $expected_qty = (int)($ar['expected_qty'] ?? 0);
     $expected_setoran = (int)($ar['expected_setoran'] ?? 0);
     $reported_qty = (int)($ar['reported_qty'] ?? 0);
-    $actual_setoran = (int)($ar['actual_setoran'] ?? 0);
+    $actual_setoran = function_exists('normalize_actual_setoran') ? normalize_actual_setoran($ar) : (int)($ar['actual_setoran'] ?? 0);
     $expense_amt = (int)($ar['expenses_amt'] ?? 0);
     $has_manual_evidence = false;
     $manual_setoran_override = false;
@@ -427,7 +427,7 @@ if (file_exists($dbFile)) {
         }
 
         if (table_exists($db, 'audit_rekap_manual')) {
-            $auditSql = "SELECT blok_name, expected_qty, expected_setoran, reported_qty, actual_setoran, refund_amt, refund_desc, kurang_bayar_amt, kurang_bayar_desc, expenses_amt, expenses_desc, user_evidence
+            $auditSql = "SELECT blok_name, expected_qty, expected_setoran, reported_qty, actual_setoran, selisih_setoran, refund_amt, refund_desc, kurang_bayar_amt, kurang_bayar_desc, expenses_amt, expenses_desc, user_evidence
                 FROM audit_rekap_manual WHERE $auditDateFilter";
             $stmt = $db->prepare($auditSql);
             foreach ($auditDateParam as $k => $v) $stmt->bindValue($k, $v);
@@ -678,7 +678,7 @@ if (file_exists($dbFile)) {
                 <?php endif; ?>
                 <?php if ($audit_manual_summary['total_kurang_bayar'] > 0): ?>
                     <div class="summary-card" style="border-color:#2ecc71;">
-                        <div class="summary-title" style="color:#2ecc71;">Kurang Bayar</div>
+                        <div class="summary-title" style="color:#2ecc71;">Piutang</div>
                         <div class="summary-value" style="color:#2ecc71;">Rp <?= number_format($audit_manual_summary['total_kurang_bayar'],0,',','.') ?></div>
                         <div style="font-size:10px;color:#2ecc71;">(Tagih susulan)</div>
                     </div>
@@ -748,7 +748,7 @@ if (file_exists($dbFile)) {
                 </div>
                 <?php if (!empty($audit_refund_notes) && $selisih_adj != 0): ?>
                     <div style="margin-top:8px;">
-                        <div style="font-size:12px;color:#cbd5f5;font-weight:bold;">Catatan Selisih (setelah refund/kurang bayar):</div>
+                        <div style="font-size:12px;color:#cbd5f5;font-weight:bold;">Catatan Selisih (setelah refund/piutang):</div>
                         <ul style="margin:6px 0 0 16px; padding:0; color:#e2e8f0; font-size:12px;">
                             <?php foreach ($audit_refund_notes as $rn): ?>
                                 <?php if ((int)$rn['selisih_adj'] === 0) continue; ?>
@@ -769,16 +769,16 @@ if (file_exists($dbFile)) {
         <?php if ($audit_manual_summary['total_kurang_bayar'] > 0): ?>
             <div class="summary-card" style="border:1px solid #3a4046;background:#1f2327;margin-top:10px;">
                 <div style="font-size:12px;color:#cbd5f5;">
-                    <strong>Catatan Kurang Bayar:</strong> Total kurang bayar tercatat Rp <?= number_format($audit_manual_summary['total_kurang_bayar'],0,',','.') ?>.
+                    <strong>Catatan Piutang:</strong> Total piutang tercatat Rp <?= number_format($audit_manual_summary['total_kurang_bayar'],0,',','.') ?>.
                 </div>
                 <?php if (!empty($audit_kurang_bayar_notes) && $selisih_adj != 0): ?>
                     <div style="margin-top:8px;">
-                        <div style="font-size:12px;color:#cbd5f5;font-weight:bold;">Catatan Selisih (setelah refund/kurang bayar):</div>
+                        <div style="font-size:12px;color:#cbd5f5;font-weight:bold;">Catatan Selisih (setelah refund/piutang):</div>
                         <ul style="margin:6px 0 0 16px; padding:0; color:#e2e8f0; font-size:12px;">
                             <?php foreach ($audit_kurang_bayar_notes as $rn): ?>
                                 <?php if ((int)$rn['selisih_adj'] === 0) continue; ?>
                                 <li>
-                                    Blok <?= htmlspecialchars((string)$rn['blok']) ?>: Kurang Bayar Rp <?= number_format((int)$rn['kurang_bayar_amt'],0,',','.') ?>
+                                    Blok <?= htmlspecialchars((string)$rn['blok']) ?>: Piutang Rp <?= number_format((int)$rn['kurang_bayar_amt'],0,',','.') ?>
                                     <?php if (!empty($rn['kurang_bayar_desc'])): ?>
                                         (<?= htmlspecialchars($rn['kurang_bayar_desc']) ?>)
                                     <?php endif; ?>

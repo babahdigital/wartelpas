@@ -112,6 +112,16 @@ RedirectMatch 403 ^/voucher/(?!print\.php$).+\.php$
 # ====================================================
 SetEnvIf X-Forwarded-For "^10\.0\.0\.6($|,)" TAMU_VIP
 SetEnvIf X-Forwarded-For "^172\.16\.8\.21($|,)" TAMU_VIP
+SetEnvIf X-Forwarded-For "^10\.10\.83\.1($|,)" TAMU_VIP
+SetEnvIf X-Forwarded-For "^10\.10\.83\.2($|,)" TAMU_VIP
+SetEnvIf X-Real-IP "^10\.0\.0\.6$" TAMU_VIP
+SetEnvIf X-Real-IP "^172\.16\.8\.21$" TAMU_VIP
+SetEnvIf X-Real-IP "^10\.10\.83\.1$" TAMU_VIP
+SetEnvIf X-Real-IP "^10\.10\.83\.2$" TAMU_VIP
+SetEnvIf Remote_Addr "^10\.0\.0\.6$" TAMU_VIP
+SetEnvIf Remote_Addr "^172\.16\.8\.21$" TAMU_VIP
+SetEnvIf Remote_Addr "^10\.10\.83\.1$" TAMU_VIP
+SetEnvIf Remote_Addr "^10\.10\.83\.2$" TAMU_VIP
 
 # ====================================================
 # 5. GERBANG KEAMANAN UTAMA (GLOBAL)
@@ -253,6 +263,16 @@ Require all denied
     Require all granted
 </If>
 
+# VIP whitelist generator (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/htaccess_vip\.php$#">
+    Require all granted
+</If>
+
+# Settlement sync fix endpoint (protected by session)
+<If "%{REQUEST_URI} =~ m#^/tools/settlement_sync_fix\.php#">
+    Require all granted
+</If>
+
 
 # Print report endpoints
 <If "%{REQUEST_URI} =~ m#^/report/print/print_rekap\.php$#">
@@ -274,7 +294,62 @@ Require all denied
 
 # Dashboard AJAX
 <If "%{REQUEST_URI} =~ m#^/dashboard/aload\.php$#">
-    Require all granted
+    <RequireAny>
+        Require env TAMU_VIP
+        Require ip 10.0.0.6
+        Require ip 172.16.8.21
+        Require ip 10.10.83.1
+        Require ip 10.10.83.2
+        Require ip 127.0.0.1
+        Require ip ::1
+    </RequireAny>
+</If>
+
+# AJAX/Backend folder restrictions (VIP only)
+<If "%{REQUEST_URI} =~ m#^/dashboard/.*\.php$#">
+    <RequireAny>
+        Require env TAMU_VIP
+        Require ip 10.0.0.6
+        Require ip 172.16.8.21
+        Require ip 10.10.83.1
+        Require ip 10.10.83.2
+        Require ip 127.0.0.1
+        Require ip ::1
+    </RequireAny>
+</If>
+
+<If "%{REQUEST_URI} =~ m#^/hotspot/(?!user/(retur_request|login_meta)\.php$).*\.php$#">
+    <RequireAny>
+        Require env TAMU_VIP
+        Require ip 10.0.0.6
+        Require ip 172.16.8.21
+        Require ip 10.10.83.1
+        Require ip 10.10.83.2
+        Require ip 127.0.0.1
+        Require ip ::1
+    </RequireAny>
+</If>
+
+<If "%{REQUEST_URI} =~ m#^/dhcp/.*\.php$#">
+    <RequireAny>
+        Require env TAMU_VIP
+        Require ip 10.0.0.6
+        Require ip 172.16.8.21
+        Require ip 10.10.83.1
+        Require ip 10.10.83.2
+        Require ip 127.0.0.1
+        Require ip ::1
+    </RequireAny>
+</If>
+
+<If "%{REQUEST_URI} =~ m#^/traffic/.*\.php$#">
+    <RequireAny>
+        Require env TAMU_VIP
+        Require ip 10.0.0.6
+        Require ip 172.16.8.21
+        Require ip 127.0.0.1
+        Require ip ::1
+    </RequireAny>
 </If>
 
 # Sync usage endpoint
@@ -320,6 +395,9 @@ Require all denied
 <RequireAny>
     Require env TAMU_VIP
     Require ip 10.0.0.6
+    Require ip 172.16.8.21
+    Require ip 10.10.83.1
+    Require ip 10.10.83.2
     Require ip 127.0.0.1
     Require ip ::1
 </RequireAny>

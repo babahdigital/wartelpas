@@ -956,7 +956,7 @@ $has_kurang_bayar = $total_audit_kurang_bayar > 0;
         <?php endif; ?>
         <?php if ($has_kurang_bayar): ?>
         <div class="card" style="border-color:#16a34a;">
-            <div class="label" style="color:#16a34a;">Kurang Bayar</div>
+            <div class="label" style="color:#16a34a;">Piutang</div>
             <div class="value" style="color:#16a34a;"><?= $cur ?> <?= number_format($total_audit_kurang_bayar,0,',','.') ?></div>
             <div class="small" style="color:#16a34a;">Penagihan susulan selisih minus</div>
         </div>
@@ -1171,13 +1171,13 @@ $has_kurang_bayar = $total_audit_kurang_bayar > 0;
                 $profile_label_1 = $profile_label_1 ?? ($profile_key_1 !== '' ? resolve_profile_label($profile_key_1) : 'Profil 1');
                 $profile_label_2 = $profile_label_2 ?? ($profile_key_2 !== '' ? resolve_profile_label($profile_key_2) : 'Profil 2');
             ?>
-            <h2 class="dul-gap" style="margin-top:25px;">Rekap Audit Penjualan Lapangan</h2>
+            <h2 style="margin-top:25px;">Rekap Audit Penjualan Lapangan</h2>
             <div class="meta">Periode: <?= htmlspecialchars($period_label) ?> | Tanggal: <?= htmlspecialchars(format_date_ddmmyyyy($filter_date)) ?></div>
 
             <table class="rekap-table" style="margin-top:15px;">
                 <thead>
                     <tr>
-                        <th colspan="16">Audit Manual Rekap Harian</th>
+                        <th colspan="17">Audit Manual Rekap Harian</th>
                     </tr>
                     <tr>
                         <th rowspan="2" style="width:90px;">Blok</th>
@@ -1197,7 +1197,7 @@ $has_kurang_bayar = $total_audit_kurang_bayar > 0;
                         <th style="width:90px;">Refund</th>
                         <?php endif; ?>
                         <?php if ($has_kurang_bayar): ?>
-                        <th style="width:90px;">Kurang Bayar</th>
+                        <th style="width:90px;">Piutang</th>
                         <?php endif; ?>
                         <th style="width:90px;">User</th>
                         <th style="width:70px;">Up</th>
@@ -1734,7 +1734,7 @@ $has_kurang_bayar = $total_audit_kurang_bayar > 0;
                                     <div style="color:#6c5ce7;">• Refund: <b><?= $cur ?> <?= number_format((int)$rep['refund_amt'],0,',','.') ?></b><?php if (!empty($rep['refund_desc'])): ?> <span style="color:#6c5ce7;">(<?= htmlspecialchars($rep['refund_desc']) ?>)</span><?php endif; ?></div>
                                 <?php endif; ?>
                                 <?php if (!empty($rep['kurang_bayar_amt'])): ?>
-                                    <div style="color:#16a34a;">• Kurang Bayar: <b><?= $cur ?> <?= number_format((int)$rep['kurang_bayar_amt'],0,',','.') ?></b><?php if (!empty($rep['kurang_bayar_desc'])): ?> <span style="color:#16a34a;">(<?= htmlspecialchars($rep['kurang_bayar_desc']) ?>)</span><?php endif; ?></div>
+                                    <div style="color:#16a34a;">• Piutang: <b><?= $cur ?> <?= number_format((int)$rep['kurang_bayar_amt'],0,',','.') ?></b><?php if (!empty($rep['kurang_bayar_desc'])): ?> <span style="color:#16a34a;">(<?= htmlspecialchars($rep['kurang_bayar_desc']) ?>)</span><?php endif; ?></div>
                                 <?php endif; ?>
                             </div>
 

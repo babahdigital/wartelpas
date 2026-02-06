@@ -266,7 +266,32 @@ try {
     }
 
     $profile_label = '';
-    if (!empty($hist['validity']) && function_exists('normalize_profile_label')) {
+    if ($profile_name !== '') {
+        $profile_label = function_exists('normalize_profile_label') ? normalize_profile_label($profile_name) : $profile_name;
+    }
+    if ($profile_label === '' && table_exists_local($db, 'sales_history')) {
+        try {
+            $stmtProf = $db->prepare("SELECT profile, profile_snapshot FROM sales_history WHERE username = :u ORDER BY sale_date DESC, raw_date DESC LIMIT 1");
+            $stmtProf->execute([':u' => $voucher_code]);
+            $profRow = $stmtProf->fetch(PDO::FETCH_ASSOC) ?: [];
+            $src = (string)($profRow['profile'] ?? $profRow['profile_snapshot'] ?? '');
+            if ($src !== '') {
+                $profile_label = function_exists('normalize_profile_label') ? normalize_profile_label($src) : $src;
+            }
+        } catch (Exception $e) {}
+    }
+    if ($profile_label === '' && table_exists_local($db, 'live_sales')) {
+        try {
+            $stmtProf = $db->prepare("SELECT profile, profile_snapshot FROM live_sales WHERE username = :u ORDER BY sale_date DESC, raw_date DESC LIMIT 1");
+            $stmtProf->execute([':u' => $voucher_code]);
+            $profRow = $stmtProf->fetch(PDO::FETCH_ASSOC) ?: [];
+            $src = (string)($profRow['profile'] ?? $profRow['profile_snapshot'] ?? '');
+            if ($src !== '') {
+                $profile_label = function_exists('normalize_profile_label') ? normalize_profile_label($src) : $src;
+            }
+        } catch (Exception $e) {}
+    }
+    if ($profile_label === '' && !empty($hist['validity']) && function_exists('normalize_profile_label')) {
         $profile_label = normalize_profile_label($hist['validity']);
     }
     if (function_exists('get_voucher_meta_info')) {

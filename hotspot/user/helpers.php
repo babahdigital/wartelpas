@@ -348,6 +348,17 @@ if (!function_exists('get_user_history_from_db')) {
 // Helper: Ambil meta voucher (nama/kamar/blok/profile/usage)
 if (!function_exists('get_voucher_meta_info')) {
   function get_voucher_meta_info($db, $voucher_code) {
+    $resolve_profile_from_minutes = function($validity, $comment, $current) {
+      $current = trim((string)$current);
+      $pm = function_exists('auto_rusak_profile_minutes') ? auto_rusak_profile_minutes($validity, $comment) : 0;
+      if ($pm > 0) {
+        $label = $pm . ' Menit';
+        if ($current === '' || !preg_match('/\b(10|30)\s*menit\b/i', $current)) {
+          return $label;
+        }
+      }
+      return '';
+    };
     $info = [
       'customer_name' => '',
       'room_name' => '',
@@ -370,11 +381,19 @@ if (!function_exists('get_voucher_meta_info')) {
         $rn = trim((string)($row['room_name'] ?? ''));
         $bn = trim((string)($row['blok_name'] ?? ''));
         $pv = trim((string)($row['validity'] ?? ''));
+        $raw_comment = (string)($row['raw_comment'] ?? '');
         if ($info['customer_name'] === '' && $cn !== '') $info['customer_name'] = $cn;
         if ($info['room_name'] === '' && $rn !== '') $info['room_name'] = $rn;
         if ($info['blok_name'] === '' && $bn !== '') $info['blok_name'] = $bn;
         if ($info['profile'] === '' && $pv !== '') {
           $info['profile'] = function_exists('normalize_profile_label') ? normalize_profile_label($pv) : $pv;
+        }
+        if ($info['profile'] !== '' && preg_match('/^1\s*d$/i', $info['profile'])) {
+          $info['profile'] = '';
+        }
+        $resolved = $resolve_profile_from_minutes($pv, $raw_comment, $info['profile']);
+        if ($resolved !== '') {
+          $info['profile'] = function_exists('normalize_profile_label') ? normalize_profile_label($resolved) : $resolved;
         }
         if ($info['blok_name'] === '' && !empty($row['raw_comment']) && function_exists('extract_blok_name')) {
           $info['blok_name'] = extract_blok_name($row['raw_comment']);
@@ -411,7 +430,7 @@ if (!function_exists('get_voucher_meta_info')) {
 
     try {
       if ($info['customer_name'] === '' || $info['room_name'] === '' || $info['blok_name'] === '' || $info['profile'] === '') {
-        $stmt = $db->prepare("SELECT customer_name, room_name, blok_name, validity FROM sales_history WHERE username = :u ORDER BY sale_date DESC, raw_date DESC LIMIT 1");
+        $stmt = $db->prepare("SELECT customer_name, room_name, blok_name, validity, comment FROM sales_history WHERE username = :u ORDER BY sale_date DESC, raw_date DESC LIMIT 1");
         $stmt->execute([':u' => $voucher_code]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         if ($row) {
@@ -425,6 +444,13 @@ if (!function_exists('get_voucher_meta_info')) {
           if ($info['profile'] === '' && $pv !== '') {
             $info['profile'] = function_exists('normalize_profile_label') ? normalize_profile_label($pv) : $pv;
           }
+          if ($info['profile'] !== '' && preg_match('/^1\s*d$/i', $info['profile'])) {
+            $info['profile'] = '';
+          }
+          $resolved = $resolve_profile_from_minutes($pv, (string)($row['comment'] ?? ''), $info['profile']);
+          if ($resolved !== '') {
+            $info['profile'] = function_exists('normalize_profile_label') ? normalize_profile_label($resolved) : $resolved;
+          }
         }
       }
     } catch (Exception $e) {
@@ -433,7 +459,7 @@ if (!function_exists('get_voucher_meta_info')) {
 
     try {
       if ($info['customer_name'] === '' || $info['room_name'] === '' || $info['blok_name'] === '' || $info['profile'] === '') {
-        $stmt = $db->prepare("SELECT customer_name, room_name, blok_name, validity FROM live_sales WHERE username = :u ORDER BY sale_date DESC, raw_date DESC LIMIT 1");
+        $stmt = $db->prepare("SELECT customer_name, room_name, blok_name, validity, comment FROM live_sales WHERE username = :u ORDER BY sale_date DESC, raw_date DESC LIMIT 1");
         $stmt->execute([':u' => $voucher_code]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         if ($row) {
@@ -446,6 +472,13 @@ if (!function_exists('get_voucher_meta_info')) {
           if ($info['blok_name'] === '' && $bn !== '') $info['blok_name'] = $bn;
           if ($info['profile'] === '' && $pv !== '') {
             $info['profile'] = function_exists('normalize_profile_label') ? normalize_profile_label($pv) : $pv;
+          }
+          if ($info['profile'] !== '' && preg_match('/^1\s*d$/i', $info['profile'])) {
+            $info['profile'] = '';
+          }
+          $resolved = $resolve_profile_from_minutes($pv, (string)($row['comment'] ?? ''), $info['profile']);
+          if ($resolved !== '') {
+            $info['profile'] = function_exists('normalize_profile_label') ? normalize_profile_label($resolved) : $resolved;
           }
         }
       }

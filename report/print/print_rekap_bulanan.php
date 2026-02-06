@@ -525,7 +525,7 @@ if (!empty($unsettled_dates)) {
         <?php endif; ?>
         <?php if ($show_kurang_bayar): ?>
             <div class="summary-card" style="border:1px solid #86efac; background:#ecfdf3; padding:15px; border-radius:4px;">
-                <div class="summary-title" style="color:#16a34a; font-size:11px; text-transform:uppercase;">Kurang Bayar</div>
+                <div class="summary-title" style="color:#16a34a; font-size:11px; text-transform:uppercase;">Piutang</div>
                 <div class="summary-value" style="font-size:20px; font-weight:bold; color:#16a34a;">+ <?= $cur ?> <?= number_format((int)$total_kurang_bayar_month,0,',','.') ?></div>
             </div>
         <?php endif; ?>

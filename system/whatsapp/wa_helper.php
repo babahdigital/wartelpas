@@ -300,11 +300,17 @@ function wa_send_text($message, $target = '', $category = '') {
 
 
     if ($target === '') {
-        $list = $category !== '' ? wa_get_active_recipients($category) : [];
-        if (!empty($list)) {
-            $target = implode(',', $list);
+        if ($category !== '') {
+            $list = wa_get_active_recipients($category);
+            if (!empty($list)) {
+                $target = implode(',', $list);
+            } else {
+                wa_log_message($target, $message, 'skipped: empty recipients', 'no active recipients for category: ' . $category);
+                return ['ok' => false, 'message' => 'Tidak ada penerima aktif untuk kategori ini.'];
+            }
         } else {
-            $target = $defaultTarget;
+            $list = wa_get_active_recipients('');
+            $target = !empty($list) ? implode(',', $list) : $defaultTarget;
         }
     }
     $target = wa_normalize_target($target, $country);
@@ -366,11 +372,17 @@ function wa_send_file($message, $filePath, $target = '', $category = 'report') {
     }
 
     if ($target === '') {
-        $list = $category !== '' ? wa_get_active_recipients($category) : [];
-        if (!empty($list)) {
-            $target = implode(',', $list);
+        if ($category !== '') {
+            $list = wa_get_active_recipients($category);
+            if (!empty($list)) {
+                $target = implode(',', $list);
+            } else {
+                wa_log_message($target, $message, 'skipped: empty recipients', 'no active recipients for category: ' . $category, basename((string)$filePath));
+                return ['ok' => false, 'message' => 'Tidak ada penerima aktif untuk kategori ini.'];
+            }
         } else {
-            $target = $defaultTarget;
+            $list = wa_get_active_recipients('');
+            $target = !empty($list) ? implode(',', $list) : $defaultTarget;
         }
     }
     $target = wa_normalize_target($target, $country);
