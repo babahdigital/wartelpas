@@ -1172,8 +1172,9 @@ function app_audit_log($action, $target = '', $message = '', $result = 'success'
     }
     try {
         $pdo = app_db();
+        $created_at = date('Y-m-d H:i:s');
         $stmt = $pdo->prepare("INSERT INTO audit_actions (action, target, actor, role, result, message, context, ip_address, created_at)
-            VALUES (:a, :t, :ac, :r, :res, :m, :c, :ip, CURRENT_TIMESTAMP)");
+            VALUES (:a, :t, :ac, :r, :res, :m, :c, :ip, :created_at)");
         $stmt->execute([
             ':a' => $action,
             ':t' => (string)$target,
@@ -1182,7 +1183,8 @@ function app_audit_log($action, $target = '', $message = '', $result = 'success'
             ':res' => (string)$result,
             ':m' => (string)$message,
             ':c' => (string)$contextJson,
-            ':ip' => (string)$ip
+            ':ip' => (string)$ip,
+            ':created_at' => $created_at
         ]);
         return true;
     } catch (Exception $e) {
