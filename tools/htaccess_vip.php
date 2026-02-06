@@ -363,7 +363,7 @@ function vip_whitelist_render_form($status, $error, $ips, $ip_names, $htaccessPa
                     <?php foreach ($ips as $ip): ?>
                         <?php $nameVal = (string)($ip_names[$ip] ?? ''); ?>
                         <div class="router-item" style="margin-bottom:8px;">
-                            <div class="router-icon"><i class="fa fa-shield"></i></div>
+                            <div class="router-icon"><i class="fa fa-shield" style="font-size: 14px !important;"></i></div>
                             <div class="router-info">
                                 <span class="router-name"><?= htmlspecialchars($nameVal !== '' ? $nameVal : $ip) ?></span>
                                 <span class="router-session">IP: <?= htmlspecialchars($ip) ?></span>
