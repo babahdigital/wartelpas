@@ -202,6 +202,32 @@ if (file_exists($dbFile)) {
             $auditDateParam[':d'] = $year . '%';
         }
 
+        if (isset($_POST['save_daily_note'])) {
+            $note_date = trim($_POST['note_date'] ?? '');
+            $note_text = trim($_POST['note_text'] ?? '');
+            if ($note_text !== '') {
+                $note_text = mb_substr($note_text, 0, 500);
+            }
+            if ($note_date !== '') {
+                try {
+                    $db->exec("CREATE TABLE IF NOT EXISTS daily_report_notes (report_date TEXT PRIMARY KEY, note TEXT, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
+                    if ($note_text !== '') {
+                        $stmtNote = $db->prepare("INSERT INTO daily_report_notes (report_date, note, updated_at)
+                            VALUES (:d, :n, CURRENT_TIMESTAMP)
+                            ON CONFLICT(report_date) DO UPDATE SET note=excluded.note, updated_at=CURRENT_TIMESTAMP");
+                        $stmtNote->execute([':d' => $note_date, ':n' => $note_text]);
+                    } else {
+                        $db->prepare("DELETE FROM daily_report_notes WHERE report_date = :d")->execute([':d' => $note_date]);
+                    }
+                } catch (Exception $e) {}
+            }
+            $note_redirect = './?report=audit_session' . ($session_id !== '' ? '&session=' . urlencode($session_id) : '') . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
+            if (!headers_sent()) {
+                header('Location: ' . $note_redirect);
+                exit;
+            }
+        }
+
         $retur_ref_users = [];
         $retur_filter_params = [];
         $retur_filter_sh = '';
@@ -606,6 +632,9 @@ if (file_exists($dbFile)) {
                 <input type="hidden" name="audit_csrf" value="<?= htmlspecialchars($audit_csrf) ?>">
                 <button type="submit" class="btn-solid" style="background:#8e44ad;"><i class="fa fa-refresh"></i> Rebuild Target Sistem</button>
             </form>
+            <?php if ($req_show === 'harian'): ?>
+                <button type="button" class="btn-solid" style="background:#8e44ad;" onclick="openAuditNoteModal()"><i class="fa fa-sticky-note-o"></i> Catatan / Insiden</button>
+            <?php endif; ?>
             <a class="btn-solid" style="text-decoration:none;" target="_blank" href="report/print/print_audit.php?session=<?= urlencode($session_id) ?>&show=<?= urlencode($req_show) ?>&date=<?= urlencode($filter_date) ?>"><i class="fa fa-print"></i> Print Laporan Keuangan</a>
         </div>
     </div>
@@ -856,3 +885,54 @@ if (file_exists($dbFile)) {
 
     </div>
 </div>
+
+<?php if ($req_show === 'harian'): ?>
+<style>
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 9999; }
+    .modal-card { background: #1f2327; color:#e5e7eb; border:1px solid #3a4046; border-radius:8px; width: 90%; max-width: 520px; box-shadow: 0 6px 20px rgba(0,0,0,0.35); }
+    .modal-header { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid #3a4046; }
+    .modal-title { font-weight:700; font-size:14px; }
+    .modal-close { background: transparent; border: none; color:#cbd5e1; font-size:20px; cursor:pointer; }
+    .modal-body { padding:14px 16px; }
+    .modal-footer { padding:12px 16px; display:flex; justify-content:flex-end; gap:8px; border-top:1px solid #3a4046; }
+    .form-input { width:100%; background:#2a3036; color:#e5e7eb; border:1px solid #3a4046; border-radius:4px; padding:8px 10px; }
+    .modal-note { font-size:11px; color:#9ca3af; margin-top:6px; }
+</style>
+
+<div id="auditNoteModal" class="modal-backdrop" onclick="if(event.target===this){closeAuditNoteModal();}">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fa fa-sticky-note-o"></i> Catatan / Insiden Audit</div>
+            <button type="button" class="modal-close" onclick="closeAuditNoteModal()">&times;</button>
+        </div>
+        <form method="post" action="?report=audit_session&session=<?= urlencode($session_id) ?>&show=<?= urlencode($req_show) ?>&date=<?= urlencode($filter_date) ?>">
+            <input type="hidden" name="save_daily_note" value="1">
+            <input type="hidden" name="note_date" value="<?= htmlspecialchars($filter_date) ?>">
+            <div class="modal-body">
+                <label style="font-size:12px;color:#cbd5e1;">Catatan hari ini</label>
+                <textarea name="note_text" rows="5" class="form-input" maxlength="500" placeholder="Tulis keterangan di sini..."><?= htmlspecialchars($daily_note_alert) ?></textarea>
+                <div class="modal-note">Maksimal 500 karakter. Kosongkan untuk menghapus catatan hari ini.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-solid" style="background:#374151;" onclick="closeAuditNoteModal()">Batal</button>
+                <button type="submit" class="btn-solid" style="background:#2ecc71;">Simpan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openAuditNoteModal(){
+        var modal = document.getElementById('auditNoteModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            var noteInput = modal.querySelector('textarea[name="note_text"]');
+            if (noteInput) noteInput.focus();
+        }
+    }
+    function closeAuditNoteModal(){
+        var modal = document.getElementById('auditNoteModal');
+        if (modal) modal.style.display = 'none';
+    }
+</script>
+<?php endif; ?>

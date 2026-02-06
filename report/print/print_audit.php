@@ -741,45 +741,6 @@ $file_title = trim($file_title, '-_');
       </tbody>
     </table>
 
-    <div class="section-title">Rincian Perhitungan</div>
-    <div class="summary-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
-    <div class="summary-card">
-      <div class="summary-title">Setoran Bersih (Cash)</div>
-      <div class="summary-value">Rp <?= number_format(max(0, $audit_manual_summary['manual_setoran'] - $audit_manual_summary['total_expenses'] - ($audit_manual_summary['total_refund'] ?? 0) + ($audit_manual_summary['total_kurang_bayar'] ?? 0)),0,',','.') ?></div>
-    </div>
-    <?php if ($audit_manual_summary['total_expenses'] > 0): ?>
-      <div class="summary-card">
-        <div class="summary-title" style="color:#f39c12;">Pengeluaran Ops.</div>
-        <div class="summary-value" style="color:#f39c12;">Rp <?= number_format($audit_manual_summary['total_expenses'],0,',','.') ?></div>
-        <div style="font-size:10px;color:#d35400;">(Bon/Belanja)</div>
-      </div>
-    <?php endif; ?>
-    <?php if (!empty($audit_manual_summary['total_refund'])): ?>
-      <div class="summary-card">
-        <div class="summary-title" style="color:#6c5ce7;">Pengembalian</div>
-        <div class="summary-value" style="color:#6c5ce7;">Rp <?= number_format($audit_manual_summary['total_refund'],0,',','.') ?></div>
-      </div>
-    <?php endif; ?>
-    <?php if (!empty($audit_manual_summary['total_kurang_bayar'])): ?>
-      <div class="summary-card">
-        <div class="summary-title" style="color:#16a34a;">Piutang</div>
-        <div class="summary-value" style="color:#16a34a;">Rp <?= number_format($audit_manual_summary['total_kurang_bayar'],0,',','.') ?></div>
-      </div>
-    <?php endif; ?>
-    <?php $system_net_total = (int)$sales_summary['net'] + (int)$pending_summary['net']; ?>
-    <div class="summary-card">
-      <div class="summary-title">Target Sistem (Audit)</div>
-      <div class="summary-value">Rp <?= number_format($audit_manual_summary['expected_setoran'],0,',','.') ?></div>
-    </div>
-    <div class="summary-card">
-      <div class="summary-title">Target Sistem (Global)</div>
-      <div class="summary-value">Rp <?= number_format($system_net_total,0,',','.') ?></div>
-    </div>
-    <div class="summary-card">
-      <div class="summary-title">Selisih Uang</div>
-      <div class="summary-value" style="color:<?= $text_color ?>;">Rp <?= number_format($selisih,0,',','.') ?></div>
-    </div>
-    </div>
   <?php endif; ?>
 
     <div class="section-title">Statistik Keuangan & Insiden (Real-Time)</div>
