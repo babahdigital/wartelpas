@@ -580,11 +580,6 @@ $file_title = trim($file_title, '-_');
     @page { margin: 8mm; }
     @media print {
       .toolbar { display: none; }
-      body {
-        transform: scale(0.6);
-        transform-origin: top left;
-        width: 166.6667%;
-      }
     }
 </style>
 </head>
