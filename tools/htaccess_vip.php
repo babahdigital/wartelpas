@@ -291,90 +291,92 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="UTF-8">
   <title>VIP Whitelist Generator</title>
-  <style>
-        :root { --popup-text: #e5e7eb; --popup-muted: #94a3b8; --popup-border: #1f2937; --popup-primary: #3b82f6; --popup-success: #22c55e; }
-        body { font-family: Arial, Helvetica, sans-serif; background:<?= $is_embed ? 'transparent' : '#0f172a' ?>; color:var(--popup-text); padding:<?= $is_embed ? '0' : '20px' ?>; }
-        .card { background:#111827; border:1px solid #1f2937; border-radius:10px; padding:16px; max-width:<?= $is_embed ? '100%' : '900px' ?>; margin:<?= $is_embed ? '0' : '0 auto' ?>; }
-        .title { font-size:18px; font-weight:700; margin-bottom:10px; }
-        .meta { font-size:12px; color:#9ca3af; margin-bottom:12px; }
-        .ok { background:#14532d; color:#bbf7d0; padding:8px 10px; border-radius:6px; margin-bottom:10px; }
-        .err { background:#7f1d1d; color:#fecaca; padding:8px 10px; border-radius:6px; margin-bottom:10px; }
-        .m-pass-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
-        .m-pass-row { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-        .m-pass-label { font-size: 12px; color: var(--popup-muted); font-weight: 600; }
-        .m-pass-input { height: 38px; border-radius: 8px; border: 1px solid var(--popup-border); background: #1b1f24; color: var(--popup-text); padding: 0 12px; font-size: 13px; outline: none; width: 100%; box-sizing: border-box; }
-        .m-pass-input:focus { border-color: var(--popup-primary); box-shadow: 0 0 0 2px rgba(47, 129, 247, 0.15); }
-        .m-btn { padding:10px 14px; border:0; border-radius:8px; background:var(--popup-success); color:#0f172a; cursor:pointer; font-weight:700; font-size:13px; }
-        .note { font-size:12px; color:#cbd5e1; margin-top:8px; }
-        label { font-size:12px; color:#cbd5db; display:block; margin-bottom:6px; }
-        table { width:100%; border-collapse: collapse; font-size:13px; }
-        th, td { border-bottom:1px solid #1f2937; padding:8px 6px; text-align:left; }
-        th { color:#9ca3af; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
-        .ip-cell { font-family: monospace; }
-        @media (max-width: 720px) { .m-pass-form { grid-template-columns: 1fr; } }
-  </style>
+    <link rel="stylesheet" href="../admin_assets/admin.css">
+    <link rel="stylesheet" href="../css/admin.css">
+    <link rel="stylesheet" href="../css/popup.css">
+    <style>
+                body { background:<?= $is_embed ? 'transparent' : '#0f172a' ?>; padding:<?= $is_embed ? '0' : '16px' ?>; }
+                .vip-shell { max-width: <?= $is_embed ? '100%' : '980px' ?>; margin: 0 auto; }
+                .vip-title { display:flex; align-items:center; gap:8px; font-weight:700; }
+                .vip-meta { font-size:12px; color:var(--text-secondary); margin-top:4px; }
+                .vip-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:16px; }
+                .vip-table td input.m-pass-input { height: 34px; }
+                .vip-note { font-size:12px; color:var(--text-secondary); }
+                .ip-cell { font-family: monospace; }
+                @media (max-width: 720px) { .vip-grid { grid-template-columns: 1fr; } }
+    </style>
 </head>
 <body>
-  <div class="card">
-    <div class="title">VIP Whitelist Generator (.htaccess)</div>
-    <div class="meta">File: <?= htmlspecialchars($htaccessPath) ?></div>
-
-    <?php if ($status): ?>
-      <div class="ok"><?= htmlspecialchars($status) ?></div>
-    <?php endif; ?>
-    <?php if ($error): ?>
-      <div class="err"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
-
-    <form method="post">
-        <div class="m-pass-form">
-            <div class="m-pass-row">
-                <label class="m-pass-label">Nama</label>
-                <input type="text" name="add_name" class="m-pass-input" placeholder="Nama pemilik">
+    <div class="vip-shell">
+        <div class="card-modern" style="margin-bottom:16px;">
+            <div class="card-header-modern" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                <div>
+                    <div class="vip-title"><i class="fa fa-shield"></i> VIP Whitelist Generator (.htaccess)</div>
+                    <div class="vip-meta">File: <?= htmlspecialchars($htaccessPath) ?></div>
+                </div>
             </div>
-            <div class="m-pass-row">
-                <label class="m-pass-label">IP</label>
-                <input type="text" name="add_ip" class="m-pass-input" placeholder="Contoh: 10.10.0.6">
+            <div class="card-body-modern">
+
+                <?php if ($status): ?>
+                    <div class="alert alert-success" style="margin-bottom:12px;"><?= htmlspecialchars($status) ?></div>
+                <?php endif; ?>
+                <?php if ($error): ?>
+                    <div class="alert alert-danger" style="margin-bottom:12px;"><?= htmlspecialchars($error) ?></div>
+                <?php endif; ?>
+
+                <form method="post">
+                    <div class="vip-grid" style="margin-bottom:12px;">
+                        <div class="form-group-modern">
+                            <label class="form-label">Nama</label>
+                            <input type="text" name="add_name" class="m-pass-input" placeholder="Nama pemilik" required>
+                        </div>
+                        <div class="form-group-modern">
+                            <label class="form-label">IP</label>
+                            <input type="text" name="add_ip" class="m-pass-input" placeholder="Contoh: 10.10.0.6" required>
+                        </div>
+                    </div>
+                    <div style="margin-bottom:16px;">
+                        <button type="submit" class="btn-action"><i class="fa fa-save"></i> Simpan & Terapkan</button>
+                    </div>
+
+                    <div class="form-group-modern">
+                        <label class="form-label">Daftar IP VIP (aktif)</label>
+                        <?php if (empty($ips)): ?>
+                            <div class="admin-empty" style="padding:10px;">Belum ada IP VIP.</div>
+                        <?php else: ?>
+                            <div style="overflow:auto;">
+                                <table class="table table-sm vip-table">
+                                    <thead>
+                                        <tr>
+                                            <th>IP</th>
+                                            <th>Nama</th>
+                                            <th style="width:80px;">Hapus</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($ips as $ip): ?>
+                                            <tr>
+                                                <td class="ip-cell">
+                                                    <?= htmlspecialchars($ip) ?>
+                                                    <input type="hidden" name="keep_ips[]" value="<?= htmlspecialchars($ip) ?>">
+                                                </td>
+                                                <td>
+                                                    <input type="text" name="keep_name[<?= htmlspecialchars($ip) ?>]" class="m-pass-input" value="<?= htmlspecialchars($ip_names[$ip] ?? '') ?>" required>
+                                                </td>
+                                                <td style="text-align:center;">
+                                                    <input type="checkbox" name="remove_ips[]" value="<?= htmlspecialchars($ip) ?>">
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                        <div class="vip-note" style="margin-top:8px;">Centang kolom hapus untuk mengeluarkan IP. Backup otomatis tersimpan di .htaccess.bak</div>
+                    </div>
+                </form>
             </div>
         </div>
-        <div style="margin-top:12px;">
-            <button type="submit" class="m-btn">Simpan & Terapkan</button>
-        </div>
-
-        <div style="margin-top:16px;">
-            <label>Daftar IP VIP (aktif)</label>
-            <?php if (empty($ips)): ?>
-                <div class="note">Belum ada IP VIP.</div>
-            <?php else: ?>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>IP</th>
-                            <th>Nama</th>
-                            <th>Hapus</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($ips as $ip): ?>
-                            <tr>
-                                <td class="ip-cell">
-                                    <?= htmlspecialchars($ip) ?>
-                                    <input type="hidden" name="keep_ips[]" value="<?= htmlspecialchars($ip) ?>">
-                                </td>
-                                <td>
-                                    <input type="text" name="keep_name[<?= htmlspecialchars($ip) ?>]" class="m-pass-input" value="<?= htmlspecialchars($ip_names[$ip] ?? '') ?>" required>
-                                </td>
-                                <td style="text-align:center;">
-                                    <input type="checkbox" name="remove_ips[]" value="<?= htmlspecialchars($ip) ?>">
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            <?php endif; ?>
-        </div>
-    </form>
-    <div class="note">Catatan: Backup otomatis tersimpan di .htaccess.bak</div>
-  </div>
+    </div>
 </body>
 </html>
