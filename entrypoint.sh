@@ -5,7 +5,6 @@ set -e
 echo "FIXING PERMISSIONS FOR MIKHMON..."
 
 # 1. Paksa folder data agar bisa ditulis (gunakan 775 bila memungkinkan)
-# Ini wajib karena folder ini dimount dari Host (User 1000) tapi dipakai oleh Container (www-data)
 chmod -R 777 /var/www/html/session
 chmod -R 777 /var/www/html/db_data
 chmod -R 777 /var/www/html/img
@@ -13,9 +12,16 @@ chmod -R 777 /var/www/html/logs
 chmod -R 777 /var/www/html/report
 chmod -R 777 /var/www/html/voucher
 
-# 1b. Pastikan .htaccess bisa ditulis
+# 1b. Pastikan .htaccess bisa ditulis dan dimiliki oleh www-data
 if [ -f "/var/www/html/.htaccess" ]; then
+    echo "Updating .htaccess ownership and permissions..."
+    chown www-data:www-data /var/www/html/.htaccess
     chmod 666 /var/www/html/.htaccess || true
+else
+    # Jika file tidak ada (misal tertinggal di host), buat baru agar apache tidak error
+    touch /var/www/html/.htaccess
+    chown www-data:www-data /var/www/html/.htaccess
+    chmod 666 /var/www/html/.htaccess
 fi
 
 # 2. Pastikan file konfigurasi bisa ditulis oleh web server

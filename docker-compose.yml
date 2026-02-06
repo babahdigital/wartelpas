@@ -26,14 +26,15 @@ services:
       - ./settings:/var/www/html/settings
       - ./status:/var/www/html/status
       - ./custom.ini:/usr/local/etc/php/conf.d/custom.ini
-      - ./.htaccess:/var/www/html/.htaccess
+      # FIX: Tambahkan :z agar SELinux/Docker mengizinkan write
+      - ./.htaccess:/var/www/html/.htaccess:z
 
       # ==========================================
       # 3. MODUL UTAMA (MAPPING SATU FOLDER)
       # ==========================================
       - ./report:/var/www/html/report        # Semua laporan
-      - ./report/laporan/services:/var/www/html/report/laporan/services  # Service endpoint laporan
-      - ./report/print:/var/www/html/report/print  # Print laporan
+      - ./report/laporan/services:/var/www/html/report/laporan/services
+      - ./report/print:/var/www/html/report/print
       - ./voucher:/var/www/html/voucher      # Template & print
       - ./dashboard:/var/www/html/dashboard  # Dashboard home
       - ./dhcp:/var/www/html/dhcp            # Modul DHCP

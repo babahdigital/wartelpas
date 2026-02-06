@@ -9,6 +9,7 @@ if (!isset($_SESSION["mikhmon"])) {
 
 require_once __DIR__ . '/../include/acl.php';
 require_once __DIR__ . '/../include/db.php';
+
 if (!isSuperAdmin()) {
     echo "<div style='padding:14px;font-family:Arial;'>Akses ditolak.</div>";
     exit;
@@ -21,6 +22,7 @@ $error = '';
 $ips = [];
 $ip_names = [];
 
+// Helper functions
 function normalize_ip_list($raw) {
     $raw = str_replace(["\r", "\n"], ' ', (string)$raw);
     $parts = preg_split('/[\s,;]+/', $raw, -1, PREG_SPLIT_NO_EMPTY);
@@ -54,6 +56,7 @@ function build_setenv_lines($ips) {
     $lines = [];
     foreach ($ips as $ip) {
         $safe = str_replace('.', '\\.', $ip);
+        // Match X-Forwarded-For: ^IP($|,)
         $lines[] = "SetEnvIf X-Forwarded-For \"^{$safe}($|,)\" TAMU_VIP";
     }
     foreach ($ips as $ip) {
@@ -72,13 +75,14 @@ function replace_vip_block($content, $setenvLines) {
     $out = [];
     $inVipSection = false;
     foreach ($lines as $line) {
+        // Deteksi header section VIP
         if (preg_match('/^#\s*4\.\s*LOGIKA DETEKSI IP/i', $line)) {
             $inVipSection = true;
             $out[] = $line;
             continue;
         }
+        // Deteksi separator section berikutnya (===)
         if ($inVipSection && preg_match('/^#\s*=+/', $line)) {
-            // end section before next separator
             foreach ($setenvLines as $l) {
                 $out[] = $l;
             }
@@ -86,14 +90,15 @@ function replace_vip_block($content, $setenvLines) {
             $out[] = $line;
             continue;
         }
+        // Hapus baris VIP lama dalam section
         if ($inVipSection) {
             if (preg_match('/^SetEnvIf\s+\S+\s+"\\^/i', $line)) {
-                continue; // skip old SetEnvIf VIP lines
+                continue; 
             }
         }
         $out[] = $line;
     }
-    // If section never closed, append at end
+    // Jika section adalah akhir file
     if ($inVipSection) {
         foreach ($setenvLines as $l) {
             $out[] = $l;
@@ -152,6 +157,7 @@ function replace_requireany_blocks($content, $ips) {
     return implode("\n", $out);
 }
 
+// Load existing IPs
 if (is_file($htaccessPath)) {
     $content = file_get_contents($htaccessPath);
     if ($content !== false) {
@@ -159,6 +165,7 @@ if (is_file($htaccessPath)) {
     }
 }
 
+// Database Init
 try {
     $pdo = app_db();
     $pdo->exec("CREATE TABLE IF NOT EXISTS vip_whitelist (
@@ -176,12 +183,14 @@ try {
     $ip_names = [];
 }
 
+// Handle POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $add_ip = trim((string)($_POST['add_ip'] ?? ''));
     $add_name = trim((string)($_POST['add_name'] ?? ''));
     $keep_ips = $_POST['keep_ips'] ?? [];
     $keep_names = $_POST['keep_name'] ?? [];
     $remove_ips = $_POST['remove_ips'] ?? [];
+    
     if (!is_array($keep_ips)) $keep_ips = [];
     if (!is_array($keep_names)) $keep_names = [];
     if (!is_array($remove_ips)) $remove_ips = [];
@@ -198,71 +207,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $final[$ip] = $name;
     }
+
     if ($add_ip !== '') {
         if ($add_name === '') {
             $error = 'Nama wajib diisi.';
         } elseif (!is_valid_ip($add_ip)) {
-            $error = 'IP tidak valid. Gunakan format IPv4/IPv6 yang benar.';
+            $error = 'IP tidak valid.';
         } else {
             $final[$add_ip] = $add_name;
         }
     }
     $ips = array_keys($final);
 
-    if ($error !== '') {
-        // skip update
-    } elseif (!is_file($htaccessPath) || !is_readable($htaccessPath) || !is_writable($htaccessPath)) {
-        if (is_file($htaccessPath) && is_readable($htaccessPath)) {
+    if ($error === '') {
+        // Coba perbaiki permission dari sisi PHP sebelum menulis
+        if (is_file($htaccessPath)) {
             @chmod($htaccessPath, 0666);
         }
-        if (!is_file($htaccessPath) || !is_readable($htaccessPath) || !is_writable($htaccessPath)) {
-            $error = 'File .htaccess tidak dapat dibaca/ditulis. Pastikan file sudah di-mount ke container dan permission write untuk www-data.';
+
+        if (!is_file($htaccessPath) || !is_writable($htaccessPath)) {
+             // Upaya terakhir permission fix
+            if (is_file($htaccessPath)) {
+                @chmod($htaccessPath, 0666);
+            }
+            if (!is_writable($htaccessPath)) {
+                $perm = substr(sprintf('%o', fileperms($htaccessPath)), -4);
+                $owner = fileowner($htaccessPath);
+                $error = "File .htaccess tidak dapat ditulis. (Perm: $perm, Owner: $owner). Pastikan Entrypoint Docker sudah melakukan 'chown www-data'.";
+            }
         }
-    } else {
-        $content = file_get_contents($htaccessPath);
-        if ($content === false) {
-            $error = 'Gagal membaca .htaccess.';
-        } else {
-            $backup = $htaccessPath . '.bak';
-            @file_put_contents($backup, $content);
-            $setenvLines = build_setenv_lines($ips);
-            $updated = replace_vip_block($content, $setenvLines);
-            $updated = replace_requireany_blocks($updated, $ips);
-            $writeOk = @file_put_contents($htaccessPath, $updated);
-            if ($writeOk !== false) {
-                $status = 'Whitelist VIP diperbarui.';
-                try {
-                    $pdo = app_db();
-                    $pdo->exec("CREATE TABLE IF NOT EXISTS vip_whitelist (
-                        ip TEXT PRIMARY KEY,
-                        name TEXT,
-                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-                    )");
-                    $pdo->beginTransaction();
-                    $stmtUp = $pdo->prepare("INSERT INTO vip_whitelist (ip, name, updated_at) VALUES (:ip, :name, CURRENT_TIMESTAMP)
-                        ON CONFLICT(ip) DO UPDATE SET name=excluded.name, updated_at=CURRENT_TIMESTAMP");
-                    foreach ($final as $ip => $name) {
-                        $stmtUp->execute([':ip' => $ip, ':name' => $name]);
-                    }
-                    if (!empty($final)) {
-                        $placeholders = implode(',', array_fill(0, count($final), '?'));
-                        $stmtDel = $pdo->prepare("DELETE FROM vip_whitelist WHERE ip NOT IN ($placeholders)");
-                        $stmtDel->execute(array_keys($final));
-                    } else {
-                        $pdo->exec("DELETE FROM vip_whitelist");
-                    }
-                    $pdo->commit();
-                } catch (Exception $e) {
-                }
+
+        if ($error === '') {
+            $content = file_get_contents($htaccessPath);
+            if ($content === false) {
+                $error = 'Gagal membaca .htaccess.';
             } else {
-                $err = error_get_last();
-                $perm = is_file($htaccessPath) ? substr(sprintf('%o', fileperms($htaccessPath)), -4) : '-';
-                $w = is_writable($htaccessPath) ? 'yes' : 'no';
-                $error = 'Gagal menyimpan .htaccess.';
-                if (!empty($err['message'])) {
-                    $error .= ' (' . $err['message'] . ')';
+                // Backup
+                @file_put_contents($htaccessPath . '.bak', $content);
+                
+                // Process logic
+                $setenvLines = build_setenv_lines($ips);
+                $updated = replace_vip_block($content, $setenvLines);
+                $updated = replace_requireany_blocks($updated, $ips);
+                
+                // Write with Lock
+                $writeOk = @file_put_contents($htaccessPath, $updated, LOCK_EX);
+                
+                if ($writeOk !== false) {
+                    $status = 'Whitelist VIP diperbarui.';
+                    // Update DB
+                    try {
+                        $pdo->beginTransaction();
+                        $stmtUp = $pdo->prepare("INSERT INTO vip_whitelist (ip, name, updated_at) VALUES (:ip, :name, CURRENT_TIMESTAMP)
+                            ON CONFLICT(ip) DO UPDATE SET name=excluded.name, updated_at=CURRENT_TIMESTAMP");
+                        foreach ($final as $ip => $name) {
+                            $stmtUp->execute([':ip' => $ip, ':name' => $name]);
+                        }
+                        if (!empty($final)) {
+                            $placeholders = implode(',', array_fill(0, count($final), '?'));
+                            $stmtDel = $pdo->prepare("DELETE FROM vip_whitelist WHERE ip NOT IN ($placeholders)");
+                            $stmtDel->execute(array_keys($final));
+                        } else {
+                            $pdo->exec("DELETE FROM vip_whitelist");
+                        }
+                        $pdo->commit();
+                    } catch (Exception $e) {
+                        // Silent db error
+                    }
+                } else {
+                    $error = 'Gagal menyimpan .htaccess (Write Failed).';
                 }
-                $error .= ' [perm=' . $perm . ' writable=' . $w . ']';
             }
         }
     }
@@ -274,49 +288,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta charset="UTF-8">
   <title>VIP Whitelist Generator</title>
   <style>
-        :root {
-            --popup-text: #e5e7eb;
-            --popup-muted: #94a3b8;
-            --popup-border: #1f2937;
-            --popup-primary: #3b82f6;
-            --popup-success: #22c55e;
-        }
+        :root { --popup-text: #e5e7eb; --popup-muted: #94a3b8; --popup-border: #1f2937; --popup-primary: #3b82f6; --popup-success: #22c55e; }
         body { font-family: Arial, Helvetica, sans-serif; background:<?= $is_embed ? 'transparent' : '#0f172a' ?>; color:var(--popup-text); padding:<?= $is_embed ? '0' : '20px' ?>; }
         .card { background:#111827; border:1px solid #1f2937; border-radius:10px; padding:16px; max-width:<?= $is_embed ? '100%' : '900px' ?>; margin:<?= $is_embed ? '0' : '0 auto' ?>; }
-    .title { font-size:18px; font-weight:700; margin-bottom:10px; }
-    .meta { font-size:12px; color:#9ca3af; margin-bottom:12px; }
-    .ok { background:#14532d; color:#bbf7d0; padding:8px 10px; border-radius:6px; margin-bottom:10px; }
-    .err { background:#7f1d1d; color:#fecaca; padding:8px 10px; border-radius:6px; margin-bottom:10px; }
-    .row { display:flex; gap:12px; flex-wrap:wrap; }
-        .col { flex:1 1 260px; }
+        .title { font-size:18px; font-weight:700; margin-bottom:10px; }
+        .meta { font-size:12px; color:#9ca3af; margin-bottom:12px; }
+        .ok { background:#14532d; color:#bbf7d0; padding:8px 10px; border-radius:6px; margin-bottom:10px; }
+        .err { background:#7f1d1d; color:#fecaca; padding:8px 10px; border-radius:6px; margin-bottom:10px; }
         .m-pass-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
         .m-pass-row { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-        .m-pass-row.m-span-2 { grid-column: 1 / -1; }
         .m-pass-label { font-size: 12px; color: var(--popup-muted); font-weight: 600; }
-        .m-pass-input {
-            height: 38px;
-            border-radius: 8px;
-            border: 1px solid var(--popup-border);
-            background: #1b1f24;
-            color: var(--popup-text);
-            padding: 0 12px;
-            font-size: 13px;
-            outline: none;
-            width: 100%;
-        }
+        .m-pass-input { height: 38px; border-radius: 8px; border: 1px solid var(--popup-border); background: #1b1f24; color: var(--popup-text); padding: 0 12px; font-size: 13px; outline: none; width: 100%; box-sizing: border-box; }
         .m-pass-input:focus { border-color: var(--popup-primary); box-shadow: 0 0 0 2px rgba(47, 129, 247, 0.15); }
         .m-btn { padding:10px 14px; border:0; border-radius:8px; background:var(--popup-success); color:#0f172a; cursor:pointer; font-weight:700; font-size:13px; }
-        .m-btn:disabled { opacity:0.6; cursor:not-allowed; }
-    .list { margin:0; padding-left:18px; font-size:13px; }
-    .note { font-size:12px; color:#cbd5e1; margin-top:8px; }
+        .note { font-size:12px; color:#cbd5e1; margin-top:8px; }
         label { font-size:12px; color:#cbd5db; display:block; margin-bottom:6px; }
         table { width:100%; border-collapse: collapse; font-size:13px; }
         th, td { border-bottom:1px solid #1f2937; padding:8px 6px; text-align:left; }
         th { color:#9ca3af; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
         .ip-cell { font-family: monospace; }
-        @media (max-width: 720px) {
-            .m-pass-form { grid-template-columns: 1fr; }
-        }
+        @media (max-width: 720px) { .m-pass-form { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -332,56 +323,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endif; ?>
 
     <form method="post">
-            <div class="m-pass-form">
-                <div class="m-pass-row">
-                    <label class="m-pass-label">Nama</label>
-                    <input type="text" name="add_name" class="m-pass-input" placeholder="Nama pemilik" required>
-                </div>
-                <div class="m-pass-row">
-                    <label class="m-pass-label">IP</label>
-                    <input type="text" name="add_ip" class="m-pass-input" placeholder="Contoh: 10.10.0.6" required>
-                </div>
+        <div class="m-pass-form">
+            <div class="m-pass-row">
+                <label class="m-pass-label">Nama</label>
+                <input type="text" name="add_name" class="m-pass-input" placeholder="Nama pemilik">
             </div>
-            <div style="margin-top:12px;">
-                <button type="submit" class="m-btn">Simpan & Terapkan</button>
+            <div class="m-pass-row">
+                <label class="m-pass-label">IP</label>
+                <input type="text" name="add_ip" class="m-pass-input" placeholder="Contoh: 10.10.0.6">
             </div>
+        </div>
+        <div style="margin-top:12px;">
+            <button type="submit" class="m-btn">Simpan & Terapkan</button>
+        </div>
 
-            <div style="margin-top:16px;">
-                <label>Daftar IP VIP (aktif)</label>
-                <?php if (empty($ips)): ?>
-                    <div class="note">Belum ada IP VIP.</div>
-                <?php else: ?>
-                    <table>
-                        <thead>
+        <div style="margin-top:16px;">
+            <label>Daftar IP VIP (aktif)</label>
+            <?php if (empty($ips)): ?>
+                <div class="note">Belum ada IP VIP.</div>
+            <?php else: ?>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>IP</th>
+                            <th>Nama</th>
+                            <th>Hapus</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($ips as $ip): ?>
                             <tr>
-                                <th>IP</th>
-                                <th>Nama</th>
-                                <th>Hapus</th>
+                                <td class="ip-cell">
+                                    <?= htmlspecialchars($ip) ?>
+                                    <input type="hidden" name="keep_ips[]" value="<?= htmlspecialchars($ip) ?>">
+                                </td>
+                                <td>
+                                    <input type="text" name="keep_name[<?= htmlspecialchars($ip) ?>]" class="m-pass-input" value="<?= htmlspecialchars($ip_names[$ip] ?? '') ?>" required>
+                                </td>
+                                <td style="text-align:center;">
+                                    <input type="checkbox" name="remove_ips[]" value="<?= htmlspecialchars($ip) ?>">
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($ips as $ip): ?>
-                                <tr>
-                                    <td class="ip-cell">
-                                        <?= htmlspecialchars($ip) ?>
-                                        <input type="hidden" name="keep_ips[]" value="<?= htmlspecialchars($ip) ?>">
-                                    </td>
-                                    <td>
-                                        <input type="text" name="keep_name[<?= htmlspecialchars($ip) ?>]" class="m-pass-input" value="<?= htmlspecialchars($ip_names[$ip] ?? '') ?>" placeholder="Nama pemilik" required>
-                                    </td>
-                                    <td style="text-align:center;">
-                                        <input type="checkbox" name="remove_ips[]" value="<?= htmlspecialchars($ip) ?>">
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                <?php endif; ?>
-                <div class="note">Centang kolom hapus untuk mengeluarkan IP.</div>
-            </div>
-        </form>
-
-    <div class="note">Catatan: backup otomatis tersimpan di .htaccess.bak</div>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
+        </div>
+    </form>
+    <div class="note">Catatan: Backup otomatis tersimpan di .htaccess.bak</div>
   </div>
 </body>
 </html>
