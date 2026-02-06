@@ -571,24 +571,40 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 }
             }
 
-            // Refund hari ini
+            // Refund hari ini (selisih plus belum dicatat)
             if ($audit_t_count > 0) {
                 try {
-                    $stmtRefT = $db_sync->prepare("SELECT SUM(COALESCE(refund_amt,0)) AS total FROM audit_rekap_manual WHERE report_date = :d");
+                    $stmtRefT = $db_sync->prepare("SELECT
+                        SUM(CASE WHEN selisih_setoran > 0 THEN selisih_setoran ELSE 0 END) AS pos,
+                        SUM(COALESCE(refund_amt,0)) AS refunded
+                        FROM audit_rekap_manual WHERE report_date = :d");
                     $stmtRefT->execute([':d' => $today]);
-                    $refT = (int)($stmtRefT->fetchColumn() ?: 0);
-                    if ($refT > 0) {
+                    $refRow = $stmtRefT->fetch(PDO::FETCH_ASSOC) ?: [];
+                    $posT = (int)($refRow['pos'] ?? 0);
+                    $refundedT = (int)($refRow['refunded'] ?? 0);
+                    $remainT = $posT - $refundedT;
+                    if ($remainT > 0) {
                         $blok_list = '';
                         try {
-                            $stmtRefB = $db_sync->prepare("SELECT blok_name, SUM(COALESCE(refund_amt,0)) AS total FROM audit_rekap_manual WHERE report_date = :d GROUP BY blok_name HAVING total > 0 ORDER BY blok_name ASC LIMIT 10");
+                            $stmtRefB = $db_sync->prepare("SELECT blok_name,
+                                SUM(CASE WHEN selisih_setoran > 0 THEN selisih_setoran ELSE 0 END) AS pos,
+                                SUM(COALESCE(refund_amt,0)) AS refunded
+                                FROM audit_rekap_manual
+                                WHERE report_date = :d
+                                GROUP BY blok_name
+                                HAVING (pos - refunded) > 0
+                                ORDER BY blok_name ASC
+                                LIMIT 10");
                             $stmtRefB->execute([':d' => $today]);
                             $rows = $stmtRefB->fetchAll(PDO::FETCH_ASSOC) ?: [];
                             $parts = [];
                             foreach ($rows as $br) {
                                 $bname = $format_block_label($br['blok_name'] ?? '');
-                                $btotal = (int)($br['total'] ?? 0);
-                                if ($btotal <= 0) continue;
-                                $parts[] = $bname . ' (refund ' . number_format($btotal, 0, ",", ".") . ')';
+                                $bpos = (int)($br['pos'] ?? 0);
+                                $bref = (int)($br['refunded'] ?? 0);
+                                $brem = $bpos - $bref;
+                                if ($brem <= 0) continue;
+                                $parts[] = $bname . ' (lebih ' . number_format($brem, 0, ",", ".") . ')';
                             }
                             if (!empty($parts)) {
                                 $blok_list = ' ' . implode(', ', $parts) . '.';
@@ -597,8 +613,8 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                         }
                         $todo_list[] = [
                             'id' => 'refund_pending_' . $today,
-                            'title' => 'Refund pending (Hari Ini)',
-                            'desc' => 'Terdapat refund Rp ' . number_format($refT, 0, ",", ".") . ' pada audit tanggal ' . $today_label . '.' . $blok_list,
+                            'title' => 'Refund belum dicatat (Hari Ini)',
+                            'desc' => 'Terdapat selisih lebih Rp ' . number_format($remainT, 0, ",", ".") . ' pada audit tanggal ' . $today_label . '.' . $blok_list,
                             'level' => 'warn',
                             'action_label' => 'Buka Tanggal ' . $today_label,
                             'action_url' => './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($today),
@@ -744,9 +760,16 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 ];
             }
 
-            // Refund tanggal lain
+            // Refund tanggal lain (selisih plus belum dicatat)
             try {
-                $stmtRefO = $db_sync->query("SELECT report_date, SUM(COALESCE(refund_amt,0)) AS total FROM audit_rekap_manual GROUP BY report_date HAVING total > 0 ORDER BY report_date DESC LIMIT 20");
+                $stmtRefO = $db_sync->query("SELECT report_date,
+                    SUM(CASE WHEN selisih_setoran > 0 THEN selisih_setoran ELSE 0 END) AS pos,
+                    SUM(COALESCE(refund_amt,0)) AS refunded
+                    FROM audit_rekap_manual
+                    GROUP BY report_date
+                    HAVING (pos - refunded) > 0
+                    ORDER BY report_date DESC
+                    LIMIT 20");
                 $ref_rows = $stmtRefO ? $stmtRefO->fetchAll(PDO::FETCH_ASSOC) : [];
             } catch (Exception $e) {
                 $ref_rows = [];
@@ -754,20 +777,32 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
             foreach ($ref_rows as $rr) {
                 $rdate = (string)($rr['report_date'] ?? '');
                 if ($rdate === '' || $rdate === $today) continue;
-                $refV = (int)($rr['total'] ?? 0);
-                if ($refV <= 0) continue;
+                $posV = (int)($rr['pos'] ?? 0);
+                $refV = (int)($rr['refunded'] ?? 0);
+                $remainV = $posV - $refV;
+                if ($remainV <= 0) continue;
                 $rlabel = $format_ddmmyyyy($rdate);
                 $blok_list = '';
                 try {
-                    $stmtRefB = $db_sync->prepare("SELECT blok_name, SUM(COALESCE(refund_amt,0)) AS total FROM audit_rekap_manual WHERE report_date = :d GROUP BY blok_name HAVING total > 0 ORDER BY blok_name ASC LIMIT 10");
+                    $stmtRefB = $db_sync->prepare("SELECT blok_name,
+                        SUM(CASE WHEN selisih_setoran > 0 THEN selisih_setoran ELSE 0 END) AS pos,
+                        SUM(COALESCE(refund_amt,0)) AS refunded
+                        FROM audit_rekap_manual
+                        WHERE report_date = :d
+                        GROUP BY blok_name
+                        HAVING (pos - refunded) > 0
+                        ORDER BY blok_name ASC
+                        LIMIT 10");
                     $stmtRefB->execute([':d' => $rdate]);
                     $rows = $stmtRefB->fetchAll(PDO::FETCH_ASSOC) ?: [];
                     $parts = [];
                     foreach ($rows as $br) {
                         $bname = $format_block_label($br['blok_name'] ?? '');
-                        $btotal = (int)($br['total'] ?? 0);
-                        if ($btotal <= 0) continue;
-                        $parts[] = $bname . ' (refund ' . number_format($btotal, 0, ",", ".") . ')';
+                        $bpos = (int)($br['pos'] ?? 0);
+                        $bref = (int)($br['refunded'] ?? 0);
+                        $brem = $bpos - $bref;
+                        if ($brem <= 0) continue;
+                        $parts[] = $bname . ' (lebih ' . number_format($brem, 0, ",", ".") . ')';
                     }
                     if (!empty($parts)) {
                         $blok_list = ' ' . implode(', ', $parts) . '.';
@@ -776,8 +811,8 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 }
                 $todo_list[] = [
                     'id' => 'refund_pending_' . $rdate,
-                    'title' => 'Refund pending',
-                    'desc' => 'Terdapat refund Rp ' . number_format($refV, 0, ",", ".") . ' pada audit tanggal ' . $rlabel . '.' . $blok_list,
+                    'title' => 'Refund belum dicatat',
+                    'desc' => 'Terdapat selisih lebih Rp ' . number_format($remainV, 0, ",", ".") . ' pada audit tanggal ' . $rlabel . '.' . $blok_list,
                     'level' => 'warn',
                     'action_label' => 'Buka Tanggal ' . $rlabel,
                     'action_url' => './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($rdate),
