@@ -3,11 +3,17 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../include/acl.php';
+require_once __DIR__ . '/../include/db.php';
 ensureRole();
 
 if (!isset($_SESSION["mikhmon"])) {
     http_response_code(403);
     echo "Unauthorized.";
+    exit;
+}
+if (isOperator() && !operator_can('todo_ack')) {
+    http_response_code(403);
+    echo "Forbidden.";
     exit;
 }
 
@@ -56,6 +62,12 @@ try {
         ':d' => $date,
         ':t' => date('Y-m-d H:i:s')
     ]);
+    if (function_exists('app_audit_log')) {
+        app_audit_log('todo_ack', $key, 'Todo diakui.', 'success', [
+            'date' => $date,
+            'session' => $session
+        ]);
+    }
 } catch (Exception $e) {
     http_response_code(500);
     echo "DB error.";

@@ -56,14 +56,17 @@ $path = parse_url($url, PHP_URL_PATH);
 $basename = $path ? basename($path) : '';
 
 // load session MikroTik
-$session = $_GET['session'];
+$session = $_GET['session'] ?? '';
 if (!empty($session) && strpos($session, '~') !== false) {
   $session = explode('~', $session)[0];
 }
-$id = $_GET['id'];
-$c = $_GET['c'];
-$router = $_GET['router'];
-$logo = $_GET['logo'];
+$id = $_GET['id'] ?? '';
+$c = $_GET['c'] ?? '';
+$router = $_GET['router'] ?? '';
+$logo = $_GET['logo'] ?? '';
+if ($id === 'settlement-audit') {
+  $id = 'log-audit';
+}
 
 if ($id === 'settings' && !empty($session) && strpos($session, 'new-') === 0) {
   ini_set('display_errors', '1');
@@ -90,6 +93,7 @@ $ids = array(
   "uplogo",
   "settings",
   "mikrotik-scripts",
+  "log-audit",
 );
 
 // lang
@@ -119,7 +123,7 @@ include_once('./lib/routeros_api.class.php');
 include_once('./lib/formatbytesbites.php');
 
 $is_admin_content = ($id === 'admin-content');
-$is_admin_layout = in_array($id, array('sessions', 'settings', 'mikrotik-scripts', 'operator-access', 'whatsapp'), true);
+$is_admin_layout = in_array($id, array('sessions', 'settings', 'mikrotik-scripts', 'operator-access', 'whatsapp', 'log-audit'), true);
 
 if ($is_admin_content) {
   if (!isset($_SESSION["mikhmon"])) {
@@ -291,16 +295,22 @@ if ($id == "login" || ($basename === 'admin.php' && empty($id))) {
   echo "<script>window.location='./admin.php?id=login'</script>";
 } elseif (isOperator() && isMaintenanceEnabled()) {
   aclRedirect(getMaintenanceUrl());
+} elseif ($id === "log-audit") {
+  include_once('./settings/admin_single.php');
+  exit;
 } elseif (isOperator() && $id == "sessions") {
   echo "<script>window.location='./error.php?code=403'</script>";
   exit;
-} elseif (isOperator() && in_array($id, array("settings", "uplogo", "editor", "reboot", "shutdown", "remove-session", "remove-logo", "mikrotik-scripts"), true)) {
+} elseif (isOperator() && in_array($id, array("settings", "uplogo", "editor", "reboot", "shutdown", "remove-session", "remove-logo", "mikrotik-scripts", "log-audit"), true)) {
   echo "<script>window.location='./error.php?code=403'</script>";
   exit;
 } elseif (isOperator() && !empty($router) && strpos($router, 'new') !== false) {
   echo "<script>window.location='./error.php?code=403'</script>";
   exit;
-} elseif (substr($url, -1) == "/" || substr($url, -4) == ".php") {
+} elseif ($id === "log-audit") {
+  include_once('./settings/admin_single.php');
+  exit;
+} elseif (substr($url, -1) == "/" || (substr($path, -4) == ".php" && empty($id))) {
   echo "<script>window.location='./admin.php?id=sessions'</script>";
 
 } elseif ($id == "sessions") {
@@ -325,6 +335,8 @@ if ($id == "login" || ($basename === 'admin.php' && empty($id))) {
 } elseif ($id == "operator-access") {
   include_once('./settings/admin_single.php');
 } elseif ($id == "whatsapp") {
+  include_once('./settings/admin_single.php');
+} elseif ($id == "log-audit") {
   include_once('./settings/admin_single.php');
 } elseif ($id == "connect"  && !empty($session)) {
   ini_set("max_execution_time",5);  
@@ -358,6 +370,11 @@ if ($id == "login" || ($basename === 'admin.php' && empty($id))) {
 } elseif ($id == "remove-session" && $session != "") {
   include_once('./include/menu.php');
   app_db_delete_session($session);
+  if (function_exists('app_audit_log')) {
+    app_audit_log('session_delete', $session, 'Sesi dihapus.', 'success', [
+      'session' => $session
+    ]);
+  }
   echo "<script>window.location='./admin.php?id=sessions'</script>";
 } elseif ($id == "about") {
   include_once('./include/menu.php');
@@ -372,13 +389,19 @@ if ($id == "login" || ($basename === 'admin.php' && empty($id))) {
   $logopath = "./img/";
   $remlogo = $logopath . $logo;
   unlink("$remlogo");
+  if (function_exists('app_audit_log')) {
+    app_audit_log('logo_delete', $logo, 'Logo dihapus.', 'success', [
+      'file' => $logo,
+      'session' => $session
+    ]);
+  }
   echo "<script>window.location='./admin.php?id=uplogo&session=" . $session . "'</script>";
 } elseif ($id == "editor"  && !empty($session)) {
   echo "<script>window.location='./error.php?code=404'</script>";
   exit;
 } elseif (empty($id)) {
   echo "<script>window.location='./admin.php?id=sessions'</script>";
-} elseif(in_array($id, $ids) && empty($session)){
+} elseif(in_array($id, $ids) && empty($session) && $id !== 'log-audit'){
   echo "<script>window.location='./admin.php?id=sessions'</script>";
 }
 ?>

@@ -5,6 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../../../include/acl.php';
+require_once __DIR__ . '/../../../include/db.php';
 ini_set('display_errors', 0);
 error_reporting(0);
 header('Content-Type: application/json');
@@ -158,6 +159,19 @@ try {
     }
 
     $db->commit();
+
+    if (function_exists('app_audit_log')) {
+        app_audit_log('hp_save', $blok_name, 'Update handphone laporan.', 'success', [
+            'report_date' => $report_date,
+            'total_units' => $total_units,
+            'rusak_units' => $rusak_units,
+            'spam_units' => $spam_units,
+            'use_wartel' => $use_wartel,
+            'wartel_units' => $wartel_units,
+            'use_kamtib' => $use_kamtib,
+            'kamtib_units' => $kamtib_units
+        ]);
+    }
 
     $redirect_date = ($show === 'harian' && $report_date !== '') ? $report_date : $date;
     $redirect = './?report=selling' . $session_qs . '&show=' . urlencode($show) . '&date=' . urlencode($redirect_date);

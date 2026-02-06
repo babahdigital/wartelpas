@@ -59,6 +59,18 @@ $menu_stuck_list = [];
 $menu_retur_visible = (isSuperAdmin() || (isOperator() && operator_can('retur_voucher')));
 if ($menu_retur_visible) {
     $root_dir = dirname(__DIR__);
+    require_once __DIR__ . '/auto_rusak.php';
+    $menu_profile_normalize = function($profile) {
+        $p = trim((string)$profile);
+        if ($p === '') return '';
+        $pl = strtolower($p);
+        if ($pl === 'lainnya' || $pl === 'other' || $pl === 'default' || $pl === '-') return '';
+        if (preg_match('/\b(10|30)\s*(menit|m)\b/i', $p, $m)) {
+            return $m[1] . ' Menit';
+        }
+        $p = preg_replace('/\s*menit\b/i', ' Menit', $p);
+        return $p;
+    };
     $system_cfg = $env['system'] ?? [];
     $db_rel = $system_cfg['db_file'] ?? 'db_data/babahdigital_main.db';
     if (preg_match('/^[A-Za-z]:\\|^\//', $db_rel)) {
@@ -79,12 +91,44 @@ if ($menu_retur_visible) {
             COALESCE(
                 (SELECT sh.blok_name FROM sales_history sh WHERE sh.username = r.voucher_code ORDER BY sh.sale_datetime DESC, sh.id DESC LIMIT 1),
                 (SELECT lh.blok_name FROM login_history lh WHERE lh.username = r.voucher_code LIMIT 1)
-            ) AS blok_guess
+            ) AS blok_guess,
+            (SELECT lh.raw_comment FROM login_history lh WHERE lh.username = r.voucher_code LIMIT 1) AS raw_comment
             FROM retur_requests r
             ORDER BY r.created_at DESC
             LIMIT 200");
         $stmt->execute();
         $menu_retur_list = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if (!empty($menu_retur_list)) {
+            foreach ($menu_retur_list as &$row) {
+                $req_type = strtolower(trim((string)($row['request_type'] ?? '')));
+                if ($req_type === 'pengembalian' || $req_type === 'refund') {
+                    $row['request_type'] = 'retur';
+                } elseif ($req_type === '') {
+                    $row['request_type'] = 'retur';
+                }
+                $profile_src = trim((string)($row['profile_name'] ?? ''));
+                $profile_label = $menu_profile_normalize($profile_src);
+                if ($profile_label !== '' && preg_match('/^1\s*d$/i', $profile_label)) {
+                    $profile_label = '';
+                }
+                $raw_comment = (string)($row['raw_comment'] ?? '');
+                $pm = function_exists('auto_rusak_profile_minutes') ? auto_rusak_profile_minutes($profile_src, $raw_comment) : 0;
+                if ($pm <= 0) {
+                    $blok_guess = (string)($row['blok_guess'] ?? '');
+                    if (preg_match('/\b(10|30)\b/', $blok_guess, $m)) {
+                        $pm = (int)$m[1];
+                    }
+                }
+                if ($profile_label === '' && $pm > 0) {
+                    $profile_label = $pm . ' Menit';
+                }
+                if ($profile_label === '') {
+                    $profile_label = $profile_src;
+                }
+                $row['profile_name'] = $profile_label;
+            }
+            unset($row);
+        }
     } catch (Exception $e) {
         $menu_retur_pending = 0;
         $menu_retur_list = [];
@@ -848,6 +892,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
     window.__canRestoreFlag = <?= json_encode($is_superadmin || (isOperator() && operator_can('restore_only'))); ?>;
     window.__operatorProfile = <?= json_encode($operator_profile, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     window.__returMenuData = <?= json_encode(['count' => $menu_retur_pending, 'items' => $menu_retur_list], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+    window.__returCanReopen = <?= json_encode($is_superadmin || (isOperator() && operator_can('retur_reopen'))); ?>;
     window.__todoMenuData = <?= json_encode(['count' => $todo_count, 'items' => $todo_list], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     window.__returBlokNames = <?= json_encode(($env['blok']['names'] ?? []), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     window.__returSession = <?= json_encode($session); ?>;

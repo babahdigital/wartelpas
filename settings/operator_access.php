@@ -102,7 +102,9 @@ $op_perms = ($op_id !== '' && $op_id !== 'new')
         'delete_block_full' => false,
         'mark_rusak' => false,
         'retur_voucher' => false,
+        'retur_reopen' => false,
         'audit_manual' => false,
+        'todo_ack' => false,
         'reset_settlement' => false,
         'settlement_run' => false,
         'settlement_reset' => false,
@@ -115,7 +117,9 @@ $perm_delete_block_router = !empty($op_perms['delete_block_router']);
 $perm_delete_block_full = !empty($op_perms['delete_block_full']);
 $perm_mark_rusak = !empty($op_perms['mark_rusak']);
 $perm_retur_voucher = !empty($op_perms['retur_voucher']);
+$perm_retur_reopen = !empty($op_perms['retur_reopen']);
 $perm_audit_manual = !empty($op_perms['audit_manual']);
+$perm_todo_ack = !empty($op_perms['todo_ack']);
 $perm_reset_settlement = !empty($op_perms['reset_settlement']);
 $perm_settlement_run = !empty($op_perms['settlement_run']);
 $perm_settlement_reset = !empty($op_perms['settlement_reset']);
@@ -152,11 +156,13 @@ $operator_defaults = [
         'delete_block_full' => false,
         'mark_rusak' => false,
         'retur_voucher' => false,
+        'retur_reopen' => false,
         'audit_manual' => false,
+        'todo_ack' => false,
         'reset_settlement' => false,
-            'settlement_run' => false,
-            'settlement_reset' => false,
-            'sync_sales_force' => false,
+        'settlement_run' => false,
+        'settlement_reset' => false,
+        'sync_sales_force' => false,
         'backup_only' => false,
         'restore_only' => false,
     ],
@@ -504,9 +510,19 @@ $operator_defaults = [
                                 '<span class="check-label">Retur Voucher</span>' +
                             '</label>' +
                             '<label class="custom-check">' +
+                                '<input id="perm-retur-reopen" type="checkbox" ' + (perms.retur_reopen ? 'checked' : '') + '>' +
+                                '<span class="checkmark"></span>' +
+                                '<span class="check-label">Reopen Retur</span>' +
+                            '</label>' +
+                            '<label class="custom-check">' +
                                 '<input id="perm-audit-manual" type="checkbox" ' + (perms.audit_manual ? 'checked' : '') + '>' +
                                 '<span class="checkmark"></span>' +
                                 '<span class="check-label">Edit Audit Manual</span>' +
+                            '</label>' +
+                            '<label class="custom-check">' +
+                                '<input id="perm-todo-ack" type="checkbox" ' + (perms.todo_ack ? 'checked' : '') + '>' +
+                                '<span class="checkmark"></span>' +
+                                '<span class="check-label">Konfirmasi Todo</span>' +
                             '</label>' +
                         '</div>' +
                         '<div class="col-6">' +
@@ -589,7 +605,9 @@ $operator_defaults = [
                         setHiddenInput('access_delete_block_full', document.getElementById('perm-delete-block-full').checked ? '1' : '');
                         setHiddenInput('access_mark_rusak', document.getElementById('perm-mark-rusak').checked ? '1' : '');
                         setHiddenInput('access_retur_voucher', document.getElementById('perm-retur-voucher').checked ? '1' : '');
+                        setHiddenInput('access_retur_reopen', document.getElementById('perm-retur-reopen').checked ? '1' : '');
                         setHiddenInput('access_audit_manual', document.getElementById('perm-audit-manual').checked ? '1' : '');
+                        setHiddenInput('access_todo_ack', document.getElementById('perm-todo-ack').checked ? '1' : '');
                         setHiddenInput('access_settlement_run', document.getElementById('perm-settlement-run').checked ? '1' : '');
                         setHiddenInput('access_settlement_reset', document.getElementById('perm-settlement-reset').checked ? '1' : '');
                         setHiddenInput('access_sync_sales_force', document.getElementById('perm-sync-sales-force').checked ? '1' : '');
@@ -768,7 +786,9 @@ if ($flash) {
                     <input type="hidden" id="operator-perm-delete-block-full" name="access_delete_block_full" value="">
                     <input type="hidden" id="operator-perm-mark-rusak" name="access_mark_rusak" value="">
                     <input type="hidden" id="operator-perm-retur-voucher" name="access_retur_voucher" value="">
+                    <input type="hidden" id="operator-perm-retur-reopen" name="access_retur_reopen" value="">
                     <input type="hidden" id="operator-perm-audit-manual" name="access_audit_manual" value="">
+                    <input type="hidden" id="operator-perm-todo-ack" name="access_todo_ack" value="">
                     <input type="hidden" id="operator-perm-reset-settlement" name="access_reset_settlement" value="">
                     <input type="hidden" id="operator-perm-settlement-run" name="access_settlement_run" value="">
                     <input type="hidden" id="operator-perm-settlement-reset" name="access_settlement_reset" value="">

@@ -48,6 +48,7 @@ if (file_exists($envFile)) {
     require $envFile;
 }
 require_once $root_dir . '/include/db_helpers.php';
+require_once $root_dir . '/include/db.php';
 $profiles_cfg = $env['profiles'] ?? [];
 $pricing_cfg = $env['pricing'] ?? [];
 $blok_cfg = $env['blok'] ?? ($env['blocks'] ?? []);
@@ -272,6 +273,15 @@ if (!isset($_SESSION["mikhmon"])) {
                 "limit-bytes-total" => "0", 
                 "comment" => "$commt",
             ));
+        }
+        if (function_exists('app_audit_log')) {
+            app_audit_log('generate_user', $adcomment, 'Generate voucher hotspot.', 'success', [
+                'qty' => $qty,
+                'profile' => $profile,
+                'timelimit' => $timelimit,
+                'server' => $server,
+                'prefix' => $prefix
+            ]);
         }
         echo "<script>window.location='./?hotspot-user=generate&session=" . $session . "'</script>";
     }

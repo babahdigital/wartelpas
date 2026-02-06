@@ -3,6 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../include/acl.php';
+require_once __DIR__ . '/../include/db.php';
 if (isset($_SESSION['mikhmon']) && isOperator() && !operator_can('backup_only')) {
     respond_backup(false, 'Forbidden', [], 403);
 }
@@ -293,6 +294,14 @@ $sidecars = array_merge(
 );
 foreach ($sidecars as $f) {
     if (@unlink($f)) $deleted++;
+}
+
+if (function_exists('app_audit_log')) {
+    app_audit_log('backup_db', basename($backupFile), 'Backup DB utama.', 'success', [
+        'cloud' => $cloudStatus,
+        'cloud_error' => $cloudError,
+        'deleted' => $deleted
+    ]);
 }
 
 if ($is_ajax) {

@@ -167,6 +167,24 @@ if (!isSuperAdmin()) {
     }
 }
 
+if (function_exists('app_audit_log')) {
+    if (in_array('admin', $updated, true)) {
+        app_audit_log('password_change_admin', (string)($adminUser ?? ''), 'Password admin diperbarui.', 'success', [
+            'admin_id' => (int)($adminId ?? 0)
+        ]);
+    }
+    if (in_array('operator', $updated, true)) {
+        app_audit_log('password_change_operator', (string)($opUser ?? ''), 'Password operator diperbarui.', 'success', [
+            'operator_id' => (int)($opId ?? 0)
+        ]);
+    }
+    if (in_array('profil', $updated, true)) {
+        app_audit_log('operator_profile_update', (string)($opUser ?? ''), 'Profil operator diperbarui.', 'success', [
+            'operator_id' => (int)($opId ?? 0)
+        ]);
+    }
+}
+
 echo json_encode([
     'ok' => true,
     'message' => 'Password berhasil diperbarui: ' . implode(', ', $updated)

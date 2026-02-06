@@ -83,6 +83,11 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'delete_recipient') {
         $save_message = 'Penerima WhatsApp tidak ditemukan.';
         $save_type = 'warning';
     }
+    if (function_exists('app_audit_log')) {
+        app_audit_log('wa_recipient_delete', 'id:' . $del_id, $save_message, $save_type === 'success' ? 'success' : 'failed', [
+            'recipient_id' => $del_id
+        ]);
+    }
 
     if (!$is_ajax) {
         $_SESSION['wa_save_message'] = $save_message;
@@ -215,6 +220,7 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'add_recipient') {
     $receive_todo = !empty($_POST['wa_new_receive_todo']) ? 1 : 0;
     $err = '';
     $validated_target = validate_wa_target($target_raw, $type, $err);
+    $recipient_action = 'wa_recipient_add';
     if ($validated_target === false) {
         $save_message = $err;
         $save_type = 'warning';
@@ -236,6 +242,7 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'add_recipient') {
                     ':id' => (int)$existing['id'],
                 ]);
                 $save_message = 'Penerima WhatsApp diperbarui.';
+                $recipient_action = 'wa_recipient_update';
             } else {
                 $stmtAdd = $stats_db->prepare("INSERT INTO whatsapp_recipients (label, target, target_type, active, receive_retur, receive_report, receive_ls, receive_todo, created_at, updated_at) VALUES (:label, :target, :type, :active, :retur, :report, :ls, :todo, :now, :now)");
                 $stmtAdd->execute([
@@ -256,6 +263,13 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'add_recipient') {
             $save_message = 'Gagal menambahkan penerima WhatsApp.';
             $save_type = 'danger';
         }
+    }
+    if (function_exists('app_audit_log')) {
+        app_audit_log($recipient_action, (string)($validated_target ?: $target_raw), $save_message, $save_type === 'success' ? 'success' : 'failed', [
+            'label' => $label,
+            'type' => $type,
+            'active' => $active
+        ]);
     }
 
     if (!$is_ajax) {
@@ -301,6 +315,13 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'update_recipient') {
         $save_message = 'Penerima tidak ditemukan.';
         $save_type = 'warning';
     }
+    if (function_exists('app_audit_log')) {
+        app_audit_log('wa_recipient_update', 'id:' . $id, $save_message, $save_type === 'success' ? 'success' : 'failed', [
+            'recipient_id' => $id,
+            'label' => $label ?? '',
+            'active' => $active ?? 0
+        ]);
+    }
 
     if (!$is_ajax) {
         $_SESSION['wa_save_message'] = $save_message;
@@ -322,6 +343,7 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'save_template') {
     $tpl_name = trim((string)($_POST['wa_tpl_name'] ?? ''));
     $tpl_category = trim((string)($_POST['wa_tpl_category'] ?? ''));
     $tpl_body = trim((string)($_POST['wa_tpl_body'] ?? ''));
+    $is_update = false;
     if ($tpl_name === '' || $tpl_body === '') {
         $save_message = 'Nama dan isi template wajib diisi.';
         $save_type = 'warning';
@@ -348,6 +370,8 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'save_template') {
                 'category' => $tpl_category,
                 'body' => $tpl_body,
             ];
+        } else {
+            $is_update = true;
         }
         if (wa_save_templates($wa_templates_file, $wa_templates)) {
             $save_message = 'Template WhatsApp berhasil disimpan.';
@@ -356,6 +380,12 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'save_template') {
             $save_message = 'Gagal menyimpan template WhatsApp.';
             $save_type = 'danger';
         }
+    }
+    if (function_exists('app_audit_log')) {
+        app_audit_log($is_update ? 'wa_template_update' : 'wa_template_add', $tpl_name !== '' ? $tpl_name : $tpl_id, $save_message, $save_type === 'success' ? 'success' : 'failed', [
+            'template_id' => $tpl_id,
+            'category' => $tpl_category
+        ]);
     }
 
     if (!$is_ajax) {
@@ -386,6 +416,11 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'delete_template') {
             $save_message = 'Gagal menghapus template WhatsApp.';
             $save_type = 'danger';
         }
+    }
+    if (function_exists('app_audit_log')) {
+        app_audit_log('wa_template_delete', $tpl_id, $save_message, $save_type === 'success' ? 'success' : 'failed', [
+            'template_id' => $tpl_id
+        ]);
     }
 
     if (!$is_ajax) {
@@ -574,6 +609,12 @@ if (isset($_POST['save_whatsapp'])) {
         @error_log(date('c') . " [admin][whatsapp] db save failed: " . $e->getMessage() . "\n", 3, __DIR__ . '/../logs/admin_errors.log');
         $save_message = 'Gagal menyimpan WhatsApp. Penyimpanan database gagal.';
         $save_type = 'danger';
+    }
+    if (function_exists('app_audit_log')) {
+        app_audit_log('wa_config_update', 'whatsapp', $save_message, $save_type === 'success' ? 'success' : 'failed', [
+            'notify_target_count' => count($targets),
+            'log_limit' => (int)$wh['log_limit']
+        ]);
     }
 
     if ($is_ajax) {

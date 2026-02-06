@@ -50,7 +50,9 @@ $perm_delete_block_router = !empty($_POST['access_delete_block_router']);
 $perm_delete_block_full = !empty($_POST['access_delete_block_full']);
 $perm_mark_rusak = !empty($_POST['access_mark_rusak']);
 $perm_retur_voucher = !empty($_POST['access_retur_voucher']);
+$perm_retur_reopen = !empty($_POST['access_retur_reopen']);
 $perm_audit_manual = !empty($_POST['access_audit_manual']);
+$perm_todo_ack = !empty($_POST['access_todo_ack']);
 $perm_reset_settlement = !empty($_POST['access_reset_settlement']);
 $perm_settlement_run = !empty($_POST['access_settlement_run']);
 $perm_settlement_reset = !empty($_POST['access_settlement_reset']);
@@ -125,6 +127,11 @@ if ($admin_action === 'delete' && $admin_id !== '' && $admin_id !== 'new') {
     }
     app_db_delete_admin($del_id);
     wa_delete_recipient($adminPhone, $adminName !== '' ? $adminName : $adminUser);
+    if (function_exists('app_audit_log')) {
+        app_audit_log('admin_delete', $adminUser !== '' ? $adminUser : ('id:' . $del_id), 'Admin dihapus.', 'success', [
+            'admin_id' => $del_id
+        ]);
+    }
     if ($adminUser !== '') {
         $root_dir = dirname(__DIR__);
         $session_dirs = [
@@ -203,6 +210,11 @@ if ($admin_action === 'reset' && $admin_id !== '' && $admin_id !== 'new') {
         'created_by_role' => strtoupper($actorRole),
         'date' => date('d-m-Y H:i'),
     ], $adminPhone);
+    if (function_exists('app_audit_log')) {
+        app_audit_log('admin_reset_password', $adminUser, 'Reset password admin.', 'success', [
+            'admin_id' => $aid
+        ]);
+    }
 
     if ($isAjax) {
         header('Content-Type: application/json');
@@ -220,6 +232,11 @@ if ($op_action === 'delete' && $op_id !== '' && $op_id !== 'new') {
     $opPhone = (string)($opRow['phone'] ?? '');
     app_db_delete_operator((int)$op_id);
     wa_delete_recipient($opPhone, $opName !== '' ? $opName : $opUser);
+    if (function_exists('app_audit_log')) {
+        app_audit_log('operator_delete', $opUser !== '' ? $opUser : ('id:' . (int)$op_id), 'Operator dihapus.', 'success', [
+            'operator_id' => (int)$op_id
+        ]);
+    }
     if (count(app_db_list_operators()) === 0) {
         try {
             $pdo = app_db();
@@ -305,6 +322,11 @@ if ($op_action === 'reset' && $op_id !== '' && $op_id !== 'new') {
         'created_by_role' => strtoupper($actorRole),
         'date' => date('d-m-Y H:i'),
     ], $opPhone);
+    if (function_exists('app_audit_log')) {
+        app_audit_log('operator_reset_password', $opUserRow, 'Reset password operator.', 'success', [
+            'operator_id' => $oid
+        ]);
+    }
 
     if ($isAjax) {
         header('Content-Type: application/json');
@@ -316,6 +338,8 @@ if ($op_action === 'reset' && $op_id !== '' && $op_id !== 'new') {
 }
 
 if ($save_admin) {
+    $audit_admin_action = '';
+    $audit_admin_context = [];
         if ($admin_phone_raw !== '' && !is_valid_phone_08($admin_phone_raw)) {
             if ($isAjax) {
                 http_response_code(400);
@@ -395,7 +419,9 @@ if ($save_admin) {
         $admin_plain_pass = $admin_password !== '' ? $admin_password : generate_numeric_password(6);
         $admin_hash = hash_password_value($admin_plain_pass);
         try {
-            app_db_create_admin($admin_user, $admin_hash, $admin_active, $admin_full_name, $admin_phone);
+            $new_id = app_db_create_admin($admin_user, $admin_hash, $admin_active, $admin_full_name, $admin_phone);
+            $audit_admin_action = 'admin_create';
+            $audit_admin_context = ['admin_id' => (int)$new_id, 'active' => $admin_active ? 1 : 0];
         } catch (Exception $e) {
             if ($isAjax) {
                 http_response_code(400);
@@ -415,6 +441,12 @@ if ($save_admin) {
             app_db_update_admin((int)$admin_id, $admin_user, $admin_hash, $admin_active, $fullName, $phone);
             $admin_full_name = $fullName;
             $admin_phone = $phone;
+            $audit_admin_action = 'admin_update';
+            $audit_admin_context = [
+                'admin_id' => (int)$admin_id,
+                'active' => $admin_active ? 1 : 0,
+                'password_changed' => $admin_password !== '' ? 1 : 0
+            ];
         } catch (Exception $e) {
             if ($isAjax) {
                 http_response_code(400);
@@ -443,9 +475,14 @@ if ($save_admin) {
             'date' => date('d-m-Y H:i'),
         ], $admin_phone);
     }
+    if ($audit_admin_action !== '' && function_exists('app_audit_log')) {
+        app_audit_log($audit_admin_action, $admin_user, 'Perubahan akun admin.', 'success', $audit_admin_context);
+    }
 }
 
 if ($save_operator) {
+    $audit_operator_action = '';
+    $audit_operator_context = [];
     if ($op_phone_raw !== '' && !is_valid_phone_08($op_phone_raw)) {
         if ($isAjax) {
             http_response_code(400);
@@ -473,6 +510,8 @@ if ($save_operator) {
             try {
                 $new_id = app_db_create_operator($sopuser, $op_hash, $op_active, $op_full_name, $op_phone);
                 $op_id = (string)$new_id;
+                $audit_operator_action = 'operator_create';
+                $audit_operator_context = ['operator_id' => (int)$new_id, 'active' => $op_active ? 1 : 0];
             } catch (Exception $e) {
                 if ($isAjax) {
                     http_response_code(400);
@@ -492,6 +531,12 @@ if ($save_operator) {
                 app_db_update_operator((int)$op_id, $sopuser, $op_hash, $op_active, $fullName, $phone);
                 $op_full_name = $fullName;
                 $op_phone = $phone;
+                $audit_operator_action = 'operator_update';
+                $audit_operator_context = [
+                    'operator_id' => (int)$op_id,
+                    'active' => $op_active ? 1 : 0,
+                    'password_changed' => $op_password !== '' ? 1 : 0
+                ];
             } catch (Exception $e) {
                 if ($isAjax) {
                     http_response_code(400);
@@ -512,7 +557,9 @@ if ($save_operator) {
             'delete_block_full' => $perm_delete_block_full,
             'mark_rusak' => $perm_mark_rusak,
             'retur_voucher' => $perm_retur_voucher,
+            'retur_reopen' => $perm_retur_reopen,
             'audit_manual' => $perm_audit_manual,
+            'todo_ack' => $perm_todo_ack,
             'reset_settlement' => $perm_reset_settlement,
             'settlement_run' => $perm_settlement_run,
             'settlement_reset' => $perm_settlement_reset,
@@ -520,6 +567,25 @@ if ($save_operator) {
             'backup_only' => $perm_backup_only,
             'restore_only' => $perm_restore_only,
         ]);
+        if (function_exists('app_audit_log')) {
+            app_audit_log('operator_permissions_update', $sopuser !== '' ? $sopuser : ('id:' . (int)$op_id), 'Update izin operator.', 'success', [
+                'operator_id' => (int)$op_id,
+                'delete_user' => $perm_delete_user ? 1 : 0,
+                'delete_block_router' => $perm_delete_block_router ? 1 : 0,
+                'delete_block_full' => $perm_delete_block_full ? 1 : 0,
+                'mark_rusak' => $perm_mark_rusak ? 1 : 0,
+                'retur_voucher' => $perm_retur_voucher ? 1 : 0,
+                'retur_reopen' => $perm_retur_reopen ? 1 : 0,
+                'audit_manual' => $perm_audit_manual ? 1 : 0,
+                'todo_ack' => $perm_todo_ack ? 1 : 0,
+                'reset_settlement' => $perm_reset_settlement ? 1 : 0,
+                'settlement_run' => $perm_settlement_run ? 1 : 0,
+                'settlement_reset' => $perm_settlement_reset ? 1 : 0,
+                'sync_sales_force' => $perm_sync_sales_force ? 1 : 0,
+                'backup_only' => $perm_backup_only ? 1 : 0,
+                'restore_only' => $perm_restore_only ? 1 : 0
+            ]);
+        }
     }
 
     if ($op_phone !== '') {
@@ -537,6 +603,9 @@ if ($save_operator) {
             'created_by_role' => strtoupper($actorRole),
             'date' => date('d-m-Y H:i'),
         ], $op_phone);
+    }
+    if ($audit_operator_action !== '' && function_exists('app_audit_log')) {
+        app_audit_log($audit_operator_action, $sopuser, 'Perubahan akun operator.', 'success', $audit_operator_context);
     }
 }
 if ($isAjax) {

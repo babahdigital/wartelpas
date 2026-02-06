@@ -3,6 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../../../include/acl.php';
+require_once __DIR__ . '/../../../include/db.php';
 ini_set('display_errors', 0);
 error_reporting(0);
 ob_start();
@@ -904,11 +905,23 @@ if ($action === 'reset') {
     } catch (Exception $e) {}
     append_settlement_log($logFile, 'system,warning', $reset_msg);
     log_settlement_action($db, $date, 'reset', 'ok', $reset_msg);
+    if (function_exists('app_audit_log')) {
+        app_audit_log('settlement_reset', $date, 'Reset settlement manual.', 'success', [
+            'session' => $session,
+            'date' => $date
+        ]);
+    }
     respond_json(['ok' => true, 'message' => 'Reset berhasil.']);
 }
 
 if ($action === 'start') {
     log_settlement_action($db, $date, 'start', 'requested', 'Settlement diminta');
+    if ($force && function_exists('app_audit_log')) {
+        app_audit_log('settlement_force', $date, 'Force settlement manual.', 'success', [
+            'session' => $session,
+            'date' => $date
+        ]);
+    }
     $latestLogFile = '';
     $pattern = $logDir . '/settlement_' . $safe_session . '_*.log';
     $candidates = glob($pattern);

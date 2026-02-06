@@ -97,6 +97,9 @@
         if (tabId === 'operator') {
             return base + '?id=operator-access';
         }
+        if (tabId === 'log-audit') {
+            return base + '?id=log-audit';
+        }
         if (tabId === 'whatsapp') {
             return base + '?id=whatsapp';
         }

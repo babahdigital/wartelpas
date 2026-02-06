@@ -777,10 +777,11 @@
 
   function buildReturActionUrl(action, id, note) {
     var session = getSession();
+    var statusParam = action === 'retur_request_reopen' ? 'approved' : 'pending';
     var base = './?hotspot=users&action=' + encodeURIComponent(action) +
       '&req_id=' + encodeURIComponent(id) +
       '&session=' + encodeURIComponent(session) +
-      '&retur_status=pending' +
+      '&retur_status=' + encodeURIComponent(statusParam) +
       '&ajax=1&action_ajax=1';
     if (note) {
       base += '&note=' + encodeURIComponent(note);
@@ -964,9 +965,9 @@
     var isRefund = typeRaw === 'pengembalian';
     var typeLabel = isRefund ? 'Refund' : 'Retur';
     var typeClass = isRefund ? 'retur-confirm-refund' : 'retur-confirm-retur';
-    var title = action === 'retur_request_approve' ? 'Setujui Retur' : 'Tolak Retur';
-    var icon = action === 'retur_request_approve' ? 'fa fa-check-circle' : 'fa fa-times-circle';
-    var color = action === 'retur_request_approve' ? '#238636' : '#da3633';
+    var title = action === 'retur_request_approve' ? 'Setujui Retur' : (action === 'retur_request_reopen' ? 'Batalkan Persetujuan' : 'Tolak Retur');
+    var icon = action === 'retur_request_approve' ? 'fa fa-check-circle' : (action === 'retur_request_reopen' ? 'fa fa-undo' : 'fa fa-times-circle');
+    var color = action === 'retur_request_approve' ? '#238636' : (action === 'retur_request_reopen' ? '#f59e0b' : '#da3633');
     var noteId = 'retur-note-' + String(id || '0');
     var noteHtml = '';
 
@@ -974,6 +975,11 @@
       noteHtml = '<div style="margin-top:10px;">' +
         '<div style="font-size:12px; color:#b8c7ce; margin-bottom:6px;">Alasan penolakan</div>' +
         '<textarea id="' + noteId + '" style="width:100%; min-height:70px; padding:8px 10px; border-radius:6px; border:1px solid #3b4248; background:#1f2428; color:#e6edf3; resize:vertical;" placeholder="Contoh: voucher sudah dipakai"></textarea>' +
+      '</div>';
+    } else if (action === 'retur_request_reopen') {
+      noteHtml = '<div style="margin-top:10px;">' +
+        '<div style="font-size:12px; color:#b8c7ce; margin-bottom:6px;">Catatan pembatalan</div>' +
+        '<textarea id="' + noteId + '" style="width:100%; min-height:70px; padding:8px 10px; border-radius:6px; border:1px solid #3b4248; background:#1f2428; color:#e6edf3; resize:vertical;" placeholder="Contoh: salah approve, mohon cek ulang"></textarea>' +
       '</div>';
     }
 
@@ -992,9 +998,9 @@
       messageHtml: msgHtml,
       buttons: [
         { label: 'Batalkan', className: 'm-btn m-btn-cancel' },
-        { label: action === 'retur_request_approve' ? 'Setujui' : 'Tolak', className: action === 'retur_request_approve' ? 'm-btn m-btn-success' : 'm-btn m-btn-danger', close: false, onClick: function(){
+        { label: action === 'retur_request_approve' ? 'Setujui' : (action === 'retur_request_reopen' ? 'Kembalikan' : 'Tolak'), className: action === 'retur_request_approve' ? 'm-btn m-btn-success' : (action === 'retur_request_reopen' ? 'm-btn m-btn-warning' : 'm-btn m-btn-danger'), close: false, onClick: function(){
             var note = '';
-            if (action === 'retur_request_reject') {
+            if (action === 'retur_request_reject' || action === 'retur_request_reopen') {
               var noteEl = document.getElementById(noteId);
               note = noteEl ? noteEl.value.trim() : '';
             }
@@ -1022,7 +1028,7 @@
       .then(function(resp){ return resp.json(); })
       .then(function(data){
         if (data && data.ok) {
-          var newStatus = (action === 'retur_request_approve' || action === 'retur_request_mark_rusak') ? 'approved' : 'rejected';
+          var newStatus = (action === 'retur_request_approve' || action === 'retur_request_mark_rusak') ? 'approved' : (action === 'retur_request_reopen' ? 'pending' : 'rejected');
           updateReturItemStatus(id, newStatus);
           window.__returLastMessage = { type: 'success', text: data.message || 'Berhasil diproses.' };
           window.openReturMenuPopup();
@@ -1199,6 +1205,7 @@
     var view = getReturView();
     var counts = getReturCounts(items);
     var actionMsg = window.__returLastMessage || null;
+    var canReopen = !!window.__returCanReopen;
     window.__returLastMessage = null;
 
     var filteredItems = items.filter(function(it) {
@@ -1209,7 +1216,7 @@
       if (filter === 'retur') return typeRaw !== 'pengembalian';
       return st === filter;
     });
-    var showActionColumn = (filter === 'pending' || filter === 'refund');
+    var showActionColumn = (filter === 'pending' || filter === 'refund' || filter === 'approved');
 
     var rows = '';
     if (filteredItems.length) {
@@ -1229,7 +1236,11 @@
           '  <a class="btn-act btn-act-reject" href="#" title="Tolak" data-retur-action="retur_request_reject" data-retur-id="' + escapeHtml(id) + '">' +
           '    <span class="btn-act-symbol">&#10005;</span>' +
           '  </a>' :
-          '  <span class="retur-action-dash">-</span>';
+          (st === 'approved' && canReopen ?
+            '  <a class="btn-act btn-act-reopen" href="#" title="Batalkan Persetujuan" data-retur-action="retur_request_reopen" data-retur-id="' + escapeHtml(id) + '">' +
+            '    <i class="fa fa-undo"></i>' +
+            '  </a>' :
+            '  <span class="retur-action-dash">-</span>');
 
         return '<tr>' +
           '<td class="retur-col-date retur-col-center">' + escapeHtml(formatReturDate(it)) + '</td>' +

@@ -28,6 +28,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
             $is_super = function_exists('isSuperAdmin') ? isSuperAdmin() : false;
             $is_operator = function_exists('isOperator') ? isOperator() : false;
             $can_force_sync = $is_super || ($is_operator && function_exists('operator_can') && operator_can('sync_sales_force'));
+            $can_todo_ack = $is_super || ($is_operator && function_exists('operator_can') && operator_can('todo_ack'));
 
             $parse_time = function ($timeStr) use ($today) {
                 $timeStr = trim((string)$timeStr);
@@ -61,7 +62,8 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 $val = (string)$stmt->fetchColumn();
                 return $val !== '';
             };
-            $todo_ack_url = function ($key) use ($session, $todo_next) {
+            $todo_ack_url = function ($key) use ($session, $todo_next, $can_todo_ack) {
+                if (!$can_todo_ack) return '';
                 $qs = http_build_query([
                     'session' => $session,
                     'key' => $key,

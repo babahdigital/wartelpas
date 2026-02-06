@@ -4,6 +4,7 @@ require_once __DIR__ . '/helpers.php';
 
 $root_dir = dirname(__DIR__, 2);
 require_once $root_dir . '/include/acl.php';
+require_once $root_dir . '/include/db.php';
 $is_superadmin = isset($_SESSION['mikhmon']) ? isSuperAdmin() : false;
 $is_operator = isset($_SESSION['mikhmon']) ? isOperator() : false;
 $env = [];
@@ -1386,6 +1387,7 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                 }
             }
 
+            $audit_saved = false;
             try {
                 $stmt = $db->prepare("INSERT INTO audit_rekap_manual
                     (report_date, blok_name, audit_username, expected_qty, expected_setoran, reported_qty, actual_setoran, refund_amt, refund_desc, kurang_bayar_amt, kurang_bayar_desc, expenses_amt, expenses_desc, selisih_qty, selisih_setoran, note, user_evidence, status, updated_at)
@@ -1428,8 +1430,20 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
                     ':ev' => json_encode($audit_evidence),
                     ':st' => $audit_status
                 ]);
+                $audit_saved = true;
             } catch (Exception $e) {
                 $audit_error = 'Gagal menyimpan audit.';
+            }
+            if ($audit_saved && function_exists('app_audit_log')) {
+                app_audit_log('audit_manual_save', $audit_blok, 'Audit manual tersimpan.', 'success', [
+                    'date' => $audit_date,
+                    'blok' => $audit_blok,
+                    'expected_setoran' => (int)$audit_expected_setoran,
+                    'actual_setoran' => (int)$audit_setoran,
+                    'refund_amt' => (int)$audit_refund_amt,
+                    'kurang_bayar_amt' => (int)$audit_kurang_bayar_amt,
+                    'expenses_amt' => (int)$audit_exp_amt
+                ]);
             }
         }
 

@@ -9,6 +9,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
   ignore_user_abort(true);
   $root_dir = dirname(__DIR__, 2);
   require_once($root_dir . '/include/acl.php');
+  require_once($root_dir . '/include/db.php');
   require_once(__DIR__ . '/helpers.php');
   $wa_cfg = [];
   $waHelper = $root_dir . '/system/whatsapp/wa_helper.php';
@@ -66,6 +67,11 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     return 0;
   };
   $is_action_ajax = isset($_GET['ajax']) && $_GET['ajax'] == '1' && isset($_GET['action_ajax']);
+  $audit_log = function($action, $target, $message, $result, array $context = []) {
+    if (function_exists('app_audit_log')) {
+      app_audit_log($action, $target, $message, $result, $context);
+    }
+  };
   $act = $_POST['action'] ?? $_GET['action'];
   $retur_request_id = null;
   $retur_request_note = '';
@@ -207,9 +213,9 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     if (!isOperator() && !isSuperAdmin()) {
       $action_blocked = true;
       $action_error = 'Akses ditolak.';
-    } elseif (isOperator() && !operator_can('retur_voucher')) {
+    } elseif (isOperator() && !operator_can('retur_reopen')) {
       $action_blocked = true;
-      $action_error = 'Akses ditolak. Retur hanya untuk role yang diizinkan.';
+      $action_error = 'Akses ditolak. Reopen retur hanya untuk role yang diizinkan.';
     } elseif (!$db) {
       $action_blocked = true;
       $action_error = 'Gagal: database belum siap.';
@@ -289,6 +295,82 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     if (isset($_GET['only_wartel'])) $redir_params['only_wartel'] = $_GET['only_wartel'];
     if (isset($_GET['retur_status'])) $redir_params['retur_status'] = $_GET['retur_status'];
     $redir = './?' . http_build_query($redir_params);
+    $audit_log('retur_request_reject', 'req#' . $req_id, $action_blocked ? $action_error : ($action_message ?: 'Berhasil diproses.'), $action_blocked ? 'failed' : 'success', [
+      'request_id' => $req_id
+    ]);
+    if ($is_action_ajax) {
+      if (ob_get_length()) { @ob_clean(); }
+      header('Content-Type: application/json');
+      echo json_encode([
+        'ok' => !$action_blocked,
+        'message' => $action_blocked ? $action_error : ($action_message ?: 'Berhasil diproses.'),
+        'redirect' => $action_blocked ? '' : $redir
+      ]);
+      exit();
+    }
+    if ($action_blocked) {
+      echo "<script>if(window.showActionPopup){window.showActionPopup('error','" . addslashes($action_error) . "');}</script>";
+    } else {
+      echo "<script>if(window.showActionPopup){window.showActionPopup('success','" . addslashes($action_message ?: 'Berhasil diproses.') . "','{$redir}');}else{window.location.href='{$redir}';}</script>";
+    }
+    exit();
+  }
+
+  if ($act === 'retur_request_reopen') {
+    $req_id = (int)($_GET['req_id'] ?? 0);
+    $note = trim((string)($_GET['note'] ?? 'Dikembalikan ke pending.'));
+    if (!isOperator() && !isSuperAdmin()) {
+      $action_blocked = true;
+      $action_error = 'Akses ditolak.';
+    } elseif (isOperator() && !operator_can('retur_voucher')) {
+      $action_blocked = true;
+      $action_error = 'Akses ditolak. Retur hanya untuk role yang diizinkan.';
+    } elseif (!$db) {
+      $action_blocked = true;
+      $action_error = 'Gagal: database belum siap.';
+    } elseif ($req_id <= 0) {
+      $action_blocked = true;
+      $action_error = 'Permintaan tidak ditemukan.';
+    } else {
+      try {
+        $stmt = $db->prepare("SELECT status FROM retur_requests WHERE id = :id");
+        $stmt->execute([':id' => $req_id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $st = strtolower((string)($row['status'] ?? ''));
+        if (!in_array($st, ['approved', 'rejected'], true)) {
+          $action_blocked = true;
+          $action_error = $st === 'pending' ? 'Status sudah pending.' : 'Permintaan tidak ditemukan.';
+        } else {
+          $stmt = $db->prepare("UPDATE retur_requests SET status='pending', reviewed_by=NULL, reviewed_at=NULL, review_note=:rn WHERE id=:id");
+          $stmt->execute([
+            ':id' => $req_id,
+            ':rn' => $note !== '' ? $note : 'Dikembalikan ke pending.'
+          ]);
+          $action_blocked = false;
+          $action_message = 'Status retur dikembalikan ke pending.';
+        }
+      } catch (Exception $e) {
+        $action_blocked = true;
+        $action_error = 'Gagal memproses permintaan.';
+      }
+    }
+    $redir_params = [
+      'hotspot' => 'users',
+      'session' => $session,
+    ];
+    if (isset($_GET['profile'])) $redir_params['profile'] = $_GET['profile'];
+    if (isset($_GET['comment'])) $redir_params['comment'] = $_GET['comment'];
+    if (isset($_GET['status'])) $redir_params['status'] = $_GET['status'];
+    if (isset($_GET['q'])) $redir_params['q'] = $_GET['q'];
+    if (isset($_GET['show'])) $redir_params['show'] = $_GET['show'];
+    if (isset($_GET['date'])) $redir_params['date'] = $_GET['date'];
+    if (isset($_GET['debug'])) $redir_params['debug'] = $_GET['debug'];
+    if (isset($_GET['only_wartel'])) $redir_params['only_wartel'] = $_GET['only_wartel'];
+    if (isset($_GET['retur_status'])) $redir_params['retur_status'] = $_GET['retur_status'];
+    $redir = './?' . http_build_query($redir_params);
+    $audit_log('retur_request_reopen', 'req#' . $req_id, $action_blocked ? $action_error : ($action_message ?: 'Berhasil diproses.'), $action_blocked ? 'failed' : 'success', [
+      'request_id' => $req_id
+    ]);
     if ($is_action_ajax) {
       if (ob_get_length()) { @ob_clean(); }
       header('Content-Type: application/json');
@@ -399,6 +481,9 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     if (isset($_GET['only_wartel'])) $redir_params['only_wartel'] = $_GET['only_wartel'];
     if (isset($_GET['retur_status'])) $redir_params['retur_status'] = $_GET['retur_status'];
     $redir = './?' . http_build_query($redir_params);
+    $audit_log('retur_request_mark_rusak', 'req#' . $req_id, $action_blocked ? $action_error : ($action_message ?: 'Berhasil diproses.'), $action_blocked ? 'failed' : 'success', [
+      'request_id' => $req_id
+    ]);
     if ($is_action_ajax) {
       if (ob_get_length()) { @ob_clean(); }
       header('Content-Type: application/json');
@@ -448,6 +533,11 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             $action_blocked = true;
             $action_error = 'Kode voucher kosong.';
           } else {
+            $comment_ref = '';
+            $hist = $db ? get_user_history($voucher) : null;
+            if (!empty($hist['raw_comment'])) {
+              $comment_ref = (string)$hist['raw_comment'];
+            }
             $retur_request_id = (int)$row['id'];
             $retur_request_note = 'Disetujui operator.';
             $retur_request_meta = [
@@ -458,7 +548,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
               'blok_name' => (string)($row['blok_name'] ?? '')
             ];
             $_GET['name'] = $voucher;
-            $_GET['c'] = 'Retur Request: ' . trim((string)($row['reason'] ?? ''));
+            $_GET['c'] = $comment_ref !== '' ? $comment_ref : ('Retur Request: ' . trim((string)($row['reason'] ?? '')));
             $act = 'retur';
           }
         }
@@ -503,7 +593,10 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     $comm = $_GET['c'] ?? '';
     $prof = $_GET['p'] ?? '';
     $blok = normalize_blok_param($_GET['blok'] ?? '');
+    $blok_norm = '';
+    $blok_raw = '';
     $status = $_GET['status'] ?? '';
+    $target_status = '';
     $action_blocked = false;
     $action_error = '';
     $action_message = '';
@@ -630,7 +723,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
     }
 
     if ($enforce_rusak_rules && ($act == 'invalid' || $act == 'retur' || $act == 'check_rusak')) {
-      $total_uptime_ok = (!$is_active) && ($bytes <= $bytes_limit);
+      $total_uptime_ok = (!$is_active) && ($bytes <= $bytes_limit) && ($uptime_sec <= $uptime_limit);
       $relogin_count_ok = false;
       if (!($act == 'retur' && $is_rusak_target)) {
         $fail_reasons = [];
@@ -2130,8 +2223,15 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $ainfo = $active_info[0] ?? [];
 
         $cmt = $uinfo['comment'] ?? $comm;
+        $hist = $hist ?? get_user_history($name);
+        if ($cmt === '' && !empty($hist['raw_comment'])) {
+          $cmt = (string)$hist['raw_comment'];
+        }
         $blok = extract_blok_name($cmt);
         $prof = $uinfo['profile'] ?? $prof;
+        if ($prof === '' && !empty($hist['validity'])) {
+          $prof = (string)$hist['validity'];
+        }
         $cm = extract_ip_mac_from_comment($cmt);
         $f_ip = $ainfo['address'] ?? ($cm['ip'] ?? '-');
         $f_mac = $ainfo['mac-address'] ?? ($uinfo['mac-address'] ?? ($cm['mac'] ?? '-'));
@@ -2178,18 +2278,6 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
           }
         }
 
-        // Hapus voucher lama
-        $del_id = $uid ?: ($uinfo['.id'] ?? '');
-        if ($del_id != '') {
-          $API->write('/ip/hotspot/user/remove', false);
-          $API->write('=.id=' . $del_id);
-          $API->read();
-        }
-
-        // Generate voucher baru
-        $gen_ref = $cmt ?: ($comm ?: $name);
-        $gen = gen_user($prof ?: 'default', $gen_ref, $name);
-        $new_user = $gen['u'] ?? '';
         $profile_kind = detect_profile_kind_unified($prof ?: ($uinfo['profile'] ?? ''), $cmt ?? '', $blok ?? '', $uptime ?? '');
         $limit_uptime = '';
         if ($profile_kind === '30') {
@@ -2204,32 +2292,80 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             $limit_uptime = '10m';
           }
         }
-        $API->write('/ip/hotspot/user/add', false);
-        $API->write('=server='.$hotspot_server, false);
-        $API->write('=name='.$gen['u'], false);
-        $API->write('=password='.$gen['p'], false);
-        $API->write('=profile='.($prof ?: 'default'), false);
-        if ($limit_uptime !== '') {
-          $API->write('=limit-uptime='.$limit_uptime, false);
-        }
-        $API->write('=comment='.$gen['c']);
-        $API->read();
 
-        // Simpan status READY untuk user baru (hasil retur)
-        if ($db) {
-          $new_blok = extract_blok_name($gen['c']);
-          $save_new = [
-            'ip' => '-',
-            'mac' => '-',
-            'uptime' => '0s',
-            'bytes' => 0,
-            'blok' => $new_blok,
-            'raw' => $gen['c'],
-            'login_time_real' => null,
-            'logout_time_real' => null,
-            'status' => 'ready'
-          ];
-          save_user_history($gen['u'], $save_new);
+        // Generate voucher baru (retry jika nama bentrok)
+        $gen_ref = $cmt ?: ($comm ?: $name);
+        $new_user = '';
+        $gen = [];
+        for ($try = 1; $try <= 3; $try++) {
+          $gen = gen_user($prof ?: 'default', $gen_ref, $name);
+          $new_user = $gen['u'] ?? '';
+          if ($new_user === '') continue;
+
+          $API->write('/ip/hotspot/user/add', false);
+          $API->write('=server='.$hotspot_server, false);
+          $API->write('=name='.$gen['u'], false);
+          $API->write('=password='.$gen['p'], false);
+          $API->write('=profile='.($prof ?: 'default'), false);
+          if ($limit_uptime !== '') {
+            $API->write('=limit-uptime='.$limit_uptime, false);
+          }
+          $API->write('=comment='.$gen['c']);
+          $API->read();
+
+          $check = $api_print('/ip/hotspot/user/print', [
+            '?server' => $hotspot_server,
+            '?name' => $new_user,
+            '.proplist' => '.id'
+          ]);
+          if (!empty($check) && isset($check[0]['.id'])) {
+            $new_id = $check[0]['.id'];
+            try {
+              $API->write('/ip/hotspot/user/set', false);
+              $API->write('=.id=' . $new_id, false);
+              $API->write('=mac-address=', false);
+              $API->read();
+            } catch (Exception $e) {}
+            break;
+          }
+          $new_user = '';
+        }
+
+        if ($new_user === '') {
+          $action_blocked = true;
+          $action_error = 'Gagal membuat voucher retur. Coba lagi.';
+        }
+
+        // Hapus voucher lama setelah voucher retur berhasil dibuat
+        if (!$action_blocked) {
+          $del_id = $uid ?: ($uinfo['.id'] ?? '');
+          if ($del_id != '') {
+            $API->write('/ip/hotspot/user/remove', false);
+            $API->write('=.id=' . $del_id);
+            $API->read();
+          }
+        }
+        if (!$action_blocked) {
+          // Simpan status READY untuk user baru (hasil retur)
+          if ($db) {
+            $new_blok = extract_blok_name($gen['c']);
+            $save_new = [
+              'ip' => '-',
+              'mac' => '-',
+              'uptime' => '0s',
+              'bytes' => 0,
+              'blok' => $new_blok,
+              'raw' => $gen['c'],
+              'login_time_real' => null,
+              'logout_time_real' => null,
+              'status' => 'ready'
+            ];
+            save_user_history($gen['u'], $save_new);
+          }
+          if (!empty($retur_request_id)) {
+            $retur_request_note = 'Disetujui operator. Voucher retur: ' . $new_user;
+          }
+          $action_message = 'Berhasil retur voucher ' . $name . ' -> ' . $new_user . '.';
         }
       }
     } elseif ($act == 'invalid' && $name != '' && $db) {
@@ -2295,7 +2431,9 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $stmt->execute([':u' => $name]);
       } catch(Exception $e) {}
     }
-    $action_message = $action_message ?: ('Berhasil retur voucher ' . $name . '.');
+    if (!$action_blocked) {
+      $action_message = $action_message ?: ('Berhasil retur voucher ' . $name . '.');
+    }
   }
   if ($retur_request_id && $db) {
     try {
@@ -2348,6 +2486,22 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       }
     } catch (Exception $e) {}
   }
+
+    if ($act !== 'check_rusak') {
+      $audit_target = $name;
+      $audit_context = ['act' => $act];
+      if (!empty($blok)) $audit_context['blok'] = $blok;
+      if (!empty($target_status)) $audit_context['status'] = $target_status;
+      if (!empty($new_user)) $audit_context['new_user'] = $new_user;
+      if (!empty($deleted_list)) $audit_context['deleted'] = $deleted_list;
+      if (!empty($retur_request_id)) $audit_context['retur_request_id'] = $retur_request_id;
+      if ($act === 'delete_block_full' || $act === 'batch_delete') {
+        $audit_target = $blok ?: ($blok_norm ?? $blok_raw ?? '');
+      } elseif ($act === 'delete_status') {
+        $audit_target = $target_status !== '' ? $target_status : $status;
+      }
+      $audit_log($act, $audit_target, $action_blocked ? $action_error : ($action_message ?: 'Berhasil diproses.'), $action_blocked ? 'failed' : 'success', $audit_context);
+    }
 
   $redir_params = [
     'hotspot' => 'users',

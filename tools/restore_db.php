@@ -3,6 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../include/acl.php';
+require_once __DIR__ . '/../include/db.php';
 if (isset($_SESSION['mikhmon']) && isOperator() && !operator_can('restore_only')) {
     respond_restore(false, 'Forbidden', [], 403);
 }
@@ -197,6 +198,12 @@ if (!@rename($tmpRestore, $dbFile)) {
 $logFile = dirname(__DIR__) . '/logs/restore_db.log';
 $logLine = date('Y-m-d H:i:s') . "\t" . $target . "\t" . ($downloaded ? 'From Cloud' : 'Local') . "\n";
 @file_put_contents($logFile, $logLine, FILE_APPEND);
+
+if (function_exists('app_audit_log')) {
+    app_audit_log('restore_db', $target, 'Restore DB utama.', 'success', [
+        'source' => $downloaded ? 'cloud' : 'local'
+    ]);
+}
 
 if ($is_ajax) {
     respond_restore(true, 'Restore OK', [

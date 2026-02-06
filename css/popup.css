@@ -75,10 +75,6 @@
   padding: 20px;
 }
 
-.m-modal-card.is-retur .m-status-info i {
-  display: none;
-}
-
 .m-modal-card.is-retur .m-status-info {
   margin-bottom: 0;
 }
@@ -309,6 +305,13 @@
 }
 
 .m-btn-danger:hover { filter: brightness(1.06); }
+
+.m-btn-warning {
+  background: #f59e0b;
+  color: #ffffff;
+}
+
+.m-btn-warning:hover { filter: brightness(1.06); }
 
 .m-popup-hidden { display: none; }
 
@@ -747,6 +750,7 @@
 
 .retur-table .btn-act-approve { background: #16a34a; }
 .retur-table .btn-act-reject { background: #ef4444; }
+.retur-table .btn-act-reopen { background: #f59e0b; }
 .retur-table .btn-act-print { background: #3b82f6; }
 
 .eligibility-wrap {

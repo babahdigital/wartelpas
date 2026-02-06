@@ -178,6 +178,12 @@ if (isset($_POST['save'])) {
     }
     $save_message = 'Sesi baru berhasil disimpan: ' . $sesname;
     $save_type = 'success';
+    if (function_exists('app_audit_log')) {
+      app_audit_log('session_add', $sesname, $save_message, 'success', [
+        'session' => $sesname,
+        'iphost' => $siphost
+      ]);
+    }
     $new_session_name = $sesname;
     $session = $sesname;
     $iphost = $siphost;
@@ -227,6 +233,12 @@ if (isset($_POST['save'])) {
   $_SESSION["connect"] = "";
   $save_message = 'Konfigurasi router berhasil disimpan.';
   $save_type = 'success';
+  if (function_exists('app_audit_log')) {
+    app_audit_log('session_update', $sesname, $save_message, 'success', [
+      'session' => $sesname,
+      'iphost' => $siphost
+    ]);
+  }
   @error_log(date('c') . " [admin][settings] saved session=" . $sesname . "\n", 3, __DIR__ . '/../logs/admin_errors.log');
   $session = $sesname;
   $iphost = $siphost;

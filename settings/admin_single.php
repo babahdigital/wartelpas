@@ -16,8 +16,8 @@ if ($id === 'settings') {
     $active_tab = 'operator';
 } elseif ($id === 'whatsapp') {
     $active_tab = 'whatsapp';
-} elseif ($id === 'settlement-audit') {
-    $active_tab = 'settlement-audit';
+} elseif ($id === 'log-audit') {
+    $active_tab = 'log-audit';
 }
 
 $active_session = $session ?? '';
@@ -49,8 +49,8 @@ $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-
                 <a class="nav-btn <?= $active_tab === 'operator' ? 'active' : ''; ?>" data-tab="operator" href="./admin.php?id=operator-access">
                     <i class="fa fa-users"></i> Akses Operator
                 </a>
-                <a class="nav-btn <?= $active_tab === 'settlement-audit' ? 'active' : ''; ?>" data-tab="settlement-audit" href="./admin.php?id=settlement-audit">
-                    <i class="fa fa-clipboard"></i> Audit Settlement
+                <a class="nav-btn <?= $active_tab === 'log-audit' ? 'active' : ''; ?>" data-tab="log-audit" href="./admin.php?id=log-audit">
+                    <i class="fa fa-clipboard"></i> Log Audit
                 </a>
                 <a class="nav-btn <?= $active_tab === 'whatsapp' ? 'active' : ''; ?>" data-tab="whatsapp" href="./admin.php?id=whatsapp">
                     <i class="fa fa-whatsapp"></i> WhatsApp
@@ -119,11 +119,11 @@ $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-
             <?php endif; ?>
         </div>
 
-        <div class="view-section <?= $active_tab === 'settlement-audit' ? 'active' : ''; ?>" data-view="settlement-audit" style="display: <?= $active_tab === 'settlement-audit' ? 'block' : 'none'; ?>;">
-            <?php if ($active_tab === 'settlement-audit'): ?>
-                <?php include __DIR__ . '/settlement_audit.php'; ?>
+        <div class="view-section <?= $active_tab === 'log-audit' ? 'active' : ''; ?>" data-view="log-audit" style="display: <?= $active_tab === 'log-audit' ? 'block' : 'none'; ?>;">
+            <?php if ($active_tab === 'log-audit'): ?>
+                <?php include __DIR__ . '/log_audit.php'; ?>
             <?php else: ?>
-                <div class="admin-async" data-section="settlement-audit"></div>
+                <div class="admin-async" data-section="log-audit"></div>
             <?php endif; ?>
         </div>
 
