@@ -93,7 +93,7 @@ ErrorDocument 500 /error.php
 # Folder ini berisi script inti yang tidak boleh dipanggil langsung browser
 RedirectMatch 403 ^/include/.*$
 RedirectMatch 403 ^/process/.*$
-RedirectMatch 403 ^/system/(?!whatsapp/(?:.*\.(css|js)$|api\.php$)).*$
+RedirectMatch 403 ^/system/(?!whatsapp/(?:.*\.(css|js)$|api\.php$|webhook\.php$)).*$
 RedirectMatch 403 ^/lib/.*$
 
 # D. BLOKIR FOLDER DATA SENSITIF (CRITICAL!)
@@ -265,6 +265,11 @@ Require all denied
 
 # VIP whitelist generator (protected)
 <If "%{REQUEST_URI} =~ m#^/tools/htaccess_vip\.php$#">
+    Require all granted
+</If>
+
+# VIP whitelist sync (protected by token)
+<If "%{REQUEST_URI} =~ m#^/tools/htaccess_vip_sync\.php$#">
     Require all granted
 </If>
 

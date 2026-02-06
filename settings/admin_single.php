@@ -19,7 +19,8 @@ if (isSuperAdmin()) {
     ob_start();
     include __DIR__ . '/../tools/htaccess_vip.php';
     if (function_exists('vip_whitelist_render_form')) {
-        vip_whitelist_render_form($status ?? '', $error ?? '', $ips ?? [], $ip_names ?? [], $htaccessPath ?? '', $vip_whitelist_action);
+        $vip_render_ips = $render_ips ?? ($ips ?? []);
+        vip_whitelist_render_form($status ?? '', $error ?? '', $vip_render_ips, $ip_names ?? [], $htaccessPath ?? '', $vip_whitelist_action);
         if (!empty($status) || !empty($error) || (!empty($_POST['vip_whitelist']))) {
             $vip_popup_autoshow = true;
         }
@@ -209,6 +210,8 @@ function bindVipWhitelistPopupHandlers(){
             if (!confirm('Hapus IP ' + ip + '?')) return;
             if (removeInput) removeInput.value = ip;
             if (editInput) editInput.value = '';
+            if (nameInput) nameInput.value = '';
+            if (ipInput) ipInput.value = '';
             if (nameInput) nameInput.required = false;
             if (ipInput) ipInput.required = false;
             form.noValidate = true;

@@ -23,6 +23,9 @@ $status = '';
 $error = '';
 $ips = [];
 $ip_names = [];
+$env_vip_ips = [];
+$allow_all_if_empty = true;
+$render_ips = [];
 
 if (!empty($_SESSION['vip_whitelist_flash']) && is_array($_SESSION['vip_whitelist_flash'])) {
     $status = (string)($_SESSION['vip_whitelist_flash']['status'] ?? '');
@@ -60,8 +63,12 @@ function extract_vip_ips($content) {
     return array_keys($ips);
 }
 
-function build_setenv_lines($ips) {
+function build_setenv_lines($ips, $allowAll = false) {
     $lines = [];
+    if ($allowAll && empty($ips)) {
+        $lines[] = 'SetEnvIf Remote_Addr ".*" TAMU_VIP';
+        return $lines;
+    }
     foreach ($ips as $ip) {
         $safe = str_replace('.', '\\.', $ip);
         // Match X-Forwarded-For: ^IP($|,)
@@ -89,8 +96,8 @@ function replace_vip_block($content, $setenvLines) {
             $out[] = $line;
             continue;
         }
-        // Deteksi separator section berikutnya (===)
-        if ($inVipSection && preg_match('/^#\s*=+/', $line)) {
+        // Deteksi header section berikutnya (mis: # 5. GERBANG...)
+        if ($inVipSection && preg_match('/^#\s*5\./i', $line)) {
             foreach ($setenvLines as $l) {
                 $out[] = $l;
             }
@@ -102,6 +109,9 @@ function replace_vip_block($content, $setenvLines) {
         if ($inVipSection) {
             if (preg_match('/^SetEnvIf\s+\S+\s+"\\^/i', $line)) {
                 continue; 
+            }
+            if (preg_match('/^#\s*=+\s*$/', $line)) {
+                continue;
             }
         }
         $out[] = $line;
@@ -121,6 +131,7 @@ function replace_requireany_blocks($content, $ips) {
     $inRequireAny = false;
     $buffer = [];
     $hasVip = false;
+    $hasRequireAny = false;
 
     $buildBlock = function() use ($ips) {
         $block = [];
@@ -138,6 +149,7 @@ function replace_requireany_blocks($content, $ips) {
             $inRequireAny = true;
             $buffer = [$line];
             $hasVip = false;
+            $hasRequireAny = true;
             continue;
         }
         if ($inRequireAny) {
@@ -155,12 +167,27 @@ function replace_requireany_blocks($content, $ips) {
                 }
                 $inRequireAny = false;
                 $buffer = [];
+                $hasVip = false;
                 continue;
+            }
+
+            if ($hasVip) {
+                if (preg_match('/^\s*Require\s+(env|ip)\s+/i', $line)) {
+                    continue;
+                }
             }
             $buffer[] = $line;
             continue;
         }
         $out[] = $line;
+    }
+    if ($inRequireAny) {
+        if ($hasVip) {
+            $out = array_merge($out, $buffer);
+            $out = array_merge($out, $buildBlock());
+        } else {
+            $out = array_merge($out, $buffer);
+        }
     }
     return implode("\n", $out);
 }
@@ -171,6 +198,29 @@ if (is_file($htaccessPath)) {
     if ($content !== false) {
         $ips = extract_vip_ips($content);
     }
+}
+
+// Load env VIP whitelist (optional)
+$env = [];
+$envFile = __DIR__ . '/../include/env.php';
+if (is_file($envFile)) {
+    require $envFile;
+}
+if (isset($env) && is_array($env)) {
+    $env_whitelist = $env['security']['vip_whitelist'] ?? ($env['vip_whitelist'] ?? []);
+    $env_allow_all = $env['security']['vip_allow_all_if_empty'] ?? ($env['vip_allow_all_if_empty'] ?? null);
+    if ($env_allow_all !== null) {
+        $allow_all_if_empty = (bool)$env_allow_all;
+    }
+    if (is_string($env_whitelist)) {
+        $env_vip_ips = normalize_ip_list($env_whitelist);
+    } elseif (is_array($env_whitelist)) {
+        foreach ($env_whitelist as $v) {
+            $v = trim((string)$v);
+            if ($v !== '') $env_vip_ips[] = $v;
+        }
+    }
+    $env_vip_ips = array_values(array_unique(array_filter($env_vip_ips, 'is_valid_ip')));
 }
 
 // Database Init
@@ -194,6 +244,10 @@ try {
 if (empty($ips) && !empty($ip_names)) {
     $ips = array_keys($ip_names);
 }
+if (!empty($env_vip_ips)) {
+    $ips = array_values(array_unique(array_merge($ips, $env_vip_ips)));
+}
+$render_ips = !empty($env_vip_ips) ? array_values(array_diff($ips, $env_vip_ips)) : $ips;
 
 // Handle POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vip_whitelist'])) {
@@ -210,6 +264,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vip_whitelist'])) {
     if (!is_array($remove_ips)) $remove_ips = [];
     if ($remove_ip_single !== '' && !in_array($remove_ip_single, $remove_ips, true)) {
         $remove_ips[] = $remove_ip_single;
+    }
+    $has_remove = !empty($remove_ips);
+    if ($has_remove) {
+        if ($add_name === '' && $add_ip !== '') {
+            $add_ip = '';
+        }
+        if ($add_ip === '' && $add_name !== '') {
+            $add_name = '';
+        }
     }
 
     $final = [];
@@ -230,8 +293,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vip_whitelist'])) {
         $error = 'IP wajib diisi untuk edit.';
     }
 
-    if ($add_ip !== '') {
-        if ($add_name === '') {
+    if ($add_ip !== '' || $add_name !== '') {
+        if ($add_ip === '') {
+            $error = 'IP wajib diisi.';
+        } elseif ($add_name === '') {
             $error = 'Nama wajib diisi.';
         } elseif (!is_valid_ip($add_ip)) {
             $error = 'IP tidak valid.';
@@ -239,7 +304,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vip_whitelist'])) {
             $final[$add_ip] = $add_name;
         }
     }
+    $final_db = $final;
+    if ($error === '' && !empty($env_vip_ips)) {
+        foreach ($env_vip_ips as $env_ip) {
+            if (!is_valid_ip($env_ip)) continue;
+            if (!isset($final[$env_ip])) {
+                $final[$env_ip] = $ip_names[$env_ip] ?? 'ENV';
+            }
+        }
+    }
+
     $ips = array_keys($final);
+    $allow_all_active = $allow_all_if_empty && empty($ips);
 
     if ($error === '') {
         // Coba perbaiki permission dari sisi PHP sebelum menulis
@@ -268,7 +344,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vip_whitelist'])) {
                 @file_put_contents($htaccessPath . '.bak', $content);
                 
                 // Process logic
-                $setenvLines = build_setenv_lines($ips);
+                $setenvLines = $allow_all_active ? build_setenv_lines([], true) : build_setenv_lines($ips, false);
                 $updated = replace_vip_block($content, $setenvLines);
                 $updated = replace_requireany_blocks($updated, $ips);
                 
@@ -282,13 +358,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vip_whitelist'])) {
                         $pdo->beginTransaction();
                         $stmtUp = $pdo->prepare("INSERT INTO vip_whitelist (ip, name, updated_at) VALUES (:ip, :name, CURRENT_TIMESTAMP)
                             ON CONFLICT(ip) DO UPDATE SET name=excluded.name, updated_at=CURRENT_TIMESTAMP");
-                        foreach ($final as $ip => $name) {
+                        foreach ($final_db as $ip => $name) {
                             $stmtUp->execute([':ip' => $ip, ':name' => $name]);
                         }
-                        if (!empty($final)) {
-                            $placeholders = implode(',', array_fill(0, count($final), '?'));
+                        if (!empty($final_db)) {
+                            $placeholders = implode(',', array_fill(0, count($final_db), '?'));
                             $stmtDel = $pdo->prepare("DELETE FROM vip_whitelist WHERE ip NOT IN ($placeholders)");
-                            $stmtDel->execute(array_keys($final));
+                            $stmtDel->execute(array_keys($final_db));
                         } else {
                             $pdo->exec("DELETE FROM vip_whitelist");
                         }
@@ -317,8 +393,7 @@ function vip_whitelist_render_form($status, $error, $ips, $ip_names, $htaccessPa
         ?>
         <div>
             <div class="m-status-text" style="text-align:center; padding-top:0; margin-bottom:12px;">
-                VIP Whitelist Generator (.htaccess)<br>
-                <span style="font-size:12px;color:#9ca3af;">File: <?= htmlspecialchars($htaccessPath) ?></span>
+                VIP Whitelist<br>
             </div>
                 <input type="hidden" name="edit_ip_old" id="vip-edit-old" value="">
 
@@ -355,7 +430,7 @@ function vip_whitelist_render_form($status, $error, $ips, $ip_names, $htaccessPa
                 </div>
 
                 <div class="m-pass-divider" style="margin-top:14px;"></div>
-                <div style="font-size:12px;color:#9ca3af;font-weight:600;margin-bottom:10px; margin-top:20px;">Daftar IP VIP (aktif)</div>
+                <div style="font-size:12px; color:#9ca3af; font-weight:600; margin-bottom:10px; margin-top:20px; text-align: left;">Daftar IP VIP (aktif)</div>
 
                 <?php if (empty($ips)): ?>
                     <div class="admin-empty" style="padding:10px;">Belum ada IP VIP.</div>

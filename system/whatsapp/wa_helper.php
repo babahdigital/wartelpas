@@ -3,6 +3,122 @@
 require_once __DIR__ . '/../../include/db_helpers.php';
 require_once __DIR__ . '/../../include/db.php';
 
+function wa_table_exists(PDO $db, $table)
+{
+    $stmt = $db->prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=:t");
+    $stmt->execute([':t' => $table]);
+    return (bool)$stmt->fetchColumn();
+}
+
+function wa_migrate_whatsapp_db($targetFile)
+{
+    static $done = false;
+    if ($done) return;
+    $done = true;
+
+    if (!function_exists('get_stats_db_path')) return;
+    $legacyFile = get_stats_db_path();
+    if ($legacyFile === $targetFile || !is_file($legacyFile)) return;
+
+    try {
+        $legacy = new PDO('sqlite:' . $legacyFile);
+        $legacy->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $target = new PDO('sqlite:' . $targetFile);
+        $target->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $target->exec("PRAGMA journal_mode=WAL;");
+        $target->exec("PRAGMA busy_timeout=5000;");
+
+        // Create tables in target if not exists
+        $target->exec("CREATE TABLE IF NOT EXISTS whatsapp_recipients (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            label TEXT,
+            target TEXT NOT NULL,
+            target_type TEXT NOT NULL DEFAULT 'number',
+            active INTEGER NOT NULL DEFAULT 1,
+            receive_retur INTEGER NOT NULL DEFAULT 1,
+            receive_report INTEGER NOT NULL DEFAULT 1,
+            receive_ls INTEGER NOT NULL DEFAULT 1,
+            receive_todo INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT,
+            updated_at TEXT
+        )");
+        $target->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_whatsapp_recipients_target ON whatsapp_recipients(target)");
+        $target->exec("CREATE TABLE IF NOT EXISTS whatsapp_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            target TEXT,
+            message TEXT,
+            pdf_file TEXT,
+            status TEXT,
+            response_json TEXT,
+            request_id TEXT,
+            message_id TEXT,
+            status_detail TEXT,
+            updated_at TEXT,
+            created_at TEXT
+        )");
+        $target->exec("CREATE INDEX IF NOT EXISTS idx_whatsapp_logs_created ON whatsapp_logs(created_at)");
+
+        // Copy recipients if target empty
+        if (wa_table_exists($legacy, 'whatsapp_recipients')) {
+            $count = (int)$target->query("SELECT COUNT(*) FROM whatsapp_recipients")->fetchColumn();
+            if ($count === 0) {
+                $rows = $legacy->query("SELECT label,target,target_type,active,receive_retur,receive_report,receive_ls,receive_todo,created_at,updated_at FROM whatsapp_recipients")->fetchAll(PDO::FETCH_ASSOC);
+                if (!empty($rows)) {
+                    $stmt = $target->prepare("INSERT INTO whatsapp_recipients (label,target,target_type,active,receive_retur,receive_report,receive_ls,receive_todo,created_at,updated_at)
+                        VALUES (:label,:target,:target_type,:active,:receive_retur,:receive_report,:receive_ls,:receive_todo,:created_at,:updated_at)");
+                    foreach ($rows as $r) {
+                        $stmt->execute([
+                            ':label' => $r['label'] ?? '',
+                            ':target' => $r['target'] ?? '',
+                            ':target_type' => $r['target_type'] ?? 'number',
+                            ':active' => (int)($r['active'] ?? 1),
+                            ':receive_retur' => (int)($r['receive_retur'] ?? 1),
+                            ':receive_report' => (int)($r['receive_report'] ?? 1),
+                            ':receive_ls' => (int)($r['receive_ls'] ?? 1),
+                            ':receive_todo' => (int)($r['receive_todo'] ?? 1),
+                            ':created_at' => $r['created_at'] ?? null,
+                            ':updated_at' => $r['updated_at'] ?? null,
+                        ]);
+                    }
+                }
+            }
+        }
+
+        // Copy logs if target empty
+        if (wa_table_exists($legacy, 'whatsapp_logs')) {
+            $count = (int)$target->query("SELECT COUNT(*) FROM whatsapp_logs")->fetchColumn();
+            if ($count === 0) {
+                $rows = $legacy->query("SELECT target,message,pdf_file,status,response_json,created_at FROM whatsapp_logs")->fetchAll(PDO::FETCH_ASSOC);
+                if (!empty($rows)) {
+                    $stmt = $target->prepare("INSERT INTO whatsapp_logs (target,message,pdf_file,status,response_json,created_at)
+                        VALUES (:target,:message,:pdf_file,:status,:response_json,:created_at)");
+                    foreach ($rows as $r) {
+                        $stmt->execute([
+                            ':target' => $r['target'] ?? '',
+                            ':message' => $r['message'] ?? '',
+                            ':pdf_file' => $r['pdf_file'] ?? '',
+                            ':status' => $r['status'] ?? '',
+                            ':response_json' => $r['response_json'] ?? '',
+                            ':created_at' => $r['created_at'] ?? null,
+                        ]);
+                    }
+                }
+            }
+        }
+    } catch (Exception $e) {
+        // silent
+    }
+}
+
+function wa_get_db_file()
+{
+    static $dbFile = null;
+    if ($dbFile !== null) return $dbFile;
+    $dbFile = function_exists('get_whatsapp_db_path') ? get_whatsapp_db_path() : get_stats_db_path();
+    wa_migrate_whatsapp_db($dbFile);
+    return $dbFile;
+}
+
 function wa_get_env_config() {
     static $cache = null;
     if ($cache !== null) {
@@ -88,7 +204,7 @@ function wa_normalize_target($target, $countryCode = '62') {
 
 function wa_log_message($target, $message, $status, $responseJson = '', $pdfFile = '') {
     $root_dir = dirname(__DIR__, 2);
-    $dbFile = get_stats_db_path();
+    $dbFile = wa_get_db_file();
     try {
         $db = new PDO('sqlite:' . $dbFile);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -101,18 +217,68 @@ function wa_log_message($target, $message, $status, $responseJson = '', $pdfFile
             pdf_file TEXT,
             status TEXT,
             response_json TEXT,
+            request_id TEXT,
+            message_id TEXT,
+            status_detail TEXT,
+            updated_at TEXT,
             created_at TEXT
         )");
-        $stmt = $db->prepare("INSERT INTO whatsapp_logs (target, message, pdf_file, status, response_json, created_at)
-            VALUES (:t,:m,:p,:s,:r,:c)");
-        $stmt->execute([
-            ':t' => (string)$target,
-            ':m' => (string)$message,
-            ':p' => (string)$pdfFile,
-            ':s' => (string)$status,
-            ':r' => (string)$responseJson,
-            ':c' => date('Y-m-d H:i:s')
-        ]);
+        $cols = $db->query("PRAGMA table_info(whatsapp_logs)")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $colNames = array_map(function($c){ return $c['name'] ?? ''; }, $cols);
+        if (!in_array('request_id', $colNames, true)) {
+            $db->exec("ALTER TABLE whatsapp_logs ADD COLUMN request_id TEXT");
+        }
+        if (!in_array('message_id', $colNames, true)) {
+            $db->exec("ALTER TABLE whatsapp_logs ADD COLUMN message_id TEXT");
+        }
+        if (!in_array('status_detail', $colNames, true)) {
+            $db->exec("ALTER TABLE whatsapp_logs ADD COLUMN status_detail TEXT");
+        }
+        if (!in_array('updated_at', $colNames, true)) {
+            $db->exec("ALTER TABLE whatsapp_logs ADD COLUMN updated_at TEXT");
+        }
+
+        $resp = json_decode((string)$responseJson, true);
+        $reqId = is_array($resp) ? (string)($resp['requestid'] ?? '') : '';
+        $respTargets = is_array($resp) && isset($resp['target']) && is_array($resp['target']) ? $resp['target'] : [];
+        $respIds = is_array($resp) && isset($resp['id']) && is_array($resp['id']) ? $resp['id'] : [];
+
+        $targets = [];
+        if (!empty($respTargets)) {
+            foreach ($respTargets as $t) {
+                $t = trim((string)$t);
+                if ($t !== '') $targets[] = $t;
+            }
+        } else {
+            $parts = preg_split('/\s*,\s*/', (string)$target, -1, PREG_SPLIT_NO_EMPTY);
+            foreach ($parts as $p) {
+                $p = trim((string)$p);
+                if ($p !== '') $targets[] = $p;
+            }
+        }
+        if (empty($targets)) {
+            $targets = [(string)$target];
+        }
+
+        $stmt = $db->prepare("INSERT INTO whatsapp_logs (target, message, pdf_file, status, response_json, request_id, message_id, status_detail, updated_at, created_at)
+            VALUES (:t,:m,:p,:s,:r,:req,:mid,:sd,:u,:c)");
+
+        $now = date('Y-m-d H:i:s');
+        foreach ($targets as $idx => $t) {
+            $mid = isset($respIds[$idx]) ? (string)$respIds[$idx] : '';
+            $stmt->execute([
+                ':t' => (string)$t,
+                ':m' => (string)$message,
+                ':p' => (string)$pdfFile,
+                ':s' => (string)$status,
+                ':r' => (string)$responseJson,
+                ':req' => $reqId,
+                ':mid' => $mid,
+                ':sd' => '',
+                ':u' => $now,
+                ':c' => $now
+            ]);
+        }
     } catch (Exception $e) {
         // silent
     }
@@ -120,7 +286,7 @@ function wa_log_message($target, $message, $status, $responseJson = '', $pdfFile
 
 function wa_get_active_recipients($category = '') {
     $root_dir = dirname(__DIR__, 2);
-    $dbFile = get_stats_db_path();
+    $dbFile = wa_get_db_file();
     $targets = [];
     try {
         $db = new PDO('sqlite:' . $dbFile);
@@ -177,7 +343,7 @@ function wa_upsert_recipient($label, $target, $targetType = 'number')
     $target = wa_normalize_target_single($target, $country);
     if ($target === '') return false;
 
-    $dbFile = get_stats_db_path();
+    $dbFile = wa_get_db_file();
     try {
         $db = new PDO('sqlite:' . $dbFile);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -242,7 +408,7 @@ function wa_delete_recipient($target = '', $label = '')
     $label = trim((string)$label);
     if ($target === '' && $label === '') return false;
 
-    $dbFile = get_stats_db_path();
+    $dbFile = wa_get_db_file();
     try {
         $db = new PDO('sqlite:' . $dbFile);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -283,6 +449,70 @@ function wa_send_template_message($templateId, array $vars = [], $target = '')
     return wa_send_text($message, $target, '');
 }
 
+function wa_parse_send_response($resp)
+{
+    $status = 'success';
+    $message = 'Sent';
+    $json = json_decode((string)$resp, true);
+    if (is_array($json)) {
+        $detail = strtolower((string)($json['detail'] ?? ''));
+        $process = strtolower((string)($json['process'] ?? ''));
+        $error = strtolower((string)($json['error'] ?? ''));
+        $statusFlag = $json['status'] ?? null;
+
+        if ($statusFlag === false || $error !== '') {
+            $status = 'failed';
+            $message = $error !== '' ? $error : 'Failed';
+        } elseif (strpos($detail, 'queue') !== false || strpos($detail, 'pending') !== false || $process === 'pending') {
+            $status = 'success';
+            $message = 'Sent';
+        }
+    }
+    return ['status' => $status, 'message' => $message];
+}
+
+function wa_validate_number_remote($target, $country, $token)
+{
+    if ($target === '' || $token === '') return [false, 'Token WhatsApp belum diisi.', 'error'];
+    if (!function_exists('curl_init')) return [false, 'cURL tidak tersedia.', 'error'];
+
+    $endpoint = 'https://api.fonnte.com/validate';
+    $postFields = [
+        'target' => (string)$target,
+        'countryCode' => (string)$country,
+    ];
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $endpoint);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Authorization: ' . $token
+    ]);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+    $resp = curl_exec($ch);
+    $err = curl_error($ch);
+    $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($resp === false || $err !== '' || $code >= 400) {
+        $errMsg = $err !== '' ? $err : ('HTTP ' . $code);
+        return [false, $errMsg, 'error'];
+    }
+
+    $json = json_decode((string)$resp, true);
+    if (!is_array($json) || empty($json['status'])) {
+        return [false, 'Respon validate tidak valid.', 'error'];
+    }
+    $registered = $json['registered'] ?? [];
+    if (is_array($registered) && in_array((string)$target, $registered, true)) {
+        return [true, 'OK', 'ok'];
+    }
+
+    return [false, 'Nomor tidak terdaftar di WhatsApp.', 'invalid'];
+}
+
 function wa_send_text($message, $target = '', $category = '') {
     $cfg = wa_get_env_config();
     $endpoint = trim((string)($cfg['endpoint_send'] ?? 'https://api.fonnte.com/send'));
@@ -314,6 +544,19 @@ function wa_send_text($message, $target = '', $category = '') {
         }
     }
     $target = wa_normalize_target($target, $country);
+
+    // Validate single-number targets to avoid false queued status
+    $validate_warning = '';
+    if ($target !== '' && strpos($target, ',') === false && stripos($target, '@g.us') === false) {
+        [$okValidate, $errValidate, $validateType] = wa_validate_number_remote($target, $country, $token);
+        if (!$okValidate && $validateType === 'invalid') {
+            wa_log_message($target, $message, 'invalid', $errValidate);
+            return ['ok' => false, 'message' => $errValidate];
+        }
+        if (!$okValidate && $validateType === 'error') {
+            $validate_warning = $errValidate;
+        }
+    }
 
     if ($endpoint === '' || $token === '' || $target === '') {
         wa_log_message($target, $message, 'failed: config', 'missing endpoint/token/target');
@@ -348,12 +591,15 @@ function wa_send_text($message, $target = '', $category = '') {
 
     if ($resp === false || $err !== '' || $code >= 400) {
         $errMsg = $err !== '' ? $err : ('HTTP ' . $code);
-        wa_log_message($target, $message, 'failed', $errMsg . ' | ' . (string)$resp);
+        $detail = $validate_warning !== '' ? ('validate: ' . $validate_warning . ' | ') : '';
+        wa_log_message($target, $message, 'failed', $detail . $errMsg . ' | ' . (string)$resp);
         return ['ok' => false, 'message' => $errMsg];
     }
 
-    wa_log_message($target, $message, 'success', (string)$resp);
-    return ['ok' => true, 'message' => 'Sent', 'response' => $resp];
+    $parsed = wa_parse_send_response($resp);
+    $detail = $validate_warning !== '' ? ('validate: ' . $validate_warning . ' | ') : '';
+    wa_log_message($target, $message, $parsed['status'], $detail . (string)$resp);
+    return ['ok' => $parsed['status'] !== 'failed', 'message' => $parsed['message'], 'response' => $resp];
 }
 
 function wa_send_file($message, $filePath, $target = '', $category = 'report') {
@@ -436,6 +682,7 @@ function wa_send_file($message, $filePath, $target = '', $category = 'report') {
         return ['ok' => false, 'message' => $errMsg];
     }
 
-    wa_log_message($target, $message, 'success', (string)$resp, basename($filePath));
-    return ['ok' => true, 'message' => 'Sent', 'response' => $resp];
+    $parsed = wa_parse_send_response($resp);
+    wa_log_message($target, $message, $parsed['status'], (string)$resp, basename($filePath));
+    return ['ok' => $parsed['status'] !== 'failed', 'message' => $parsed['message'], 'response' => $resp];
 }

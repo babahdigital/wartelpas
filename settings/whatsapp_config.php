@@ -23,7 +23,7 @@ $wa_recipients = [];
 $wa_logs = [];
 
 try {
-    $stats_db_path = get_stats_db_path();
+    $stats_db_path = function_exists('get_whatsapp_db_path') ? get_whatsapp_db_path() : get_stats_db_path();
     if ($stats_db_path !== '') {
         $stats_db = new PDO('sqlite:' . $stats_db_path);
         $stats_db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -58,6 +58,10 @@ try {
             pdf_file TEXT,
             status TEXT,
             response_json TEXT,
+            request_id TEXT,
+            message_id TEXT,
+            status_detail TEXT,
+            updated_at TEXT,
             created_at TEXT
         )");
         $stats_db->exec("CREATE INDEX IF NOT EXISTS idx_whatsapp_logs_created ON whatsapp_logs(created_at)");
@@ -455,7 +459,9 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'test_send') {
         if (function_exists('wa_send_text')) {
             $res = wa_send_text($test_message, $test_target, 'test');
             if (!empty($res['ok'])) {
-                $save_message = 'Test WhatsApp terkirim.';
+                $save_message = (isset($res['message']) && strtolower((string)$res['message']) === 'queued')
+                    ? 'Test WhatsApp masuk antrian (pending).'
+                    : 'Test WhatsApp terkirim.';
                 $save_type = 'success';
             } else {
                 $save_message = 'Test WhatsApp gagal: ' . ($res['message'] ?? 'error');
@@ -552,7 +558,9 @@ if (isset($_POST['wa_action']) && $_POST['wa_action'] === 'test_template') {
                 $send_category = $category_key !== '' ? $category_key : 'test';
                 $res = wa_send_text($message, '', $send_category);
                 if (!empty($res['ok'])) {
-                    $save_message = 'Test WhatsApp terkirim.';
+                    $save_message = (isset($res['message']) && strtolower((string)$res['message']) === 'queued')
+                        ? 'Test WhatsApp masuk antrian (pending).'
+                        : 'Test WhatsApp terkirim.';
                     $save_type = 'success';
                 } else {
                     $save_message = 'Test WhatsApp gagal: ' . ($res['message'] ?? 'error');
@@ -661,7 +669,7 @@ if ($stats_db) {
     }
     try {
         $limit = $wa_log_limit > 0 ? $wa_log_limit : 50;
-        $stmtLog = $stats_db->prepare("SELECT id, target, message, pdf_file, status, created_at FROM whatsapp_logs ORDER BY id DESC LIMIT :lim");
+        $stmtLog = $stats_db->prepare("SELECT id, target, message, pdf_file, status, status_detail, created_at FROM whatsapp_logs ORDER BY id DESC LIMIT :lim");
         $stmtLog->bindValue(':lim', $limit, PDO::PARAM_INT);
         $stmtLog->execute();
         $wa_logs = $stmtLog->fetchAll(PDO::FETCH_ASSOC) ?: [];
@@ -969,7 +977,11 @@ foreach ($wa_recipients as $rec) {
                                             $msg = wa_format_log_message($raw_msg);
                                             $msg_class = wa_message_class($raw_msg);
                                             $status = strtolower((string)($log['status'] ?? ''));
-                                            $status_badge = strpos($status, 'success') !== false ? 'wa-badge wa-badge-green' : (strpos($status, 'fail') !== false || strpos($status, 'error') !== false ? 'wa-badge wa-badge-red' : 'wa-badge wa-badge-blue');
+                                            $status_badge = (strpos($status, 'success') !== false || strpos($status, 'sent') !== false || strpos($status, 'delivered') !== false)
+                                                ? 'wa-badge wa-badge-green'
+                                                : (strpos($status, 'queued') !== false || strpos($status, 'pending') !== false
+                                                    ? 'wa-badge wa-badge-blue'
+                                                    : (strpos($status, 'fail') !== false || strpos($status, 'error') !== false ? 'wa-badge wa-badge-red' : 'wa-badge wa-badge-blue'));
                                             $created = (string)($log['created_at'] ?? '');
                                             $ts = $created !== '' ? strtotime($created) : false;
                                             $date = $ts ? date('d-m-Y', $ts) : '-';
@@ -997,7 +1009,12 @@ foreach ($wa_recipients as $rec) {
                                                     <?php endif; ?>
                                                 </div>
                                             </td>
-                                            <td><span class="<?= $status_badge; ?>"><?= htmlspecialchars($log['status'] ?? '-'); ?></span></td>
+                                            <?php $status_detail = trim((string)($log['status_detail'] ?? '')); ?>
+                                            <td>
+                                                <span class="<?= $status_badge; ?>"<?= $status_detail !== '' ? ' title="' . htmlspecialchars($status_detail) . '"' : ''; ?>>
+                                                    <?= htmlspecialchars($log['status'] ?? '-'); ?>
+                                                </span>
+                                            </td>
                                             <td class="wa-log-message <?= $msg_class; ?>" title="<?= htmlspecialchars($msg); ?>"><?= htmlspecialchars($msg); ?></td>
                                             <td><span class="<?= $file_badge; ?>"><?= $has_file ? 'PDF' : 'Text'; ?></span></td>
                                         </tr>

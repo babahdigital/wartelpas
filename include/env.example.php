@@ -6,6 +6,8 @@ $env = [
     'system' => [
         'db_file' => 'db_data/babahdigital_main.db',
         'app_db_file' => 'db_data/babahdigital_app.db',
+        // Optional: use a separate DB for WhatsApp logs/recipients
+        // 'whatsapp_db_file' => 'db_data/babahdigital_app.db',
         'base_url' => '',
         'ghost_min_bytes' => 0,
     ],
@@ -27,6 +29,11 @@ $env = [
         'tools' => ['token' => 'CHANGE_ME'],
         'live_ingest' => ['token' => 'CHANGE_ME'],
         'usage_ingest' => ['token' => 'CHANGE_ME'],
+        // Optional: WhatsApp webhook token
+        // 'whatsapp_webhook_token' => 'CHANGE_ME',
+        // Optional: VIP whitelist defaults
+        // 'vip_whitelist' => ['10.0.0.5'],
+        // 'vip_allow_all_if_empty' => true,
     ],
     'pricing' => [
         'price_10' => 0,

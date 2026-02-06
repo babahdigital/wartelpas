@@ -11,7 +11,7 @@ if (!empty($_GET['error']) || isset($_GET['saved'])) {
     $flashMap = [
         'empty-username' => ['danger', 'Gagal menyimpan. Username tidak boleh kosong.'],
         'forbidden' => ['danger', 'Akses ditolak. Hubungi Superadmin.'],
-        'invalid-phone' => ['danger', 'Nomor telepon harus 08xxxxxxxx dan 10-13 digit.'],
+        'invalid-phone' => ['danger', 'Nomor WA harus diawali 08 atau 62 dan 10-14 digit.'],
         'duplicate-operator' => ['danger', 'Username operator sudah digunakan.'],
         'duplicate-admin' => ['danger', 'Username admin sudah digunakan.'],
         'invalid-username' => ['danger', 'Username hanya huruf kecil dan angka, tanpa spasi/simbol.'],
@@ -241,19 +241,11 @@ $operator_defaults = [
     function normalizePhoneInput(el) {
         if (!el) return;
         var v = (el.value || '').replace(/\D/g, '');
-        if (v.indexOf('62') === 0) {
-            v = '0' + v.slice(2);
+        if (!v) {
+            el.value = '';
+            return;
         }
-        if (v.indexOf('8') === 0) {
-            v = '0' + v;
-        }
-        if (v.indexOf('0') !== 0) {
-            v = '0' + v;
-        }
-        if (v.length >= 2 && v.slice(0, 2) !== '08') {
-            v = '08' + v.slice(2);
-        }
-        el.value = v.slice(0, 13);
+        el.value = v.slice(0, 14);
     }
 
     function attachPhoneInput(id) {
@@ -262,9 +254,8 @@ $operator_defaults = [
         el.setAttribute('inputmode', 'numeric');
         el.setAttribute('pattern', '[0-9]*');
         el.setAttribute('minlength', '10');
-        el.setAttribute('maxlength', '13');
+        el.setAttribute('maxlength', '14');
         el.addEventListener('input', function() { normalizePhoneInput(el); });
-        normalizePhoneInput(el);
     }
 
     function clearOperatorSaveFlag() {
@@ -339,7 +330,7 @@ $operator_defaults = [
                     '<div class="col-6">' +
                         '<div class="m-pass-row">' +
                             '<label class="m-pass-label">Nomor Telepon</label>' +
-                            '<input id="adm-phone" type="text" class="m-pass-input" value="' + escapeHtml(data.phone || '') + '" placeholder="08xxxxxxxxxx" />' +
+                            '<input id="adm-phone" type="text" class="m-pass-input" value="' + escapeHtml(data.phone || '') + '" placeholder="Masukan Nomer WA Aktif" />' +
                         '</div>' +
                     '</div>' +
                 '</div>' +
@@ -466,7 +457,7 @@ $operator_defaults = [
                     '<div class="col-6">' +
                         '<div class="m-pass-row">' +
                             '<label class="m-pass-label">Nomor Telepon</label>' +
-                            '<input id="op-phone" type="text" class="m-pass-input" value="' + escapeHtml(data.phone || '') + '" placeholder="08xxxxxxxxxx" />' +
+                            '<input id="op-phone" type="text" class="m-pass-input" value="' + escapeHtml(data.phone || '') + '" placeholder="Masukan Nomer WA Aktif" />' +
                         '</div>' +
                     '</div>' +
                 '</div>' +

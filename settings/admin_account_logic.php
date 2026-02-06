@@ -96,6 +96,19 @@ function account_actor_context()
     return [$display !== '' ? $display : $user, $role];
 }
 
+function is_valid_whatsapp_phone($raw)
+{
+    $digits = preg_replace('/\D+/', '', (string)$raw);
+    if ($digits === '') return false;
+    if (strpos($digits, '0') === 0) {
+        return strlen($digits) >= 10 && strlen($digits) <= 14;
+    }
+    if (strpos($digits, '62') === 0) {
+        return strlen($digits) >= 11 && strlen($digits) <= 14;
+    }
+    return false;
+}
+
 if ($admin_action === 'delete' && $admin_id !== '' && $admin_id !== 'new') {
     $del_id = (int)$admin_id;
     $adminRow = app_db_get_admin_by_id($del_id);
@@ -340,16 +353,42 @@ if ($op_action === 'reset' && $op_id !== '' && $op_id !== 'new') {
 if ($save_admin) {
     $audit_admin_action = '';
     $audit_admin_context = [];
-        if ($admin_phone_raw !== '' && !is_valid_phone_08($admin_phone_raw)) {
+        if ($admin_phone_raw !== '' && !is_valid_whatsapp_phone($admin_phone_raw)) {
             if ($isAjax) {
                 http_response_code(400);
                 header('Content-Type: application/json');
-                echo json_encode(['ok' => false, 'message' => 'Nomor WA admin harus 08xxxxxxxx dan 10-13 digit.']);
+                echo json_encode(['ok' => false, 'message' => 'Nomor WA admin harus diawali 08 atau 62 dan 10-14 digit.']);
                 exit;
             }
             header('Location: ./admin.php?id=operator-access&error=invalid-phone');
             exit;
         }
+    if ($admin_phone_raw === '') {
+        if ($isAjax) {
+            http_response_code(400);
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'message' => 'Nomor WA admin wajib diisi.']);
+            exit;
+        }
+        header('Location: ./admin.php?id=operator-access&error=empty-phone');
+        exit;
+    }
+    if ($admin_phone !== '') {
+        $wa_cfg = function_exists('wa_get_env_config') ? wa_get_env_config() : [];
+        $wa_token = trim((string)($wa_cfg['token'] ?? ''));
+        [$okValidate, $errValidate, $errType] = array_pad(function_exists('wa_validate_number_remote') ? wa_validate_number_remote($admin_phone, '62', $wa_token) : [false, 'WA helper tidak tersedia.', 'error'], 3, null);
+        if (!$okValidate) {
+            if ($isAjax) {
+                http_response_code(400);
+                header('Content-Type: application/json');
+                echo json_encode(['ok' => false, 'message' => $errValidate ?: 'Nomor WA admin tidak aktif.']);
+                exit;
+            }
+            $_SESSION['operator_access_flash'] = ['danger', $errValidate ?: 'Nomor WA admin tidak aktif.'];
+            header('Location: ./admin.php?id=operator-access');
+            exit;
+        }
+    }
     $admin_user = strtolower($admin_user);
     if (!is_valid_simple_username($admin_user)) {
         if ($isAjax) {
@@ -483,15 +522,41 @@ if ($save_admin) {
 if ($save_operator) {
     $audit_operator_action = '';
     $audit_operator_context = [];
-    if ($op_phone_raw !== '' && !is_valid_phone_08($op_phone_raw)) {
+    if ($op_phone_raw !== '' && !is_valid_whatsapp_phone($op_phone_raw)) {
         if ($isAjax) {
             http_response_code(400);
             header('Content-Type: application/json');
-            echo json_encode(['ok' => false, 'message' => 'Nomor WA operator harus 08xxxxxxxx dan 10-13 digit.']);
+            echo json_encode(['ok' => false, 'message' => 'Nomor WA operator harus diawali 08 atau 62 dan 10-14 digit.']);
             exit;
         }
         header('Location: ./admin.php?id=operator-access&error=invalid-phone');
         exit;
+    }
+    if ($op_phone_raw === '') {
+        if ($isAjax) {
+            http_response_code(400);
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'message' => 'Nomor WA operator wajib diisi.']);
+            exit;
+        }
+        header('Location: ./admin.php?id=operator-access&error=empty-phone');
+        exit;
+    }
+    if ($op_phone !== '') {
+        $wa_cfg = function_exists('wa_get_env_config') ? wa_get_env_config() : [];
+        $wa_token = trim((string)($wa_cfg['token'] ?? ''));
+        [$okValidate, $errValidate, $errType] = array_pad(function_exists('wa_validate_number_remote') ? wa_validate_number_remote($op_phone, '62', $wa_token) : [false, 'WA helper tidak tersedia.', 'error'], 3, null);
+        if (!$okValidate) {
+            if ($isAjax) {
+                http_response_code(400);
+                header('Content-Type: application/json');
+                echo json_encode(['ok' => false, 'message' => $errValidate ?: 'Nomor WA operator tidak aktif.']);
+                exit;
+            }
+            $_SESSION['operator_access_flash'] = ['danger', $errValidate ?: 'Nomor WA operator tidak aktif.'];
+            header('Location: ./admin.php?id=operator-access');
+            exit;
+        }
     }
     if ($sopuser !== '' && !is_valid_simple_username($sopuser)) {
         if ($isAjax) {

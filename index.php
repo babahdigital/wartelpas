@@ -23,6 +23,18 @@ if (!empty($session) && strpos($session, '~') !== false) {
   $session = explode('~', $session)[0];
 }
 
+// VIP guard: block immediately when IP not whitelisted
+$vipEnv = getenv('TAMU_VIP');
+if ($vipEnv === false || $vipEnv === '') {
+  $vipEnv = $_SERVER['TAMU_VIP'] ?? '';
+}
+if ($vipEnv === '' || $vipEnv === false) {
+  http_response_code(403);
+  $_GET['code'] = 403;
+  include __DIR__ . '/error.php';
+  exit;
+}
+
 // load config
 include('./include/config.php'); 
 

@@ -68,6 +68,20 @@ if ($id === 'settlement-audit') {
   $id = 'log-audit';
 }
 
+// VIP guard: block immediately when IP not whitelisted (including login)
+if (!in_array($id, array('logout'), true)) {
+  $vipEnv = getenv('TAMU_VIP');
+  if ($vipEnv === false || $vipEnv === '') {
+    $vipEnv = $_SERVER['TAMU_VIP'] ?? '';
+  }
+  if ($vipEnv === '' || $vipEnv === false) {
+    http_response_code(403);
+    $_GET['code'] = 403;
+    include __DIR__ . '/error.php';
+    exit;
+  }
+}
+
 if ($id === 'settings' && !empty($session) && strpos($session, 'new-') === 0) {
   ini_set('display_errors', '1');
   ini_set('display_startup_errors', '1');

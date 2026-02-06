@@ -11,7 +11,7 @@ $session_id = $_GET['session'] ?? '';
 $session_qs = $session_id !== '' ? '&session=' . urlencode($session_id) : '';
 $config = include __DIR__ . '/config.php';
 require_once __DIR__ . '/../../include/db_helpers.php';
-$dbFile = $config['db_file'] ?? get_stats_db_path();
+$dbFile = $config['db_file'] ?? (function_exists('get_whatsapp_db_path') ? get_whatsapp_db_path() : get_stats_db_path());
 $pdf_dir = $config['pdf_dir'] ?? (dirname(__DIR__) . '/pdf');
 $log_limit = (int)($config['log_limit'] ?? 50);
 $timezone = $config['timezone'] ?? '';
@@ -48,6 +48,10 @@ try {
         pdf_file TEXT,
         status TEXT,
         response_json TEXT,
+        request_id TEXT,
+        message_id TEXT,
+        status_detail TEXT,
+        updated_at TEXT,
         created_at TEXT
     )");
     $db->exec("CREATE INDEX IF NOT EXISTS idx_whatsapp_logs_created ON whatsapp_logs(created_at)");

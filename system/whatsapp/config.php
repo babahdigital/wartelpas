@@ -4,7 +4,7 @@ require_once __DIR__ . '/../../include/db_helpers.php';
 require_once __DIR__ . '/../../include/db.php';
 
 $root_dir = dirname(__DIR__, 2);
-$dbFile = get_stats_db_path();
+$dbFile = function_exists('get_whatsapp_db_path') ? get_whatsapp_db_path() : get_stats_db_path();
 $wa_env = app_db_get_whatsapp_config();
 
 return [
