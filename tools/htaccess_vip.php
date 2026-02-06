@@ -355,7 +355,7 @@ function vip_whitelist_render_form($status, $error, $ips, $ip_names, $htaccessPa
                 </div>
 
                 <div class="m-pass-divider" style="margin-top:14px;"></div>
-                <div style="font-size:12px;color:#9ca3af;font-weight:600;margin-bottom:8px;">Daftar IP VIP (aktif)</div>
+                <div style="font-size:12px;color:#9ca3af;font-weight:600;margin-bottom:10px; margin-top:20px;">Daftar IP VIP (aktif)</div>
 
                 <?php if (empty($ips)): ?>
                     <div class="admin-empty" style="padding:10px;">Belum ada IP VIP.</div>
