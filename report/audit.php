@@ -202,6 +202,44 @@ if (file_exists($dbFile)) {
             $auditDateParam[':d'] = $year . '%';
         }
 
+        $retur_ref_users = [];
+        $retur_filter_params = [];
+        $retur_filter_sh = '';
+        $retur_filter_ls = '';
+        $retur_filter_lh = '';
+        try {
+            if (table_exists($db, 'sales_history')) {
+                $stmtRef = $db->prepare("SELECT comment FROM sales_history WHERE $dateFilter AND instr(lower(COALESCE(comment,'')), 'retur ref') > 0");
+                foreach ($dateParam as $k => $v) $stmtRef->bindValue($k, $v);
+                $stmtRef->execute();
+                foreach ($stmtRef->fetchAll(PDO::FETCH_COLUMN, 0) as $cmt) {
+                    $ref_user = extract_retur_user_from_ref($cmt);
+                    if ($ref_user !== '') $retur_ref_users[strtolower($ref_user)] = true;
+                }
+            }
+            if (table_exists($db, 'live_sales')) {
+                $stmtRef = $db->prepare("SELECT comment FROM live_sales WHERE sync_status='pending' AND $dateFilter AND instr(lower(COALESCE(comment,'')), 'retur ref') > 0");
+                foreach ($dateParam as $k => $v) $stmtRef->bindValue($k, $v);
+                $stmtRef->execute();
+                foreach ($stmtRef->fetchAll(PDO::FETCH_COLUMN, 0) as $cmt) {
+                    $ref_user = extract_retur_user_from_ref($cmt);
+                    if ($ref_user !== '') $retur_ref_users[strtolower($ref_user)] = true;
+                }
+            }
+        } catch (Exception $e) {}
+        if (!empty($retur_ref_users)) {
+            $idx = 0;
+            foreach (array_keys($retur_ref_users) as $ref_user) {
+                $ph = ':retur' . $idx;
+                $retur_filter_params[$ph] = $ref_user;
+                $idx++;
+            }
+            $in = implode(',', array_keys($retur_filter_params));
+            $retur_filter_sh = " AND sh.username NOT IN ($in)";
+            $retur_filter_ls = " AND ls.username NOT IN ($in)";
+            $retur_filter_lh = " AND lh.username NOT IN ($in)";
+        }
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'rebuild_audit_expected') {
             $token_ok = isset($_POST['audit_csrf']) && hash_equals($audit_csrf, (string)$_POST['audit_csrf']);
             if (!$token_ok) {
@@ -251,9 +289,11 @@ if (file_exists($dbFile)) {
                                         WHERE $dateFilter
                                             AND instr(lower(COALESCE(sh.comment,'')), 'vip') = 0
                                             AND instr(lower(COALESCE(lh.raw_comment,'')), 'vip') = 0
+                                            $retur_filter_sh
                 ) t";
             $stmt = $db->prepare($sumSql);
             foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
+            foreach ($retur_filter_params as $k => $v) $stmt->bindValue($k, $v);
             $stmt->execute();
             $sumRow = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
             $raw_gross = (int)($sumRow['gross_sum'] ?? 0);
@@ -293,10 +333,12 @@ if (file_exists($dbFile)) {
                             OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'retur') > 0
                             OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'invalid') > 0
                         )
-                        $lhNotExists";
+                        $lhNotExists
+                        $retur_filter_lh";
                 $stmt = $db->prepare($lhSql);
                 foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
                 $stmt->bindValue(':d_lh', $filter_date);
+                foreach ($retur_filter_params as $k => $v) $stmt->bindValue($k, $v);
                 $stmt->execute();
                 $lhRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -342,9 +384,10 @@ if (file_exists($dbFile)) {
         }
 
         if (table_exists($db, 'live_sales')) {
-            $pendingSql = "SELECT COUNT(*) FROM live_sales WHERE sync_status='pending' AND $dateFilter AND instr(lower(COALESCE(comment,'')), 'vip') = 0";
+            $pendingSql = "SELECT COUNT(*) FROM live_sales WHERE sync_status='pending' AND $dateFilter AND instr(lower(COALESCE(comment,'')), 'vip') = 0 $retur_filter_ls";
             $stmt = $db->prepare($pendingSql);
             foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
+            foreach ($retur_filter_params as $k => $v) $stmt->bindValue($k, $v);
             $stmt->execute();
             $sales_summary['pending'] = (int)($stmt->fetchColumn() ?: 0);
 
@@ -379,9 +422,11 @@ if (file_exists($dbFile)) {
                                         WHERE ls.sync_status='pending' AND $dateFilter
                                             AND instr(lower(COALESCE(ls.comment,'')), 'vip') = 0
                                             AND instr(lower(COALESCE(lh2.raw_comment,'')), 'vip') = 0
+                                            $retur_filter_ls
                 ) t";
             $stmt = $db->prepare($pendingSumSql);
             foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
+            foreach ($retur_filter_params as $k => $v) $stmt->bindValue($k, $v);
             $stmt->execute();
             $p = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
             $raw_gross = (int)($p['gross_sum'] ?? 0);
