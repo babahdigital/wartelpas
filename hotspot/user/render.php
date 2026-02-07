@@ -132,7 +132,9 @@
               <select name="status" id="status-filter" class="custom-select-solid mid-el" onchange="this.form.submit()" style="flex: 0 0 220px;">
                 <option value="all" <?=($req_status=='all'?'selected':'')?>>Status: Semua</option>
                 <option value="ready" <?=($req_status=='ready'?'selected':'')?>>🟢 Voucher</option>
+                <?php if (!empty($can_vip_voucher)): ?>
                 <option value="vip" <?=($req_status=='vip'?'selected':'')?>>🟡 Pengelola</option>
+                <?php endif; ?>
                 <option value="online" <?=($req_status=='online'?'selected':'')?>>🔵 Online</option>
                 <option value="used" <?=($req_status=='used'?'selected':'')?>>⚪ Terpakai</option>
                 <option value="used_warn" <?=($req_status=='used_warn'?'selected':'')?>>🟡 Terpakai (Perlu Cek)</option>
@@ -189,7 +191,7 @@
             $status_label = $status_labels[$req_status] ?? '';
             $can_print_block = ($req_comm != '' && $req_status === 'ready');
             $can_print_status = ($req_comm != '' && $req_status === 'retur');
-            $can_print_vip_code = ($req_status === 'vip');
+            $can_print_vip_code = ($req_status === 'vip') && !empty($can_vip_voucher);
             $can_print_used = ($req_status === 'used');
             $can_print_online = ($req_status === 'online');
             $can_print_rusak = ($req_status === 'rusak');
@@ -271,7 +273,7 @@
                 </button>
               <?php endif; ?>
             <?php endif; ?>
-            <?php if ($req_comm == '' && ($can_print_list || $can_print_vip_code)): ?>
+              <?php if ($req_comm == '' && ($can_print_list || $can_print_vip_code)): ?>
               <?php
                 $vip_code_url = '';
                 if ($can_print_vip_code) {
@@ -473,13 +475,17 @@
                             $vip_confirm = addslashes('Tetapkan ' . $u['name'] . ' sebagai Pengelola?');
                             $vip_onclick = $vip_disabled ? '' : "actionRequest('" . $vip_action_url . "','" . $vip_confirm . "')";
                           ?>
+                          <?php if (!empty($can_vip_voucher)): ?>
                           <button type="button" class="btn-act btn-act-info" <?= $vip_disabled ? 'disabled style="opacity:.45;filter:grayscale(1);cursor:not-allowed;"' : '' ?> onclick="<?= htmlspecialchars($vip_onclick, ENT_QUOTES) ?>" title="<?= htmlspecialchars($vip_title, ENT_QUOTES) ?>"><i class="fa fa-star"></i></button>
+                          <?php endif; ?>
                           <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=disable&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Disable Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Disable"><i class="fa fa-ban"></i></button>
                         <?php elseif ($is_vip): ?>
                           <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
                           <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>&download=1&img=1','_blank')" title="Download Voucher (PNG)"><i class="fa fa-download"></i></button>
+                          <?php if (!empty($can_vip_voucher)): ?>
                           <button type="button" class="btn-act btn-act-warning" onclick="actionRequest('./?hotspot=users&action=unvip&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Keluarkan <?= htmlspecialchars($u['name']) ?> dari Pengelola?')" title="Batalkan Pengelola"><i class="fa fa-star-o"></i></button>
+                          <?php endif; ?>
                         <?php elseif ($can_mark_rusak && $can_mark_rusak_action): ?>
                           <button type="button" class="btn-act btn-act-invalid" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'], ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'], ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'], ENT_QUOTES) ?>" data-login="<?= htmlspecialchars($u['login_time'], ENT_QUOTES) ?>" data-logout="<?= htmlspecialchars($u['logout_time'], ENT_QUOTES) ?>" data-bytes="<?= (int)$u['bytes'] ?>" data-uptime="<?= htmlspecialchars($u['uptime'], ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'], ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" onclick="actionRequestRusak(this,'./?hotspot=users&action=invalid&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','SET RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rusak"><i class="fa fa-ban"></i></button>
                         <?php endif; ?>

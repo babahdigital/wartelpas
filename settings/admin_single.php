@@ -84,7 +84,6 @@ $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-
 
         <div style="display: flex; align-items: center; gap: 12px;">
             <span class="badge" data-session-badge>Sesi: <?= $session_label; ?></span>
-            <span class="badge" title="Waktu Saat Ini"><i class="fa fa-clock-o"></i> <span id="timer_val">--:--</span></span>
 
             <div style="display:flex; gap:8px;">
                 <a class="btn-action btn-outline" style="font-size: 11px; padding: 6px 10px;" data-no-ajax="1" href="<?= $active_session !== '' ? './?session=' . htmlspecialchars($active_session) : './'; ?>">

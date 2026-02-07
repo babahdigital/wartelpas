@@ -51,6 +51,8 @@ $perm_delete_block_full = !empty($_POST['access_delete_block_full']);
 $perm_mark_rusak = !empty($_POST['access_mark_rusak']);
 $perm_retur_voucher = !empty($_POST['access_retur_voucher']);
 $perm_retur_reopen = !empty($_POST['access_retur_reopen']);
+$perm_ann_manage = !empty($_POST['access_ann_manage']) || !empty($_POST['access_popup_manage']);
+$perm_vip_voucher = !empty($_POST['access_vip_voucher']);
 $perm_audit_manual = !empty($_POST['access_audit_manual']);
 $perm_todo_ack = !empty($_POST['access_todo_ack']);
 $perm_reset_settlement = !empty($_POST['access_reset_settlement']);
@@ -623,6 +625,8 @@ if ($save_operator) {
             'mark_rusak' => $perm_mark_rusak,
             'retur_voucher' => $perm_retur_voucher,
             'retur_reopen' => $perm_retur_reopen,
+            'ann_manage' => $perm_ann_manage,
+            'vip_voucher' => $perm_vip_voucher,
             'audit_manual' => $perm_audit_manual,
             'todo_ack' => $perm_todo_ack,
             'reset_settlement' => $perm_reset_settlement,
@@ -641,6 +645,8 @@ if ($save_operator) {
                 'mark_rusak' => $perm_mark_rusak ? 1 : 0,
                 'retur_voucher' => $perm_retur_voucher ? 1 : 0,
                 'retur_reopen' => $perm_retur_reopen ? 1 : 0,
+                'ann_manage' => $perm_ann_manage ? 1 : 0,
+                'vip_voucher' => $perm_vip_voucher ? 1 : 0,
                 'audit_manual' => $perm_audit_manual ? 1 : 0,
                 'todo_ack' => $perm_todo_ack ? 1 : 0,
                 'reset_settlement' => $perm_reset_settlement ? 1 : 0,

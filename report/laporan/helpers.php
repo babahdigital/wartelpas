@@ -178,7 +178,7 @@ function format_customer_name($name) {
 function is_vip_comment($comment) {
     $c = trim((string)$comment);
     if ($c === '') return false;
-    return (bool)preg_match('/\bvip\b|\bpengelola\b/i', $c);
+    return (bool)preg_match('/(^|\|\s*)(VIP|PENGELOLA)(\s*(\||$))/i', $c);
 }
 
 function normalize_block_name($blok_name, $comment = '') {

@@ -185,7 +185,7 @@ if (!function_exists('is_vip_comment')) {
   function is_vip_comment($comment) {
     $c = trim((string)$comment);
     if ($c === '') return false;
-    return (bool)preg_match('/\bvip\b|\bpengelola\b/i', $c);
+    return (bool)preg_match('/(^|\|\s*)(VIP|PENGELOLA)(\s*(\||$))/i', $c);
   }
 }
 

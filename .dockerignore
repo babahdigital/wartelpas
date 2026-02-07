@@ -17,3 +17,8 @@ backup
 dev
 mikrotik
 other
+.venv
+LICENSE
+htaccess-copy-txt
+*.example
+*.code-workspace

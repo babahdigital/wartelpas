@@ -64,6 +64,13 @@ Options -Indexes
     </FilesMatch>
 </IfModule>
 
+# Izinkan gambar dipakai lintas situs (halaman login Mikrotik beda domain)
+<IfModule mod_headers.c>
+    <FilesMatch "\.(png|jpe?g|gif|svg|webp)$">
+        Header set Cross-Origin-Resource-Policy "cross-origin"
+    </FilesMatch>
+</IfModule>
+
 # 2. HALAMAN ERROR
 ErrorDocument 403 /error.php
 ErrorDocument 404 /error.php
@@ -91,7 +98,7 @@ ErrorDocument 500 /error.php
 
 # C. BLOKIR FOLDER SYSTEM & LOGIC (Backend)
 # Folder ini berisi script inti yang tidak boleh dipanggil langsung browser
-RedirectMatch 403 ^/include/.*$
+RedirectMatch 403 ^/include/(?!popup_announcement_action\.php$|popup_announcement_upload\.php$).*$
 RedirectMatch 403 ^/process/.*$
 RedirectMatch 403 ^/system/(?!whatsapp/(?:.*\.(css|js)$|api\.php$|webhook\.php$)).*$
 RedirectMatch 403 ^/lib/.*$
@@ -190,6 +197,15 @@ Require all denied
 
 # Password update endpoint (requires session)
 <If "%{REQUEST_URI} =~ m#^/settings/password_update\.php$#">
+    Require all granted
+</If>
+
+# Popup announcement admin endpoint
+<If "%{REQUEST_URI} =~ m#^/include/popup_announcement_action\.php$#">
+    Require all granted
+</If>
+
+<If "%{REQUEST_URI} =~ m#^/include/popup_announcement_upload\.php$#">
     Require all granted
 </If>
 
@@ -323,7 +339,7 @@ Require all denied
     </RequireAny>
 </If>
 
-<If "%{REQUEST_URI} =~ m#^/hotspot/(?!user/(retur_request|login_meta)\.php$).*\.php$#">
+<If "%{REQUEST_URI} =~ m#^/hotspot/(?!user/(retur_request|login_meta|popup_announcement)\.php$).*\.php$#">
     <RequireAny>
         Require env TAMU_VIP
         Require ip 10.0.0.6
@@ -372,6 +388,11 @@ Require all denied
     Require all granted
 </If>
 
+# Popup announcement endpoint (public)
+<If "%{REQUEST_URI} =~ m#^/hotspot/user/popup_announcement\.php$#">
+    Require all granted
+</If>
+
 # Backfill Meta endpoint (restricted)
 <If "%{REQUEST_URI} =~ m#^/report/laporan/services/backfill_meta\.php$#">
     <RequireAny>
@@ -408,11 +429,7 @@ Require all denied
 </RequireAny>
 
 # ====================================================
-# 6. PINTU KHUSUS MIKROTIK (SYNC)
-# ====================================================
-
-# ====================================================
-# 7. PINTU KHUSUS PRINT VOUCHER
+# PINTU KHUSUS PRINT VOUCHER
 # ====================================================
 <Files "print.php">
     Require all granted

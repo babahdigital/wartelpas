@@ -291,7 +291,9 @@ foreach ($rows as $r) {
 
     $status = strtolower((string)($r['status'] ?? ''));
     $lh_status = strtolower((string)($r['last_status'] ?? ''));
-    $comment = strtolower((string)($r['comment'] ?? ''));
+    $comment_raw = (string)($r['comment'] ?? '');
+    $comment = strtolower($comment_raw);
+    $retur_ref_user = extract_retur_user_from_ref($comment_raw);
     if ($status === '' || $status === 'normal') {
         if ((int)($r['is_invalid'] ?? 0) === 1) $status = 'invalid';
         elseif ((int)($r['is_retur'] ?? 0) === 1) $status = 'retur';
@@ -300,6 +302,9 @@ foreach ($rows as $r) {
         elseif (strpos($comment, 'retur') !== false) $status = 'retur';
         elseif (strpos($comment, 'rusak') !== false || $lh_status === 'rusak') $status = 'rusak';
         else $status = 'normal';
+    }
+    if ($status === 'retur' && $retur_ref_user !== '') {
+        $status = 'normal';
     }
 
     $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);

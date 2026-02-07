@@ -18,6 +18,9 @@
 session_start();
  // hide all error
 error_reporting(0);
+if (empty($_SESSION['csrf_token'])) {
+	$_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -43,6 +46,9 @@ error_reporting(0);
 		<link href="css/login.css" rel="stylesheet" />
 		<link rel="stylesheet" href="css/popup.css">
 		<link rel="stylesheet" href="css/tooltips.css">
+		<script>
+			window.__csrfToken = <?= json_encode($_SESSION['csrf_token'] ?? ''); ?>;
+		</script>
 		<?php if (!empty($is_admin_layout)) : ?>
 		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 		<?php $adminCssVer = @filemtime(__DIR__ . '/../admin_assets/admin.css') ?: time(); ?>

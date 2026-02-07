@@ -149,6 +149,9 @@ if ($request_type === 'pengembalian' && $customer_name !== '' && (strlen($custom
     echo json_encode(['ok' => false, 'message' => 'Nama lengkap minimal 2 karakter.']);
     exit;
 }
+if ($request_type === 'pengembalian' && $room_name !== '' && strlen($room_name) > 40) {
+    $room_name = substr($room_name, 0, 40);
+}
 if ($contact_phone !== '' && strlen($contact_phone) > 20) {
     $contact_phone = substr($contact_phone, 0, 20);
 }
@@ -373,6 +376,10 @@ try {
 
     if ($request_type === 'pengembalian' && strlen($customer_name) < 2) {
         echo json_encode(['ok' => false, 'message' => 'Nama lengkap tidak ditemukan dari voucher. Mohon isi nama.']);
+        exit;
+    }
+    if ($request_type === 'pengembalian' && $room_name === '') {
+        echo json_encode(['ok' => false, 'message' => 'Kamar tidak ditemukan dari voucher. Mohon isi kamar.']);
         exit;
     }
 

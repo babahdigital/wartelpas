@@ -1894,3 +1894,620 @@
     window.showOverlayNotice(msg, type, !!lockClose);
   };
 })();
+
+(function() {
+  function getAnnouncementEndpoint() {
+    return './include/popup_announcement_action.php';
+  }
+
+  function getAnnouncementUploadEndpoint() {
+    return './include/popup_announcement_upload.php';
+  }
+
+  function toBool(val) {
+    return !!(val && (val === true || val === '1' || val === 1));
+  }
+
+  function escapeHtml(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function formatScheduleText(item) {
+    var start = (item.start_date_dmy || '').trim();
+    var end = (item.end_date_dmy || '').trim();
+    var startTime = (item.start_time_hm || '').trim();
+    var endTime = (item.end_time_hm || '').trim();
+    var repeat = (item.repeat_type || 'none');
+    var repeatValue = parseInt(item.repeat_value || 0, 10);
+    var rangeText = '';
+    if (start || end) {
+      rangeText = (start || '-') + ' s/d ' + (end || '-');
+    }
+    if (startTime || endTime) {
+      var timeText = (startTime || '--:--') + ' - ' + (endTime || '--:--');
+      rangeText = rangeText ? (rangeText + ' (' + timeText + ')') : timeText;
+    }
+    var repeatText = 'Sekali';
+    if (repeat === 'daily') repeatText = 'Harian';
+    if (repeat === 'weekly') {
+      var days = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
+      repeatText = 'Mingguan' + (repeatValue >= 1 && repeatValue <= 7 ? (' (' + days[repeatValue - 1] + ')') : '');
+    }
+    if (repeat === 'monthly') {
+      repeatText = 'Bulanan' + (repeatValue > 0 ? (' (tgl ' + repeatValue + ')') : '');
+    }
+    if (!rangeText && repeat === 'none') return '';
+    return [rangeText, repeatText].filter(Boolean).join(' • ');
+  }
+
+  function renderAnnouncementPreview(item) {
+    if (!window.MikhmonPopup) return;
+    var data = item || {};
+    var title = data.title || 'Informasi';
+    var message = data.message || '';
+    var image = data.image_url || '';
+    var linkLabel = data.link_label || '';
+    var linkUrl = data.link_url || '';
+    var buttonLabel = data.button_label || 'Mengerti';
+
+    var html = '';
+    if (image) {
+      html += '<div class="m-announce-preview" style="display:block;margin-bottom:12px;"><img alt="Preview" src="' + image + '"></div>';
+    }
+    if (message) {
+      html += '<div style="font-size:13px;line-height:1.6;color:#cbd5e1;white-space:pre-line;">' + message + '</div>';
+    }
+    if (linkUrl) {
+      var label = linkLabel || 'Buka Link';
+      html += '<div style="margin-top:12px;"><a href="' + linkUrl + '" target="_blank" rel="noopener" class="m-btn m-btn-secondary" style="text-decoration:none;">' + label + '</a></div>';
+    }
+
+    window.MikhmonPopup.open({
+      title: title,
+      iconClass: 'fa fa-eye',
+      statusIcon: 'fa fa-info-circle',
+      cardClass: 'is-announce',
+      messageHtml: html,
+      buttons: [{ label: buttonLabel || 'Tutup', className: 'm-btn m-btn-cancel' }]
+    });
+  }
+
+  function getCsrfToken() {
+    return (window.__csrfToken || '').toString();
+  }
+
+  function openAnnouncementEditor(data) {
+    if (!window.MikhmonPopup) return;
+    var cfg = data || {};
+    function hideAnnAlert() {
+      var alertEl = document.getElementById('ann-alert');
+      if (!alertEl) {
+        alertEl = document.querySelector('.m-popup-backdrop.show .m-alert');
+      }
+      if (!alertEl) return;
+      alertEl.classList.add('m-popup-hidden');
+    }
+    function showAnnAlert(type, text) {
+      var alertEl = document.getElementById('ann-alert');
+      if (!alertEl) {
+        alertEl = document.querySelector('.m-popup-backdrop.show .m-alert');
+      }
+      if (!alertEl) return;
+      var cls = (type === 'success') ? 'm-alert-success' : (type === 'warning' ? 'm-alert-warning' : (type === 'danger' ? 'm-alert-danger' : 'm-alert-info'));
+      alertEl.className = 'm-alert ' + cls;
+      alertEl.classList.remove('m-popup-hidden');
+      alertEl.innerHTML = '<div>' + (text || '') + '</div><button type="button" class="m-alert-close" aria-label="Tutup">&times;</button>';
+      var closeBtn = alertEl.querySelector('.m-alert-close');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', function(){ hideAnnAlert(); });
+      }
+      setTimeout(function(){ hideAnnAlert(); }, 5000);
+    }
+    var html = '' +
+      '<div id="ann-alert" class="m-alert m-popup-hidden" style="margin-bottom:10px;"></div>' +
+      '<div class="m-pass-form">' +
+        '<div>' +
+          '<label class="m-pass-label" style="padding-left: 3px; padding-bottom: 5px; display: block;">Judul</label>' +
+          '<input id="ann-title" type="text" class="m-pass-input" placeholder="Contoh: Selamat Lebaran" />' +
+        '</div>' +
+        '<div>' +
+          '<label class="m-pass-label" style="padding-left: 3px; padding-bottom: 5px; display: block;">Pesan</label>' +
+          '<textarea id="ann-message" class="m-pass-input" style="min-height: 100px;resize: vertical; max-height: 80px;height: 86px; max-width: 476px;min-width: 476px;width: 100%; padding-top: 10px;" placeholder="Tulis pesan informasi atau promo di sini"></textarea>' +
+        '</div>' +
+        '<div>' +
+          '<label class="m-pass-label">Gambar (opsional)</label>' +
+          '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:15px;margin-top: 10px;margin-left: -10px;padding-left: 0;">' +
+            '<label class="m-switch" style="margin:0;">' +
+              '<input type="checkbox" id="ann-image-upload" />' +
+              '<span class="m-switch-slider"></span>' +
+              '<span>Upload</span>' +
+            '</label>' +
+            '<label class="m-switch" style="margin:0;">' +
+              '<input type="checkbox" id="ann-image-url" />' +
+              '<span class="m-switch-slider"></span>' +
+              '<span>URL</span>' +
+            '</label>' +
+          '</div>' +
+          '<div id="ann-upload-wrap" style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;">' +
+            '<input id="ann-image" type="text" class="m-pass-input" placeholder="/img/popup/filename.jpg" />' +
+            '<label class="m-btn m-btn-secondary" style="margin:0;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">' +
+              '<i class="fa fa-upload" style=" font-size: 16px !important;"></i> Upload' +
+              '<input id="ann-image-file" type="file" accept="image/jpeg,image/png,image/webp" style="display:none;" />' +
+            '</label>' +
+          '</div>' +
+          '<div id="ann-url-wrap" style="display:none;">' +
+            '<input id="ann-image-url-input" type="text" class="m-pass-input" placeholder="https://..." />' +
+          '</div>' +
+          '<div class="m-announce-preview" id="ann-preview"><img alt="Preview"></div>' +
+          '<div style="font-size:11px;color:#9aa0a6;margin-top:6px;">Rekomendasi ukuran 1080x1350 atau 1080x1080.</div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+          '<div>' +
+            '<label class="m-pass-label">Label Link (opsional)</label>' +
+            '<input id="ann-link-label" type="text" class="m-pass-input" placeholder="Kunjungi" />' +
+          '</div>' +
+          '<div>' +
+            '<label class="m-pass-label">URL Link (opsional)</label>' +
+            '<input id="ann-link-url" type="text" class="m-pass-input" placeholder="https://..." />' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+          '<div>' +
+            '<label class="m-pass-label">Label Tombol</label>' +
+            '<input id="ann-button" type="text" class="m-pass-input" placeholder="Mengerti" />' +
+          '</div>' +
+          '<div>' +
+            '<label class="m-pass-label">Tipe</label>' +
+            '<select id="ann-level" class="m-pass-input">' +
+              '<option value="info">Info</option>' +
+              '<option value="success">Sukses</option>' +
+              '<option value="warning">Peringatan</option>' +
+              '<option value="danger">Bahaya</option>' +
+            '</select>' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+          '<div>' +
+            '<label class="m-pass-label">Mulai (dd-mm-yyyy)</label>' +
+            '<input id="ann-start" type="text" class="m-pass-input" placeholder="07-02-2026" />' +
+          '</div>' +
+          '<div>' +
+            '<label class="m-pass-label">Selesai (dd-mm-yyyy)</label>' +
+            '<input id="ann-end" type="text" class="m-pass-input" placeholder="08-02-2026" />' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+          '<div>' +
+            '<label class="m-pass-label">Mulai Jam (HH:MM)</label>' +
+            '<input id="ann-start-time" type="time" class="m-pass-input" />' +
+          '</div>' +
+          '<div>' +
+            '<label class="m-pass-label">Selesai Jam (HH:MM)</label>' +
+            '<input id="ann-end-time" type="time" class="m-pass-input" />' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;">' +
+          '<div>' +
+            '<label class="m-pass-label">Pengulangan</label>' +
+            '<select id="ann-repeat" class="m-pass-input">' +
+              '<option value="none">Sekali</option>' +
+              '<option value="daily">Harian</option>' +
+              '<option value="weekly">Mingguan</option>' +
+              '<option value="monthly">Bulanan</option>' +
+            '</select>' +
+          '</div>' +
+          '<div id="ann-repeat-value-wrap" style="display:none;">' +
+            '<label class="m-pass-label" id="ann-repeat-label">Hari</label>' +
+            '<select id="ann-repeat-value" class="m-pass-input">' +
+              '<option value="1">Senin</option>' +
+              '<option value="2">Selasa</option>' +
+              '<option value="3">Rabu</option>' +
+              '<option value="4">Kamis</option>' +
+              '<option value="5">Jumat</option>' +
+              '<option value="6">Sabtu</option>' +
+              '<option value="7">Minggu</option>' +
+            '</select>' +
+          '</div>' +
+          '<div id="ann-repeat-day-wrap" style="display:none;">' +
+            '<label class="m-pass-label">Tanggal (1-31)</label>' +
+            '<input id="ann-repeat-day" type="number" min="1" max="31" class="m-pass-input" placeholder="1" />' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:6px;">' +
+          '<label class="m-switch">' +
+            '<input type="checkbox" id="ann-enabled" />' +
+            '<span class="m-switch-slider"></span>' +
+            '<span>Aktifkan popup</span>' +
+          '</label>' +
+          '<label class="m-switch">' +
+            '<input type="checkbox" id="ann-auto" />' +
+            '<span class="m-switch-slider"></span>' +
+            '<span>Tampilkan otomatis saat halaman login dibuka</span>' +
+          '</label>' +
+        '</div>' +
+      '</div>';
+
+    window.MikhmonPopup.open({
+      title: 'Popup Informasi',
+      iconClass: 'fa fa-bullhorn',
+      statusIcon: 'fa fa-info-circle',
+      cardClass: 'is-announce',
+      messageHtml: html,
+      buttons: [
+        { label: 'Kembali', className: 'm-btn m-btn-cancel', onClick: function(){ window.openAnnouncementEditor(); } },
+        { label: 'Simpan', className: 'm-btn m-btn-primary', close: false, onClick: function() {
+          var imageModeUpload = document.getElementById('ann-image-upload').checked;
+          var imageUrlValue = imageModeUpload ? (document.getElementById('ann-image').value || '') : (document.getElementById('ann-image-url-input').value || '');
+          var repeatType = document.getElementById('ann-repeat').value || 'none';
+          var repeatValue = 0;
+          if (repeatType === 'weekly') {
+            repeatValue = parseInt(document.getElementById('ann-repeat-value').value || '1', 10);
+          } else if (repeatType === 'monthly') {
+            repeatValue = parseInt(document.getElementById('ann-repeat-day').value || '1', 10);
+          }
+          var payload = {
+            id: cfg.id || 0,
+            enabled: document.getElementById('ann-enabled').checked ? 1 : 0,
+            auto_show: document.getElementById('ann-auto').checked ? 1 : 0,
+            start_date: (document.getElementById('ann-start').value || '').trim(),
+            end_date: (document.getElementById('ann-end').value || '').trim(),
+            start_time: (document.getElementById('ann-start-time').value || '').trim(),
+            end_time: (document.getElementById('ann-end-time').value || '').trim(),
+            repeat_type: repeatType,
+            repeat_value: repeatValue,
+            title: (document.getElementById('ann-title').value || '').trim(),
+            message: (document.getElementById('ann-message').value || '').trim(),
+            image_url: imageUrlValue.trim(),
+            link_label: (document.getElementById('ann-link-label').value || '').trim(),
+            link_url: (document.getElementById('ann-link-url').value || '').trim(),
+            button_label: (document.getElementById('ann-button').value || '').trim(),
+            level: document.getElementById('ann-level').value || 'info'
+          };
+          var form = new FormData();
+          var csrfToken = getCsrfToken();
+          if (csrfToken) form.append('csrf_token', csrfToken);
+          form.append('action', 'save');
+          Object.keys(payload).forEach(function(k){ form.append(k, payload[k]); });
+
+          showAnnAlert('info', 'Menyimpan...');
+          fetch(getAnnouncementEndpoint(), {
+            method: 'POST',
+            body: form
+          })
+          .then(function(res){
+            return res.text().then(function(text){
+              var data = null;
+              try { data = JSON.parse(text); } catch (e) {}
+              return { ok: res.ok, status: res.status, data: data, raw: text };
+            });
+          })
+          .then(function(result){
+            var resp = result.data;
+            if (result.ok && resp && resp.ok) {
+              window.__annFlash = { type: 'success', text: 'Berhasil menyimpan popup.' };
+              showAnnAlert('success', 'Berhasil menyimpan popup.');
+              setTimeout(function(){ window.openAnnouncementEditor(); }, 700);
+              return;
+            }
+            var msg = (resp && resp.message) ? resp.message : (result.raw || 'Gagal menyimpan data.');
+            msg = (result.status ? ('HTTP ' + result.status + ' - ') : '') + msg;
+            showAnnAlert('danger', msg);
+          })
+          .catch(function(err){
+            var msg = (err && err.message) ? err.message : 'Tidak dapat terhubung ke server.';
+            msg += ' (' + getAnnouncementEndpoint() + ')';
+            showAnnAlert('danger', msg);
+          });
+        }}
+      ]
+    });
+
+    setTimeout(function(){
+      var elEnabled = document.getElementById('ann-enabled');
+      var elAuto = document.getElementById('ann-auto');
+      var elTitle = document.getElementById('ann-title');
+      var elMessage = document.getElementById('ann-message');
+      var elButton = document.getElementById('ann-button');
+      var elLevel = document.getElementById('ann-level');
+      var elImage = document.getElementById('ann-image');
+      var elImageFile = document.getElementById('ann-image-file');
+      var elImageUpload = document.getElementById('ann-image-upload');
+      var elImageUrl = document.getElementById('ann-image-url');
+      var elImageUrlInput = document.getElementById('ann-image-url-input');
+      var elUploadWrap = document.getElementById('ann-upload-wrap');
+      var elUrlWrap = document.getElementById('ann-url-wrap');
+      var elLinkLabel = document.getElementById('ann-link-label');
+      var elLinkUrl = document.getElementById('ann-link-url');
+      var elStart = document.getElementById('ann-start');
+      var elEnd = document.getElementById('ann-end');
+      var elStartTime = document.getElementById('ann-start-time');
+      var elEndTime = document.getElementById('ann-end-time');
+      var elRepeat = document.getElementById('ann-repeat');
+      var elRepeatValue = document.getElementById('ann-repeat-value');
+      var elRepeatLabel = document.getElementById('ann-repeat-label');
+      var elRepeatDay = document.getElementById('ann-repeat-day');
+      var elRepeatValueWrap = document.getElementById('ann-repeat-value-wrap');
+      var elRepeatDayWrap = document.getElementById('ann-repeat-day-wrap');
+      var preview = document.getElementById('ann-preview');
+      var previewImg = preview ? preview.querySelector('img') : null;
+
+      if (!elEnabled || !elTitle) return;
+      elEnabled.checked = toBool(cfg.enabled);
+      elAuto.checked = toBool(cfg.auto_show);
+      elTitle.value = cfg.title || 'Informasi';
+      elMessage.value = cfg.message || '';
+      elButton.value = cfg.button_label || 'Mengerti';
+      if (elLevel && cfg.level) elLevel.value = cfg.level;
+      if (elImage) elImage.value = cfg.image_url || '';
+      if (elImageUrlInput) elImageUrlInput.value = cfg.image_url || '';
+      if (elLinkLabel) elLinkLabel.value = cfg.link_label || '';
+      if (elLinkUrl) elLinkUrl.value = cfg.link_url || '';
+      if (elStart) elStart.value = cfg.start_date_dmy || '';
+      if (elEnd) elEnd.value = cfg.end_date_dmy || '';
+      if (elStartTime) elStartTime.value = cfg.start_time_hm || '';
+      if (elEndTime) elEndTime.value = cfg.end_time_hm || '';
+      if (elRepeat) elRepeat.value = cfg.repeat_type || 'none';
+      if (elRepeatValue) elRepeatValue.value = (cfg.repeat_value || 1).toString();
+      if (elRepeatDay) elRepeatDay.value = (cfg.repeat_value || 1).toString();
+
+      function updateRepeatFields() {
+        var mode = (elRepeat && elRepeat.value) || 'none';
+        if (mode === 'weekly') {
+          if (elRepeatValueWrap) elRepeatValueWrap.style.display = 'block';
+          if (elRepeatDayWrap) elRepeatDayWrap.style.display = 'none';
+        } else if (mode === 'monthly') {
+          if (elRepeatValueWrap) elRepeatValueWrap.style.display = 'none';
+          if (elRepeatDayWrap) elRepeatDayWrap.style.display = 'block';
+        } else {
+          if (elRepeatValueWrap) elRepeatValueWrap.style.display = 'none';
+          if (elRepeatDayWrap) elRepeatDayWrap.style.display = 'none';
+        }
+      }
+
+      function updateImageMode() {
+        var useUpload = !!(elImageUpload && elImageUpload.checked);
+        if (elUploadWrap) elUploadWrap.style.display = useUpload ? 'grid' : 'none';
+        if (elUrlWrap) elUrlWrap.style.display = useUpload ? 'none' : 'block';
+        if (elImageUrl) elImageUrl.checked = !useUpload;
+        updatePreview();
+      }
+
+      function updatePreview() {
+        if (!preview || !previewImg) return;
+        var val = '';
+        if (elImageUpload && elImageUpload.checked) {
+          val = (elImage && elImage.value || '').trim();
+        } else {
+          val = (elImageUrlInput && elImageUrlInput.value || '').trim();
+        }
+        if (!val) {
+          preview.style.display = 'none';
+          previewImg.removeAttribute('src');
+          return;
+        }
+        preview.style.display = 'block';
+        previewImg.src = val;
+      }
+      if (elImage) elImage.addEventListener('input', updatePreview);
+      if (elImageUrlInput) elImageUrlInput.addEventListener('input', updatePreview);
+
+      var defaultUpload = true;
+      if (cfg.image_url && cfg.image_url.indexOf('/img/popup/') !== 0) {
+        defaultUpload = false;
+      }
+      if (elImageUpload) elImageUpload.checked = defaultUpload;
+      if (elImageUrl) elImageUrl.checked = !defaultUpload;
+      updateImageMode();
+
+      if (elImageUpload) elImageUpload.addEventListener('change', function(){
+        if (elImageUpload.checked && elImageUrl) elImageUrl.checked = false;
+        updateImageMode();
+      });
+      if (elImageUrl) elImageUrl.addEventListener('change', function(){
+        if (elImageUrl.checked && elImageUpload) elImageUpload.checked = false;
+        updateImageMode();
+      });
+      if (elRepeat) elRepeat.addEventListener('change', updateRepeatFields);
+      updateRepeatFields();
+
+      if (elImageFile) {
+        elImageFile.addEventListener('change', function(){
+          if (!elImageFile.files || !elImageFile.files.length) return;
+          var file = elImageFile.files[0];
+          var form = new FormData();
+          var csrfToken = getCsrfToken();
+          if (csrfToken) form.append('csrf_token', csrfToken);
+          form.append('image', file);
+          fetch(getAnnouncementUploadEndpoint(), { method: 'POST', body: form })
+            .then(function(res){ return res.json(); })
+            .then(function(resp){
+              if (resp && resp.ok && resp.url) {
+                elImage.value = resp.url;
+                updatePreview();
+              } else {
+                alert((resp && resp.message) ? resp.message : 'Upload gagal.');
+              }
+            })
+            .catch(function(){ alert('Upload gagal.'); });
+        });
+      }
+    }, 50);
+  }
+
+  function renderAnnouncementList(items) {
+    if (!window.MikhmonPopup) return;
+    var list = Array.isArray(items) ? items : [];
+    var body = '';
+    if (!list.length) {
+      body = '<div style="text-align:center;color:#9aa0a6;padding:12px;">Belum ada popup.</div>';
+    } else {
+      body = '<div class="ann-router-list">' + list.map(function(it){
+        var statusText = it.enabled ? 'Aktif' : 'Nonaktif';
+        var scheduleText = formatScheduleText(it);
+        var activeClass = it.enabled ? ' ann-router-active' : '';
+        return '' +
+          '<div class="ann-router-item' + activeClass + '">' +
+            '<div class="ann-router-icon"><i class="fa fa-bullhorn" style="font-size: 14px !important;"></i></div>' +
+            '<div class="ann-router-info">' +
+              '<span class="ann-router-name">' + (it.title || 'Popup') + '</span>' +
+              '<span class="ann-router-session">Terakhir update: ' + (it.updated_at || '-') + '</span>' +
+            '</div>' +
+            '<div class="ann-router-actions">' +
+              '<a href="javascript:void(0)" class="ann-router-action" data-act="edit" data-id="' + it.id + '" title="Edit"><i class="fa fa-pencil" style="font-size: 14px !important;"></i></a>' +
+              '<a href="javascript:void(0)" class="ann-router-action ann-router-action-danger" data-act="delete" data-id="' + it.id + '" title="Hapus"><i class="fa fa-trash" style="font-size: 14px !important;"></i></a>' +
+            '</div>' +
+          '</div>';
+      }).join('') + '</div>';
+    }
+
+    var flashHtml = '';
+    if (window.__annFlash && window.__annFlash.text) {
+      var fcls = window.__annFlash.type === 'success' ? 'm-alert-success' : (window.__annFlash.type === 'danger' ? 'm-alert-danger' : (window.__annFlash.type === 'warning' ? 'm-alert-warning' : 'm-alert-info'));
+      flashHtml = '<div id="ann-flash" class="m-alert ' + fcls + '" style="margin-bottom:10px;"><div>' + escapeHtml(window.__annFlash.text) + '</div><button type="button" class="m-alert-close" aria-label="Tutup">&times;</button></div>';
+      window.__annFlash = null;
+    }
+
+    window.MikhmonPopup.open({
+      title: 'Popup Informasi',
+      iconClass: 'fa fa-bullhorn',
+      statusIcon: 'fa fa-info-circle',
+      cardClass: 'is-announce',
+      messageHtml: '' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+          '<div style="color:#9aa0a6;font-size:12px;">Hanya 1 popup yang bisa aktif.</div>' +
+          '<button class="m-btn m-btn-primary" id="ann-add" style="padding: 3px 10px;"><i class="fa fa-plus" style="font-size: 12px !important;"></i> Tambah</button>' +
+        '</div>' +
+        flashHtml + body,
+      buttons: [{ label: 'Tutup', className: 'm-btn m-btn-cancel' }]
+    });
+
+    setTimeout(function(){
+      var root = document.querySelector('.m-popup-backdrop.show');
+      if (!root) return;
+      var flashEl = root.querySelector('#ann-flash');
+      if (flashEl) {
+        var closeBtn = flashEl.querySelector('.m-alert-close');
+        if (closeBtn) {
+          closeBtn.addEventListener('click', function(){ flashEl.classList.add('m-popup-hidden'); });
+        }
+        setTimeout(function(){ flashEl.classList.add('m-popup-hidden'); }, 5000);
+      }
+      var addBtn = root.querySelector('#ann-add');
+      if (addBtn) {
+        addBtn.addEventListener('click', function(){ openAnnouncementEditor({}); });
+      }
+      root.querySelectorAll('[data-act]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          var id = parseInt(btn.getAttribute('data-id') || '0', 10);
+          var act = btn.getAttribute('data-act');
+          if (act === 'edit') {
+            fetch(getAnnouncementEndpoint() + '?action=get&id=' + id)
+              .then(function(res){ return res.json(); })
+              .then(function(resp){
+                if (resp && resp.ok && resp.data) {
+                  openAnnouncementEditor(resp.data || {});
+                }
+              });
+            return;
+          }
+          if (act === 'preview') {
+            renderAnnouncementPreview(list.find(function(x){ return (x.id || 0) === id; }) || {});
+            return;
+          }
+          if (act === 'delete') {
+            if (!confirm('Hapus popup ini?')) return;
+            var dform = new FormData();
+            var csrfToken = getCsrfToken();
+            if (csrfToken) dform.append('csrf_token', csrfToken);
+            dform.append('action', 'delete');
+            dform.append('id', id);
+            fetch(getAnnouncementEndpoint(), { method: 'POST', body: dform })
+              .then(function(res){
+                return res.text().then(function(text){
+                  var data = null;
+                  try { data = JSON.parse(text); } catch (e) {}
+                  return { ok: res.ok, status: res.status, data: data, raw: text };
+                });
+              })
+              .then(function(result){
+                var resp = result.data;
+                if (result.ok && resp && resp.ok) {
+                  window.__annFlash = { type: 'success', text: 'Popup berhasil dihapus.' };
+                  window.openAnnouncementEditor();
+                  return;
+                }
+                var msg = (resp && resp.message) ? resp.message : (result.raw || 'Gagal menghapus popup.');
+                msg = (result.status ? ('HTTP ' + result.status + ' - ') : '') + msg;
+                window.__annFlash = { type: 'danger', text: msg };
+                window.openAnnouncementEditor();
+              })
+              .catch(function(err){
+                var msg = (err && err.message) ? err.message : 'Tidak dapat terhubung ke server.';
+                msg += ' (' + getAnnouncementEndpoint() + ')';
+                window.__annFlash = { type: 'danger', text: msg };
+                window.openAnnouncementEditor();
+              });
+          }
+        });
+      });
+    }, 50);
+  }
+
+  window.openAnnouncementEditor = function() {
+    if (!window.MikhmonPopup) return;
+    window.MikhmonPopup.open({
+      title: 'Popup Informasi',
+      iconClass: 'fa fa-bullhorn',
+      statusIcon: 'fa fa-info-circle',
+      cardClass: 'is-announce',
+      message: 'Memuat daftar popup...',
+      buttons: [{ label: 'Tutup', className: 'm-btn m-btn-cancel' }]
+    });
+
+    var listUrl = getAnnouncementEndpoint() + '?action=list';
+    fetch(listUrl)
+      .then(function(res){
+        return res.text().then(function(text){
+          var data = null;
+          try { data = JSON.parse(text); } catch (e) {}
+          return { ok: res.ok, status: res.status, data: data, raw: text };
+        });
+      })
+      .then(function(result){
+        var resp = result.data;
+        if (result.ok && resp && resp.ok) {
+          renderAnnouncementList(resp.data || []);
+          return;
+        }
+        var msg = (resp && resp.message) ? resp.message : (result.raw || 'Tidak dapat memuat daftar popup.');
+        msg = (result.status ? ('HTTP ' + result.status + ' - ') : '') + msg;
+        window.MikhmonPopup.open({
+          title: 'Gagal',
+          iconClass: 'fa fa-times-circle',
+          statusIcon: 'fa fa-times-circle',
+          statusColor: '#da3633',
+            cardClass: 'is-announce',
+          message: msg,
+          buttons: [{ label: 'Tutup', className: 'm-btn m-btn-cancel' }]
+        });
+      })
+      .catch(function(err){
+        var msg = (err && err.message) ? err.message : 'Tidak dapat terhubung ke server.';
+        msg += ' (' + listUrl + ')';
+        window.MikhmonPopup.open({
+          title: 'Gagal',
+          iconClass: 'fa fa-times-circle',
+          statusIcon: 'fa fa-times-circle',
+          statusColor: '#da3633',
+          cardClass: 'is-announce',
+          message: msg,
+          buttons: [{ label: 'Tutup', className: 'm-btn m-btn-cancel' }]
+        });
+      });
+  };
+})();

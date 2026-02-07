@@ -621,6 +621,10 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             $action_blocked = true;
             $action_error = 'Akses ditolak. Hapus blok total hanya untuk role yang diizinkan.';
           }
+          if (in_array($act, ['vip', 'unvip'], true) && !operator_can('vip_voucher')) {
+            $action_blocked = true;
+            $action_error = 'Akses ditolak. Voucher VIP/Pengelola hanya untuk role yang diizinkan.';
+          }
         }
     $hist_action = null;
     $is_rusak_target = false;

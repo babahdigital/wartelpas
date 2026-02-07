@@ -103,6 +103,8 @@ $op_perms = ($op_id !== '' && $op_id !== 'new')
         'mark_rusak' => false,
         'retur_voucher' => false,
         'retur_reopen' => false,
+        'ann_manage' => false,
+        'vip_voucher' => false,
         'audit_manual' => false,
         'todo_ack' => false,
         'reset_settlement' => false,
@@ -118,6 +120,8 @@ $perm_delete_block_full = !empty($op_perms['delete_block_full']);
 $perm_mark_rusak = !empty($op_perms['mark_rusak']);
 $perm_retur_voucher = !empty($op_perms['retur_voucher']);
 $perm_retur_reopen = !empty($op_perms['retur_reopen']);
+$perm_ann_manage = !empty($op_perms['ann_manage']);
+$perm_vip_voucher = !empty($op_perms['vip_voucher']);
 $perm_audit_manual = !empty($op_perms['audit_manual']);
 $perm_todo_ack = !empty($op_perms['todo_ack']);
 $perm_reset_settlement = !empty($op_perms['reset_settlement']);
@@ -157,6 +161,8 @@ $operator_defaults = [
         'mark_rusak' => false,
         'retur_voucher' => false,
         'retur_reopen' => false,
+        'ann_manage' => false,
+        'vip_voucher' => false,
         'audit_manual' => false,
         'todo_ack' => false,
         'reset_settlement' => false,
@@ -478,7 +484,7 @@ $operator_defaults = [
                             '<label class="custom-check">' +
                                 '<input id="perm-delete-user" type="checkbox" ' + (perms.delete_user ? 'checked' : '') + '>' +
                                 '<span class="checkmark"></span>' +
-                                '<span class="check-label">Deleted User</span>' +
+                                '<span class="check-label">Hapus User</span>' +
                             '</label>' +
                             '<label class="custom-check">' +
                                 '<input id="perm-delete-block-router" type="checkbox" ' + (perms.delete_block_router ? 'checked' : '') + '>' +
@@ -488,12 +494,12 @@ $operator_defaults = [
                             '<label class="custom-check">' +
                                 '<input id="perm-delete-block-full" type="checkbox" ' + (perms.delete_block_full ? 'checked' : '') + '>' +
                                 '<span class="checkmark"></span>' +
-                                '<span class="check-label">Hapus Blok (Router + DB)</span>' +
+                                '<span class="check-label">Hapus Blok (Total)</span>' +
                             '</label>' +
                             '<label class="custom-check">' +
                                 '<input id="perm-mark-rusak" type="checkbox" ' + (perms.mark_rusak ? 'checked' : '') + '>' +
                                 '<span class="checkmark"></span>' +
-                                '<span class="check-label">Set RUSAK Voucher</span>' +
+                                '<span class="check-label">Tandai Voucher Rusak</span>' +
                             '</label>' +
                             '<label class="custom-check">' +
                                 '<input id="perm-retur-voucher" type="checkbox" ' + (perms.retur_voucher ? 'checked' : '') + '>' +
@@ -503,7 +509,7 @@ $operator_defaults = [
                             '<label class="custom-check">' +
                                 '<input id="perm-retur-reopen" type="checkbox" ' + (perms.retur_reopen ? 'checked' : '') + '>' +
                                 '<span class="checkmark"></span>' +
-                                '<span class="check-label">Reopen Retur</span>' +
+                                '<span class="check-label">Buka Retur Lagi</span>' +
                             '</label>' +
                             '<label class="custom-check">' +
                                 '<input id="perm-audit-manual" type="checkbox" ' + (perms.audit_manual ? 'checked' : '') + '>' +
@@ -530,7 +536,7 @@ $operator_defaults = [
                             '<label class="custom-check">' +
                                 '<input id="perm-sync-sales-force" type="checkbox" ' + (perms.sync_sales_force ? 'checked' : '') + '>' +
                                 '<span class="checkmark"></span>' +
-                                '<span class="check-label">Sync Sales (Force)</span>' +
+                                '<span class="check-label">Sinkron Sales (Paksa)</span>' +
                             '</label>' +
                             '<label class="custom-check">' +
                                 '<input id="perm-backup-only" type="checkbox" ' + (perms.backup_only ? 'checked' : '') + '>' +
@@ -541,6 +547,16 @@ $operator_defaults = [
                                 '<input id="perm-restore-only" type="checkbox" ' + (perms.restore_only ? 'checked' : '') + '>' +
                                 '<span class="checkmark"></span>' +
                                 '<span class="check-label">Restore (DB Utama)</span>' +
+                            '</label>' +
+                            '<label class="custom-check">' +
+                                '<input id="perm-ann-manage" type="checkbox" ' + (perms.ann_manage ? 'checked' : '') + '>' +
+                                '<span class="checkmark"></span>' +
+                                '<span class="check-label">Kelola Pengumuman</span>' +
+                            '</label>' +
+                            '<label class="custom-check">' +
+                                '<input id="perm-vip-voucher" type="checkbox" ' + (perms.vip_voucher ? 'checked' : '') + '>' +
+                                '<span class="checkmark"></span>' +
+                                '<span class="check-label">Voucher Pengelola (VIP)</span>' +
                             '</label>' +
                         '</div>' +
                     '</div>' +
@@ -597,6 +613,8 @@ $operator_defaults = [
                         setHiddenInput('access_mark_rusak', document.getElementById('perm-mark-rusak').checked ? '1' : '');
                         setHiddenInput('access_retur_voucher', document.getElementById('perm-retur-voucher').checked ? '1' : '');
                         setHiddenInput('access_retur_reopen', document.getElementById('perm-retur-reopen').checked ? '1' : '');
+                        setHiddenInput('access_ann_manage', document.getElementById('perm-ann-manage').checked ? '1' : '');
+                        setHiddenInput('access_vip_voucher', document.getElementById('perm-vip-voucher').checked ? '1' : '');
                         setHiddenInput('access_audit_manual', document.getElementById('perm-audit-manual').checked ? '1' : '');
                         setHiddenInput('access_todo_ack', document.getElementById('perm-todo-ack').checked ? '1' : '');
                         setHiddenInput('access_settlement_run', document.getElementById('perm-settlement-run').checked ? '1' : '');
@@ -778,6 +796,8 @@ if ($flash) {
                     <input type="hidden" id="operator-perm-mark-rusak" name="access_mark_rusak" value="">
                     <input type="hidden" id="operator-perm-retur-voucher" name="access_retur_voucher" value="">
                     <input type="hidden" id="operator-perm-retur-reopen" name="access_retur_reopen" value="">
+                    <input type="hidden" id="operator-perm-ann-manage" name="access_ann_manage" value="">
+                    <input type="hidden" id="operator-perm-vip-voucher" name="access_vip_voucher" value="">
                     <input type="hidden" id="operator-perm-audit-manual" name="access_audit_manual" value="">
                     <input type="hidden" id="operator-perm-todo-ack" name="access_todo_ack" value="">
                     <input type="hidden" id="operator-perm-reset-settlement" name="access_reset_settlement" value="">

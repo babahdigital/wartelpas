@@ -15,6 +15,10 @@ if (!isset($_SESSION["mikhmon"])) {
     exit;
 }
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 require_once __DIR__ . '/acl.php';
 ensureRole();
 require_once __DIR__ . '/db.php';
@@ -99,6 +103,10 @@ if ($menu_retur_visible) {
         $stmt->execute();
         $menu_retur_list = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         if (!empty($menu_retur_list)) {
+            $menu_retur_tz = 'Asia/Makassar';
+            if (isset($_SESSION['timezone']) && trim((string)$_SESSION['timezone']) !== '') {
+                $menu_retur_tz = trim((string)$_SESSION['timezone']);
+            }
             foreach ($menu_retur_list as &$row) {
                 $req_type = strtolower(trim((string)($row['request_type'] ?? '')));
                 if ($req_type === 'pengembalian' || $req_type === 'refund') {
@@ -126,6 +134,16 @@ if ($menu_retur_visible) {
                     $profile_label = $profile_src;
                 }
                 $row['profile_name'] = $profile_label;
+                if (!empty($row['created_at'])) {
+                    $created_raw = (string)$row['created_at'];
+                    try {
+                        $dt = new DateTime($created_raw, new DateTimeZone('UTC'));
+                        $dt->setTimezone(new DateTimeZone($menu_retur_tz));
+                        $row['created_at'] = $dt->format('Y-m-d H:i:s');
+                    } catch (Exception $e) {
+                        $row['created_at'] = $created_raw;
+                    }
+                }
             }
             unset($row);
         }
@@ -507,6 +525,21 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         background: #94a3b8;
         color: #111827;
     }
+    .popup-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 18px;
+        background: rgba(59, 130, 246, 0.15);
+        color: #93c5fd;
+        border: 1px solid rgba(59, 130, 246, 0.35);
+        font-weight: 700;
+        font-size: 12px;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+    .popup-pill i { font-size: 12px; }
     .db-tools {
         display: inline-flex;
         align-items: center;
@@ -693,6 +726,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         <div class="nav-right">
             <?php $is_superadmin = isSuperAdmin(); ?>
             <?php $can_backup = (isOperator() && (operator_can('backup_only') || operator_can('restore_only'))); ?>
+            <?php $can_popup_info = ($is_superadmin || (isOperator() && operator_can('ann_manage'))); ?>
             <?php if ($can_backup): ?>
                 <?php if (isOperator() && operator_can('backup_only')): ?>
                     <a id="db-backup" class="db-tools" style="display:none" href="javascript:void(0)" title="Backup Database Utama" onclick="runBackupAjax()">
@@ -715,6 +749,11 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                 <i class="fa fa-bell"></i> Todo
                 <span class="todo-pill-count" id="todo-menu-count"><?= (int)$todo_count ?></span>
             </a>
+            <?php if ($can_popup_info): ?>
+                <a class="popup-pill" href="javascript:void(0)" onclick="return (window.openAnnouncementEditor ? window.openAnnouncementEditor() : null);" title="Popup Informasi">
+                    <i class="fa fa-bullhorn"></i> Popup
+                </a>
+            <?php endif; ?>
             <span id="db-status" class="db-status" title="Kesehatan Database">
                 <i class="fa fa-heart"></i>
             </span>
@@ -790,6 +829,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         <div class="nav-right">
             <?php $is_superadmin = isSuperAdmin(); ?>
             <?php $can_backup = (isOperator() && (operator_can('backup_only') || operator_can('restore_only'))); ?>
+            <?php $can_popup_info = ($is_superadmin || (isOperator() && operator_can('ann_manage'))); ?>
             <?php if ($can_backup): ?>
                 <?php if (isOperator() && operator_can('backup_only')): ?>
                     <a id="db-backup" class="db-tools" style="display:none" href="javascript:void(0)" title="Backup Database Utama" onclick="runBackupAjax()">
@@ -812,6 +852,11 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
                 <i class="fa fa-bell"></i> Todo
                 <span class="todo-pill-count" id="todo-menu-count"><?= (int)$todo_count ?></span>
             </a>
+            <?php if ($can_popup_info): ?>
+                <a class="popup-pill" href="javascript:void(0)" onclick="return (window.openAnnouncementEditor ? window.openAnnouncementEditor() : null);" title="Popup Informasi">
+                    <i class="fa fa-bullhorn"></i> Popup
+                </a>
+            <?php endif; ?>
             <span id="db-status" class="db-status" title="Kesehatan Database">
                 <i class="fa fa-heart"></i>
             </span>
@@ -898,6 +943,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
     window.__returSession = <?= json_encode($session); ?>;
     window.__stuckMenuData = <?= json_encode(['count' => $menu_stuck_count, 'items' => $menu_stuck_list], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     window.__backupKey = <?= json_encode($is_superadmin ? $backupKey : '') ?>;
+    window.__csrfToken = <?= json_encode($_SESSION['csrf_token'] ?? ''); ?>;
 
 
     document.addEventListener('DOMContentLoaded', function(){

@@ -284,11 +284,11 @@ if (file_exists($dbFile)) {
 
         if (table_exists($db, 'login_history')) {
           try {
-            $lhWhere = "(substr(login_time_real,1,10) = :d_lh OR substr(last_login_real,1,10) = :d_lh OR substr(logout_time_real,1,10) = :d_lh OR substr(updated_at,1,10) = :d_lh OR login_date = :d_lh)";
+            $lhWhere = "(substr(login_time_real,1,10) = :d_lh OR substr(last_login_real,1,10) = :d_lh OR substr(logout_time_real,1,10) = :d_lh OR login_date = :d_lh)";
             if ($req_show === 'bulanan') {
-              $lhWhere = "(substr(login_time_real,1,7) = :d_lh OR substr(last_login_real,1,7) = :d_lh OR substr(logout_time_real,1,7) = :d_lh OR substr(updated_at,1,7) = :d_lh OR substr(login_date,1,7) = :d_lh)";
+              $lhWhere = "(substr(login_time_real,1,7) = :d_lh OR substr(last_login_real,1,7) = :d_lh OR substr(logout_time_real,1,7) = :d_lh OR substr(login_date,1,7) = :d_lh)";
             } elseif ($req_show === 'tahunan') {
-              $lhWhere = "(substr(login_time_real,1,4) = :d_lh OR substr(last_login_real,1,4) = :d_lh OR substr(logout_time_real,1,4) = :d_lh OR substr(updated_at,1,4) = :d_lh OR substr(login_date,1,4) = :d_lh)";
+              $lhWhere = "(substr(login_time_real,1,4) = :d_lh OR substr(last_login_real,1,4) = :d_lh OR substr(logout_time_real,1,4) = :d_lh OR substr(login_date,1,4) = :d_lh)";
             }
 
             $lhNotExists = '';

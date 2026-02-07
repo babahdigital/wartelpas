@@ -1,11 +1,9 @@
 <?php
-// Sync VIP whitelist to .htaccess (CLI or token-protected HTTP)
 error_reporting(0);
 
 $rootDir = dirname(__DIR__);
 $htaccessPath = $rootDir . '/.htaccess';
 
-// Load env
 $env = [];
 $envFile = $rootDir . '/include/env.php';
 if (is_file($envFile)) {
@@ -204,6 +202,14 @@ function sync_vip_htaccess($env, $htaccessPath) {
     $content = file_get_contents($htaccessPath);
     if ($content === false) {
         return ['ok' => false, 'message' => 'Gagal membaca .htaccess.'];
+    }
+
+    if (empty($ips)) {
+        $existing_ips = extract_vip_ips($content);
+        if (!empty($existing_ips)) {
+            $ips = array_values(array_unique(array_filter($existing_ips, 'is_valid_ip')));
+            $allow_all_active = $allow_all_if_empty && empty($ips);
+        }
     }
 
     $setenvLines = build_setenv_lines($ips, $allow_all_active);

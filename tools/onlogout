@@ -57,7 +57,15 @@
         }
     }
     :local vipTag "";
-    :if (([:find $currentComment "VIP"] != nil) || ([:find $currentComment "Pengelola"] != nil)) do={
+    :local vipMarker false;
+    :local fVip [:find $currentComment "| VIP"];
+    :local fVip2 [:find $currentComment "| vip"];
+    :local fPeng [:find $currentComment "| Pengelola"];
+    :local fPeng2 [:find $currentComment "| pengelola"];
+    :if ((([:typeof $fVip] != "nil") && ($fVip >= 0)) || (([:typeof $fVip2] != "nil") && ($fVip2 >= 0)) || (([:typeof $fPeng] != "nil") && ($fPeng >= 0)) || (([:typeof $fPeng2] != "nil") && ($fPeng2 >= 0)) || ($currentComment = "VIP") || ($currentComment = "vip") || ($currentComment = "Pengelola") || ($currentComment = "pengelola")) do={
+        :set vipMarker true;
+    }
+    :if ($vipMarker) do={
         :set vipTag "VIP";
     }
     :local isVip false;
@@ -80,7 +88,10 @@
         
         :do { 
             /tool fetch url=$usageUrl mode=http keep-result=no check-certificate=no; 
+            :log info "LOGOUT: Usage ingest sent for $username";
         } on-error={ :log warning "LOGOUT: Gagal Fetch Usage"; }
+    } else={
+        :log info "LOGOUT: VIP skip usage ingest for $username | comment=$currentComment";
     }
 
     # 5. BERSIHKAN KONEKSI (Hanya jika Blok Info / Wartel)

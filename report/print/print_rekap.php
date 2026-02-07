@@ -267,18 +267,18 @@ try {
 
         // Tambahkan data dari login_history untuk status rusak/retur/invalid
         try {
-            $lhWhere = "(substr(login_time_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR substr(logout_time_real,1,10) = :d OR substr(updated_at,1,10) = :d OR login_date = :d)";
+            $lhWhere = "(substr(login_time_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR substr(logout_time_real,1,10) = :d OR login_date = :d)";
             if ($req_show === 'bulanan') {
-                $lhWhere = "(substr(login_time_real,1,7) = :d OR substr(last_login_real,1,7) = :d OR substr(logout_time_real,1,7) = :d OR substr(updated_at,1,7) = :d OR substr(login_date,1,7) = :d)";
+                $lhWhere = "(substr(login_time_real,1,7) = :d OR substr(last_login_real,1,7) = :d OR substr(logout_time_real,1,7) = :d OR substr(login_date,1,7) = :d)";
             } elseif ($req_show === 'tahunan') {
-                $lhWhere = "(substr(login_time_real,1,4) = :d OR substr(last_login_real,1,4) = :d OR substr(logout_time_real,1,4) = :d OR substr(updated_at,1,4) = :d OR substr(login_date,1,4) = :d)";
+                $lhWhere = "(substr(login_time_real,1,4) = :d OR substr(last_login_real,1,4) = :d OR substr(logout_time_real,1,4) = :d OR substr(login_date,1,4) = :d)";
             }
             $stmtLh = $db->prepare("SELECT
                 '' AS raw_date,
                 '' AS raw_time,
-                COALESCE(NULLIF(substr(login_time_real,1,10),''), NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(logout_time_real,1,10),''), NULLIF(substr(updated_at,1,10),''), login_date) AS sale_date,
-                COALESCE(NULLIF(substr(login_time_real,12,8),''), NULLIF(substr(last_login_real,12,8),''), NULLIF(substr(logout_time_real,12,8),''), NULLIF(substr(updated_at,12,8),''), login_time) AS sale_time,
-                COALESCE(NULLIF(login_time_real,''), NULLIF(last_login_real,''), NULLIF(logout_time_real,''), NULLIF(updated_at,'')) AS sale_datetime,
+                COALESCE(NULLIF(substr(login_time_real,1,10),''), NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(logout_time_real,1,10),''), login_date) AS sale_date,
+                COALESCE(NULLIF(substr(login_time_real,12,8),''), NULLIF(substr(last_login_real,12,8),''), NULLIF(substr(logout_time_real,12,8),''), login_time) AS sale_time,
+                COALESCE(NULLIF(login_time_real,''), NULLIF(last_login_real,''), NULLIF(logout_time_real,''), CASE WHEN login_date != '' AND login_time != '' THEN login_date || ' ' || login_time END) AS sale_datetime,
                 username,
                 COALESCE(NULLIF(validity,''), '-') AS profile,
                 COALESCE(NULLIF(validity,''), '-') AS profile_snapshot,
@@ -631,13 +631,18 @@ foreach ($rows as $r) {
     }
     $block = normalize_block_name($r['blok_name'] ?? '', $comment);
 
+    $is_retur_ref = false;
     if ($status === 'retur') {
         $ref_user = extract_retur_user_from_ref($comment);
         if ($ref_user !== '') {
             if (!isset($retur_ref_map[$block])) $retur_ref_map[$block] = [];
             $retur_ref_map[$block][strtolower($ref_user)] = true;
             $retur_ref_map_global[strtolower($ref_user)] = true;
+            $is_retur_ref = true;
         }
+    }
+    if ($is_retur_ref) {
+        $status = 'normal';
     }
     if ($status === 'rusak') {
         $username = strtolower((string)($r['username'] ?? ''));

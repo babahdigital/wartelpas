@@ -16,6 +16,7 @@ $can_delete_block_full = ($is_superadmin || ($is_operator && operator_can('delet
 $can_delete_block = ($can_delete_block_router || $can_delete_block_full);
 $can_mark_rusak_action = ($is_superadmin || ($is_operator && operator_can('mark_rusak')));
 $can_retur_voucher = ($is_superadmin || ($is_operator && operator_can('retur_voucher')));
+$can_vip_voucher = ($is_superadmin || ($is_operator && operator_can('vip_voucher')));
 
 $env = [];
 $envFile = __DIR__ . '/../../include/env.php';

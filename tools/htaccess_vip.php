@@ -247,6 +247,13 @@ if (empty($ips) && !empty($ip_names)) {
 if (!empty($env_vip_ips)) {
     $ips = array_values(array_unique(array_merge($ips, $env_vip_ips)));
 }
+$has_any_source = !empty($ips) || !empty($env_vip_ips) || !empty($ip_names);
+if (!$has_any_source && !empty($content)) {
+    $fallback_ips = extract_vip_ips($content);
+    if (!empty($fallback_ips)) {
+        $ips = array_values(array_unique($fallback_ips));
+    }
+}
 $render_ips = !empty($env_vip_ips) ? array_values(array_diff($ips, $env_vip_ips)) : $ips;
 
 // Handle POST
