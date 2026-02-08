@@ -1234,7 +1234,9 @@
     const fetchId = ++lastFetchId;
     try {
       if (isSearch) appliedQuery = searchInput.value.trim();
-      if (showLoading && searchLoading) searchLoading.style.display = 'inline-block';
+      if (searchLoading) {
+        searchLoading.style.display = showLoading ? 'inline-block' : 'none';
+      }
       if (showLoading && pageDim) pageDim.style.display = 'flex';
       const res = await fetch(buildUrl(isSearch), { headers: { 'X-Requested-With': 'XMLHttpRequest' }, cache: 'no-store' });
       if (!res.ok) return;
@@ -1253,9 +1255,13 @@
     }
   }
 
+  let submitGuard = false;
+
   searchInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      submitGuard = true;
+      setTimeout(() => { submitGuard = false; }, 0);
       const hasQuery = searchInput.value.trim() !== '';
       updateSearchUrl(searchInput.value.trim());
       fetchUsers(true, hasQuery);
@@ -1280,6 +1286,10 @@
   }
   if (form) {
     form.addEventListener('submit', (e) => {
+      if (submitGuard) {
+        e.preventDefault();
+        return;
+      }
       if (document.activeElement === searchInput) {
         e.preventDefault();
         const hasQuery = searchInput.value.trim() !== '';

@@ -425,6 +425,27 @@
                 <i class="fa fa-info-circle"></i> Menampilkan data terakhir: <?= htmlspecialchars($filter_date); ?>
             </div>
         <?php endif; ?>
+        <?php if ($req_show === 'harian' && !empty($reuse_summary_by_block)): ?>
+            <div style="background:#fff7ed;border:1px solid #fdba74;border-left:5px solid #f59e0b;border-radius:6px;padding:10px 12px;margin-bottom:12px;color:#92400e;">
+                <div style="font-weight:bold; font-size:12px; text-transform:uppercase; margin-bottom:4px;">
+                    <i class="fa fa-refresh"></i> Voucher Digunakan Ulang (tidak dihitung penjualan)
+                </div>
+                <div style="font-size:12px; line-height:1.5;">
+                    <?php foreach ($reuse_summary_by_block as $bname => $items): ?>
+                        <div style="font-weight:bold; margin-top:6px; color:#7c2d12;"><?= htmlspecialchars($bname) ?></div>
+                        <?php foreach ($items as $it): ?>
+                            <div style="margin-left:10px; margin-top:2px;">
+                                <b><?= htmlspecialchars($it['username'] ?? '') ?></b>
+                                <?php if (!empty($it['profile']) && $it['profile'] !== '-'): ?> • <?= htmlspecialchars($it['profile']) ?><?php endif; ?>
+                                <?php if (!empty($it['room'])): ?> • <?= htmlspecialchars($it['room']) ?><?php endif; ?>
+                                <?php if (!empty($it['customer'])): ?> • <?= htmlspecialchars($it['customer']) ?><?php endif; ?>
+                                <?php if (!empty($it['time'])): ?> • <?= htmlspecialchars($it['time']) ?><?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
         <?php
             $net_system_display = (int)$total_net;
             $voucher_loss_display = (int)$total_rusak + (int)$total_invalid;

@@ -103,10 +103,6 @@ if ($menu_retur_visible) {
         $stmt->execute();
         $menu_retur_list = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         if (!empty($menu_retur_list)) {
-            $menu_retur_tz = 'Asia/Makassar';
-            if (isset($_SESSION['timezone']) && trim((string)$_SESSION['timezone']) !== '') {
-                $menu_retur_tz = trim((string)$_SESSION['timezone']);
-            }
             foreach ($menu_retur_list as &$row) {
                 $req_type = strtolower(trim((string)($row['request_type'] ?? '')));
                 if ($req_type === 'pengembalian' || $req_type === 'refund') {
@@ -134,16 +130,6 @@ if ($menu_retur_visible) {
                     $profile_label = $profile_src;
                 }
                 $row['profile_name'] = $profile_label;
-                if (!empty($row['created_at'])) {
-                    $created_raw = (string)$row['created_at'];
-                    try {
-                        $dt = new DateTime($created_raw, new DateTimeZone('UTC'));
-                        $dt->setTimezone(new DateTimeZone($menu_retur_tz));
-                        $row['created_at'] = $dt->format('Y-m-d H:i:s');
-                    } catch (Exception $e) {
-                        $row['created_at'] = $created_raw;
-                    }
-                }
             }
             unset($row);
         }
@@ -916,22 +902,37 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         }
     });
 
+    var rtBadgeCache = { tz: '', dateFmt: null, timeFmt: null };
     function updateRealTimeBadge() {
         var el = document.getElementById('timer_val');
         var fallback = document.getElementById('timer');
         if (!el && !fallback) return;
+        var tz = (window.__appTimeZone || 'Asia/Makassar');
+        if (rtBadgeCache.tz !== tz || !rtBadgeCache.dateFmt || !rtBadgeCache.timeFmt) {
+            rtBadgeCache.tz = tz;
+            rtBadgeCache.dateFmt = new Intl.DateTimeFormat('id-ID', {
+                timeZone: tz,
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            });
+            rtBadgeCache.timeFmt = new Intl.DateTimeFormat('id-ID', {
+                timeZone: tz,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+        }
         var now = new Date();
-        var dateStr = now.toLocaleDateString('id-ID', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric'
-        });
-        var timeStr = now.toLocaleTimeString('id-ID', { hour12: false });
+        var dateStr = rtBadgeCache.dateFmt.format(now);
+        var timeStr = rtBadgeCache.timeFmt.format(now);
         var full = dateStr + ' ' + timeStr;
         if (el) el.textContent = full;
         if (fallback) fallback.textContent = full;
     }
 
+    window.__appTimeZone = <?= json_encode((!empty($_SESSION['timezone']) ? $_SESSION['timezone'] : 'Asia/Makassar')); ?>;
     window.__isSuperAdminFlag = <?= json_encode($is_superadmin); ?>;
     window.__canBackupFlag = <?= json_encode($is_superadmin || (isOperator() && operator_can('backup_only'))); ?>;
     window.__canRestoreFlag = <?= json_encode($is_superadmin || (isOperator() && operator_can('restore_only'))); ?>;
@@ -939,6 +940,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
     window.__returMenuData = <?= json_encode(['count' => $menu_retur_pending, 'items' => $menu_retur_list], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     window.__returCanReopen = <?= json_encode($is_superadmin || (isOperator() && operator_can('retur_reopen'))); ?>;
     window.__todoMenuData = <?= json_encode(['count' => $todo_count, 'items' => $todo_list], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+    window.__todoSession = <?= json_encode($session); ?>;
     window.__returBlokNames = <?= json_encode(($env['blok']['names'] ?? []), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     window.__returSession = <?= json_encode($session); ?>;
     window.__stuckMenuData = <?= json_encode(['count' => $menu_stuck_count, 'items' => $menu_stuck_list], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;

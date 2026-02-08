@@ -626,6 +626,10 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
             $action_error = 'Akses ditolak. Voucher VIP/Pengelola hanya untuk role yang diizinkan.';
           }
         }
+      if ($act === 'enable') {
+        $action_blocked = true;
+        $action_error = 'Aksi enable sudah dihapus.';
+      }
     $hist_action = null;
     $is_rusak_target = false;
     $new_user = '';
@@ -639,7 +643,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
       $is_rusak_target = true;
     }
 
-    if ($uid == '' && $name != '' && in_array($act, ['invalid','retur','rollback','delete','delete_user_full','disable','enable','vip','unvip'])) {
+    if ($uid == '' && $name != '' && in_array($act, ['invalid','retur','rollback','delete','delete_user_full','disable','vip','unvip'])) {
       $uget = $api_print('/ip/hotspot/user/print', [
         '?server' => $hotspot_server,
         '?name' => $name,
@@ -649,7 +653,7 @@ if (isset($_GET['action']) || isset($_POST['action'])) {
         $uid = $uget[0]['.id'];
       }
     }
-    if ($uid == '' && $name != '' && in_array($act, ['invalid','retur','rollback','delete','delete_user_full','disable','enable','vip','unvip'], true)) {
+    if ($uid == '' && $name != '' && in_array($act, ['invalid','retur','rollback','delete','delete_user_full','disable','vip','unvip'], true)) {
       $uget = $api_print('/ip/hotspot/user/print', [
         '?name' => $name,
         '.proplist' => '.id'

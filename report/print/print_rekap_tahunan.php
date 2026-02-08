@@ -51,6 +51,7 @@ $audit_refund = [];
 $total_refund_year = 0;
 $audit_kurang_bayar = [];
 $total_kurang_bayar_year = 0;
+$reuse_month_map = [];
 $settled_dates = [];
 $pending_dates = [];
 $has_settlement_rows = false;
@@ -59,6 +60,14 @@ try {
     if (file_exists($dbFile)) {
         $db = new PDO('sqlite:' . $dbFile);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+                $hasReuse = table_exists($db, 'voucher_reuse_log');
+                $reuseExcludeSales = $hasReuse
+                    ? " AND NOT EXISTS (SELECT 1 FROM voucher_reuse_log vr WHERE vr.username = sh.username AND vr.reuse_date = sh.sale_date)"
+                    : '';
+                $reuseExcludeLive = $hasReuse
+                    ? " AND NOT EXISTS (SELECT 1 FROM voucher_reuse_log vr WHERE vr.username = ls.username AND vr.reuse_date = ls.sale_date)"
+                    : '';
 
                 $res = $db->query("SELECT 
                                 sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
@@ -72,6 +81,7 @@ try {
                             AND instr(lower(COALESCE(sh.comment,'')), 'pengelola') = 0
                             AND instr(lower(COALESCE(lh.raw_comment,'')), 'vip') = 0
                             AND instr(lower(COALESCE(lh.raw_comment,'')), 'pengelola') = 0
+                                    $reuseExcludeSales
                         UNION ALL
                         SELECT 
                                 ls.raw_date, ls.raw_time, ls.sale_date, ls.sale_time, ls.sale_datetime,
@@ -86,6 +96,7 @@ try {
                             AND instr(lower(COALESCE(ls.comment,'')), 'pengelola') = 0
                             AND instr(lower(COALESCE(lh2.raw_comment,'')), 'vip') = 0
                             AND instr(lower(COALESCE(lh2.raw_comment,'')), 'pengelola') = 0
+                            $reuseExcludeLive
                         ORDER BY sale_datetime DESC, raw_date DESC");
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
 
@@ -176,6 +187,38 @@ try {
                 }
             } catch (Exception $e) {}
         }
+
+        if (table_exists($db, 'voucher_reuse_log')) {
+            try {
+                $hasLhReuse = table_exists($db, 'login_history');
+                $sqlReuse = "SELECT vr.reuse_date, vr.blok_name AS vr_blok, vr.raw_comment AS vr_comment";
+                if ($hasLhReuse) {
+                    $sqlReuse .= ", lh.raw_comment AS lh_comment, lh.blok_name AS lh_blok";
+                }
+                $sqlReuse .= " FROM voucher_reuse_log vr";
+                if ($hasLhReuse) {
+                    $sqlReuse .= " LEFT JOIN login_history lh ON lh.username = vr.username";
+                }
+                $sqlReuse .= " WHERE vr.reuse_date LIKE :y";
+                $stmtReuse = $db->prepare($sqlReuse);
+                $stmtReuse->execute([':y' => $filter_year . '%']);
+                $reuseRows = $stmtReuse->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                foreach ($reuseRows as $rr) {
+                    $reuse_date = (string)($rr['reuse_date'] ?? '');
+                    if ($reuse_date === '') continue;
+                    $ym = substr($reuse_date, 0, 7);
+                    $comment = (string)($rr['vr_comment'] ?? '');
+                    if ($comment === '' && !empty($rr['lh_comment'])) $comment = (string)$rr['lh_comment'];
+                    $blok_raw = (string)($rr['vr_blok'] ?? '');
+                    if ($blok_raw === '' && !empty($rr['lh_blok'])) $blok_raw = (string)$rr['lh_blok'];
+                    $blok_norm = normalize_block_name($blok_raw, $comment);
+                    if (!isset($reuse_month_map[$ym])) $reuse_month_map[$ym] = [];
+                    $reuse_month_map[$ym][$blok_norm] = (int)($reuse_month_map[$ym][$blok_norm] ?? 0) + 1;
+                }
+            } catch (Exception $e) {
+                $reuse_month_map = [];
+            }
+        }
     }
 } catch (Exception $e) {
     $rows = [];
@@ -223,9 +266,7 @@ foreach ($rows as $r) {
 
     $status = strtolower((string)($r['status'] ?? ''));
     $lh_status = strtolower((string)($r['last_status'] ?? ''));
-    $comment_raw = (string)($r['comment'] ?? '');
-    $comment = strtolower($comment_raw);
-    $retur_ref_user = extract_retur_user_from_ref($comment_raw);
+    $comment = strtolower((string)($r['comment'] ?? ''));
     if ($status === '' || $status === 'normal') {
         if ((int)($r['is_invalid'] ?? 0) === 1) $status = 'invalid';
         elseif ((int)($r['is_retur'] ?? 0) === 1) $status = 'retur';
@@ -234,9 +275,6 @@ foreach ($rows as $r) {
         elseif (strpos($comment, 'retur') !== false) $status = 'retur';
         elseif (strpos($comment, 'rusak') !== false || $lh_status === 'rusak') $status = 'rusak';
         else $status = 'normal';
-    }
-    if ($status === 'retur' && $retur_ref_user !== '') {
-        $status = 'normal';
     }
 
     $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
@@ -546,6 +584,26 @@ $print_time = date('d-m-Y H:i:s');
             <div class="summary-value" style="color:#1e3a8a;"><?= $cur ?> <?= number_format((int)$total_net,0,',','.') ?></div>
         </div>
     </div>
+
+    <?php if (!empty($reuse_month_map)): ?>
+        <div style="margin:10px 0 16px; padding:10px 12px; border:1px solid #fdba74; background:#fff7ed; color:#7c2d12; font-size:12px; border-radius:6px;">
+            <strong>Ringkasan Voucher Digunakan Ulang (tidak dihitung penjualan)</strong><br>
+            <?php
+                ksort($reuse_month_map);
+                foreach ($reuse_month_map as $ym => $blkMap):
+                    $parts = [];
+                    foreach ($blkMap as $b => $cnt) {
+                        if ($cnt <= 0) continue;
+                        $parts[] = $b . '(' . $cnt . ')';
+                    }
+                    if (empty($parts)) continue;
+                    $mm = substr($ym, 5, 2);
+                    $label = month_label_id($mm) . ' ' . substr($ym, 0, 4);
+            ?>
+                <div style="margin-top:4px;"><b><?= esc($label) ?>:</b> <?= esc(implode(', ', $parts)) ?></div>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
 
     <table style="width:100%; border-collapse:collapse; font-size:12px; margin-top:20px;">
         <thead>

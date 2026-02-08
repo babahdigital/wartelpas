@@ -304,6 +304,27 @@
     return window.__todoMenuData || { count: 0, items: [] };
   }
 
+  function getTodoSession() {
+    if (window.__todoSession) return String(window.__todoSession || '');
+    try {
+      var params = new URLSearchParams(window.location.search || '');
+      return params.get('session') || '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function logTodoAction(todoId, action, url) {
+    var session = getTodoSession();
+    var qs = new URLSearchParams();
+    qs.set('id', todoId || '');
+    qs.set('action', action || 'action');
+    if (url) qs.set('url', url);
+    if (session) qs.set('session', session);
+    var logUrl = './tools/todo_log.php?' + qs.toString();
+    return fetch(logUrl, { method: 'GET' }).catch(function(){});
+  }
+
   function buildTodoHtml(data) {
     var items = Array.isArray(data.items) ? data.items : [];
     if (!items.length) {
@@ -327,13 +348,24 @@
       var actionTarget = String(it.action_target || '_self');
       var actionAjax = !!it.action_ajax;
       var actionAck = String(it.action_ack || '');
-      var actionHtml = actionUrl
-        ? '<a class="todo-action-btn" href="' + escapeHtml(actionUrl) + '" ' +
+      var actionAckLabel = String(it.action_ack_label || '');
+      var actionHtml = '';
+      if (actionUrl) {
+        actionHtml += '<a class="todo-action-btn" href="' + escapeHtml(actionUrl) + '" ' +
           (actionAjax ? 'data-todo-action="1"' : '') +
           ' data-todo-ack="' + escapeHtml(actionAck) + '"' +
           ' data-todo-id="' + escapeHtml(it.id || '') + '"' +
-          ' target="' + escapeHtml(actionTarget) + '">' + actionLabel + '</a>'
-        : '<span class="todo-action-dash">-</span>';
+          ' target="' + escapeHtml(actionTarget) + '">' + actionLabel + '</a>';
+      }
+      if (actionAck && actionAckLabel) {
+        actionHtml += (actionHtml ? '<span class="todo-action-sep"> </span>' : '');
+        actionHtml += '<a class="todo-action-btn todo-action-ack" href="' + escapeHtml(actionAck) + '" data-todo-ack-only="1"' +
+          ' data-todo-ack="' + escapeHtml(actionAck) + '"' +
+          ' data-todo-id="' + escapeHtml(it.id || '') + '">' + escapeHtml(actionAckLabel) + '</a>';
+      }
+      if (!actionHtml) {
+        actionHtml = '<span class="todo-action-dash">-</span>';
+      }
       html += '<tr class="todo-row todo-' + level + '">' +
         '<td class="todo-col-level"><span class="todo-level">' + level.toUpperCase() + '</span></td>' +
         '<td class="todo-col-title"><strong class="todo-title">' + title + '</strong></td>' +
@@ -375,7 +407,8 @@
     if (!target) return;
     if (target.closest) target = target.closest('.todo-action-btn');
     if (!target || !target.getAttribute) return;
-    if (target.getAttribute('data-todo-action') !== '1') return;
+    var isAckOnly = target.getAttribute('data-todo-ack-only') === '1';
+    if (target.getAttribute('data-todo-action') !== '1' && !isAckOnly) return;
     ev.preventDefault();
 
     var url = target.getAttribute('href');
@@ -384,13 +417,15 @@
     if (!url) return;
 
     target.classList.add('is-loading');
-    fetch(url, { method: 'GET' })
+    logTodoAction(todoId, isAckOnly ? 'ack' : 'action', isAckOnly ? (ackUrl || url) : url);
+    var run = isAckOnly ? fetch(ackUrl || url, { method: 'GET' }) : fetch(url, { method: 'GET' });
+    run
       .then(function(r){ return r.text(); })
       .then(function(txt){
         var ok = /Sukses|OK|berhasil/i.test(txt);
         var rawMsg = String(txt || '').trim();
         var msg = ok
-          ? (ackUrl ? 'Berhasil. Todo ditutup.' : 'Berhasil.')
+          ? (isAckOnly ? 'Todo ditutup.' : (ackUrl ? 'Berhasil. Todo ditutup.' : 'Berhasil.'))
           : (rawMsg !== '' ? rawMsg : 'Gagal. Hubungi administrator.');
         if (window.MikhmonPopup) {
           window.MikhmonPopup.open({
@@ -406,7 +441,7 @@
           });
         }
         if (ok) {
-          if (ackUrl) {
+          if (!isAckOnly && ackUrl) {
             return fetch(ackUrl, { method: 'GET' }).then(function(){
               updateTodoDataAfterAck(todoId);
             });
@@ -453,21 +488,73 @@
     });
   }
 
+  function getAppTimeZone() {
+    return window.__appTimeZone || 'Asia/Makassar';
+  }
+
+  function parseDbDateTimeUtc(value) {
+    var str = String(value || '').trim();
+    if (!str) return null;
+    var m = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+    if (!m) return null;
+    var y = parseInt(m[1], 10);
+    var mo = parseInt(m[2], 10) - 1;
+    var d = parseInt(m[3], 10);
+    var hh = parseInt(m[4] || '0', 10);
+    var mm = parseInt(m[5] || '0', 10);
+    var ss = parseInt(m[6] || '0', 10);
+    return new Date(Date.UTC(y, mo, d, hh, mm, ss));
+  }
+
+  function formatDateInTz(value) {
+    var date = parseDbDateTimeUtc(value);
+    if (!date) return '';
+    var parts = new Intl.DateTimeFormat('id-ID', {
+      timeZone: getAppTimeZone(),
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).formatToParts(date);
+    var dd = '', mm = '', yy = '';
+    parts.forEach(function(p){
+      if (p.type === 'day') dd = p.value;
+      if (p.type === 'month') mm = p.value;
+      if (p.type === 'year') yy = p.value;
+    });
+    if (!dd || !mm || !yy) return '';
+    return dd + '-' + mm + '-' + yy;
+  }
+
+  function formatTimeInTz(value) {
+    var date = parseDbDateTimeUtc(value);
+    if (!date) return '';
+    var parts = new Intl.DateTimeFormat('id-ID', {
+      timeZone: getAppTimeZone(),
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).formatToParts(date);
+    var hh = '', mm = '';
+    parts.forEach(function(p){
+      if (p.type === 'hour') hh = p.value;
+      if (p.type === 'minute') mm = p.value;
+    });
+    if (!hh || !mm) return '';
+    return hh + ':' + mm;
+  }
+
   function formatReturDate(item) {
-    var d = item && (item.request_date || item.created_at) ? String(item.request_date || item.created_at) : '';
-    if (!d) return '-';
-    var datePart = d.substring(0, 10);
-    if (!datePart || datePart.indexOf('-') === -1) return datePart || '-';
-    var parts = datePart.split('-');
-    if (parts.length !== 3) return datePart;
-    return [parts[2], parts[1], parts[0]].join('-');
+    var raw = item && (item.request_date || item.created_at) ? String(item.request_date || item.created_at) : '';
+    if (!raw) return '-';
+    var fmt = formatDateInTz(raw);
+    return fmt || '-';
   }
 
   function formatReturTime(item) {
-    var d = item && item.created_at ? String(item.created_at) : '';
-    if (!d) return '-';
-    var timePart = d.length >= 19 ? d.substring(11, 16) : '';
-    return timePart || '-';
+    var raw = item && item.created_at ? String(item.created_at) : '';
+    if (!raw) return '-';
+    var fmt = formatTimeInTz(raw);
+    return fmt || '-';
   }
 
   function formatBlokLabel(raw) {
@@ -1917,6 +2004,50 @@
       .replace(/'/g, '&#39;');
   }
 
+  function getAppTimeZone() {
+    return window.__appTimeZone || 'Asia/Makassar';
+  }
+
+  function parseDbDateTimeUtc(value) {
+    var str = String(value || '').trim();
+    if (!str) return null;
+    var m = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+    if (!m) return null;
+    var y = parseInt(m[1], 10);
+    var mo = parseInt(m[2], 10) - 1;
+    var d = parseInt(m[3], 10);
+    var hh = parseInt(m[4] || '0', 10);
+    var mm = parseInt(m[5] || '0', 10);
+    var ss = parseInt(m[6] || '0', 10);
+    return new Date(Date.UTC(y, mo, d, hh, mm, ss));
+  }
+
+  function formatDateTimeInTz(value) {
+    var date = parseDbDateTimeUtc(value);
+    if (!date) return '';
+    var parts = new Intl.DateTimeFormat('id-ID', {
+      timeZone: getAppTimeZone(),
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).formatToParts(date);
+    var dd = '', mm = '', yy = '', hh = '', mi = '';
+    parts.forEach(function(p){
+      if (p.type === 'day') dd = p.value;
+      if (p.type === 'month') mm = p.value;
+      if (p.type === 'year') yy = p.value;
+      if (p.type === 'hour') hh = p.value;
+      if (p.type === 'minute') mi = p.value;
+    });
+    if (!dd || !mm || !yy) return '';
+    var dateStr = dd + '-' + mm + '-' + yy;
+    if (hh && mi) return dateStr + ' ' + hh + ':' + mi;
+    return dateStr;
+  }
+
   function formatScheduleText(item) {
     var start = (item.start_date_dmy || '').trim();
     var end = (item.end_date_dmy || '').trim();
@@ -2350,12 +2481,13 @@
         var statusText = it.enabled ? 'Aktif' : 'Nonaktif';
         var scheduleText = formatScheduleText(it);
         var activeClass = it.enabled ? ' ann-router-active' : '';
+        var updatedText = formatDateTimeInTz(it.updated_at || '') || (it.updated_at || '-');
         return '' +
           '<div class="ann-router-item' + activeClass + '">' +
             '<div class="ann-router-icon"><i class="fa fa-bullhorn" style="font-size: 14px !important;"></i></div>' +
             '<div class="ann-router-info">' +
               '<span class="ann-router-name">' + (it.title || 'Popup') + '</span>' +
-              '<span class="ann-router-session">Terakhir update: ' + (it.updated_at || '-') + '</span>' +
+              '<span class="ann-router-session">Terakhir update: ' + updatedText + '</span>' +
             '</div>' +
             '<div class="ann-router-actions">' +
               '<a href="javascript:void(0)" class="ann-router-action" data-act="edit" data-id="' + it.id + '" title="Edit"><i class="fa fa-pencil" style="font-size: 14px !important;"></i></a>' +

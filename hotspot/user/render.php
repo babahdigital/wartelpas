@@ -106,22 +106,124 @@
           <span id="users-active" class="badge badge-info p-2" style="font-size:14px;">Online: 0 User</span>
         </div>
       </div>
-      <div class="status-legend">
-        <div class="legend-item"><span class="status-badge st-online">ONLINE</span><span>Online</span></div>
-        <div class="legend-item"><span class="status-badge st-ready">READY</span><span>Voucher</span></div>
-        <div class="legend-item"><span class="status-badge st-used">TERPAKAI</span><span>Terpakai</span></div>
-        <div class="legend-item"><span class="status-badge st-used-warn">TERPAKAI</span><span>Terpakai (perlu cek)</span></div>
-        <div class="legend-item"><span class="status-badge st-rusak">RUSAK</span><span>Rusak</span></div>
-        <div class="legend-item"><span class="status-badge st-retur">RETUR</span><span>Retur</span></div>
-        <div class="legend-item"><span class="status-badge st-invalid">INVALID</span><span>Invalid</span></div>
-        <div class="legend-item"><span class="status-badge st-vip">PENGELOLA</span><span>Pengelola</span></div>
-        <div class="legend-item"><span class="status-badge st-relogin">RELOGIN</span><span>Relogin</span></div>
-      </div>
-      <div class="toolbar-container">
-        <form action="?" method="GET" class="toolbar-row m-0" id="users-toolbar-form">
-          <input type="hidden" name="hotspot" value="users">
-          <input type="hidden" name="session" value="<?= $session ?>">
-
+      <form action="?" method="GET" class="toolbar-row m-0" id="users-toolbar-form">
+        <input type="hidden" name="hotspot" value="users">
+        <input type="hidden" name="session" value="<?= $session ?>">
+        <?php
+          $status_labels = ['used' => 'Terpakai', 'retur' => 'Retur', 'rusak' => 'Rusak', 'ready' => 'Ready', 'vip' => 'Pengelola'];
+          $can_delete_status = in_array($req_status, array_keys($status_labels)) && $req_show === 'semua' && empty($filter_date) && !empty($can_delete_user);
+          $status_label = $status_labels[$req_status] ?? '';
+          $can_print_block = ($req_comm != '' && $req_status === 'ready');
+          $can_print_status = ($req_comm != '' && $req_status === 'retur');
+          $can_print_vip_code = ($req_status === 'vip') && !empty($can_vip_voucher);
+          $can_print_used = ($req_status === 'used');
+          $can_print_online = ($req_status === 'online');
+          $can_print_rusak = ($req_status === 'rusak');
+          $can_print_ready = ($req_status === 'ready');
+          $can_print_retur = ($req_status === 'retur');
+          $profile_param = ($req_prof != '' && $req_prof != 'all') ? '&profile=' . urlencode($req_prof) : '';
+          $reset_params = $_GET;
+          $reset_params['status'] = 'all';
+          unset($reset_params['page']);
+          $reset_url = './?' . http_build_query($reset_params);
+          $can_print_list = ($can_print_used || $can_print_online || $can_print_rusak || $can_print_ready || $can_print_retur || ($req_status === 'all' && $req_comm != ''));
+        ?>
+        <div class="status-legend">
+          <div class="legend-left">
+            <div class="legend-item"><span class="status-badge st-online">ONLINE</span><span>Online</span></div>
+            <div class="legend-item"><span class="status-badge st-ready">READY</span><span>Voucher</span></div>
+            <div class="legend-item"><span class="status-badge st-used">TERPAKAI</span><span>Terpakai</span></div>
+            <div class="legend-item"><span class="status-badge st-used-warn">TERPAKAI</span><span>Terpakai (perlu cek)</span></div>
+            <div class="legend-item"><span class="status-badge st-rusak">RUSAK</span><span>Rusak</span></div>
+            <div class="legend-item"><span class="status-badge st-retur">RETUR</span><span>Retur</span></div>
+            <div class="legend-item"><span class="status-badge st-invalid">INVALID</span><span>Invalid</span></div>
+            <div class="legend-item"><span class="status-badge st-vip">PENGELOLA</span><span>Pengelola</span></div>
+            <div class="legend-item"><span class="status-badge st-relogin">RELOGIN</span><span>Relogin</span></div>
+            <div class="legend-item"><span class="status-badge st-reused">REUSED</span><span>Digunakan kembali</span></div>
+          </div>
+          <div class="legend-actions">
+            <div class="toolbar-right">
+              <?php if ($req_status !== 'all'): ?>
+                <button type="button" class="btn btn-outline-light" onclick="location.href='<?= $reset_url ?>'">
+                  <i class="fa fa-undo"></i> Reset Status
+                </button>
+              <?php endif; ?>
+              <?php if ($req_status === 'all' && $req_comm == ''): ?>
+                <?php
+                  $today_params = $_GET;
+                  $today_params['show'] = 'harian';
+                  $today_params['date'] = date('Y-m-d');
+                  unset($today_params['page']);
+                  $today_url = './?' . http_build_query($today_params);
+                ?>
+                <button type="button" class="btn btn-outline-light" onclick="location.href='<?= $today_url ?>'">
+                  <i class="fa fa-calendar"></i> Reset Tanggal
+                </button>
+              <?php endif; ?>
+              <?php if (!$is_ajax): ?>
+                <button type="button" id="summary-open" class="btn btn-outline-light">
+                  <i class="fa fa-list-alt"></i> Sisa Voucher
+                </button>
+              <?php endif; ?>
+              <?php if ($req_comm == '' && $can_delete_status): ?>
+                <button type="button" class="btn btn-warning" onclick="actionRequest('./?hotspot=users&action=delete_status&status=<?= $req_status ?>&session=<?= $session ?>','Hapus semua voucher <?= $status_label ?> (tidak online)?')">
+                  <i class="fa fa-trash"></i> Hapus <?= $status_label ?>
+                </button>
+              <?php endif; ?>
+              <?php if ($req_comm != ''): ?>
+                <?php
+                  $print_code_url = '';
+                  if ($can_print_status) {
+                    $print_code_url = './voucher/print.php?status=' . urlencode($req_status) . '&blok=' . urlencode($req_comm) . $profile_param . '&small=yes&session=' . urlencode($session);
+                  } elseif ($can_print_block) {
+                    $print_code_url = './voucher/print.php?id=' . urlencode($req_comm) . $profile_param . '&small=yes&session=' . urlencode($session);
+                  }
+                ?>
+                <?php
+                  $print_all_params = [
+                    'mode' => 'usage',
+                    'status' => 'all',
+                    'session' => $session,
+                    'blok' => $req_comm
+                  ];
+                  if ($req_prof != '' && $req_prof != 'all') $print_all_params['profile'] = $req_prof;
+                  if ($req_show !== 'semua' && !empty($filter_date)) {
+                    $print_all_params['show'] = $req_show;
+                    $print_all_params['date'] = $filter_date;
+                  }
+                  $print_all_url = './hotspot/print/print_list.php?' . http_build_query($print_all_params);
+                ?>
+                <?php if ($can_print_list || $print_code_url !== ''): ?>
+                  <button type="button" class="btn btn-secondary" onclick="window.openUnifiedPrintPopupWithCode && window.openUnifiedPrintPopupWithCode('<?= $print_code_url ?>','<?= htmlspecialchars($req_comm, ENT_QUOTES) ?>')">
+                    <i class="fa fa-print"></i> Print
+                  </button>
+                <?php endif; ?>
+                <?php if ($can_delete_status): ?>
+                  <button type="button" class="btn btn-warning" onclick="actionRequest('./?hotspot=users&action=delete_status&status=<?= $req_status ?>&blok=<?= urlencode($req_comm) ?>&session=<?= $session ?>','Hapus semua voucher <?= $status_label ?> di <?= htmlspecialchars($req_comm) ?> (tidak online)?')">
+                    <i class="fa fa-trash"></i> Hapus <?= $status_label ?>
+                  </button>
+                <?php endif; ?>
+                <?php if (!empty($can_delete_block)): ?>
+                  <button type="button" class="btn btn-danger" onclick="openDeleteBlockPopup('<?= htmlspecialchars($req_comm, ENT_QUOTES) ?>')">
+                    <i class="fa fa-trash"></i> Hapus Blok
+                  </button>
+                <?php endif; ?>
+              <?php endif; ?>
+              <?php if ($req_comm == '' && ($can_print_list || $can_print_vip_code)): ?>
+                <?php
+                  $vip_code_url = '';
+                  if ($can_print_vip_code) {
+                    $vip_code_url = './voucher/print.php?status=vip' . $profile_param . '&small=yes&session=' . urlencode($session);
+                  }
+                ?>
+                <button type="button" class="btn btn-secondary" onclick="<?= $can_print_vip_code ? "window.openUnifiedPrintPopupWithCode && window.openUnifiedPrintPopupWithCode('" . $vip_code_url . "','-')" : "window.openPrintPopup && window.openPrintPopup()" ?>">
+                  <i class="fa fa-print"></i> Print
+                </button>
+              <?php endif; ?>
+            </div>
+          </div>
+        </div>
+        <div class="toolbar-container">
           <div class="toolbar-left">
             <div class="input-group-solid">
               <div class="search-wrap">
@@ -131,15 +233,16 @@
 
               <select name="status" id="status-filter" class="custom-select-solid mid-el" onchange="this.form.submit()" style="flex: 0 0 220px;">
                 <option value="all" <?=($req_status=='all'?'selected':'')?>>Status: Semua</option>
-                <option value="ready" <?=($req_status=='ready'?'selected':'')?>>🟢 Voucher</option>
+                <option value="ready" <?=($req_status=='ready'?'selected':'')?>>● Voucher</option>
                 <?php if (!empty($can_vip_voucher)): ?>
-                <option value="vip" <?=($req_status=='vip'?'selected':'')?>>🟡 Pengelola</option>
+                <option value="vip" <?=($req_status=='vip'?'selected':'')?>>● Pengelola</option>
                 <?php endif; ?>
-                <option value="online" <?=($req_status=='online'?'selected':'')?>>🔵 Online</option>
-                <option value="used" <?=($req_status=='used'?'selected':'')?>>⚪ Terpakai</option>
-                <option value="used_warn" <?=($req_status=='used_warn'?'selected':'')?>>🟡 Terpakai (Perlu Cek)</option>
-                <option value="rusak" <?=($req_status=='rusak'?'selected':'')?>>🟠 Rusak / Error</option>
-                <option value="retur" <?=($req_status=='retur'?'selected':'')?>>🟣 Hasil Retur</option>
+                <option value="online" <?=($req_status=='online'?'selected':'')?>>● Online</option>
+                <option value="used" <?=($req_status=='used'?'selected':'')?>>● Terpakai</option>
+                <option value="used_warn" <?=($req_status=='used_warn'?'selected':'')?>>● Terpakai (Perlu Cek)</option>
+                <option value="reused" <?=($req_status=='reused'?'selected':'')?>>● Reused (Dipakai Lagi)</option>
+                <option value="rusak" <?=($req_status=='rusak'?'selected':'')?>>● Rusak / Error</option>
+                <option value="retur" <?=($req_status=='retur'?'selected':'')?>>● Hasil Retur</option>
               </select>
 
               <select name="profile" class="custom-select-solid mid-el" onchange="this.form.submit()" style="flex: 0 0 160px;">
@@ -164,128 +267,28 @@
                 } ?>
               </select>
             </div>
-            <div class="input-group-solid period-group">
-              <select name="show" class="custom-select-solid first-el no-sep-right" onchange="this.form.submit()" style="flex: 0 0 140px;">
-                <option value="semua" <?= $req_show==='semua'?'selected':''; ?> style="display:none;">Semua</option>
-                <option value="harian" <?= $req_show==='harian'?'selected':''; ?>>Harian</option>
-                <option value="bulanan" <?= $req_show==='bulanan'?'selected':''; ?>>Bulanan</option>
-                <option value="tahunan" <?= $req_show==='tahunan'?'selected':''; ?>>Tahunan</option>
-              </select>
-              <?php if ($req_show === 'harian'): ?>
-                <input type="date" name="date" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" class="form-control last-el no-sep-left" style="flex:0 0 170px;">
-              <?php elseif ($req_show === 'bulanan'): ?>
-                <input type="month" name="date" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" class="form-control last-el no-sep-left" style="flex:0 0 170px;">
-              <?php else: ?>
-                <?php if ($req_show === 'tahunan'): ?>
-                  <input type="number" name="date" min="2000" max="2100" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" class="form-control last-el no-sep-left" style="flex:0 0 120px;">
+            <div class="period-right">
+              <div class="input-group-solid period-group">
+                <select name="show" class="custom-select-solid first-el no-sep-right" onchange="this.form.submit()" style="flex: 0 0 120px;">
+                  <option value="semua" <?= $req_show==='semua'?'selected':''; ?> style="display:none;">Semua</option>
+                  <option value="harian" <?= $req_show==='harian'?'selected':''; ?>>Harian</option>
+                  <option value="bulanan" <?= $req_show==='bulanan'?'selected':''; ?>>Bulanan</option>
+                  <option value="tahunan" <?= $req_show==='tahunan'?'selected':''; ?>>Tahunan</option>
+                </select>
+                <?php if ($req_show === 'harian'): ?>
+                  <input type="date" name="date" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" class="form-control last-el no-sep-left" style="flex:0 0 150px;">
+                <?php elseif ($req_show === 'bulanan'): ?>
+                  <input type="month" name="date" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" class="form-control last-el no-sep-left" style="flex:0 0 150px;">
+                <?php else: ?>
+                  <?php if ($req_show === 'tahunan'): ?>
+                    <input type="number" name="date" min="2000" max="2100" value="<?= htmlspecialchars($filter_date); ?>" onchange="this.form.submit()" class="form-control last-el no-sep-left" style="flex:0 0 110px;">
+                  <?php endif; ?>
                 <?php endif; ?>
-              <?php endif; ?>
+              </div>
             </div>
-            <span id="search-loading" style="display:none;font-size:12px;color:var(--txt-muted);margin-left:6px;">
-              <i class="fa fa-circle-o-notch fa-spin"></i> Mencari...
-            </span>
           </div>
-          <?php
-            $status_labels = ['used' => 'Terpakai', 'retur' => 'Retur', 'rusak' => 'Rusak', 'ready' => 'Ready', 'vip' => 'Pengelola'];
-            $can_delete_status = in_array($req_status, array_keys($status_labels)) && $req_show === 'semua' && empty($filter_date) && !empty($can_delete_user);
-            $status_label = $status_labels[$req_status] ?? '';
-            $can_print_block = ($req_comm != '' && $req_status === 'ready');
-            $can_print_status = ($req_comm != '' && $req_status === 'retur');
-            $can_print_vip_code = ($req_status === 'vip') && !empty($can_vip_voucher);
-            $can_print_used = ($req_status === 'used');
-            $can_print_online = ($req_status === 'online');
-            $can_print_rusak = ($req_status === 'rusak');
-            $can_print_ready = ($req_status === 'ready');
-            $can_print_retur = ($req_status === 'retur');
-            $profile_param = ($req_prof != '' && $req_prof != 'all') ? '&profile=' . urlencode($req_prof) : '';
-            $reset_params = $_GET;
-            $reset_params['status'] = 'all';
-            unset($reset_params['page']);
-            $reset_url = './?' . http_build_query($reset_params);
-          ?>
-          <div class="toolbar-right">
-            <?php if ($req_status !== 'all'): ?>
-              <button type="button" class="btn btn-outline-light" style="height:40px;" onclick="location.href='<?= $reset_url ?>'">
-                <i class="fa fa-undo"></i> Reset Status
-              </button>
-            <?php endif; ?>
-            <?php if ($req_status === 'all' && $req_comm == ''): ?>
-              <?php
-                $today_params = $_GET;
-                $today_params['show'] = 'harian';
-                $today_params['date'] = date('Y-m-d');
-                unset($today_params['page']);
-                $today_url = './?' . http_build_query($today_params);
-              ?>
-              <button type="button" class="btn btn-outline-light" style="height:40px;" onclick="location.href='<?= $today_url ?>'">
-                <i class="fa fa-calendar"></i> Reset Tanggal
-              </button>
-            <?php endif; ?>
-            <?php if (!$is_ajax): ?>
-              <button type="button" id="summary-open" class="btn btn-outline-light" style="height:40px;">
-                <i class="fa fa-list-alt"></i> Sisa Voucher
-              </button>
-            <?php endif; ?>
-            <?php
-              $can_print_list = ($can_print_used || $can_print_online || $can_print_rusak || $can_print_ready || $can_print_retur || ($req_status === 'all' && $req_comm != ''));
-            ?>
-            <?php if ($req_comm == '' && $can_delete_status): ?>
-              <button type="button" class="btn btn-warning" style="height:40px;" onclick="actionRequest('./?hotspot=users&action=delete_status&status=<?= $req_status ?>&session=<?= $session ?>','Hapus semua voucher <?= $status_label ?> (tidak online)?')">
-                <i class="fa fa-trash"></i> Hapus <?= $status_label ?>
-              </button>
-            <?php endif; ?>
-            <?php if ($req_comm != ''): ?>
-              <?php
-                $print_code_url = '';
-                if ($can_print_status) {
-                  $print_code_url = './voucher/print.php?status=' . urlencode($req_status) . '&blok=' . urlencode($req_comm) . $profile_param . '&small=yes&session=' . urlencode($session);
-                } elseif ($can_print_block) {
-                  $print_code_url = './voucher/print.php?id=' . urlencode($req_comm) . $profile_param . '&small=yes&session=' . urlencode($session);
-                }
-              ?>
-              <?php
-                $print_all_params = [
-                  'mode' => 'usage',
-                  'status' => 'all',
-                  'session' => $session,
-                  'blok' => $req_comm
-                ];
-                if ($req_prof != '' && $req_prof != 'all') $print_all_params['profile'] = $req_prof;
-                if ($req_show !== 'semua' && !empty($filter_date)) {
-                  $print_all_params['show'] = $req_show;
-                  $print_all_params['date'] = $filter_date;
-                }
-                $print_all_url = './hotspot/print/print_list.php?' . http_build_query($print_all_params);
-              ?>
-              <?php if ($can_print_list || $print_code_url !== ''): ?>
-                <button type="button" class="btn btn-secondary" style="height:40px;" onclick="window.openUnifiedPrintPopupWithCode && window.openUnifiedPrintPopupWithCode('<?= $print_code_url ?>','<?= htmlspecialchars($req_comm, ENT_QUOTES) ?>')">
-                  <i class="fa fa-print"></i> Print
-                </button>
-              <?php endif; ?>
-              <?php if ($can_delete_status): ?>
-                <button type="button" class="btn btn-warning" style="height:40px;" onclick="actionRequest('./?hotspot=users&action=delete_status&status=<?= $req_status ?>&blok=<?= urlencode($req_comm) ?>&session=<?= $session ?>','Hapus semua voucher <?= $status_label ?> di <?= htmlspecialchars($req_comm) ?> (tidak online)?')">
-                  <i class="fa fa-trash"></i> Hapus <?= $status_label ?>
-                </button>
-              <?php endif; ?>
-              <?php if ($req_status == 'all' && !empty($can_delete_block)): ?>
-                <button type="button" class="btn btn-danger" style="height:40px;" onclick="openDeleteBlockPopup('<?= htmlspecialchars($req_comm, ENT_QUOTES) ?>')">
-                  <i class="fa fa-trash"></i> Hapus Blok
-                </button>
-              <?php endif; ?>
-            <?php endif; ?>
-              <?php if ($req_comm == '' && ($can_print_list || $can_print_vip_code)): ?>
-              <?php
-                $vip_code_url = '';
-                if ($can_print_vip_code) {
-                  $vip_code_url = './voucher/print.php?status=vip' . $profile_param . '&small=yes&session=' . urlencode($session);
-                }
-              ?>
-              <button type="button" class="btn btn-secondary" style="height:40px;" onclick="<?= $can_print_vip_code ? "window.openUnifiedPrintPopupWithCode && window.openUnifiedPrintPopupWithCode('" . $vip_code_url . "','-')" : "window.openPrintPopup && window.openPrintPopup()" ?>">
-                <i class="fa fa-print"></i> Print
-              </button>
-            <?php endif; ?>
-          </div>
-        </form>
+        </div>
+      </form>
       </div>
       <script>
         window.isSuperAdmin = <?= !empty($is_superadmin) ? 'true' : 'false' ?>;
@@ -398,7 +401,7 @@
                       <span style="font-size:13px; font-weight:600"><?= htmlspecialchars($u['uptime']) ?></span><br>
                       <span style="font-size:11px; color:var(--txt-muted)"><?= formatBytes($u['bytes'],2) ?></span>
                     </td>
-                    <td class="text-center">
+                    <td class="text-center status-col">
                       <?php if($u['status'] === 'ONLINE'): ?><span class="status-badge st-online">ONLINE</span>
                         <?php elseif($u['status'] === 'RUSAK'): ?><span class="status-badge st-rusak">RUSAK</span>
                         <?php elseif($u['status'] === 'INVALID'): ?><span class="status-badge st-invalid">INVALID</span>
@@ -406,9 +409,10 @@
                         <?php elseif($u['status'] === 'TERPAKAI'): ?><span class="status-badge <?= !empty($u['terpakai_warning']) ? 'st-used-warn' : 'st-used'; ?>">TERPAKAI</span>
                         <?php elseif($u['status'] === 'VIP'): ?><span class="status-badge st-vip">PENGELOLA</span>
                         <?php else: ?><span class="status-badge st-ready">READY</span>
-                        <?php endif; ?>
+                      <?php endif; ?>
+                      <?php if (!empty($u['is_reused'])): ?><span class="status-badge st-reused" style="margin-left:6px;">REUSED</span><?php endif; ?>
                     </td>
-                    <td class="text-center">
+                    <td class="text-center actions-col">
                       <?php
                         $status_upper = strtoupper($u['status'] ?? '');
                         $is_ready = ($status_upper === 'READY');
@@ -424,74 +428,77 @@
                         $can_mark_rusak = $is_used && !$is_online;
                         $can_mark_rusak_action = !empty($can_mark_rusak_action);
                         $can_retur_action = !empty($can_retur_voucher);
+                        $keep_params = '&profile=' . urlencode($req_prof) .
+                          '&comment=' . urlencode($req_comm) .
+                          '&status=' . urlencode($req_status) .
+                          '&q=' . urlencode($req_search) .
+                          '&show=' . urlencode($req_show) .
+                          '&date=' . urlencode($filter_date);
                       ?>
-                      <?php if (in_array($req_status, ['all','ready','vip','used','rusak','online','retur'], true)): ?>
-                        <?php if ($is_used && in_array($req_status, ['all','used'], true)): ?>
-                          <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
-                          <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.used.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
-                        <?php elseif ($is_online && in_array($req_status, ['all','online'], true)): ?>
-                          <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
-                          <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.used.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
-                        <?php elseif ($is_rusak && in_array($req_status, ['all','rusak'], true)): ?>
-                          <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
-                          <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.detail.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Rincian Rusak"><i class="fa fa-print"></i></button>
-                        <?php elseif ($is_retur && in_array($req_status, ['all','retur'], true)): ?>
-                          <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
-                          <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.retur.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Voucher Retur"><i class="fa fa-print"></i></button>
-                          <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.retur.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>&download=1&img=1','_blank')" title="Download Voucher Retur (PNG)"><i class="fa fa-download"></i></button>
-                        <?php elseif ($is_ready && in_array($req_status, ['all','ready'], true)): ?>
-                          <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
-                          <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
+                      <?php if ($req_status === 'reused'): ?>
+                        <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
+                        <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.used.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
+                      <?php else: ?>
+                        <?php if (in_array($req_status, ['all','ready','used','used_warn','rusak','online','retur'], true)): ?>
+                          <?php if ($is_used && in_array($req_status, ['all','used','used_warn'], true)): ?>
+                            <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
+                            <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.used.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
+                          <?php elseif ($is_online && in_array($req_status, ['all','online'], true)): ?>
+                            <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
+                            <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.used.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
+                          <?php elseif ($is_rusak && in_array($req_status, ['all','rusak'], true)): ?>
+                            <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
+                            <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.detail.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Rincian Rusak"><i class="fa fa-print"></i></button>
+                          <?php elseif ($is_retur && in_array($req_status, ['all','retur'], true)): ?>
+                            <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
+                            <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.retur.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Voucher Retur"><i class="fa fa-print"></i></button>
+                            <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.retur.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>&download=1&img=1','_blank')" title="Download Voucher Retur (PNG)"><i class="fa fa-download"></i></button>
+                          <?php elseif ($is_ready && in_array($req_status, ['all','ready'], true)): ?>
+                            <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
+                            <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
+                          <?php endif; ?>
                         <?php endif; ?>
-                      <?php endif; ?>
-                      <?php if($u['uid'] || $can_mark_rusak || $is_rusak || $is_vip): ?>
-                        <?php
-                          $keep_params = '&profile=' . urlencode($req_prof) .
-                            '&comment=' . urlencode($req_comm) .
-                            '&status=' . urlencode($req_status) .
-                            '&q=' . urlencode($req_search) .
-                            '&show=' . urlencode($req_show) .
-                            '&date=' . urlencode($filter_date);
-                        ?>
-                        <?php if ($is_rusak): ?>
-                          <?php if ($can_retur_action): ?>
-                            <button type="button" class="btn-act btn-act-retur" onclick="actionRequest('./?hotspot=users&action=retur&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&p=<?= urlencode($u['profile']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','RETUR Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Retur"><i class="fa fa-exchange"></i></button>
-                          <?php endif; ?>
-                          <?php if ($can_mark_rusak_action): ?>
-                            <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=rollback&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','Rollback RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rollback"><i class="fa fa-undo"></i></button>
-                            <?php if ($can_enable): ?>
+                        <?php if($u['uid'] || $can_mark_rusak || $is_rusak || $is_vip): ?>
+                          <?php if ($is_rusak): ?>
+                            <?php if ($can_retur_action): ?>
+                              <button type="button" class="btn-act btn-act-retur" onclick="actionRequest('./?hotspot=users&action=retur&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&p=<?= urlencode($u['profile']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','RETUR Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Retur"><i class="fa fa-exchange"></i></button>
                             <?php endif; ?>
+                            <?php if ($can_mark_rusak_action): ?>
+                              <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=rollback&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','Rollback RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rollback"><i class="fa fa-undo"></i></button>
+                            <?php endif; ?>
+                          <?php elseif ($is_ready): ?>
+                            <?php $vip_disabled = $vip_limit_reached; ?>
+                            <?php
+                              $vip_quota_label = ($vip_daily_limit > 0) ? ('Batas Perubahan Pengelola ' . $vip_daily_used . '/' . $vip_daily_limit) : 'Jadikan Pengelola';
+                              $vip_title = $vip_disabled && $vip_daily_limit > 0
+                                ? ('Batas Perubahan Pengelola ' . $vip_daily_used . '/' . $vip_daily_limit . ' (Limit tercapai)')
+                                : $vip_quota_label;
+                              $vip_action_url = './?hotspot=users&action=vip&uid=' . urlencode($u['uid']) .
+                                '&name=' . urlencode($u['name']) .
+                                '&session=' . urlencode($session) . $keep_params;
+                              $vip_confirm = addslashes('Tetapkan ' . $u['name'] . ' sebagai Pengelola?');
+                              $vip_onclick = $vip_disabled ? '' : "actionRequest('" . $vip_action_url . "','" . $vip_confirm . "')";
+                            ?>
+                            <?php if (!empty($can_vip_voucher)): ?>
+                            <button type="button" class="btn-act btn-act-info" <?= $vip_disabled ? 'disabled style="opacity:.45;filter:grayscale(1);cursor:not-allowed;"' : '' ?> onclick="<?= htmlspecialchars($vip_onclick, ENT_QUOTES) ?>" title="<?= htmlspecialchars($vip_title, ENT_QUOTES) ?>"><i class="fa fa-star"></i></button>
+                            <?php endif; ?>
+                            <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=disable&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Disable Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Disable"><i class="fa fa-ban"></i></button>
+                          <?php elseif ($is_vip): ?>
+                            <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
+                            <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
+                            <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>&download=1&img=1','_blank')" title="Download Voucher (PNG)"><i class="fa fa-download"></i></button>
+                            <?php if (!empty($can_vip_voucher)): ?>
+                            <button type="button" class="btn-act btn-act-warning" onclick="actionRequest('./?hotspot=users&action=unvip&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Keluarkan <?= htmlspecialchars($u['name']) ?> dari Pengelola?')" title="Batalkan Pengelola"><i class="fa fa-star-o"></i></button>
+                            <?php endif; ?>
+                          <?php elseif ($can_mark_rusak && $can_mark_rusak_action): ?>
+                            <button type="button" class="btn-act btn-act-invalid" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'], ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'], ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'], ENT_QUOTES) ?>" data-login="<?= htmlspecialchars($u['login_time'], ENT_QUOTES) ?>" data-logout="<?= htmlspecialchars($u['logout_time'], ENT_QUOTES) ?>" data-bytes="<?= (int)$u['bytes'] ?>" data-uptime="<?= htmlspecialchars($u['uptime'], ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'], ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" onclick="actionRequestRusak(this,'./?hotspot=users&action=invalid&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','SET RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rusak"><i class="fa fa-ban"></i></button>
                           <?php endif; ?>
-                        <?php elseif ($is_ready): ?>
-                          <?php $vip_disabled = $vip_limit_reached; ?>
-                          <?php
-                            $vip_quota_label = ($vip_daily_limit > 0) ? ('Batas Perubahan Pengelola ' . $vip_daily_used . '/' . $vip_daily_limit) : 'Jadikan Pengelola';
-                            $vip_title = $vip_disabled && $vip_daily_limit > 0
-                              ? ('Batas Perubahan Pengelola ' . $vip_daily_used . '/' . $vip_daily_limit . ' (Limit tercapai)')
-                              : $vip_quota_label;
-                            $vip_action_url = './?hotspot=users&action=vip&uid=' . urlencode($u['uid']) .
-                              '&name=' . urlencode($u['name']) .
-                              '&session=' . urlencode($session) . $keep_params;
-                            $vip_confirm = addslashes('Tetapkan ' . $u['name'] . ' sebagai Pengelola?');
-                            $vip_onclick = $vip_disabled ? '' : "actionRequest('" . $vip_action_url . "','" . $vip_confirm . "')";
-                          ?>
-                          <?php if (!empty($can_vip_voucher)): ?>
-                          <button type="button" class="btn-act btn-act-info" <?= $vip_disabled ? 'disabled style="opacity:.45;filter:grayscale(1);cursor:not-allowed;"' : '' ?> onclick="<?= htmlspecialchars($vip_onclick, ENT_QUOTES) ?>" title="<?= htmlspecialchars($vip_title, ENT_QUOTES) ?>"><i class="fa fa-star"></i></button>
-                          <?php endif; ?>
-                          <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=disable&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Disable Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Disable"><i class="fa fa-ban"></i></button>
-                        <?php elseif ($is_vip): ?>
-                          <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
-                          <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
-                          <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>&download=1&img=1','_blank')" title="Download Voucher (PNG)"><i class="fa fa-download"></i></button>
-                          <?php if (!empty($can_vip_voucher)): ?>
-                          <button type="button" class="btn-act btn-act-warning" onclick="actionRequest('./?hotspot=users&action=unvip&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Keluarkan <?= htmlspecialchars($u['name']) ?> dari Pengelola?')" title="Batalkan Pengelola"><i class="fa fa-star-o"></i></button>
-                          <?php endif; ?>
-                        <?php elseif ($can_mark_rusak && $can_mark_rusak_action): ?>
-                          <button type="button" class="btn-act btn-act-invalid" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'], ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'], ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'], ENT_QUOTES) ?>" data-login="<?= htmlspecialchars($u['login_time'], ENT_QUOTES) ?>" data-logout="<?= htmlspecialchars($u['logout_time'], ENT_QUOTES) ?>" data-bytes="<?= (int)$u['bytes'] ?>" data-uptime="<?= htmlspecialchars($u['uptime'], ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'], ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" onclick="actionRequestRusak(this,'./?hotspot=users&action=invalid&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','SET RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rusak"><i class="fa fa-ban"></i></button>
                         <?php endif; ?>
                       <?php endif; ?>
                       <?php if (!empty($can_delete_user)): ?>
-                        <?php $retur_pair_flag = ($is_retur || !empty($u['retur_ref_user']) || !empty($u['retur_ref'])); ?>
+                        <?php
+                          $retur_pair_flag = ($is_retur || !empty($u['retur_ref_user']) || !empty($u['retur_ref']));
+                        ?>
                         <button type="button" class="btn-act btn-act-delete" onclick="actionRequest('./?hotspot=users&action=delete_user_full&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Hapus total user <?= htmlspecialchars($u['name']) ?> (Router + DB)?<?= $retur_pair_flag ? ' [RETUR_PAIR]' : '' ?>')" title="Hapus Total"><i class="fa fa-trash"></i></button>
                       <?php endif; ?>
                     </td>

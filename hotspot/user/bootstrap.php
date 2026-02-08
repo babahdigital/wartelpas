@@ -44,9 +44,11 @@ $default_show = in_array($req_status, ['used', 'used_warn', 'rusak', 'retur']) ?
 $req_show = $_GET['show'] ?? $default_show;
 $filter_date = $_GET['date'] ?? '';
 $req_show = in_array($req_show, ['harian', 'bulanan', 'tahunan', 'semua']) ? $req_show : 'harian';
-if ($req_status === 'used_warn') {
-  $req_show = 'semua';
-  $filter_date = '';
+if ($req_show === 'semua' && !in_array($req_status, ['used', 'rusak', 'retur'], true)) {
+  $req_show = 'harian';
+}
+if ($req_status === 'reused' && $req_show === 'semua') {
+  $req_show = 'harian';
 }
 if ($req_show === 'semua') {
   $filter_date = '';

@@ -181,6 +181,45 @@ if ($db && (isOperator() || isSuperAdmin())) {
   } catch (Exception $e) {
     $retur_requests = [];
   }
+
+$reuse_map = [];
+$reuse_date_map = [];
+try {
+  if ($db && function_exists('table_exists') && table_exists($db, 'voucher_reuse_log')) {
+    $reuse_where = '';
+    $reuse_params = [];
+    if ($req_show === 'harian') {
+      $reuse_where = 'reuse_date = :d';
+      $reuse_params[':d'] = $filter_date;
+    } elseif ($req_show === 'bulanan') {
+      $reuse_where = 'substr(reuse_date,1,7) = :d';
+      $reuse_params[':d'] = $filter_date;
+    } elseif ($req_show === 'tahunan') {
+      $reuse_where = 'substr(reuse_date,1,4) = :d';
+      $reuse_params[':d'] = $filter_date;
+    }
+    $sql = "SELECT username, reuse_date FROM voucher_reuse_log WHERE username != ''";
+    if ($reuse_where !== '') {
+      $sql .= " AND " . $reuse_where;
+    }
+    $sql .= " ORDER BY reuse_date DESC";
+    $stmtReuse = $db->prepare($sql);
+    foreach ($reuse_params as $k => $v) {
+      $stmtReuse->bindValue($k, $v);
+    }
+    $stmtReuse->execute();
+    foreach ($stmtReuse->fetchAll(PDO::FETCH_ASSOC) as $rr) {
+      $uname = strtolower(trim((string)($rr['username'] ?? '')));
+      $rdate = trim((string)($rr['reuse_date'] ?? ''));
+      if ($uname === '' || $rdate === '') continue;
+      $reuse_map[$uname] = true;
+      if (!isset($reuse_date_map[$uname]) || $rdate > $reuse_date_map[$uname]) {
+        $reuse_date_map[$uname] = $rdate;
+      }
+    }
+  }
+} catch (Exception $e) {
+}
 }
 
 if ($db) {
@@ -413,7 +452,7 @@ if ($db) {
 // Tambahkan data history-only agar TERPAKAI/RUSAK/RETUR tetap tampil
 if ($db) {
   try {
-    $need_history = in_array(strtolower($req_status), ['used','used_warn','rusak','retur','all']) || trim($req_search) !== '';
+    $need_history = in_array(strtolower($req_status), ['used','used_warn','rusak','retur','reused','all']) || trim($req_search) !== '';
     if ($need_history) {
       $res = $db->query("SELECT username, raw_comment, last_status, last_bytes, last_uptime, ip_address, mac_address, blok_name, validity FROM login_history WHERE username IS NOT NULL AND username != ''");
       $existing = [];
@@ -459,6 +498,8 @@ if ($db) {
         elseif ($h_is_used) $h_status = 'TERPAKAI';
 
         if ($h_status === 'READY') continue;
+        $h_is_reused = isset($reuse_map[strtolower($uname)]);
+        if ($req_status === 'reused' && !$h_is_reused) continue;
         if (in_array($req_status, ['used','retur','all'], true) && isset($retur_ref_map[strtolower($uname)])) continue;
         if ($req_status === 'used' && !in_array($h_status, ['TERPAKAI','RETUR','RUSAK'])) continue;
         if ($req_status === 'used_warn' && $h_status !== 'TERPAKAI') continue;
@@ -472,7 +513,9 @@ if ($db) {
           'bytes-in' => $bytes_hist,
           'bytes-out' => 0,
           'uptime' => $uptime_hist,
-          'history_only' => 1
+          'history_only' => 1,
+          'is_reused' => $h_is_reused ? 1 : 0,
+          'reuse_date' => $reuse_date_map[strtolower($uname)] ?? ''
         ];
         $existing[$uname] = true;
       }
@@ -953,6 +996,8 @@ foreach($all_users as $u) {
       $last_used_filter = '-';
     }
 
+    $is_reused = isset($reuse_map[strtolower($name)]);
+
     // Filter tanggal (harian/bulanan/tahunan) memakai last_used (selalu aktif)
     $status_for_date = ($status === 'VIP') ? 'READY' : $status;
     if ($req_show !== 'semua' && !empty($filter_date)) {
@@ -975,6 +1020,7 @@ foreach($all_users as $u) {
     }
 
     // Filter status
+    if ($req_status == 'reused' && !$is_reused) continue;
     if ($req_status == 'ready' && $status !== 'READY') continue;
     if ($req_status == 'vip' && $status !== 'VIP') continue;
     if ($req_status == 'all' && in_array($status, ['READY','VIP'], true) && trim((string)$req_search) === '') continue;
@@ -1086,6 +1132,8 @@ foreach($all_users as $u) {
         'mac' => $f_mac,
       'comment' => $comment,
         'history_only' => !empty($u['history_only']),
+        'is_reused' => $is_reused ? 1 : 0,
+        'reuse_date' => $reuse_date_map[strtolower($name)] ?? '',
         'comment_rusak' => $comment_rusak ? 1 : 0,
         'is_disabled' => ($disabled === 'true') ? 1 : 0,
         'first_login' => $first_login_disp,
@@ -1266,7 +1314,7 @@ if ($is_ajax) {
           <span style="font-size:13px; font-weight:600"><?= htmlspecialchars($u['uptime']) ?></span><br>
           <span style="font-size:11px; color:var(--txt-muted)"><?= formatBytes($u['bytes'],2) ?></span>
         </td>
-        <td class="text-center">
+        <td class="text-center status-col">
           <?php if($u['status'] === 'ONLINE'): ?><span class="status-badge st-online">ONLINE</span>
           <?php elseif($u['status'] === 'RUSAK'): ?><span class="status-badge st-rusak">RUSAK</span>
           <?php elseif($u['status'] === 'INVALID'): ?><span class="status-badge st-invalid">INVALID</span>
@@ -1275,8 +1323,9 @@ if ($is_ajax) {
           <?php elseif($u['status'] === 'VIP'): ?><span class="status-badge st-vip">PENGELOLA</span>
           <?php else: ?><span class="status-badge st-ready">READY</span>
           <?php endif; ?>
+          <?php if (!empty($u['is_reused'])): ?><span class="status-badge st-reused" style="margin-left:6px;">REUSED</span><?php endif; ?>
         </td>
-        <td class="text-center">
+        <td class="text-center actions-col">
           <?php
             $status_upper = strtoupper($u['status'] ?? '');
             $is_ready = ($status_upper === 'READY');
@@ -1288,29 +1337,33 @@ if ($is_ajax) {
             $is_invalid = ($status_upper === 'INVALID');
             $has_rusak_comment = !empty($u['comment_rusak']);
             $is_disabled = !empty($u['is_disabled']);
-            $can_enable = $is_rusak && $is_disabled && !$has_rusak_comment;
             $can_mark_rusak = $is_used && !$is_online;
             $can_mark_rusak_action = !empty($can_mark_rusak_action);
             $can_retur_action = !empty($can_retur_voucher);
             $uid_param = !empty($u['uid']) ? ('&uid=' . urlencode($u['uid'])) : '';
           ?>
-          <?php if (in_array($req_status, ['all','ready','vip','used','rusak','online','retur'], true)): ?>
-            <?php if ($is_used): ?>
-              <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
-              <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.used.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
-            <?php elseif ($is_online): ?>
-              <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
-              <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.used.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
-            <?php elseif ($is_rusak && in_array($req_status, ['all','rusak'], true)): ?>
-              <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
-              <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.detail.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Rincian Rusak"><i class="fa fa-print"></i></button>
-            <?php elseif ($is_retur && in_array($req_status, ['all','retur'], true)): ?>
-              <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
-              <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.retur.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Voucher Retur"><i class="fa fa-print"></i></button>
-              <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.retur.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>&download=1&img=1','_blank')" title="Download Voucher Retur (PNG)"><i class="fa fa-download"></i></button>
-            <?php elseif ($is_ready && in_array($req_status, ['all','ready'], true)): ?>
-              <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
-              <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
+          <?php if ($req_status === 'reused'): ?>
+            <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
+            <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.used.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
+          <?php else: ?>
+            <?php if (in_array($req_status, ['all','ready','used','used_warn','rusak','online','retur'], true)): ?>
+              <?php if ($is_used && in_array($req_status, ['all','used','used_warn'], true)): ?>
+                <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
+                <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.used.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
+              <?php elseif ($is_online && in_array($req_status, ['all','online'], true)): ?>
+                <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
+                <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.used.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Bukti Pemakaian"><i class="fa fa-print"></i></button>
+              <?php elseif ($is_rusak && in_array($req_status, ['all','rusak'], true)): ?>
+                <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
+                <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.detail.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank')" title="Print Rincian Rusak"><i class="fa fa-print"></i></button>
+              <?php elseif ($is_retur && in_array($req_status, ['all','retur'], true)): ?>
+                <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
+                <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.retur.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>','_blank').print()" title="Print Voucher Retur"><i class="fa fa-print"></i></button>
+                <button type="button" class="btn-act btn-act-print" onclick="window.open('./hotspot/print/print.retur.php?user=<?= urlencode($u['name']) ?>&session=<?= $session ?>&download=1&img=1','_blank')" title="Download Voucher Retur (PNG)"><i class="fa fa-download"></i></button>
+              <?php elseif ($is_ready && in_array($req_status, ['all','ready'], true)): ?>
+                <button type="button" class="btn-act btn-act-eye" data-user-resume="1" data-user="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-customer="<?= htmlspecialchars($u['customer_name'] ?? '', ENT_QUOTES) ?>" data-room="<?= htmlspecialchars($u['room_name'] ?? '', ENT_QUOTES) ?>" data-blok="<?= htmlspecialchars($u['blok'] ?? '', ENT_QUOTES) ?>" data-profile="<?= htmlspecialchars($u['profile'] ?? '', ENT_QUOTES) ?>" data-ip="<?= htmlspecialchars($u['ip'] ?? '', ENT_QUOTES) ?>" data-mac="<?= htmlspecialchars($u['mac'] ?? '', ENT_QUOTES) ?>" data-status="<?= htmlspecialchars($u['status'] ?? '', ENT_QUOTES) ?>" data-first-login="<?= htmlspecialchars($u['first_login'] ?? '', ENT_QUOTES) ?>" data-login-time="<?= htmlspecialchars($u['login_time'] ?? '', ENT_QUOTES) ?>" data-logout-time="<?= htmlspecialchars($u['logout_time'] ?? '', ENT_QUOTES) ?>" data-bytes="<?= (int)($u['bytes'] ?? 0) ?>" data-uptime="<?= htmlspecialchars($u['uptime'] ?? '', ENT_QUOTES) ?>" data-last-used="<?= htmlspecialchars($u['last_used'] ?? '', ENT_QUOTES) ?>" data-relogin="<?= (int)($u['relogin_count'] ?? 0) ?>" title="Detail User"><i class="fa fa-eye"></i></button>
+                <button type="button" class="btn-act btn-act-print" onclick="window.open('./voucher/print.php?user=vc-<?= htmlspecialchars($u['name']) ?>&small=yes&session=<?= $session ?>','_blank').print()" title="Print Voucher"><i class="fa fa-print"></i></button>
+              <?php endif; ?>
             <?php endif; ?>
           <?php endif; ?>
           <?php if($u['uid'] || $can_mark_rusak || $is_rusak || $is_vip): ?>
@@ -1320,9 +1373,6 @@ if ($is_ajax) {
               <?php endif; ?>
               <?php if ($can_mark_rusak_action): ?>
                 <button type="button" class="btn-act btn-act-invalid" onclick="actionRequest('./?hotspot=users&action=rollback&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&c=<?= urlencode($u['comment']) ?>&session=<?= $session ?><?= $keep_params ?>','Rollback RUSAK <?= htmlspecialchars($u['name']) ?>?')" title="Rollback"><i class="fa fa-undo"></i></button>
-                <?php if ($can_enable): ?>
-                  <button type="button" class="btn-act btn-act-enable" onclick="actionRequest('./?hotspot=users&action=enable&uid=<?= $u['uid'] ?>&name=<?= urlencode($u['name']) ?>&session=<?= $session ?><?= $keep_params ?>','Enable Voucher <?= htmlspecialchars($u['name']) ?>?')" title="Enable"><i class="fa fa-check"></i></button>
-                <?php endif; ?>
               <?php endif; ?>
             <?php elseif ($is_ready): ?>
               <?php $vip_disabled = $vip_limit_reached; ?>

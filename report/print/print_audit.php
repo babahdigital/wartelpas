@@ -147,6 +147,7 @@ $audit_expense_notes = [];
 $audit_refund_notes = [];
 $audit_kurang_bayar_notes = [];
 $daily_note_audit = '';
+$reuse_summary_by_block = [];
 
 if (file_exists($dbFile)) {
     try {
@@ -195,7 +196,7 @@ if (file_exists($dbFile)) {
         $retur_filter_lh = '';
         try {
           if (table_exists($db, 'sales_history')) {
-            $stmtRef = $db->prepare("SELECT comment FROM sales_history WHERE $dateFilter AND instr(lower(COALESCE(comment,'')), 'retur ref') > 0");
+            $stmtRef = $db->prepare("SELECT comment FROM sales_history sh WHERE $dateFilter AND instr(lower(COALESCE(comment,'')), 'retur ref') > 0 $reuse_filter_sh");
             foreach ($dateParam as $k => $v) $stmtRef->bindValue($k, $v);
             $stmtRef->execute();
             foreach ($stmtRef->fetchAll(PDO::FETCH_COLUMN, 0) as $cmt) {
@@ -204,7 +205,7 @@ if (file_exists($dbFile)) {
             }
           }
           if (table_exists($db, 'live_sales')) {
-            $stmtRef = $db->prepare("SELECT comment FROM live_sales WHERE sync_status='pending' AND $dateFilter AND instr(lower(COALESCE(comment,'')), 'retur ref') > 0");
+            $stmtRef = $db->prepare("SELECT comment FROM live_sales ls WHERE sync_status='pending' AND $dateFilter AND instr(lower(COALESCE(comment,'')), 'retur ref') > 0 $reuse_filter_ls");
             foreach ($dateParam as $k => $v) $stmtRef->bindValue($k, $v);
             $stmtRef->execute();
             foreach ($stmtRef->fetchAll(PDO::FETCH_COLUMN, 0) as $cmt) {
@@ -225,6 +226,23 @@ if (file_exists($dbFile)) {
           $retur_filter_ls = " AND ls.username NOT IN ($in)";
           $retur_filter_lh = " AND lh.username NOT IN ($in)";
         }
+
+        $has_reuse_log = table_exists($db, 'voucher_reuse_log');
+        $reuse_filter_sh = $has_reuse_log
+          ? " AND NOT EXISTS (SELECT 1 FROM voucher_reuse_log vr WHERE vr.username = sh.username AND vr.reuse_date = sh.sale_date)"
+          : '';
+        $reuse_filter_ls = $has_reuse_log
+          ? " AND NOT EXISTS (SELECT 1 FROM voucher_reuse_log vr WHERE vr.username = ls.username AND vr.reuse_date = ls.sale_date)"
+          : '';
+        $reuse_date_cond = "vr.reuse_date = :d_lh";
+        if ($req_show === 'bulanan') {
+          $reuse_date_cond = "substr(vr.reuse_date,1,7) = :d_lh";
+        } elseif ($req_show === 'tahunan') {
+          $reuse_date_cond = "substr(vr.reuse_date,1,4) = :d_lh";
+        }
+        $reuse_filter_lh = $has_reuse_log
+          ? (" AND NOT EXISTS (SELECT 1 FROM voucher_reuse_log vr WHERE vr.username = lh.username AND " . $reuse_date_cond . ")")
+          : '';
 
         $has_sales_history = table_exists($db, 'sales_history');
         if ($has_sales_history) {
@@ -261,6 +279,7 @@ if (file_exists($dbFile)) {
                   AND instr(lower(COALESCE(sh.comment,'')), 'pengelola') = 0
                   AND instr(lower(COALESCE(lh.raw_comment,'')), 'vip') = 0
                   AND instr(lower(COALESCE(lh.raw_comment,'')), 'pengelola') = 0
+                  $reuse_filter_sh
                   $retur_filter_sh
               ) t";
             $stmt = $db->prepare($sumSql);
@@ -284,11 +303,11 @@ if (file_exists($dbFile)) {
 
         if (table_exists($db, 'login_history')) {
           try {
-            $lhWhere = "(substr(login_time_real,1,10) = :d_lh OR substr(last_login_real,1,10) = :d_lh OR substr(logout_time_real,1,10) = :d_lh OR login_date = :d_lh)";
+            $lhWhere = "(substr(login_time_real,1,10) = :d_lh OR substr(last_login_real,1,10) = :d_lh OR substr(logout_time_real,1,10) = :d_lh OR substr(updated_at,1,10) = :d_lh OR login_date = :d_lh)";
             if ($req_show === 'bulanan') {
-              $lhWhere = "(substr(login_time_real,1,7) = :d_lh OR substr(last_login_real,1,7) = :d_lh OR substr(logout_time_real,1,7) = :d_lh OR substr(login_date,1,7) = :d_lh)";
+              $lhWhere = "(substr(login_time_real,1,7) = :d_lh OR substr(last_login_real,1,7) = :d_lh OR substr(logout_time_real,1,7) = :d_lh OR substr(updated_at,1,7) = :d_lh OR substr(login_date,1,7) = :d_lh)";
             } elseif ($req_show === 'tahunan') {
-              $lhWhere = "(substr(login_time_real,1,4) = :d_lh OR substr(last_login_real,1,4) = :d_lh OR substr(logout_time_real,1,4) = :d_lh OR substr(login_date,1,4) = :d_lh)";
+              $lhWhere = "(substr(login_time_real,1,4) = :d_lh OR substr(last_login_real,1,4) = :d_lh OR substr(logout_time_real,1,4) = :d_lh OR substr(updated_at,1,4) = :d_lh OR substr(login_date,1,4) = :d_lh)";
             }
 
             $lhNotExists = '';
@@ -296,7 +315,7 @@ if (file_exists($dbFile)) {
               $lhNotExists = "AND NOT EXISTS (SELECT 1 FROM sales_history sh WHERE sh.username = lh.username AND $dateFilter)";
             }
 
-            $lhSql = "SELECT username, price, validity, raw_comment, last_status
+              $lhSql = "SELECT username, price, validity, raw_comment, last_status
               FROM login_history lh
               WHERE username != ''
                 AND $lhWhere
@@ -307,6 +326,7 @@ if (file_exists($dbFile)) {
                   OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'retur') > 0
                   OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'invalid') > 0
                 )
+                    $reuse_filter_lh
                 $lhNotExists
                 $retur_filter_lh";
             $stmt = $db->prepare($lhSql);
@@ -358,7 +378,7 @@ if (file_exists($dbFile)) {
         }
 
         if (table_exists($db, 'live_sales')) {
-            $pendingSql = "SELECT COUNT(*) FROM live_sales WHERE sync_status='pending' AND $dateFilter AND instr(lower(COALESCE(comment,'')), 'vip') = 0 AND instr(lower(COALESCE(comment,'')), 'pengelola') = 0 $retur_filter_ls";
+            $pendingSql = "SELECT COUNT(*) FROM live_sales ls WHERE sync_status='pending' AND $dateFilter AND instr(lower(COALESCE(comment,'')), 'vip') = 0 AND instr(lower(COALESCE(comment,'')), 'pengelola') = 0 $reuse_filter_ls $retur_filter_ls";
             $stmt = $db->prepare($pendingSql);
             foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
             foreach ($retur_filter_params as $k => $v) $stmt->bindValue($k, $v);
@@ -398,6 +418,7 @@ if (file_exists($dbFile)) {
                   AND instr(lower(COALESCE(ls.comment,'')), 'pengelola') = 0
                   AND instr(lower(COALESCE(lh2.raw_comment,'')), 'vip') = 0
                   AND instr(lower(COALESCE(lh2.raw_comment,'')), 'pengelola') = 0
+                  $reuse_filter_ls
                   $retur_filter_ls
               ) t";
             $stmt = $db->prepare($pendingSumSql);
@@ -423,8 +444,8 @@ if (file_exists($dbFile)) {
                 MAX(COALESCE(NULLIF(sale_date,''),'')) AS max_sale,
                 MIN(COALESCE(NULLIF(raw_date,''),'')) AS min_raw,
                 MAX(COALESCE(NULLIF(raw_date,''),'')) AS max_raw
-                FROM live_sales
-                WHERE sync_status='pending' AND $dateFilter AND instr(lower(COALESCE(comment,'')), 'vip') = 0 AND instr(lower(COALESCE(comment,'')), 'pengelola') = 0";
+                FROM live_sales ls
+                WHERE sync_status='pending' AND $dateFilter AND instr(lower(COALESCE(comment,'')), 'vip') = 0 AND instr(lower(COALESCE(comment,'')), 'pengelola') = 0 $reuse_filter_ls";
               $stmt = $db->prepare($rangeSql);
               foreach ($dateParam as $k => $v) $stmt->bindValue($k, $v);
               $stmt->execute();
@@ -539,6 +560,59 @@ if (file_exists($dbFile)) {
             $stmtN->execute([':d' => $filter_date]);
             $daily_note_audit = $stmtN->fetchColumn() ?: '';
           } catch (Exception $e) {}
+
+          if (table_exists($db, 'voucher_reuse_log')) {
+            try {
+              $hasLhReuse = table_exists($db, 'login_history');
+              $sqlReuse = "SELECT vr.username, vr.reuse_date, vr.blok_name AS vr_blok, vr.raw_comment AS vr_comment, vr.last_login_time";
+              if ($hasLhReuse) {
+                $sqlReuse .= ", lh.customer_name, lh.room_name, lh.validity, lh.raw_comment AS lh_comment, lh.blok_name AS lh_blok";
+              }
+              $sqlReuse .= " FROM voucher_reuse_log vr";
+              if ($hasLhReuse) {
+                $sqlReuse .= " LEFT JOIN login_history lh ON lh.username = vr.username";
+              }
+              $sqlReuse .= " WHERE vr.reuse_date = :d ORDER BY vr.last_login_time DESC, vr.username ASC";
+              $stmtReuse = $db->prepare($sqlReuse);
+              $stmtReuse->execute([':d' => $filter_date]);
+              $reuseRows = $stmtReuse->fetchAll(PDO::FETCH_ASSOC) ?: [];
+              foreach ($reuseRows as $rr) {
+                $comment = (string)($rr['vr_comment'] ?? '');
+                if ($comment === '' && !empty($rr['lh_comment'])) $comment = (string)$rr['lh_comment'];
+                $profile = (string)($rr['validity'] ?? '');
+                if ($profile === '' || $profile === '-') {
+                  $profile = extract_profile_from_comment($comment);
+                }
+                if ($profile === '') {
+                  $profile = infer_profile_from_comment($comment);
+                }
+                $profile_label = resolve_profile_label($profile);
+                if ($profile_label === '') $profile_label = $profile !== '' ? $profile : '-';
+                $blok_raw = (string)($rr['vr_blok'] ?? '');
+                if ($blok_raw === '' && !empty($rr['lh_blok'])) $blok_raw = (string)$rr['lh_blok'];
+                $blok_norm = normalize_block_name($blok_raw, $comment);
+                $customer_name = format_customer_name($rr['customer_name'] ?? '');
+                $room_name = (string)($rr['room_name'] ?? '');
+                $last_login_time = (string)($rr['last_login_time'] ?? '');
+                $time_label = '';
+                if ($last_login_time !== '') {
+                  $ts = strtotime($last_login_time);
+                  if ($ts) $time_label = date('H:i', $ts);
+                }
+                $blockKey = $blok_norm !== '' ? $blok_norm : 'BLOK-LAIN';
+                if (!isset($reuse_summary_by_block[$blockKey])) $reuse_summary_by_block[$blockKey] = [];
+                $reuse_summary_by_block[$blockKey][] = [
+                  'username' => (string)($rr['username'] ?? ''),
+                  'profile' => $profile_label,
+                  'room' => $room_name,
+                  'customer' => $customer_name,
+                  'time' => $time_label
+                ];
+              }
+            } catch (Exception $e) {
+              $reuse_summary_by_block = [];
+            }
+          }
         }
     } catch (Exception $e) {
         $db = null;
@@ -627,6 +701,21 @@ $file_title = trim($file_title, '-_');
         <strong><i class="fa fa-info-circle"></i> CATATAN / INSIDEN HARI INI:</strong><br>
         <div style="margin-top:4px; font-style:italic;">
           <?= nl2br(htmlspecialchars($daily_note_audit)) ?>
+        </div>
+      </div>
+    <?php endif; ?>
+
+    <?php if ($req_show === 'harian' && !empty($reuse_summary_by_block)): ?>
+      <div style="border: 1px dashed #e0e0e0; background-color: #f8fafc; padding: 10px; margin-bottom: 16px; border-radius: 4px; font-size: 12px; color: #555;">
+        <strong><i class="fa fa-refresh"></i> Catatan Reused (tidak dihitung penjualan):</strong><br>
+        <div style="margin-top:6px;">
+          <?php foreach ($reuse_summary_by_block as $bname => $items): ?>
+            <?php
+              $count = is_array($items) ? count($items) : 0;
+              if ($count <= 0) continue;
+            ?>
+            <div style="margin-top:2px;">Blok <?= htmlspecialchars($bname) ?>: <?= number_format($count,0,',','.') ?> voucher reused.</div>
+          <?php endforeach; ?>
         </div>
       </div>
     <?php endif; ?>

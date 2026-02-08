@@ -898,156 +898,149 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 ];
             }
 
-            // User lama dipakai lagi (reuse)
+            // Deteksi voucher digunakan kembali (reused)
             try {
-                $reuse_today = [];
-                $reuse_map = [];
-                if (function_exists('table_exists') && table_exists($db_sync, 'login_history')) {
-                    $has_sales = table_exists($db_sync, 'sales_history');
-                    $has_live = table_exists($db_sync, 'live_sales');
-                    if ($has_sales || $has_live) {
-                        $db_sync->exec("CREATE TABLE IF NOT EXISTS reuse_events (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            event_date TEXT,
-                            username TEXT,
-                            prev_status TEXT,
-                            sale_date TEXT,
-                            sale_time TEXT,
-                            blok_name TEXT,
-                            source TEXT,
-                            note TEXT,
-                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                            UNIQUE(event_date, username)
-                        )");
+                if (function_exists('table_exists') && table_exists($db_sync, 'login_history') && table_exists($db_sync, 'login_events')) {
+                    $db_sync->exec("CREATE TABLE IF NOT EXISTS voucher_reuse_log (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT NOT NULL,
+                        base_date TEXT,
+                        reuse_date TEXT,
+                        reuse_count INTEGER DEFAULT 0,
+                        last_status TEXT,
+                        blok_name TEXT,
+                        raw_comment TEXT,
+                        first_login_real TEXT,
+                        login_time_real TEXT,
+                        logout_time_real TEXT,
+                        last_login_real TEXT,
+                        last_login_time TEXT,
+                        last_logout_time TEXT,
+                        detected_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        note TEXT,
+                        UNIQUE(username, reuse_date)
+                    )");
 
-                        $stmtInsertReuse = $db_sync->prepare("INSERT OR IGNORE INTO reuse_events (event_date, username, prev_status, sale_date, sale_time, blok_name, source, note)
-                            VALUES (:ed, :u, :ps, :sd, :st, :b, :src, :note)");
+                    $reuse_limit = (int)($todo_cfg['voucher_reuse_limit'] ?? 20);
+                    if ($reuse_limit <= 0) $reuse_limit = 20;
 
-                        $baseWhereSh = "sh.username != ''
-                            AND sh.sale_date = :d
-                            AND instr(lower(COALESCE(sh.comment,'')), 'vip') = 0
-                            AND instr(lower(COALESCE(sh.comment,'')), 'pengelola') = 0
-                            AND COALESCE(sh.is_retur,0) = 0
-                            AND COALESCE(sh.is_rusak,0) = 0
-                            AND COALESCE(sh.is_invalid,0) = 0
-                            AND instr(lower(COALESCE(sh.comment,'')), 'retur') = 0
-                            AND instr(lower(COALESCE(sh.comment,'')), 'rusak') = 0
-                            AND instr(lower(COALESCE(sh.comment,'')), 'invalid') = 0";
+                    $baseExpr = "substr(COALESCE(NULLIF(lh.first_login_real,''), NULLIF(lh.login_time_real,''), NULLIF(lh.login_date,''), NULLIF(lh.logout_time_real,''), NULLIF(lh.last_login_real,''), NULLIF(lh.updated_at,'')),1,10)";
+                    $sql = "SELECT
+                                lh.username,
+                                lh.last_status,
+                                lh.blok_name,
+                                lh.raw_comment,
+                                lh.first_login_real,
+                                lh.login_time_real,
+                                lh.logout_time_real,
+                                lh.last_login_real,
+                                lh.updated_at,
+                                {$baseExpr} AS base_date,
+                                MAX(le.date_key) AS reuse_date,
+                                MAX(le.login_time) AS last_login_time,
+                                MAX(le.logout_time) AS last_logout_time,
+                                COUNT(le.id) AS reuse_count
+                            FROM login_history lh
+                            JOIN login_events le ON le.username = lh.username
+                            WHERE lh.username != ''
+                              AND le.date_key IS NOT NULL AND le.date_key != ''
+                              AND {$baseExpr} != ''
+                              AND le.date_key > {$baseExpr}
+                              AND lower(COALESCE(lh.last_status,'')) IN ('terpakai','retur','online')
+                            GROUP BY lh.username
+                            ORDER BY reuse_date DESC, last_login_time DESC
+                            LIMIT :lim";
+                    $stmtReuse = $db_sync->prepare($sql);
+                    $stmtReuse->bindValue(':lim', $reuse_limit, PDO::PARAM_INT);
+                    $stmtReuse->execute();
+                    $reuse_rows = $stmtReuse->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-                        $baseWhereLs = "ls.username != ''
-                            AND ls.sale_date = :d
-                            AND instr(lower(COALESCE(ls.comment,'')), 'vip') = 0
-                            AND instr(lower(COALESCE(ls.comment,'')), 'pengelola') = 0
-                            AND COALESCE(ls.is_retur,0) = 0
-                            AND COALESCE(ls.is_rusak,0) = 0
-                            AND COALESCE(ls.is_invalid,0) = 0
-                            AND instr(lower(COALESCE(ls.comment,'')), 'retur') = 0
-                            AND instr(lower(COALESCE(ls.comment,'')), 'rusak') = 0
-                            AND instr(lower(COALESCE(ls.comment,'')), 'invalid') = 0";
+                    $stmtReuseLog = null;
+                    if (!empty($reuse_rows)) {
+                        $stmtReuseLog = $db_sync->prepare("INSERT INTO voucher_reuse_log (
+                                username, base_date, reuse_date, reuse_count, last_status, blok_name, raw_comment,
+                                first_login_real, login_time_real, logout_time_real, last_login_real, last_login_time, last_logout_time,
+                                detected_at, updated_at
+                            ) VALUES (
+                                :u, :bd, :rd, :rc, :st, :bn, :rcm,
+                                :fl, :lt, :lo, :ll, :llt, :llo,
+                                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                            ) ON CONFLICT(username, reuse_date) DO UPDATE SET
+                                base_date=excluded.base_date,
+                                reuse_count=excluded.reuse_count,
+                                last_status=excluded.last_status,
+                                blok_name=excluded.blok_name,
+                                raw_comment=excluded.raw_comment,
+                                first_login_real=excluded.first_login_real,
+                                login_time_real=excluded.login_time_real,
+                                logout_time_real=excluded.logout_time_real,
+                                last_login_real=excluded.last_login_real,
+                                last_login_time=excluded.last_login_time,
+                                last_logout_time=excluded.last_logout_time,
+                                updated_at=CURRENT_TIMESTAMP");
+                    }
 
-                        $statusWhereSh = "(sh.status = '' OR lower(sh.status) = 'normal' OR lower(sh.status) = 'ready' OR lower(sh.status) = 'terpakai' OR lower(sh.status) = 'online')";
-                        $statusWhereLs = "(ls.status = '' OR lower(ls.status) = 'normal' OR lower(ls.status) = 'ready' OR lower(ls.status) = 'terpakai' OR lower(ls.status) = 'online')";
+                    foreach ($reuse_rows as $rr) {
+                        $uname = trim((string)($rr['username'] ?? ''));
+                        $reuse_date = trim((string)($rr['reuse_date'] ?? ''));
+                        $base_date = trim((string)($rr['base_date'] ?? ''));
+                        if ($uname === '' || $reuse_date === '' || $base_date === '') continue;
 
-                        $reuseSelect = function ($sql, $source) use ($db_sync, $today, $stmtInsertReuse, &$reuse_today, &$reuse_map) {
-                            $stmt = $db_sync->prepare($sql);
-                            $stmt->execute([':d' => $today]);
-                            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-                            foreach ($rows as $row) {
-                                $uname = trim((string)($row['username'] ?? ''));
-                                if ($uname === '') continue;
-                                $ukey = strtolower($uname);
-                                if (isset($reuse_map[$ukey])) continue;
-
-                                $prev = strtolower(trim((string)($row['last_status'] ?? '')));
-                                if (strpos($prev, 'retur') !== false) $prev = 'retur';
-                                elseif (strpos($prev, 'rusak') !== false) $prev = 'rusak';
-                                elseif (strpos($prev, 'invalid') !== false) $prev = 'invalid';
-                                else $prev = $prev !== '' ? $prev : 'unknown';
-
-                                $raw_note = trim((string)($row['raw_comment'] ?? ''));
-                                $note = $raw_note !== '' ? $raw_note : trim((string)($row['comment'] ?? ''));
-                                if (strlen($note) > 120) $note = substr($note, 0, 120) . '...';
-
-                                $reuse_today[] = [
-                                    'username' => $uname,
-                                    'prev_status' => $prev,
-                                    'blok_name' => (string)($row['blok_name'] ?? ''),
-                                    'sale_time' => (string)($row['sale_time'] ?? ''),
-                                    'source' => $source
-                                ];
-                                $reuse_map[$ukey] = true;
-
-                                $stmtInsertReuse->execute([
-                                    ':ed' => $today,
+                        if ($stmtReuseLog) {
+                            try {
+                                $stmtReuseLog->execute([
                                     ':u' => $uname,
-                                    ':ps' => $prev,
-                                    ':sd' => (string)($row['sale_date'] ?? $today),
-                                    ':st' => (string)($row['sale_time'] ?? ''),
-                                    ':b' => (string)($row['blok_name'] ?? ''),
-                                    ':src' => $source,
-                                    ':note' => $note
+                                    ':bd' => $base_date,
+                                    ':rd' => $reuse_date,
+                                    ':rc' => (int)($rr['reuse_count'] ?? 0),
+                                    ':st' => (string)($rr['last_status'] ?? ''),
+                                    ':bn' => (string)($rr['blok_name'] ?? ''),
+                                    ':rcm' => (string)($rr['raw_comment'] ?? ''),
+                                    ':fl' => (string)($rr['first_login_real'] ?? ''),
+                                    ':lt' => (string)($rr['login_time_real'] ?? ''),
+                                    ':lo' => (string)($rr['logout_time_real'] ?? ''),
+                                    ':ll' => (string)($rr['last_login_real'] ?? ''),
+                                    ':llt' => (string)($rr['last_login_time'] ?? ''),
+                                    ':llo' => (string)($rr['last_logout_time'] ?? '')
                                 ]);
+                            } catch (Exception $e) {
                             }
-                        };
-
-                        if ($has_sales) {
-                            $sqlSales = "SELECT sh.username, sh.sale_date, sh.sale_time, sh.blok_name, sh.comment,
-                                    lh.last_status, lh.raw_comment
-                                FROM sales_history sh
-                                LEFT JOIN login_history lh ON lh.username = sh.username
-                                WHERE $baseWhereSh
-                                    AND $statusWhereSh
-                                    AND instr(lower(COALESCE(lh.raw_comment,'')), 'vip') = 0
-                                    AND instr(lower(COALESCE(lh.raw_comment,'')), 'pengelola') = 0
-                                    AND instr(lower(COALESCE(lh.raw_comment,'')), 'retur ref') = 0
-                                    AND (
-                                        instr(lower(COALESCE(NULLIF(lh.last_status,''), '')), 'retur') > 0
-                                        OR instr(lower(COALESCE(NULLIF(lh.last_status,''), '')), 'rusak') > 0
-                                        OR instr(lower(COALESCE(NULLIF(lh.last_status,''), '')), 'invalid') > 0
-                                    )";
-                            $reuseSelect($sqlSales, 'sales_history');
                         }
 
-                        if ($has_live) {
-                            $sqlLive = "SELECT ls.username, ls.sale_date, ls.sale_time, ls.blok_name, ls.comment,
-                                    lh.last_status, lh.raw_comment
-                                FROM live_sales ls
-                                LEFT JOIN login_history lh ON lh.username = ls.username
-                                WHERE $baseWhereLs
-                                    AND ls.sync_status = 'pending'
-                                    AND $statusWhereLs
-                                    AND instr(lower(COALESCE(lh.raw_comment,'')), 'vip') = 0
-                                    AND instr(lower(COALESCE(lh.raw_comment,'')), 'pengelola') = 0
-                                    AND instr(lower(COALESCE(lh.raw_comment,'')), 'retur ref') = 0
-                                    AND (
-                                        instr(lower(COALESCE(NULLIF(lh.last_status,''), '')), 'retur') > 0
-                                        OR instr(lower(COALESCE(NULLIF(lh.last_status,''), '')), 'rusak') > 0
-                                        OR instr(lower(COALESCE(NULLIF(lh.last_status,''), '')), 'invalid') > 0
-                                    )";
-                            $reuseSelect($sqlLive, 'live_sales');
+                        $status_raw = strtolower(trim((string)($rr['last_status'] ?? '')));
+                        $status_label = $status_raw !== '' ? strtoupper($status_raw) : '-';
+                        $blok_label = $format_block_label($rr['blok_name'] ?? '');
+                        $base_label = $format_ddmmyyyy($base_date);
+                        $reuse_label = $format_ddmmyyyy($reuse_date);
+                        $last_login_time = (string)($rr['last_login_time'] ?? '');
+                        $time_hint = '';
+                        if ($last_login_time !== '') {
+                            $ts = strtotime($last_login_time);
+                            if ($ts) {
+                                $time_hint = ' (login ' . date('H:i', $ts) . ')';
+                            }
                         }
+                        $desc = 'Voucher ' . $uname . ' digunakan kembali pada ' . $reuse_label . $time_hint . '. Status sebelumnya ' . $status_label . '. Tanggal awal ' . $base_label . '. Blok ' . $blok_label . '.';
+                        $safe_key = preg_replace('/[^A-Za-z0-9_\-]/', '', $uname);
+                        if ($safe_key === '') $safe_key = 'unknown';
+                        $ack_key = 'voucher_reuse_' . $safe_key;
+                        if ($todo_is_ack($ack_key, $reuse_date)) {
+                            continue;
+                        }
+                        $ack_url = $todo_ack_url($ack_key, $reuse_date);
+                        $todo_list[] = [
+                            'id' => 'voucher_reuse_' . $uname . '_' . $reuse_date,
+                            'title' => 'Voucher digunakan kembali',
+                            'desc' => $desc,
+                            'level' => 'warn',
+                            'action_label' => 'Buka User (Fix)',
+                            'action_url' => './?hotspot=users&session=' . urlencode($session) . '&show=harian&date=' . urlencode($reuse_date) . '&q=' . urlencode($uname),
+                            'action_target' => '_self',
+                            'action_ack' => $ack_url,
+                            'action_ack_label' => 'Abaikan'
+                        ];
                     }
-                }
-
-                if (!empty($reuse_today) && !$todo_is_ack('reuse_users', $today)) {
-                    $max_list = 10;
-                    $parts = [];
-                    foreach ($reuse_today as $i => $ru) {
-                        if ($i >= $max_list) break;
-                        $blok = $format_block_label($ru['blok_name'] ?? '');
-                        $parts[] = $ru['username'] . ' (' . $ru['prev_status'] . ', ' . $blok . ')';
-                    }
-                    $more = count($reuse_today) > $max_list ? (' + ' . (count($reuse_today) - $max_list) . ' lainnya') : '';
-                    $list_txt = !empty($parts) ? implode(', ', $parts) : '';
-                    $todo_list[] = [
-                        'id' => 'reuse_users_' . $today,
-                        'title' => 'User lama dipakai lagi',
-                        'desc' => 'Terindikasi user lama (retur/rusak/invalid) digunakan lagi hari ini. ' . $list_txt . $more . '. Silakan cek & bersihkan di Mikrotik.',
-                        'level' => 'warn',
-                        'action_label' => 'Sesuai',
-                        'action_url' => $todo_ack_url('reuse_users'),
-                        'action_target' => '_self'
-                    ];
                 }
             } catch (Exception $e) {
             }

@@ -220,6 +220,8 @@ $has_audit_adjusted = false;
 $total_audit_expense = 0;
 $total_audit_refund = 0;
 $total_audit_kurang_bayar = 0;
+$reuse_summary_rows = [];
+$reuse_summary_by_block = [];
 $daily_note_alert = '';
 $hp_active_by_block = [];
 $hp_stats_by_block = [];
@@ -236,25 +238,45 @@ try {
         $db = new PDO('sqlite:' . $dbFile);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
+                $hasReuse = table_exists($db, 'voucher_reuse_log');
+                $reuseExcludeSales = $hasReuse
+                    ? " AND NOT EXISTS (SELECT 1 FROM voucher_reuse_log vr WHERE vr.username = sh.username AND vr.reuse_date = sh.sale_date)"
+                    : '';
+                $reuseExcludeLive = $hasReuse
+                    ? " AND NOT EXISTS (SELECT 1 FROM voucher_reuse_log vr WHERE vr.username = ls.username AND vr.reuse_date = ls.sale_date)"
+                    : '';
+                $reuseDateCond = "vr.reuse_date = :d";
+                if ($req_show === 'bulanan') {
+                    $reuseDateCond = "substr(vr.reuse_date,1,7) = :d";
+                } elseif ($req_show === 'tahunan') {
+                    $reuseDateCond = "substr(vr.reuse_date,1,4) = :d";
+                }
+                $reuseExcludeLogin = $hasReuse
+                    ? (" AND NOT EXISTS (SELECT 1 FROM voucher_reuse_log vr WHERE vr.username = login_history.username AND " . $reuseDateCond . ")")
+                    : '';
+
                 $res = $db->query("SELECT 
                         sh.raw_date, sh.raw_time, sh.sale_date, sh.sale_time, sh.sale_datetime,
                         sh.username, sh.profile, sh.profile_snapshot,
                         sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
                         sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
-                        sh.full_raw_data, lh.last_status, lh.last_bytes, lh.last_uptime, lh.raw_comment
+                    sh.full_raw_data, lh.last_status, lh.last_bytes, lh.last_uptime, lh.raw_comment,
+                    lh.last_login_real AS lh_last_login_real, lh.login_time_real AS lh_login_time_real
                         FROM sales_history sh
                         LEFT JOIN login_history lh ON lh.username = sh.username
                         WHERE instr(lower(COALESCE(sh.comment,'')), 'vip') = 0
                             AND instr(lower(COALESCE(sh.comment,'')), 'pengelola') = 0
                             AND instr(lower(COALESCE(lh.raw_comment,'')), 'vip') = 0
                             AND instr(lower(COALESCE(lh.raw_comment,'')), 'pengelola') = 0
+                                    $reuseExcludeSales
                         UNION ALL
                         SELECT 
                                 ls.raw_date, ls.raw_time, ls.sale_date, ls.sale_time, ls.sale_datetime,
                                 ls.username, ls.profile, ls.profile_snapshot,
                                 ls.price, ls.price_snapshot, ls.sprice_snapshot, ls.validity,
                                 ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
-                        ls.full_raw_data, lh2.last_status, lh2.last_bytes, lh2.last_uptime, lh2.raw_comment
+                    ls.full_raw_data, lh2.last_status, lh2.last_bytes, lh2.last_uptime, lh2.raw_comment,
+                    lh2.last_login_real AS lh_last_login_real, lh2.login_time_real AS lh_login_time_real
                         FROM live_sales ls
                         LEFT JOIN login_history lh2 ON lh2.username = ls.username
                         WHERE ls.sync_status = 'pending'
@@ -262,23 +284,82 @@ try {
                             AND instr(lower(COALESCE(ls.comment,'')), 'pengelola') = 0
                             AND instr(lower(COALESCE(lh2.raw_comment,'')), 'vip') = 0
                             AND instr(lower(COALESCE(lh2.raw_comment,'')), 'pengelola') = 0
+                            $reuseExcludeLive
                         ORDER BY sale_datetime DESC, raw_date DESC");
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
 
+        if ($req_show === 'harian' && table_exists($db, 'voucher_reuse_log')) {
+            try {
+                $hasLhReuse = table_exists($db, 'login_history');
+                $sqlReuse = "SELECT vr.username, vr.reuse_date, vr.reuse_count, vr.last_status, vr.blok_name AS vr_blok, vr.raw_comment AS vr_comment, vr.last_login_time, vr.last_logout_time";
+                if ($hasLhReuse) {
+                    $sqlReuse .= ", lh.customer_name, lh.room_name, lh.validity, lh.raw_comment AS lh_comment, lh.blok_name AS lh_blok";
+                }
+                $sqlReuse .= " FROM voucher_reuse_log vr";
+                if ($hasLhReuse) {
+                    $sqlReuse .= " LEFT JOIN login_history lh ON lh.username = vr.username";
+                }
+                $sqlReuse .= " WHERE vr.reuse_date = :d ORDER BY vr.last_login_time DESC, vr.username ASC";
+                $stmtReuse = $db->prepare($sqlReuse);
+                $stmtReuse->execute([':d' => $filter_date]);
+                $reuseRows = $stmtReuse->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                foreach ($reuseRows as $rr) {
+                    $comment = (string)($rr['vr_comment'] ?? '');
+                    if ($comment === '' && !empty($rr['lh_comment'])) $comment = (string)$rr['lh_comment'];
+                    $profile = (string)($rr['validity'] ?? '');
+                    if ($profile === '' || $profile === '-') {
+                        $profile = extract_profile_from_comment($comment);
+                    }
+                    if ($profile === '') {
+                        $profile = infer_profile_from_comment($comment);
+                    }
+                    $profile_label = resolve_profile_label($profile);
+                    if ($profile_label === '') $profile_label = $profile !== '' ? $profile : '-';
+                    $blok_raw = (string)($rr['vr_blok'] ?? '');
+                    if ($blok_raw === '' && !empty($rr['lh_blok'])) $blok_raw = (string)$rr['lh_blok'];
+                    $blok_norm = normalize_block_name($blok_raw, $comment);
+                    $blok_label = get_block_label($blok_norm, $blok_names);
+                    $customer_name = format_customer_name($rr['customer_name'] ?? '');
+                    $room_name = (string)($rr['room_name'] ?? '');
+                    $last_login_time = (string)($rr['last_login_time'] ?? '');
+                    $time_label = '';
+                    if ($last_login_time !== '') {
+                        $ts = strtotime($last_login_time);
+                        if ($ts) $time_label = date('H:i', $ts);
+                    }
+                    $rowReuse = [
+                        'username' => (string)($rr['username'] ?? ''),
+                        'profile' => $profile_label,
+                        'blok' => $blok_label,
+                        'room' => $room_name,
+                        'customer' => $customer_name,
+                        'time' => $time_label
+                    ];
+                    $reuse_summary_rows[] = $rowReuse;
+                    $blockKey = $blok_label !== '' ? $blok_label : 'BLOK-LAIN';
+                    if (!isset($reuse_summary_by_block[$blockKey])) $reuse_summary_by_block[$blockKey] = [];
+                    $reuse_summary_by_block[$blockKey][] = $rowReuse;
+                }
+            } catch (Exception $e) {
+                $reuse_summary_rows = [];
+                $reuse_summary_by_block = [];
+            }
+        }
+
         // Tambahkan data dari login_history untuk status rusak/retur/invalid
         try {
-            $lhWhere = "(substr(login_time_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR substr(logout_time_real,1,10) = :d OR login_date = :d)";
+            $lhWhere = "(substr(login_time_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR substr(logout_time_real,1,10) = :d OR substr(updated_at,1,10) = :d OR login_date = :d)";
             if ($req_show === 'bulanan') {
-                $lhWhere = "(substr(login_time_real,1,7) = :d OR substr(last_login_real,1,7) = :d OR substr(logout_time_real,1,7) = :d OR substr(login_date,1,7) = :d)";
+                $lhWhere = "(substr(login_time_real,1,7) = :d OR substr(last_login_real,1,7) = :d OR substr(logout_time_real,1,7) = :d OR substr(updated_at,1,7) = :d OR substr(login_date,1,7) = :d)";
             } elseif ($req_show === 'tahunan') {
-                $lhWhere = "(substr(login_time_real,1,4) = :d OR substr(last_login_real,1,4) = :d OR substr(logout_time_real,1,4) = :d OR substr(login_date,1,4) = :d)";
+                $lhWhere = "(substr(login_time_real,1,4) = :d OR substr(last_login_real,1,4) = :d OR substr(logout_time_real,1,4) = :d OR substr(updated_at,1,4) = :d OR substr(login_date,1,4) = :d)";
             }
             $stmtLh = $db->prepare("SELECT
                 '' AS raw_date,
                 '' AS raw_time,
-                COALESCE(NULLIF(substr(login_time_real,1,10),''), NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(logout_time_real,1,10),''), login_date) AS sale_date,
-                COALESCE(NULLIF(substr(login_time_real,12,8),''), NULLIF(substr(last_login_real,12,8),''), NULLIF(substr(logout_time_real,12,8),''), login_time) AS sale_time,
-                COALESCE(NULLIF(login_time_real,''), NULLIF(last_login_real,''), NULLIF(logout_time_real,''), CASE WHEN login_date != '' AND login_time != '' THEN login_date || ' ' || login_time END) AS sale_datetime,
+                COALESCE(NULLIF(substr(login_time_real,1,10),''), NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(logout_time_real,1,10),''), NULLIF(substr(updated_at,1,10),''), login_date) AS sale_date,
+                COALESCE(NULLIF(substr(login_time_real,12,8),''), NULLIF(substr(last_login_real,12,8),''), NULLIF(substr(logout_time_real,12,8),''), NULLIF(substr(updated_at,12,8),''), login_time) AS sale_time,
+                COALESCE(NULLIF(login_time_real,''), NULLIF(last_login_real,''), NULLIF(logout_time_real,''), NULLIF(updated_at,'')) AS sale_datetime,
                 username,
                 COALESCE(NULLIF(validity,''), '-') AS profile,
                 COALESCE(NULLIF(validity,''), '-') AS profile_snapshot,
@@ -302,6 +383,7 @@ try {
                 AND $lhWhere
                 AND instr(lower(COALESCE(raw_comment,'')), 'vip') = 0
                 AND instr(lower(COALESCE(raw_comment,'')), 'pengelola') = 0
+                $reuseExcludeLogin
                         AND (
                             instr(lower(COALESCE(NULLIF(last_status,''), '')), 'rusak') > 0
                             OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'retur') > 0
@@ -594,9 +676,22 @@ foreach ($rows as $r) {
     $comment = (string)($r['comment'] ?? '');
     $raw_comment = (string)($r['raw_comment'] ?? '');
     if ($raw_comment !== '') {
+        $raw_date_hint = '';
+        if (!empty($r['lh_last_login_real'])) {
+            $raw_date_hint = substr((string)$r['lh_last_login_real'], 0, 10);
+        }
+        if ($raw_date_hint === '' && !empty($r['lh_login_time_real'])) {
+            $raw_date_hint = substr((string)$r['lh_login_time_real'], 0, 10);
+        }
+        $raw_match = false;
+        if ($raw_date_hint !== '') {
+            if ($req_show === 'harian') $raw_match = ($raw_date_hint === $sale_date);
+            elseif ($req_show === 'bulanan') $raw_match = (strpos((string)$raw_date_hint, $filter_date) === 0);
+            else $raw_match = (strpos((string)$raw_date_hint, $filter_date) === 0);
+        }
         $raw_low = strtolower($raw_comment);
         $cmt_low = strtolower($comment);
-        if ((strpos($raw_low, 'retur') !== false || strpos($raw_low, 'rusak') !== false) &&
+        if ($raw_match && (strpos($raw_low, 'retur') !== false || strpos($raw_low, 'rusak') !== false) &&
             !(strpos($cmt_low, 'retur') !== false || strpos($cmt_low, 'rusak') !== false)) {
             $comment = $raw_comment;
         }
@@ -631,18 +726,13 @@ foreach ($rows as $r) {
     }
     $block = normalize_block_name($r['blok_name'] ?? '', $comment);
 
-    $is_retur_ref = false;
     if ($status === 'retur') {
         $ref_user = extract_retur_user_from_ref($comment);
         if ($ref_user !== '') {
             if (!isset($retur_ref_map[$block])) $retur_ref_map[$block] = [];
             $retur_ref_map[$block][strtolower($ref_user)] = true;
             $retur_ref_map_global[strtolower($ref_user)] = true;
-            $is_retur_ref = true;
         }
-    }
-    if ($is_retur_ref) {
-        $status = 'normal';
     }
     if ($status === 'rusak') {
         $username = strtolower((string)($r['username'] ?? ''));
@@ -1684,6 +1774,30 @@ $has_kurang_bayar = $total_audit_kurang_bayar > 0;
                         *Data berdasarkan input manual lapangan
                     </div>
                 </div>
+
+                <?php if ($req_show === 'harian' && !empty($reuse_summary_by_block)): ?>
+                    <div style="background:#fff; padding:8px 10px; border-radius:4px; margin-bottom:12px; font-size:11px; border:1px solid #e2e8f0;">
+                        <div style="font-weight:bold; margin-bottom:6px; color:#92400e;">
+                            Voucher Digunakan Ulang (tidak dihitung penjualan)
+                        </div>
+                        <?php foreach ($reuse_summary_by_block as $bname => $items): ?>
+                            <div style="margin-bottom:6px;">
+                                <div style="font-weight:bold; color:#7c2d12; margin-bottom:2px;">
+                                    <?= htmlspecialchars($bname) ?>
+                                </div>
+                                <?php foreach ($items as $rr): ?>
+                                    <div style="margin-left:10px; margin-bottom:2px;">
+                                        <b><?= htmlspecialchars($rr['username'] ?? '') ?></b>
+                                        <?php if (!empty($rr['profile']) && $rr['profile'] !== '-'): ?> • <?= htmlspecialchars($rr['profile']) ?><?php endif; ?>
+                                        <?php if (!empty($rr['room'])): ?> • <?= htmlspecialchars($rr['room']) ?><?php endif; ?>
+                                        <?php if (!empty($rr['customer'])): ?> • <?= htmlspecialchars($rr['customer']) ?><?php endif; ?>
+                                        <?php if (!empty($rr['time'])): ?> • <?= htmlspecialchars($rr['time']) ?><?php endif; ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
 
                 <?php if ($req_show === 'harian' && !empty($hp_change_rows)): ?>
                     <?php

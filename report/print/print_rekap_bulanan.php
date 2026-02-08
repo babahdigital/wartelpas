@@ -88,6 +88,9 @@ function build_sales_select(PDO $db, $table, $alias, $login_alias, $has_login, $
     }
     $where_clauses[] = "instr(lower(COALESCE(" . $alias . ".comment,'')), 'vip') = 0";
     $where_clauses[] = "instr(lower(COALESCE(" . $alias . ".comment,'')), 'pengelola') = 0";
+    if (table_exists($db, 'voucher_reuse_log')) {
+        $where_clauses[] = "NOT EXISTS (SELECT 1 FROM voucher_reuse_log vr WHERE vr.username = " . $alias . ".username AND vr.reuse_date = " . $alias . ".sale_date)";
+    }
     $where_pending = !empty($where_clauses) ? (' WHERE ' . implode(' AND ', $where_clauses)) : '';
     return 'SELECT ' . implode(', ', $parts) . ', ' . $login_select . ' FROM ' . $table . ' ' . $alias . ' ' . $login_join . $where_pending;
 }
@@ -108,6 +111,7 @@ $total_refund_month = 0;
 $total_kurang_bayar_month = 0;
 $daily_expense_logs = [];
 $notes_map = [];
+$reuse_note_map = [];
 $settled_dates = [];
 $pending_dates = [];
 $has_settlement_rows = false;
@@ -201,6 +205,48 @@ try {
             }
         } catch (Exception $e) {}
 
+        if (table_exists($db, 'voucher_reuse_log')) {
+            try {
+                $hasLhReuse = table_exists($db, 'login_history');
+                $sqlReuse = "SELECT vr.username, vr.reuse_date, vr.blok_name AS vr_blok, vr.raw_comment AS vr_comment";
+                if ($hasLhReuse) {
+                    $sqlReuse .= ", lh.raw_comment AS lh_comment, lh.blok_name AS lh_blok";
+                }
+                $sqlReuse .= " FROM voucher_reuse_log vr";
+                if ($hasLhReuse) {
+                    $sqlReuse .= " LEFT JOIN login_history lh ON lh.username = vr.username";
+                }
+                $sqlReuse .= " WHERE vr.reuse_date LIKE :m";
+                $stmtReuse = $db->prepare($sqlReuse);
+                $stmtReuse->execute([':m' => $filter_date . '%']);
+                $reuseRows = $stmtReuse->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                $tmp = [];
+                foreach ($reuseRows as $rr) {
+                    $reuse_date = (string)($rr['reuse_date'] ?? '');
+                    if ($reuse_date === '') continue;
+                    $comment = (string)($rr['vr_comment'] ?? '');
+                    if ($comment === '' && !empty($rr['lh_comment'])) $comment = (string)$rr['lh_comment'];
+                    $blok_raw = (string)($rr['vr_blok'] ?? '');
+                    if ($blok_raw === '' && !empty($rr['lh_blok'])) $blok_raw = (string)$rr['lh_blok'];
+                    $blok_norm = normalize_block_name($blok_raw, $comment);
+                    if (!isset($tmp[$reuse_date])) $tmp[$reuse_date] = [];
+                    $tmp[$reuse_date][$blok_norm] = (int)($tmp[$reuse_date][$blok_norm] ?? 0) + 1;
+                }
+                foreach ($tmp as $d => $blkMap) {
+                    $parts = [];
+                    foreach ($blkMap as $b => $cnt) {
+                        if ($cnt <= 0) continue;
+                        $parts[] = $b . '(' . $cnt . ')';
+                    }
+                    if (!empty($parts)) {
+                        $reuse_note_map[$d] = 'Reuse: ' . implode(', ', $parts);
+                    }
+                }
+            } catch (Exception $e) {
+                $reuse_note_map = [];
+            }
+        }
+
         if (table_exists($db, 'settlement_log')) {
             try {
                 $stmtSet = $db->prepare("SELECT report_date, status FROM settlement_log WHERE report_date LIKE :m");
@@ -291,9 +337,7 @@ foreach ($rows as $r) {
 
     $status = strtolower((string)($r['status'] ?? ''));
     $lh_status = strtolower((string)($r['last_status'] ?? ''));
-    $comment_raw = (string)($r['comment'] ?? '');
-    $comment = strtolower($comment_raw);
-    $retur_ref_user = extract_retur_user_from_ref($comment_raw);
+    $comment = strtolower((string)($r['comment'] ?? ''));
     if ($status === '' || $status === 'normal') {
         if ((int)($r['is_invalid'] ?? 0) === 1) $status = 'invalid';
         elseif ((int)($r['is_retur'] ?? 0) === 1) $status = 'retur';
@@ -302,9 +346,6 @@ foreach ($rows as $r) {
         elseif (strpos($comment, 'retur') !== false) $status = 'retur';
         elseif (strpos($comment, 'rusak') !== false || $lh_status === 'rusak') $status = 'rusak';
         else $status = 'normal';
-    }
-    if ($status === 'retur' && $retur_ref_user !== '') {
-        $status = 'normal';
     }
 
     $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
@@ -594,7 +635,16 @@ if (!empty($unsettled_dates)) {
                         $status_color = '#16a34a';
                     }
                        $day_note = $notes_map[$row['date']] ?? '';
-                       $day_note_short = $day_note !== '' ? mb_strimwidth($day_note, 0, 40, '...') : '';
+                       $reuse_note = $reuse_note_map[$row['date']] ?? '';
+                       $note_combo = '';
+                       if ($day_note !== '' && $reuse_note !== '') {
+                           $note_combo = $day_note . ' | ' . $reuse_note;
+                       } elseif ($day_note !== '') {
+                           $note_combo = $day_note;
+                       } elseif ($reuse_note !== '') {
+                           $note_combo = $reuse_note;
+                       }
+                       $day_note_short = $note_combo !== '' ? mb_strimwidth($note_combo, 0, 60, '...') : '';
                 ?>
                 <tr style="background:<?= $bg_row ?>;">
                     <td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:center;"><?= esc(substr($row['date'], 8, 2)) ?></td>
