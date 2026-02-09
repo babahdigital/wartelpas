@@ -12,17 +12,26 @@ chmod -R 777 /var/www/html/logs
 chmod -R 777 /var/www/html/report
 chmod -R 777 /var/www/html/voucher
 
-# 1b. Pastikan .htaccess bisa ditulis dan dimiliki oleh www-data
-if [ -f "/var/www/html/.htaccess" ]; then
-    echo "Updating .htaccess ownership and permissions..."
-    chown www-data:www-data /var/www/html/.htaccess
-    chmod 666 /var/www/html/.htaccess || true
+# 1b. Pastikan .htaccess ada dan tidak kosong
+HTACCESS="/var/www/html/.htaccess"
+HTACCESS_TEMPLATE="/var/www/html/htaccess-templated"
+if [ -f "$HTACCESS" ]; then
+    if [ ! -s "$HTACCESS" ] && [ -f "$HTACCESS_TEMPLATE" ]; then
+        echo "Restoring .htaccess from template..."
+        cp "$HTACCESS_TEMPLATE" "$HTACCESS"
+    fi
 else
-    # Jika file tidak ada (misal tertinggal di host), buat baru agar apache tidak error
-    touch /var/www/html/.htaccess
-    chown www-data:www-data /var/www/html/.htaccess
-    chmod 666 /var/www/html/.htaccess
+    if [ -f "$HTACCESS_TEMPLATE" ]; then
+        echo "Creating .htaccess from template..."
+        cp "$HTACCESS_TEMPLATE" "$HTACCESS"
+    else
+        # Jika file tidak ada (misal tertinggal di host), buat baru agar apache tidak error
+        touch "$HTACCESS"
+    fi
 fi
+echo "Updating .htaccess ownership and permissions..."
+chown www-data:www-data "$HTACCESS"
+chmod 666 "$HTACCESS" || true
 
 # 2. Pastikan file konfigurasi bisa ditulis oleh web server
 if [ -f "/var/www/html/include/config.php" ]; then

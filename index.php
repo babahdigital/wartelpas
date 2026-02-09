@@ -17,6 +17,32 @@ if (isset($_SERVER['HTTP_ACCEPT_ENCODING']) && substr_count($_SERVER['HTTP_ACCEP
     ob_start();
 }
 
+// Debug log untuk error 500 di halaman utama
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+$logDir = __DIR__ . '/logs';
+if (!is_dir($logDir)) {
+  @mkdir($logDir, 0777, true);
+}
+ini_set('error_log', $logDir . '/index_error.log');
+$reqId = '';
+try {
+  $reqId = date('Ymd-His') . '-' . bin2hex(random_bytes(6));
+} catch (Exception $e) {
+  $reqId = date('Ymd-His') . '-' . uniqid();
+}
+$clientIp = $_SERVER['REMOTE_ADDR'] ?? '';
+$clientUa = $_SERVER['HTTP_USER_AGENT'] ?? '';
+error_log('[' . $reqId . '] index start ip=' . $clientIp . ' ua=' . $clientUa . ' uri=' . ($_SERVER['REQUEST_URI'] ?? ''));
+register_shutdown_function(function () use ($reqId) {
+  $err = error_get_last();
+  if (!$err) return;
+  $fatal = array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR);
+  if (in_array($err['type'], $fatal, true)) {
+    error_log('[' . $reqId . '] fatal: ' . $err['message'] . ' in ' . $err['file'] . ':' . $err['line']);
+  }
+});
+
 $url = $_SERVER['REQUEST_URI'];
 $session = isset($_GET['session']) ? $_GET['session'] : "";
 if (!empty($session) && strpos($session, '~') !== false) {

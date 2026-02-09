@@ -91,9 +91,9 @@ ErrorDocument 500 /error.php
 
 # C. BLOKIR FOLDER SYSTEM & LOGIC (Backend)
 # Folder ini berisi script inti yang tidak boleh dipanggil langsung browser
-RedirectMatch 403 ^/include/.*$
+RedirectMatch 403 ^/include/(?!popup_announcement_action\.php$|popup_announcement_upload\.php$).*$
 RedirectMatch 403 ^/process/.*$
-RedirectMatch 403 ^/system/(?!whatsapp/(?:.*\.(css|js)$|api\.php$)).*$
+RedirectMatch 403 ^/system/(?!whatsapp/(?:.*\.(css|js)$|api\.php$|webhook\.php$)).*$
 RedirectMatch 403 ^/lib/.*$
 
 # D. BLOKIR FOLDER DATA SENSITIF (CRITICAL!)
@@ -109,21 +109,19 @@ RedirectMatch 403 ^/voucher/(?!print\.php$).+\.php$
 
 # ====================================================
 # 4. LOGIKA DETEKSI IP
-# ====================================================
-SetEnvIf X-Forwarded-For "^10\.0\.0\.6($|,)" TAMU_VIP
+
 SetEnvIf X-Forwarded-For "^172\.16\.8\.21($|,)" TAMU_VIP
+SetEnvIf X-Forwarded-For "^10\.0\.0\.6($|,)" TAMU_VIP
 SetEnvIf X-Forwarded-For "^10\.10\.83\.1($|,)" TAMU_VIP
 SetEnvIf X-Forwarded-For "^10\.10\.83\.2($|,)" TAMU_VIP
-SetEnvIf X-Real-IP "^10\.0\.0\.6$" TAMU_VIP
 SetEnvIf X-Real-IP "^172\.16\.8\.21$" TAMU_VIP
+SetEnvIf X-Real-IP "^10\.0\.0\.6$" TAMU_VIP
 SetEnvIf X-Real-IP "^10\.10\.83\.1$" TAMU_VIP
 SetEnvIf X-Real-IP "^10\.10\.83\.2$" TAMU_VIP
-SetEnvIf Remote_Addr "^10\.0\.0\.6$" TAMU_VIP
 SetEnvIf Remote_Addr "^172\.16\.8\.21$" TAMU_VIP
+SetEnvIf Remote_Addr "^10\.0\.0\.6$" TAMU_VIP
 SetEnvIf Remote_Addr "^10\.10\.83\.1$" TAMU_VIP
 SetEnvIf Remote_Addr "^10\.10\.83\.2$" TAMU_VIP
-
-# ====================================================
 # 5. GERBANG KEAMANAN UTAMA (GLOBAL)
 # ====================================================
 
@@ -193,8 +191,22 @@ Require all denied
     Require all granted
 </If>
 
+# Popup announcement admin endpoint
+<If "%{REQUEST_URI} =~ m#^/include/popup_announcement_action\.php$#">
+    Require all granted
+</If>
+
+<If "%{REQUEST_URI} =~ m#^/include/popup_announcement_upload\.php$#">
+    Require all granted
+</If>
+
 # Backup DB endpoint (protected)
 <If "%{REQUEST_URI} =~ m#^/tools/backup_db\.php$#">
+    Require all granted
+</If>
+
+# Backup App DB endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/backup_app_db\.php$#">
     Require all granted
 </If>
 
@@ -220,6 +232,11 @@ Require all denied
 
 # Restore DB endpoint (protected)
 <If "%{REQUEST_URI} =~ m#^/tools/restore_db\.php$#">
+    Require all granted
+</If>
+
+# Restore App DB endpoint (protected)
+<If "%{REQUEST_URI} =~ m#^/tools/restore_app_db\.php$#">
     Require all granted
 </If>
 
@@ -268,6 +285,16 @@ Require all denied
     Require all granted
 </If>
 
+# VIP whitelist sync (protected by token)
+<If "%{REQUEST_URI} =~ m#^/tools/htaccess_vip_sync\.php$#">
+    Require all granted
+</If>
+
+# Mikrotik scripts generator (requires session)
+<If "%{REQUEST_URI} =~ m#^/tools/mikrotik_scripts\.php$#">
+    Require all granted
+</If>
+
 # Settlement sync fix endpoint (protected by session)
 <If "%{REQUEST_URI} =~ m#^/tools/settlement_sync_fix\.php#">
     Require all granted
@@ -295,65 +322,80 @@ Require all denied
 # Dashboard AJAX
 <If "%{REQUEST_URI} =~ m#^/dashboard/aload\.php$#">
     <RequireAny>
-        Require env TAMU_VIP
-        Require ip 10.0.0.6
-        Require ip 172.16.8.21
-        Require ip 10.10.83.1
-        Require ip 10.10.83.2
-        Require ip 127.0.0.1
-        Require ip ::1
+    Require env TAMU_VIP
+    Require ip 172.16.8.21
+    Require ip 10.0.0.6
+    Require ip 10.10.83.1
+    Require ip 10.10.83.2
+    Require ip 127.0.0.1
+    Require ip ::1
     </RequireAny>
 </If>
 
 # AJAX/Backend folder restrictions (VIP only)
 <If "%{REQUEST_URI} =~ m#^/dashboard/.*\.php$#">
     <RequireAny>
-        Require env TAMU_VIP
-        Require ip 10.0.0.6
-        Require ip 172.16.8.21
-        Require ip 10.10.83.1
-        Require ip 10.10.83.2
-        Require ip 127.0.0.1
-        Require ip ::1
+    Require env TAMU_VIP
+    Require ip 172.16.8.21
+    Require ip 10.0.0.6
+    Require ip 10.10.83.1
+    Require ip 10.10.83.2
+    Require ip 127.0.0.1
+    Require ip ::1
     </RequireAny>
 </If>
 
-<If "%{REQUEST_URI} =~ m#^/hotspot/(?!user/(retur_request|login_meta)\.php$).*\.php$#">
+<If "%{REQUEST_URI} =~ m#^/hotspot/(?!user/(retur_request|login_meta|popup_announcement)\.php$).*\.php$#">
     <RequireAny>
-        Require env TAMU_VIP
-        Require ip 10.0.0.6
-        Require ip 172.16.8.21
-        Require ip 10.10.83.1
-        Require ip 10.10.83.2
-        Require ip 127.0.0.1
-        Require ip ::1
+    Require env TAMU_VIP
+    Require ip 172.16.8.21
+    Require ip 10.0.0.6
+    Require ip 10.10.83.1
+    Require ip 10.10.83.2
+    Require ip 127.0.0.1
+    Require ip ::1
     </RequireAny>
 </If>
 
 <If "%{REQUEST_URI} =~ m#^/dhcp/.*\.php$#">
     <RequireAny>
-        Require env TAMU_VIP
-        Require ip 10.0.0.6
-        Require ip 172.16.8.21
-        Require ip 10.10.83.1
-        Require ip 10.10.83.2
-        Require ip 127.0.0.1
-        Require ip ::1
+    Require env TAMU_VIP
+    Require ip 172.16.8.21
+    Require ip 10.0.0.6
+    Require ip 10.10.83.1
+    Require ip 10.10.83.2
+    Require ip 127.0.0.1
+    Require ip ::1
     </RequireAny>
 </If>
 
 <If "%{REQUEST_URI} =~ m#^/traffic/.*\.php$#">
     <RequireAny>
-        Require env TAMU_VIP
-        Require ip 10.0.0.6
-        Require ip 172.16.8.21
-        Require ip 127.0.0.1
-        Require ip ::1
+    Require env TAMU_VIP
+    Require ip 172.16.8.21
+    Require ip 10.0.0.6
+    Require ip 10.10.83.1
+    Require ip 10.10.83.2
+    Require ip 127.0.0.1
+    Require ip ::1
     </RequireAny>
 </If>
 
 # Sync usage endpoint
 <If "%{REQUEST_URI} =~ m#^/report/laporan/services/sync_usage\.php$#">
+    Require all granted
+</If>
+
+# Todo ack/log endpoints (requires session)
+<If "%{REQUEST_URI} =~ m#^/tools/todo_ack\.php$#">
+    Require all granted
+</If>
+<If "%{REQUEST_URI} =~ m#^/tools/todo_log\.php$#">
+    Require all granted
+</If>
+
+# VIP cleanup tool (requires session)
+<If "%{REQUEST_URI} =~ m#^/tools/vip_cleanup\.php$#">
     Require all granted
 </If>
 
@@ -367,12 +409,21 @@ Require all denied
     Require all granted
 </If>
 
+# Popup announcement endpoint (public)
+<If "%{REQUEST_URI} =~ m#^/hotspot/user/popup_announcement\.php$#">
+    Require all granted
+</If>
+
 # Backfill Meta endpoint (restricted)
 <If "%{REQUEST_URI} =~ m#^/report/laporan/services/backfill_meta\.php$#">
     <RequireAny>
-        Require env TAMU_VIP
-        Require ip 127.0.0.1
-        Require ip ::1
+    Require env TAMU_VIP
+    Require ip 172.16.8.21
+    Require ip 10.0.0.6
+    Require ip 10.10.83.1
+    Require ip 10.10.83.2
+    Require ip 127.0.0.1
+    Require ip ::1
     </RequireAny>
 </If>
 
@@ -394,8 +445,8 @@ Require all denied
 # IP VIP boleh akses file AJAX (dashboard/, hotspot/, dll)
 <RequireAny>
     Require env TAMU_VIP
-    Require ip 10.0.0.6
     Require ip 172.16.8.21
+    Require ip 10.0.0.6
     Require ip 10.10.83.1
     Require ip 10.10.83.2
     Require ip 127.0.0.1

@@ -357,11 +357,22 @@ if ($id == "login" || ($basename === 'admin.php' && empty($id))) {
   include_once('./include/menu.php');
   $API = new RouterosAPI();
   $API->debug = false;
+  if (!empty($connect_req_id)) {
+    $logUser = isset($userhost) ? $userhost : '';
+    $logIp = isset($iphost) ? $iphost : '';
+    error_log('[' . $connect_req_id . '] connect try iphost=' . $logIp . ' user=' . $logUser);
+  }
   if ($API->connect($iphost, $userhost, decrypt($passwdhost))){
     $_SESSION["connect"] = "<b class='text-green'>Connected</b>";
+    if (!empty($connect_req_id)) {
+      error_log('[' . $connect_req_id . '] connect ok');
+    }
     echo "<script>window.location='./?session=" . $session . "'</script>";
   } else {
     $_SESSION["connect"] = "<b class='text-red'>Not Connected</b>";
+    if (!empty($connect_req_id)) {
+      error_log('[' . $connect_req_id . '] connect failed');
+    }
     $nl = '\n';
     if ($currency == in_array($currency, $cekindo['indo'])) {
       echo "<script>alert('Mikhmon not connected!".$nl."Silakan periksa kembali IP, User, Password dan port API harus enable.".$nl."Jika menggunakan koneksi VPN, pastikan VPN tersebut terkoneksi.')</script>";

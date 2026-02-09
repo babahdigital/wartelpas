@@ -525,6 +525,16 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
             } catch (Exception $e) {
                 $audit_y_count = 0;
             }
+            $format_block_label = function($name) {
+                $name = trim((string)$name);
+                if ($name === '') return '-';
+                $name = str_replace('-', ' ', $name);
+                $name = preg_replace('/^BLOK\s+/i', '', $name);
+                $name = trim($name);
+                if ($name === '') return '-';
+                return 'BLOK ' . strtoupper($name);
+            };
+
             if ($audit_y_count === 0) {
                 $todo_list[] = [
                     'id' => 'audit_missing_' . $yesterday,
@@ -576,16 +586,6 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 } catch (Exception $e) {
                 }
             }
-
-            $format_block_label = function($name) {
-                $name = trim((string)$name);
-                if ($name === '') return '-';
-                $name = str_replace('-', ' ', $name);
-                $name = preg_replace('/^BLOK\s+/i', '', $name);
-                $name = trim($name);
-                if ($name === '') return '-';
-                return 'BLOK ' . strtoupper($name);
-            };
 
             // Settlement belum selesai (tanggal sebelumnya, bukan hari ini)
             try {
