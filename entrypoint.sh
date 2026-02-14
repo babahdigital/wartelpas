@@ -15,23 +15,25 @@ chmod -R 777 /var/www/html/voucher
 # 1b. Pastikan .htaccess ada dan tidak kosong
 HTACCESS="/var/www/html/.htaccess"
 HTACCESS_TEMPLATE="/var/www/html/htaccess-templated"
-if [ -f "$HTACCESS" ]; then
-    if [ ! -s "$HTACCESS" ] && [ -f "$HTACCESS_TEMPLATE" ]; then
-        echo "Restoring .htaccess from template..."
-        cp "$HTACCESS_TEMPLATE" "$HTACCESS"
-    fi
-else
-    if [ -f "$HTACCESS_TEMPLATE" ]; then
-        echo "Creating .htaccess from template..."
-        cp "$HTACCESS_TEMPLATE" "$HTACCESS"
-    else
-        # Jika file tidak ada (misal tertinggal di host), buat baru agar apache tidak error
-        touch "$HTACCESS"
-    fi
+
+# Jika dua-duanya kosong/tidak ada, buat placeholder agar Apache tidak error
+if { [ ! -f "$HTACCESS" ] || [ ! -s "$HTACCESS" ]; } && { [ ! -f "$HTACCESS_TEMPLATE" ] || [ ! -s "$HTACCESS_TEMPLATE" ]; }; then
+    echo "Both .htaccess and template are missing/empty. Creating safe placeholders..."
+    touch "$HTACCESS" "$HTACCESS_TEMPLATE"
 fi
-echo "Updating .htaccess ownership and permissions..."
-chown www-data:www-data "$HTACCESS"
-chmod 666 "$HTACCESS" || true
+
+# Sinkron awal dua arah: pilih file yang berisi sebagai sumber
+if [ -s "$HTACCESS_TEMPLATE" ] && { [ ! -f "$HTACCESS" ] || [ ! -s "$HTACCESS" ]; }; then
+    echo "Restoring .htaccess from template..."
+    cp "$HTACCESS_TEMPLATE" "$HTACCESS"
+elif [ -s "$HTACCESS" ] && { [ ! -f "$HTACCESS_TEMPLATE" ] || [ ! -s "$HTACCESS_TEMPLATE" ]; }; then
+    echo "Restoring htaccess-templated from .htaccess..."
+    cp "$HTACCESS" "$HTACCESS_TEMPLATE"
+fi
+
+echo "Updating .htaccess and template ownership/permissions..."
+chown www-data:www-data "$HTACCESS" "$HTACCESS_TEMPLATE" || true
+chmod 666 "$HTACCESS" "$HTACCESS_TEMPLATE" || true
 
 # 2. Pastikan file konfigurasi bisa ditulis oleh web server
 if [ -f "/var/www/html/include/config.php" ]; then
@@ -46,6 +48,16 @@ fi
 # 3. Khusus folder settings agar bisa simpan config
 if [ -d "/var/www/html/settings" ]; then
     chmod -R 777 /var/www/html/settings
+fi
+
+# 4. Sinkronisasi VIP dari env/db ke .htaccess + htaccess-templated
+if [ -f "/var/www/html/tools/htaccess_vip_sync.php" ]; then
+    echo "Syncing VIP whitelist into .htaccess and template..."
+    if php /var/www/html/tools/htaccess_vip_sync.php; then
+        echo "VIP sync completed."
+    else
+        echo "WARNING: VIP sync failed. Continuing startup with existing .htaccess." >&2
+    fi
 fi
 
 echo "PERMISSIONS FIXED. STARTING APACHE..."
