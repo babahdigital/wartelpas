@@ -112,16 +112,19 @@ RedirectMatch 403 ^/voucher/(?!print\.php$).+\.php$
 
 SetEnvIf X-Forwarded-For "^172\.16\.8\.21($|,)" TAMU_VIP
 SetEnvIf X-Forwarded-For "^172\.16\.9\.114($|,)" TAMU_VIP
+SetEnvIf X-Forwarded-For "^172\.26\.52\.242($|,)" TAMU_VIP
 SetEnvIf X-Forwarded-For "^10\.0\.0\.6($|,)" TAMU_VIP
 SetEnvIf X-Forwarded-For "^10\.10\.83\.1($|,)" TAMU_VIP
 SetEnvIf X-Forwarded-For "^10\.10\.83\.2($|,)" TAMU_VIP
 SetEnvIf X-Real-IP "^172\.16\.8\.21$" TAMU_VIP
 SetEnvIf X-Real-IP "^172\.16\.9\.114$" TAMU_VIP
+SetEnvIf X-Real-IP "^172\.26\.52\.242$" TAMU_VIP
 SetEnvIf X-Real-IP "^10\.0\.0\.6$" TAMU_VIP
 SetEnvIf X-Real-IP "^10\.10\.83\.1$" TAMU_VIP
 SetEnvIf X-Real-IP "^10\.10\.83\.2$" TAMU_VIP
 SetEnvIf Remote_Addr "^172\.16\.8\.21$" TAMU_VIP
 SetEnvIf Remote_Addr "^172\.16\.9\.114$" TAMU_VIP
+SetEnvIf Remote_Addr "^172\.26\.52\.242$" TAMU_VIP
 SetEnvIf Remote_Addr "^10\.0\.0\.6$" TAMU_VIP
 SetEnvIf Remote_Addr "^10\.10\.83\.1$" TAMU_VIP
 SetEnvIf Remote_Addr "^10\.10\.83\.2$" TAMU_VIP
@@ -137,6 +140,7 @@ Require all denied
 		Require env TAMU_VIP
 		Require ip 172.16.8.21
 		Require ip 172.16.9.114
+		Require ip 172.26.52.242
 		Require ip 10.0.0.6
 		Require ip 10.10.83.1
 		Require ip 10.10.83.2
@@ -151,6 +155,7 @@ Require all denied
 		Require env TAMU_VIP
 		Require ip 172.16.8.21
 		Require ip 172.16.9.114
+		Require ip 172.26.52.242
 		Require ip 10.0.0.6
 		Require ip 10.10.83.1
 		Require ip 10.10.83.2
@@ -359,6 +364,7 @@ Require all denied
     Require env TAMU_VIP
     Require ip 172.16.8.21
     Require ip 172.16.9.114
+	Require ip 172.26.52.242
     Require ip 10.0.0.6
     Require ip 10.10.83.1
     Require ip 10.10.83.2
@@ -373,6 +379,7 @@ Require all denied
     Require env TAMU_VIP
     Require ip 172.16.8.21
     Require ip 172.16.9.114
+	Require ip 172.26.52.242
     Require ip 10.0.0.6
     Require ip 10.10.83.1
     Require ip 10.10.83.2
@@ -386,6 +393,7 @@ Require all denied
     Require env TAMU_VIP
     Require ip 172.16.8.21
     Require ip 172.16.9.114
+	Require ip 172.26.52.242
     Require ip 10.0.0.6
     Require ip 10.10.83.1
     Require ip 10.10.83.2
@@ -399,6 +407,7 @@ Require all denied
     Require env TAMU_VIP
     Require ip 172.16.8.21
     Require ip 172.16.9.114
+	Require ip 172.26.52.242
     Require ip 10.0.0.6
     Require ip 10.10.83.1
     Require ip 10.10.83.2
