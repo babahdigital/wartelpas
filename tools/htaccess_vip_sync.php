@@ -115,6 +115,7 @@ function replace_requireany_blocks($content, $ips) {
     $buildBlock = function() use ($ips) {
         $block = [];
         $block[] = "    Require env TAMU_VIP";
+        $block[] = "    Require env TAMU_VIP_ACCESS";
         foreach ($ips as $ip) {
             $block[] = "    Require ip {$ip}";
         }
