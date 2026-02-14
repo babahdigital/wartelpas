@@ -109,6 +109,7 @@ RedirectMatch 403 ^/voucher/(?!print\.php$).+\.php$
 
 # ====================================================
 # 4. LOGIKA DETEKSI IP
+# Catatan: untuk keamanan, origin sebaiknya dibatasi firewall agar hanya bisa diakses Cloudflare/internal.
 
 SetEnvIf X-Forwarded-For "^172\.16\.8\.21($|,)" TAMU_VIP
 SetEnvIf X-Forwarded-For "^172\.16\.9\.114($|,)" TAMU_VIP
@@ -116,6 +117,18 @@ SetEnvIf X-Forwarded-For "^172\.26\.52\.242($|,)" TAMU_VIP
 SetEnvIf X-Forwarded-For "^10\.0\.0\.6($|,)" TAMU_VIP
 SetEnvIf X-Forwarded-For "^10\.10\.83\.1($|,)" TAMU_VIP
 SetEnvIf X-Forwarded-For "^10\.10\.83\.2($|,)" TAMU_VIP
+SetEnvIf CF-Connecting-IP "^172\.16\.8\.21$" TAMU_VIP
+SetEnvIf CF-Connecting-IP "^172\.16\.9\.114$" TAMU_VIP
+SetEnvIf CF-Connecting-IP "^172\.26\.52\.242$" TAMU_VIP
+SetEnvIf CF-Connecting-IP "^10\.0\.0\.6$" TAMU_VIP
+SetEnvIf CF-Connecting-IP "^10\.10\.83\.1$" TAMU_VIP
+SetEnvIf CF-Connecting-IP "^10\.10\.83\.2$" TAMU_VIP
+SetEnvIf True-Client-IP "^172\.16\.8\.21$" TAMU_VIP
+SetEnvIf True-Client-IP "^172\.16\.9\.114$" TAMU_VIP
+SetEnvIf True-Client-IP "^172\.26\.52\.242$" TAMU_VIP
+SetEnvIf True-Client-IP "^10\.0\.0\.6$" TAMU_VIP
+SetEnvIf True-Client-IP "^10\.10\.83\.1$" TAMU_VIP
+SetEnvIf True-Client-IP "^10\.10\.83\.2$" TAMU_VIP
 SetEnvIf X-Real-IP "^172\.16\.8\.21$" TAMU_VIP
 SetEnvIf X-Real-IP "^172\.16\.9\.114$" TAMU_VIP
 SetEnvIf X-Real-IP "^172\.26\.52\.242$" TAMU_VIP
