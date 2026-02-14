@@ -16,6 +16,7 @@ if (!isSuperAdmin()) {
 }
 
 $htaccessPath = dirname(__DIR__) . '/.htaccess';
+$htaccessTemplatePath = dirname(__DIR__) . '/htaccess-templated';
 $is_embed = isset($_GET['embed']) && $_GET['embed'] === '1';
 $vip_whitelist_no_render = isset($vip_whitelist_no_render) ? (bool)$vip_whitelist_no_render : false;
 $vip_whitelist_action = isset($vip_whitelist_action) ? (string)$vip_whitelist_action : '';
@@ -192,9 +193,51 @@ function replace_requireany_blocks($content, $ips) {
     return implode("\n", $out);
 }
 
+function get_htaccess_base_content($primaryPath, $templatePath) {
+    $primary = is_file($primaryPath) ? @file_get_contents($primaryPath) : false;
+    if ($primary !== false && trim((string)$primary) !== '') {
+        return $primary;
+    }
+    $template = is_file($templatePath) ? @file_get_contents($templatePath) : false;
+    if ($template !== false && trim((string)$template) !== '') {
+        return $template;
+    }
+    return false;
+}
+
+function write_htaccess_targets($updatedContent, $primaryPath, $templatePath, &$error) {
+    $targets = [$primaryPath, $templatePath];
+    foreach ($targets as $target) {
+        $dir = dirname($target);
+        if (!is_dir($dir) || !is_writable($dir)) {
+            $error = 'Direktori target .htaccess tidak dapat ditulis: ' . $dir;
+            return false;
+        }
+        if (is_file($target)) {
+            @chmod($target, 0666);
+            if (!is_writable($target)) {
+                $perm = @substr(sprintf('%o', @fileperms($target)), -4);
+                $owner = @fileowner($target);
+                $error = "File tidak dapat ditulis: {$target} (Perm: {$perm}, Owner: {$owner}).";
+                return false;
+            }
+            @file_put_contents($target . '.bak', (string)@file_get_contents($target));
+        }
+    }
+
+    foreach ($targets as $target) {
+        $ok = @file_put_contents($target, $updatedContent, LOCK_EX);
+        if ($ok === false) {
+            $error = 'Gagal menyimpan file: ' . $target;
+            return false;
+        }
+    }
+    return true;
+}
+
 // Load existing IPs
-if (is_file($htaccessPath)) {
-    $content = file_get_contents($htaccessPath);
+if (is_file($htaccessPath) || is_file($htaccessTemplatePath)) {
+    $content = get_htaccess_base_content($htaccessPath, $htaccessTemplatePath);
     if ($content !== false) {
         $ips = extract_vip_ips($content);
     }
@@ -325,41 +368,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vip_whitelist'])) {
     $allow_all_active = $allow_all_if_empty && empty($ips);
 
     if ($error === '') {
-        // Coba perbaiki permission dari sisi PHP sebelum menulis
-        if (is_file($htaccessPath)) {
-            @chmod($htaccessPath, 0666);
-        }
-
-        if (!is_file($htaccessPath) || !is_writable($htaccessPath)) {
-             // Upaya terakhir permission fix
-            if (is_file($htaccessPath)) {
-                @chmod($htaccessPath, 0666);
-            }
-            if (!is_writable($htaccessPath)) {
-                $perm = substr(sprintf('%o', fileperms($htaccessPath)), -4);
-                $owner = fileowner($htaccessPath);
-                $error = "File .htaccess tidak dapat ditulis. (Perm: $perm, Owner: $owner). Pastikan Entrypoint Docker sudah melakukan 'chown www-data'.";
-            }
-        }
-
         if ($error === '') {
-            $content = file_get_contents($htaccessPath);
+            $content = get_htaccess_base_content($htaccessPath, $htaccessTemplatePath);
             if ($content === false) {
-                $error = 'Gagal membaca .htaccess.';
+                $error = 'Gagal membaca sumber konfigurasi .htaccess/.htaccess-templated.';
             } else {
-                // Backup
-                @file_put_contents($htaccessPath . '.bak', $content);
-                
                 // Process logic
                 $setenvLines = $allow_all_active ? build_setenv_lines([], true) : build_setenv_lines($ips, false);
                 $updated = replace_vip_block($content, $setenvLines);
                 $updated = replace_requireany_blocks($updated, $ips);
-                
-                // Write with Lock
-                $writeOk = @file_put_contents($htaccessPath, $updated, LOCK_EX);
-                
-                if ($writeOk !== false) {
-                    $status = 'Whitelist VIP diperbarui.';
+
+                if (write_htaccess_targets($updated, $htaccessPath, $htaccessTemplatePath, $error)) {
+                    $status = 'Whitelist VIP diperbarui dan sinkron ke htaccess-templated.';
                     // Update DB
                     try {
                         $pdo->beginTransaction();
@@ -379,8 +399,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vip_whitelist'])) {
                     } catch (Exception $e) {
                         // Silent db error
                     }
-                } else {
-                    $error = 'Gagal menyimpan .htaccess (Write Failed).';
                 }
             }
         }

@@ -111,18 +111,36 @@ RedirectMatch 403 ^/voucher/(?!print\.php$).+\.php$
 # 4. LOGIKA DETEKSI IP
 # Catatan: untuk keamanan, origin sebaiknya dibatasi firewall agar hanya bisa diakses Cloudflare/internal.
 
+SetEnvIf X-Forwarded-For "^172\.16\.8\.21($|,)" TAMU_VIP
+SetEnvIf X-Forwarded-For "^172\.16\.9\.114($|,)" TAMU_VIP
+SetEnvIf X-Forwarded-For "^172\.26\.52\.242($|,)" TAMU_VIP
 SetEnvIf X-Forwarded-For "^10\.0\.0\.6($|,)" TAMU_VIP
 SetEnvIf X-Forwarded-For "^10\.10\.83\.1($|,)" TAMU_VIP
 SetEnvIf X-Forwarded-For "^10\.10\.83\.2($|,)" TAMU_VIP
-SetEnvIf X-Forwarded-For "^172\.26\.52\.242($|,)" TAMU_VIP
+SetEnvIf CF-Connecting-IP "^172\.16\.8\.21$" TAMU_VIP
+SetEnvIf CF-Connecting-IP "^172\.16\.9\.114$" TAMU_VIP
+SetEnvIf CF-Connecting-IP "^172\.26\.52\.242$" TAMU_VIP
+SetEnvIf CF-Connecting-IP "^10\.0\.0\.6$" TAMU_VIP
+SetEnvIf CF-Connecting-IP "^10\.10\.83\.1$" TAMU_VIP
+SetEnvIf CF-Connecting-IP "^10\.10\.83\.2$" TAMU_VIP
+SetEnvIf True-Client-IP "^172\.16\.8\.21$" TAMU_VIP
+SetEnvIf True-Client-IP "^172\.16\.9\.114$" TAMU_VIP
+SetEnvIf True-Client-IP "^172\.26\.52\.242$" TAMU_VIP
+SetEnvIf True-Client-IP "^10\.0\.0\.6$" TAMU_VIP
+SetEnvIf True-Client-IP "^10\.10\.83\.1$" TAMU_VIP
+SetEnvIf True-Client-IP "^10\.10\.83\.2$" TAMU_VIP
+SetEnvIf X-Real-IP "^172\.16\.8\.21$" TAMU_VIP
+SetEnvIf X-Real-IP "^172\.16\.9\.114$" TAMU_VIP
+SetEnvIf X-Real-IP "^172\.26\.52\.242$" TAMU_VIP
 SetEnvIf X-Real-IP "^10\.0\.0\.6$" TAMU_VIP
 SetEnvIf X-Real-IP "^10\.10\.83\.1$" TAMU_VIP
 SetEnvIf X-Real-IP "^10\.10\.83\.2$" TAMU_VIP
-SetEnvIf X-Real-IP "^172\.26\.52\.242$" TAMU_VIP
+SetEnvIf Remote_Addr "^172\.16\.8\.21$" TAMU_VIP
+SetEnvIf Remote_Addr "^172\.16\.9\.114$" TAMU_VIP
+SetEnvIf Remote_Addr "^172\.26\.52\.242$" TAMU_VIP
 SetEnvIf Remote_Addr "^10\.0\.0\.6$" TAMU_VIP
 SetEnvIf Remote_Addr "^10\.10\.83\.1$" TAMU_VIP
 SetEnvIf Remote_Addr "^10\.10\.83\.2$" TAMU_VIP
-SetEnvIf Remote_Addr "^172\.26\.52\.242$" TAMU_VIP
 # 5. GERBANG KEAMANAN UTAMA (GLOBAL)
 # ====================================================
 
@@ -132,26 +150,30 @@ Require all denied
 # B. AKSES ROOT (VIP/internal saja)
 <If "%{REQUEST_URI} == '/'">
 	<RequireAny>
-    Require env TAMU_VIP
-    Require ip 10.0.0.6
-    Require ip 10.10.83.1
-    Require ip 10.10.83.2
-    Require ip 172.26.52.242
-    Require ip 127.0.0.1
-    Require ip ::1
+		Require env TAMU_VIP
+		Require ip 172.16.8.21
+		Require ip 172.16.9.114
+		Require ip 172.26.52.242
+		Require ip 10.0.0.6
+		Require ip 10.10.83.1
+		Require ip 10.10.83.2
+		Require ip 127.0.0.1
+		Require ip ::1
 	</RequireAny>
 </If>
 
 # C. AKSES LOGIN (VIP/internal saja)
 <FilesMatch "^(index\.php|admin\.php|login\.php|status\.php|maintenance\.php)$">
 	<RequireAny>
-    Require env TAMU_VIP
-    Require ip 10.0.0.6
-    Require ip 10.10.83.1
-    Require ip 10.10.83.2
-    Require ip 172.26.52.242
-    Require ip 127.0.0.1
-    Require ip ::1
+		Require env TAMU_VIP
+		Require ip 172.16.8.21
+		Require ip 172.16.9.114
+		Require ip 172.26.52.242
+		Require ip 10.0.0.6
+		Require ip 10.10.83.1
+		Require ip 10.10.83.2
+		Require ip 127.0.0.1
+		Require ip ::1
 	</RequireAny>
 </FilesMatch>
 
@@ -353,10 +375,12 @@ Require all denied
 <If "%{REQUEST_URI} =~ m#^/dashboard/aload\.php$#">
 	<RequireAny>
     Require env TAMU_VIP
+    Require ip 172.16.8.21
+    Require ip 172.16.9.114
+	Require ip 172.26.52.242
     Require ip 10.0.0.6
     Require ip 10.10.83.1
     Require ip 10.10.83.2
-    Require ip 172.26.52.242
     Require ip 127.0.0.1
     Require ip ::1
 	</RequireAny>
@@ -366,10 +390,12 @@ Require all denied
 <If "%{REQUEST_URI} =~ m#^/dashboard/.*\.php$#">
 	<RequireAny>
     Require env TAMU_VIP
+    Require ip 172.16.8.21
+    Require ip 172.16.9.114
+	Require ip 172.26.52.242
     Require ip 10.0.0.6
     Require ip 10.10.83.1
     Require ip 10.10.83.2
-    Require ip 172.26.52.242
     Require ip 127.0.0.1
     Require ip ::1
 	</RequireAny>
@@ -378,10 +404,12 @@ Require all denied
 <If "%{REQUEST_URI} =~ m#^/hotspot/(?!user/(retur_request|login_meta|popup_announcement)\.php$).*\.php$#">
 	<RequireAny>
     Require env TAMU_VIP
+    Require ip 172.16.8.21
+    Require ip 172.16.9.114
+	Require ip 172.26.52.242
     Require ip 10.0.0.6
     Require ip 10.10.83.1
     Require ip 10.10.83.2
-    Require ip 172.26.52.242
     Require ip 127.0.0.1
     Require ip ::1
 	</RequireAny>
@@ -390,10 +418,12 @@ Require all denied
 <If "%{REQUEST_URI} =~ m#^/dhcp/.*\.php$#">
 	<RequireAny>
     Require env TAMU_VIP
+    Require ip 172.16.8.21
+    Require ip 172.16.9.114
+	Require ip 172.26.52.242
     Require ip 10.0.0.6
     Require ip 10.10.83.1
     Require ip 10.10.83.2
-    Require ip 172.26.52.242
     Require ip 127.0.0.1
     Require ip ::1
 	</RequireAny>
@@ -402,10 +432,11 @@ Require all denied
 <If "%{REQUEST_URI} =~ m#^/traffic/.*\.php$#">
 	<RequireAny>
     Require env TAMU_VIP
+    Require ip 172.16.8.21
+    Require ip 172.16.9.114
     Require ip 10.0.0.6
     Require ip 10.10.83.1
     Require ip 10.10.83.2
-    Require ip 172.26.52.242
     Require ip 127.0.0.1
     Require ip ::1
 	</RequireAny>
@@ -448,10 +479,11 @@ Require all denied
 <If "%{REQUEST_URI} =~ m#^/report/laporan/services/backfill_meta\.php$#">
 	<RequireAny>
     Require env TAMU_VIP
+    Require ip 172.16.8.21
+    Require ip 172.16.9.114
     Require ip 10.0.0.6
     Require ip 10.10.83.1
     Require ip 10.10.83.2
-    Require ip 172.26.52.242
     Require ip 127.0.0.1
     Require ip ::1
 	</RequireAny>
@@ -475,10 +507,11 @@ Require all denied
 # IP VIP boleh akses file AJAX (dashboard/, hotspot/, dll)
 <RequireAny>
     Require env TAMU_VIP
+    Require ip 172.16.8.21
+    Require ip 172.16.9.114
     Require ip 10.0.0.6
     Require ip 10.10.83.1
     Require ip 10.10.83.2
-    Require ip 172.26.52.242
     Require ip 127.0.0.1
     Require ip ::1
 </RequireAny>

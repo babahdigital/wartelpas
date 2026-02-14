@@ -3,6 +3,7 @@ error_reporting(0);
 
 $rootDir = dirname(__DIR__);
 $htaccessPath = $rootDir . '/.htaccess';
+$htaccessTemplatePath = $rootDir . '/htaccess-templated';
 
 $env = [];
 $envFile = $rootDir . '/include/env.php';
@@ -158,7 +159,45 @@ function replace_requireany_blocks($content, $ips) {
     return implode("\n", $out);
 }
 
-function sync_vip_htaccess($env, $htaccessPath) {
+function get_htaccess_base_content($primaryPath, $templatePath) {
+    $primary = is_file($primaryPath) ? @file_get_contents($primaryPath) : false;
+    if ($primary !== false && trim((string)$primary) !== '') {
+        return $primary;
+    }
+    $template = is_file($templatePath) ? @file_get_contents($templatePath) : false;
+    if ($template !== false && trim((string)$template) !== '') {
+        return $template;
+    }
+    return false;
+}
+
+function write_htaccess_targets($updatedContent, $primaryPath, $templatePath) {
+    $targets = [$primaryPath, $templatePath];
+    foreach ($targets as $target) {
+        $dir = dirname($target);
+        if (!is_dir($dir) || !is_writable($dir)) {
+            return ['ok' => false, 'message' => 'Direktori target tidak dapat ditulis: ' . $dir];
+        }
+        if (is_file($target)) {
+            @chmod($target, 0666);
+            if (!is_writable($target)) {
+                return ['ok' => false, 'message' => 'File tidak dapat ditulis: ' . $target];
+            }
+            @file_put_contents($target . '.bak', (string)@file_get_contents($target));
+        }
+    }
+
+    foreach ($targets as $target) {
+        $ok = @file_put_contents($target, $updatedContent, LOCK_EX);
+        if ($ok === false) {
+            return ['ok' => false, 'message' => 'Gagal menyimpan file: ' . $target];
+        }
+    }
+
+    return ['ok' => true, 'message' => 'OK'];
+}
+
+function sync_vip_htaccess($env, $htaccessPath, $htaccessTemplatePath, $dryRun = false) {
     $env_vip_ips = [];
     $allow_all_if_empty = true;
     if (isset($env) && is_array($env)) {
@@ -195,13 +234,9 @@ function sync_vip_htaccess($env, $htaccessPath) {
     $ips = array_values(array_unique(array_merge($db_ips, $env_vip_ips)));
     $allow_all_active = $allow_all_if_empty && empty($ips);
 
-    if (!is_file($htaccessPath) || !is_writable($htaccessPath)) {
-        return ['ok' => false, 'message' => 'File .htaccess tidak dapat ditulis.'];
-    }
-
-    $content = file_get_contents($htaccessPath);
+    $content = get_htaccess_base_content($htaccessPath, $htaccessTemplatePath);
     if ($content === false) {
-        return ['ok' => false, 'message' => 'Gagal membaca .htaccess.'];
+        return ['ok' => false, 'message' => 'Gagal membaca sumber konfigurasi .htaccess/.htaccess-templated.'];
     }
 
     if (empty($ips)) {
@@ -215,17 +250,39 @@ function sync_vip_htaccess($env, $htaccessPath) {
     $setenvLines = build_setenv_lines($ips, $allow_all_active);
     $updated = replace_vip_block($content, $setenvLines);
     $updated = replace_requireany_blocks($updated, $ips);
-    $writeOk = @file_put_contents($htaccessPath, $updated, LOCK_EX);
-    if ($writeOk === false) {
-        return ['ok' => false, 'message' => 'Gagal menyimpan .htaccess.'];
+    if ($dryRun) {
+        $currentPrimary = is_file($htaccessPath) ? (string)@file_get_contents($htaccessPath) : '';
+        $currentTemplate = is_file($htaccessTemplatePath) ? (string)@file_get_contents($htaccessTemplatePath) : '';
+        return [
+            'ok' => true,
+            'dry_run' => true,
+            'message' => 'Dry-run: tidak ada file yang ditulis.',
+            'count' => count($ips),
+            'changes' => [
+                '.htaccess' => ($currentPrimary !== $updated),
+                'htaccess-templated' => ($currentTemplate !== $updated)
+            ]
+        ];
+    } else {
+        $writeResult = write_htaccess_targets($updated, $htaccessPath, $htaccessTemplatePath);
+        if (!$writeResult['ok']) {
+            return $writeResult;
+        }
     }
 
-    return ['ok' => true, 'message' => 'Whitelist VIP disinkronkan.', 'count' => count($ips)];
+    return ['ok' => true, 'message' => 'Whitelist VIP disinkronkan ke .htaccess dan htaccess-templated.', 'count' => count($ips)];
 }
 
 $is_cli = (PHP_SAPI === 'cli');
+$dryRun = false;
+$cliArgs = [];
+if ($is_cli && isset($_SERVER['argv']) && is_array($_SERVER['argv'])) {
+    $cliArgs = $_SERVER['argv'];
+    $dryRun = in_array('--dry-run', $cliArgs, true);
+}
 $key = '';
 if (!$is_cli) {
+    $dryRun = isset($_GET['dry_run']) && (string)$_GET['dry_run'] === '1';
     $key = trim((string)($_GET['key'] ?? ''));
     if ($key === '' && isset($_SERVER['HTTP_X_WARTELPAS_KEY'])) {
         $key = trim((string)$_SERVER['HTTP_X_WARTELPAS_KEY']);
@@ -239,11 +296,20 @@ if (!$is_cli) {
     }
 }
 
-$result = sync_vip_htaccess($env, $htaccessPath);
+$result = sync_vip_htaccess($env, $htaccessPath, $htaccessTemplatePath, $dryRun);
 
 if (!$is_cli) {
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($result);
 } else {
-    echo ($result['ok'] ? 'OK' : 'ERROR') . ': ' . ($result['message'] ?? '') . PHP_EOL;
+    if (!empty($result['dry_run'])) {
+        echo 'DRY-RUN: ' . ($result['message'] ?? '') . PHP_EOL;
+        if (isset($result['changes']) && is_array($result['changes'])) {
+            foreach ($result['changes'] as $target => $changed) {
+                echo '- ' . $target . ': ' . ($changed ? 'CHANGED' : 'UNCHANGED') . PHP_EOL;
+            }
+        }
+    } else {
+        echo ($result['ok'] ? 'OK' : 'ERROR') . ': ' . ($result['message'] ?? '') . PHP_EOL;
+    }
 }
