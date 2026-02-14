@@ -823,8 +823,7 @@ foreach ($wa_recipients as $rec) {
                         <div class="wa-muted">Kirim pesan uji ke target manual atau pilih dari daftar penerima.</div>
                     </div>
                     <div class="form-group-modern">
-                        <form method="post" action="./admin.php?id=whatsapp">
-                            <input type="hidden" name="wa_action" value="test_send">
+                        <div>
                             <div class="input-group-modern" style="margin-bottom:8px;">
                                 <div class="input-icon"><i class="fa fa-phone"></i></div>
                                 <input class="form-control-modern" type="text" name="wa_test_target" placeholder="Target (opsional, jika tidak pilih dropdown)">
@@ -851,11 +850,11 @@ foreach ($wa_recipients as $rec) {
                                 <textarea class="form-control-modern" name="wa_test_message" rows="3" placeholder="Pesan test"></textarea>
                             </div>
                             <div style="display:flex;justify-content:flex-end;margin-top: 20px;">
-                                <button class="btn-action btn-primary-m" type="submit">
+                                <button class="btn-action btn-primary-m" type="submit" name="wa_action" value="test_send">
                                     <i class="fa fa-paper-plane"></i> Kirim Test
                                 </button>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             </div>
