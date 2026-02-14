@@ -111,14 +111,17 @@ RedirectMatch 403 ^/voucher/(?!print\.php$).+\.php$
 # 4. LOGIKA DETEKSI IP
 
 SetEnvIf X-Forwarded-For "^172\.16\.8\.21($|,)" TAMU_VIP
+SetEnvIf X-Forwarded-For "^172\.16\.9\.114($|,)" TAMU_VIP
 SetEnvIf X-Forwarded-For "^10\.0\.0\.6($|,)" TAMU_VIP
 SetEnvIf X-Forwarded-For "^10\.10\.83\.1($|,)" TAMU_VIP
 SetEnvIf X-Forwarded-For "^10\.10\.83\.2($|,)" TAMU_VIP
 SetEnvIf X-Real-IP "^172\.16\.8\.21$" TAMU_VIP
+SetEnvIf X-Real-IP "^172\.16\.9\.114$" TAMU_VIP
 SetEnvIf X-Real-IP "^10\.0\.0\.6$" TAMU_VIP
 SetEnvIf X-Real-IP "^10\.10\.83\.1$" TAMU_VIP
 SetEnvIf X-Real-IP "^10\.10\.83\.2$" TAMU_VIP
 SetEnvIf Remote_Addr "^172\.16\.8\.21$" TAMU_VIP
+SetEnvIf Remote_Addr "^172\.16\.9\.114$" TAMU_VIP
 SetEnvIf Remote_Addr "^10\.0\.0\.6$" TAMU_VIP
 SetEnvIf Remote_Addr "^10\.10\.83\.1$" TAMU_VIP
 SetEnvIf Remote_Addr "^10\.10\.83\.2$" TAMU_VIP
@@ -322,62 +325,67 @@ Require all denied
 # Dashboard AJAX
 <If "%{REQUEST_URI} =~ m#^/dashboard/aload\.php$#">
 	<RequireAny>
-	Require env TAMU_VIP
-	Require ip 172.16.8.21
-	Require ip 10.0.0.6
-	Require ip 10.10.83.1
-	Require ip 10.10.83.2
-	Require ip 127.0.0.1
-	Require ip ::1
+    Require env TAMU_VIP
+    Require ip 172.16.8.21
+    Require ip 172.16.9.114
+    Require ip 10.0.0.6
+    Require ip 10.10.83.1
+    Require ip 10.10.83.2
+    Require ip 127.0.0.1
+    Require ip ::1
 	</RequireAny>
 </If>
 
 # AJAX/Backend folder restrictions (VIP only)
 <If "%{REQUEST_URI} =~ m#^/dashboard/.*\.php$#">
 	<RequireAny>
-	Require env TAMU_VIP
-	Require ip 172.16.8.21
-	Require ip 10.0.0.6
-	Require ip 10.10.83.1
-	Require ip 10.10.83.2
-	Require ip 127.0.0.1
-	Require ip ::1
+    Require env TAMU_VIP
+    Require ip 172.16.8.21
+    Require ip 172.16.9.114
+    Require ip 10.0.0.6
+    Require ip 10.10.83.1
+    Require ip 10.10.83.2
+    Require ip 127.0.0.1
+    Require ip ::1
 	</RequireAny>
 </If>
 
 <If "%{REQUEST_URI} =~ m#^/hotspot/(?!user/(retur_request|login_meta|popup_announcement)\.php$).*\.php$#">
 	<RequireAny>
-	Require env TAMU_VIP
-	Require ip 172.16.8.21
-	Require ip 10.0.0.6
-	Require ip 10.10.83.1
-	Require ip 10.10.83.2
-	Require ip 127.0.0.1
-	Require ip ::1
+    Require env TAMU_VIP
+    Require ip 172.16.8.21
+    Require ip 172.16.9.114
+    Require ip 10.0.0.6
+    Require ip 10.10.83.1
+    Require ip 10.10.83.2
+    Require ip 127.0.0.1
+    Require ip ::1
 	</RequireAny>
 </If>
 
 <If "%{REQUEST_URI} =~ m#^/dhcp/.*\.php$#">
 	<RequireAny>
-	Require env TAMU_VIP
-	Require ip 172.16.8.21
-	Require ip 10.0.0.6
-	Require ip 10.10.83.1
-	Require ip 10.10.83.2
-	Require ip 127.0.0.1
-	Require ip ::1
+    Require env TAMU_VIP
+    Require ip 172.16.8.21
+    Require ip 172.16.9.114
+    Require ip 10.0.0.6
+    Require ip 10.10.83.1
+    Require ip 10.10.83.2
+    Require ip 127.0.0.1
+    Require ip ::1
 	</RequireAny>
 </If>
 
 <If "%{REQUEST_URI} =~ m#^/traffic/.*\.php$#">
 	<RequireAny>
-	Require env TAMU_VIP
-	Require ip 172.16.8.21
-	Require ip 10.0.0.6
-	Require ip 10.10.83.1
-	Require ip 10.10.83.2
-	Require ip 127.0.0.1
-	Require ip ::1
+    Require env TAMU_VIP
+    Require ip 172.16.8.21
+    Require ip 172.16.9.114
+    Require ip 10.0.0.6
+    Require ip 10.10.83.1
+    Require ip 10.10.83.2
+    Require ip 127.0.0.1
+    Require ip ::1
 	</RequireAny>
 </If>
 
@@ -417,13 +425,14 @@ Require all denied
 # Backfill Meta endpoint (restricted)
 <If "%{REQUEST_URI} =~ m#^/report/laporan/services/backfill_meta\.php$#">
 	<RequireAny>
-	Require env TAMU_VIP
-	Require ip 172.16.8.21
-	Require ip 10.0.0.6
-	Require ip 10.10.83.1
-	Require ip 10.10.83.2
-	Require ip 127.0.0.1
-	Require ip ::1
+    Require env TAMU_VIP
+    Require ip 172.16.8.21
+    Require ip 172.16.9.114
+    Require ip 10.0.0.6
+    Require ip 10.10.83.1
+    Require ip 10.10.83.2
+    Require ip 127.0.0.1
+    Require ip ::1
 	</RequireAny>
 </If>
 
@@ -444,21 +453,18 @@ Require all denied
 # C. WHITELIST: TAMU VIP (Dashboard Full Akses)
 # IP VIP boleh akses file AJAX (dashboard/, hotspot/, dll)
 <RequireAny>
-	Require env TAMU_VIP
-	Require ip 172.16.8.21
-	Require ip 10.0.0.6
-	Require ip 10.10.83.1
-	Require ip 10.10.83.2
-	Require ip 127.0.0.1
-	Require ip ::1
+    Require env TAMU_VIP
+    Require ip 172.16.8.21
+    Require ip 172.16.9.114
+    Require ip 10.0.0.6
+    Require ip 10.10.83.1
+    Require ip 10.10.83.2
+    Require ip 127.0.0.1
+    Require ip ::1
 </RequireAny>
 
 # ====================================================
-# 6. PINTU KHUSUS MIKROTIK (SYNC)
-# ====================================================
-
-# ====================================================
-# 7. PINTU KHUSUS PRINT VOUCHER
+# 6. PINTU KHUSUS PRINT VOUCHER
 # ====================================================
 <Files "print.php">
 	Require all granted

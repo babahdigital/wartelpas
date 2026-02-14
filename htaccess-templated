@@ -454,11 +454,7 @@ Require all denied
 </RequireAny>
 
 # ====================================================
-# 6. PINTU KHUSUS MIKROTIK (SYNC)
-# ====================================================
-
-# ====================================================
-# 7. PINTU KHUSUS PRINT VOUCHER
+# 6. PINTU KHUSUS PRINT VOUCHER
 # ====================================================
 <Files "print.php">
     Require all granted
