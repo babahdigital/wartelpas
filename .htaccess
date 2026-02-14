@@ -131,8 +131,22 @@ SetEnvIf Remote_Addr "^10\.10\.83\.2$" TAMU_VIP
 # A. DEFAULT: TOLAK SEMUA
 Require all denied
 
-# B. AKSES LOGIN (VIP/internal saja)
-<FilesMatch "^(index\.php|admin\.php|login\.php|status\.php|error\.php|maintenance\.php)$">
+# B. AKSES ROOT (VIP/internal saja)
+<If "%{REQUEST_URI} == '/'">
+	<RequireAny>
+		Require env TAMU_VIP
+		Require ip 172.16.8.21
+		Require ip 172.16.9.114
+		Require ip 10.0.0.6
+		Require ip 10.10.83.1
+		Require ip 10.10.83.2
+		Require ip 127.0.0.1
+		Require ip ::1
+	</RequireAny>
+</If>
+
+# C. AKSES LOGIN (VIP/internal saja)
+<FilesMatch "^(index\.php|admin\.php|login\.php|status\.php|maintenance\.php)$">
 	<RequireAny>
 		Require env TAMU_VIP
 		Require ip 172.16.8.21
@@ -145,8 +159,13 @@ Require all denied
 	</RequireAny>
 </FilesMatch>
 
-# Asset gambar publik (favicon, png, jpg)
-<FilesMatch "\.(png|jpe?g|ico)$">
+# D. HALAMAN ERROR PUBLIK
+<Files "error.php">
+	Require all granted
+</Files>
+
+# Asset publik (css, js, favicon, png, jpg)
+<FilesMatch "\.(css|js|png|jpe?g|ico)$">
 	Require all granted
 </FilesMatch>
 
