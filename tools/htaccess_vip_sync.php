@@ -105,15 +105,19 @@ function replace_vip_block($content, $setenvLines) {
     return implode("\n", $out);
 }
 
-function replace_requireany_blocks($content, $ips) {
+function replace_requireany_blocks($content, $ips, $publicAccess = false) {
     $lines = preg_split('/\r?\n/', $content);
     $out = [];
     $inRequireAny = false;
     $buffer = [];
     $hasVip = false;
 
-    $buildBlock = function() use ($ips) {
+    $buildBlock = function() use ($ips, $publicAccess) {
         $block = [];
+        if ($publicAccess) {
+            $block[] = "    Require all granted";
+            return $block;
+        }
         $block[] = "    Require env TAMU_VIP";
         $block[] = "    Require env TAMU_VIP_ACCESS";
         foreach ($ips as $ip) {
@@ -209,9 +213,11 @@ function write_htaccess_targets($updatedContent, $primaryPath, $templatePath) {
 function sync_vip_htaccess($env, $htaccessPath, $htaccessTemplatePath, $dryRun = false) {
     $env_vip_ips = [];
     $allow_all_if_empty = true;
+    $public_access = false;
     if (isset($env) && is_array($env)) {
         $env_whitelist = $env['security']['vip_whitelist'] ?? ($env['vip_whitelist'] ?? []);
         $env_allow_all = $env['security']['vip_allow_all_if_empty'] ?? ($env['vip_allow_all_if_empty'] ?? null);
+        $public_access = (bool)($env['security']['public_access'] ?? ($env['public_access'] ?? false));
         if ($env_allow_all !== null) {
             $allow_all_if_empty = (bool)$env_allow_all;
         }
@@ -258,7 +264,7 @@ function sync_vip_htaccess($env, $htaccessPath, $htaccessTemplatePath, $dryRun =
 
     $setenvLines = build_setenv_lines($ips, $allow_all_active);
     $updated = replace_vip_block($content, $setenvLines);
-    $updated = replace_requireany_blocks($updated, $ips);
+    $updated = replace_requireany_blocks($updated, $ips, $public_access);
     if ($dryRun) {
         $currentPrimary = is_file($htaccessPath) ? (string)@file_get_contents($htaccessPath) : '';
         $currentTemplate = is_file($htaccessTemplatePath) ? (string)@file_get_contents($htaccessTemplatePath) : '';

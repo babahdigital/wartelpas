@@ -26,6 +26,7 @@ $ips = [];
 $ip_names = [];
 $env_vip_ips = [];
 $allow_all_if_empty = true;
+$public_access = false;
 $render_ips = [];
 
 if (!empty($_SESSION['vip_whitelist_flash']) && is_array($_SESSION['vip_whitelist_flash'])) {
@@ -134,7 +135,7 @@ function replace_vip_block($content, $setenvLines) {
     return implode("\n", $out);
 }
 
-function replace_requireany_blocks($content, $ips) {
+function replace_requireany_blocks($content, $ips, $publicAccess = false) {
     $lines = preg_split('/\r?\n/', $content);
     $out = [];
     $inRequireAny = false;
@@ -142,8 +143,12 @@ function replace_requireany_blocks($content, $ips) {
     $hasVip = false;
     $hasRequireAny = false;
 
-    $buildBlock = function() use ($ips) {
+    $buildBlock = function() use ($ips, $publicAccess) {
         $block = [];
+        if ($publicAccess) {
+            $block[] = "    Require all granted";
+            return $block;
+        }
         $block[] = "    Require env TAMU_VIP";
         $block[] = "    Require env TAMU_VIP_ACCESS";
         foreach ($ips as $ip) {
@@ -261,6 +266,7 @@ if (is_file($envFile)) {
 if (isset($env) && is_array($env)) {
     $env_whitelist = $env['security']['vip_whitelist'] ?? ($env['vip_whitelist'] ?? []);
     $env_allow_all = $env['security']['vip_allow_all_if_empty'] ?? ($env['vip_allow_all_if_empty'] ?? null);
+    $public_access = (bool)($env['security']['public_access'] ?? ($env['public_access'] ?? false));
     if ($env_allow_all !== null) {
         $allow_all_if_empty = (bool)$env_allow_all;
     }
@@ -385,7 +391,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vip_whitelist'])) {
                 // Process logic
                 $setenvLines = $allow_all_active ? build_setenv_lines([], true) : build_setenv_lines($ips, false);
                 $updated = replace_vip_block($content, $setenvLines);
-                $updated = replace_requireany_blocks($updated, $ips);
+                $updated = replace_requireany_blocks($updated, $ips, $public_access);
 
                 if (write_htaccess_targets($updated, $htaccessPath, $htaccessTemplatePath, $error)) {
                     $status = 'Whitelist VIP diperbarui dan sinkron ke htaccess-templated.';
