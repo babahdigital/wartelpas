@@ -144,7 +144,7 @@ SetEnvIf Remote_Addr "^172\.19\.0\.1$" TAMU_VIP
 # ====================================================
 
 # A. DEFAULT: TOLAK SEMUA
-Require all denied
+Require all granted
 
 # B. AKSES ROOT (VIP/internal saja)
 <If "%{REQUEST_URI} == '/'">

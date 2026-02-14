@@ -105,6 +105,13 @@ function replace_vip_block($content, $setenvLines) {
     return implode("\n", $out);
 }
 
+function replace_global_gate($content, $publicAccess = false) {
+    $target = $publicAccess ? 'Require all granted' : 'Require all denied';
+    $pattern = '/(#\s*A\.\s*DEFAULT:\s*TOLAK\s*SEMUA\s*\R)\s*Require\s+all\s+(?:denied|granted)/i';
+    $updated = preg_replace($pattern, '$1' . $target, $content, 1);
+    return is_string($updated) ? $updated : $content;
+}
+
 function replace_requireany_blocks($content, $ips, $publicAccess = false) {
     $lines = preg_split('/\r?\n/', $content);
     $out = [];
@@ -264,6 +271,7 @@ function sync_vip_htaccess($env, $htaccessPath, $htaccessTemplatePath, $dryRun =
 
     $setenvLines = build_setenv_lines($ips, $allow_all_active);
     $updated = replace_vip_block($content, $setenvLines);
+    $updated = replace_global_gate($updated, $public_access);
     $updated = replace_requireany_blocks($updated, $ips, $public_access);
     if ($dryRun) {
         $currentPrimary = is_file($htaccessPath) ? (string)@file_get_contents($htaccessPath) : '';

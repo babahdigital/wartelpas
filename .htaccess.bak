@@ -149,30 +149,14 @@ Require all denied
 # B. AKSES ROOT (VIP/internal saja)
 <If "%{REQUEST_URI} == '/'">
 	<RequireAny>
-    Require env TAMU_VIP
-    Require env TAMU_VIP_ACCESS
-    Require ip 10.0.0.6
-    Require ip 10.10.83.1
-    Require ip 10.10.83.2
-    Require ip 172.26.52.242
-    Require ip 172.19.0.1
-    Require ip 127.0.0.1
-    Require ip ::1
+    Require all granted
 	</RequireAny>
 </If>
 
 # C. AKSES LOGIN (VIP/internal saja)
 <FilesMatch "^(index\.php|admin\.php|login\.php|status\.php|maintenance\.php)$">
 	<RequireAny>
-    Require env TAMU_VIP
-    Require env TAMU_VIP_ACCESS
-    Require ip 10.0.0.6
-    Require ip 10.10.83.1
-    Require ip 10.10.83.2
-    Require ip 172.26.52.242
-    Require ip 172.19.0.1
-    Require ip 127.0.0.1
-    Require ip ::1
+    Require all granted
 	</RequireAny>
 </FilesMatch>
 
@@ -373,72 +357,32 @@ Require all denied
 # Dashboard AJAX
 <If "%{REQUEST_URI} =~ m#^/dashboard/aload\.php$#">
 	<RequireAny>
-    Require env TAMU_VIP
-    Require env TAMU_VIP_ACCESS
-    Require ip 10.0.0.6
-    Require ip 10.10.83.1
-    Require ip 10.10.83.2
-    Require ip 172.26.52.242
-    Require ip 172.19.0.1
-    Require ip 127.0.0.1
-    Require ip ::1
+    Require all granted
 	</RequireAny>
 </If>
 
 # AJAX/Backend folder restrictions (VIP only)
 <If "%{REQUEST_URI} =~ m#^/dashboard/.*\.php$#">
 	<RequireAny>
-    Require env TAMU_VIP
-    Require env TAMU_VIP_ACCESS
-    Require ip 10.0.0.6
-    Require ip 10.10.83.1
-    Require ip 10.10.83.2
-    Require ip 172.26.52.242
-    Require ip 172.19.0.1
-    Require ip 127.0.0.1
-    Require ip ::1
+    Require all granted
 	</RequireAny>
 </If>
 
 <If "%{REQUEST_URI} =~ m#^/hotspot/(?!user/(retur_request|login_meta|popup_announcement)\.php$).*\.php$#">
 	<RequireAny>
-    Require env TAMU_VIP
-    Require env TAMU_VIP_ACCESS
-    Require ip 10.0.0.6
-    Require ip 10.10.83.1
-    Require ip 10.10.83.2
-    Require ip 172.26.52.242
-    Require ip 172.19.0.1
-    Require ip 127.0.0.1
-    Require ip ::1
+    Require all granted
 	</RequireAny>
 </If>
 
 <If "%{REQUEST_URI} =~ m#^/dhcp/.*\.php$#">
 	<RequireAny>
-    Require env TAMU_VIP
-    Require env TAMU_VIP_ACCESS
-    Require ip 10.0.0.6
-    Require ip 10.10.83.1
-    Require ip 10.10.83.2
-    Require ip 172.26.52.242
-    Require ip 172.19.0.1
-    Require ip 127.0.0.1
-    Require ip ::1
+    Require all granted
 	</RequireAny>
 </If>
 
 <If "%{REQUEST_URI} =~ m#^/traffic/.*\.php$#">
 	<RequireAny>
-    Require env TAMU_VIP
-    Require env TAMU_VIP_ACCESS
-    Require ip 10.0.0.6
-    Require ip 10.10.83.1
-    Require ip 10.10.83.2
-    Require ip 172.26.52.242
-    Require ip 172.19.0.1
-    Require ip 127.0.0.1
-    Require ip ::1
+    Require all granted
 	</RequireAny>
 </If>
 
@@ -478,15 +422,7 @@ Require all denied
 # Backfill Meta endpoint (restricted)
 <If "%{REQUEST_URI} =~ m#^/report/laporan/services/backfill_meta\.php$#">
 	<RequireAny>
-    Require env TAMU_VIP
-    Require env TAMU_VIP_ACCESS
-    Require ip 10.0.0.6
-    Require ip 10.10.83.1
-    Require ip 10.10.83.2
-    Require ip 172.26.52.242
-    Require ip 172.19.0.1
-    Require ip 127.0.0.1
-    Require ip ::1
+    Require all granted
 	</RequireAny>
 </If>
 
@@ -507,15 +443,7 @@ Require all denied
 # C. WHITELIST: TAMU VIP (Dashboard Full Akses)
 # IP VIP boleh akses file AJAX (dashboard/, hotspot/, dll)
 <RequireAny>
-    Require env TAMU_VIP
-    Require env TAMU_VIP_ACCESS
-    Require ip 10.0.0.6
-    Require ip 10.10.83.1
-    Require ip 10.10.83.2
-    Require ip 172.26.52.242
-    Require ip 172.19.0.1
-    Require ip 127.0.0.1
-    Require ip ::1
+    Require all granted
 </RequireAny>
 
 # ====================================================
