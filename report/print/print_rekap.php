@@ -2,7 +2,14 @@
 session_start();
 error_reporting(0);
 
-if (!isset($_SESSION["mikhmon"])) {
+$root_dir = dirname(__DIR__, 2);
+$env = [];
+$envFile = $root_dir . '/include/env.php';
+if (file_exists($envFile)) {
+    require $envFile;
+}
+$publicAccess = (bool)($env['security']['public_access'] ?? false);
+if (!isset($_SESSION["mikhmon"]) && !$publicAccess) {
     header("Location:../admin.php?id=login");
     exit;
 }
@@ -10,12 +17,6 @@ if (!isset($_SESSION["mikhmon"])) {
 include('../../include/config.php');
 include('../../include/readcfg.php');
 
-$root_dir = dirname(__DIR__, 2);
-$env = [];
-$envFile = $root_dir . '/include/env.php';
-if (file_exists($envFile)) {
-    require $envFile;
-}
 require_once($root_dir . '/report/laporan/helpers.php');
 $system_cfg = $env['system'] ?? [];
 $db_rel = $system_cfg['db_file'] ?? 'db_data/babahdigital_main.db';
