@@ -388,7 +388,6 @@
                 } elseif ($req_show === 'tahunan') {
                     $print_rekap_url = 'report/print/print_rekap_tahunan.php?date=' . urlencode($filter_date);
                 }
-                if ($session_id !== '') $print_rekap_url .= '&session=' . urlencode($session_id);
                 $print_rincian_url = 'report/print/print_rincian.php?show=' . urlencode($req_show) . '&date=' . urlencode($filter_date);
                 if ($session_id !== '') $print_rincian_url .= '&session=' . urlencode($session_id);
             ?>
