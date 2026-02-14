@@ -77,6 +77,14 @@ function build_setenv_lines($ips, $allowAll = false) {
     }
     foreach ($ips as $ip) {
         $safe = str_replace('.', '\\.', $ip);
+        $lines[] = "SetEnvIf CF-Connecting-IP \"^{$safe}$\" TAMU_VIP";
+    }
+    foreach ($ips as $ip) {
+        $safe = str_replace('.', '\\.', $ip);
+        $lines[] = "SetEnvIf True-Client-IP \"^{$safe}$\" TAMU_VIP";
+    }
+    foreach ($ips as $ip) {
+        $safe = str_replace('.', '\\.', $ip);
         $lines[] = "SetEnvIf X-Real-IP \"^{$safe}$\" TAMU_VIP";
     }
     foreach ($ips as $ip) {
