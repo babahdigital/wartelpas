@@ -113,6 +113,8 @@ RedirectMatch 403 ^/voucher/(?!print\.php$).+\.php$
 
 SetEnvIfNoCase CF-Access-Authenticated-User-Email ".+" TAMU_VIP_ACCESS
 SetEnvIfNoCase Cf-Access-Jwt-Assertion ".+" TAMU_VIP_ACCESS
+SetEnvIfExpr "req('CF-Access-Authenticated-User-Email') =~ /.+/" TAMU_VIP_ACCESS
+SetEnvIfExpr "req('Cf-Access-Jwt-Assertion') =~ /.+/" TAMU_VIP_ACCESS
 SetEnvIf X-Forwarded-For "^10\.0\.0\.6($|,)" TAMU_VIP
 SetEnvIf X-Forwarded-For "^10\.10\.83\.1($|,)" TAMU_VIP
 SetEnvIf X-Forwarded-For "^10\.10\.83\.2($|,)" TAMU_VIP
