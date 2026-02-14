@@ -53,8 +53,9 @@ if (!empty($session) && strpos($session, '~') !== false) {
 $publicAccess = false;
 $envFile = __DIR__ . '/include/env.php';
 if (is_file($envFile)) {
-  $appEnv = include $envFile;
-  $publicAccess = (bool)($appEnv['security']['public_access'] ?? false);
+  $env = [];
+  require $envFile;
+  $publicAccess = (bool)($env['security']['public_access'] ?? false);
 }
 if (!$publicAccess) {
   $vipEnv = getenv('TAMU_VIP');
