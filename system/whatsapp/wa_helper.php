@@ -458,14 +458,28 @@ function wa_parse_send_response($resp)
         $detail = strtolower((string)($json['detail'] ?? ''));
         $process = strtolower((string)($json['process'] ?? ''));
         $error = strtolower((string)($json['error'] ?? ''));
+        $reason = trim((string)($json['reason'] ?? ''));
+        $msg = trim((string)($json['message'] ?? ''));
         $statusFlag = $json['status'] ?? null;
 
         if ($statusFlag === false || $error !== '') {
             $status = 'failed';
-            $message = $error !== '' ? $error : 'Failed';
+            if ($error !== '') {
+                $message = $error;
+            } elseif ($reason !== '') {
+                $message = $reason;
+            } elseif ($msg !== '') {
+                $message = $msg;
+            } elseif ($detail !== '') {
+                $message = $detail;
+            } else {
+                $message = 'Failed';
+            }
         } elseif (strpos($detail, 'queue') !== false || strpos($detail, 'pending') !== false || $process === 'pending') {
             $status = 'success';
             $message = 'Sent';
+        } elseif ($detail !== '') {
+            $message = $detail;
         }
     }
     return ['status' => $status, 'message' => $message];
