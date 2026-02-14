@@ -111,6 +111,10 @@ RedirectMatch 403 ^/voucher/(?!print\.php$).+\.php$
 # 4. LOGIKA DETEKSI IP
 # Catatan: untuk keamanan, origin sebaiknya dibatasi firewall agar hanya bisa diakses Cloudflare/internal.
 
+SetEnvIfNoCase CF-Access-Authenticated-User-Email ".+" TAMU_VIP_ACCESS
+SetEnvIfNoCase Cf-Access-Jwt-Assertion ".+" TAMU_VIP_ACCESS
+SetEnvIfExpr "req('CF-Access-Authenticated-User-Email') =~ /.+/" TAMU_VIP_ACCESS
+SetEnvIfExpr "req('Cf-Access-Jwt-Assertion') =~ /.+/" TAMU_VIP_ACCESS
 SetEnvIf X-Forwarded-For "^10\.0\.0\.6($|,)" TAMU_VIP
 SetEnvIf X-Forwarded-For "^10\.10\.83\.1($|,)" TAMU_VIP
 SetEnvIf X-Forwarded-For "^10\.10\.83\.2($|,)" TAMU_VIP
@@ -131,8 +135,6 @@ SetEnvIf Remote_Addr "^10\.0\.0\.6$" TAMU_VIP
 SetEnvIf Remote_Addr "^10\.10\.83\.1$" TAMU_VIP
 SetEnvIf Remote_Addr "^10\.10\.83\.2$" TAMU_VIP
 SetEnvIf Remote_Addr "^172\.26\.52\.242$" TAMU_VIP
-SetEnvIfNoCase CF-Access-Authenticated-User-Email ".+" TAMU_VIP_ACCESS
-SetEnvIfNoCase Cf-Access-Jwt-Assertion ".+" TAMU_VIP_ACCESS
 # 5. GERBANG KEAMANAN UTAMA (GLOBAL)
 # ====================================================
 
@@ -143,7 +145,7 @@ Require all denied
 <If "%{REQUEST_URI} == '/'">
 	<RequireAny>
     Require env TAMU_VIP
-	Require env TAMU_VIP_ACCESS
+    Require env TAMU_VIP_ACCESS
     Require ip 10.0.0.6
     Require ip 10.10.83.1
     Require ip 10.10.83.2
@@ -157,7 +159,7 @@ Require all denied
 <FilesMatch "^(index\.php|admin\.php|login\.php|status\.php|maintenance\.php)$">
 	<RequireAny>
     Require env TAMU_VIP
-	Require env TAMU_VIP_ACCESS
+    Require env TAMU_VIP_ACCESS
     Require ip 10.0.0.6
     Require ip 10.10.83.1
     Require ip 10.10.83.2
@@ -365,7 +367,7 @@ Require all denied
 <If "%{REQUEST_URI} =~ m#^/dashboard/aload\.php$#">
 	<RequireAny>
     Require env TAMU_VIP
-	Require env TAMU_VIP_ACCESS
+    Require env TAMU_VIP_ACCESS
     Require ip 10.0.0.6
     Require ip 10.10.83.1
     Require ip 10.10.83.2
@@ -379,7 +381,7 @@ Require all denied
 <If "%{REQUEST_URI} =~ m#^/dashboard/.*\.php$#">
 	<RequireAny>
     Require env TAMU_VIP
-	Require env TAMU_VIP_ACCESS
+    Require env TAMU_VIP_ACCESS
     Require ip 10.0.0.6
     Require ip 10.10.83.1
     Require ip 10.10.83.2
@@ -392,7 +394,7 @@ Require all denied
 <If "%{REQUEST_URI} =~ m#^/hotspot/(?!user/(retur_request|login_meta|popup_announcement)\.php$).*\.php$#">
 	<RequireAny>
     Require env TAMU_VIP
-	Require env TAMU_VIP_ACCESS
+    Require env TAMU_VIP_ACCESS
     Require ip 10.0.0.6
     Require ip 10.10.83.1
     Require ip 10.10.83.2
@@ -405,7 +407,7 @@ Require all denied
 <If "%{REQUEST_URI} =~ m#^/dhcp/.*\.php$#">
 	<RequireAny>
     Require env TAMU_VIP
-	Require env TAMU_VIP_ACCESS
+    Require env TAMU_VIP_ACCESS
     Require ip 10.0.0.6
     Require ip 10.10.83.1
     Require ip 10.10.83.2
@@ -418,7 +420,7 @@ Require all denied
 <If "%{REQUEST_URI} =~ m#^/traffic/.*\.php$#">
 	<RequireAny>
     Require env TAMU_VIP
-	Require env TAMU_VIP_ACCESS
+    Require env TAMU_VIP_ACCESS
     Require ip 10.0.0.6
     Require ip 10.10.83.1
     Require ip 10.10.83.2
@@ -465,6 +467,7 @@ Require all denied
 <If "%{REQUEST_URI} =~ m#^/report/laporan/services/backfill_meta\.php$#">
 	<RequireAny>
     Require env TAMU_VIP
+    Require env TAMU_VIP_ACCESS
     Require ip 10.0.0.6
     Require ip 10.10.83.1
     Require ip 10.10.83.2
@@ -492,7 +495,7 @@ Require all denied
 # IP VIP boleh akses file AJAX (dashboard/, hotspot/, dll)
 <RequireAny>
     Require env TAMU_VIP
-	Require env TAMU_VIP_ACCESS
+    Require env TAMU_VIP_ACCESS
     Require ip 10.0.0.6
     Require ip 10.10.83.1
     Require ip 10.10.83.2
