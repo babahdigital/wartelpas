@@ -143,6 +143,16 @@ function uptime_to_seconds_sync($uptime) {
     return $total;
 }
 
+function table_exists_sync(PDO $db, $table) {
+    try {
+        $stmt = $db->prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=:t");
+        $stmt->execute([':t' => $table]);
+        return (bool)$stmt->fetchColumn();
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
 
 function log_sync_usage($message) {
     global $logDir;
@@ -265,6 +275,33 @@ try {
     exit;
 }
 
+$metaMap = [];
+if (isset($db) && $db instanceof PDO && table_exists_sync($db, 'login_meta_queue')) {
+    try {
+        $stmtMetaMap = $db->query("SELECT voucher_code, customer_name, room_name, blok_name
+            FROM login_meta_queue
+            WHERE voucher_code != ''
+              AND (COALESCE(customer_name,'') != '' OR COALESCE(room_name,'') != '' OR COALESCE(blok_name,'') != '')
+              AND created_at >= datetime('now','-2 day')
+            ORDER BY id DESC
+            LIMIT 5000");
+        if ($stmtMetaMap) {
+            foreach ($stmtMetaMap->fetchAll(PDO::FETCH_ASSOC) as $rowMeta) {
+                $metaUser = strtolower(trim((string)($rowMeta['voucher_code'] ?? '')));
+                if ($metaUser === '' || isset($metaMap[$metaUser])) {
+                    continue;
+                }
+                $metaMap[$metaUser] = [
+                    'customer_name' => trim((string)($rowMeta['customer_name'] ?? '')),
+                    'room_name' => trim((string)($rowMeta['room_name'] ?? '')),
+                    'blok_name' => trim((string)($rowMeta['blok_name'] ?? '')),
+                ];
+            }
+        }
+    } catch (Exception $e) {
+    }
+}
+
 // --- RouterOS ---
 $API = new RouterosAPI();
 $API->debug = false;
@@ -322,6 +359,14 @@ foreach ($all_users as $u) {
     $ip = $is_active ? ($activeMap[$name]['address'] ?? '-') : ($cm['ip'] ?: '-');
     $mac = $is_active ? ($activeMap[$name]['mac-address'] ?? '-') : ($cm['mac'] ?: '-');
     $blok = extract_blok_name_sync($comment);
+    $metaUserKey = strtolower(trim((string)$name));
+    $metaRow = $metaMap[$metaUserKey] ?? null;
+    $customer_name = trim((string)($metaRow['customer_name'] ?? ''));
+    $room_name = trim((string)($metaRow['room_name'] ?? ''));
+    $blok_meta = trim((string)($metaRow['blok_name'] ?? ''));
+    if ($blok === '' && $blok_meta !== '') {
+        $blok = stripos($blok_meta, 'BLOK-') === 0 ? strtoupper($blok_meta) : ('BLOK-' . strtoupper($blok_meta));
+    }
 
     $status = 'ready';
     if ($is_active) $status = 'online';
@@ -353,11 +398,13 @@ foreach ($all_users as $u) {
     }
 
         $stmt = $db->prepare("INSERT INTO login_history (
-                username, ip_address, mac_address, last_uptime, last_bytes, blok_name, raw_comment,
+                username, customer_name, room_name, ip_address, mac_address, last_uptime, last_bytes, blok_name, raw_comment,
                 login_time_real, logout_time_real, last_status, updated_at
             ) VALUES (
-                :u, :ip, :mac, :up, :lb, :bl, :raw, :ltr, :lor, :st, :upd
+                :u, :cn, :rn, :ip, :mac, :up, :lb, :bl, :raw, :ltr, :lor, :st, :upd
             ) ON CONFLICT(username) DO UPDATE SET
+                customer_name = CASE WHEN excluded.customer_name != '' THEN excluded.customer_name ELSE login_history.customer_name END,
+                room_name = CASE WHEN excluded.room_name != '' THEN excluded.room_name ELSE login_history.room_name END,
                 ip_address = CASE WHEN excluded.ip_address != '-' AND excluded.ip_address != '' THEN excluded.ip_address ELSE login_history.ip_address END,
                 mac_address = CASE WHEN excluded.mac_address != '-' AND excluded.mac_address != '' THEN excluded.mac_address ELSE login_history.mac_address END,
                 last_uptime = COALESCE(NULLIF(excluded.last_uptime,''), login_history.last_uptime),
@@ -378,6 +425,8 @@ foreach ($all_users as $u) {
 
     $stmt->execute([
         ':u' => $name,
+        ':cn' => $customer_name,
+        ':rn' => $room_name,
         ':ip' => $ip,
         ':mac' => $mac,
         ':up' => $uptime,
