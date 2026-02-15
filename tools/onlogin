@@ -1,5 +1,5 @@
 # SCRIPT MIKROTIK ON-LOGIN
-# HTTPS-safe: tidak memaksa mode=http agar tidak konflik dengan URL https 1
+# HTTPS-safe: tidak memaksa mode=http agar tidak konflik dengan URL http
 
 :local baseUrl "{{BASE_URL}}";
 :local localBaseUrl "http://10.10.83.2:8081";
