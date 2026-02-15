@@ -1,0 +1,113 @@
+# SCRIPT MIKROTIK ON-LOGIN
+# HTTPS-safe: tidak memaksa mode=http agar tidak konflik dengan URL https
+
+:local baseUrl "{{BASE_URL}}";
+:local key "{{LIVE_KEY}}";
+:local session "{{SESSION}}";
+:local usageKey "{{USAGE_KEY}}";
+
+:local urlEncode do={
+	:local i [:tostr $1]; :local o ""; :local l [:len $i];
+	:if ($l = 0) do={ :return ""; }
+	:for c from=0 to=($l - 1) do={
+		:local ch [:pick $i $c ($c + 1)];
+		:if ($ch = " ") do={ :set o ($o . "%20"); } else={
+		:if ($ch = ":") do={ :set o ($o . "%3A"); } else={
+		:if ($ch = "/") do={ :set o ($o . "%2F"); } else={
+		:if ($ch = "|") do={ :set o ($o . "%7C"); } else={
+		:if ($ch = "&") do={ :set o ($o . "%26"); } else={
+			:set o ($o . $ch); }}}}}
+	}
+	:return $o;
+};
+
+{
+	:local username "$user";
+	:local userip "$address";
+	:local usermac $"mac-address";
+	:local date [/system clock get date];
+	:local time [/system clock get time];
+	:local year [:pick $date 7 11];
+	:local month [:pick $date 0 3];
+
+	:do {
+		:local uID [/ip hotspot user find where name="$username"];
+		:local comment "";
+		:local profile "";
+
+		:if ([:len $uID] > 0) do={
+			:set uID ($uID->0);
+			:set comment [/ip hotspot user get $uID comment];
+			:set profile [/ip hotspot user get $uID profile];
+		}
+
+		:local blokInfo "";
+		:local posBlok [:find $comment "Blok-"];
+		:if ([:typeof $posBlok] = "nil") do={ :set posBlok [:find $comment "blok-"]; }
+		:if ([:typeof $posBlok] != "nil") do={
+			:local endPos [:find $comment "|" $posBlok];
+			:if ([:typeof $endPos] = "nil") do={ :set endPos [:len $comment]; }
+			:set blokInfo [:pick $comment $posBlok $endPos];
+			:if ([:pick $blokInfo ([:len $blokInfo]-1)] = " ") do={
+				:set blokInfo [:pick $blokInfo 0 ([:len $blokInfo]-1)];
+			}
+		}
+
+		:local isVip false;
+		:if (([:find $comment "| VIP"] != nil) || ([:find $comment "| vip"] != nil) || ([:find $comment "| Pengelola"] != nil) || ([:find $comment "| pengelola"] != nil) || ($comment = "VIP") || ($comment = "vip") || ($comment = "Pengelola") || ($comment = "pengelola")) do={
+			:set isVip true;
+		}
+
+		:local hasLog [/system script find where comment="mikhmon" and source="$date" and name~"-\\|-$username-\\|-"];
+
+		:if ([:len $hasLog] = 0) do={
+			:do { /sys sch add name="$username" disable=no start-date=$date interval="1d"; } on-error={};
+			:delay 1s;
+			:local schId [/sys sch find where name="$username"];
+			:local exp "";
+			:if ([:len $schId] > 0) do={
+				:set exp [/sys sch get ($schId->0) next-run];
+				/sys sch remove $schId;
+			}
+
+			:local newComment "";
+			:local pipePos [:find $comment "|"];
+			:if ([:typeof $pipePos] != "nil") do={
+				:set newComment [:pick $comment 0 $pipePos];
+			} else={
+				:if ([:len $exp] = 15) do={ :set newComment ([:pick $exp 0 6]."/".$year." ".[:pick $exp 7 16]); }
+				:if ([:len $exp] = 8) do={ :set newComment ("$date $exp"); }
+				:if ([:len $newComment] = 0) do={ :set newComment "$date $time"; }
+			}
+			:if ([:len $blokInfo] > 0) do={ :set newComment ("$newComment | $blokInfo"); }
+
+			:if (!$isVip) do={
+				:local price "5000"; :local validity "1d"; :local pLabel "10Menit";
+				:if ($profile = "30Menit") do={ :set price "20000"; :set pLabel "30Menit"; }
+
+				:local logTxt "$date-|-$time-|-$username-|-$price-|-$userip-|-$usermac-|-$validity-|-$pLabel-|-$blokInfo";
+				:do { /system script add name=$logTxt owner="$month$year" source="$date" comment="mikhmon"; } on-error={ :log warning "LOGIN: Gagal create script for $username"; }
+
+				:local liveUrl ($baseUrl . "/report/laporan/services/live_ingest.php");
+				:local postData ("data=" . [$urlEncode $logTxt] . "&key=" . [$urlEncode $key] . "&session=" . [$urlEncode $session]);
+				:do {
+					/tool fetch url=$liveUrl http-method=post http-data=$postData http-header-field="content-type: application/x-www-form-urlencoded" keep-result=no check-certificate=no;
+					:log info "LOGIN: Data Sent for $username";
+				} on-error={ :log warning "LOGIN: Gagal Fetch Live Ingest"; }
+			}
+
+			:if ([:len $uID] > 0) do={
+				:do { /ip hotspot user set comment=$newComment mac-address=$usermac $uID; } on-error={}
+			}
+		}
+
+		:if (!$isVip) do={
+			:local useUrl ($baseUrl . "/report/laporan/services/usage_ingest.php?key=" . [$urlEncode $usageKey] . "&session=" . [$urlEncode $session] . "&event=login" . "&user=" . [$urlEncode $username] . "&date=" . [$urlEncode $date] . "&time=" . [$urlEncode $time] . "&ip=" . [$urlEncode $userip] . "&mac=" . [$urlEncode $usermac] . "&uptime=0s");
+			:do {
+				/tool fetch url=$useUrl keep-result=no check-certificate=no;
+				:log info "LOGIN: Usage ingest sent for $username";
+			} on-error={ :log warning "LOGIN: Gagal Fetch Usage"; }
+		}
+
+	} on-error={ :log error "LOGIN: Error Critical Script"; }
+}
