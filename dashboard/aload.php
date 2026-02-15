@@ -170,6 +170,7 @@ if ($load == "live_data") {
     if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
         $expected_server = strtolower((string)($hotspot_server ?? 'wartel'));
         $rawActive = $API->comm("/ip/hotspot/active/print", array(".proplist" => "server"));
+        $totalActive = is_array($rawActive) ? count($rawActive) : 0;
         if (is_array($rawActive)) {
             foreach ($rawActive as $act) {
                 $server = isset($act['server']) ? strtolower((string)$act['server']) : '';
@@ -177,6 +178,9 @@ if ($load == "live_data") {
                     $counthotspotactive++;
                 }
             }
+        }
+        if ($counthotspotactive === 0 && $totalActive > 0) {
+            $counthotspotactive = $totalActive;
         }
     }
 
