@@ -276,6 +276,44 @@ try {
         }
     }
 
+    try {
+        $syncCfg = $env['security']['sync_sales'] ?? [];
+        $syncToken = trim((string)($syncCfg['token'] ?? ''));
+        if ($syncToken === '') {
+            $syncToken = getenv('WARTELPAS_SYNC_TOKEN');
+            if ($syncToken === false || trim((string)$syncToken) === '') {
+                if (defined('WARTELPAS_SYNC_TOKEN')) {
+                    $syncToken = WARTELPAS_SYNC_TOKEN;
+                } else {
+                    $syncToken = trim((string)($env['backup']['secret'] ?? ''));
+                }
+            }
+        }
+
+        $triggerSession = trim((string)$session_id);
+        if ($syncToken !== '' && $triggerSession !== '') {
+            $log_rel = $system_cfg['log_dir'] ?? 'logs';
+            $logDir = preg_match('/^[A-Za-z]:\\|^\//', $log_rel) ? $log_rel : ($root_dir . '/' . trim($log_rel, '/'));
+            if (!is_dir($logDir)) {
+                @mkdir($logDir, 0755, true);
+            }
+            $throttleFile = $logDir . '/sync_sales_trigger_meta.ts';
+            $nowTs = time();
+            $lastTs = @file_exists($throttleFile) ? (int)@file_get_contents($throttleFile) : 0;
+            if (($nowTs - $lastTs) >= 20) {
+                @file_put_contents($throttleFile, (string)$nowTs);
+                $syncUrl = 'http://127.0.0.1/report/laporan/services/sync_sales.php?key=' . urlencode((string)$syncToken) . '&session=' . urlencode((string)$triggerSession);
+                $ctx = stream_context_create([
+                    'http' => [
+                        'timeout' => 1,
+                        'ignore_errors' => true,
+                    ]
+                ]);
+                @file_get_contents($syncUrl, false, $ctx);
+            }
+        }
+    } catch (Exception $e) {}
+
     echo json_encode(['ok' => true]);
 } catch (Exception $e) {
     echo json_encode(['ok' => false, 'message' => 'Gagal menyimpan data.']);
