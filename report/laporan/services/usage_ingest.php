@@ -271,7 +271,7 @@ try {
     if ($event === 'login' && ($customer_name === '' || $room_name === '' || $meta_blok_name === '' || $meta_profile_name === '' || $meta_price <= 0)) {
         try {
             $stmtMeta = $db->prepare("SELECT id, customer_name, room_name, blok_name, profile_name, price FROM login_meta_queue
-                WHERE voucher_code = :u AND consumed_at IS NULL
+                WHERE lower(voucher_code) = lower(:u) AND consumed_at IS NULL
                 AND (session_id = :sid OR session_id = '' OR :sid = '')
                 AND created_at >= datetime('now','-12 hours')
                 ORDER BY CASE WHEN client_ip = :ip AND :ip != '' THEN 0 ELSE 1 END, created_at DESC LIMIT 1");

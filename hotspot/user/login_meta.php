@@ -59,6 +59,7 @@ if ($meta_key !== '' && $req_key !== $meta_key) {
     exit;
 }
 $voucher_code = trim((string)($payload['voucher_code'] ?? $payload['username'] ?? $payload['user'] ?? ''));
+$voucher_code = strtolower($voucher_code);
 $customer_name = trim((string)($payload['customer_name'] ?? $payload['nama'] ?? ''));
 $room_name = trim((string)($payload['room'] ?? $payload['kamar'] ?? ''));
 $blok_name = trim((string)($payload['blok_name'] ?? $payload['blok'] ?? ''));
