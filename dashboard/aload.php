@@ -264,6 +264,66 @@ if ($load == "live_data") {
                 if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
             }
 
+            if ($hasLogin) {
+                try {
+                    $stmtLoginRows = $db->prepare("SELECT
+                        COALESCE(NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(first_login_real,1,10),''), NULLIF(substr(login_time_real,1,10),''), login_date) AS sale_date,
+                        username,
+                        COALESCE(NULLIF(last_status,''), 'normal') AS status,
+                        0 AS is_rusak,
+                        0 AS is_retur,
+                        0 AS is_invalid,
+                        raw_comment AS comment,
+                        blok_name,
+                        CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price,
+                        CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price_snapshot,
+                        CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS sprice_snapshot,
+                        1 AS qty,
+                        validity,
+                        last_status
+                        FROM login_history
+                        WHERE username != ''
+                          AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'
+                          AND COALESCE(NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(first_login_real,1,10),''), NULLIF(substr(login_time_real,1,10),''), login_date) LIKE :monthLike");
+                    $stmtLoginRows->execute([':monthLike' => $monthLike]);
+                    foreach ($stmtLoginRows->fetchAll(PDO::FETCH_ASSOC) as $lr) {
+                        $profileHint = (string)($lr['validity'] ?? '');
+                        $rawHint = (string)($lr['comment'] ?? '');
+                        $derivedPrice = (int)($lr['price_snapshot'] ?? 0);
+                        if ($derivedPrice <= 0 && function_exists('resolve_price_from_profile')) {
+                            $profileKey = '';
+                            if (function_exists('detect_profile_kind_from_label')) {
+                                $profileKey = (string)detect_profile_kind_from_label($profileHint . ' ' . $rawHint);
+                            }
+                            if ($profileKey === '' && $profileHint !== '') {
+                                $profileKey = $profileHint;
+                            }
+                            $derivedPrice = (int)resolve_price_from_profile($profileKey);
+                        }
+                        $lr['price'] = $derivedPrice;
+                        $lr['price_snapshot'] = $derivedPrice;
+                        $lr['sprice_snapshot'] = $derivedPrice;
+                        $rows[] = [
+                            'raw_date' => '',
+                            'sale_date' => (string)($lr['sale_date'] ?? ''),
+                            'username' => (string)($lr['username'] ?? ''),
+                            'status' => (string)($lr['status'] ?? 'normal'),
+                            'is_rusak' => 0,
+                            'is_retur' => 0,
+                            'is_invalid' => 0,
+                            'comment' => (string)($lr['comment'] ?? ''),
+                            'blok_name' => (string)($lr['blok_name'] ?? ''),
+                            'price' => $derivedPrice,
+                            'price_snapshot' => $derivedPrice,
+                            'sprice_snapshot' => $derivedPrice,
+                            'qty' => 1,
+                            'last_status' => (string)($lr['last_status'] ?? ''),
+                        ];
+                    }
+                } catch (Exception $e) {
+                }
+            }
+
             $monthKey = $year . '-' . $month;
             $seen_user_day = [];
             $total_net_month = 0;
@@ -378,6 +438,45 @@ if ($load == "live_data") {
                         $sql = implode(" UNION ALL ", $selects);
                         $res = $db->query($sql);
                         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
+                    }
+
+                    if ($hasLogin) {
+                        try {
+                            $stmtLoginToday = $db->prepare("SELECT
+                                '' AS raw_date,
+                                COALESCE(NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(first_login_real,1,10),''), NULLIF(substr(login_time_real,1,10),''), login_date) AS sale_date,
+                                username,
+                                COALESCE(NULLIF(last_status,''), 'normal') AS status,
+                                0 AS is_rusak,
+                                0 AS is_retur,
+                                0 AS is_invalid,
+                                raw_comment AS comment,
+                                blok_name,
+                                validity,
+                                last_status
+                                FROM login_history
+                                WHERE username != ''
+                                  AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'
+                                  AND COALESCE(NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(first_login_real,1,10),''), NULLIF(substr(login_time_real,1,10),''), login_date) = :d
+                                  AND instr(lower(COALESCE(raw_comment,'')), 'vip') = 0
+                                  AND instr(lower(COALESCE(raw_comment,'')), 'pengelola') = 0");
+                            $stmtLoginToday->execute([':d' => $today]);
+                            foreach ($stmtLoginToday->fetchAll(PDO::FETCH_ASSOC) as $lr) {
+                                $rows[] = [
+                                    'raw_date' => '',
+                                    'sale_date' => (string)($lr['sale_date'] ?? ''),
+                                    'username' => (string)($lr['username'] ?? ''),
+                                    'status' => (string)($lr['status'] ?? 'normal'),
+                                    'is_rusak' => 0,
+                                    'is_retur' => 0,
+                                    'is_invalid' => 0,
+                                    'comment' => (string)($lr['comment'] ?? ''),
+                                    'blok_name' => (string)($lr['blok_name'] ?? ''),
+                                    'last_status' => (string)($lr['last_status'] ?? ''),
+                                ];
+                            }
+                        } catch (Exception $e) {
+                        }
                     }
 
                     if ($hasLogin) {
@@ -808,10 +907,73 @@ if ($load == "logs") {
                     if ($resLive) { foreach($resLive as $row) { $rawDataMerged[] = $row['full_raw_data']; } }
                 } catch (Exception $e) { }
             }
+
+            $finalLogs = [];
+            if (table_exists($db, 'login_history')) {
+                try {
+                    $stmtLiveLogs = $db->prepare("SELECT
+                        username,
+                        COALESCE(NULLIF(last_login_real,''), NULLIF(first_login_real,''), NULLIF(login_time_real,''), login_date) AS login_dt,
+                        validity,
+                        raw_comment,
+                        blok_name,
+                        room_name,
+                        customer_name,
+                        COALESCE(NULLIF(last_status,''), 'used') AS last_status,
+                        CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price
+                        FROM login_history
+                        WHERE username != ''
+                          AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'
+                          AND substr(COALESCE(NULLIF(last_login_real,''), NULLIF(first_login_real,''), NULLIF(login_time_real,''), login_date),1,7) = :ym
+                        ORDER BY COALESCE(NULLIF(last_login_real,''), NULLIF(first_login_real,''), NULLIF(login_time_real,''), login_date) DESC
+                        LIMIT 1000");
+                    $stmtLiveLogs->execute([':ym' => sprintf('%04d-%02d', (int)$filterYear, (int)$filterMonth)]);
+                    foreach ($stmtLiveLogs->fetchAll(PDO::FETCH_ASSOC) as $lr) {
+                        $dtRaw = trim((string)($lr['login_dt'] ?? ''));
+                        $ts = $dtRaw !== '' ? strtotime($dtRaw) : false;
+                        if ($ts === false) continue;
+                        $d_month = (int)date('m', $ts);
+                        $d_year = (int)date('Y', $ts);
+                        if ($d_month != (int)$filterMonth || $d_year != (int)$filterYear) continue;
+
+                        $profileLabel = trim((string)($lr['validity'] ?? ''));
+                        if ($profileLabel === '') {
+                            $profileKey = '';
+                            if (function_exists('detect_profile_kind_from_label')) {
+                                $profileKey = (string)detect_profile_kind_from_label((string)($lr['raw_comment'] ?? ''));
+                            }
+                            if ($profileKey !== '') {
+                                $profileLabel = strtoupper($profileKey);
+                            } else {
+                                $profileLabel = '-';
+                            }
+                        }
+
+                        $statusLive = strtolower(trim((string)($lr['last_status'] ?? 'used')));
+                        if ($statusLive === '') $statusLive = 'used';
+                        $priceLive = (int)($lr['price'] ?? 0);
+
+                        $key = $ts . '_' . str_pad((string)count($finalLogs), 4, '0', STR_PAD_LEFT);
+                        $finalLogs[$key] = [
+                            'time_str' => date('d/m/Y H:i', $ts),
+                            'username' => trim((string)($lr['username'] ?? '')),
+                            'paket' => $profileLabel,
+                            'comment' => (string)($lr['raw_comment'] ?? ''),
+                            'price' => $priceLive,
+                            'status' => $statusLive,
+                            'customer_name' => (string)($lr['customer_name'] ?? ''),
+                            'room_name' => (string)($lr['room_name'] ?? ''),
+                            'blok_name' => (string)($lr['blok_name'] ?? ''),
+                            'validity' => (string)($lr['validity'] ?? ''),
+                            'uptime' => ''
+                        ];
+                    }
+                } catch (Exception $e) {
+                }
+            }
         } catch (Exception $e) { }
     }
 
-    $finalLogs = [];
     foreach ($rawDataMerged as $rowString) {
         $parts = split_sales_raw($rowString);
         if (count($parts) >= 4) {
