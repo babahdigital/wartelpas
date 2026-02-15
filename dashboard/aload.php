@@ -19,6 +19,17 @@ $session = isset($_GET['session']) ? $_GET['session'] : '';
 $load    = isset($_GET['load']) ? $_GET['load'] : '';
 $sess_m  = isset($_GET['m']) ? $_GET['m'] : '';
 
+if ($session === '' && !empty($_SERVER['HTTP_REFERER'])) {
+    $refererQuery = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_QUERY);
+    if (!empty($refererQuery)) {
+        $refererParams = [];
+        parse_str($refererQuery, $refererParams);
+        if (!empty($refererParams['session'])) {
+            $session = (string)$refererParams['session'];
+        }
+    }
+}
+
 // --- SET TIMEZONE ---
 if (isset($_SESSION['timezone']) && !empty($_SESSION['timezone'])) {
     date_default_timezone_set($_SESSION['timezone']);
