@@ -30,18 +30,6 @@ if (!in_array($_SERVER['REQUEST_METHOD'], ['POST', 'GET'], true)) {
     exit;
 }
 
-$log_rel = $system_cfg['log_dir'] ?? 'logs';
-$logDir = preg_match('/^[A-Za-z]:\\|^\//', $log_rel) ? $log_rel : ($root_dir . '/' . trim($log_rel, '/'));
-if (!is_dir($logDir)) {
-    @mkdir($logDir, 0755, true);
-}
-$metaDebugLog = $logDir . '/login_meta_debug.log';
-if (!function_exists('meta_debug_log')) {
-    function meta_debug_log($file, $line) {
-        @file_put_contents($file, date('c') . ' | ' . $line . "\n", FILE_APPEND);
-    }
-}
-
 function table_exists_local(PDO $db, $table) {
     try {
         $stmt = $db->prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=:t");
@@ -66,13 +54,7 @@ function table_has_column_local(PDO $db, $table, $column) {
 
 $payload = $_SERVER['REQUEST_METHOD'] === 'GET' ? $_GET : $_POST;
 $req_key = trim((string)($payload['key'] ?? ''));
-meta_debug_log($metaDebugLog, 'hit method=' . ($_SERVER['REQUEST_METHOD'] ?? '-')
-    . ' ip=' . ($_SERVER['REMOTE_ADDR'] ?? '-')
-    . ' ua=' . substr((string)($_SERVER['HTTP_USER_AGENT'] ?? '-'), 0, 80)
-    . ' qs=' . ($_SERVER['QUERY_STRING'] ?? ''));
 if ($meta_key !== '' && $req_key !== $meta_key) {
-    meta_debug_log($metaDebugLog, 'reject=bad_key ip=' . ($_SERVER['REMOTE_ADDR'] ?? '-')
-        . ' voucher=' . (string)($payload['voucher_code'] ?? $payload['username'] ?? $payload['user'] ?? ''));
     echo json_encode(['ok' => false, 'message' => 'Kunci tidak valid.']);
     exit;
 }
@@ -108,8 +90,6 @@ if ($session_id === '') {
 }
 
 if ($voucher_code === '' || strlen($voucher_code) < 3 || strlen($voucher_code) > 64) {
-    meta_debug_log($metaDebugLog, 'reject=bad_voucher ip=' . ($_SERVER['REMOTE_ADDR'] ?? '-')
-        . ' voucher=' . $voucher_code);
     echo json_encode(['ok' => false, 'message' => 'Kode voucher tidak valid.']);
     exit;
 }
@@ -180,13 +160,6 @@ try {
         ':ip' => $client_ip,
         ':ua' => $user_agent
     ]);
-
-    meta_debug_log($metaDebugLog, 'ok voucher=' . $voucher_code
-        . ' name=' . ($customer_name !== '' ? '1' : '0')
-        . ' room=' . ($room_name !== '' ? '1' : '0')
-        . ' blok=' . ($blok_name !== '' ? '1' : '0')
-        . ' session=' . $session_id
-        . ' ip=' . $client_ip);
 
     try {
         $db->exec("DELETE FROM login_meta_queue WHERE created_at < datetime('now','-7 day')");
@@ -305,6 +278,5 @@ try {
 
     echo json_encode(['ok' => true]);
 } catch (Exception $e) {
-    meta_debug_log($metaDebugLog, 'error=' . $e->getMessage());
     echo json_encode(['ok' => false, 'message' => 'Gagal menyimpan data.']);
 }
