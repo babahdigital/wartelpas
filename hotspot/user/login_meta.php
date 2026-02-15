@@ -62,6 +62,12 @@ $voucher_code = trim((string)($payload['voucher_code'] ?? $payload['username'] ?
 $customer_name = trim((string)($payload['customer_name'] ?? $payload['nama'] ?? ''));
 $room_name = trim((string)($payload['room'] ?? $payload['kamar'] ?? ''));
 $blok_name = trim((string)($payload['blok_name'] ?? $payload['blok'] ?? ''));
+
+if ($blok_name === '' && $room_name !== '') {
+    if (preg_match('/\bblok\s*[-_\s]*([A-Za-z0-9]+)/i', $room_name, $mBlok)) {
+        $blok_name = strtoupper(trim((string)$mBlok[1]));
+    }
+}
 $profile_name = trim((string)($payload['profile_name'] ?? $payload['profile'] ?? ''));
 $price_raw = trim((string)($payload['price'] ?? $payload['harga'] ?? ''));
 $price_val = is_numeric($price_raw) ? (int)$price_raw : 0;
@@ -174,7 +180,7 @@ try {
         }
     }
 
-    if (($customer_name !== '' || $room_name !== '') && table_exists_local($db, 'login_history')) {
+    if (($customer_name !== '' || $room_name !== '' || $blok_name !== '') && table_exists_local($db, 'login_history')) {
         $has_customer = table_has_column_local($db, 'login_history', 'customer_name');
         $has_room = table_has_column_local($db, 'login_history', 'room_name');
         $has_blok = table_has_column_local($db, 'login_history', 'blok_name');
@@ -215,31 +221,57 @@ try {
         }
     }
 
-    if (($customer_name !== '' || $room_name !== '') && table_exists_local($db, 'sales_history')) {
-        if (table_has_column_local($db, 'sales_history', 'customer_name') && table_has_column_local($db, 'sales_history', 'room_name')) {
-            $stmt = $db->prepare("UPDATE sales_history SET
-                customer_name = CASE WHEN :cn != '' THEN :cn ELSE customer_name END,
-                room_name = CASE WHEN :rn != '' THEN :rn ELSE room_name END
-                WHERE username = :v");
-            $stmt->execute([
-                ':cn' => $customer_name,
-                ':rn' => $room_name,
-                ':v' => $voucher_code
-            ]);
+    if (($customer_name !== '' || $room_name !== '' || $blok_name !== '') && table_exists_local($db, 'sales_history')) {
+        $has_sales_customer = table_has_column_local($db, 'sales_history', 'customer_name');
+        $has_sales_room = table_has_column_local($db, 'sales_history', 'room_name');
+        $has_sales_blok = table_has_column_local($db, 'sales_history', 'blok_name');
+        if ($has_sales_customer || $has_sales_room || $has_sales_blok) {
+            $setParts = [];
+            if ($has_sales_customer) {
+                $setParts[] = "customer_name = CASE WHEN :cn != '' THEN :cn ELSE customer_name END";
+            }
+            if ($has_sales_room) {
+                $setParts[] = "room_name = CASE WHEN :rn != '' THEN :rn ELSE room_name END";
+            }
+            if ($has_sales_blok) {
+                $setParts[] = "blok_name = CASE WHEN :bn != '' THEN :bn ELSE blok_name END";
+            }
+            if (!empty($setParts)) {
+                $stmt = $db->prepare("UPDATE sales_history SET\n                " . implode(",\n                ", $setParts) . "\n                WHERE username = :v");
+                $stmt->execute([
+                    ':cn' => $customer_name,
+                    ':rn' => $room_name,
+                    ':bn' => $blok_name,
+                    ':v' => $voucher_code
+                ]);
+            }
         }
     }
 
-    if (($customer_name !== '' || $room_name !== '') && table_exists_local($db, 'live_sales')) {
-        if (table_has_column_local($db, 'live_sales', 'customer_name') && table_has_column_local($db, 'live_sales', 'room_name')) {
-            $stmt = $db->prepare("UPDATE live_sales SET
-                customer_name = CASE WHEN :cn != '' THEN :cn ELSE customer_name END,
-                room_name = CASE WHEN :rn != '' THEN :rn ELSE room_name END
-                WHERE username = :v");
-            $stmt->execute([
-                ':cn' => $customer_name,
-                ':rn' => $room_name,
-                ':v' => $voucher_code
-            ]);
+    if (($customer_name !== '' || $room_name !== '' || $blok_name !== '') && table_exists_local($db, 'live_sales')) {
+        $has_live_customer = table_has_column_local($db, 'live_sales', 'customer_name');
+        $has_live_room = table_has_column_local($db, 'live_sales', 'room_name');
+        $has_live_blok = table_has_column_local($db, 'live_sales', 'blok_name');
+        if ($has_live_customer || $has_live_room || $has_live_blok) {
+            $setParts = [];
+            if ($has_live_customer) {
+                $setParts[] = "customer_name = CASE WHEN :cn != '' THEN :cn ELSE customer_name END";
+            }
+            if ($has_live_room) {
+                $setParts[] = "room_name = CASE WHEN :rn != '' THEN :rn ELSE room_name END";
+            }
+            if ($has_live_blok) {
+                $setParts[] = "blok_name = CASE WHEN :bn != '' THEN :bn ELSE blok_name END";
+            }
+            if (!empty($setParts)) {
+                $stmt = $db->prepare("UPDATE live_sales SET\n                " . implode(",\n                ", $setParts) . "\n                WHERE username = :v");
+                $stmt->execute([
+                    ':cn' => $customer_name,
+                    ':rn' => $room_name,
+                    ':bn' => $blok_name,
+                    ':v' => $voucher_code
+                ]);
+            }
         }
     }
 
