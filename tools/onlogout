@@ -2,6 +2,7 @@
 # HTTPS-safe: tidak memaksa mode=http agar tidak konflik dengan URL https
 
 :local baseUrl "{{BASE_URL}}";
+:local localBaseUrl "http://10.10.83.2:8081";
 :local usageKey "{{USAGE_KEY}}";
 :local session "{{SESSION}}";
 
@@ -14,7 +15,8 @@
 		:if ($ch = ":") do={ :set o ($o . "%3A"); } else={
 		:if ($ch = "/") do={ :set o ($o . "%2F"); } else={
 		:if ($ch = "|") do={ :set o ($o . "%7C"); } else={
-			:set o ($o . $ch); }}}}
+		:if ($ch = "&") do={ :set o ($o . "%26"); } else={
+			:set o ($o . $ch); }}}}}
 	}
 	:return $o;
 };
@@ -67,11 +69,17 @@
 	:do { /ip hotspot user set comment=$finalComment $uID; } on-error={}
 
 	:if (!$isVip) do={
-		:local usageUrl ($baseUrl . "/report/laporan/services/usage_ingest.php?key=" . [$urlEncode $usageKey] . "&session=" . [$urlEncode $session] . "&event=logout&user=" . [$urlEncode $username] . "&date=" . [$urlEncode $logoutDate] . "&time=" . [$urlEncode $logoutTime] . "&ip=" . [$urlEncode $userip] . "&mac=" . [$urlEncode $usermac] . "&uptime=" . [$urlEncode $userUptime]);
+		:local usageUrl ($localBaseUrl . "/report/laporan/services/usage_ingest.php?key=" . [$urlEncode $usageKey] . "&session=" . [$urlEncode $session] . "&event=logout&user=" . [$urlEncode $username] . "&date=" . [$urlEncode $logoutDate] . "&time=" . [$urlEncode $logoutTime] . "&ip=" . [$urlEncode $userip] . "&mac=" . [$urlEncode $usermac] . "&uptime=" . [$urlEncode $userUptime]);
+		:local usageUrlFallback ($baseUrl . "/report/laporan/services/usage_ingest.php?key=" . [$urlEncode $usageKey] . "&session=" . [$urlEncode $session] . "&event=logout&user=" . [$urlEncode $username] . "&date=" . [$urlEncode $logoutDate] . "&time=" . [$urlEncode $logoutTime] . "&ip=" . [$urlEncode $userip] . "&mac=" . [$urlEncode $usermac] . "&uptime=" . [$urlEncode $userUptime]);
 		:do {
-			/tool fetch url=$usageUrl keep-result=no check-certificate=no;
+			/tool fetch url=$usageUrl keep-result=no mode=http;
 			:log info "LOGOUT: Usage ingest sent for $username";
-		} on-error={ :log warning "LOGOUT: Gagal Fetch Usage"; }
+		} on-error={
+			:do {
+				/tool fetch url=$usageUrlFallback keep-result=no check-certificate=no;
+				:log info "LOGOUT: Usage ingest sent (fallback) for $username";
+			} on-error={ :log warning "LOGOUT: Gagal Fetch Usage"; }
+		}
 	}
 
 	:if ([:len $blokInfo] > 0) do={
