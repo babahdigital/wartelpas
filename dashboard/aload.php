@@ -15,6 +15,7 @@ $root = dirname(__DIR__);
 if (!isset($_SESSION["mikhmon"])) { die(); }
 
 // --- AMBIL PARAMETER ---
+$session = isset($_GET['session']) ? $_GET['session'] : '';
 $load    = isset($_GET['load']) ? $_GET['load'] : '';
 $sess_m  = isset($_GET['m']) ? $_GET['m'] : '';
 

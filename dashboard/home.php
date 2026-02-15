@@ -59,7 +59,7 @@ else {
         $("#tabel_riwayat").html('<tr><td colspan="7" class="text-center" style="padding:20px;">Memuat...</td></tr>');
         $("#row-count").text("Memuat...");
 
-        $.get(withTestDate("./dashboard/aload.php?load=hotspot&m=" + m))
+        $.get(withTestDate("./dashboard/aload.php?session=<?= $session ?>&load=hotspot&m=" + m))
             .done(function(data) {
                 $("#r_2_content").html(data);
                 chartWrap = $("#chart_container");
@@ -87,7 +87,7 @@ else {
     }
 
     function refreshLogs(m, done) {
-        $.get(withTestDate("./dashboard/aload.php?load=logs&m=" + m))
+        $.get(withTestDate("./dashboard/aload.php?session=<?= $session ?>&load=logs&m=" + m))
             .done(function(dataLogs) {
                 if (dataLogs.trim() == "") {
                     $("#tabel_riwayat").html('<tr><td colspan="7" class="text-center text-muted" style="padding:20px;">Belum ada transaksi.</td></tr>');
@@ -109,7 +109,7 @@ else {
     }
 
     function updateDashboard() {
-        $.getJSON(withTestDate("./dashboard/aload.php?load=live_data"), function(data) {
+        $.getJSON(withTestDate("./dashboard/aload.php?load=live_data&session=<?= $session ?>"), function(data) {
             $('#kpi-active').text(data.active);
             $('#kpi-sold').text(data.sold);
             $('#kpi-income').text('Rp ' + data.income);
@@ -224,7 +224,7 @@ else {
     }
 
     $(document).ready(function() {
-        $("#r_1_display").load("./dashboard/aload.php?load=sysresource #r_1_content_raw");
+        $("#r_1_display").load("./dashboard/aload.php?session=<?= $session ?>&load=sysresource #r_1_content_raw");
         changeMonth(<?= (int)date('m') ?>);
         updateDashboard();
         setInterval(updateDashboard, 10000);
@@ -232,7 +232,7 @@ else {
         updateLiveWindow();
         setInterval(updateLiveWindow, 60000);
         setInterval(function() {
-            $("#r_1_display").load("./dashboard/aload.php?load=sysresource #r_1_content_raw");
+            $("#r_1_display").load("./dashboard/aload.php?session=<?= $session ?>&load=sysresource #r_1_content_raw");
         }, 10000);
 
         optimizeTableLayout();
