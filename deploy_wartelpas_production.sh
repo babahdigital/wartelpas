@@ -24,8 +24,6 @@ RECREATE=1
 DRY_RUN=0
 
 RUNTIME_FILES=(
-  ".htaccess"
-  "htaccess-templated"
   "custom.ini"
   "include/env.php"
 )
@@ -193,8 +191,6 @@ wait_http_ok() {
 }
 
 RUNTIME_FILES=(
-  ".htaccess"
-  "htaccess-templated"
   "custom.ini"
   "include/env.php"
 )
