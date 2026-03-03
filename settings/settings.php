@@ -279,6 +279,13 @@ if (!empty($system_cfg['base_url'])) {
   $host = $_SERVER['HTTP_HOST'] ?? '';
   $base_url = $host !== '' ? ($scheme . '://' . $host) : '';
 }
+$local_base_url = '';
+if (!empty($system_cfg['local_base_url'])) {
+  $local_base_url = rtrim((string)$system_cfg['local_base_url'], '/');
+}
+if ($local_base_url === '') {
+  $local_base_url = $base_url;
+}
 $live_key = $env['security']['live_ingest']['token'] ?? '';
 $usage_key = $env['security']['usage_ingest']['token'] ?? '';
 if ($live_key === '') $live_key = $env['backup']['secret'] ?? '';
@@ -288,6 +295,7 @@ $tmpl_onlogout = __DIR__ . '/../tools/onlogout';
 if (file_exists($tmpl_onlogin) && file_exists($tmpl_onlogout) && $base_url !== '') {
   $replace = [
     '{{BASE_URL}}' => $base_url,
+    '{{LOCAL_BASE_URL}}' => $local_base_url,
     '{{LIVE_KEY}}' => $live_key,
     '{{USAGE_KEY}}' => $usage_key,
     '{{SESSION}}' => $session

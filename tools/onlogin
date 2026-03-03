@@ -2,7 +2,7 @@
 # HTTPS-safe: tidak memaksa mode=http agar tidak konflik dengan URL http
 
 :local baseUrl "{{BASE_URL}}";
-:local localBaseUrl "http://10.10.83.2:8081";
+:local localBaseUrl "{{LOCAL_BASE_URL}}";
 :local key "{{LIVE_KEY}}";
 :local session "{{SESSION}}";
 :local usageKey "{{USAGE_KEY}}";
@@ -104,7 +104,7 @@
 			:local liveUrlFallback ($baseUrl . "/report/laporan/services/live_ingest.php");
 			:local postData ("data=" . [$urlEncode $logTxt] . "&key=" . [$urlEncode $key] . "&session=" . [$urlEncode $session]);
 			:do {
-				/tool fetch url=$liveUrl http-method=post http-data=$postData http-header-field="content-type: application/x-www-form-urlencoded" keep-result=no mode=http;
+				/tool fetch url=$liveUrl http-method=post http-data=$postData http-header-field="content-type: application/x-www-form-urlencoded" keep-result=no;
 				:log info "LOGIN: Live ingest sent for $username";
 			} on-error={
 				:do {
@@ -118,7 +118,7 @@
 			:local useUrl ($localBaseUrl . "/report/laporan/services/usage_ingest.php?key=" . [$urlEncode $usageKey] . "&session=" . [$urlEncode $session] . "&event=login" . "&user=" . [$urlEncode $username] . "&date=" . [$urlEncode $date] . "&time=" . [$urlEncode $time] . "&ip=" . [$urlEncode $userip] . "&mac=" . [$urlEncode $usermac] . "&uptime=0s");
 			:local useUrlFallback ($baseUrl . "/report/laporan/services/usage_ingest.php?key=" . [$urlEncode $usageKey] . "&session=" . [$urlEncode $session] . "&event=login" . "&user=" . [$urlEncode $username] . "&date=" . [$urlEncode $date] . "&time=" . [$urlEncode $time] . "&ip=" . [$urlEncode $userip] . "&mac=" . [$urlEncode $usermac] . "&uptime=0s");
 			:do {
-				/tool fetch url=$useUrl keep-result=no mode=http;
+				/tool fetch url=$useUrl keep-result=no;
 				:log info "LOGIN: Usage ingest sent for $username";
 			} on-error={
 				:do {

@@ -9,6 +9,7 @@ $env = [
         // Optional: use a separate DB for WhatsApp logs/recipients
         // 'whatsapp_db_file' => 'db_data/babahdigital_app.db',
         'base_url' => '',
+        'local_base_url' => '',
         'ghost_min_bytes' => 0,
     ],
     'auth' => [

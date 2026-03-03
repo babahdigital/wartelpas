@@ -2,7 +2,7 @@
 # HTTPS-safe: tidak memaksa mode=http agar tidak konflik dengan URL http
 
 :local baseUrl "{{BASE_URL}}";
-:local localBaseUrl "http://10.10.83.2:8081";
+:local localBaseUrl "{{LOCAL_BASE_URL}}";
 :local usageKey "{{USAGE_KEY}}";
 :local session "{{SESSION}}";
 
@@ -72,7 +72,7 @@
 		:local usageUrl ($localBaseUrl . "/report/laporan/services/usage_ingest.php?key=" . [$urlEncode $usageKey] . "&session=" . [$urlEncode $session] . "&event=logout&user=" . [$urlEncode $username] . "&date=" . [$urlEncode $logoutDate] . "&time=" . [$urlEncode $logoutTime] . "&ip=" . [$urlEncode $userip] . "&mac=" . [$urlEncode $usermac] . "&uptime=" . [$urlEncode $userUptime]);
 		:local usageUrlFallback ($baseUrl . "/report/laporan/services/usage_ingest.php?key=" . [$urlEncode $usageKey] . "&session=" . [$urlEncode $session] . "&event=logout&user=" . [$urlEncode $username] . "&date=" . [$urlEncode $logoutDate] . "&time=" . [$urlEncode $logoutTime] . "&ip=" . [$urlEncode $userip] . "&mac=" . [$urlEncode $usermac] . "&uptime=" . [$urlEncode $userUptime]);
 		:do {
-			/tool fetch url=$usageUrl keep-result=no mode=http;
+			/tool fetch url=$usageUrl keep-result=no;
 			:log info "LOGOUT: Usage ingest sent for $username";
 		} on-error={
 			:do {

@@ -36,6 +36,16 @@ if ($baseUrl === '') {
 if ($baseUrl === '' && !empty($_GET['base_url'])) {
     $baseUrl = rtrim((string)$_GET['base_url'], '/');
 }
+ $localBaseUrl = '';
+if (!empty($system_cfg['local_base_url'])) {
+    $localBaseUrl = rtrim((string)$system_cfg['local_base_url'], '/');
+}
+if ($localBaseUrl === '' && !empty($_GET['local_base_url'])) {
+    $localBaseUrl = rtrim((string)$_GET['local_base_url'], '/');
+}
+if ($localBaseUrl === '') {
+    $localBaseUrl = $baseUrl;
+}
 if ($baseUrl === '') {
     echo "Error: base_url tidak ditemukan. Tambahkan system.base_url di env atau kirim ?base_url=.\n";
     exit;
@@ -62,6 +72,7 @@ if (function_exists('opcache_invalidate')) {
 
 $replace = [
     '{{BASE_URL}}' => $baseUrl,
+    '{{LOCAL_BASE_URL}}' => $localBaseUrl,
     '{{LIVE_KEY}}' => $live_key,
     '{{USAGE_KEY}}' => $usage_key,
     '{{SESSION}}' => $session
