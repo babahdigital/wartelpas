@@ -19,6 +19,7 @@ CLEAN=1
 BUILD=1
 NO_CACHE=1
 RECREATE=1
+DRY_RUN=0
 
 RUNTIME_FILES=(
   ".htaccess"
@@ -50,11 +51,13 @@ Flags utama:
   --recreate         Recreate container wartelpas (default: ON)
   --no-recreate      Skip recreate container
   --recreate-only    Shortcut: --no-clean --no-build --recreate
+  --dry-run          Simulasi langkah deploy tanpa perubahan
   --strict           Validasi host/path target agar tidak melebar
   --help             Tampilkan bantuan
 
 Contoh:
   ./deploy_wartelpas_production.sh --clean --strict --no-cache --recreate
+  ./deploy_wartelpas_production.sh --clean --strict --dry-run
   ./deploy_wartelpas_production.sh --recreate-only --strict
 EOF
 }
@@ -83,6 +86,7 @@ while [[ $# -gt 0 ]]; do
       RECREATE=1
       ;;
     --strict) STRICT=1 ;;
+    --dry-run) DRY_RUN=1 ;;
     --help)
       usage
       exit 0
@@ -112,11 +116,16 @@ fi
 
 print_step "Deploy wartelpas only via SSH ($SSH_USER_HOST:$SSH_PORT)"
 
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  print_step "Mode DRY-RUN aktif: tidak ada perubahan yang akan dieksekusi"
+fi
+
 ssh -i "$SSH_KEY" -p "$SSH_PORT" "$SSH_USER_HOST" \
   CLEAN="$CLEAN" \
   BUILD="$BUILD" \
   NO_CACHE="$NO_CACHE" \
   RECREATE="$RECREATE" \
+  DRY_RUN="$DRY_RUN" \
   STRICT="$STRICT" \
   REPO_URL="$REPO_URL" \
   REMOTE_BASE="$REMOTE_BASE" \
@@ -131,6 +140,14 @@ set -euo pipefail
 print_step() {
   echo
   echo "==> $1"
+}
+
+run_cmd() {
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "[DRY-RUN] $*"
+  else
+    "$@"
+  fi
 }
 
 copy_if_missing() {
@@ -167,64 +184,75 @@ if [[ "$STRICT" -eq 1 ]]; then
   }
 fi
 
-mkdir -p "$REMOTE_BASE"
+run_cmd mkdir -p "$REMOTE_BASE"
 
 if [[ "$CLEAN" -eq 1 ]]; then
   print_step "Backup runtime files"
-  rm -rf "$REMOTE_BACKUP"
-  mkdir -p "$REMOTE_BACKUP"
+  run_cmd rm -rf "$REMOTE_BACKUP"
+  run_cmd mkdir -p "$REMOTE_BACKUP"
 
   if [[ -d "$REMOTE_APP" ]]; then
     for rel_path in "${RUNTIME_FILES[@]}"; do
       src="$REMOTE_APP/$rel_path"
       dst="$REMOTE_BACKUP/$rel_path"
       if [[ -f "$src" ]]; then
-        mkdir -p "$(dirname "$dst")"
-        cp -f "$src" "$dst"
+        run_cmd mkdir -p "$(dirname "$dst")"
+        run_cmd cp -f "$src" "$dst"
         echo "Backup: $rel_path"
       fi
     done
   fi
 
   print_step "Hapus source lama + clone fresh"
-  rm -rf "$REMOTE_APP"
-  git clone "$REPO_URL" "$REMOTE_APP"
+  run_cmd rm -rf "$REMOTE_APP"
+  run_cmd git clone "$REPO_URL" "$REMOTE_APP"
 
   print_step "Restore runtime files"
   for rel_path in "${RUNTIME_FILES[@]}"; do
     src="$REMOTE_BACKUP/$rel_path"
     dst="$REMOTE_APP/$rel_path"
     if [[ -f "$src" ]]; then
-      mkdir -p "$(dirname "$dst")"
-      cp -f "$src" "$dst"
+      run_cmd mkdir -p "$(dirname "$dst")"
+      run_cmd cp -f "$src" "$dst"
       echo "Restore: $rel_path"
     fi
   done
 fi
 
-copy_if_missing "$REMOTE_APP/custom.ini.example" "$REMOTE_APP/custom.ini"
-copy_if_missing "$REMOTE_APP/include/env.example.php" "$REMOTE_APP/include/env.php"
-copy_if_missing "$REMOTE_APP/include/config.example.php" "$REMOTE_APP/include/config.php"
-copy_if_missing "$REMOTE_APP/include/config_legacy.example.php" "$REMOTE_APP/include/config_legacy.php"
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  echo "[DRY-RUN] copy_if_missing $REMOTE_APP/custom.ini.example -> $REMOTE_APP/custom.ini"
+  echo "[DRY-RUN] copy_if_missing $REMOTE_APP/include/env.example.php -> $REMOTE_APP/include/env.php"
+  echo "[DRY-RUN] copy_if_missing $REMOTE_APP/include/config.example.php -> $REMOTE_APP/include/config.php"
+  echo "[DRY-RUN] copy_if_missing $REMOTE_APP/include/config_legacy.example.php -> $REMOTE_APP/include/config_legacy.php"
+else
+  copy_if_missing "$REMOTE_APP/custom.ini.example" "$REMOTE_APP/custom.ini"
+  copy_if_missing "$REMOTE_APP/include/env.example.php" "$REMOTE_APP/include/env.php"
+  copy_if_missing "$REMOTE_APP/include/config.example.php" "$REMOTE_APP/include/config.php"
+  copy_if_missing "$REMOTE_APP/include/config_legacy.example.php" "$REMOTE_APP/include/config_legacy.php"
+fi
 
 cd "$REMOTE_APP"
 
 if [[ "$BUILD" -eq 1 ]]; then
   print_step "Build image wartelpas"
   if [[ "$NO_CACHE" -eq 1 ]]; then
-    docker compose build --no-cache "$APP_SERVICE_NAME"
+    run_cmd docker compose build --no-cache "$APP_SERVICE_NAME"
   else
-    docker compose build "$APP_SERVICE_NAME"
+    run_cmd docker compose build "$APP_SERVICE_NAME"
   fi
 fi
 
 if [[ "$RECREATE" -eq 1 ]]; then
   print_step "Recreate container wartelpas"
-  docker compose up -d --force-recreate "$APP_SERVICE_NAME"
+  run_cmd docker compose up -d --force-recreate "$APP_SERVICE_NAME"
 
   print_step "Connect ke proxy-network"
   if docker network inspect "$PROXY_NETWORK" >/dev/null 2>&1; then
-    docker network connect "$PROXY_NETWORK" "$APP_CONTAINER_NAME" >/dev/null 2>&1 || true
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+      echo "[DRY-RUN] docker network connect $PROXY_NETWORK $APP_CONTAINER_NAME"
+    else
+      docker network connect "$PROXY_NETWORK" "$APP_CONTAINER_NAME" >/dev/null 2>&1 || true
+    fi
     echo "Network OK: $PROXY_NETWORK"
   else
     echo "Warning: network '$PROXY_NETWORK' tidak ditemukan"
@@ -232,9 +260,18 @@ if [[ "$RECREATE" -eq 1 ]]; then
 fi
 
 print_step "Status akhir"
-docker compose ps
-docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' | grep -E "NAMES|^${APP_CONTAINER_NAME}[[:space:]]" || true
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  echo "[DRY-RUN] docker compose ps"
+  echo "[DRY-RUN] docker ps --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}' | grep -E 'NAMES|^${APP_CONTAINER_NAME}[[:space:]]'"
+else
+  docker compose ps
+  docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' | grep -E "NAMES|^${APP_CONTAINER_NAME}[[:space:]]" || true
+fi
 
 echo
-echo "Selesai: hanya Wartelpas yang diproses, container lain tidak disentuh."
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  echo "Selesai DRY-RUN: tidak ada perubahan yang diterapkan."
+else
+  echo "Selesai: hanya Wartelpas yang diproses, container lain tidak disentuh."
+fi
 REMOTE_SCRIPT
