@@ -22,3 +22,9 @@ LICENSE
 htaccess-copy-txt
 *.example
 *.code-workspace
+
+# Nginx global: abaikan semua kecuali konfigurasi referensi utama
+nginx/**
+!nginx/
+!nginx/conf.d/
+!nginx/conf.d/lpsaring.conf
