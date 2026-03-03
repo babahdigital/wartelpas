@@ -48,6 +48,8 @@ services:
       - ./hotspot/user:/var/www/html/hotspot/user
       - ./hotspot/print:/var/www/html/hotspot/print
       - ./hotspot/generateuser.php:/var/www/html/hotspot/generateuser.php
+      - ./hotspot/getvalidprice.php:/var/www/html/hotspot/getvalidprice.php
+      - ./hotspot/listquickprint.php:/var/www/html/hotspot/listquickprint.php
       - ./hotspot/users.php:/var/www/html/hotspot/users.php
       - ./hotspot/hotspotactive.php:/var/www/html/hotspot/hotspotactive.php
       - ./hotspot/hosts.php:/var/www/html/hotspot/hosts.php
