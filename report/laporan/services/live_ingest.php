@@ -58,6 +58,7 @@ if (!empty($allowed)) {
 }
 
 $logFile = $logDir . '/live_ingest.log';
+$today_server = date('Y-m-d');
 $logWrite = function (string $line) use ($logFile) {
     $ok = @file_put_contents($logFile, $line, FILE_APPEND);
     if ($ok === false) {
@@ -221,6 +222,11 @@ try {
     } elseif (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $raw_date)) {
         $parts = explode('/', $raw_date);
         $sale_date = $parts[2] . '-' . $parts[0] . '-' . $parts[1];
+    }
+
+    if ($sale_date !== '' && $sale_date > $today_server) {
+        $logWrite(date('c') . " | future date normalized | raw_date={$raw_date} | normalized={$today_server} | " . $raw . "\n");
+        $sale_date = $today_server;
     }
 
     $sale_time = $raw_time ?: '';

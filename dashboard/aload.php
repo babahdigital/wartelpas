@@ -79,6 +79,8 @@ if (!$session_valid) {
 
 session_write_close(); 
 
+$today_server_dashboard = date('Y-m-d');
+
 $API = new RouterosAPI();
 $API->debug = false;
 
@@ -363,6 +365,9 @@ if ($load == "live_data") {
                 if ($sale_date === '' || strpos($sale_date, $monthKey) !== 0) {
                     continue;
                 }
+                if ($sale_date > $today_server_dashboard) {
+                    continue;
+                }
 
                 $username = trim((string)($r['username'] ?? ''));
                 if ($username !== '') {
@@ -547,6 +552,7 @@ if ($load == "live_data") {
                     foreach ($rows as $r) {
                         $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
                         if ($sale_date !== $today) continue;
+                        if ($sale_date > $today_server_dashboard) continue;
 
                         $username = trim((string)($r['username'] ?? ''));
                         if ($username === '') continue;
@@ -831,6 +837,7 @@ if ($load == "hotspot") {
             $sale_date = norm_date_from_raw_report($row['raw_date'] ?? '');
         }
         if ($sale_date === '') continue;
+        if ($sale_date > $today_server_dashboard) continue;
 
         $tstamp = strtotime($sale_date);
         if (!$tstamp) continue;

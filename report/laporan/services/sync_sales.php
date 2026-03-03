@@ -233,6 +233,7 @@ try {
 
 // 5. EKSEKUSI
 $API = new RouterosAPI();
+$today_server = date('Y-m-d');
 
 if ($API->connect($use_ip, $use_user, $use_pass)) {
     
@@ -267,6 +268,7 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
     $skip_blok = 0;
     $skip_duplicate = 0;
     $skip_vip = 0;
+    $skip_future = 0;
     $sample_names = [];
     $stmt = $db->prepare("INSERT OR IGNORE INTO sales_history (
         raw_date, raw_time, sale_date, sale_time, sale_datetime,
@@ -338,6 +340,10 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
             if ($sale_date === '' && preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $raw_date)) {
                 $parts = explode('/', $raw_date);
                 $sale_date = $parts[2] . '-' . $parts[0] . '-' . $parts[1];
+            }
+            if ($sale_date !== '' && $sale_date > $today_server) {
+                $skip_future++;
+                $sale_date = $today_server;
             }
             $sale_time = $raw_time ?: '';
             $sale_datetime = ($sale_date && $sale_time) ? ($sale_date . ' ' . $sale_time) : '';
@@ -488,9 +494,12 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
         if ($skip_duplicate > 0) {
             log_audit_warning($db, $log_date, 'sync_sales', 'Duplikat di-skip: ' . $skip_duplicate . ' item.');
         }
+        if ($skip_future > 0) {
+            log_audit_warning($db, $log_date, 'sync_sales', 'Tanggal transaksi lebih dari tanggal server dinormalkan: ' . $skip_future . ' item.');
+        }
     }
 
-    log_sync_sales("done count={$count} invalid={$skip_invalid_format} blok_skip={$skip_blok} dup={$skip_duplicate}");
+    log_sync_sales("done count={$count} invalid={$skip_invalid_format} blok_skip={$skip_blok} dup={$skip_duplicate} future_norm={$skip_future}");
 
     try {
         if (table_exists($db, 'settlement_log')) {
