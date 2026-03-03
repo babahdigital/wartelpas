@@ -502,22 +502,43 @@ if (is_file($app_cloud_log_file) && is_readable($app_cloud_log_file)) {
 }
 
 $router_list = [];
-if (isset($data) && is_array($data)) {
-  foreach ($data as $key => $row) {
-    if ($key == "mikhmon" || $key == "") {
+try {
+  $session_rows = app_db_get_sessions();
+  foreach ($session_rows as $row) {
+    $session_id = trim((string)($row['id'] ?? ''));
+    if ($session_id === '') {
       continue;
     }
-    $ip_value = '';
-    if (isset($row[1]) && strpos($row[1], '!') !== false) {
-      $ip_value = explode('!', $row[1])[1];
+    $ip_value = trim((string)($row['iphost'] ?? ''));
+    $hotspot_label = trim((string)($row['hotspotname'] ?? ''));
+    if ($hotspot_label === '') {
+      $hotspot_label = $session_id;
     }
-    $hotspot_label = isset($row[4]) ? explode('%', $row[4])[1] : $key;
     $router_list[] = [
-      'session' => $key,
+      'session' => $session_id,
       'label' => $hotspot_label,
       'ip' => $ip_value,
       'active' => $ip_value !== ''
     ];
+  }
+} catch (Exception $e) {
+  if (isset($data) && is_array($data)) {
+    foreach ($data as $key => $row) {
+      if ($key == "mikhmon" || $key == "") {
+        continue;
+      }
+      $ip_value = '';
+      if (isset($row[1]) && strpos($row[1], '!') !== false) {
+        $ip_value = explode('!', $row[1])[1];
+      }
+      $hotspot_label = isset($row[4]) ? explode('%', $row[4])[1] : $key;
+      $router_list[] = [
+        'session' => $key,
+        'label' => $hotspot_label,
+        'ip' => $ip_value,
+        'active' => $ip_value !== ''
+      ];
+    }
   }
 }
 $active_count = 0;
