@@ -52,30 +52,7 @@ if (!empty($session) && strpos($session, ':') !== false) {
   $session = explode(':', $session)[0];
 }
 
-// VIP guard: block immediately when IP not whitelisted
-$publicAccess = false;
-$envFile = __DIR__ . '/include/env.php';
-if (is_file($envFile)) {
-  $env = [];
-  require $envFile;
-  $publicAccess = (bool)($env['security']['public_access'] ?? false);
-}
-if (!$publicAccess) {
-  $vipEnv = getenv('TAMU_VIP');
-  if ($vipEnv === false || $vipEnv === '') {
-    $vipEnv = $_SERVER['TAMU_VIP'] ?? '';
-  }
-  $vipAccessEnv = getenv('TAMU_VIP_ACCESS');
-  if ($vipAccessEnv === false || $vipAccessEnv === '') {
-    $vipAccessEnv = $_SERVER['TAMU_VIP_ACCESS'] ?? '';
-  }
-  if (($vipEnv === '' || $vipEnv === false) && ($vipAccessEnv === '' || $vipAccessEnv === false)) {
-    http_response_code(403);
-    $_GET['code'] = 403;
-    include __DIR__ . '/error.php';
-    exit;
-  }
-}
+
 
 // load config
 include('./include/config.php'); 

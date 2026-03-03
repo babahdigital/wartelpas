@@ -7,27 +7,6 @@ requireLogin('../admin.php?id=login');
 require_once __DIR__ . '/../include/db.php';
 app_db_import_legacy_if_needed();
 
-$vip_popup_html = '';
-$vip_popup_autoshow = false;
-if (isSuperAdmin()) {
-    if (!empty($_SESSION['vip_whitelist_autoshow'])) {
-        $vip_popup_autoshow = true;
-        unset($_SESSION['vip_whitelist_autoshow']);
-    }
-    $vip_whitelist_no_render = true;
-    $vip_whitelist_action = './admin.php?id=' . htmlspecialchars($id ?: 'sessions');
-    ob_start();
-    include __DIR__ . '/../tools/htaccess_vip.php';
-    if (function_exists('vip_whitelist_render_form')) {
-        $vip_render_ips = $render_ips ?? ($ips ?? []);
-        vip_whitelist_render_form($status ?? '', $error ?? '', $vip_render_ips, $ip_names ?? [], $htaccessPath ?? '', $vip_whitelist_action);
-        if (!empty($status) || !empty($error) || (!empty($_POST['vip_whitelist']))) {
-            $vip_popup_autoshow = true;
-        }
-    }
-    $vip_popup_html = ob_get_clean();
-}
-
 $active_tab = 'sessions';
 if ($id === 'settings') {
     $active_tab = 'settings';
@@ -89,11 +68,6 @@ $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-
                 <a class="btn-action btn-outline" style="font-size: 11px; padding: 6px 10px;" data-no-ajax="1" href="<?= $active_session !== '' ? './?session=' . htmlspecialchars($active_session) : './'; ?>">
                     <i class="fa fa-home"></i> Halaman Utama
                 </a>
-                <?php if (isSuperAdmin()): ?>
-                    <button type="button" class="btn-action btn-outline" style="font-size: 11px; padding: 6px 10px;" onclick="openVipWhitelistPopup()">
-                        <i class="fa fa-shield"></i> Whitelist IP
-                    </button>
-                <?php endif; ?>
             </div>
 
             <a href="./admin.php?id=logout" title="Keluar" style="color: var(--danger); font-size: 16px; margin-left: 8px;">
@@ -157,69 +131,4 @@ $session_label = $active_session !== '' ? htmlspecialchars($active_session) : '-
     </div>
 </div>
 
-<?php if (isSuperAdmin()): ?>
-<script>
-function openVipWhitelistPopup(){
-    if (!window.MikhmonPopup) return;
-    var html = <?= json_encode($vip_popup_html, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
-    window.MikhmonPopup.open({
-        title: 'Whitelist IP',
-        iconClass: 'fa fa-shield',
-        statusIcon: 'fa fa-shield',
-        statusColor: '#3b82f6',
-        cardClass: 'is-large',
-        messageHtml: html,
-        buttons: [
-            { label: 'Tutup', className: 'm-btn m-btn-cancel' }
-        ]
-    });
-    setTimeout(bindVipWhitelistPopupHandlers, 50);
-}
 
-function bindVipWhitelistPopupHandlers(){
-    var backdrop = document.querySelector('.m-popup-backdrop.show');
-    if (!backdrop) return;
-    var form = backdrop.querySelector('#vip-whitelist-form');
-    if (!form) return;
-    var nameInput = backdrop.querySelector('#vip-add-name');
-    var ipInput = backdrop.querySelector('#vip-add-ip');
-    var removeInput = backdrop.querySelector('#vip-remove-ip');
-    var editInput = backdrop.querySelector('#vip-edit-old');
-    var edits = backdrop.querySelectorAll('.vip-edit');
-    var removes = backdrop.querySelectorAll('.vip-remove');
-
-    edits.forEach(function(btn){
-        btn.addEventListener('click', function(){
-            var ip = this.getAttribute('data-ip') || '';
-            var name = this.getAttribute('data-name') || '';
-            if (nameInput) nameInput.value = name;
-            if (ipInput) ipInput.value = ip;
-            if (editInput) editInput.value = ip;
-            if (removeInput) removeInput.value = '';
-            if (nameInput) nameInput.required = true;
-            if (ipInput) ipInput.required = true;
-            if (nameInput) nameInput.focus();
-        });
-    });
-
-    removes.forEach(function(btn){
-        btn.addEventListener('click', function(){
-            var ip = this.getAttribute('data-ip') || '';
-            if (!ip) return;
-            if (!confirm('Hapus IP ' + ip + '?')) return;
-            if (removeInput) removeInput.value = ip;
-            if (editInput) editInput.value = '';
-            if (nameInput) nameInput.value = '';
-            if (ipInput) ipInput.value = '';
-            if (nameInput) nameInput.required = false;
-            if (ipInput) ipInput.required = false;
-            form.noValidate = true;
-            form.submit();
-        });
-    });
-}
-<?php if ($vip_popup_autoshow): ?>
-setTimeout(openVipWhitelistPopup, 150);
-<?php endif; ?>
-</script>
-<?php endif; ?>
