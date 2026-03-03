@@ -19,6 +19,13 @@ $session = isset($_GET['session']) ? $_GET['session'] : '';
 $load    = isset($_GET['load']) ? $_GET['load'] : '';
 $sess_m  = isset($_GET['m']) ? $_GET['m'] : '';
 
+if ($session !== '' && strpos($session, '~') !== false) {
+    $session = explode('~', $session)[0];
+}
+if ($session !== '' && strpos($session, ':') !== false) {
+    $session = explode(':', $session)[0];
+}
+
 if ($session === '' && !empty($_SERVER['HTTP_REFERER'])) {
     $refererQuery = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_QUERY);
     if (!empty($refererQuery)) {
@@ -42,12 +49,33 @@ $_SESSION['filter_year'] = (int)date("Y");
 
 // --- INCLUDE LIBRARY ---
 if (file_exists($root . '/include/config.php')) include($root . '/include/config.php');
-if (file_exists($root . '/include/readcfg.php')) include($root . '/include/readcfg.php');
+
+$session_valid = ($session !== '' && isset($data[$session]) && is_array($data[$session]));
+if ($session_valid && file_exists($root . '/include/readcfg.php')) include($root . '/include/readcfg.php');
 if (file_exists($root . '/include/env.php')) include($root . '/include/env.php');
 if (file_exists($root . '/include/auto_rusak.php')) include_once($root . '/include/auto_rusak.php');
 if (file_exists($root . '/lib/routeros_api.class.php')) include_once($root . '/lib/routeros_api.class.php');
 if (file_exists($root . '/lib/formatbytesbites.php')) include_once($root . '/lib/formatbytesbites.php');
 if (file_exists($root . '/report/laporan/helpers.php')) include_once($root . '/report/laporan/helpers.php');
+
+if (!$session_valid) {
+    if ($load === "live_data") {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'active' => 0,
+            'sold' => 0,
+            'income' => '0',
+            'gross_income' => '0',
+            'est_income' => '0',
+            'ghost' => 0,
+            'audit_status' => 'SESSION_INVALID',
+            'audit_val' => '0'
+        ]);
+        exit;
+    }
+    echo '<div class="text-secondary" style="padding:10px;">Session tidak valid. Silakan muat ulang dashboard.</div>';
+    exit;
+}
 
 session_write_close(); 
 

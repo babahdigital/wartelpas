@@ -20,10 +20,21 @@
 error_reporting(0);
 ob_start("ob_gzhandler");
 
-$session = $_GET['session'];
+$session = $_GET['session'] ?? '';
+if ($session !== '' && strpos($session, '~') !== false) {
+	$session = explode('~', $session)[0];
+}
+if ($session !== '' && strpos($session, ':') !== false) {
+	$session = explode(':', $session)[0];
+}
 require('../lib/routeros_api.class.php');
 include('../lib/formatbytesbites.php');
 include('../include/config.php');
+
+if ($session === '' || !isset($data[$session]) || !is_array($data[$session])) {
+	echo "<h3 style='font-family:Arial,sans-serif;color:#e74c3c;text-align:center;margin-top:30px;'>Session tidak valid.</h3>";
+	exit;
+}
 
 // theme  
 include('../include/theme.php');

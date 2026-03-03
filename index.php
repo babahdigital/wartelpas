@@ -48,6 +48,9 @@ $session = isset($_GET['session']) ? $_GET['session'] : "";
 if (!empty($session) && strpos($session, '~') !== false) {
   $session = explode('~', $session)[0];
 }
+if (!empty($session) && strpos($session, ':') !== false) {
+  $session = explode(':', $session)[0];
+}
 
 // VIP guard: block immediately when IP not whitelisted
 $publicAccess = false;
@@ -77,6 +80,37 @@ if (!$publicAccess) {
 // load config
 include('./include/config.php'); 
 
+$available_sessions = [];
+if (isset($data) && is_array($data)) {
+  foreach ($data as $key => $value) {
+    if ($key === 'mikhmon' || $key === '') {
+      continue;
+    }
+    if (is_array($value)) {
+      $available_sessions[] = $key;
+    }
+  }
+}
+
+if (!empty($session) && (!isset($data[$session]) || !is_array($data[$session]))) {
+  if (!empty($available_sessions)) {
+    $query = [];
+    if (!empty($_SERVER['QUERY_STRING'])) {
+      parse_str($_SERVER['QUERY_STRING'], $query);
+      unset($query['session']);
+    }
+    $qs = http_build_query($query);
+    $redirect = "./?session=" . $available_sessions[0];
+    if (!empty($qs)) {
+      $redirect .= "&" . $qs;
+    }
+    header("Location:" . $redirect);
+    exit();
+  }
+  echo "<script>window.location='./admin.php?id=sessions'</script>";
+  exit();
+}
+
 require_once __DIR__ . '/include/acl.php';
 ensureRole();
 
@@ -90,13 +124,7 @@ if (!isset($_SESSION["mikhmon"])) {
   exit();
 
 } elseif (empty($session)) {
-  $target_session = "";
-  foreach ($data as $key => $value) {
-    if ($key !== 'mikhmon') {
-      $target_session = $key;
-      break; 
-    }
-  }
+  $target_session = !empty($available_sessions) ? $available_sessions[0] : "";
 
   if (!empty($target_session)) {
     $query = [];
