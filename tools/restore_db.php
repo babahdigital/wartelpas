@@ -67,7 +67,7 @@ if (!$is_valid_key && !$allow_session) {
 
 $allowedIpList = isset($env['backup']['allowed_ips']) && is_array($env['backup']['allowed_ips'])
     ? $env['backup']['allowed_ips']
-    : ['127.0.0.1', '::1', '10.19.83.1', '172.19.0.1'];
+    : ['127.0.0.1', '::1', '10.19.83.2', '172.19.0.1'];
 if (!$allow_session && !empty($_SERVER['REMOTE_ADDR']) && !empty($allowedIpList)) {
     $clientIp = (string)$_SERVER['REMOTE_ADDR'];
     if (!in_array($clientIp, $allowedIpList, true)) {
