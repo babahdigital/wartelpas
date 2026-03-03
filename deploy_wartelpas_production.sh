@@ -233,11 +233,13 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "[DRY-RUN] require_file $REMOTE_APP/include/env.php"
   echo "[DRY-RUN] require_file $REMOTE_APP/include/config.php"
   echo "[DRY-RUN] require_file $REMOTE_APP/include/config_legacy.php"
+  echo "[DRY-RUN] require_file $REMOTE_APP/include/quickbt.php"
 else
   require_file "$REMOTE_APP/custom.ini"
   require_file "$REMOTE_APP/include/env.php"
   require_file "$REMOTE_APP/include/config.php"
   require_file "$REMOTE_APP/include/config_legacy.php"
+  require_file "$REMOTE_APP/include/quickbt.php"
 fi
 
 cd "$REMOTE_APP"
