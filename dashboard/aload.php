@@ -599,7 +599,7 @@ if ($load == "live_data") {
             $estIncome = $sumIncomeMonth + ($avgDaily * ($daysInMonth - $currentDay));
 
             $dataResponse['sold'] = $sumSold;
-            $dataResponse['income'] = number_format($sumIncome, 0, ",", ".");
+            $dataResponse['income'] = number_format($sumIncomeMonth, 0, ",", ".");
             $dataResponse['gross_income'] = number_format($sumGrossToday, 0, ",", ".");
             $dataResponse['est_income'] = number_format($estIncome, 0, ",", ".");
 
