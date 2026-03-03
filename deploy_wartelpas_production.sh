@@ -21,6 +21,8 @@ NO_CACHE=1
 RECREATE=1
 
 RUNTIME_FILES=(
+  ".htaccess"
+  "htaccess-templated"
   "custom.ini"
   "include/env.php"
   "include/config.php"
@@ -149,6 +151,8 @@ copy_if_missing() {
 }
 
 RUNTIME_FILES=(
+  ".htaccess"
+  "htaccess-templated"
   "custom.ini"
   "include/env.php"
   "include/config.php"
