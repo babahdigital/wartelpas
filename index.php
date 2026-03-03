@@ -216,11 +216,15 @@ if (!isset($_SESSION["mikhmon"])) {
   include_once('./include/menu.php');
 
   $disable_sci = '<script>
-  document.getElementById("comment").onkeypress = function(e) {
-    var chr = String.fromCharCode(e.which);
-    if (" _!@#$%^&*()+=;|?,.~".indexOf(chr) >= 0)
-        return false;
-};
+  (function() {
+    var commentEl = document.getElementById("comment");
+    if (!commentEl) return;
+    commentEl.onkeypress = function(e) {
+      var chr = String.fromCharCode(e.which);
+      if (" _!@#$%^&*()+=;|?,.~".indexOf(chr) >= 0)
+          return false;
+    };
+  })();
 </script>';
 
 // logout
