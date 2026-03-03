@@ -10,7 +10,6 @@ custom.ini
 
 # Sensitive config
 include/env.php
-include/config.php
 include/quickbt.php
 include/config_legacy.php
 

@@ -28,8 +28,6 @@ RUNTIME_FILES=(
   "htaccess-templated"
   "custom.ini"
   "include/env.php"
-  "include/config.php"
-  "include/config_legacy.php"
 )
 
 print_step() {
@@ -199,8 +197,6 @@ RUNTIME_FILES=(
   "htaccess-templated"
   "custom.ini"
   "include/env.php"
-  "include/config.php"
-  "include/config_legacy.php"
 )
 
 if [[ "$STRICT" -eq 1 ]]; then
@@ -249,13 +245,9 @@ print_step "Validasi file runtime produksi (tanpa fallback .example)"
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "[DRY-RUN] require_file $REMOTE_APP/custom.ini"
   echo "[DRY-RUN] require_file $REMOTE_APP/include/env.php"
-  echo "[DRY-RUN] require_file $REMOTE_APP/include/config.php"
-  echo "[DRY-RUN] require_file $REMOTE_APP/include/config_legacy.php"
 else
   require_file "$REMOTE_APP/custom.ini"
   require_file "$REMOTE_APP/include/env.php"
-  require_file "$REMOTE_APP/include/config.php"
-  require_file "$REMOTE_APP/include/config_legacy.php"
 fi
 
 cd "$REMOTE_APP"

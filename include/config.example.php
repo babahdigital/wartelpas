@@ -1,8 +1,9 @@
 <?php
-// Dummy config template.
-// Runtime config is loaded from SQLite (app DB) and should not be committed.
-// Copy to include/config.php only for legacy/manual setups.
+// PROTEKSI FILE CONFIG
+if (substr($_SERVER["REQUEST_URI"], -10) == "config.php") {
+	header("Location:./");
+	exit();
+};
 
-$data = [];
-// Example admin record (hashed password recommended)
-// $data['mikhmon'] = array('1' => 'mikhmon<|<admin', 'mikhmon>|>admin123');
+require_once __DIR__ . '/db.php';
+$data = app_db_load_config();
