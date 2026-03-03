@@ -65,6 +65,11 @@ Options -Indexes
 	<FilesMatch "\.(css|js|png|jpe?g|gif|svg|webp|woff2?|ico)$">
 		Header set Cache-Control "public, max-age=2592000, immutable"
 	</FilesMatch>
+	<FilesMatch "\.php$">
+		Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+		Header set Pragma "no-cache"
+		Header set Expires "0"
+	</FilesMatch>
 </IfModule>
 
 # 2. HALAMAN ERROR

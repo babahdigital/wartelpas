@@ -300,6 +300,20 @@ if (!isset($_SESSION["mikhmon"])) {
   elseif ($hotspotuser == "generate") {
     include_once('./hotspot/generateuser.php');
     echo $disable_sci;
+    echo '<script>(function(){
+      var sess = ' . json_encode($session) . ';
+      window.GetVP = function(){
+        var profileHidden = document.getElementById("profileHidden");
+        var profileSelect = document.getElementById("uprof");
+        var prof = (profileHidden && profileHidden.value) ? profileHidden.value : ((profileSelect && profileSelect.value) ? profileSelect.value : "");
+        if (!prof) return;
+        $("#GetValidPrice").load("./hotspot/getvalidprice.php?name=" + prof + "&session=" + sess + " #getdata", function(response, status){
+          if (status === "error") {
+            console.log("Error loading price info");
+          }
+        });
+      };
+    })();</script>';
   }
 // hotspot users filter by name
   elseif (substr($hotspotuser, 0, 1) == "*") {
