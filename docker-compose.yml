@@ -75,3 +75,10 @@ services:
       # 6. INCLUDE LAINNYA
       # ==========================================
       - ./system/scheduler.php:/var/www/html/system/scheduler.php
+    networks:
+      - default
+      - proxy-network
+
+networks:
+  proxy-network:
+    external: true
