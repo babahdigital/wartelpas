@@ -167,6 +167,14 @@ copy_if_missing() {
   echo "Warning: tidak menemukan '$dst' dan contoh '$src'"
 }
 
+require_file() {
+  local path="$1"
+  if [[ ! -f "$path" ]]; then
+    echo "Error: file wajib produksi tidak ditemukan: $path"
+    exit 1
+  fi
+}
+
 RUNTIME_FILES=(
   ".htaccess"
   "htaccess-templated"
@@ -219,16 +227,17 @@ if [[ "$CLEAN" -eq 1 ]]; then
   done
 fi
 
+print_step "Validasi file runtime produksi (tanpa fallback .example)"
 if [[ "$DRY_RUN" -eq 1 ]]; then
-  echo "[DRY-RUN] copy_if_missing $REMOTE_APP/custom.ini.example -> $REMOTE_APP/custom.ini"
-  echo "[DRY-RUN] copy_if_missing $REMOTE_APP/include/env.example.php -> $REMOTE_APP/include/env.php"
-  echo "[DRY-RUN] copy_if_missing $REMOTE_APP/include/config.example.php -> $REMOTE_APP/include/config.php"
-  echo "[DRY-RUN] copy_if_missing $REMOTE_APP/include/config_legacy.example.php -> $REMOTE_APP/include/config_legacy.php"
+  echo "[DRY-RUN] require_file $REMOTE_APP/custom.ini"
+  echo "[DRY-RUN] require_file $REMOTE_APP/include/env.php"
+  echo "[DRY-RUN] require_file $REMOTE_APP/include/config.php"
+  echo "[DRY-RUN] require_file $REMOTE_APP/include/config_legacy.php"
 else
-  copy_if_missing "$REMOTE_APP/custom.ini.example" "$REMOTE_APP/custom.ini"
-  copy_if_missing "$REMOTE_APP/include/env.example.php" "$REMOTE_APP/include/env.php"
-  copy_if_missing "$REMOTE_APP/include/config.example.php" "$REMOTE_APP/include/config.php"
-  copy_if_missing "$REMOTE_APP/include/config_legacy.example.php" "$REMOTE_APP/include/config_legacy.php"
+  require_file "$REMOTE_APP/custom.ini"
+  require_file "$REMOTE_APP/include/env.php"
+  require_file "$REMOTE_APP/include/config.php"
+  require_file "$REMOTE_APP/include/config_legacy.php"
 fi
 
 cd "$REMOTE_APP"
