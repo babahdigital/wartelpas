@@ -246,6 +246,15 @@ else
   require_file "$REMOTE_APP/include/env.php"
 fi
 
+print_step "Pastikan folder runtime bind-mount ada"
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  echo "[DRY-RUN] mkdir -p $REMOTE_APP/session"
+  echo "[DRY-RUN] chmod 777 $REMOTE_APP/session"
+else
+  mkdir -p "$REMOTE_APP/session"
+  chmod 777 "$REMOTE_APP/session" || true
+fi
+
 cd "$REMOTE_APP"
 
 if [[ "$BUILD" -eq 1 ]]; then
