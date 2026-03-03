@@ -364,7 +364,7 @@ for ($i = 0; $i < $TotalReg; $i++) {
 // get valid $ price
 function GetVP(){
   var prof = document.getElementById('uprof').value;
-  var url = "./process/getvalidprice.php?name=";
+	var url = "./hotspot/getvalidprice.php?name=";
   var session = "&session=<?= $session; ?>"
   var getvalidprice = url+prof+session
   $("#GetValidPrice").load(getvalidprice);

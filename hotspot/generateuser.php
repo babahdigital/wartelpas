@@ -751,7 +751,7 @@ var defaultProfile = <?= json_encode($profile_default) ?>;
 function GetVP(){
     var prof = document.getElementById('profileHidden').value || document.getElementById('uprof').value;
   // Reload div via AJAX
-  $("#GetValidPrice").load("./process/getvalidprice.php?name="+prof+"&session=<?= $session; ?> #getdata", function(response, status, xhr) {
+    $("#GetValidPrice").load("./hotspot/getvalidprice.php?name="+prof+"&session=<?= $session; ?> #getdata", function(response, status, xhr) {
       if (status == "error") {
           console.log("Error loading price info");
       }
