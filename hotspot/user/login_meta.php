@@ -17,7 +17,13 @@ if (file_exists($envFile)) {
 }
 
 $system_cfg = $env['system'] ?? [];
-$meta_key = trim((string)($system_cfg['api_key'] ?? $system_cfg['meta_key'] ?? ''));
+$security_cfg = $env['security'] ?? [];
+$meta_key = trim((string)(
+    $security_cfg['login_meta']['token']
+    ?? $system_cfg['meta_key']
+    ?? $system_cfg['api_key']
+    ?? ''
+));
 $db_rel = $system_cfg['db_file'] ?? 'db_data/babahdigital_main.db';
 if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
     $dbFile = $db_rel;

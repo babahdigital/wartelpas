@@ -62,7 +62,13 @@ if (!$has_norm) {
     }
 }
 $system_cfg = $env['system'] ?? [];
-$retur_key = trim((string)($system_cfg['api_key'] ?? $system_cfg['retur_key'] ?? ''));
+$security_cfg = $env['security'] ?? [];
+$retur_key = trim((string)(
+    $security_cfg['retur_request']['token']
+    ?? $system_cfg['retur_key']
+    ?? $system_cfg['api_key']
+    ?? ''
+));
 $retur_cfg = $env['retur_request'] ?? [];
 $retur_enabled = !isset($retur_cfg['enabled']) || $retur_cfg['enabled'] === true || $retur_cfg['enabled'] === 1 || $retur_cfg['enabled'] === '1';
 $retur_message = trim((string)($retur_cfg['message'] ?? ''));

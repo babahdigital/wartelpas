@@ -25,6 +25,19 @@ if (file_exists($envFile)) {
     require $envFile;
 }
 $system_cfg = $env['system'] ?? [];
+$security_cfg = $env['security'] ?? [];
+$backfill_key = trim((string)(
+    $security_cfg['tools']['token']
+    ?? $system_cfg['backfill_key']
+    ?? $system_cfg['api_key']
+    ?? ''
+));
+$req_key = trim((string)($_GET['key'] ?? ''));
+if ($backfill_key !== '' && $req_key !== $backfill_key) {
+    http_response_code(403);
+    echo json_encode(['ok' => false, 'message' => 'Invalid key']);
+    exit;
+}
 $db_rel = $system_cfg['db_file'] ?? 'db_data/babahdigital_main.db';
 if (preg_match('/^[A-Za-z]:\\\\|^\//', $db_rel)) {
     $dbFile = $db_rel;
