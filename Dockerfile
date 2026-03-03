@@ -27,6 +27,9 @@ RUN chmod +x /usr/local/bin/entrypoint.sh \
     /var/www/html/db_data \
     /var/www/html/logs \
     /var/www/html/img \
+    /var/www/html/report \
+    /var/www/html/voucher \
+    && touch /var/www/html/.htaccess \
     && chown -R www-data:www-data /var/www/html
 
 # 4. Set Entrypoint
