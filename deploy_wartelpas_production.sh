@@ -13,6 +13,8 @@ REMOTE_BACKUP="$REMOTE_BASE/.wartelpas-runtime-backup"
 PROXY_NETWORK="proxy-network"
 APP_CONTAINER_NAME="wartelpas"
 APP_SERVICE_NAME="mikhmon"
+PUBLIC_BASE_URL="https://wartelpas.babahdigital.net"
+ORIGIN_BASE_URL="http://127.0.0.1:8081"
 
 STRICT=0
 CLEAN=1
@@ -133,6 +135,8 @@ ssh -i "$SSH_KEY" -p "$SSH_PORT" "$SSH_USER_HOST" \
   PROXY_NETWORK="$PROXY_NETWORK" \
   APP_CONTAINER_NAME="$APP_CONTAINER_NAME" \
   APP_SERVICE_NAME="$APP_SERVICE_NAME" \
+  PUBLIC_BASE_URL="$PUBLIC_BASE_URL" \
+  ORIGIN_BASE_URL="$ORIGIN_BASE_URL" \
   'bash -s' <<'REMOTE_SCRIPT'
 set -euo pipefail
 
@@ -155,6 +159,39 @@ require_file() {
     echo "Error: file wajib produksi tidak ditemukan: $path"
     exit 1
   fi
+}
+
+http_code() {
+  local url="$1"
+  curl -k -sS -o /dev/null -w '%{http_code}' "$url"
+}
+
+code_ok() {
+  local code="$1"
+  [[ "$code" == "200" || "$code" == "302" ]]
+}
+
+wait_http_ok() {
+  local label="$1"
+  local url="$2"
+  local max_try="${3:-20}"
+  local sleep_sec="${4:-2}"
+  local i=1
+  local code="000"
+
+  while (( i <= max_try )); do
+    code="$(http_code "$url" || echo 000)"
+    if code_ok "$code"; then
+      echo "$label OK ($code): $url"
+      return 0
+    fi
+    echo "$label wait [$i/$max_try] code=$code url=$url"
+    sleep "$sleep_sec"
+    ((i++))
+  done
+
+  echo "Error: $label gagal, code terakhir=$code url=$url"
+  return 1
 }
 
 RUNTIME_FILES=(
@@ -247,6 +284,31 @@ if [[ "$RECREATE" -eq 1 ]]; then
   else
     echo "Warning: network '$PROXY_NETWORK' tidak ditemukan"
   fi
+fi
+
+print_step "Validasi koneksi network + health endpoint"
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  echo "[DRY-RUN] docker inspect $APP_CONTAINER_NAME --format '{{json .NetworkSettings.Networks}}'"
+  echo "[DRY-RUN] wait_http_ok ORIGIN_ROOT ${ORIGIN_BASE_URL}/"
+  echo "[DRY-RUN] wait_http_ok ORIGIN_SESSION ${ORIGIN_BASE_URL}/?session=S3c7x9_LB"
+  echo "[DRY-RUN] wait_http_ok ORIGIN_ADMIN ${ORIGIN_BASE_URL}/admin.php?id=sessions"
+  echo "[DRY-RUN] wait_http_ok PUBLIC_ROOT ${PUBLIC_BASE_URL}/"
+  echo "[DRY-RUN] wait_http_ok PUBLIC_ADMIN ${PUBLIC_BASE_URL}/admin.php?id=sessions"
+else
+  network_json="$(docker inspect "$APP_CONTAINER_NAME" --format '{{json .NetworkSettings.Networks}}' 2>/dev/null || true)"
+  echo "Networks: $network_json"
+  if [[ -n "$network_json" && "$network_json" == *"\"$PROXY_NETWORK\""* ]]; then
+    echo "Attach check OK: $APP_CONTAINER_NAME terhubung ke $PROXY_NETWORK"
+  else
+    echo "Error: $APP_CONTAINER_NAME belum terhubung ke $PROXY_NETWORK"
+    exit 1
+  fi
+
+  wait_http_ok "ORIGIN_ROOT" "${ORIGIN_BASE_URL}/"
+  wait_http_ok "ORIGIN_SESSION" "${ORIGIN_BASE_URL}/?session=S3c7x9_LB"
+  wait_http_ok "ORIGIN_ADMIN" "${ORIGIN_BASE_URL}/admin.php?id=sessions"
+  wait_http_ok "PUBLIC_ROOT" "${PUBLIC_BASE_URL}/"
+  wait_http_ok "PUBLIC_ADMIN" "${PUBLIC_BASE_URL}/admin.php?id=sessions"
 fi
 
 print_step "Status akhir"
