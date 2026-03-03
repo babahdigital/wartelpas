@@ -1,0 +1,30 @@
+services:
+  nginx-proxy:
+    image: nginx:stable-alpine
+    container_name: global-nginx-proxy
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "10"
+    volumes:
+      - ./conf.d:/etc/nginx/conf.d:ro
+      - ./logs:/var/log/nginx
+      - ./html:/usr/share/nginx/html:ro
+    networks:
+      - proxy-network
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: global-cloudflared
+    restart: always
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=eyJhIjoiZjIxYTEzNjdlNWFlNDg4ODMzNWI4ODBhMzM5NjBjMzMiLCJ0IjoiZTVkMzhlMjYtNGFmMy00NWRlLTllYzQtNzg5OGNlMTg2MzdjIiwicyI6Ill6STVaV0UwWW1FdE56QXhaQzAwT1dSaExUZzNPV1V0TnpCbU5qWmhPREEzWkRreCJ9
+    networks:
+      - proxy-network
+
+networks:
+  proxy-network:
+    external: true
