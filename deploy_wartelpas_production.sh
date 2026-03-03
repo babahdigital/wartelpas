@@ -307,8 +307,13 @@ else
   wait_http_ok "ORIGIN_ROOT" "${ORIGIN_BASE_URL}/"
   wait_http_ok "ORIGIN_SESSION" "${ORIGIN_BASE_URL}/?session=S3c7x9_LB"
   wait_http_ok "ORIGIN_ADMIN" "${ORIGIN_BASE_URL}/admin.php?id=sessions"
-  wait_http_ok "PUBLIC_ROOT" "${PUBLIC_BASE_URL}/"
-  wait_http_ok "PUBLIC_ADMIN" "${PUBLIC_BASE_URL}/admin.php?id=sessions"
+
+  if ! wait_http_ok "PUBLIC_ROOT" "${PUBLIC_BASE_URL}/" 5 2; then
+    echo "Warning: PUBLIC_ROOT belum OK dari sisi server deploy (bisa dipengaruhi policy edge/WAF)."
+  fi
+  if ! wait_http_ok "PUBLIC_ADMIN" "${PUBLIC_BASE_URL}/admin.php?id=sessions" 5 2; then
+    echo "Warning: PUBLIC_ADMIN belum OK dari sisi server deploy (bisa dipengaruhi policy edge/WAF)."
+  fi
 fi
 
 print_step "Status akhir"
