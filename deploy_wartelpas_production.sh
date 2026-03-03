@@ -28,7 +28,6 @@ RUNTIME_FILES=(
   "include/env.php"
   "include/config.php"
   "include/config_legacy.php"
-  "include/quickbt.php"
 )
 
 print_step() {
@@ -150,23 +149,6 @@ run_cmd() {
   fi
 }
 
-copy_if_missing() {
-  local src="$1"
-  local dst="$2"
-
-  if [[ -f "$dst" ]]; then
-    return 0
-  fi
-
-  if [[ -f "$src" ]]; then
-    cp -f "$src" "$dst"
-    echo "Create from example: $dst"
-    return 0
-  fi
-
-  echo "Warning: tidak menemukan '$dst' dan contoh '$src'"
-}
-
 require_file() {
   local path="$1"
   if [[ ! -f "$path" ]]; then
@@ -182,7 +164,6 @@ RUNTIME_FILES=(
   "include/env.php"
   "include/config.php"
   "include/config_legacy.php"
-  "include/quickbt.php"
 )
 
 if [[ "$STRICT" -eq 1 ]]; then
@@ -233,13 +214,11 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "[DRY-RUN] require_file $REMOTE_APP/include/env.php"
   echo "[DRY-RUN] require_file $REMOTE_APP/include/config.php"
   echo "[DRY-RUN] require_file $REMOTE_APP/include/config_legacy.php"
-  echo "[DRY-RUN] require_file $REMOTE_APP/include/quickbt.php"
 else
   require_file "$REMOTE_APP/custom.ini"
   require_file "$REMOTE_APP/include/env.php"
   require_file "$REMOTE_APP/include/config.php"
   require_file "$REMOTE_APP/include/config_legacy.php"
-  require_file "$REMOTE_APP/include/quickbt.php"
 fi
 
 cd "$REMOTE_APP"
