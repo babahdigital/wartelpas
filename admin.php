@@ -60,6 +60,9 @@ $session = $_GET['session'] ?? '';
 if (!empty($session) && strpos($session, '~') !== false) {
   $session = explode('~', $session)[0];
 }
+if (!empty($session) && strpos($session, ':') !== false) {
+  $session = explode(':', $session)[0];
+}
 $id = $_GET['id'] ?? '';
 $c = $_GET['c'] ?? '';
 $router = $_GET['router'] ?? '';
@@ -361,7 +364,6 @@ if ($id == "login" || ($basename === 'admin.php' && empty($id))) {
   include_once('./settings/admin_single.php');
 } elseif ($id == "connect"  && !empty($session)) {
   ini_set("max_execution_time",5);  
-  include_once('./include/menu.php');
   $API = new RouterosAPI();
   $API->debug = false;
   if (!empty($connect_req_id)) {
