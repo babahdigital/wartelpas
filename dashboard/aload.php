@@ -734,13 +734,76 @@ if ($load == "hotspot") {
                 $stmt->execute([':m' => $monthKey . '%', ':r1' => $raw1, ':r2' => $raw2, ':r3' => $raw3]);
                 $rowsMerged = array_merge($rowsMerged, $stmt->fetchAll(PDO::FETCH_ASSOC) ?: []);
             }
+
+            if (count($rowsMerged) === 0 && table_exists($db, 'login_history')) {
+                $stmtLogin = $db->prepare("SELECT
+                    username,
+                    COALESCE(NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(first_login_real,1,10),''), NULLIF(substr(login_time_real,1,10),''), login_date) AS sale_date,
+                    CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price,
+                    validity,
+                    raw_comment,
+                    COALESCE(NULLIF(last_status,''), 'ready') AS last_status
+                    FROM login_history
+                    WHERE username != ''
+                      AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'
+                      AND COALESCE(NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(first_login_real,1,10),''), NULLIF(substr(login_time_real,1,10),''), login_date) LIKE :m");
+                $stmtLogin->execute([':m' => $monthKey . '%']);
+
+                $seenUserDay = [];
+                foreach ($stmtLogin->fetchAll(PDO::FETCH_ASSOC) as $lr) {
+                    $saleDate = trim((string)($lr['sale_date'] ?? ''));
+                    $username = trim((string)($lr['username'] ?? ''));
+                    if ($saleDate === '' || $username === '') {
+                        continue;
+                    }
+
+                    $statusLive = strtolower(trim((string)($lr['last_status'] ?? 'ready')));
+                    if ($statusLive === 'ready') {
+                        continue;
+                    }
+
+                    $commentRaw = (string)($lr['raw_comment'] ?? '');
+                    $commentLow = strtolower($commentRaw);
+                    if (strpos($commentLow, 'vip') !== false || strpos($commentLow, 'pengelola') !== false) {
+                        continue;
+                    }
+
+                    $userDayKey = $username . '|' . $saleDate;
+                    if (isset($seenUserDay[$userDayKey])) {
+                        continue;
+                    }
+                    $seenUserDay[$userDayKey] = true;
+
+                    $price = (int)($lr['price'] ?? 0);
+                    if ($price <= 0 && function_exists('resolve_price_from_profile')) {
+                        $profileHint = (string)($lr['validity'] ?? '');
+                        $profileKey = '';
+                        if (function_exists('detect_profile_kind_from_label')) {
+                            $profileKey = (string)detect_profile_kind_from_label($profileHint . ' ' . $commentRaw);
+                        }
+                        if ($profileKey === '' && $profileHint !== '') {
+                            $profileKey = $profileHint;
+                        }
+                        $price = (int)resolve_price_from_profile($profileKey);
+                    }
+
+                    $rowsMerged[] = [
+                        'sale_date' => $saleDate,
+                        'raw_date' => '',
+                        'price' => $price,
+                        'price_snapshot' => $price,
+                        'sprice_snapshot' => $price,
+                        'qty' => 1,
+                        'full_raw_data' => 'login_fallback|' . $username . '|' . $saleDate,
+                    ];
+                }
+            }
         } catch (Exception $e) { }
     }
 
     $daysInMonth = (int)date("t", mktime(0, 0, 0, $filterMonth, 1, $filterYear));
     $startDay = 1;
     if ($filterMonth === $currentMonth && $filterYear === $currentYear) {
-        $startDay = ($currentDay >= 21) ? 21 : 1;
         $endDay = $currentDay;
     } else {
         $endDay = $daysInMonth;
@@ -789,11 +852,7 @@ if ($load == "hotspot") {
     $categories = [];
     $dataIncome = [];
     $dataQty = [];
-    $skipDay3 = ($filterMonth === $currentMonth && $filterYear === $currentYear);
     for ($d = $startDay; $d <= $endDay; $d++) {
-        if ($skipDay3 && $d === 3) {
-            continue;
-        }
         $categories[] = (string)$d;
         $dataIncome[] = $dailyIncome[$d] ?? 0;
         $dataQty[] = $dailyQty[$d] ?? 0;
