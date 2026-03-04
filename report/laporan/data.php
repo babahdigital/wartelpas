@@ -379,7 +379,7 @@ if (file_exists($dbFile)) {
                 $stmtLh->execute([':d' => $filter_date]);
                 $lhRows = $stmtLh->fetchAll(PDO::FETCH_ASSOC);
                 if (!empty($lhRows)) {
-                    $rows = array_merge($lhRows, $rows);
+                    $rows = array_merge($rows, $lhRows);
                 }
             } catch (Exception $e) {}
         } catch (Exception $e) {
@@ -1063,12 +1063,6 @@ foreach ($rows as $r) {
         elseif (strpos($cmt_low, 'retur') !== false) $status = 'retur';
         elseif (strpos($cmt_low, 'rusak') !== false || $lh_status === 'rusak') $status = 'rusak';
         else $status = 'normal';
-    }
-
-    $blok_row = (string)($r['blok_name'] ?? '');
-    $has_block_hint = ($blok_row !== '' || preg_match('/\bblok\s*[-_]?\s*[A-Za-z0-9]+/i', $raw_comment));
-    if (!$has_block_hint && !in_array($status, ['rusak', 'retur', 'invalid'], true)) {
-        continue;
     }
 
     $gross_add = 0;

@@ -340,21 +340,37 @@ foreach ($rows as $r) {
         $seen_user_day[$user_day_key] = true;
     }
 
-    $status = strtolower((string)($r['status'] ?? ''));
-    $lh_status = strtolower((string)($r['last_status'] ?? ''));
-    $comment = strtolower((string)($r['comment'] ?? ''));
-    if ($status === '' || $status === 'normal') {
-        if ((int)($r['is_invalid'] ?? 0) === 1) $status = 'invalid';
-        elseif ((int)($r['is_retur'] ?? 0) === 1) $status = 'retur';
-        elseif ((int)($r['is_rusak'] ?? 0) === 1) $status = 'rusak';
-        elseif (strpos($comment, 'invalid') !== false) $status = 'invalid';
-        elseif (strpos($comment, 'retur') !== false) $status = 'retur';
-        elseif (strpos($comment, 'rusak') !== false || $lh_status === 'rusak') $status = 'rusak';
-        else $status = 'normal';
+    $comment_raw = (string)($r['comment'] ?? '');
+    $comment = strtolower($comment_raw);
+    $status = resolve_status_from_sources(
+        $r['status'] ?? '',
+        $r['is_invalid'] ?? 0,
+        $r['is_retur'] ?? 0,
+        $r['is_rusak'] ?? 0,
+        $comment_raw,
+        $r['last_status'] ?? ''
+    );
+
+    $profile = (string)($r['validity'] ?? '');
+    if ($profile === '' || $profile === '-') {
+        $profile = (string)($r['profile_snapshot'] ?? ($r['profile'] ?? '-'));
+    }
+    if ($profile === '' || $profile === '-') {
+        $profile = extract_profile_from_comment($comment_raw);
+    }
+    $guess_profile = infer_profile_from_comment($comment_raw);
+    if ($guess_profile !== '') {
+        $profile = $guess_profile;
     }
 
     $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
     if ($price <= 0) $price = (int)($r['sprice_snapshot'] ?? 0);
+    $resolved_profile_price = ($profile !== '' && $profile !== '-') ? (int)resolve_price_from_profile($profile) : 0;
+    if ($resolved_profile_price > 0) {
+        $price = $resolved_profile_price;
+    } elseif ($price <= 0) {
+        $price = 0;
+    }
     $qty = (int)($r['qty'] ?? 0);
     if ($qty <= 0) $qty = 1;
     $line_price = $price * $qty;

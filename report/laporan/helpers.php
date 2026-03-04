@@ -858,6 +858,17 @@ function fetch_rows_for_audit(PDO $db, $audit_date) {
     $hasSales = table_exists($db, 'sales_history');
     $hasLive = table_exists($db, 'live_sales');
     $hasLogin = table_exists($db, 'login_history');
+    $hasReuse = table_exists($db, 'voucher_reuse_log');
+
+    $reuseExcludeSales = $hasReuse
+        ? " AND NOT EXISTS (SELECT 1 FROM voucher_reuse_log vr WHERE vr.username = sh.username AND vr.reuse_date = sh.sale_date)"
+        : '';
+    $reuseExcludeLive = $hasReuse
+        ? " AND NOT EXISTS (SELECT 1 FROM voucher_reuse_log vr WHERE vr.username = ls.username AND vr.reuse_date = ls.sale_date)"
+        : '';
+    $reuseExcludeLogin = $hasReuse
+        ? " AND NOT EXISTS (SELECT 1 FROM voucher_reuse_log vr WHERE vr.username = login_history.username AND vr.reuse_date = :d)"
+        : '';
 
     if ($hasSales) {
         $sql = "SELECT
@@ -866,12 +877,14 @@ function fetch_rows_for_audit(PDO $db, $audit_date) {
             sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.validity,
             sh.comment, sh.blok_name, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid, sh.qty,
             sh.full_raw_data,
-            " . ($hasLogin ? "lh.last_status" : "'' AS last_status") . "
+            " . ($hasLogin ? "lh.last_status" : "'' AS last_status") . ",
+            " . ($hasLogin ? "lh.raw_comment" : "'' AS raw_comment") . "
             FROM sales_history sh
             " . ($hasLogin ? "LEFT JOIN login_history lh ON lh.username = sh.username" : "") . "
                         WHERE sh.sale_date = :d
                             AND instr(lower(COALESCE(sh.comment,'')), 'vip') = 0
-                            AND instr(lower(COALESCE(sh.comment,'')), 'pengelola') = 0";
+                            AND instr(lower(COALESCE(sh.comment,'')), 'pengelola') = 0
+                            $reuseExcludeSales";
         $stmt = $db->prepare($sql);
         $stmt->execute([':d' => $audit_date]);
         $rows = array_merge($rows, $stmt->fetchAll(PDO::FETCH_ASSOC));
@@ -884,15 +897,65 @@ function fetch_rows_for_audit(PDO $db, $audit_date) {
             ls.price, ls.price_snapshot, ls.sprice_snapshot, ls.validity,
             ls.comment, ls.blok_name, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid, ls.qty,
             ls.full_raw_data,
-            " . ($hasLogin ? "lh2.last_status" : "'' AS last_status") . "
+            " . ($hasLogin ? "lh2.last_status" : "'' AS last_status") . ",
+            " . ($hasLogin ? "lh2.raw_comment" : "'' AS raw_comment") . "
             FROM live_sales ls
             " . ($hasLogin ? "LEFT JOIN login_history lh2 ON lh2.username = ls.username" : "") . "
                         WHERE ls.sale_date = :d AND ls.sync_status = 'pending'
                             AND instr(lower(COALESCE(ls.comment,'')), 'vip') = 0
-                            AND instr(lower(COALESCE(ls.comment,'')), 'pengelola') = 0";
+                            AND instr(lower(COALESCE(ls.comment,'')), 'pengelola') = 0
+                            $reuseExcludeLive";
         $stmt = $db->prepare($sql);
         $stmt->execute([':d' => $audit_date]);
         $rows = array_merge($rows, $stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    if ($hasLogin) {
+        $stmtLh = $db->prepare("SELECT
+            '' AS raw_date,
+            '' AS raw_time,
+            COALESCE(NULLIF(substr(login_time_real,1,10),''), NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(logout_time_real,1,10),''), NULLIF(substr(updated_at,1,10),''), login_date) AS sale_date,
+            COALESCE(NULLIF(substr(login_time_real,12,8),''), NULLIF(substr(last_login_real,12,8),''), NULLIF(substr(logout_time_real,12,8),''), NULLIF(substr(updated_at,12,8),''), login_time) AS sale_time,
+            COALESCE(NULLIF(login_time_real,''), NULLIF(last_login_real,''), NULLIF(logout_time_real,''), NULLIF(updated_at,'')) AS sale_datetime,
+            username,
+            COALESCE(NULLIF(validity,''), '-') AS profile,
+            COALESCE(NULLIF(validity,''), '-') AS profile_snapshot,
+            CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price,
+            CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price_snapshot,
+            CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS sprice_snapshot,
+            validity,
+            raw_comment AS comment,
+            blok_name,
+            COALESCE(NULLIF(last_status,''), '') AS status,
+            0 AS is_rusak,
+            0 AS is_retur,
+            0 AS is_invalid,
+            1 AS qty,
+            '' AS full_raw_data,
+            last_status,
+            raw_comment
+                        FROM login_history
+                        WHERE username != ''
+                            AND (
+                                substr(login_time_real,1,10) = :d OR
+                                substr(last_login_real,1,10) = :d OR
+                                substr(logout_time_real,1,10) = :d OR
+                                substr(updated_at,1,10) = :d OR
+                                login_date = :d
+                            )
+              AND instr(lower(COALESCE(raw_comment,'')), 'vip') = 0
+              AND instr(lower(COALESCE(raw_comment,'')), 'pengelola') = 0
+              $reuseExcludeLogin
+              AND (
+                instr(lower(COALESCE(NULLIF(last_status,''), '')), 'rusak') > 0
+                OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'retur') > 0
+                OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'invalid') > 0
+              )");
+        $stmtLh->execute([':d' => $audit_date]);
+        $lhRows = $stmtLh->fetchAll(PDO::FETCH_ASSOC);
+        if (!empty($lhRows)) {
+            $rows = array_merge($rows, $lhRows);
+        }
     }
 
     if (empty($rows) && $hasLogin) {
@@ -917,7 +980,8 @@ function fetch_rows_for_audit(PDO $db, $audit_date) {
             0 AS is_invalid,
             1 AS qty,
             '' AS full_raw_data,
-            last_status
+            last_status,
+            raw_comment
                         FROM login_history
                         WHERE username != ''
                             AND (
@@ -927,6 +991,7 @@ function fetch_rows_for_audit(PDO $db, $audit_date) {
                                 substr(updated_at,1,10) = :d OR
                                 login_date = :d
                             )
+              $reuseExcludeLogin
               AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'
               AND instr(lower(COALESCE(raw_comment,'')), 'vip') = 0
               AND instr(lower(COALESCE(raw_comment,'')), 'pengelola') = 0" );

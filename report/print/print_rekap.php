@@ -267,8 +267,6 @@ try {
                         LEFT JOIN login_history lh ON lh.username = sh.username
                         WHERE instr(lower(COALESCE(sh.comment,'')), 'vip') = 0
                             AND instr(lower(COALESCE(sh.comment,'')), 'pengelola') = 0
-                            AND instr(lower(COALESCE(lh.raw_comment,'')), 'vip') = 0
-                            AND instr(lower(COALESCE(lh.raw_comment,'')), 'pengelola') = 0
                                     $reuseExcludeSales
                         UNION ALL
                         SELECT 
@@ -283,8 +281,6 @@ try {
                         WHERE ls.sync_status = 'pending'
                             AND instr(lower(COALESCE(ls.comment,'')), 'vip') = 0
                             AND instr(lower(COALESCE(ls.comment,'')), 'pengelola') = 0
-                            AND instr(lower(COALESCE(lh2.raw_comment,'')), 'vip') = 0
-                            AND instr(lower(COALESCE(lh2.raw_comment,'')), 'pengelola') = 0
                             $reuseExcludeLive
                         ORDER BY sale_datetime DESC, raw_date DESC");
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
@@ -405,7 +401,7 @@ try {
                 }
             }
             if (!empty($lhRows)) {
-                $rows = array_merge($lhRows, $rows);
+                $rows = array_merge($rows, $lhRows);
             }
         } catch (Exception $e) {}
 
@@ -730,11 +726,6 @@ foreach ($rows as $r) {
         $status = $status_db;
     }
 
-    $blok_row = (string)($r['blok_name'] ?? '');
-    $has_block_hint = ($blok_row !== '' || preg_match('/\bblok\s*[-_]?\s*[A-Za-z0-9]+/i', $comment));
-    if (!$has_block_hint && !in_array($status, ['rusak', 'retur', 'invalid'], true)) {
-        continue;
-    }
     $block = normalize_block_name($r['blok_name'] ?? '', $comment);
 
     if ($status === 'retur') {
@@ -781,23 +772,38 @@ foreach ($rows as $r) {
         $seen_sales[$unique_key] = true;
     }
 
-    $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
-    if ($price <= 0) {
-        $price = (int)($r['sprice_snapshot'] ?? 0);
-    }
-    $qty = (int)($r['qty'] ?? 0);
-    if ($qty <= 0) $qty = 1;
-    $line_price = $price * $qty;
     $comment = (string)($r['comment'] ?? '');
     $status_db = normalize_status_value($r['status'] ?? '');
     $lh_status = normalize_status_value($r['last_status'] ?? '');
-    $profile = $r['profile_snapshot'] ?? ($r['profile'] ?? '-');
+    $profile = (string)($r['validity'] ?? '');
+    if ($profile === '' || $profile === '-') {
+        $profile = (string)($r['profile_snapshot'] ?? ($r['profile'] ?? '-'));
+    }
     if ($profile === '' || $profile === '-') {
         $profile_from_comment = extract_profile_from_comment($comment);
         if ($profile_from_comment !== '') {
             $profile = $profile_from_comment;
         }
     }
+    $guess_profile = infer_profile_from_comment($comment);
+    if ($guess_profile !== '') {
+        $profile = $guess_profile;
+    }
+
+    $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
+    if ($price <= 0) {
+        $price = (int)($r['sprice_snapshot'] ?? 0);
+    }
+    $resolved_profile_price = ($profile !== '' && $profile !== '-') ? (int)resolve_price_from_profile($profile) : 0;
+    if ($resolved_profile_price > 0) {
+        $price = $resolved_profile_price;
+    } elseif ($price <= 0) {
+        $price = 0;
+    }
+
+    $qty = (int)($r['qty'] ?? 0);
+    if ($qty <= 0) $qty = 1;
+    $line_price = $price * $qty;
     $cmt_low = strtolower($comment);
     $bytes = (int)($r['last_bytes'] ?? 0);
     if ($bytes < 0) $bytes = 0;
@@ -830,11 +836,6 @@ foreach ($rows as $r) {
         }
     }
 
-    $blok_row = (string)($r['blok_name'] ?? '');
-    $has_block_hint = ($blok_row !== '' || preg_match('/\bblok\s*[-_]?\s*[A-Za-z0-9]+/i', $comment));
-    if (!$has_block_hint && !in_array($status, ['rusak', 'retur', 'invalid'], true)) {
-        continue;
-    }
     $block = normalize_block_name($r['blok_name'] ?? '', $comment);
 
     if ($username !== '' && isset($retur_ref_map_global[strtolower($username)])) {
@@ -845,11 +846,6 @@ foreach ($rows as $r) {
         $user_day_key = $username . '|' . $sale_date;
         if (isset($seen_user_day[$user_day_key])) continue;
         $seen_user_day[$user_day_key] = true;
-    }
-
-    if ($price <= 0) {
-        $price = resolve_price_from_profile($profile);
-        $line_price = $price * $qty;
     }
 
     if (in_array($status, ['rusak', 'retur', 'invalid', 'normal', 'online', 'terpakai'], true) && $username !== '') {

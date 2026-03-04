@@ -79,8 +79,6 @@ try {
                         LEFT JOIN login_history lh ON lh.username = sh.username
                         WHERE instr(lower(COALESCE(sh.comment,'')), 'vip') = 0
                             AND instr(lower(COALESCE(sh.comment,'')), 'pengelola') = 0
-                            AND instr(lower(COALESCE(lh.raw_comment,'')), 'vip') = 0
-                            AND instr(lower(COALESCE(lh.raw_comment,'')), 'pengelola') = 0
                                     $reuseExcludeSales
                         UNION ALL
                         SELECT 
@@ -94,8 +92,6 @@ try {
                         WHERE ls.sync_status = 'pending'
                             AND instr(lower(COALESCE(ls.comment,'')), 'vip') = 0
                             AND instr(lower(COALESCE(ls.comment,'')), 'pengelola') = 0
-                            AND instr(lower(COALESCE(lh2.raw_comment,'')), 'vip') = 0
-                            AND instr(lower(COALESCE(lh2.raw_comment,'')), 'pengelola') = 0
                             $reuseExcludeLive
                         ORDER BY sale_datetime DESC, raw_date DESC");
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
@@ -269,21 +265,37 @@ foreach ($rows as $r) {
         $seen_user_day[$user_day_key] = true;
     }
 
-    $status = strtolower((string)($r['status'] ?? ''));
-    $lh_status = strtolower((string)($r['last_status'] ?? ''));
-    $comment = strtolower((string)($r['comment'] ?? ''));
-    if ($status === '' || $status === 'normal') {
-        if ((int)($r['is_invalid'] ?? 0) === 1) $status = 'invalid';
-        elseif ((int)($r['is_retur'] ?? 0) === 1) $status = 'retur';
-        elseif ((int)($r['is_rusak'] ?? 0) === 1) $status = 'rusak';
-        elseif (strpos($comment, 'invalid') !== false) $status = 'invalid';
-        elseif (strpos($comment, 'retur') !== false) $status = 'retur';
-        elseif (strpos($comment, 'rusak') !== false || $lh_status === 'rusak') $status = 'rusak';
-        else $status = 'normal';
+    $comment_raw = (string)($r['comment'] ?? '');
+    $comment = strtolower($comment_raw);
+    $status = resolve_status_from_sources(
+        $r['status'] ?? '',
+        $r['is_invalid'] ?? 0,
+        $r['is_retur'] ?? 0,
+        $r['is_rusak'] ?? 0,
+        $comment_raw,
+        $r['last_status'] ?? ''
+    );
+
+    $profile = (string)($r['validity'] ?? '');
+    if ($profile === '' || $profile === '-') {
+        $profile = (string)($r['profile_snapshot'] ?? ($r['profile'] ?? '-'));
+    }
+    if ($profile === '' || $profile === '-') {
+        $profile = extract_profile_from_comment($comment_raw);
+    }
+    $guess_profile = infer_profile_from_comment($comment_raw);
+    if ($guess_profile !== '') {
+        $profile = $guess_profile;
     }
 
     $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
     if ($price <= 0) $price = (int)($r['sprice_snapshot'] ?? 0);
+    $resolved_profile_price = ($profile !== '' && $profile !== '-') ? (int)resolve_price_from_profile($profile) : 0;
+    if ($resolved_profile_price > 0) {
+        $price = $resolved_profile_price;
+    } elseif ($price <= 0) {
+        $price = 0;
+    }
     $qty = (int)($r['qty'] ?? 0);
     if ($qty <= 0) $qty = 1;
     $line_price = $price * $qty;
@@ -397,7 +409,7 @@ foreach ($daily as $date => $val) {
     $qty = count($val['laku_users'] ?? []);
     $system_net = (int)($val['net'] ?? 0);
     $months[$mm]['net'] += $system_net;
-    $months[$mm]['gross'] += $system_net;
+    $months[$mm]['gross'] += (int)($val['gross'] ?? 0);
     $months[$mm]['loss_voucher'] += (int)($val['loss_rusak'] ?? 0) + (int)($val['loss_invalid'] ?? 0);
     $has_audit_day = isset($audit_net[$date]);
     $day_audit = $has_audit_day ? (int)$audit_net[$date] : (int)($val['net'] ?? 0);
