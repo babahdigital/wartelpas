@@ -43,6 +43,10 @@ RUNTIME_FILES=(
   "include/env.php"
 )
 
+RUNTIME_DIRS=(
+  "db_data"
+)
+
 print_step() {
   echo
   echo "==> $1"
@@ -219,6 +223,10 @@ RUNTIME_FILES=(
   "include/env.php"
 )
 
+RUNTIME_DIRS=(
+  "db_data"
+)
+
 NGINX_SYNC_FILES_BASE=(
   "wartelpas.conf"
 )
@@ -263,6 +271,17 @@ if [[ "$CLEAN" -eq 1 ]]; then
         echo "Backup: $rel_path"
       fi
     done
+
+    for rel_dir in "${RUNTIME_DIRS[@]}"; do
+      src="$REMOTE_APP/$rel_dir"
+      dst="$REMOTE_BACKUP/$rel_dir"
+      if [[ -d "$src" ]]; then
+        run_cmd rm -rf "$dst"
+        run_cmd mkdir -p "$(dirname "$dst")"
+        run_cmd cp -a "$src" "$dst"
+        echo "Backup dir: $rel_dir"
+      fi
+    done
   fi
 
   print_step "Hapus source lama + clone fresh"
@@ -277,6 +296,17 @@ if [[ "$CLEAN" -eq 1 ]]; then
       run_cmd mkdir -p "$(dirname "$dst")"
       run_cmd cp -f "$src" "$dst"
       echo "Restore: $rel_path"
+    fi
+  done
+
+  for rel_dir in "${RUNTIME_DIRS[@]}"; do
+    src="$REMOTE_BACKUP/$rel_dir"
+    dst="$REMOTE_APP/$rel_dir"
+    if [[ -d "$src" ]]; then
+      run_cmd rm -rf "$dst"
+      run_cmd mkdir -p "$(dirname "$dst")"
+      run_cmd cp -a "$src" "$dst"
+      echo "Restore dir: $rel_dir"
     fi
   done
 fi
