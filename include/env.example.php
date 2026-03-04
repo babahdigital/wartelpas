@@ -27,7 +27,7 @@ $env = [
         'rate_limit' => 1,
     ],
     'security' => [
-        'tools' => ['token' => 'CHANGE_ME'],
+                'sync_sales' => ['token' => 'CHANGE_ME', 'auto_trigger' => false],
         'live_ingest' => ['token' => 'CHANGE_ME'],
         'usage_ingest' => ['token' => 'CHANGE_ME'],
         // Optional: WhatsApp webhook token

@@ -391,22 +391,26 @@ try {
 
     @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | ok | user=" . $user . " | event=" . $status . " | dt=" . $dt . " | ip=" . $ip . " | mac=" . $mac . "\n", FILE_APPEND);
 
-    // Trigger sinkronisasi penjualan ringan agar KPI income/dashboard cepat ikut bergerak.
+    // Trigger sinkronisasi penjualan dibuat opsional (default nonaktif)
     try {
-        $throttleFile = $logDir . '/sync_sales_trigger.ts';
-        $nowTs = time();
-        $lastTs = @file_exists($throttleFile) ? (int)@file_get_contents($throttleFile) : 0;
-        if (($nowTs - $lastTs) >= 20) {
-            @file_put_contents($throttleFile, (string)$nowTs);
-            $syncUrl = 'http://127.0.0.1/report/laporan/services/sync_sales.php?key=' . urlencode((string)$secret_token) . '&session=' . urlencode((string)$session);
-            $ctx = stream_context_create([
-                'http' => [
-                    'timeout' => 1,
-                    'ignore_errors' => true,
-                ]
-            ]);
-            @file_get_contents($syncUrl, false, $ctx);
-            @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | trigger_sync_sales | url=local\n", FILE_APPEND);
+        $syncCfg = $env['security']['sync_sales'] ?? [];
+        $autoTrigger = !empty($syncCfg['auto_trigger']);
+        if ($autoTrigger) {
+            $throttleFile = $logDir . '/sync_sales_trigger.ts';
+            $nowTs = time();
+            $lastTs = @file_exists($throttleFile) ? (int)@file_get_contents($throttleFile) : 0;
+            if (($nowTs - $lastTs) >= 20) {
+                @file_put_contents($throttleFile, (string)$nowTs);
+                $syncUrl = 'http://127.0.0.1/report/laporan/services/sync_sales.php?key=' . urlencode((string)$secret_token) . '&session=' . urlencode((string)$session);
+                $ctx = stream_context_create([
+                    'http' => [
+                        'timeout' => 1,
+                        'ignore_errors' => true,
+                    ]
+                ]);
+                @file_get_contents($syncUrl, false, $ctx);
+                @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | trigger_sync_sales | url=local\n", FILE_APPEND);
+            }
         }
     } catch (Exception $e) {
         @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | trigger_sync_sales_error | " . $e->getMessage() . "\n", FILE_APPEND);
