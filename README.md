@@ -221,6 +221,11 @@ Akses menu **Tools** (ikon Admin) untuk:
 * **Clear Logs:** Membersihkan file log lama untuk menghemat ruang disk.
 * **Sync Rusak Audit:** Menyelaraskan status rusak antara `login_history` dan `sales_history` jika terjadi anomali data bulanan.
 
+### 8.4 Laporan Perbaikan Runtime Router (2026-03-05)
+Dokumentasi detail error + root cause + perbaikan + hasil smoke test produksi untuk script profile MikroTik tersedia di:
+
+`docs/router-runtime-onlogin-onlogout-20260305.md`
+
 ---
 
 ## 9. Lisensi
