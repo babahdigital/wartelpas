@@ -676,12 +676,24 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "[DRY-RUN] php $REMOTE_APP/tools/router_apply_profiles_runtime.php"
   echo "[DRY-RUN] php $REMOTE_APP/tools/router_audit_runtime.php"
 else
-  if ! command -v php >/dev/null 2>&1; then
-    echo "Error: php CLI tidak tersedia di host deploy."
+  PHP_ENTRY=()
+  APPLY_SCRIPT=""
+  AUDIT_SCRIPT=""
+  if command -v php >/dev/null 2>&1; then
+    PHP_ENTRY=(php)
+    APPLY_SCRIPT="$REMOTE_APP/tools/router_apply_profiles_runtime.php"
+    AUDIT_SCRIPT="$REMOTE_APP/tools/router_audit_runtime.php"
+  elif docker ps --format '{{.Names}}' | grep -Fxq "$APP_CONTAINER_NAME"; then
+    PHP_ENTRY=(docker exec "$APP_CONTAINER_NAME" php)
+    APPLY_SCRIPT="/var/www/html/tools/router_apply_profiles_runtime.php"
+    AUDIT_SCRIPT="/var/www/html/tools/router_audit_runtime.php"
+    echo "Info: php host tidak tersedia, fallback smoke test via container $APP_CONTAINER_NAME."
+  else
+    echo "Error: php CLI host tidak tersedia dan container $APP_CONTAINER_NAME tidak aktif."
     exit 1
   fi
 
-  APPLY_OUT="$(php "$REMOTE_APP/tools/router_apply_profiles_runtime.php" 2>&1 || true)"
+  APPLY_OUT="$("${PHP_ENTRY[@]}" "$APPLY_SCRIPT" 2>&1 || true)"
   printf '%s\n' "$APPLY_OUT"
 
   if printf '%s\n' "$APPLY_OUT" | grep -q '^CONNECT|FAIL'; then
@@ -701,7 +713,7 @@ else
     exit 1
   fi
 
-  AUDIT_OUT="$(php "$REMOTE_APP/tools/router_audit_runtime.php" 2>&1 || true)"
+  AUDIT_OUT="$("${PHP_ENTRY[@]}" "$AUDIT_SCRIPT" 2>&1 || true)"
   printf '%s\n' "$AUDIT_OUT"
 
   if printf '%s\n' "$AUDIT_OUT" | grep -q '^CONNECT|FAIL'; then
