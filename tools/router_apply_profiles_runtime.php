@@ -134,12 +134,24 @@ $scriptsVerify = $API->comm('/system/script/print', ['.proplist' => '.id,name,so
 if (!is_array($scriptsVerify)) {
     $scriptsVerify = [];
 }
+$hookLoginVerifyLen = 0;
+$hookLogoutVerifyLen = 0;
 foreach ($scriptsVerify as $sv) {
     $nm = (string)($sv['name'] ?? '');
     if (strcasecmp($nm, $onloginScriptName) === 0 || strcasecmp($nm, $onlogoutScriptName) === 0) {
-        echo 'HOOK_SCRIPT|verify|' . $nm . '|source_len=' . strlen((string)($sv['source'] ?? '')) . "\n";
+        $srcLen = strlen((string)($sv['source'] ?? ''));
+        if (strcasecmp($nm, $onloginScriptName) === 0) {
+            $hookLoginVerifyLen = $srcLen;
+        }
+        if (strcasecmp($nm, $onlogoutScriptName) === 0) {
+            $hookLogoutVerifyLen = $srcLen;
+        }
+        echo 'HOOK_SCRIPT|verify|' . $nm . '|source_len=' . $srcLen . "\n";
     }
 }
+
+$hookReady = ($hookLoginVerifyLen >= 500 && $hookLogoutVerifyLen >= 500);
+echo 'HOOK_MODE|ready=' . ($hookReady ? '1' : '0') . "\n";
 
 $profiles = $API->comm('/ip/hotspot/user/profile/print', ['.proplist' => '.id,name,on-login,on-logout']);
 if (!is_array($profiles)) {
@@ -180,10 +192,17 @@ foreach ($targets as $name) {
     $oldLoginLen = strlen((string)($profileRow['on-login'] ?? ''));
     $oldLogoutLen = strlen((string)($profileRow['on-logout'] ?? ''));
 
+    $priceByProfile = (strcasecmp($profileName, $profile30) === 0) ? 20000 : 5000;
+    $compactOnLogin = ':local d [/system clock get date];:local t [/system clock get time];:do{/system script add name=($d."-|-".$t."-|-".$user."-|-' . $priceByProfile . '") source=$d comment="mikhmon";}on-error={}';
+    $compactOnLogout = ':return;';
+
+    $finalOnLogin = $hookReady ? $onloginHook : $compactOnLogin;
+    $finalOnLogout = $hookReady ? $onlogoutHook : $compactOnLogout;
+
     $setRes = $API->comm('/ip/hotspot/user/profile/set', [
         '.id' => $id,
-        'on-login' => $onloginHook,
-        'on-logout' => $onlogoutHook,
+        'on-login' => $finalOnLogin,
+        'on-logout' => $finalOnLogout,
     ]);
 
     $setStatus = 'OK';
@@ -216,6 +235,7 @@ foreach ($targets as $name) {
 
     echo 'PROFILE|UPDATED|' . $profileName
         . '|set=' . $setStatus
+        . '|mode=' . ($hookReady ? 'hook' : 'compact')
         . '|old_login=' . $oldLoginLen
         . '|new_login=' . $newLoginLen
         . '|old_logout=' . $oldLogoutLen
