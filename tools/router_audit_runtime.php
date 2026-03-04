@@ -76,17 +76,20 @@ foreach ($profiles as $p) {
     $hasLiveIngest = (strpos($onLogin, 'live_ingest.php') !== false);
     $hasUsageIngestLogin = (strpos($onLogin, 'usage_ingest.php') !== false);
     $hasUsageIngestLogout = (strpos($onLogout, 'usage_ingest.php') !== false);
+    $hasMikhmonTag = (strpos($onLogin, 'mikhmon') !== false);
     $hookRunLogin = (strpos($onLogin, '/system script run ' . strtolower($hookLoginName)) !== false);
     $hookRunLogout = (strpos($onLogout, '/system script run ' . strtolower($hookLogoutName)) !== false);
     $okLoginDirect = $hasScriptAdd && $hasLiveIngest && $hasUsageIngestLogin;
     $okLogoutDirect = $hasUsageIngestLogout;
-    $okLogin = $okLoginDirect || ($hookRunLogin && $hookLoginOk);
-    $okLogout = $okLogoutDirect || ($hookRunLogout && $hookLogoutOk);
+    $okSalesMinimal = $hasScriptAdd && $hasMikhmonTag;
+    $okLogin = $okLoginDirect || ($hookRunLogin && $hookLoginOk) || $okSalesMinimal;
+    $okLogout = $okLogoutDirect || ($hookRunLogout && $hookLogoutOk) || $okSalesMinimal;
     if ($isTarget && !($okLogin && $okLogout)) {
         $missing[] = $name . '|script_add=' . ($hasScriptAdd ? '1' : '0')
             . '|live_ingest=' . ($hasLiveIngest ? '1' : '0')
             . '|usage_login=' . ($hasUsageIngestLogin ? '1' : '0')
             . '|usage_logout=' . ($hasUsageIngestLogout ? '1' : '0')
+            . '|minimal=' . ($okSalesMinimal ? '1' : '0')
             . '|hook_login=' . ($hookRunLogin ? '1' : '0')
             . '|hook_logout=' . ($hookRunLogout ? '1' : '0')
             . '|login_len=' . strlen((string)($p['on-login'] ?? ''))
