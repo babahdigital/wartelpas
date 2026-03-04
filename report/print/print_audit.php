@@ -469,7 +469,7 @@ if (file_exists($dbFile)) {
         }
 
         if (table_exists($db, 'audit_rekap_manual')) {
-          $auditSql = "SELECT blok_name, expected_qty, expected_setoran, reported_qty, actual_setoran, selisih_setoran, refund_amt, refund_desc, kurang_bayar_amt, kurang_bayar_desc, expenses_amt, expenses_desc, user_evidence
+          $auditSql = "SELECT report_date, blok_name, expected_qty, expected_setoran, reported_qty, actual_setoran, selisih_setoran, refund_amt, refund_desc, kurang_bayar_amt, kurang_bayar_desc, expenses_amt, expenses_desc, user_evidence
           FROM audit_rekap_manual WHERE $auditDateFilter";
           $stmt = $db->prepare($auditSql);
           foreach ($auditDateParam as $k => $v) $stmt->bindValue($k, $v);
@@ -479,7 +479,14 @@ if (file_exists($dbFile)) {
           $audit_manual_summary['total_rusak_rp'] = 0;
           $audit_manual_summary['total_refund'] = 0;
           $audit_manual_summary['total_kurang_bayar'] = 0;
-          foreach ($audit_rows as $ar) {
+          $rows_by_date_cache = [];
+          $expected_by_block_cache = [];
+          foreach ($audit_rows as $idx => $ar) {
+            if (function_exists('resolve_audit_expected_setoran')) {
+              $resolved_expected = resolve_audit_expected_setoran($db, $ar, $rows_by_date_cache, $expected_by_block_cache);
+              $audit_rows[$idx]['expected_setoran'] = $resolved_expected;
+              $ar['expected_setoran'] = $resolved_expected;
+            }
             [$manual_qty, $expected_qty, $manual_setoran, $expected_setoran, $expense_amt] = calc_audit_adjusted_totals($ar);
             $audit_manual_summary['manual_qty'] += (int)$manual_qty;
             $audit_manual_summary['expected_qty'] += (int)$expected_qty;
@@ -728,7 +735,7 @@ $file_title = trim($file_title, '-_');
         $bg_status = $selisih < 0 ? '#fee2e2' : ($selisih > 0 ? '#dcfce7' : '#f3f4f6');
         $border_status = $selisih < 0 ? '#b91c1c' : ($selisih > 0 ? '#15803d' : '#ccc');
         $text_color = $selisih < 0 ? '#b91c1c' : ($selisih > 0 ? '#15803d' : '#333');
-        $label_status = $selisih < 0 ? 'KURANG SETOR (LOSS)' : ($selisih > 0 ? 'LEBIH SETOR' : 'SETORAN SESUAI / AMAN');
+        $label_status = $selisih < 0 ? 'DEFISIT SETORAN' : ($selisih > 0 ? 'SURPLUS SETORAN' : 'SETORAN SEIMBANG');
       ?>
 
     <?php if ($audit_manual_summary['rows'] === 0): ?>
@@ -755,7 +762,7 @@ $file_title = trim($file_title, '-_');
                   </div>
               </td>
               <td style="border:none; padding:0; text-align:right;">
-                  <div style="font-size:10px; color:#555; text-transform:uppercase;">Total Selisih</div>
+                  <div style="font-size:10px; color:#555; text-transform:uppercase;">Total Surplus / Defisit</div>
                   <div style="font-size:18px; font-weight:bold; color:<?= $text_color ?>; margin-top:4px;">
                       Rp <?= number_format($selisih, 0, ',', '.') ?>
                   </div>
@@ -869,7 +876,7 @@ $file_title = trim($file_title, '-_');
         <strong>Catatan Refund:</strong> Total refund tercatat Rp <?= number_format($audit_manual_summary['total_refund'],0,',','.') ?>.
         <?php if ($selisih != 0 && !empty($audit_refund_notes)): ?>
           <div style="margin-top:6px;">
-            <strong>Catatan Selisih (setelah refund/piutang):</strong>
+            <strong>Catatan Surplus / Defisit (setelah refund/piutang):</strong>
             <ul style="margin:6px 0 0 16px; padding:0;">
               <?php foreach ($audit_refund_notes as $rn): ?>
                 <?php if ((int)$rn['selisih_adj'] === 0) continue; ?>
@@ -878,7 +885,7 @@ $file_title = trim($file_title, '-_');
                   <?php if (!empty($rn['refund_desc'])): ?>
                     (<?= htmlspecialchars($rn['refund_desc']) ?>)
                   <?php endif; ?>
-                  — Selisih Rp <?= number_format((int)$rn['selisih_adj'],0,',','.') ?>
+                  — Surplus / Defisit Rp <?= number_format((int)$rn['selisih_adj'],0,',','.') ?>
                 </li>
               <?php endforeach; ?>
             </ul>
@@ -891,7 +898,7 @@ $file_title = trim($file_title, '-_');
         <strong>Catatan Piutang:</strong> Total piutang tercatat Rp <?= number_format($audit_manual_summary['total_kurang_bayar'],0,',','.') ?>.
         <?php if ($selisih != 0 && !empty($audit_kurang_bayar_notes)): ?>
           <div style="margin-top:6px;">
-            <strong>Catatan Selisih (setelah refund/piutang):</strong>
+            <strong>Catatan Surplus / Defisit (setelah refund/piutang):</strong>
             <ul style="margin:6px 0 0 16px; padding:0;">
               <?php foreach ($audit_kurang_bayar_notes as $rn): ?>
                 <?php if ((int)$rn['selisih_adj'] === 0) continue; ?>
@@ -900,7 +907,7 @@ $file_title = trim($file_title, '-_');
                   <?php if (!empty($rn['kurang_bayar_desc'])): ?>
                     (<?= htmlspecialchars($rn['kurang_bayar_desc']) ?>)
                   <?php endif; ?>
-                  — Selisih Rp <?= number_format((int)$rn['selisih_adj'],0,',','.') ?>
+                  — Surplus / Defisit Rp <?= number_format((int)$rn['selisih_adj'],0,',','.') ?>
                 </li>
               <?php endforeach; ?>
             </ul>

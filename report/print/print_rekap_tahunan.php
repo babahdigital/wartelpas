@@ -130,14 +130,19 @@ try {
             $phone_units[$d][$ut] = (int)($row['total_units'] ?? 0);
         }
 
-        $stmtAudit = $db->prepare("SELECT report_date, expected_setoran, actual_setoran, user_evidence, expenses_amt, refund_amt, kurang_bayar_amt
+        $stmtAudit = $db->prepare("SELECT report_date, blok_name, expected_setoran, actual_setoran, user_evidence, expenses_amt, refund_amt, kurang_bayar_amt
             FROM audit_rekap_manual
             WHERE report_date LIKE :y");
         $stmtAudit->execute([':y' => $filter_year . '%']);
         $temp_expenses = [];
+        $rows_by_date_cache = [];
+        $expected_by_block_cache = [];
         foreach ($stmtAudit->fetchAll(PDO::FETCH_ASSOC) as $row) {
             $d = $row['report_date'] ?? '';
             if ($d === '') continue;
+            if (function_exists('resolve_audit_expected_setoran')) {
+                $row['expected_setoran'] = resolve_audit_expected_setoran($db, $row, $rows_by_date_cache, $expected_by_block_cache);
+            }
             [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($row);
             $expense = (int)($row['expenses_amt'] ?? 0);
             $refund_amt = (int)($row['refund_amt'] ?? 0);
@@ -613,7 +618,7 @@ $print_time = date('d-m-Y H:i:s');
                 <th style="padding:10px; text-align:center;">Target Sistem</th>
                 <th style="padding:10px; text-align:center;">Pengeluaran (Ops)</th>
                 <th style="padding:10px; text-align:center;">Setoran Bersih</th>
-                <th style="padding:10px; text-align:center;">Selisih / Loss</th>
+                <th style="padding:10px; text-align:center;">Surplus / Defisit</th>
                 <th style="padding:10px; text-align:center;">Kinerja</th>
             </tr>
         </thead>

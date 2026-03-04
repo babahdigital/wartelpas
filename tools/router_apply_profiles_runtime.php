@@ -59,7 +59,7 @@ if (!function_exists('renderRouterProfileScript')) {
             }
             $parts[] = $line;
         }
-        $oneLine = trim((string)preg_replace('/\s+/', ' ', implode(' ', $parts)));
+        $oneLine = trim((string)preg_replace('/\s+/', ' ', implode(' ; ', $parts)));
         return normalizeRouterValue($oneLine);
     }
 }

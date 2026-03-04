@@ -608,41 +608,6 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
         $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
         if ($sale_date !== $audit_date) continue;
 
-        $raw_date = trim((string)($r['raw_date'] ?? ''));
-        $raw_time = trim((string)($r['raw_time'] ?? ''));
-        $full_raw = trim((string)($r['full_raw_data'] ?? ''));
-        $price_snapshot = (int)($r['price_snapshot'] ?? 0);
-        $price_val = (int)($r['price'] ?? 0);
-        $sprice_val = (int)($r['sprice_snapshot'] ?? 0);
-        $is_login_history_row = ($raw_date === '' && $raw_time === '' && $full_raw === '' && $price_snapshot <= 0 && $price_val <= 0 && $sprice_val <= 0);
-        if ($is_login_history_row) {
-            continue;
-        }
-
-        $username = $r['username'] ?? '';
-        if ($username !== '' && $sale_date !== '') {
-            $user_day_key = $username . '|' . $sale_date;
-            if (isset($seen_user_day[$user_day_key])) continue;
-            $seen_user_day[$user_day_key] = true;
-        }
-
-        $raw_key = trim((string)($r['full_raw_data'] ?? ''));
-        $unique_key = '';
-        if ($raw_key !== '') {
-            $unique_key = 'raw|' . $raw_key;
-        } elseif ($username !== '' && $sale_date !== '') {
-            $unique_key = $username . '|' . ($r['sale_datetime'] ?? ($sale_date . ' ' . ($r['sale_time'] ?? '')));
-            if ($unique_key === $username . '|') {
-                $unique_key = $username . '|' . $sale_date . '|' . ($r['sale_time'] ?? '');
-            }
-        } elseif ($sale_date !== '') {
-            $unique_key = 'date|' . $sale_date . '|' . ($r['sale_time'] ?? '');
-        }
-        if ($unique_key !== '') {
-            if (isset($seen_sales[$unique_key])) continue;
-            $seen_sales[$unique_key] = true;
-        }
-
         $raw_comment = (string)($r['comment'] ?? '');
         $lh_comment = (string)($r['raw_comment'] ?? '');
         if ($lh_comment !== '') {
@@ -656,6 +621,30 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
         $cmt_low = strtolower($raw_comment);
         $blok = normalize_block_name($r['blok_name'] ?? '', $raw_comment);
         if ($blok !== $audit_blok) continue;
+
+        $username = $r['username'] ?? '';
+        if ($username !== '' && $sale_date !== '') {
+            $user_day_key = $blok . '|' . $username . '|' . $sale_date;
+            if (isset($seen_user_day[$user_day_key])) continue;
+            $seen_user_day[$user_day_key] = true;
+        }
+
+        $raw_key = trim((string)($r['full_raw_data'] ?? ''));
+        $unique_key = '';
+        if ($raw_key !== '') {
+            $unique_key = $blok . '|raw|' . $raw_key;
+        } elseif ($username !== '' && $sale_date !== '') {
+            $unique_key = $blok . '|' . $username . '|' . ($r['sale_datetime'] ?? ($sale_date . ' ' . ($r['sale_time'] ?? '')));
+            if ($unique_key === ($blok . '|' . $username . '|')) {
+                $unique_key = $blok . '|' . $username . '|' . $sale_date . '|' . ($r['sale_time'] ?? '');
+            }
+        } elseif ($sale_date !== '') {
+            $unique_key = $blok . '|date|' . $sale_date . '|' . ($r['sale_time'] ?? '');
+        }
+        if ($unique_key !== '') {
+            if (isset($seen_sales[$unique_key])) continue;
+            $seen_sales[$unique_key] = true;
+        }
 
         $status = resolve_status_from_sources(
             $r['status'] ?? '',
@@ -674,14 +663,27 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
             }
         }
 
-        $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
-        if ($price <= 0) $price = (int)($r['sprice_snapshot'] ?? 0);
-        if ($price <= 0) {
+        $profile = (string)($r['validity'] ?? '');
+        if ($profile === '' || $profile === '-') {
             $profile = (string)($r['profile_snapshot'] ?? ($r['profile'] ?? ''));
-            if ($profile === '' || $profile === '-') {
-                $profile = extract_profile_from_comment($raw_comment);
-            }
-            $price = resolve_price_from_profile($profile);
+        }
+        if ($profile === '' || $profile === '-') {
+            $profile = extract_profile_from_comment($raw_comment);
+        }
+        $profileInfer = infer_profile_from_comment($raw_comment);
+        if ($profileInfer !== '') {
+            $profile = $profileInfer;
+        }
+
+        $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
+        if ($price <= 0) {
+            $price = (int)($r['sprice_snapshot'] ?? 0);
+        }
+        $resolvedProfilePrice = ($profile !== '' && $profile !== '-') ? (int)resolve_price_from_profile($profile) : 0;
+        if ($resolvedProfilePrice > 0) {
+            $price = $resolvedProfilePrice;
+        } elseif ($price <= 0) {
+            $price = 0;
         }
         $qty = (int)($r['qty'] ?? 0);
         if ($qty <= 0) $qty = 1;
@@ -744,6 +746,45 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
         'net' => $net_total,
         'retur_qty' => $retur_qty
     ];
+}
+
+if (!function_exists('resolve_audit_expected_setoran')) {
+    function resolve_audit_expected_setoran(PDO $db, array $audit_row, array &$rows_by_date_cache = [], array &$expected_by_block_cache = []) {
+        $expected_setoran = (int)($audit_row['expected_setoran'] ?? 0);
+        if (!function_exists('fetch_rows_for_audit') || !function_exists('calc_expected_for_block') || !function_exists('normalize_block_name')) {
+            return $expected_setoran;
+        }
+
+        $report_date = trim((string)($audit_row['report_date'] ?? ''));
+        if ($report_date === '') {
+            return $expected_setoran;
+        }
+
+        $blok_norm = normalize_block_name($audit_row['blok_name'] ?? '');
+        if ($blok_norm === '') {
+            return $expected_setoran;
+        }
+
+        $cache_key = $report_date . '|' . $blok_norm;
+        if (!array_key_exists($cache_key, $expected_by_block_cache)) {
+            if (!array_key_exists($report_date, $rows_by_date_cache)) {
+                try {
+                    $rows_by_date_cache[$report_date] = fetch_rows_for_audit($db, $report_date);
+                } catch (Exception $e) {
+                    $rows_by_date_cache[$report_date] = [];
+                }
+            }
+
+            if (!empty($rows_by_date_cache[$report_date])) {
+                $expected_calc = calc_expected_for_block($rows_by_date_cache[$report_date], $report_date, $blok_norm);
+                $expected_by_block_cache[$cache_key] = (int)($expected_calc['net'] ?? $expected_setoran);
+            } else {
+                $expected_by_block_cache[$cache_key] = $expected_setoran;
+            }
+        }
+
+        return (int)$expected_by_block_cache[$cache_key];
+    }
 }
 
 function calc_audit_adjusted_setoran(array $ar) {

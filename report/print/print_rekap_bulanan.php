@@ -168,9 +168,14 @@ try {
             FROM audit_rekap_manual
             WHERE report_date LIKE :m");
         $stmtAudit->execute([':m' => $filter_date . '%']);
+        $rows_by_date_cache = [];
+        $expected_by_block_cache = [];
         foreach ($stmtAudit->fetchAll(PDO::FETCH_ASSOC) as $row) {
             $d = $row['report_date'] ?? '';
             if ($d === '') continue;
+            if (function_exists('resolve_audit_expected_setoran')) {
+                $row['expected_setoran'] = resolve_audit_expected_setoran($db, $row, $rows_by_date_cache, $expected_by_block_cache);
+            }
             [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($row);
             $expense = (int)($row['expenses_amt'] ?? 0);
             $refund_amt = (int)($row['refund_amt'] ?? 0);
@@ -612,7 +617,7 @@ if (!empty($unsettled_dates)) {
                 <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Target Sistem (Net)</th>
                 <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Setoran Fisik (Audit)</th>
                      <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Pengeluaran</th>
-                <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Selisih</th>
+                     <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Surplus / Defisit</th>
                    <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Keterangan / Insiden</th>
                 <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Status</th>
             </tr>
@@ -624,14 +629,14 @@ if (!empty($unsettled_dates)) {
                 <?php
                     $daily_selisih = (int)($row['selisih'] ?? 0);
                     $bg_row = $idx % 2 === 0 ? '#fff' : '#f8fafc';
-                    $status_label = 'AMAN';
+                    $status_label = 'SEIMBANG';
                     $status_color = '#2563eb';
                     if ($daily_selisih < 0) {
-                        $status_label = 'KURANG';
+                        $status_label = 'DEFISIT';
                         $status_color = '#dc2626';
                         $bg_row = '#fef2f2';
                     } elseif ($daily_selisih > 0) {
-                        $status_label = 'LEBIH';
+                        $status_label = 'SURPLUS';
                         $status_color = '#16a34a';
                     }
                        $day_note = $notes_map[$row['date']] ?? '';

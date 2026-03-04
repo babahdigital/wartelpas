@@ -525,7 +525,7 @@ if (file_exists($dbFile)) {
         }
 
         if (table_exists($db, 'audit_rekap_manual')) {
-            $auditSql = "SELECT blok_name, expected_qty, expected_setoran, reported_qty, actual_setoran, selisih_setoran, refund_amt, refund_desc, kurang_bayar_amt, kurang_bayar_desc, expenses_amt, expenses_desc, user_evidence
+            $auditSql = "SELECT report_date, blok_name, expected_qty, expected_setoran, reported_qty, actual_setoran, selisih_setoran, refund_amt, refund_desc, kurang_bayar_amt, kurang_bayar_desc, expenses_amt, expenses_desc, user_evidence
                 FROM audit_rekap_manual WHERE $auditDateFilter";
             $stmt = $db->prepare($auditSql);
             foreach ($auditDateParam as $k => $v) $stmt->bindValue($k, $v);
@@ -533,7 +533,14 @@ if (file_exists($dbFile)) {
             $audit_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $audit_manual_summary['rows'] = count($audit_rows);
             $audit_manual_summary['total_rusak_rp'] = 0;
-            foreach ($audit_rows as $ar) {
+            $rows_by_date_cache = [];
+            $expected_by_block_cache = [];
+            foreach ($audit_rows as $idx => $ar) {
+                if (function_exists('resolve_audit_expected_setoran')) {
+                    $resolved_expected = resolve_audit_expected_setoran($db, $ar, $rows_by_date_cache, $expected_by_block_cache);
+                    $audit_rows[$idx]['expected_setoran'] = $resolved_expected;
+                    $ar['expected_setoran'] = $resolved_expected;
+                }
                 [$manual_qty, $expected_qty, $manual_setoran, $expected_setoran, $expense_amt] = calc_audit_adjusted_totals($ar);
                 $audit_manual_summary['manual_qty'] += (int)$manual_qty;
                 $audit_manual_summary['expected_qty'] += (int)$expected_qty;
@@ -769,7 +776,7 @@ if (file_exists($dbFile)) {
                 1) Total Qty fisik (termasuk retur sebagai pengganti).<br>
                 2) Total uang fisik di laci (sebelum pengeluaran).<br>
                 3) Pengeluaran opsional (jika ada, wajib isi keterangan).<br>
-                4) Evidence: tandai user rusak/retur agar selisih bisa dijelaskan.
+                4) Evidence: tandai user rusak/retur agar surplus/defisit bisa dijelaskan.
             </div>
         </div>
 
@@ -812,7 +819,7 @@ if (file_exists($dbFile)) {
             ?>
             <div class="summary-card" style="border:1px solid #3a4046;background:#1f2327;text-align:center;padding:20px;">
                 <div style="color:#f39c12;font-weight:bold;"><i class="fa fa-exclamation-triangle"></i> Belum ada data Audit Manual yang diinput pada periode ini.</div>
-                <div style="margin-top:10px;font-size:13px;color:#bbb;">Silakan input fisik uang/voucher di Laporan Penjualan untuk melihat selisih.</div>
+                <div style="margin-top:10px;font-size:13px;color:#bbb;">Silakan input fisik uang/voucher di Laporan Penjualan untuk melihat surplus/defisit.</div>
                 <div style="margin-top:12px;font-size:14px;color:#fff;">Target Sistem (Estimasi): <b>Rp <?= number_format($target_est,0,',','.') ?></b></div>
             </div>
         <?php else: ?>
@@ -821,7 +828,7 @@ if (file_exists($dbFile)) {
                 $selisih_adj = $selisih - (int)($audit_manual_summary['total_refund'] ?? 0) + (int)($audit_manual_summary['total_kurang_bayar'] ?? 0);
                 $ghost_hint = build_ghost_hint($audit_manual_summary['selisih_qty'], $selisih_adj);
                 $color_status = $selisih_adj < 0 ? '#c0392b' : ($selisih_adj > 0 ? '#2ecc71' : '#3498db');
-                $text_status = $selisih_adj < 0 ? 'KURANG SETOR (LOSS)' : ($selisih_adj > 0 ? 'LEBIH SETOR' : 'AMAN / SESUAI');
+                $text_status = $selisih_adj < 0 ? 'DEFISIT SETORAN' : ($selisih_adj > 0 ? 'SURPLUS SETORAN' : 'SETORAN SEIMBANG');
                 $bg_status = $selisih_adj < 0 ? '#381818' : ($selisih_adj > 0 ? '#1b3a24' : '#1e2a36');
                 $system_net_total = (int)$sales_summary['net'] + (int)$pending_summary['net'];
             ?>
@@ -830,7 +837,7 @@ if (file_exists($dbFile)) {
                     <div style="font-size:12px;color:#aaa;text-transform:uppercase;">Status Keuangan</div>
                     <div style="font-size:22px;font-weight:bold;color:<?= $color_status ?>;"><?= $text_status ?></div>
                     <?php if ($selisih_adj != 0): ?>
-                        <div style="font-size:16px;color:#fff;">Selisih: Rp <?= number_format($selisih_adj,0,',','.') ?></div>
+                        <div style="font-size:16px;color:#fff;">Surplus / Defisit: Rp <?= number_format($selisih_adj,0,',','.') ?></div>
                     <?php endif; ?>
                 </div>
                 <?php if (!empty($ghost_hint)): ?>
@@ -858,7 +865,7 @@ if (file_exists($dbFile)) {
                     <div class="summary-card" style="border-color:#6c5ce7;">
                         <div class="summary-title" style="color:#6c5ce7;">Pengembalian</div>
                         <div class="summary-value" style="color:#6c5ce7;">Rp <?= number_format($audit_manual_summary['total_refund'],0,',','.') ?></div>
-                        <div style="font-size:10px;color:#6c5ce7;">(Lebih setor)</div>
+                        <div style="font-size:10px;color:#6c5ce7;">(Surplus setor)</div>
                     </div>
                 <?php endif; ?>
                 <?php if ($audit_manual_summary['total_kurang_bayar'] > 0): ?>
@@ -933,7 +940,7 @@ if (file_exists($dbFile)) {
                 </div>
                 <?php if (!empty($audit_refund_notes) && $selisih_adj != 0): ?>
                     <div style="margin-top:8px;">
-                        <div style="font-size:12px;color:#cbd5f5;font-weight:bold;">Catatan Selisih (setelah refund/piutang):</div>
+                        <div style="font-size:12px;color:#cbd5f5;font-weight:bold;">Catatan Surplus / Defisit (setelah refund/piutang):</div>
                         <ul style="margin:6px 0 0 16px; padding:0; color:#e2e8f0; font-size:12px;">
                             <?php foreach ($audit_refund_notes as $rn): ?>
                                 <?php if ((int)$rn['selisih_adj'] === 0) continue; ?>
@@ -942,7 +949,7 @@ if (file_exists($dbFile)) {
                                     <?php if (!empty($rn['refund_desc'])): ?>
                                         (<?= htmlspecialchars($rn['refund_desc']) ?>)
                                     <?php endif; ?>
-                                    — Selisih Rp <?= number_format((int)$rn['selisih_adj'],0,',','.') ?>
+                                    — Surplus / Defisit Rp <?= number_format((int)$rn['selisih_adj'],0,',','.') ?>
                                 </li>
                             <?php endforeach; ?>
                         </ul>
@@ -958,7 +965,7 @@ if (file_exists($dbFile)) {
                 </div>
                 <?php if (!empty($audit_kurang_bayar_notes) && $selisih_adj != 0): ?>
                     <div style="margin-top:8px;">
-                        <div style="font-size:12px;color:#cbd5f5;font-weight:bold;">Catatan Selisih (setelah refund/piutang):</div>
+                        <div style="font-size:12px;color:#cbd5f5;font-weight:bold;">Catatan Surplus / Defisit (setelah refund/piutang):</div>
                         <ul style="margin:6px 0 0 16px; padding:0; color:#e2e8f0; font-size:12px;">
                             <?php foreach ($audit_kurang_bayar_notes as $rn): ?>
                                 <?php if ((int)$rn['selisih_adj'] === 0) continue; ?>
@@ -967,7 +974,7 @@ if (file_exists($dbFile)) {
                                     <?php if (!empty($rn['kurang_bayar_desc'])): ?>
                                         (<?= htmlspecialchars($rn['kurang_bayar_desc']) ?>)
                                     <?php endif; ?>
-                                    — Selisih Rp <?= number_format((int)$rn['selisih_adj'],0,',','.') ?>
+                                    — Surplus / Defisit Rp <?= number_format((int)$rn['selisih_adj'],0,',','.') ?>
                                 </li>
                             <?php endforeach; ?>
                         </ul>

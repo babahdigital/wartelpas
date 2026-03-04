@@ -1008,58 +1008,34 @@ foreach ($rows as $r) {
         $seen_sales[$unique_key] = true;
     }
 
+    $comment = format_first_login($r['first_login_real'] ?? '');
+    $raw_comment = (string)($r['comment'] ?? '');
+
+    $profile = (string)($r['validity'] ?? '');
+    if ($profile === '' || $profile === '-') {
+        $profile = (string)($r['profile_snapshot'] ?? ($r['profile'] ?? '-'));
+    }
+    if ($profile === '' || $profile === '-') {
+        $profile = extract_profile_from_comment($raw_comment);
+    }
+    $guess_profile = infer_profile_from_comment($raw_comment);
+    if ($guess_profile !== '') {
+        $profile = $guess_profile;
+    }
+
     $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
     if ($price <= 0) {
         $price = (int)($r['sprice_snapshot'] ?? 0);
     }
+    $resolved_profile_price = ($profile !== '' && $profile !== '-') ? (int)resolve_price_from_profile($profile) : 0;
+    if ($resolved_profile_price > 0) {
+        $price = $resolved_profile_price;
+    } elseif ($price <= 0) {
+        $price = 0;
+    }
+
     $qty = (int)($r['qty'] ?? 0);
     if ($qty <= 0) $qty = 1;
-    $comment = format_first_login($r['first_login_real'] ?? '');
-    $raw_comment = (string)($r['comment'] ?? '');
-    $profile = $r['profile_snapshot'] ?? ($r['profile'] ?? '-');
-    if ($profile === '' || $profile === '-') {
-        $hint = (string)($r['validity'] ?? '') . ' ' . $raw_comment;
-        if (preg_match('/\b30\s*(menit|m)\b|30menit|profile\s*[:=]?\s*30\b|\b30m\b/i', $hint)) {
-            $profile = $label30;
-            if ($price <= 0) $price = $price30;
-        } elseif (preg_match('/\b10\s*(menit|m)\b|10menit|profile\s*[:=]?\s*10\b|\b10m\b/i', $hint)) {
-            $profile = $label10;
-            if ($price <= 0) $price = $price10;
-        }
-    } elseif ($price <= 0) {
-        if (preg_match('/\b30\s*(menit|m)\b|30menit|\b30m\b/i', $profile)) {
-            $price = $price30;
-        } elseif (preg_match('/\b10\s*(menit|m)\b|10menit|\b10m\b/i', $profile)) {
-            $price = $price10;
-        }
-    }
-    $line_price = $price * $qty;
-    if ($profile === '' || $profile === '-') {
-        $hint = (string)($r['validity'] ?? '') . ' ' . $raw_comment;
-        if (preg_match('/\b30\s*(menit|m)\b|30menit/i', $hint)) {
-            $profile = $label30;
-            if ($price <= 0) $price = $price30;
-        } elseif (preg_match('/\b10\s*(menit|m)\b|10menit/i', $hint)) {
-            $profile = $label10;
-            if ($price <= 0) $price = $price10;
-        }
-    } elseif ($price <= 0) {
-        if (preg_match('/\b30\s*(menit|m)\b|30menit/i', $profile)) {
-            $price = $price30;
-        } elseif (preg_match('/\b10\s*(menit|m)\b|10menit/i', $profile)) {
-            $price = $price10;
-        }
-    }
-    if ($price <= 0) {
-        $guess_profile = infer_profile_from_comment($raw_comment);
-        if ($guess_profile !== '') {
-            $profile = $guess_profile;
-            $price = resolve_price_from_profile($profile);
-        }
-    }
-    if ($price <= 0 && $profile !== '' && $profile !== '-') {
-        $price = resolve_price_from_profile($profile);
-    }
     $line_price = $price * $qty;
     $blok = normalize_block_name($r['blok_name'] ?? '', $raw_comment);
     $status = strtolower((string)($r['status'] ?? ''));
@@ -1610,16 +1586,26 @@ if ($req_show === 'harian' && isset($db) && $db instanceof PDO) {
 }
 if ($req_show !== 'harian' && isset($db) && $db instanceof PDO) {
     try {
-        $stmtAudit = $db->prepare("SELECT report_date, expected_setoran, actual_setoran, selisih_setoran, user_evidence, refund_amt, kurang_bayar_amt, expenses_amt FROM audit_rekap_manual WHERE report_date LIKE :p");
+        $stmtAudit = $db->prepare("SELECT report_date, blok_name, expected_setoran, actual_setoran, selisih_setoran, user_evidence, refund_amt, kurang_bayar_amt, expenses_amt FROM audit_rekap_manual WHERE report_date LIKE :p");
         $stmtAudit->execute([':p' => $filter_date . '%']);
+        $rows_by_date_cache = [];
+        $expected_by_block_cache = [];
         foreach ($stmtAudit->fetchAll(PDO::FETCH_ASSOC) as $ar) {
             $d = (string)($ar['report_date'] ?? '');
             if ($d === '') continue;
-            [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($ar);
+
+            $expected_setoran_row = (int)($ar['expected_setoran'] ?? 0);
+            if (function_exists('resolve_audit_expected_setoran')) {
+                $expected_setoran_row = resolve_audit_expected_setoran($db, $ar, $rows_by_date_cache, $expected_by_block_cache);
+            }
+
+            $ar_calc = $ar;
+            $ar_calc['expected_setoran'] = $expected_setoran_row;
+            [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($ar_calc);
             $refund_amt = (int)($ar['refund_amt'] ?? 0);
             $kurang_bayar_amt = (int)($ar['kurang_bayar_amt'] ?? 0);
             $expense_amt = (int)($ar['expenses_amt'] ?? 0);
-            $audit_total_expected_setoran += (int)($ar['expected_setoran'] ?? 0);
+            $audit_total_expected_setoran += (int)$expected_setoran_row;
             $audit_total_actual_setoran += (int)$manual_setoran;
             $audit_total_refund += $refund_amt;
             $audit_total_kurang_bayar += $kurang_bayar_amt;

@@ -258,7 +258,7 @@
                         <div>
                             <label>Pengembalian (Rp)</label>
                             <input class="form-input" type="number" name="audit_refund_amt" min="0" value="0" placeholder="0">
-                            <div class="modal-note">Hanya untuk selisih lebih setor.</div>
+                            <div class="modal-note">Hanya untuk surplus setor.</div>
                         </div>
                         <div>
                             <label>Keterangan Pengembalian</label>
@@ -270,7 +270,7 @@
                         <div>
                             <label>Piutang (Rp)</label>
                             <input class="form-input" type="number" name="audit_kurang_bayar_amt" min="0" value="0" placeholder="0">
-                            <div class="modal-note">Untuk selisih minus yang sudah ditagih.</div>
+                            <div class="modal-note">Untuk defisit yang sudah ditagih.</div>
                         </div>
                         <div>
                             <label>Keterangan Piutang</label>
@@ -507,7 +507,7 @@
                     <?php endif; ?>
                 </div>
                 <div class="summary-card">
-                    <div class="summary-title">Selisih Audit (Net)</div>
+                    <div class="summary-title">Surplus / Defisit Audit (Net)</div>
                     <div class="summary-value" style="color:<?= $audit_setoran_cls === 'audit-neg' ? '#c0392b' : ($audit_setoran_cls === 'audit-pos' ? '#2ecc71' : '#3498db'); ?>;">
                         <?= $cur ?> <?= number_format((int)$audit_selisih_setoran_adj_total,0,',','.') ?>
                     </div>
@@ -562,7 +562,7 @@
             <?php if ($audit_expected_diff !== 0): ?>
                 <div style="margin-top:10px;background:#2b2b2b;border:1px solid #555;border-left:5px solid #f39c12;padding:10px 12px;border-radius:6px;color:#f3c969;">
                     <i class="fa fa-exclamation-triangle"></i>
-                    Target Sistem audit berbeda dengan hitung transaksi. DB: Rp <?= number_format((int)$audit_expected_setoran_adj_total,0,',','.') ?> | Hitung: Rp <?= number_format((int)$audit_expected_setoran_calc_total,0,',','.') ?> | Selisih: Rp <?= number_format((int)$audit_expected_diff,0,',','.') ?>.
+                    Target Sistem audit berbeda dengan hitung transaksi. DB: Rp <?= number_format((int)$audit_expected_setoran_adj_total,0,',','.') ?> | Hitung: Rp <?= number_format((int)$audit_expected_setoran_calc_total,0,',','.') ?> | Perbedaan: Rp <?= number_format((int)$audit_expected_diff,0,',','.') ?>.
                     Kemungkinan data terhapus/kurang sinkron. Jalankan Rebuild Target Sistem.
                 </div>
             <?php endif; ?>
@@ -902,12 +902,12 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                         <tr>
                             <th>Blok</th>
                             <th class="text-center">QTY</th>
-                            <th class="text-center">Selisih</th>
+                            <th class="text-center">Selisih Qty</th>
                             <th class="text-right">Setoran</th>
                             <?php if ($has_expense_audit): ?>
                                 <th class="text-right">Pengeluaran</th>
                             <?php endif; ?>
-                            <th class="text-center">Selisih</th>
+                            <th class="text-center">Surplus / Defisit</th>
                             <?php if ($has_refund_audit): ?>
                                 <th class="text-right">Refund</th>
                             <?php endif; ?>
@@ -1183,7 +1183,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
             <div>Manual Rp: <b><?= number_format($audit_manual_setoran_total,0,',','.') ?></b></div>
             <div>Refund Rp: <b><?= number_format((int)($audit_total_refund ?? 0),0,',','.') ?></b></div>
             <div>Piutang Rp: <b><?= number_format((int)($audit_total_kurang_bayar ?? 0),0,',','.') ?></b></div>
-            <div>Selisih Rp: <b><?= number_format($audit_selisih_setoran_total,0,',','.') ?></b></div>
+            <div>Surplus / Defisit Rp: <b><?= number_format($audit_selisih_setoran_total,0,',','.') ?></b></div>
         </div>
         <?php else: ?>
             <?php $period_label = $req_show === 'bulanan' ? 'Tanggal' : 'Bulan'; ?>
@@ -1200,7 +1200,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                             <?php endif; ?>
                             <th class="text-center">Refund</th>
                             <th class="text-center">Piutang</th>
-                            <th class="text-center">Selisih</th>
+                            <th class="text-center">Surplus / Defisit</th>
                             <th class="text-center">Status</th>
                         </tr>
                     </thead>
@@ -1211,7 +1211,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                         <?php else: foreach ($audit_period_rows as $row): ?>
                             <?php
                                 $sel = (int)($row['selisih'] ?? 0);
-                                $status_label = $sel < 0 ? 'KURANG' : ($sel > 0 ? 'LEBIH' : 'AMAN');
+                                $status_label = $sel < 0 ? 'DEFISIT' : ($sel > 0 ? 'SURPLUS' : 'SEIMBANG');
                                 $status_color = $sel < 0 ? '#c0392b' : ($sel > 0 ? '#2ecc71' : '#3498db');
                                 $date_label = (string)($row['date'] ?? '-');
                                 if ($req_show === 'bulanan') {
@@ -1263,7 +1263,7 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                 <?php endif; ?>
                 <div>Refund (Total): <b><?= number_format((int)($audit_total_refund ?? 0),0,',','.') ?></b></div>
                 <div>Piutang (Total): <b><?= number_format((int)($audit_total_kurang_bayar ?? 0),0,',','.') ?></b></div>
-                <div>Selisih (Total): <b><?= number_format((int)($audit_selisih_setoran_adj_total ?? 0),0,',','.') ?></b></div>
+                <div>Surplus / Defisit (Total): <b><?= number_format((int)($audit_selisih_setoran_adj_total ?? 0),0,',','.') ?></b></div>
             </div>
         <?php endif; ?>
     </div>

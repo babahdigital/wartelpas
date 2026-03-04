@@ -622,17 +622,27 @@ try {
                     }
                 }
             }
-            foreach ($audit_rows as $ar) {
+            $rows_by_date_cache = [];
+            $expected_by_block_cache = [];
+            foreach ($audit_rows as $idx => $ar) {
+                $expected_setoran_row = (int)($ar['expected_setoran'] ?? 0);
+                if (function_exists('resolve_audit_expected_setoran')) {
+                    $expected_setoran_row = resolve_audit_expected_setoran($db, $ar, $rows_by_date_cache, $expected_by_block_cache);
+                    $audit_rows[$idx]['expected_setoran'] = $expected_setoran_row;
+                }
+                $ar_calc = $audit_rows[$idx];
+                $ar_calc['expected_setoran'] = $expected_setoran_row;
+                [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($ar_calc);
+                $audit_rows[$idx]['_manual_setoran_resolved'] = (int)$manual_setoran;
                 $audit_total_expected_qty += (int)($ar['expected_qty'] ?? 0);
                 $audit_total_reported_qty += (int)($ar['reported_qty'] ?? 0);
-                $audit_total_expected_setoran += (int)($ar['expected_setoran'] ?? 0);
-                $audit_total_actual_setoran += (int)($ar['actual_setoran'] ?? 0);
+                $audit_total_expected_setoran += (int)$expected_setoran_row;
+                $audit_total_actual_setoran += (int)$manual_setoran;
                 $total_audit_expense += (int)($ar['expenses_amt'] ?? 0);
                 $total_audit_refund += (int)($ar['refund_amt'] ?? 0);
                 $total_audit_kurang_bayar += (int)($ar['kurang_bayar_amt'] ?? 0);
                 $audit_total_selisih_qty += (int)($ar['selisih_qty'] ?? 0);
-                $audit_total_selisih_setoran += (int)($ar['selisih_setoran'] ?? 0);
-                [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($ar);
+                $audit_total_selisih_setoran += (int)$manual_setoran - (int)$expected_adj_setoran;
                 $audit_expected_setoran_adj_total += (int)$expected_adj_setoran;
                 $audit_selisih_setoran_adj_total += (int)$manual_setoran - (int)$expected_adj_setoran - (int)($ar['refund_amt'] ?? 0) + (int)($ar['kurang_bayar_amt'] ?? 0);
                 $has_audit_adjusted = true;
@@ -1064,14 +1074,14 @@ $has_kurang_bayar = $total_audit_kurang_bayar > 0;
         <div class="card" style="border-color:#6c5ce7;">
             <div class="label" style="color:#6c5ce7;">Refund</div>
             <div class="value" style="color:#6c5ce7;"><?= $cur ?> <?= number_format($total_audit_refund,0,',','.') ?></div>
-            <div class="small" style="color:#6c5ce7;">Pengembalian uang lebih setor</div>
+            <div class="small" style="color:#6c5ce7;">Pengembalian uang surplus setor</div>
         </div>
         <?php endif; ?>
         <?php if ($has_kurang_bayar): ?>
         <div class="card" style="border-color:#16a34a;">
             <div class="label" style="color:#16a34a;">Piutang</div>
             <div class="value" style="color:#16a34a;"><?= $cur ?> <?= number_format($total_audit_kurang_bayar,0,',','.') ?></div>
-            <div class="small" style="color:#16a34a;">Penagihan susulan selisih minus</div>
+            <div class="small" style="color:#16a34a;">Penagihan susulan defisit</div>
         </div>
         <?php endif; ?>
         <?php if ($req_show === 'harian'): ?>
@@ -1302,10 +1312,10 @@ $has_kurang_bayar = $total_audit_kurang_bayar > 0;
                     <tr>
                         <th style="width:70px;">Sistem</th>
                         <th style="width:70px;">Aktual</th>
-                        <th style="width:70px;">Selisih</th>
+                        <th style="width:70px;">Selisih Qty</th>
                         <th style="width:90px;">Sistem</th>
                         <th style="width:90px;">Aktual</th>
-                        <th style="width:80px;">Selisih</th>
+                        <th style="width:80px;">Surplus / Defisit</th>
                         <?php if ($has_refund): ?>
                         <th style="width:90px;">Refund</th>
                         <?php endif; ?>
@@ -1564,12 +1574,15 @@ $has_kurang_bayar = $total_audit_kurang_bayar > 0;
                                     $net_qty = max(0, $qty_val - $rusak_val - $invalid_val + $retur_val);
                                     $manual_display_setoran += ($net_qty * $price_val);
                                 }
-                                $actual_setoran_row = (int)($ar['actual_setoran'] ?? 0);
+                                $actual_setoran_row = function_exists('normalize_actual_setoran') ? normalize_actual_setoran($ar) : (int)($ar['actual_setoran'] ?? 0);
                                 if ($manual_setoran_override || ($actual_setoran_row > 0 && $actual_setoran_row !== $manual_display_setoran)) {
                                     $manual_display_setoran = $actual_setoran_row;
                                 }
                             } else {
-                                $manual_display_setoran = (int)($ar['actual_setoran'] ?? 0);
+                                $manual_display_setoran = function_exists('normalize_actual_setoran') ? normalize_actual_setoran($ar) : (int)($ar['actual_setoran'] ?? 0);
+                            }
+                            if (isset($ar['_manual_setoran_resolved'])) {
+                                $manual_display_setoran = (int)$ar['_manual_setoran_resolved'];
                             }
 
                             $p1_qty = (int)($profile_qty_display[$profile_key_1] ?? 0);
@@ -1594,27 +1607,12 @@ $has_kurang_bayar = $total_audit_kurang_bayar > 0;
                             if (!empty($rows)) {
                                 $expected_calc = calc_expected_for_block($rows, $filter_date, $audit_block_key);
                                 if (!empty($expected_calc)) {
-                                    $expected_qty = (int)($expected_calc['raw_qty'] ?? $expected_qty);
+                                    $expected_qty = (int)($expected_calc['qty'] ?? $expected_qty);
                                     $expected_setoran = (int)($expected_calc['net'] ?? $expected_setoran);
                                 }
                             }
                             $expected_adj_qty = $expected_qty;
                             $expected_adj_setoran = $expected_setoran;
-                            if ($has_manual_evidence) {
-                                $expected_adj_qty = $expected_qty;
-                                $adjustment = 0;
-                                $all_keys = array_unique(array_merge(
-                                    array_keys($cnt_rusak),
-                                    array_keys($cnt_invalid),
-                                    array_keys($cnt_retur)
-                                ));
-                                foreach ($all_keys as $pkey) {
-                                    $price_val = resolve_price_from_profile($pkey);
-                                    $adjustment -= ((int)($cnt_rusak[$pkey] ?? 0) + (int)($cnt_invalid[$pkey] ?? 0)) * $price_val;
-                                    $adjustment += ((int)($cnt_retur[$pkey] ?? 0)) * $price_val;
-                                }
-                                $expected_adj_setoran = max(0, $expected_setoran + $adjustment);
-                            }
 
                             $selisih_qty = $manual_display_qty - $expected_adj_qty;
                             $selisih_setoran = $manual_display_setoran - $expected_adj_setoran;
@@ -1750,7 +1748,7 @@ $has_kurang_bayar = $total_audit_kurang_bayar > 0;
 
                     <span style="display:flex; align-items:center;">
                         <span style="width:12px; height:12px; background:#fee2e2; border:1px solid #fca5a5; margin-right:4px; border-radius:3px;"></span> 
-                        <span style="color:#991b1b;">Kurang Setor / Rugi (Loss)</span>
+                        <span style="color:#991b1b;">Defisit Setoran</span>
                     </span>
 
                     <span style="display:flex; align-items:center;">
@@ -1760,7 +1758,7 @@ $has_kurang_bayar = $total_audit_kurang_bayar > 0;
 
                     <span style="display:flex; align-items:center;">
                         <span style="width:12px; height:12px; background:#dcfce7; border:1px solid #86efac; margin-right:4px; border-radius:3px;"></span> 
-                        <span style="color:#166534;">Lebih Setor / Retur (Aman)</span>
+                        <span style="color:#166534;">Surplus Setoran</span>
                     </span>
                 </div>
 
@@ -1851,9 +1849,9 @@ $has_kurang_bayar = $total_audit_kurang_bayar > 0;
                                         
                                         // LOGIKA STATUS
                                         if ($selisih_setoran_adj < 0) {
-                                            echo "<span style='color:#991b1b; background:#fee2e2; padding:3px 8px; border-radius:4px; border:1px solid #fca5a5;'>KURANG SETOR: Rp " . number_format(abs($selisih_setoran_adj), 0, ',', '.') . "</span>";
+                                            echo "<span style='color:#991b1b; background:#fee2e2; padding:3px 8px; border-radius:4px; border:1px solid #fca5a5;'>DEFISIT: Rp " . number_format(abs($selisih_setoran_adj), 0, ',', '.') . "</span>";
                                         } elseif ($selisih_setoran_adj > 0) {
-                                            echo "<span style='color:#166534; background:#dcfce7; padding:3px 8px; border-radius:4px; border:1px solid #86efac;'>LEBIH SETOR: Rp " . number_format($selisih_setoran_adj, 0, ',', '.') . "</span>";
+                                            echo "<span style='color:#166534; background:#dcfce7; padding:3px 8px; border-radius:4px; border:1px solid #86efac;'>SURPLUS: Rp " . number_format($selisih_setoran_adj, 0, ',', '.') . "</span>";
                                         } elseif ($rusak_total > 0) {
                                             echo "<span style='color:#92400e; background:#fef3c7; padding:3px 8px; border-radius:4px; border:1px solid #fcd34d;'>SETORAN SESUAI (ADA RUSAK)</span>";
                                         } else {
