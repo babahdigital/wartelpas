@@ -15,6 +15,14 @@ APP_CONTAINER_NAME="wartelpas"
 APP_SERVICE_NAME="mikhmon"
 PUBLIC_BASE_URL="https://wartelpas.babahdigital.net"
 ORIGIN_BASE_URL="http://127.0.0.1:8081"
+PROXY_CONF_SRC_REL="nginx/conf.d"
+PROXY_CONF_DST="/home/abdullah/nginx/conf.d"
+
+NGINX_SYNC_FILES=(
+  "default.conf"
+  "lpsaring.conf"
+  "wartelpas.conf"
+)
 
 STRICT=0
 CLEAN=1
@@ -133,6 +141,8 @@ ssh -i "$SSH_KEY" -p "$SSH_PORT" "$SSH_USER_HOST" \
   APP_SERVICE_NAME="$APP_SERVICE_NAME" \
   PUBLIC_BASE_URL="$PUBLIC_BASE_URL" \
   ORIGIN_BASE_URL="$ORIGIN_BASE_URL" \
+  PROXY_CONF_SRC_REL="$PROXY_CONF_SRC_REL" \
+  PROXY_CONF_DST="$PROXY_CONF_DST" \
   'bash -s' <<'REMOTE_SCRIPT'
 set -euo pipefail
 
@@ -195,9 +205,19 @@ RUNTIME_FILES=(
   "include/env.php"
 )
 
+NGINX_SYNC_FILES=(
+  "default.conf"
+  "lpsaring.conf"
+  "wartelpas.conf"
+)
+
 if [[ "$STRICT" -eq 1 ]]; then
   [[ "$REMOTE_APP" == "/home/abdullah/lpsaring/wartelpas" ]] || {
     echo "Error strict mode: path target harus /home/abdullah/lpsaring/wartelpas"
+    exit 1
+  }
+  [[ "$PROXY_CONF_DST" == "/home/abdullah/nginx/conf.d" ]] || {
+    echo "Error strict mode: nginx conf path harus /home/abdullah/nginx/conf.d"
     exit 1
   }
 fi
@@ -256,6 +276,26 @@ else
 fi
 
 cd "$REMOTE_APP"
+
+print_step "Sinkronisasi nginx conf ke host proxy (path aktif)"
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  for f in "${NGINX_SYNC_FILES[@]}"; do
+    echo "[DRY-RUN] cp -f $REMOTE_APP/$PROXY_CONF_SRC_REL/$f $PROXY_CONF_DST/$f"
+  done
+  echo "[DRY-RUN] docker exec global-nginx-proxy nginx -t"
+  echo "[DRY-RUN] docker exec global-nginx-proxy nginx -s reload"
+else
+  mkdir -p "$PROXY_CONF_DST"
+  for f in "${NGINX_SYNC_FILES[@]}"; do
+    src="$REMOTE_APP/$PROXY_CONF_SRC_REL/$f"
+    dst="$PROXY_CONF_DST/$f"
+    require_file "$src"
+    cp -f "$src" "$dst"
+    echo "Sync nginx: $f"
+  done
+  docker exec global-nginx-proxy nginx -t
+  docker exec global-nginx-proxy nginx -s reload
+fi
 
 if [[ "$BUILD" -eq 1 ]]; then
   print_step "Build image wartelpas"
