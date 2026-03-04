@@ -437,6 +437,9 @@ if ($load == "live_data") {
                 if ($price <= 0) {
                     $price = extract_price_from_full_raw_dashboard($r['full_raw_data'] ?? '');
                 }
+                if ($price <= 0) {
+                    $price = (int)($GLOBALS['price10'] ?? 0);
+                }
                 $qty = (int)($r['qty'] ?? 0);
                 if ($qty <= 0) $qty = 1;
                 $line_price = $price * $qty;
@@ -918,6 +921,8 @@ if ($load == "hotspot") {
         if ($d_day >= $startDay && $d_day <= $endDay) {
             $price = (int)($row['price_snapshot'] ?? $row['price'] ?? 0);
             if ($price <= 0) $price = (int)($row['sprice_snapshot'] ?? 0);
+            if ($price <= 0) $price = extract_price_from_full_raw_dashboard($row['full_raw_data'] ?? '');
+            if ($price <= 0) $price = (int)($GLOBALS['price10'] ?? 0);
             $qty = (int)($row['qty'] ?? 0);
             if ($qty <= 0) $qty = 1;
             $dailyIncome[$d_day] += ($price * $qty);
