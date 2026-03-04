@@ -644,6 +644,16 @@ function calc_expected_for_block(array $rows, $audit_date, $audit_blok) {
         }
 
         $raw_comment = (string)($r['comment'] ?? '');
+        $lh_comment = (string)($r['raw_comment'] ?? '');
+        if ($lh_comment !== '') {
+            $lh_low = strtolower($lh_comment);
+            $cmt_low = strtolower($raw_comment);
+            if ((strpos($lh_low, 'retur') !== false || strpos($lh_low, 'rusak') !== false) &&
+                !(strpos($cmt_low, 'retur') !== false || strpos($cmt_low, 'rusak') !== false)) {
+                $raw_comment = $lh_comment;
+            }
+        }
+        $cmt_low = strtolower($raw_comment);
         $blok = normalize_block_name($r['blok_name'] ?? '', $raw_comment);
         if ($blok !== $audit_blok) continue;
 
