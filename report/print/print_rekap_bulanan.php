@@ -563,11 +563,11 @@ $settled_filter_dates = $settled_dates;
 if (!$has_settlement_rows) {
     $settled_filter_dates = $data_dates;
 }
-foreach ($pending_dates as $d => $_v) {
-    unset($settled_filter_dates[$d]);
-}
 $unsettled_dates = array_diff_key($data_dates, $settled_filter_dates);
-$all_dates = array_keys($settled_filter_dates);
+foreach ($pending_dates as $d => $_v) {
+    $unsettled_dates[$d] = true;
+}
+$all_dates = array_keys($data_dates);
 sort($all_dates);
 
 $total_gross = 0;

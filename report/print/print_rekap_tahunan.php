@@ -479,10 +479,10 @@ $settled_filter_dates = $settled_dates;
 if (!$has_settlement_rows) {
     $settled_filter_dates = $data_dates;
 }
-foreach ($pending_dates as $d => $_v) {
-    unset($settled_filter_dates[$d]);
-}
 $unsettled_dates = array_diff_key($data_dates, $settled_filter_dates);
+foreach ($pending_dates as $d => $_v) {
+    $unsettled_dates[$d] = true;
+}
 
 $unsettled_labels = [];
 if (!empty($unsettled_dates)) {
@@ -522,7 +522,6 @@ for ($m = 1; $m <= 12; $m++) {
 }
 
 foreach ($daily as $date => $val) {
-    if (!isset($settled_filter_dates[$date])) continue;
     $mm = substr($date, 5, 2);
     if (!isset($months[$mm])) continue;
     $qty = count($val['laku_users'] ?? []);
@@ -546,7 +545,6 @@ foreach ($daily as $date => $val) {
 }
 
 foreach ($audit_net as $date => $val) {
-    if (!isset($settled_filter_dates[$date])) continue;
     if (isset($audit_dates_in_daily[$date])) continue;
     $mm = substr($date, 5, 2);
     if (!isset($months[$mm])) continue;
@@ -559,7 +557,6 @@ foreach ($audit_net as $date => $val) {
 }
 
 foreach ($phone as $date => $val) {
-    if (!isset($settled_filter_dates[$date])) continue;
     $mm = substr($date, 5, 2);
     if (!isset($months[$mm])) continue;
     $months[$mm]['rs'] += (int)($val['rusak'] ?? 0);
@@ -569,7 +566,6 @@ foreach ($phone as $date => $val) {
 }
 
 foreach ($phone_units as $date => $val) {
-    if (!isset($settled_filter_dates[$date])) continue;
     $mm = substr($date, 5, 2);
     if (!isset($months[$mm])) continue;
     $months[$mm]['wr_sum'] += (int)($val['WARTEL'] ?? 0);
