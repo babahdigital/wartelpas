@@ -466,6 +466,46 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                 }
             }
 
+            try {
+                $stmtAuditBrokenDates = $db_sync->query("SELECT report_date,
+                        SUM(CASE
+                            WHEN COALESCE(selisih_qty,0) != (COALESCE(reported_qty,0) - COALESCE(expected_qty,0))
+                              OR COALESCE(selisih_setoran,0) != (COALESCE(actual_setoran,0) - COALESCE(expected_setoran,0))
+                            THEN 1 ELSE 0 END
+                        ) AS bad_rows
+                    FROM audit_rekap_manual
+                    GROUP BY report_date
+                    HAVING bad_rows > 0
+                    ORDER BY report_date DESC
+                    LIMIT 10");
+                $broken_dates = $stmtAuditBrokenDates ? $stmtAuditBrokenDates->fetchAll(PDO::FETCH_ASSOC) : [];
+            } catch (Exception $e) {
+                $broken_dates = [];
+            }
+
+            foreach ($broken_dates as $br) {
+                $bdate = trim((string)($br['report_date'] ?? ''));
+                if ($bdate === '' || $bdate === $today) continue;
+                $bad_rows = (int)($br['bad_rows'] ?? 0);
+                if ($bad_rows <= 0) continue;
+                $blabel = $format_ddmmyyyy($bdate);
+                $broken_action_label = $can_audit_rebuild ? ('Fix Audit ' . $blabel) : ('Buka Audit ' . $blabel);
+                $broken_action_url = $can_audit_rebuild
+                    ? $todo_audit_fix_url($bdate)
+                    : ('./?report=audit_session&session=' . urlencode($session) . '&show=harian&date=' . urlencode($bdate));
+
+                $todo_list[] = [
+                    'id' => 'audit_rebuild_needed_' . $bdate,
+                    'title' => 'Audit perlu diperbaiki',
+                    'desc' => 'Ditemukan ' . number_format($bad_rows, 0, ',', '.') . ' baris audit tidak sinkron pada tanggal ' . $blabel . '.',
+                    'level' => 'warn',
+                    'action_label' => $broken_action_label,
+                    'action_url' => $broken_action_url,
+                    'action_ajax' => $can_audit_rebuild,
+                    'action_target' => '_self'
+                ];
+            }
+
             if ($settle_status === 'running' && $settle_triggered !== '') {
                 $trigger_ts = strtotime($settle_triggered);
                 if ($trigger_ts && ($now_ts - $trigger_ts) > ($settle_running_minutes * 60)) {
