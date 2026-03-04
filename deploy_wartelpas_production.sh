@@ -344,6 +344,19 @@ else
   chmod 777 "$REMOTE_APP/session" || true
 fi
 
+print_step "Pastikan file database writable"
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  echo "[DRY-RUN] mkdir -p $REMOTE_APP/db_data"
+  echo "[DRY-RUN] chmod 777 $REMOTE_APP/db_data"
+  echo "[DRY-RUN] chmod 666 $REMOTE_APP/db_data/*.db"
+  echo "[DRY-RUN] chmod 666 $REMOTE_APP/db_data/*.db-wal"
+  echo "[DRY-RUN] chmod 666 $REMOTE_APP/db_data/*.db-shm"
+else
+  mkdir -p "$REMOTE_APP/db_data"
+  chmod 777 "$REMOTE_APP/db_data" || true
+  find "$REMOTE_APP/db_data" -maxdepth 1 -type f \( -name '*.db' -o -name '*.db-wal' -o -name '*.db-shm' \) -exec chmod 666 {} \; || true
+fi
+
 cd "$REMOTE_APP"
 
 if [[ "${ALL_NGINX_SYNC:-0}" -eq 1 ]]; then
