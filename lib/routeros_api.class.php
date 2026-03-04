@@ -56,6 +56,37 @@ class RouterosAPI
 
 
     /**
+     * Parse one RouterOS response word into key/value.
+     * Supports values that contain '=' by splitting only on first separator.
+     *
+     * @param string $word
+     *
+     * @return array
+     */
+    private function parseResponseWord($word)
+    {
+        $word = (string)$word;
+        if ($word === '') {
+            return array('', '');
+        }
+
+        if ($word[0] === '=') {
+            $word = substr($word, 1);
+        }
+
+        $pos = strpos($word, '=');
+        if ($pos === false) {
+            return array($word, '');
+        }
+
+        $key = substr($word, 0, $pos);
+        $value = substr($word, $pos + 1);
+
+        return array($key, $value);
+    }
+
+
+    /**
      *
      *
      * @param string        $length
@@ -181,12 +212,12 @@ class RouterosAPI
                         $CURRENT =& $PARSED[$x][];
                     }
                 } elseif ($x != '!done') {
-                    $MATCHES = array();
-                    if (preg_match_all('/[^=]+/i', $x, $MATCHES)) {
-                        if ($MATCHES[0][0] == 'ret') {
-                            $singlevalue = $MATCHES[0][1];
+                    list($key, $value) = $this->parseResponseWord($x);
+                    if ($key !== '') {
+                        if ($key == 'ret') {
+                            $singlevalue = $value;
                         }
-                        $CURRENT[$MATCHES[0][0]] = (isset($MATCHES[0][1]) ? $MATCHES[0][1] : '');
+                        $CURRENT[$key] = $value;
                     }
                 }
             }
@@ -223,12 +254,12 @@ class RouterosAPI
                         $CURRENT =& $PARSED[$x][];
                     }
                 } elseif ($x != '!done') {
-                    $MATCHES = array();
-                    if (preg_match_all('/[^=]+/i', $x, $MATCHES)) {
-                        if ($MATCHES[0][0] == 'ret') {
-                            $singlevalue = $MATCHES[0][1];
+                    list($key, $value) = $this->parseResponseWord($x);
+                    if ($key !== '') {
+                        if ($key == 'ret') {
+                            $singlevalue = $value;
                         }
-                        $CURRENT[$MATCHES[0][0]] = (isset($MATCHES[0][1]) ? $MATCHES[0][1] : '');
+                        $CURRENT[$key] = $value;
                     }
                 }
             }
