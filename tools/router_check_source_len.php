@@ -36,9 +36,15 @@ foreach (['wartelpas_onlogin', 'wartelpas_onlogout'] as $name) {
     }
 
     $resp = $API->comm('/system/script/get', [
-        'numbers' => $id,
+        '.id' => $id,
         'value-name' => 'source',
     ]);
+    if (empty($resp)) {
+        $resp = $API->comm('/system/script/get', [
+            'numbers' => $id,
+            'value-name' => 'source',
+        ]);
+    }
 
     $fullSource = '';
     if (is_array($resp) && isset($resp['ret'])) {
@@ -49,7 +55,14 @@ foreach (['wartelpas_onlogin', 'wartelpas_onlogout'] as $name) {
         $fullSource = $resp;
     }
 
-    echo 'SCRIPT|' . $name . '|id=' . $id . '|print_len=' . $printLen . '|get_len=' . strlen($fullSource) . "\n";
+    $respType = is_array($resp) ? 'array' : gettype($resp);
+    $trap = '';
+    if (is_array($resp) && isset($resp['!trap'][0]['message'])) {
+        $trap = (string)$resp['!trap'][0]['message'];
+    }
+
+    $snippet = str_replace(["\n", "\r", '|'], [' ', ' ', '/'], $fullSource);
+    echo 'SCRIPT|' . $name . '|id=' . $id . '|print_len=' . $printLen . '|get_len=' . strlen($fullSource) . '|resp=' . $respType . '|trap=' . str_replace('|', '/', $trap) . '|src=' . $snippet . "\n";
 }
 
 $API->disconnect();

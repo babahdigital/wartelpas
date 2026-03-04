@@ -67,11 +67,41 @@ foreach ($targetProfiles as $tp) {
 echo 'PROFILE_TARGETS|' . implode(',', $targetProfiles) . "\n";
 
 $missing = [];
+
+$getProfileValue = static function ($api, $id, $field) {
+    $resp = $api->comm('/ip/hotspot/user/profile/get', [
+        '.id' => (string)$id,
+        'value-name' => (string)$field,
+    ]);
+    if (is_array($resp) && isset($resp['ret'])) {
+        return (string)$resp['ret'];
+    }
+    if (is_array($resp) && isset($resp[0]['ret'])) {
+        return (string)$resp[0]['ret'];
+    }
+    if (is_string($resp)) {
+        return $resp;
+    }
+    return '';
+};
+
 foreach ($profiles as $p) {
     $name = (string)($p['name'] ?? '');
     $isTarget = isset($targetMap[strtolower(trim($name))]);
-    $onLogin = strtolower((string)($p['on-login'] ?? ''));
-    $onLogout = strtolower((string)($p['on-logout'] ?? ''));
+    $onLoginRaw = (string)($p['on-login'] ?? '');
+    $onLogoutRaw = (string)($p['on-logout'] ?? '');
+    if ($isTarget && !empty($p['.id'])) {
+        $fullLogin = $getProfileValue($API, (string)$p['.id'], 'on-login');
+        $fullLogout = $getProfileValue($API, (string)$p['.id'], 'on-logout');
+        if ($fullLogin !== '') {
+            $onLoginRaw = $fullLogin;
+        }
+        if ($fullLogout !== '') {
+            $onLogoutRaw = $fullLogout;
+        }
+    }
+    $onLogin = strtolower($onLoginRaw);
+    $onLogout = strtolower($onLogoutRaw);
     $hasScriptAdd = (strpos($onLogin, '/system script add') !== false);
     $hasLiveIngest = (strpos($onLogin, 'live_ingest.php') !== false);
     $hasUsageIngestLogin = (strpos($onLogin, 'usage_ingest.php') !== false);
@@ -92,8 +122,8 @@ foreach ($profiles as $p) {
             . '|minimal=' . ($okSalesMinimal ? '1' : '0')
             . '|hook_login=' . ($hookRunLogin ? '1' : '0')
             . '|hook_logout=' . ($hookRunLogout ? '1' : '0')
-            . '|login_len=' . strlen((string)($p['on-login'] ?? ''))
-            . '|logout_len=' . strlen((string)($p['on-logout'] ?? ''));
+            . '|login_len=' . strlen($onLoginRaw)
+            . '|logout_len=' . strlen($onLogoutRaw);
     }
 }
 
@@ -105,8 +135,20 @@ foreach ($missing as $name) {
 foreach ($profiles as $p) {
     $name = (string)($p['name'] ?? '');
     if ($name === '10Menit' || $name === '30Menit') {
-        $ol = str_replace(["\n", "\r", "|"], [' ', ' ', '/'], (string)($p['on-login'] ?? ''));
-        $oo = str_replace(["\n", "\r", "|"], [' ', ' ', '/'], (string)($p['on-logout'] ?? ''));
+        $olRaw = (string)($p['on-login'] ?? '');
+        $ooRaw = (string)($p['on-logout'] ?? '');
+        if (!empty($p['.id'])) {
+            $f1 = $getProfileValue($API, (string)$p['.id'], 'on-login');
+            $f2 = $getProfileValue($API, (string)$p['.id'], 'on-logout');
+            if ($f1 !== '') {
+                $olRaw = $f1;
+            }
+            if ($f2 !== '') {
+                $ooRaw = $f2;
+            }
+        }
+        $ol = str_replace(["\n", "\r", "|"], [' ', ' ', '/'], $olRaw);
+        $oo = str_replace(["\n", "\r", "|"], [' ', ' ', '/'], $ooRaw);
         echo 'PROFILE_SNIPPET|' . $name . '|onlogin=' . $ol . "\n";
         echo 'PROFILE_SNIPPET|' . $name . '|onlogout=' . $oo . "\n";
     }

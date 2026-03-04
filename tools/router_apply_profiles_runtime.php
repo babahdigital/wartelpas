@@ -87,7 +87,30 @@ if (!is_array($scripts)) {
     $scripts = [];
 }
 
-$upsertScript = static function ($api, array $scripts, $scriptName, $scriptSource, $commentTag) {
+$extractTrap = static function ($res) {
+    if (!is_array($res)) {
+        return '';
+    }
+    if (isset($res['!trap'][0]['message'])) {
+        return (string)$res['!trap'][0]['message'];
+    }
+    if (isset($res['!trap']['message'])) {
+        return (string)$res['!trap']['message'];
+    }
+    foreach ($res as $chunk) {
+        if (is_array($chunk) && isset($chunk['!trap'])) {
+            if (isset($chunk['!trap'][0]['message'])) {
+                return (string)$chunk['!trap'][0]['message'];
+            }
+            if (isset($chunk['!trap']['message'])) {
+                return (string)$chunk['!trap']['message'];
+            }
+        }
+    }
+    return '';
+};
+
+$upsertScript = static function ($api, array $scripts, $scriptName, $scriptSource, $commentTag, $extractTrap) {
     $scriptName = trim((string)$scriptName);
     $found = null;
     foreach ($scripts as $s) {
@@ -113,22 +136,17 @@ $upsertScript = static function ($api, array $scripts, $scriptName, $scriptSourc
         ]);
     }
 
-    $status = 'OK';
-    if (is_array($res)) {
-        foreach ($res as $chunk) {
-            if (is_array($chunk) && isset($chunk['!trap'])) {
-                $status = 'TRAP';
-                break;
-            }
-        }
-    }
-    return $status;
+    $trap = $extractTrap($res);
+    return [
+        'status' => ($trap === '' ? 'OK' : 'TRAP'),
+        'trap' => $trap,
+    ];
 };
 
-$upLogin = $upsertScript($API, $scripts, $onloginScriptName, $onlogin, 'wartelpas-runtime');
-$upLogout = $upsertScript($API, $scripts, $onlogoutScriptName, $onlogout, 'wartelpas-runtime');
-echo 'HOOK_SCRIPT|updated|' . $onloginScriptName . '|status=' . $upLogin . '|len=' . strlen($onlogin) . "\n";
-echo 'HOOK_SCRIPT|updated|' . $onlogoutScriptName . '|status=' . $upLogout . '|len=' . strlen($onlogout) . "\n";
+$upLogin = $upsertScript($API, $scripts, $onloginScriptName, $onlogin, 'wartelpas-runtime', $extractTrap);
+$upLogout = $upsertScript($API, $scripts, $onlogoutScriptName, $onlogout, 'wartelpas-runtime', $extractTrap);
+echo 'HOOK_SCRIPT|updated|' . $onloginScriptName . '|status=' . $upLogin['status'] . '|len=' . strlen($onlogin) . '|trap=' . str_replace('|', '/', (string)$upLogin['trap']) . "\n";
+echo 'HOOK_SCRIPT|updated|' . $onlogoutScriptName . '|status=' . $upLogout['status'] . '|len=' . strlen($onlogout) . '|trap=' . str_replace('|', '/', (string)$upLogout['trap']) . "\n";
 
 $scriptsVerify = $API->comm('/system/script/print', ['.proplist' => '.id,name,source,comment']);
 if (!is_array($scriptsVerify)) {
@@ -193,7 +211,7 @@ foreach ($targets as $name) {
     $oldLogoutLen = strlen((string)($profileRow['on-logout'] ?? ''));
 
     $priceByProfile = (strcasecmp($profileName, $profile30) === 0) ? 20000 : 5000;
-    $compactOnLogin = ':local d [/system clock get date];:local t [/system clock get time];:do{/system script add name=($d."-|-".$t."-|-".$user."-|-' . $priceByProfile . '") source=$d comment="mikhmon";}on-error={}';
+    $compactOnLogin = '/system script add name=([/system clock get date]."-|-0-|-".$user."-|-' . $priceByProfile . '") comment=mikhmon';
     $compactOnLogout = ':return;';
 
     $finalOnLogin = $hookReady ? $onloginHook : $compactOnLogin;
@@ -205,15 +223,8 @@ foreach ($targets as $name) {
         'on-logout' => $finalOnLogout,
     ]);
 
-    $setStatus = 'OK';
-    if (is_array($setRes)) {
-        foreach ($setRes as $chunk) {
-            if (is_array($chunk) && isset($chunk['!trap'])) {
-                $setStatus = 'TRAP';
-                break;
-            }
-        }
-    }
+    $setTrap = $extractTrap($setRes);
+    $setStatus = ($setTrap === '' ? 'OK' : 'TRAP');
 
     $verifyRows = $API->comm('/ip/hotspot/user/profile/print', ['.proplist' => '.id,name,on-login,on-logout']);
     if (!is_array($verifyRows)) {
@@ -236,6 +247,7 @@ foreach ($targets as $name) {
     echo 'PROFILE|UPDATED|' . $profileName
         . '|set=' . $setStatus
         . '|mode=' . ($hookReady ? 'hook' : 'compact')
+        . '|trap=' . str_replace('|', '/', $setTrap)
         . '|old_login=' . $oldLoginLen
         . '|new_login=' . $newLoginLen
         . '|old_logout=' . $oldLogoutLen
