@@ -37,7 +37,37 @@ $envFile = dirname(__DIR__) . '/include/env.php';
 if (is_file($envFile)) {
     require_once $envFile;
 }
-$secret = isset($env['backup']['secret']) ? (string)$env['backup']['secret'] : '';
+
+$securityTools = (isset($env['security']['tools']) && is_array($env['security']['tools']))
+    ? $env['security']['tools']
+    : [];
+
+$acceptedTokens = [];
+$backupToken = isset($securityTools['backup_token']) ? trim((string)$securityTools['backup_token']) : '';
+if ($backupToken !== '') {
+    $acceptedTokens[] = $backupToken;
+}
+if (isset($securityTools['backup_tokens']) && is_array($securityTools['backup_tokens'])) {
+    foreach ($securityTools['backup_tokens'] as $tokenCandidate) {
+        $tokenCandidate = trim((string)$tokenCandidate);
+        if ($tokenCandidate !== '') {
+            $acceptedTokens[] = $tokenCandidate;
+        }
+    }
+}
+
+$toolsToken = isset($securityTools['token']) ? trim((string)$securityTools['token']) : '';
+if ($toolsToken !== '') {
+    $acceptedTokens[] = $toolsToken;
+}
+
+$legacyBackupSecret = isset($env['backup']['secret']) ? trim((string)$env['backup']['secret']) : '';
+if ($legacyBackupSecret !== '') {
+    $acceptedTokens[] = $legacyBackupSecret;
+}
+
+$acceptedTokens = array_values(array_unique($acceptedTokens));
+
 $key = $_GET['key'] ?? '';
 if ($key === '' && isset($_POST['key'])) {
     $key = (string)$_POST['key'];
@@ -48,7 +78,18 @@ if ($key === '' && isset($_SERVER['HTTP_X_BACKUP_KEY'])) {
 if ($key === '' && isset($_SERVER['HTTP_X_TOOLS_KEY'])) {
     $key = (string)$_SERVER['HTTP_X_TOOLS_KEY'];
 }
-$is_valid_key = $secret !== '' && hash_equals($secret, (string)$key);
+if ($key === '' && isset($_SERVER['HTTP_X_WARTELPAS_KEY'])) {
+    $key = (string)$_SERVER['HTTP_X_WARTELPAS_KEY'];
+}
+$key = trim((string)$key);
+
+$is_valid_key = false;
+foreach ($acceptedTokens as $acceptedToken) {
+    if (hash_equals($acceptedToken, $key)) {
+        $is_valid_key = true;
+        break;
+    }
+}
 
 $allow_session = isset($_SESSION['mikhmon']) && (isSuperAdmin() || (isOperator() && operator_can('backup_only')));
 

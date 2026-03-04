@@ -27,9 +27,21 @@ $env = [
         'rate_limit' => 1,
     ],
     'security' => [
-                'sync_sales' => ['token' => 'CHANGE_ME', 'auto_trigger' => false],
+        'sync_sales' => ['token' => 'CHANGE_ME', 'auto_trigger' => false],
         'live_ingest' => ['token' => 'CHANGE_ME'],
         'usage_ingest' => ['token' => 'CHANGE_ME'],
+        'tools' => [
+            // Legacy/global tools token (opsional, untuk transisi)
+            'token' => 'CHANGE_ME',
+            // Disarankan: pisahkan token per endpoint sensitif
+            'backup_token' => 'CHANGE_ME',
+            'restore_token' => 'CHANGE_ME',
+            'clear_logs_token' => 'CHANGE_ME',
+            // Optional rotation list
+            // 'backup_tokens' => ['TOKEN_A', 'TOKEN_B'],
+            // 'restore_tokens' => ['TOKEN_A', 'TOKEN_B'],
+            // 'clear_logs_tokens' => ['TOKEN_A', 'TOKEN_B'],
+        ],
         // Optional: WhatsApp webhook token
         // 'whatsapp_webhook_token' => 'CHANGE_ME',
         // Optional: VIP whitelist defaults

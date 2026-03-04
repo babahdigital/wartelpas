@@ -11,6 +11,7 @@ DEPLOY_REF="${DEPLOY_REF:-main}"
 REMOTE_BASE="/home/abdullah/lpsaring"
 REMOTE_APP="$REMOTE_BASE/wartelpas"
 REMOTE_BACKUP="$REMOTE_BASE/.wartelpas-runtime-backup"
+REMOTE_BACKUP_KEEP="${REMOTE_BACKUP_KEEP:-10}"
 PROXY_NETWORK="proxy-network"
 APP_CONTAINER_NAME="wartelpas"
 APP_SERVICE_NAME="mikhmon"
@@ -31,8 +32,8 @@ NGINX_SYNC_FILES_ALL=(
 
 ALL_NGINX_SYNC=0
 
-STRICT=0
-CLEAN=1
+STRICT=1
+CLEAN=0
 BUILD=1
 NO_CACHE=1
 RECREATE=1
@@ -58,7 +59,7 @@ Usage:
   ./deploy_wartelpas_production.sh [flags]
 
 Flags utama:
-  --clean            Hapus folder wartelpas lalu clone ulang (default: ON)
+  --clean            Hapus folder wartelpas lalu clone ulang (default: OFF)
   --no-clean         Jangan hapus/clone ulang, gunakan source yang ada
   --build            Build image wartelpas (default: ON)
   --no-build         Skip build
@@ -71,7 +72,8 @@ Flags utama:
   --sync-all-nginx   Sinkronisasi semua conf nginx (default+lpsaring+wartelpas)
   --sync-wartelpas-only
                      Sinkronisasi hanya wartelpas.conf (default)
-  --strict           Validasi host/path target agar tidak melebar
+  --strict           Validasi host/path target agar tidak melebar (default: ON)
+  --no-strict        Nonaktifkan strict mode (tidak disarankan)
   --help             Tampilkan bantuan
 
 Contoh:
@@ -107,6 +109,7 @@ while [[ $# -gt 0 ]]; do
     --sync-all-nginx) ALL_NGINX_SYNC=1 ;;
     --sync-wartelpas-only) ALL_NGINX_SYNC=0 ;;
     --strict) STRICT=1 ;;
+    --no-strict) STRICT=0 ;;
     --dry-run) DRY_RUN=1 ;;
     --help)
       usage
@@ -154,6 +157,7 @@ ssh -i "$SSH_KEY" -p "$SSH_PORT" "$SSH_USER_HOST" \
   REMOTE_BASE="$REMOTE_BASE" \
   REMOTE_APP="$REMOTE_APP" \
   REMOTE_BACKUP="$REMOTE_BACKUP" \
+  REMOTE_BACKUP_KEEP="$REMOTE_BACKUP_KEEP" \
   PROXY_NETWORK="$PROXY_NETWORK" \
   APP_CONTAINER_NAME="$APP_CONTAINER_NAME" \
   APP_SERVICE_NAME="$APP_SERVICE_NAME" \
@@ -183,6 +187,85 @@ require_file() {
     echo "Error: file wajib produksi tidak ditemukan: $path"
     exit 1
   fi
+}
+
+verify_file_copy() {
+  local src_file="$1"
+  local dst_file="$2"
+  local rel_name="$3"
+
+  if [[ ! -f "$dst_file" ]]; then
+    echo "Error: backup file hilang setelah copy: $rel_name"
+    return 1
+  fi
+
+  if ! cmp -s "$src_file" "$dst_file"; then
+    echo "Error: backup file tidak identik: $rel_name"
+    return 1
+  fi
+
+  return 0
+}
+
+verify_dir_copy() {
+  local src_dir="$1"
+  local dst_dir="$2"
+  local rel_name="$3"
+
+  if [[ ! -d "$dst_dir" ]]; then
+    echo "Error: backup dir hilang setelah copy: $rel_name"
+    return 1
+  fi
+
+  local src_count
+  local dst_count
+  src_count="$(find "$src_dir" -type f | wc -l | tr -d '[:space:]')"
+  dst_count="$(find "$dst_dir" -type f | wc -l | tr -d '[:space:]')"
+
+  if [[ "$src_count" != "$dst_count" ]]; then
+    echo "Error: backup dir mismatch file count ($rel_name): src=$src_count dst=$dst_count"
+    return 1
+  fi
+
+  if [[ "$src_count" != "0" ]]; then
+    local manifest
+    manifest="$(mktemp)"
+    (cd "$src_dir" && find . -type f -print0 | sort -z | xargs -0 sha256sum > "$manifest")
+    if ! (cd "$dst_dir" && sha256sum -c "$manifest" >/dev/null 2>&1); then
+      rm -f "$manifest"
+      echo "Error: backup dir checksum tidak cocok: $rel_name"
+      return 1
+    fi
+    rm -f "$manifest"
+  fi
+
+  return 0
+}
+
+cleanup_backup_retention() {
+  local keep="${REMOTE_BACKUP_KEEP:-10}"
+  if ! [[ "$keep" =~ ^[0-9]+$ ]] || (( keep < 1 )); then
+    keep=10
+  fi
+
+  if [[ ! -d "$REMOTE_BACKUP" ]]; then
+    return 0
+  fi
+
+  local -a dirs=()
+  while IFS= read -r dir; do
+    dirs+=("$dir")
+  done < <(find "$REMOTE_BACKUP" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' | sort -nr | awk '{print $2}')
+
+  if (( ${#dirs[@]} <= keep )); then
+    return 0
+  fi
+
+  local idx
+  for (( idx=keep; idx<${#dirs[@]}; idx++ )); do
+    run_cmd rm -rf "${dirs[$idx]}"
+    echo "Pruned old backup: ${dirs[$idx]}"
+  done
 }
 
 http_code() {
@@ -256,32 +339,80 @@ fi
 
 run_cmd mkdir -p "$REMOTE_BASE"
 
-if [[ "$CLEAN" -eq 1 ]]; then
-  print_step "Backup runtime files"
-  run_cmd rm -rf "$REMOTE_BACKUP"
+RUNTIME_BACKUP_DIR=""
+BACKUP_VERIFIED=0
+NEED_RUNTIME_BACKUP=0
+if [[ "$CLEAN" -eq 1 || "$STRICT" -eq 1 ]]; then
+  NEED_RUNTIME_BACKUP=1
+fi
+
+if [[ "$NEED_RUNTIME_BACKUP" -eq 1 ]]; then
+  print_step "Backup runtime files (wajib sebelum clean/strict)"
   run_cmd mkdir -p "$REMOTE_BACKUP"
 
+  BACKUP_STAMP="$(date +%Y%m%d_%H%M%S)"
+  RUNTIME_BACKUP_DIR="$REMOTE_BACKUP/$BACKUP_STAMP"
+  run_cmd mkdir -p "$RUNTIME_BACKUP_DIR"
+
   if [[ -d "$REMOTE_APP" ]]; then
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+      echo "[DRY-RUN] write backup metadata to $RUNTIME_BACKUP_DIR/backup.meta"
+    else
+      {
+        echo "backup_at=$BACKUP_STAMP"
+        echo "source=$REMOTE_APP"
+        echo "strict=$STRICT"
+        echo "clean=$CLEAN"
+      } > "$RUNTIME_BACKUP_DIR/backup.meta"
+    fi
+
     for rel_path in "${RUNTIME_FILES[@]}"; do
       src="$REMOTE_APP/$rel_path"
-      dst="$REMOTE_BACKUP/$rel_path"
+      dst="$RUNTIME_BACKUP_DIR/$rel_path"
       if [[ -f "$src" ]]; then
         run_cmd mkdir -p "$(dirname "$dst")"
         run_cmd cp -f "$src" "$dst"
-        echo "Backup: $rel_path"
+        if [[ "$DRY_RUN" -eq 0 ]]; then
+          verify_file_copy "$src" "$dst" "$rel_path"
+        fi
+        echo "Backup file verified: $rel_path"
       fi
     done
 
     for rel_dir in "${RUNTIME_DIRS[@]}"; do
       src="$REMOTE_APP/$rel_dir"
-      dst="$REMOTE_BACKUP/$rel_dir"
+      dst="$RUNTIME_BACKUP_DIR/$rel_dir"
       if [[ -d "$src" ]]; then
         run_cmd rm -rf "$dst"
         run_cmd mkdir -p "$(dirname "$dst")"
         run_cmd cp -a "$src" "$dst"
-        echo "Backup dir: $rel_dir"
+        if [[ "$DRY_RUN" -eq 0 ]]; then
+          verify_dir_copy "$src" "$dst" "$rel_dir"
+        fi
+        echo "Backup dir verified: $rel_dir"
       fi
     done
+
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+      echo "[DRY-RUN] touch $RUNTIME_BACKUP_DIR/.verified"
+    else
+      touch "$RUNTIME_BACKUP_DIR/.verified"
+    fi
+
+    BACKUP_VERIFIED=1
+  else
+    echo "Info: source $REMOTE_APP belum ada, backup runtime dilewati."
+    BACKUP_VERIFIED=1
+  fi
+
+  print_step "Retention backup runtime"
+  cleanup_backup_retention
+fi
+
+if [[ "$CLEAN" -eq 1 ]]; then
+  if [[ "$BACKUP_VERIFIED" -ne 1 ]]; then
+    echo "Error: backup runtime belum terverifikasi, clean dibatalkan."
+    exit 1
   fi
 
   print_step "Hapus source lama + clone fresh"
@@ -290,7 +421,7 @@ if [[ "$CLEAN" -eq 1 ]]; then
 
   print_step "Restore runtime files"
   for rel_path in "${RUNTIME_FILES[@]}"; do
-    src="$REMOTE_BACKUP/$rel_path"
+    src="$RUNTIME_BACKUP_DIR/$rel_path"
     dst="$REMOTE_APP/$rel_path"
     if [[ -f "$src" ]]; then
       run_cmd mkdir -p "$(dirname "$dst")"
@@ -300,7 +431,7 @@ if [[ "$CLEAN" -eq 1 ]]; then
   done
 
   for rel_dir in "${RUNTIME_DIRS[@]}"; do
-    src="$REMOTE_BACKUP/$rel_dir"
+    src="$RUNTIME_BACKUP_DIR/$rel_dir"
     dst="$REMOTE_APP/$rel_dir"
     if [[ -d "$src" ]]; then
       run_cmd rm -rf "$dst"

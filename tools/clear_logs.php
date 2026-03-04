@@ -14,7 +14,39 @@ $envFile = $root_dir . '/include/env.php';
 if (file_exists($envFile)) {
     require $envFile;
 }
-$secret_token = $env['security']['tools']['token'] ?? ($env['backup']['secret'] ?? '');
+
+$securityTools = (isset($env['security']['tools']) && is_array($env['security']['tools']))
+    ? $env['security']['tools']
+    : [];
+
+$acceptedTokens = [];
+$clearLogsToken = isset($securityTools['clear_logs_token']) ? trim((string)$securityTools['clear_logs_token']) : '';
+if ($clearLogsToken !== '') {
+    $acceptedTokens[] = $clearLogsToken;
+}
+if (isset($securityTools['clear_logs_tokens']) && is_array($securityTools['clear_logs_tokens'])) {
+    foreach ($securityTools['clear_logs_tokens'] as $tokenCandidate) {
+        $tokenCandidate = trim((string)$tokenCandidate);
+        if ($tokenCandidate !== '') {
+            $acceptedTokens[] = $tokenCandidate;
+        }
+    }
+}
+
+if (empty($acceptedTokens)) {
+    $toolsToken = isset($securityTools['token']) ? trim((string)$securityTools['token']) : '';
+    if ($toolsToken !== '') {
+        $acceptedTokens[] = $toolsToken;
+    }
+
+    $legacyBackupSecret = isset($env['backup']['secret']) ? trim((string)$env['backup']['secret']) : '';
+    if ($legacyBackupSecret !== '') {
+        $acceptedTokens[] = $legacyBackupSecret;
+    }
+}
+
+$acceptedTokens = array_values(array_unique($acceptedTokens));
+
 $key = $_GET['key'] ?? '';
 if ($key === '' && isset($_POST['key'])) {
     $key = (string)$_POST['key'];
@@ -29,22 +61,43 @@ $key = trim((string)$key);
 if ($key === '' && isset($_SERVER['HTTP_X_WARTELPAS_KEY'])) {
     $key = trim((string)$_SERVER['HTTP_X_WARTELPAS_KEY']);
 }
-$is_valid_key = $secret_token !== '' && hash_equals($secret_token, (string)$key);
+$key = trim((string)$key);
 
-if (!$is_valid_key) {
+$is_valid_key = false;
+foreach ($acceptedTokens as $acceptedToken) {
+    if (hash_equals($acceptedToken, $key)) {
+        $is_valid_key = true;
+        break;
+    }
+}
+
+$session_allowed = isset($_SESSION['mikhmon']) && isSuperAdmin();
+
+if (!$is_valid_key && !$session_allowed) {
     requireLogin('../admin.php?id=login');
     requireSuperAdmin('../admin.php?id=sessions');
-    $is_valid_key = true;
-} else {
+    $session_allowed = true;
+} elseif ($is_valid_key) {
     if (!isset($_SESSION['mikhmon'])) {
         $_SESSION['mikhmon'] = 'tools';
         $_SESSION['mikhmon_level'] = 'superadmin';
     }
 }
 
-if (!$is_valid_key) {
+if (!$is_valid_key && !$session_allowed) {
     http_response_code(403);
     die("Error: Token Salah.");
+}
+
+$allowedIpList = isset($env['backup']['allowed_ips']) && is_array($env['backup']['allowed_ips'])
+    ? $env['backup']['allowed_ips']
+    : ['127.0.0.1', '::1', '10.19.83.2', '172.19.0.1'];
+if ($is_valid_key && !$session_allowed && !empty($_SERVER['REMOTE_ADDR']) && !empty($allowedIpList)) {
+    $clientIp = (string)$_SERVER['REMOTE_ADDR'];
+    if (!in_array($clientIp, $allowedIpList, true)) {
+        http_response_code(403);
+        die("Error: IP not allowed.");
+    }
 }
 
 $scope = strtolower(trim($_GET['scope'] ?? 'basic'));

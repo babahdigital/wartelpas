@@ -4,6 +4,15 @@ set -e
 # Pesan Log
 echo "FIXING PERMISSIONS FOR MIKHMON..."
 
+set_dir_permissions() {
+    local target_dir="$1"
+    if [ -d "$target_dir" ]; then
+        chown -R www-data:www-data "$target_dir" || true
+        find "$target_dir" -type d -exec chmod 775 {} \; || true
+        find "$target_dir" -type f -exec chmod 664 {} \; || true
+    fi
+}
+
 # 1. Pastikan folder runtime ada agar chmod tidak gagal saat startup
 mkdir -p \
     /var/www/html/session \
@@ -13,13 +22,13 @@ mkdir -p \
     /var/www/html/report \
     /var/www/html/voucher
 
-# 1b. Paksa folder runtime bisa ditulis
-chmod -R 777 /var/www/html/session || true
-chmod -R 777 /var/www/html/db_data || true
-chmod -R 777 /var/www/html/img || true
-chmod -R 777 /var/www/html/logs || true
-chmod -R 777 /var/www/html/report || true
-chmod -R 777 /var/www/html/voucher || true
+# 1b. Terapkan permission minimum yang tetap writable untuk runtime
+set_dir_permissions /var/www/html/session
+set_dir_permissions /var/www/html/db_data
+set_dir_permissions /var/www/html/img
+set_dir_permissions /var/www/html/logs
+set_dir_permissions /var/www/html/report
+set_dir_permissions /var/www/html/voucher
 
 # 1c. Pastikan .htaccess utama ada (tanpa sinkron template legacy)
 HTACCESS="/var/www/html/.htaccess"
@@ -28,11 +37,12 @@ if [ ! -f "$HTACCESS" ]; then
     touch "$HTACCESS"
 fi
 chown www-data:www-data "$HTACCESS" || true
-chmod 666 "$HTACCESS" || true
+chmod 664 "$HTACCESS" || true
 
 # 2. Pastikan file konfigurasi bisa ditulis oleh web server
 if [ -f "/var/www/html/include/config.php" ]; then
-    chmod 666 /var/www/html/include/config.php || true
+    chown www-data:www-data /var/www/html/include/config.php || true
+    chmod 664 /var/www/html/include/config.php || true
 fi
 
 # 2c. Bersihkan session lama agar tidak numpuk (lebih dari 7 hari)
@@ -42,7 +52,7 @@ fi
 
 # 3. Khusus folder settings agar bisa simpan config
 if [ -d "/var/www/html/settings" ]; then
-    chmod -R 777 /var/www/html/settings
+    set_dir_permissions /var/www/html/settings
 fi
 
 echo "PERMISSIONS FIXED. STARTING APACHE..."
