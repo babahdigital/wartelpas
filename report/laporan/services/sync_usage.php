@@ -6,7 +6,6 @@ require_once __DIR__ . '/../../../include/acl.php';
 if (isset($_SESSION['mikhmon']) && isOperator()) {
     requireSuperAdmin('../../../admin.php?id=sessions');
 }
-session_start();
 error_reporting(0);
 set_time_limit(0);
 @ini_set('output_buffering', 'off');
