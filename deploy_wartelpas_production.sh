@@ -460,7 +460,9 @@ if [[ "$NEED_RUNTIME_BACKUP" -eq 1 ]]; then
             echo "[DRY-RUN] cp -f $src/*.db-shm $dst/*.db-shm (best-effort)"
           else
             mkdir -p "$dst"
-            (cd "$src" && tar --exclude='*.db-wal' --exclude='*.db-shm' -cf - .) | (cd "$dst" && tar -xf -)
+            if ! (cd "$src" && tar --warning=no-file-changed --exclude='*.db-wal' --exclude='*.db-shm' -cf - .) | (cd "$dst" && tar -xf -); then
+              echo "Warning: snapshot db_data berubah saat dibaca, lanjutkan dengan hasil backup terbaru."
+            fi
             shopt -s nullglob
             for live_file in "$src"/*.db-wal "$src"/*.db-shm; do
               cp -f "$live_file" "$dst/$(basename "$live_file")" 2>/dev/null || true
