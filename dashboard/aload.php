@@ -599,7 +599,7 @@ if ($load == "live_data") {
             $estIncome = $sumIncomeMonth + ($avgDaily * ($daysInMonth - $currentDay));
 
             $dataResponse['sold'] = $sumSold;
-            $dataResponse['income'] = number_format($sumIncomeMonth, 0, ",", ".");
+            $dataResponse['income'] = number_format($sumGrossToday, 0, ",", ".");
             $dataResponse['gross_income'] = number_format($sumGrossToday, 0, ",", ".");
             $dataResponse['est_income'] = number_format($estIncome, 0, ",", ".");
 
@@ -726,7 +726,7 @@ if ($load == "hotspot") {
             $raw3 = date('M', mktime(0, 0, 0, $filterMonth, 1, $filterYear)) . '/%/' . $filterYear;
 
             if (table_exists($db, 'sales_history')) {
-                $stmt = $db->prepare("SELECT sale_date, raw_date, price, price_snapshot, sprice_snapshot, qty, full_raw_data
+                $stmt = $db->prepare("SELECT username, sale_date, raw_date, price, price_snapshot, sprice_snapshot, qty, full_raw_data
                     FROM sales_history
                     WHERE sale_date LIKE :m OR raw_date LIKE :r1 OR raw_date LIKE :r2 OR raw_date LIKE :r3");
                 $stmt->execute([':m' => $monthKey . '%', ':r1' => $raw1, ':r2' => $raw2, ':r3' => $raw3]);
@@ -734,14 +734,14 @@ if ($load == "hotspot") {
             }
 
             if (table_exists($db, 'live_sales')) {
-                $stmt = $db->prepare("SELECT sale_date, raw_date, price, price_snapshot, sprice_snapshot, qty, full_raw_data
+                $stmt = $db->prepare("SELECT username, sale_date, raw_date, price, price_snapshot, sprice_snapshot, qty, full_raw_data
                     FROM live_sales
                     WHERE sync_status='pending' AND (sale_date LIKE :m OR raw_date LIKE :r1 OR raw_date LIKE :r2 OR raw_date LIKE :r3)");
                 $stmt->execute([':m' => $monthKey . '%', ':r1' => $raw1, ':r2' => $raw2, ':r3' => $raw3]);
                 $rowsMerged = array_merge($rowsMerged, $stmt->fetchAll(PDO::FETCH_ASSOC) ?: []);
             }
 
-            if (count($rowsMerged) === 0 && table_exists($db, 'login_history')) {
+            if (table_exists($db, 'login_history')) {
                 $stmtLogin = $db->prepare("SELECT
                     username,
                     COALESCE(NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(first_login_real,1,10),''), NULLIF(substr(login_time_real,1,10),''), login_date) AS sale_date,
@@ -754,6 +754,18 @@ if ($load == "hotspot") {
                       AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'
                       AND COALESCE(NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(first_login_real,1,10),''), NULLIF(substr(login_time_real,1,10),''), login_date) LIKE :m");
                 $stmtLogin->execute([':m' => $monthKey . '%']);
+
+                $existingUserDay = [];
+                foreach ($rowsMerged as $er) {
+                    $eDate = (string)($er['sale_date'] ?? '');
+                    if ($eDate === '') {
+                        $eDate = norm_date_from_raw_report($er['raw_date'] ?? '');
+                    }
+                    $eUser = trim((string)($er['username'] ?? ''));
+                    if ($eDate !== '' && $eUser !== '') {
+                        $existingUserDay[$eUser . '|' . $eDate] = true;
+                    }
+                }
 
                 $seenUserDay = [];
                 foreach ($stmtLogin->fetchAll(PDO::FETCH_ASSOC) as $lr) {
@@ -775,6 +787,9 @@ if ($load == "hotspot") {
                     }
 
                     $userDayKey = $username . '|' . $saleDate;
+                    if (isset($existingUserDay[$userDayKey])) {
+                        continue;
+                    }
                     if (isset($seenUserDay[$userDayKey])) {
                         continue;
                     }
@@ -794,6 +809,7 @@ if ($load == "hotspot") {
                     }
 
                     $rowsMerged[] = [
+                        'username' => $username,
                         'sale_date' => $saleDate,
                         'raw_date' => '',
                         'price' => $price,

@@ -290,6 +290,7 @@ for ($i = 5; $i >= 0; $i--) {
         </div>
         <div class="kpi-box border-yellow">
             <h1 id="kpi-income">Rp 0</h1>
+            <div class="label" id="kpi-income-label">Omzet Hari Ini</div>
             <div class="label" id="kpi-est">Proyeksi: Rp 0</div>
         </div>
         <div class="kpi-box border-audit" id="audit-box">
