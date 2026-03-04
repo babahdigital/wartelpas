@@ -165,6 +165,16 @@ if (!function_exists('norm_date_from_raw_report')) {
     }
 }
 
+if (!function_exists('extract_price_from_full_raw_dashboard')) {
+    function extract_price_from_full_raw_dashboard($raw) {
+        $raw = trim((string)$raw);
+        if ($raw === '') return 0;
+        $parts = function_exists('split_sales_raw') ? split_sales_raw($raw) : explode('-|-', $raw);
+        if (!is_array($parts) || count($parts) < 4) return 0;
+        return (int)($parts[3] ?? 0);
+    }
+}
+
 if (!function_exists('table_exists')) {
     function table_exists($db, $name) {
         try {
@@ -269,8 +279,10 @@ if ($load == "live_data") {
             if ($hasSales) {
                 $selects[] = "SELECT
                     sh.raw_date, sh.sale_date,
+                    'sales' AS src,
                     sh.username, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid,
                     sh.comment, sh.blok_name,
+                    sh.profile, sh.profile_snapshot, sh.validity, sh.full_raw_data,
                     sh.price, sh.price_snapshot, sh.sprice_snapshot, sh.qty,
                     $loginSelect
                     FROM sales_history sh
@@ -279,8 +291,10 @@ if ($load == "live_data") {
             if ($hasLive) {
                 $selects[] = "SELECT
                     ls.raw_date, ls.sale_date,
+                    'live' AS src,
                     ls.username, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid,
                     ls.comment, ls.blok_name,
+                    ls.profile, ls.profile_snapshot, ls.validity, ls.full_raw_data,
                     ls.price, ls.price_snapshot, ls.sprice_snapshot, ls.qty,
                     $loginSelect2
                     FROM live_sales ls
@@ -336,6 +350,7 @@ if ($load == "live_data") {
                         $rows[] = [
                             'raw_date' => '',
                             'sale_date' => (string)($lr['sale_date'] ?? ''),
+                            'src' => 'login',
                             'username' => (string)($lr['username'] ?? ''),
                             'status' => (string)($lr['status'] ?? 'normal'),
                             'is_rusak' => 0,
@@ -343,6 +358,10 @@ if ($load == "live_data") {
                             'is_invalid' => 0,
                             'comment' => (string)($lr['comment'] ?? ''),
                             'blok_name' => (string)($lr['blok_name'] ?? ''),
+                            'profile' => (string)($lr['validity'] ?? ''),
+                            'profile_snapshot' => '',
+                            'validity' => (string)($lr['validity'] ?? ''),
+                            'full_raw_data' => '',
                             'price' => $derivedPrice,
                             'price_snapshot' => $derivedPrice,
                             'sprice_snapshot' => $derivedPrice,
@@ -359,6 +378,7 @@ if ($load == "live_data") {
             $total_net_month = 0;
             $total_net_today = 0;
             $total_gross_today = 0;
+            $total_settled_month = 0;
 
             foreach ($rows as $r) {
                 $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
@@ -388,6 +408,18 @@ if ($load == "live_data") {
                 if ($price <= 0) {
                     $price = (int)($r['sprice_snapshot'] ?? 0);
                 }
+                if ($price <= 0) {
+                    $profileHint = (string)($r['profile_snapshot'] ?? ($r['profile'] ?? ($r['validity'] ?? '')));
+                    if ($profileHint === '' || $profileHint === '-') {
+                        $profileHint = extract_profile_from_comment($raw_comment);
+                    }
+                    if ($profileHint !== '' && function_exists('resolve_price_from_profile')) {
+                        $price = (int)resolve_price_from_profile($profileHint);
+                    }
+                }
+                if ($price <= 0) {
+                    $price = extract_price_from_full_raw_dashboard($r['full_raw_data'] ?? '');
+                }
                 $qty = (int)($r['qty'] ?? 0);
                 if ($qty <= 0) $qty = 1;
                 $line_price = $price * $qty;
@@ -413,6 +445,9 @@ if ($load == "live_data") {
                 $loss_invalid = ($status === 'invalid') ? $line_price : 0;
                 $net_add = $line_price - $loss_rusak - $loss_invalid;
                 $total_net_month += $net_add;
+                if (($r['src'] ?? '') === 'sales') {
+                    $total_settled_month += $net_add;
+                }
                 if ($sale_date === $today) {
                     $total_net_today += $net_add;
                     if (!in_array($status, ['retur', 'invalid'], true)) {
@@ -424,6 +459,7 @@ if ($load == "live_data") {
             $sumIncome = $total_net_today;
             $sumIncomeMonth = $total_net_month;
             $sumGrossToday = $total_gross_today;
+            $sumSettledIncomeMonth = $total_settled_month;
 
             $sumSold = 0;
             if (table_exists($db, 'sales_history') || table_exists($db, 'live_sales') || table_exists($db, 'login_history')) {
@@ -645,7 +681,7 @@ if ($load == "live_data") {
                 'ghost' => abs($ghostQty),
                 'miss_10' => $miss10,
                 'miss_30' => $miss30,
-                'cash_expected' => number_format($cashExpected, 0, ",", "."),
+                'cash_expected' => number_format($sumSettledIncomeMonth, 0, ",", "."),
                 'last_update' => date('H:i')
             ];
         } catch (Exception $e) {

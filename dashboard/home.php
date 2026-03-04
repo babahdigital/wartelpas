@@ -148,7 +148,7 @@ else {
 
                 if (data.audit_detail.cash_expected) {
                     detail += '<span style="background:rgba(46,204,113,0.15); color:#2ecc71; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:600;">';
-                    detail += '<i class="fa fa-money"></i> Pendapatan: Rp ' + data.audit_detail.cash_expected + '</span>';
+                    detail += '<i class="fa fa-money"></i> Pendapatan Settlement: Rp ' + data.audit_detail.cash_expected + '</span>';
                 }
 
                 detail += '</div>';
