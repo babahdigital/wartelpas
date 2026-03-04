@@ -18,11 +18,17 @@ ORIGIN_BASE_URL="http://127.0.0.1:8081"
 PROXY_CONF_SRC_REL="nginx/conf.d"
 PROXY_CONF_DST="/home/abdullah/nginx/conf.d"
 
-NGINX_SYNC_FILES=(
+NGINX_SYNC_FILES_BASE=(
+  "wartelpas.conf"
+)
+
+NGINX_SYNC_FILES_ALL=(
   "default.conf"
   "lpsaring.conf"
   "wartelpas.conf"
 )
+
+ALL_NGINX_SYNC=0
 
 STRICT=0
 CLEAN=1
@@ -57,6 +63,9 @@ Flags utama:
   --no-recreate      Skip recreate container
   --recreate-only    Shortcut: --no-clean --no-build --recreate
   --dry-run          Simulasi langkah deploy tanpa perubahan
+  --sync-all-nginx   Sinkronisasi semua conf nginx (default+lpsaring+wartelpas)
+  --sync-wartelpas-only
+                     Sinkronisasi hanya wartelpas.conf (default)
   --strict           Validasi host/path target agar tidak melebar
   --help             Tampilkan bantuan
 
@@ -90,6 +99,8 @@ while [[ $# -gt 0 ]]; do
       NO_CACHE=0
       RECREATE=1
       ;;
+    --sync-all-nginx) ALL_NGINX_SYNC=1 ;;
+    --sync-wartelpas-only) ALL_NGINX_SYNC=0 ;;
     --strict) STRICT=1 ;;
     --dry-run) DRY_RUN=1 ;;
     --help)
@@ -130,6 +141,7 @@ ssh -i "$SSH_KEY" -p "$SSH_PORT" "$SSH_USER_HOST" \
   BUILD="$BUILD" \
   NO_CACHE="$NO_CACHE" \
   RECREATE="$RECREATE" \
+  ALL_NGINX_SYNC="$ALL_NGINX_SYNC" \
   DRY_RUN="$DRY_RUN" \
   STRICT="$STRICT" \
   REPO_URL="$REPO_URL" \
@@ -205,11 +217,21 @@ RUNTIME_FILES=(
   "include/env.php"
 )
 
-NGINX_SYNC_FILES=(
+NGINX_SYNC_FILES_BASE=(
+  "wartelpas.conf"
+)
+
+NGINX_SYNC_FILES_ALL=(
   "default.conf"
   "lpsaring.conf"
   "wartelpas.conf"
 )
+
+if [[ "${ALL_NGINX_SYNC:-0}" -eq 1 ]]; then
+  NGINX_SYNC_FILES=("${NGINX_SYNC_FILES_ALL[@]}")
+else
+  NGINX_SYNC_FILES=("${NGINX_SYNC_FILES_BASE[@]}")
+fi
 
 if [[ "$STRICT" -eq 1 ]]; then
   [[ "$REMOTE_APP" == "/home/abdullah/lpsaring/wartelpas" ]] || {
@@ -277,7 +299,11 @@ fi
 
 cd "$REMOTE_APP"
 
-print_step "Sinkronisasi nginx conf ke host proxy (path aktif)"
+if [[ "${ALL_NGINX_SYNC:-0}" -eq 1 ]]; then
+  print_step "Sinkronisasi nginx conf ke host proxy (SEMUA conf)"
+else
+  print_step "Sinkronisasi nginx conf ke host proxy (hanya wartelpas.conf)"
+fi
 if [[ "$DRY_RUN" -eq 1 ]]; then
   for f in "${NGINX_SYNC_FILES[@]}"; do
     echo "[DRY-RUN] cp -f $REMOTE_APP/$PROXY_CONF_SRC_REL/$f $PROXY_CONF_DST/$f"
