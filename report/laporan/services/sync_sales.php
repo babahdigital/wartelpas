@@ -238,24 +238,52 @@ $today_server = date('Y-m-d');
 if ($API->connect($use_ip, $use_user, $use_pass)) {
     
     $commentFilter = isset($_GET['comment']) ? trim((string)$_GET['comment']) : 'mikhmon';
+    $extract_raw_sales = static function (array $scriptRow) {
+        $is_raw = static function ($value) {
+            $value = trim((string)$value);
+            if ($value === '') return false;
+            if (strpos($value, '-|-') === false && strpos($value, '-|') === false) return false;
+            return (
+                preg_match('/^[A-Za-z]{3}\/\d{2}\/\d{4}-\|-?/', $value)
+                || preg_match('/^\d{4}-\d{2}-\d{2}-\|-?/', $value)
+                || preg_match('/^\d{2}\/\d{2}\/\d{4}-\|-?/', $value)
+            ) === 1;
+        };
+
+        $name = (string)($scriptRow['name'] ?? '');
+        if ($is_raw($name)) {
+            return $name;
+        }
+
+        $source = (string)($scriptRow['source'] ?? '');
+        if ($is_raw($source)) {
+            return $source;
+        }
+
+        $comment = (string)($scriptRow['comment'] ?? '');
+        if ($is_raw($comment)) {
+            return $comment;
+        }
+
+        return '';
+    };
+
     // Ambil Script yang komentarnya "mikhmon" (Ciri khas script penjualan)
     $API->write('/system/script/print', false);
     if ($commentFilter !== '' && strtolower($commentFilter) !== 'any') {
         $API->write('?comment=' . $commentFilter, false);
     }
-    $API->write('=.proplist=.id,name,comment');
+    $API->write('=.proplist=.id,name,comment,source');
     $scripts = $API->read();
     if (empty($scripts) && ($commentFilter === '' || strtolower($commentFilter) !== 'any')) {
         // Fallback: ambil semua script dan filter manual berdasarkan format data penjualan
         $API->write('/system/script/print', false);
-        $API->write('=.proplist=.id,name,comment');
+        $API->write('=.proplist=.id,name,comment,source');
         $allScripts = $API->read();
         $scripts = [];
         foreach ($allScripts as $s) {
-            $nm = $s['name'] ?? '';
-            if ($nm === '') continue;
-            if (strpos($nm, '-|-') === false && strpos($nm, '-|') === false) continue;
-            if (preg_match('/^[A-Za-z]{3}\/[0-9]{2}\/[0-9]{4}-\|-?/', $nm) || preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}-\|-?/', $nm) || preg_match('/^[0-9]{2}\/[0-9]{2}\/[0-9]{4}-\|-?/', $nm)) {
+            $rawData = $extract_raw_sales(is_array($s) ? $s : []);
+            if ($rawData !== '') {
                 $scripts[] = $s;
             }
         }
@@ -285,7 +313,11 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
     )");
 
     foreach ($scripts as $s) {
-        $rawData = $s['name']; // Format: jan/11/2026-|-09:00:00-|-user-|-price...
+        $rawData = $extract_raw_sales(is_array($s) ? $s : []);
+        if ($rawData === '') {
+            $skip_invalid_format++;
+            continue;
+        }
         if ($debug && count($sample_names) < 5) {
             $sample_names[] = $rawData;
         }

@@ -669,6 +669,55 @@ else
   fi
 fi
 
+print_step "Smoke test runtime MikroTik (apply + audit profile)"
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  echo "[DRY-RUN] php $REMOTE_APP/tools/router_apply_profiles_runtime.php"
+  echo "[DRY-RUN] php $REMOTE_APP/tools/router_audit_runtime.php"
+else
+  if ! command -v php >/dev/null 2>&1; then
+    echo "Error: php CLI tidak tersedia di host deploy."
+    exit 1
+  fi
+
+  APPLY_OUT="$(php "$REMOTE_APP/tools/router_apply_profiles_runtime.php" 2>&1 || true)"
+  printf '%s\n' "$APPLY_OUT"
+
+  if printf '%s\n' "$APPLY_OUT" | grep -q '^CONNECT|FAIL'; then
+    echo "Error: gagal konek MikroTik saat apply runtime profile."
+    exit 1
+  fi
+  if printf '%s\n' "$APPLY_OUT" | grep -q '^HOOK_SCRIPT|updated|.*|status=TRAP'; then
+    echo "Error: update hook script MikroTik terkena TRAP."
+    exit 1
+  fi
+  if printf '%s\n' "$APPLY_OUT" | grep -q '^PROFILE|UPDATED|.*|set=TRAP'; then
+    echo "Error: set on-login/on-logout profile terkena TRAP."
+    exit 1
+  fi
+  if printf '%s\n' "$APPLY_OUT" | grep -q '^PROFILE|NOT_FOUND|'; then
+    echo "Error: profile target tidak ditemukan saat apply runtime profile."
+    exit 1
+  fi
+
+  AUDIT_OUT="$(php "$REMOTE_APP/tools/router_audit_runtime.php" 2>&1 || true)"
+  printf '%s\n' "$AUDIT_OUT"
+
+  if printf '%s\n' "$AUDIT_OUT" | grep -q '^CONNECT|FAIL'; then
+    echo "Error: gagal konek MikroTik saat audit runtime profile."
+    exit 1
+  fi
+
+  missing_count="$(printf '%s\n' "$AUDIT_OUT" | awk -F'|' '/^PROFILE_MISSING_COUNT\|/ {print $2; exit}')"
+  if [[ -z "$missing_count" ]]; then
+    echo "Error: output audit runtime tidak memuat PROFILE_MISSING_COUNT."
+    exit 1
+  fi
+  if (( missing_count > 0 )); then
+    echo "Error: masih ada profile yang belum memenuhi syarat runtime (count=$missing_count)."
+    exit 1
+  fi
+fi
+
 print_step "Status akhir"
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "[DRY-RUN] docker compose ps"

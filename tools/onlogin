@@ -53,11 +53,26 @@
 		}
 
 		:if (!$isVip) do={
-			:local ownerKey ([:pick $date 0 3] . [:pick $date 7 11]);
 			:local logTxt ($date . "-|-" . $time . "-|-" . $username . "-|-" . $price . "-|-" . $userip . "-|-" . $usermac . "-|-1d-|-" . $pLabel . "-|-" . $blokInfo);
+			:local userKey $username;
+			:if ([:len $userKey] > 12) do={ :set userKey [:pick $userKey 0 12]; }
+			:local dateStamp "0000";
+			:if ([:len $date] >= 11) do={ :set dateStamp ([:pick $date 4 6] . [:pick $date 7 11]); }
+			:local timeStamp "000000";
+			:if ([:len $time] >= 8) do={ :set timeStamp ([:pick $time 0 2] . [:pick $time 3 5] . [:pick $time 6 8]); }
+			:local macTail "00";
+			:if ([:len $usermac] >= 2) do={ :set macTail [:pick $usermac ([:len $usermac] - 2) [:len $usermac]]; }
+			:local saleName ("mk-" . $dateStamp . "-" . $timeStamp . "-" . $userKey . "-" . $macTail);
+			:local scriptName $logTxt;
+			:if ([:len $scriptName] > 60) do={ :set scriptName $saleName; }
 			:do {
-				/system script add name=$logTxt owner=$ownerKey source=$date comment="mikhmon";
-			} on-error={ :log warning "LOGIN: gagal create mikhmon script"; }
+				/system script add name=$scriptName source=$logTxt comment="mikhmon";
+			} on-error={
+				:local altName ($saleName . "-" . [:len [/system script find where comment="mikhmon"]]);
+				:do {
+					/system script add name=$altName source=$logTxt comment="mikhmon";
+				} on-error={ :log warning "LOGIN: gagal create mikhmon script"; }
+			}
 
 			:local liveUrl ($localBaseUrl . "/report/laporan/services/live_ingest.php");
 			:local liveUrlFallback ($baseUrl . "/report/laporan/services/live_ingest.php");
