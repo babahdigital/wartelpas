@@ -17,7 +17,7 @@ APP_CONTAINER_NAME="wartelpas"
 APP_SERVICE_NAME="mikhmon"
 PUBLIC_BASE_URL="https://wartelpas.babahdigital.net"
 ORIGIN_BASE_URL="http://127.0.0.1:8081"
-PROXY_CONF_SRC_REL="nginx/conf.d"
+PROXY_CONF_SRC_DIR="${PROXY_CONF_SRC_DIR:-/home/abdullah/nginx/conf.d}"
 PROXY_CONF_DST="/home/abdullah/nginx/conf.d"
 
 NGINX_SYNC_FILES_BASE=(
@@ -25,8 +25,6 @@ NGINX_SYNC_FILES_BASE=(
 )
 
 NGINX_SYNC_FILES_ALL=(
-  "default.conf"
-  "lpsaring.conf"
   "wartelpas.conf"
 )
 
@@ -69,7 +67,7 @@ Flags utama:
   --no-recreate      Skip recreate container
   --recreate-only    Shortcut: --no-clean --no-build --recreate
   --dry-run          Simulasi langkah deploy tanpa perubahan
-  --sync-all-nginx   Sinkronisasi semua conf nginx (default+lpsaring+wartelpas)
+  --sync-all-nginx   Sinkronisasi semua conf nginx yang diizinkan (saat ini: wartelpas.conf)
   --sync-wartelpas-only
                      Sinkronisasi hanya wartelpas.conf (default)
   --strict           Validasi host/path target agar tidak melebar (default: ON)
@@ -163,7 +161,7 @@ ssh -i "$SSH_KEY" -p "$SSH_PORT" "$SSH_USER_HOST" \
   APP_SERVICE_NAME="$APP_SERVICE_NAME" \
   PUBLIC_BASE_URL="$PUBLIC_BASE_URL" \
   ORIGIN_BASE_URL="$ORIGIN_BASE_URL" \
-  PROXY_CONF_SRC_REL="$PROXY_CONF_SRC_REL" \
+  PROXY_CONF_SRC_DIR="$PROXY_CONF_SRC_DIR" \
   PROXY_CONF_DST="$PROXY_CONF_DST" \
   'bash -s' <<'REMOTE_SCRIPT'
 set -euo pipefail
@@ -215,6 +213,37 @@ verify_dir_copy() {
   if [[ ! -d "$dst_dir" ]]; then
     echo "Error: backup dir hilang setelah copy: $rel_name"
     return 1
+  fi
+
+  if [[ "$rel_name" == "db_data" ]]; then
+    local src_db_count
+    local dst_db_count
+    src_db_count="$(find "$src_dir" -maxdepth 1 -type f -name '*.db' | wc -l | tr -d '[:space:]')"
+    dst_db_count="$(find "$dst_dir" -maxdepth 1 -type f -name '*.db' | wc -l | tr -d '[:space:]')"
+
+    if [[ "$dst_db_count" == "0" ]]; then
+      echo "Error: backup dir db_data tidak punya file .db"
+      return 1
+    fi
+
+    if [[ "$src_db_count" != "0" ]] && (( dst_db_count < src_db_count )); then
+      echo "Error: backup dir db_data kehilangan file .db (src=$src_db_count dst=$dst_db_count)"
+      return 1
+    fi
+
+    if command -v sqlite3 >/dev/null 2>&1; then
+      local db_file
+      local quick_check
+      while IFS= read -r db_file; do
+        quick_check="$(sqlite3 "$db_file" 'PRAGMA quick_check;' 2>/dev/null | head -n 1 | tr '[:upper:]' '[:lower:]')"
+        if [[ "$quick_check" != "ok" ]]; then
+          echo "Error: quick_check sqlite gagal untuk $(basename "$db_file")"
+          return 1
+        fi
+      done < <(find "$dst_dir" -maxdepth 1 -type f -name '*.db' -print)
+    fi
+
+    return 0
   fi
 
   local src_count
@@ -315,8 +344,6 @@ NGINX_SYNC_FILES_BASE=(
 )
 
 NGINX_SYNC_FILES_ALL=(
-  "default.conf"
-  "lpsaring.conf"
   "wartelpas.conf"
 )
 
@@ -329,6 +356,10 @@ fi
 if [[ "$STRICT" -eq 1 ]]; then
   [[ "$REMOTE_APP" == "/home/abdullah/lpsaring/wartelpas" ]] || {
     echo "Error strict mode: path target harus /home/abdullah/lpsaring/wartelpas"
+    exit 1
+  }
+  [[ "$PROXY_CONF_SRC_DIR" == "/home/abdullah/nginx/conf.d" ]] || {
+    echo "Error strict mode: nginx conf source harus /home/abdullah/nginx/conf.d"
     exit 1
   }
   [[ "$PROXY_CONF_DST" == "/home/abdullah/nginx/conf.d" ]] || {
@@ -385,7 +416,24 @@ if [[ "$NEED_RUNTIME_BACKUP" -eq 1 ]]; then
       if [[ -d "$src" ]]; then
         run_cmd rm -rf "$dst"
         run_cmd mkdir -p "$(dirname "$dst")"
-        run_cmd cp -a "$src" "$dst"
+        if [[ "$rel_dir" == "db_data" ]]; then
+          if [[ "$DRY_RUN" -eq 1 ]]; then
+            echo "[DRY-RUN] mkdir -p $dst"
+            echo "[DRY-RUN] (cd $src && tar --exclude='*.db-wal' --exclude='*.db-shm' -cf - .) | (cd $dst && tar -xf -)"
+            echo "[DRY-RUN] cp -f $src/*.db-wal $dst/*.db-wal (best-effort)"
+            echo "[DRY-RUN] cp -f $src/*.db-shm $dst/*.db-shm (best-effort)"
+          else
+            mkdir -p "$dst"
+            (cd "$src" && tar --exclude='*.db-wal' --exclude='*.db-shm' -cf - .) | (cd "$dst" && tar -xf -)
+            shopt -s nullglob
+            for live_file in "$src"/*.db-wal "$src"/*.db-shm; do
+              cp -f "$live_file" "$dst/$(basename "$live_file")" 2>/dev/null || true
+            done
+            shopt -u nullglob
+          fi
+        else
+          run_cmd cp -a "$src" "$dst"
+        fi
         if [[ "$DRY_RUN" -eq 0 ]]; then
           verify_dir_copy "$src" "$dst" "$rel_dir"
         fi
@@ -497,18 +545,22 @@ else
 fi
 if [[ "$DRY_RUN" -eq 1 ]]; then
   for f in "${NGINX_SYNC_FILES[@]}"; do
-    echo "[DRY-RUN] cp -f $REMOTE_APP/$PROXY_CONF_SRC_REL/$f $PROXY_CONF_DST/$f"
+    echo "[DRY-RUN] cp -f $PROXY_CONF_SRC_DIR/$f $PROXY_CONF_DST/$f"
   done
   echo "[DRY-RUN] docker exec global-nginx-proxy nginx -t"
   echo "[DRY-RUN] docker exec global-nginx-proxy nginx -s reload"
 else
   mkdir -p "$PROXY_CONF_DST"
   for f in "${NGINX_SYNC_FILES[@]}"; do
-    src="$REMOTE_APP/$PROXY_CONF_SRC_REL/$f"
+    src="$PROXY_CONF_SRC_DIR/$f"
     dst="$PROXY_CONF_DST/$f"
     require_file "$src"
-    cp -f "$src" "$dst"
-    echo "Sync nginx: $f"
+    if [[ "$src" == "$dst" ]]; then
+      echo "Sync nginx: $f (source=target, skip copy)"
+    else
+      cp -f "$src" "$dst"
+      echo "Sync nginx: $f"
+    fi
   done
   docker exec global-nginx-proxy nginx -t
   docker exec global-nginx-proxy nginx -s reload
