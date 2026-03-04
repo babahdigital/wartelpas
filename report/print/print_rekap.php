@@ -887,25 +887,15 @@ foreach ($rows as $r) {
         }
     }
     $status_db = normalize_status_value($r['status'] ?? '');
-    $lh_status = normalize_status_value($r['last_status'] ?? '');
-    $cmt_low = strtolower($comment);
-    $status = 'normal';
-    if (
-        $status_db === 'invalid' || $lh_status === 'invalid' ||
-        strpos($cmt_low, 'invalid') !== false || (int)($r['is_invalid'] ?? 0) === 1
-    ) {
-        $status = 'invalid';
-    } elseif (
-        $status_db === 'retur' || $lh_status === 'retur' ||
-        strpos($cmt_low, 'retur') !== false || (int)($r['is_retur'] ?? 0) === 1
-    ) {
-        $status = 'retur';
-    } elseif (
-        $status_db === 'rusak' || $lh_status === 'rusak' ||
-        strpos($cmt_low, 'rusak') !== false || (int)($r['is_rusak'] ?? 0) === 1
-    ) {
-        $status = 'rusak';
-    } elseif (in_array($status_db, ['online', 'terpakai', 'ready'], true)) {
+    $status = resolve_status_from_sources(
+        $r['status'] ?? '',
+        $r['is_invalid'] ?? 0,
+        $r['is_retur'] ?? 0,
+        $r['is_rusak'] ?? 0,
+        $comment,
+        $r['last_status'] ?? ''
+    );
+    if ($status === 'normal' && in_array($status_db, ['online', 'terpakai', 'ready'], true)) {
         $status = $status_db;
     }
 
@@ -941,7 +931,6 @@ foreach ($rows as $r) {
 
     $comment = (string)($r['comment'] ?? '');
     $status_db = normalize_status_value($r['status'] ?? '');
-    $lh_status = normalize_status_value($r['last_status'] ?? '');
     $profile = (string)($r['validity'] ?? '');
     if ($profile === '' || $profile === '-') {
         $profile = (string)($r['profile_snapshot'] ?? ($r['profile'] ?? '-'));
@@ -975,32 +964,16 @@ foreach ($rows as $r) {
     $bytes = (int)($r['last_bytes'] ?? 0);
     if ($bytes < 0) $bytes = 0;
 
-    $status = 'normal';
-    if (
-        $status_db === 'invalid' || $lh_status === 'invalid' ||
-        strpos($cmt_low, 'invalid') !== false || (int)($r['is_invalid'] ?? 0) === 1
-    ) {
-        $status = 'invalid';
-    } elseif (
-        $status_db === 'retur' || $lh_status === 'retur' ||
-        (int)($r['is_retur'] ?? 0) === 1
-    ) {
-        $status = 'retur';
-    } elseif (
-        $status_db === 'rusak' || $lh_status === 'rusak' ||
-        (int)($r['is_rusak'] ?? 0) === 1
-    ) {
-        $status = 'rusak';
-    } elseif (in_array($status_db, ['online', 'terpakai', 'ready'], true)) {
+    $status = resolve_status_from_sources(
+        $r['status'] ?? '',
+        $r['is_invalid'] ?? 0,
+        $r['is_retur'] ?? 0,
+        $r['is_rusak'] ?? 0,
+        $comment,
+        $r['last_status'] ?? ''
+    );
+    if ($status === 'normal' && in_array($status_db, ['online', 'terpakai', 'ready'], true)) {
         $status = $status_db;
-    }
-
-    if ($status !== 'invalid') {
-        if (strpos($cmt_low, 'retur') !== false) {
-            $status = 'retur';
-        } elseif (strpos($cmt_low, 'rusak') !== false) {
-            $status = 'rusak';
-        }
     }
 
     $block = normalize_block_name($r['blok_name'] ?? '', $comment);
