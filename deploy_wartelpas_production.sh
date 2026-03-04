@@ -179,6 +179,18 @@ run_cmd() {
   fi
 }
 
+run_quiet_cmd() {
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "[DRY-RUN] $*"
+    return 0
+  else
+    if "$@" >/dev/null 2>&1; then
+      return 0
+    fi
+    return 1
+  fi
+}
+
 require_file() {
   local path="$1"
   if [[ ! -f "$path" ]]; then
@@ -295,6 +307,30 @@ cleanup_backup_retention() {
     run_cmd rm -rf "${dirs[$idx]}"
     echo "Pruned old backup: ${dirs[$idx]}"
   done
+}
+
+sync_git_bind_mount_ownership() {
+  local uid gid
+  uid="$(id -u)"
+  gid="$(id -g)"
+
+  local chown_targets="/var/www/html/img /var/www/html/report /var/www/html/settings /var/www/html/voucher"
+
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "[DRY-RUN] docker ps --format '{{.Names}}' | grep -Fx '$APP_CONTAINER_NAME'"
+    echo "[DRY-RUN] docker exec $APP_CONTAINER_NAME sh -lc 'chown -R $uid:$gid $chown_targets'"
+    return 0
+  fi
+
+  if docker ps --format '{{.Names}}' | grep -Fxq "$APP_CONTAINER_NAME"; then
+    if docker exec "$APP_CONTAINER_NAME" sh -lc "chown -R $uid:$gid $chown_targets" >/dev/null 2>&1; then
+      echo "Ownership sync OK untuk bind-mount tracked git"
+    else
+      echo "Info: ownership sync bind-mount dilewati (container tidak mengizinkan chown)"
+    fi
+  else
+    echo "Info: container $APP_CONTAINER_NAME tidak aktif, ownership sync bind-mount dilewati"
+  fi
 }
 
 http_code() {
@@ -493,6 +529,7 @@ fi
 if [[ "$CLEAN" -eq 0 ]]; then
   print_step "Sinkronisasi source terbaru (tanpa clean)"
   if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "[DRY-RUN] sync_git_bind_mount_ownership"
     echo "[DRY-RUN] git -C $REMOTE_APP fetch --all --prune"
     echo "[DRY-RUN] git -C $REMOTE_APP reset --hard origin/$DEPLOY_REF"
   else
@@ -500,6 +537,9 @@ if [[ "$CLEAN" -eq 0 ]]; then
       echo "Error: repo tidak ditemukan di $REMOTE_APP (.git missing)"
       exit 1
     fi
+
+    sync_git_bind_mount_ownership
+
     git -C "$REMOTE_APP" fetch --all --prune
     git -C "$REMOTE_APP" reset --hard "origin/$DEPLOY_REF"
   fi
@@ -517,23 +557,30 @@ fi
 print_step "Pastikan folder runtime bind-mount ada"
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "[DRY-RUN] mkdir -p $REMOTE_APP/session"
-  echo "[DRY-RUN] chmod 777 $REMOTE_APP/session"
+  echo "[DRY-RUN] chmod 777 $REMOTE_APP/session (best-effort quiet)"
 else
   mkdir -p "$REMOTE_APP/session"
-  chmod 777 "$REMOTE_APP/session" || true
+  if ! run_quiet_cmd chmod 777 "$REMOTE_APP/session"; then
+    echo "Info: chmod session dilewati (operation not permitted)"
+  fi
 fi
 
 print_step "Pastikan file database writable"
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "[DRY-RUN] mkdir -p $REMOTE_APP/db_data"
-  echo "[DRY-RUN] chmod 777 $REMOTE_APP/db_data"
-  echo "[DRY-RUN] chmod 666 $REMOTE_APP/db_data/*.db"
-  echo "[DRY-RUN] chmod 666 $REMOTE_APP/db_data/*.db-wal"
-  echo "[DRY-RUN] chmod 666 $REMOTE_APP/db_data/*.db-shm"
+  echo "[DRY-RUN] chmod 777 $REMOTE_APP/db_data (best-effort quiet)"
+  echo "[DRY-RUN] chmod 666 untuk *.db,*.db-wal,*.db-shm (best-effort quiet)"
 else
+  db_perm_failed=0
   mkdir -p "$REMOTE_APP/db_data"
-  chmod 777 "$REMOTE_APP/db_data" || true
-  find "$REMOTE_APP/db_data" -maxdepth 1 -type f \( -name '*.db' -o -name '*.db-wal' -o -name '*.db-shm' \) -exec chmod 666 {} \; || true
+  run_quiet_cmd chmod 777 "$REMOTE_APP/db_data" || db_perm_failed=1
+  while IFS= read -r db_file; do
+    run_quiet_cmd chmod 666 "$db_file" || db_perm_failed=1
+  done < <(find "$REMOTE_APP/db_data" -maxdepth 1 -type f \( -name '*.db' -o -name '*.db-wal' -o -name '*.db-shm' \) -print)
+
+  if [[ "$db_perm_failed" -eq 1 ]]; then
+    echo "Info: sebagian chmod db_data dilewati (operation not permitted)"
+  fi
 fi
 
 cd "$REMOTE_APP"
