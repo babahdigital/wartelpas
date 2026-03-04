@@ -58,6 +58,12 @@ if (file_exists($root . '/lib/routeros_api.class.php')) include_once($root . '/l
 if (file_exists($root . '/lib/formatbytesbites.php')) include_once($root . '/lib/formatbytesbites.php');
 if (file_exists($root . '/report/laporan/helpers.php')) include_once($root . '/report/laporan/helpers.php');
 
+$pricingCfg = (isset($env['pricing']) && is_array($env['pricing'])) ? $env['pricing'] : [];
+$GLOBALS['price10'] = (int)($pricingCfg['price_10'] ?? ($GLOBALS['price10'] ?? 0));
+$GLOBALS['price30'] = (int)($pricingCfg['price_30'] ?? ($GLOBALS['price30'] ?? 0));
+$profilePriceMap = $pricingCfg['profile_prices'] ?? [];
+$GLOBALS['profile_price_map'] = is_array($profilePriceMap) ? $profilePriceMap : [];
+
 if (!$session_valid) {
     if ($load === "live_data") {
         header('Content-Type: application/json');
@@ -413,8 +419,19 @@ if ($load == "live_data") {
                     if ($profileHint === '' || $profileHint === '-') {
                         $profileHint = extract_profile_from_comment($raw_comment);
                     }
+                    if ($profileHint === '' && function_exists('infer_profile_from_comment')) {
+                        $profileHint = (string)infer_profile_from_comment($raw_comment);
+                    }
                     if ($profileHint !== '' && function_exists('resolve_price_from_profile')) {
                         $price = (int)resolve_price_from_profile($profileHint);
+                    }
+                    if ($price <= 0 && function_exists('detect_profile_kind_from_label')) {
+                        $kind = (string)detect_profile_kind_from_label($profileHint . ' ' . $raw_comment);
+                        if ($kind === '30') {
+                            $price = (int)($GLOBALS['price30'] ?? 0);
+                        } else {
+                            $price = (int)($GLOBALS['price10'] ?? 0);
+                        }
                     }
                 }
                 if ($price <= 0) {
