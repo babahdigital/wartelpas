@@ -31,6 +31,29 @@ if (!file_exists($tmplOnlogin) || !file_exists($tmplOnlogout)) {
     exit(1);
 }
 
+if (!function_exists('renderRouterProfileScript')) {
+    function renderRouterProfileScript($templatePath, array $replace)
+    {
+        $raw = (string)file_get_contents($templatePath);
+        $rendered = str_replace(array_keys($replace), array_values($replace), $raw);
+        $rendered = str_replace(["\r\n", "\r"], "\n", $rendered);
+        $lines = explode("\n", $rendered);
+        $parts = [];
+        foreach ($lines as $line) {
+            $line = trim((string)$line);
+            if ($line === '') {
+                continue;
+            }
+            if (strpos($line, '#') === 0) {
+                continue;
+            }
+            $parts[] = $line;
+        }
+        $oneLine = trim(preg_replace('/\s+/', ' ', implode(' ', $parts)));
+        return $oneLine;
+    }
+}
+
 $replace = [
     '{{BASE_URL}}' => $baseUrl,
     '{{LOCAL_BASE_URL}}' => $localBaseUrl,
@@ -38,8 +61,8 @@ $replace = [
     '{{USAGE_KEY}}' => $usageKey,
     '{{SESSION}}' => $session,
 ];
-$onlogin = str_replace(array_keys($replace), array_values($replace), file_get_contents($tmplOnlogin));
-$onlogout = str_replace(array_keys($replace), array_values($replace), file_get_contents($tmplOnlogout));
+$onlogin = renderRouterProfileScript($tmplOnlogin, $replace);
+$onlogout = renderRouterProfileScript($tmplOnlogout, $replace);
 
 $profile10 = (string)($env['profiles']['profile_10'] ?? '10Menit');
 $profile30 = (string)($env['profiles']['profile_30'] ?? '30Menit');
@@ -53,29 +76,83 @@ if (!$API->connect($iphost, $userhost, decrypt($passwdhost))) {
 }
 echo "CONNECT|OK\n";
 echo 'TARGETS|' . implode(',', $targets) . "\n";
+echo 'SCRIPT_LEN|onlogin=' . strlen($onlogin) . '|onlogout=' . strlen($onlogout) . "\n";
+
+$profiles = $API->comm('/ip/hotspot/user/profile/print', ['.proplist' => '.id,name,on-login,on-logout']);
+if (!is_array($profiles)) {
+    $profiles = [];
+}
+
+$findProfile = static function (array $profiles, $targetName) {
+    $targetName = trim((string)$targetName);
+    if ($targetName === '') {
+        return null;
+    }
+    $targetNorm = strtolower(preg_replace('/\s+/', '', $targetName));
+    foreach ($profiles as $row) {
+        $name = trim((string)($row['name'] ?? ''));
+        if ($name === '') {
+            continue;
+        }
+        if (strcasecmp($name, $targetName) === 0) {
+            return $row;
+        }
+        $nameNorm = strtolower(preg_replace('/\s+/', '', $name));
+        if ($nameNorm === $targetNorm) {
+            return $row;
+        }
+    }
+    return null;
+};
 
 foreach ($targets as $name) {
-    $rows = $API->comm('/ip/hotspot/user/profile/print', ['?name' => $name, '.proplist' => '.id,name,on-login,on-logout']);
-    if (!is_array($rows) || empty($rows[0]['.id'])) {
+    $profileRow = $findProfile($profiles, $name);
+    if (!$profileRow || empty($profileRow['.id'])) {
         echo 'PROFILE|NOT_FOUND|' . $name . "\n";
         continue;
     }
 
-    $id = (string)$rows[0]['.id'];
-    $oldLoginLen = strlen((string)($rows[0]['on-login'] ?? ''));
-    $oldLogoutLen = strlen((string)($rows[0]['on-logout'] ?? ''));
+    $id = (string)$profileRow['.id'];
+    $profileName = (string)($profileRow['name'] ?? $name);
+    $oldLoginLen = strlen((string)($profileRow['on-login'] ?? ''));
+    $oldLogoutLen = strlen((string)($profileRow['on-logout'] ?? ''));
 
-    $API->comm('/ip/hotspot/user/profile/set', [
+    $setRes = $API->comm('/ip/hotspot/user/profile/set', [
         '.id' => $id,
         'on-login' => $onlogin,
         'on-logout' => $onlogout,
     ]);
 
-    $verify = $API->comm('/ip/hotspot/user/profile/print', ['?.id' => $id, '.proplist' => 'name,on-login,on-logout']);
-    $newLoginLen = strlen((string)($verify[0]['on-login'] ?? ''));
-    $newLogoutLen = strlen((string)($verify[0]['on-logout'] ?? ''));
+    $setStatus = 'OK';
+    if (is_array($setRes)) {
+        foreach ($setRes as $chunk) {
+            if (is_array($chunk) && isset($chunk['!trap'])) {
+                $setStatus = 'TRAP';
+                break;
+            }
+        }
+    }
 
-    echo 'PROFILE|UPDATED|' . $name
+    $verifyRows = $API->comm('/ip/hotspot/user/profile/print', ['.proplist' => '.id,name,on-login,on-logout']);
+    if (!is_array($verifyRows)) {
+        $verifyRows = [];
+    }
+    $verifyRow = null;
+    foreach ($verifyRows as $vr) {
+        if ((string)($vr['.id'] ?? '') === $id) {
+            $verifyRow = $vr;
+            break;
+        }
+    }
+    if (!$verifyRow) {
+        $verifyRow = ['on-login' => '', 'on-logout' => ''];
+    }
+
+    $newLoginLen = strlen((string)($verifyRow['on-login'] ?? ''));
+    $newLogoutLen = strlen((string)($verifyRow['on-logout'] ?? ''));
+
+    echo 'PROFILE|UPDATED|' . $profileName
+        . '|set=' . $setStatus
         . '|old_login=' . $oldLoginLen
         . '|new_login=' . $newLoginLen
         . '|old_logout=' . $oldLogoutLen
