@@ -61,12 +61,16 @@ try {
         $db = new PDO('sqlite:' . $dbFile);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
+                $has_login = table_exists($db, 'login_history');
                 $hasReuse = table_exists($db, 'voucher_reuse_log');
                 $reuseExcludeSales = $hasReuse
                     ? " AND NOT EXISTS (SELECT 1 FROM voucher_reuse_log vr WHERE vr.username = sh.username AND vr.reuse_date = sh.sale_date)"
                     : '';
                 $reuseExcludeLive = $hasReuse
                     ? " AND NOT EXISTS (SELECT 1 FROM voucher_reuse_log vr WHERE vr.username = ls.username AND vr.reuse_date = ls.sale_date)"
+                    : '';
+                $reuseExcludeLogin = $hasReuse
+                    ? " AND NOT EXISTS (SELECT 1 FROM voucher_reuse_log vr WHERE vr.username = login_history.username AND substr(vr.reuse_date,1,4) = :d)"
                     : '';
 
                 $res = $db->query("SELECT 
@@ -95,6 +99,121 @@ try {
                             $reuseExcludeLive
                         ORDER BY sale_datetime DESC, raw_date DESC");
         if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
+
+        if ($has_login) {
+            try {
+                $stmtLh = $db->prepare("SELECT
+                    '' AS raw_date,
+                    '' AS raw_time,
+                    COALESCE(NULLIF(substr(login_time_real,1,10),''), NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(logout_time_real,1,10),''), NULLIF(substr(updated_at,1,10),''), login_date) AS sale_date,
+                    COALESCE(NULLIF(substr(login_time_real,12,8),''), NULLIF(substr(last_login_real,12,8),''), NULLIF(substr(logout_time_real,12,8),''), NULLIF(substr(updated_at,12,8),''), login_time) AS sale_time,
+                    COALESCE(NULLIF(login_time_real,''), NULLIF(last_login_real,''), NULLIF(logout_time_real,''), NULLIF(updated_at,'')) AS sale_datetime,
+                    username,
+                    COALESCE(NULLIF(validity,''), '-') AS profile,
+                    COALESCE(NULLIF(validity,''), '-') AS profile_snapshot,
+                    CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price,
+                    CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price_snapshot,
+                    CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS sprice_snapshot,
+                    validity,
+                    raw_comment AS comment,
+                    blok_name,
+                    COALESCE(NULLIF(last_status,''), '') AS status,
+                    0 AS is_rusak,
+                    0 AS is_retur,
+                    0 AS is_invalid,
+                    1 AS qty,
+                    '' AS full_raw_data,
+                    last_status,
+                    last_bytes
+                  FROM login_history
+                  WHERE username != ''
+                    AND (
+                        substr(login_time_real,1,4) = :d OR
+                        substr(last_login_real,1,4) = :d OR
+                        substr(logout_time_real,1,4) = :d OR
+                        substr(updated_at,1,4) = :d OR
+                        substr(login_date,1,4) = :d
+                    )
+                    AND instr(lower(COALESCE(raw_comment,'')), 'vip') = 0
+                    AND instr(lower(COALESCE(raw_comment,'')), 'pengelola') = 0
+                    $reuseExcludeLogin
+                    AND (
+                        instr(lower(COALESCE(NULLIF(last_status,''), '')), 'rusak') > 0
+                        OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'retur') > 0
+                        OR instr(lower(COALESCE(NULLIF(last_status,''), '')), 'invalid') > 0
+                    )");
+                $stmtLh->execute([':d' => $filter_year]);
+                $lhRows = $stmtLh->fetchAll(PDO::FETCH_ASSOC);
+                if (!empty($lhRows)) {
+                    $rows = array_merge($rows, $lhRows);
+                }
+            } catch (Exception $e) {}
+
+            try {
+                $sales_dates = [];
+                if (table_exists($db, 'sales_history')) {
+                    $stmtSalesDates = $db->prepare("SELECT DISTINCT sale_date FROM sales_history WHERE substr(sale_date,1,4) = :d AND sale_date != ''");
+                    $stmtSalesDates->execute([':d' => $filter_year]);
+                    foreach ($stmtSalesDates->fetchAll(PDO::FETCH_COLUMN, 0) as $sd) {
+                        $sd = trim((string)$sd);
+                        if ($sd !== '') $sales_dates[$sd] = true;
+                    }
+                }
+                if (table_exists($db, 'live_sales')) {
+                    $stmtLiveDates = $db->prepare("SELECT DISTINCT sale_date FROM live_sales WHERE substr(sale_date,1,4) = :d AND sale_date != ''");
+                    $stmtLiveDates->execute([':d' => $filter_year]);
+                    foreach ($stmtLiveDates->fetchAll(PDO::FETCH_COLUMN, 0) as $sd) {
+                        $sd = trim((string)$sd);
+                        if ($sd !== '') $sales_dates[$sd] = true;
+                    }
+                }
+
+                $stmtFallback = $db->prepare("SELECT
+                    '' AS raw_date,
+                    '' AS raw_time,
+                    COALESCE(NULLIF(substr(login_time_real,1,10),''), NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(logout_time_real,1,10),''), NULLIF(substr(updated_at,1,10),''), login_date) AS sale_date,
+                    COALESCE(NULLIF(substr(login_time_real,12,8),''), NULLIF(substr(last_login_real,12,8),''), NULLIF(substr(logout_time_real,12,8),''), NULLIF(substr(updated_at,12,8),''), login_time) AS sale_time,
+                    COALESCE(NULLIF(login_time_real,''), NULLIF(last_login_real,''), NULLIF(logout_time_real,''), NULLIF(updated_at,'')) AS sale_datetime,
+                    username,
+                    COALESCE(NULLIF(validity,''), '-') AS profile,
+                    COALESCE(NULLIF(validity,''), '-') AS profile_snapshot,
+                    CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price,
+                    CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price_snapshot,
+                    CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS sprice_snapshot,
+                    validity,
+                    raw_comment AS comment,
+                    blok_name,
+                    '' AS status,
+                    0 AS is_rusak,
+                    0 AS is_retur,
+                    0 AS is_invalid,
+                    1 AS qty,
+                    '' AS full_raw_data,
+                    last_status,
+                    last_bytes
+                  FROM login_history
+                  WHERE username != ''
+                    AND (
+                        substr(login_time_real,1,4) = :d OR
+                        substr(last_login_real,1,4) = :d OR
+                        substr(logout_time_real,1,4) = :d OR
+                        substr(updated_at,1,4) = :d OR
+                        substr(login_date,1,4) = :d
+                    )
+                    $reuseExcludeLogin
+                    AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'
+                  ORDER BY sale_datetime DESC");
+                $stmtFallback->execute([':d' => $filter_year]);
+                $fallbackRows = $stmtFallback->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                foreach ($fallbackRows as $fr) {
+                    $sd = (string)($fr['sale_date'] ?? '');
+                    if ($sd === '') $sd = norm_date_from_raw_report($fr['raw_date'] ?? '');
+                    if ($sd === '') continue;
+                    if (isset($sales_dates[$sd])) continue;
+                    $rows[] = $fr;
+                }
+            } catch (Exception $e) {}
+        }
 
         $stmtPhone = $db->prepare("SELECT report_date,
                 SUM(total_units) AS total_units,

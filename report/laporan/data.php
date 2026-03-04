@@ -444,6 +444,131 @@ if (file_exists($dbFile)) {
             }
         }
 
+        if ($req_show !== 'harian' && table_exists($db, 'login_history')) {
+            try {
+                $sales_dates = [];
+                if ($req_show === 'bulanan') {
+                    if (table_exists($db, 'sales_history')) {
+                        $stmtSalesDates = $db->prepare("SELECT DISTINCT sale_date FROM sales_history WHERE substr(sale_date,1,7) = :d AND sale_date != ''");
+                        $stmtSalesDates->execute([':d' => $filter_date]);
+                        foreach ($stmtSalesDates->fetchAll(PDO::FETCH_COLUMN, 0) as $sd) {
+                            $sd = trim((string)$sd);
+                            if ($sd !== '') $sales_dates[$sd] = true;
+                        }
+                    }
+                    if (table_exists($db, 'live_sales')) {
+                        $stmtLiveDates = $db->prepare("SELECT DISTINCT sale_date FROM live_sales WHERE substr(sale_date,1,7) = :d AND sale_date != ''");
+                        $stmtLiveDates->execute([':d' => $filter_date]);
+                        foreach ($stmtLiveDates->fetchAll(PDO::FETCH_COLUMN, 0) as $sd) {
+                            $sd = trim((string)$sd);
+                            if ($sd !== '') $sales_dates[$sd] = true;
+                        }
+                    }
+
+                    $stmtFallbackPeriod = $db->prepare("SELECT
+                        '' AS raw_date,
+                        '' AS raw_time,
+                        COALESCE(NULLIF(substr(login_time_real,1,10),''), NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(logout_time_real,1,10),''), NULLIF(substr(updated_at,1,10),''), login_date) AS sale_date,
+                        COALESCE(NULLIF(substr(login_time_real,12,8),''), NULLIF(substr(last_login_real,12,8),''), NULLIF(substr(logout_time_real,12,8),''), NULLIF(substr(updated_at,12,8),''), login_time) AS sale_time,
+                        COALESCE(NULLIF(login_time_real,''), NULLIF(last_login_real,''), NULLIF(logout_time_real,''), NULLIF(updated_at,'')) AS sale_datetime,
+                        username,
+                        COALESCE(NULLIF(validity,''), '-') AS profile,
+                        COALESCE(NULLIF(validity,''), '-') AS profile_snapshot,
+                        CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price,
+                        CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price_snapshot,
+                        CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS sprice_snapshot,
+                        validity,
+                        raw_comment AS comment,
+                        blok_name,
+                        '' AS status,
+                        0 AS is_rusak,
+                        0 AS is_retur,
+                        0 AS is_invalid,
+                        1 AS qty,
+                        '' AS full_raw_data,
+                        last_status,
+                        last_bytes,
+                        first_login_real
+                        FROM login_history
+                        WHERE username != ''
+                            AND (
+                                substr(login_time_real,1,7) = :d OR
+                                substr(last_login_real,1,7) = :d OR
+                                substr(logout_time_real,1,7) = :d OR
+                                substr(updated_at,1,7) = :d OR
+                                substr(login_date,1,7) = :d
+                            )
+                      $reuseExcludeLogin
+                      AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'
+                    ORDER BY sale_datetime DESC");
+                } else {
+                    if (table_exists($db, 'sales_history')) {
+                        $stmtSalesDates = $db->prepare("SELECT DISTINCT sale_date FROM sales_history WHERE substr(sale_date,1,4) = :d AND sale_date != ''");
+                        $stmtSalesDates->execute([':d' => $filter_date]);
+                        foreach ($stmtSalesDates->fetchAll(PDO::FETCH_COLUMN, 0) as $sd) {
+                            $sd = trim((string)$sd);
+                            if ($sd !== '') $sales_dates[$sd] = true;
+                        }
+                    }
+                    if (table_exists($db, 'live_sales')) {
+                        $stmtLiveDates = $db->prepare("SELECT DISTINCT sale_date FROM live_sales WHERE substr(sale_date,1,4) = :d AND sale_date != ''");
+                        $stmtLiveDates->execute([':d' => $filter_date]);
+                        foreach ($stmtLiveDates->fetchAll(PDO::FETCH_COLUMN, 0) as $sd) {
+                            $sd = trim((string)$sd);
+                            if ($sd !== '') $sales_dates[$sd] = true;
+                        }
+                    }
+
+                    $stmtFallbackPeriod = $db->prepare("SELECT
+                        '' AS raw_date,
+                        '' AS raw_time,
+                        COALESCE(NULLIF(substr(login_time_real,1,10),''), NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(logout_time_real,1,10),''), NULLIF(substr(updated_at,1,10),''), login_date) AS sale_date,
+                        COALESCE(NULLIF(substr(login_time_real,12,8),''), NULLIF(substr(last_login_real,12,8),''), NULLIF(substr(logout_time_real,12,8),''), NULLIF(substr(updated_at,12,8),''), login_time) AS sale_time,
+                        COALESCE(NULLIF(login_time_real,''), NULLIF(last_login_real,''), NULLIF(logout_time_real,''), NULLIF(updated_at,'')) AS sale_datetime,
+                        username,
+                        COALESCE(NULLIF(validity,''), '-') AS profile,
+                        COALESCE(NULLIF(validity,''), '-') AS profile_snapshot,
+                        CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price,
+                        CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price_snapshot,
+                        CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS sprice_snapshot,
+                        validity,
+                        raw_comment AS comment,
+                        blok_name,
+                        '' AS status,
+                        0 AS is_rusak,
+                        0 AS is_retur,
+                        0 AS is_invalid,
+                        1 AS qty,
+                        '' AS full_raw_data,
+                        last_status,
+                        last_bytes,
+                        first_login_real
+                        FROM login_history
+                        WHERE username != ''
+                            AND (
+                                substr(login_time_real,1,4) = :d OR
+                                substr(last_login_real,1,4) = :d OR
+                                substr(logout_time_real,1,4) = :d OR
+                                substr(updated_at,1,4) = :d OR
+                                substr(login_date,1,4) = :d
+                            )
+                      $reuseExcludeLogin
+                      AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'
+                    ORDER BY sale_datetime DESC");
+                }
+
+                $stmtFallbackPeriod->execute([':d' => $filter_date]);
+                $fallback_period_rows = $stmtFallbackPeriod->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                foreach ($fallback_period_rows as $fr) {
+                    $sd = (string)($fr['sale_date'] ?? '');
+                    if ($sd === '') $sd = norm_date_from_raw_report($fr['raw_date'] ?? '');
+                    if ($sd === '') continue;
+                    if (isset($sales_dates[$sd])) continue;
+                    $rows[] = $fr;
+                }
+            } catch (Exception $e) {}
+        }
+
         if (!$date_param_provided && $req_show === 'harian' && !empty($rows)) {
             foreach ($rows as $r) {
                 $cand = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
