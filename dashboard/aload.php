@@ -305,7 +305,6 @@ if ($load == "live_data") {
 
             $hasSales = table_exists($db, 'sales_history');
             $hasLive = table_exists($db, 'live_sales');
-            $hasLogin = table_exists($db, 'login_history');
 
             $rows = [];
             $selects = [];
@@ -341,71 +340,6 @@ if ($load == "live_data") {
                 $sql = implode(" UNION ALL ", $selects);
                 $res = $db->query($sql);
                 if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
-            }
-
-            if ($hasLogin) {
-                try {
-                    $stmtLoginRows = $db->prepare("SELECT
-                        COALESCE(NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(first_login_real,1,10),''), NULLIF(substr(login_time_real,1,10),''), login_date) AS sale_date,
-                        username,
-                        COALESCE(NULLIF(last_status,''), 'normal') AS status,
-                        0 AS is_rusak,
-                        0 AS is_retur,
-                        0 AS is_invalid,
-                        raw_comment AS comment,
-                        blok_name,
-                        CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price,
-                        CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price_snapshot,
-                        CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS sprice_snapshot,
-                        1 AS qty,
-                        validity,
-                        last_status
-                        FROM login_history
-                        WHERE username != ''
-                          AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'
-                          AND COALESCE(NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(first_login_real,1,10),''), NULLIF(substr(login_time_real,1,10),''), login_date) LIKE :monthLike");
-                    $stmtLoginRows->execute([':monthLike' => $monthLike]);
-                    foreach ($stmtLoginRows->fetchAll(PDO::FETCH_ASSOC) as $lr) {
-                        $profileHint = (string)($lr['validity'] ?? '');
-                        $rawHint = (string)($lr['comment'] ?? '');
-                        $derivedPrice = (int)($lr['price_snapshot'] ?? 0);
-                        if ($derivedPrice <= 0 && function_exists('resolve_price_from_profile')) {
-                            $profileKey = '';
-                            if (function_exists('detect_profile_kind_from_label')) {
-                                $profileKey = (string)detect_profile_kind_from_label($profileHint . ' ' . $rawHint);
-                            }
-                            if ($profileKey === '' && $profileHint !== '') {
-                                $profileKey = $profileHint;
-                            }
-                            $derivedPrice = (int)resolve_price_from_profile($profileKey);
-                        }
-                        $lr['price'] = $derivedPrice;
-                        $lr['price_snapshot'] = $derivedPrice;
-                        $lr['sprice_snapshot'] = $derivedPrice;
-                        $rows[] = [
-                            'raw_date' => '',
-                            'sale_date' => (string)($lr['sale_date'] ?? ''),
-                            'src' => 'login',
-                            'username' => (string)($lr['username'] ?? ''),
-                            'status' => (string)($lr['status'] ?? 'normal'),
-                            'is_rusak' => 0,
-                            'is_retur' => 0,
-                            'is_invalid' => 0,
-                            'comment' => (string)($lr['comment'] ?? ''),
-                            'blok_name' => (string)($lr['blok_name'] ?? ''),
-                            'profile' => (string)($lr['validity'] ?? ''),
-                            'profile_snapshot' => '',
-                            'validity' => (string)($lr['validity'] ?? ''),
-                            'full_raw_data' => 'login|' . (string)($lr['username'] ?? '') . '|' . (string)($lr['sale_date'] ?? ''),
-                            'price' => $derivedPrice,
-                            'price_snapshot' => $derivedPrice,
-                            'sprice_snapshot' => $derivedPrice,
-                            'qty' => 1,
-                            'last_status' => (string)($lr['last_status'] ?? ''),
-                        ];
-                    }
-                } catch (Exception $e) {
-                }
             }
 
             $monthKey = $year . '-' . $month;
@@ -515,6 +449,9 @@ if ($load == "live_data") {
                     if (!in_array($status, ['retur', 'invalid'], true)) {
                         $total_gross_today += $line_price;
                     }
+                    if (!in_array($status, ['rusak', 'invalid'], true)) {
+                        $sumSold += $qty;
+                    }
                 }
             }
 
@@ -522,187 +459,6 @@ if ($load == "live_data") {
             $sumIncomeMonth = $total_net_month;
             $sumGrossToday = $total_gross_today;
             $sumSettledIncomeMonth = $total_settled_month;
-
-            $sumSold = 0;
-            if (table_exists($db, 'sales_history') || table_exists($db, 'live_sales') || table_exists($db, 'login_history')) {
-                try {
-                    $hasSales = table_exists($db, 'sales_history');
-                    $hasLive = table_exists($db, 'live_sales');
-                    $hasLogin = table_exists($db, 'login_history');
-
-                    $rows = [];
-                    $selects = [];
-                    if ($hasSales) {
-                        $selects[] = "SELECT
-                            sh.raw_date, sh.sale_date,
-                            'sales' AS src,
-                            sh.username, sh.status, sh.is_rusak, sh.is_retur, sh.is_invalid,
-                            sh.comment, sh.blok_name,
-                            sh.qty, sh.full_raw_data,
-                            '' AS last_status
-                            FROM sales_history sh
-                            WHERE instr(lower(COALESCE(sh.comment,'')), 'vip') = 0
-                              AND instr(lower(COALESCE(sh.comment,'')), 'pengelola') = 0";
-                    }
-                    if ($hasLive) {
-                        $selects[] = "SELECT
-                            ls.raw_date, ls.sale_date,
-                            'live' AS src,
-                            ls.username, ls.status, ls.is_rusak, ls.is_retur, ls.is_invalid,
-                            ls.comment, ls.blok_name,
-                            ls.qty, ls.full_raw_data,
-                            '' AS last_status
-                            FROM live_sales ls
-                            WHERE ls.sync_status = 'pending'
-                              AND instr(lower(COALESCE(ls.comment,'')), 'vip') = 0
-                              AND instr(lower(COALESCE(ls.comment,'')), 'pengelola') = 0";
-                    }
-
-                    if (!empty($selects)) {
-                        $sql = implode(" UNION ALL ", $selects);
-                        $res = $db->query($sql);
-                        if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
-                    }
-
-                    if ($hasLogin) {
-                        try {
-                            $stmtLoginToday = $db->prepare("SELECT
-                                '' AS raw_date,
-                                COALESCE(NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(first_login_real,1,10),''), NULLIF(substr(login_time_real,1,10),''), login_date) AS sale_date,
-                                username,
-                                COALESCE(NULLIF(last_status,''), 'normal') AS status,
-                                0 AS is_rusak,
-                                0 AS is_retur,
-                                0 AS is_invalid,
-                                raw_comment AS comment,
-                                blok_name,
-                                validity,
-                                last_status
-                                FROM login_history
-                                WHERE username != ''
-                                  AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'
-                                  AND COALESCE(NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(first_login_real,1,10),''), NULLIF(substr(login_time_real,1,10),''), login_date) = :d
-                                  AND instr(lower(COALESCE(raw_comment,'')), 'vip') = 0
-                                  AND instr(lower(COALESCE(raw_comment,'')), 'pengelola') = 0");
-                            $stmtLoginToday->execute([':d' => $today]);
-                            foreach ($stmtLoginToday->fetchAll(PDO::FETCH_ASSOC) as $lr) {
-                                $rows[] = [
-                                    'raw_date' => '',
-                                    'sale_date' => (string)($lr['sale_date'] ?? ''),
-                                    'src' => 'login',
-                                    'username' => (string)($lr['username'] ?? ''),
-                                    'status' => (string)($lr['status'] ?? 'normal'),
-                                    'is_rusak' => 0,
-                                    'is_retur' => 0,
-                                    'is_invalid' => 0,
-                                    'comment' => (string)($lr['comment'] ?? ''),
-                                    'blok_name' => (string)($lr['blok_name'] ?? ''),
-                                    'qty' => 1,
-                                    'full_raw_data' => 'login|' . (string)($lr['username'] ?? '') . '|' . (string)($lr['sale_date'] ?? ''),
-                                    'last_status' => (string)($lr['last_status'] ?? ''),
-                                ];
-                            }
-                        } catch (Exception $e) {
-                        }
-                    }
-
-                    if ($hasLogin) {
-                        $salesCount = 0;
-                        if ($hasSales) {
-                            $stmtCnt = $db->prepare("SELECT COUNT(*) FROM sales_history WHERE sale_date = :d");
-                            $stmtCnt->execute([':d' => $today]);
-                            $salesCount += (int)$stmtCnt->fetchColumn();
-                        }
-                        if ($hasLive) {
-                            $stmtCnt2 = $db->prepare("SELECT COUNT(*) FROM live_sales WHERE sale_date = :d");
-                            $stmtCnt2->execute([':d' => $today]);
-                            $salesCount += (int)$stmtCnt2->fetchColumn();
-                        }
-                        if ($salesCount === 0) {
-                            $stmtFallback = $db->prepare("SELECT
-                                '' AS raw_date,
-                                COALESCE(NULLIF(substr(login_time_real,1,10),''), login_date) AS sale_date,
-                                'login' AS src,
-                                username,
-                                '' AS status,
-                                0 AS is_rusak,
-                                0 AS is_retur,
-                                0 AS is_invalid,
-                                raw_comment AS comment,
-                                blok_name,
-                                1 AS qty,
-                                ('login|' || username || '|' || COALESCE(NULLIF(substr(login_time_real,1,10),''), login_date)) AS full_raw_data,
-                                last_status
-                            FROM login_history
-                            WHERE username != ''
-                              AND (substr(login_time_real,1,10) = :d OR substr(last_login_real,1,10) = :d OR login_date = :d)
-                                                            AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'
-                                                            AND instr(lower(COALESCE(raw_comment,'')), 'vip') = 0
-                                                            AND instr(lower(COALESCE(raw_comment,'')), 'pengelola') = 0");
-                            $stmtFallback->execute([':d' => $today]);
-                            $rows = $stmtFallback->fetchAll(PDO::FETCH_ASSOC);
-                        }
-                    }
-
-                    $seen_sale_key = [];
-                    $sumSold = 0;
-                    foreach ($rows as $r) {
-                        $sale_date = $r['sale_date'] ?: norm_date_from_raw_report($r['raw_date'] ?? '');
-                        if ($sale_date !== $today) continue;
-                        if ($sale_date > $today_server_dashboard) continue;
-
-                        $username = trim((string)($r['username'] ?? ''));
-                        if ($username === '') continue;
-                        if (is_reused_voucher_dashboard($username, $sale_date, $reuse_map_month)) continue;
-
-                        $raw_key = trim((string)($r['full_raw_data'] ?? ''));
-                        if ($raw_key !== '') {
-                            $sale_key = 'raw|' . $raw_key;
-                        } else {
-                            $sale_key = (string)($r['src'] ?? 'na')
-                                . '|' . $username
-                                . '|' . $sale_date
-                                . '|' . (string)($r['status'] ?? '')
-                                . '|' . (string)($r['raw_date'] ?? '')
-                                . '|' . (string)($r['qty'] ?? '1');
-                        }
-                        if (isset($seen_sale_key[$sale_key])) continue;
-                        $seen_sale_key[$sale_key] = true;
-
-                        $raw_comment = (string)($r['comment'] ?? '');
-                        $blok_row = (string)($r['blok_name'] ?? '');
-                        if ($blok_row === '' && !preg_match('/\bblok\s*[-_]?\s*[A-Za-z0-9]+/i', $raw_comment)) {
-                            continue;
-                        }
-
-                        $status = strtolower((string)($r['status'] ?? ''));
-                        $lh_status = strtolower((string)($r['last_status'] ?? ''));
-                        $cmt_low = strtolower($raw_comment);
-
-                        if ($status === '' || $status === 'normal') {
-                            if ((int)($r['is_invalid'] ?? 0) === 1) $status = 'invalid';
-                            elseif ((int)($r['is_retur'] ?? 0) === 1) $status = 'retur';
-                            elseif ((int)($r['is_rusak'] ?? 0) === 1) $status = 'rusak';
-                            elseif ($lh_status === 'invalid') $status = 'invalid';
-                            elseif ($lh_status === 'retur') $status = 'retur';
-                            elseif ($lh_status === 'rusak') $status = 'rusak';
-                            elseif (strpos($cmt_low, 'invalid') !== false) $status = 'invalid';
-                            elseif (strpos($cmt_low, 'retur') !== false) $status = 'retur';
-                            elseif (strpos($cmt_low, 'rusak') !== false) $status = 'rusak';
-                            else $status = 'normal';
-                        }
-
-                        $is_laku = !in_array($status, ['rusak', 'invalid'], true);
-                        if ($is_laku) {
-                            $qty = (int)($r['qty'] ?? 0);
-                            if ($qty <= 0) $qty = 1;
-                            $sumSold += $qty;
-                        }
-                    }
-                } catch (Exception $e) {
-                    $sumSold = 0;
-                }
-            }
 
             $avgDaily = $currentDay > 0 ? ($sumIncomeMonth / $currentDay) : 0;
             $estIncome = $sumIncomeMonth + ($avgDaily * ($daysInMonth - $currentDay));
@@ -876,95 +632,6 @@ if ($load == "hotspot") {
                       AND instr(lower(COALESCE(comment,'')), 'pengelola') = 0");
                 $stmt->execute([':m' => $monthKey . '%', ':r1' => $raw1, ':r2' => $raw2, ':r3' => $raw3]);
                 $rowsMerged = array_merge($rowsMerged, $stmt->fetchAll(PDO::FETCH_ASSOC) ?: []);
-            }
-
-            if (table_exists($db, 'login_history')) {
-                $stmtLogin = $db->prepare("SELECT
-                    username,
-                    COALESCE(NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(first_login_real,1,10),''), NULLIF(substr(login_time_real,1,10),''), login_date) AS sale_date,
-                    CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price,
-                    validity,
-                    raw_comment,
-                                        blok_name,
-                    COALESCE(NULLIF(last_status,''), 'ready') AS last_status
-                    FROM login_history
-                    WHERE username != ''
-                      AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'
-                      AND COALESCE(NULLIF(substr(last_login_real,1,10),''), NULLIF(substr(first_login_real,1,10),''), NULLIF(substr(login_time_real,1,10),''), login_date) LIKE :m");
-                $stmtLogin->execute([':m' => $monthKey . '%']);
-
-                $existingUserDay = [];
-                foreach ($rowsMerged as $er) {
-                    $eDate = (string)($er['sale_date'] ?? '');
-                    if ($eDate === '') {
-                        $eDate = norm_date_from_raw_report($er['raw_date'] ?? '');
-                    }
-                    $eUser = trim((string)($er['username'] ?? ''));
-                    if ($eDate !== '' && $eUser !== '') {
-                        $existingUserDay[$eUser . '|' . $eDate] = true;
-                    }
-                }
-
-                $seenUserDay = [];
-                foreach ($stmtLogin->fetchAll(PDO::FETCH_ASSOC) as $lr) {
-                    $saleDate = trim((string)($lr['sale_date'] ?? ''));
-                    $username = trim((string)($lr['username'] ?? ''));
-                    if ($saleDate === '' || $username === '') {
-                        continue;
-                    }
-
-                    $statusLive = strtolower(trim((string)($lr['last_status'] ?? 'ready')));
-                    if ($statusLive === 'ready') {
-                        continue;
-                    }
-
-                    $commentRaw = (string)($lr['raw_comment'] ?? '');
-                    $commentLow = strtolower($commentRaw);
-                    if (strpos($commentLow, 'vip') !== false || strpos($commentLow, 'pengelola') !== false) {
-                        continue;
-                    }
-
-                    $userDayKey = $username . '|' . $saleDate;
-                    if (isset($existingUserDay[$userDayKey])) {
-                        continue;
-                    }
-                    if (isset($seenUserDay[$userDayKey])) {
-                        continue;
-                    }
-                    $seenUserDay[$userDayKey] = true;
-
-                    $price = (int)($lr['price'] ?? 0);
-                    if ($price <= 0 && function_exists('resolve_price_from_profile')) {
-                        $profileHint = (string)($lr['validity'] ?? '');
-                        $profileKey = '';
-                        if (function_exists('detect_profile_kind_from_label')) {
-                            $profileKey = (string)detect_profile_kind_from_label($profileHint . ' ' . $commentRaw);
-                        }
-                        if ($profileKey === '' && $profileHint !== '') {
-                            $profileKey = $profileHint;
-                        }
-                        $price = (int)resolve_price_from_profile($profileKey);
-                    }
-
-                    $rowsMerged[] = [
-                        'src' => 'login',
-                        'username' => $username,
-                        'sale_date' => $saleDate,
-                        'raw_date' => '',
-                        'price' => $price,
-                        'price_snapshot' => $price,
-                        'sprice_snapshot' => $price,
-                        'qty' => 1,
-                        'status' => $statusLive,
-                        'is_rusak' => 0,
-                        'is_retur' => 0,
-                        'is_invalid' => 0,
-                        'comment' => $commentRaw,
-                        'blok_name' => (string)($lr['blok_name'] ?? ''),
-                        'last_status' => $statusLive,
-                        'full_raw_data' => 'login_fallback|' . $username . '|' . $saleDate,
-                    ];
-                }
             }
         } catch (Exception $e) { }
     }
