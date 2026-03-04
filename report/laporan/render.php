@@ -1255,6 +1255,33 @@ window.hpSessionId = <?= json_encode($session_id ?? ''); ?>;
                     </tbody>
                 </table>
             </div>
+            <?php if (!empty($audit_period_zero_expected_rows)): ?>
+                <?php
+                    $rebuild_url = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date) . '&audit_rebuild=1';
+                    $warn_parts = [];
+                    foreach (array_slice($audit_period_zero_expected_rows, 0, 6) as $zr) {
+                        $raw_date = (string)($zr['date'] ?? '-');
+                        $raw_label = $raw_date;
+                        if ($req_show === 'bulanan') {
+                            $raw_label = strlen($raw_date) >= 10 ? substr($raw_date, 8, 2) : $raw_date;
+                        } elseif ($req_show === 'tahunan') {
+                            $mm = substr($raw_date, 5, 2);
+                            $month_map_warn = [
+                                '01' => 'Januari','02' => 'Februari','03' => 'Maret','04' => 'April','05' => 'Mei','06' => 'Juni',
+                                '07' => 'Juli','08' => 'Agustus','09' => 'September','10' => 'Oktober','11' => 'November','12' => 'Desember'
+                            ];
+                            $raw_label = $month_map_warn[$mm] ?? $raw_date;
+                        }
+                        $warn_parts[] = $raw_label . ' (' . (int)($zr['rows'] ?? 0) . ' blok)';
+                    }
+                ?>
+                <div style="margin-top:10px;background:#2b2b2b;border:1px solid #555;border-left:5px solid #e67e22;padding:10px 12px;border-radius:6px;color:#ffd08a;">
+                    <i class="fa fa-exclamation-triangle"></i>
+                    Ditemukan audit dengan Target Sistem 0 namun Setoran Fisik > 0 pada periode: <b><?= htmlspecialchars(implode(', ', $warn_parts)) ?></b>.
+                    Data kemungkinan belum sinkron / target belum direbuild.
+                    <a href="<?= htmlspecialchars($rebuild_url) ?>" style="margin-left:8px;color:#fff;background:#e67e22;padding:4px 8px;border-radius:4px;text-decoration:none;">Rebuild Target Sistem</a>
+                </div>
+            <?php endif; ?>
             <div class="hp-total-bar">
                 <div>Target Sistem (Total): <b><?= number_format((int)($audit_expected_setoran_adj_total ?? 0),0,',','.') ?></b></div>
                 <div>Setoran Fisik (Total): <b><?= number_format((int)($audit_total_actual_setoran ?? 0),0,',','.') ?></b></div>

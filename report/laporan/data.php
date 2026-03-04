@@ -112,6 +112,7 @@ $audit_expected_setoran_adj_total = 0;
 $audit_selisih_setoran_adj_total = 0;
 $audit_total_expenses_period = 0;
 $audit_period_rows = [];
+$audit_period_zero_expected_rows = [];
 $has_audit_adjusted = false;
 $audit_locked_today = false;
 $audit_rebuild_needed = false;
@@ -1361,16 +1362,27 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
     }
 }
 
-// Simpan audit manual rekap harian (qty + uang)
-if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
+if (isset($db) && $db instanceof PDO) {
     $can_audit_rebuild = (!empty($is_superadmin) || ($is_operator && function_exists('operator_can') && operator_can('audit_manual')));
     if (isset($_GET['audit_rebuild']) && $_GET['audit_rebuild'] === '1') {
         if (!$can_audit_rebuild) {
             $audit_rebuild_error = 'Akses ditolak. Perbaikan audit hanya untuk role yang diizinkan.';
+        } elseif (function_exists('rebuild_audit_expected_for_period')) {
+            $rebuild_result = rebuild_audit_expected_for_period($db, $filter_date, $req_show);
+            $updated_blocks = (int)($rebuild_result['blocks'] ?? 0);
+            $updated_dates = (int)($rebuild_result['dates'] ?? 0);
+            $audit_rebuild_message = 'Audit diperbarui: ' . $updated_blocks . ' blok pada ' . $updated_dates . ' tanggal.';
+            $redirect = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date)
+                . '&audit_rebuild_done=1&audit_rebuild_count=' . $updated_blocks . '&audit_rebuild_dates=' . $updated_dates;
+            if (!headers_sent()) {
+                header('Location: ' . $redirect);
+                exit;
+            }
         } elseif (function_exists('rebuild_audit_expected_for_date')) {
             $updated = rebuild_audit_expected_for_date($db, $filter_date);
-            $audit_rebuild_message = 'Audit diperbarui: ' . (int)$updated . ' blok.';
-            $redirect = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date) . '&audit_rebuild_done=1&audit_rebuild_count=' . (int)$updated;
+            $audit_rebuild_message = 'Audit diperbarui: ' . (int)$updated . ' blok pada 1 tanggal.';
+            $redirect = './?report=selling' . $session_qs . '&show=' . urlencode($req_show) . '&date=' . urlencode($filter_date)
+                . '&audit_rebuild_done=1&audit_rebuild_count=' . (int)$updated . '&audit_rebuild_dates=1';
             if (!headers_sent()) {
                 header('Location: ' . $redirect);
                 exit;
@@ -1381,8 +1393,16 @@ if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
     }
     if (isset($_GET['audit_rebuild_done']) && $_GET['audit_rebuild_done'] === '1') {
         $count = isset($_GET['audit_rebuild_count']) ? (int)$_GET['audit_rebuild_count'] : 0;
-        $audit_rebuild_message = 'Audit diperbarui: ' . $count . ' blok.';
+        $dates_count = isset($_GET['audit_rebuild_dates']) ? (int)$_GET['audit_rebuild_dates'] : 0;
+        if ($dates_count < 1) {
+            $dates_count = $req_show === 'harian' ? 1 : 0;
+        }
+        $audit_rebuild_message = 'Audit diperbarui: ' . $count . ' blok pada ' . $dates_count . ' tanggal.';
     }
+}
+
+// Simpan audit manual rekap harian (qty + uang)
+if (isset($db) && $db instanceof PDO && $req_show === 'harian') {
     if (isset($_POST['audit_submit']) || isset($_POST['audit_blok'])) {
         if ($is_operator && !operator_can('audit_manual')) {
             $audit_error = 'Akses ditolak. Audit manual hanya untuk role yang diizinkan.';
@@ -1751,6 +1771,18 @@ if ($req_show !== 'harian' && isset($db) && $db instanceof PDO) {
             $audit_period_rows[$row_key]['refund'] += $refund_amt;
             $audit_period_rows[$row_key]['kurang_bayar'] += $kurang_bayar_amt;
             $audit_period_rows[$row_key]['selisih'] += (int)$manual_setoran - (int)$expected_adj_setoran - $refund_amt + $kurang_bayar_amt;
+
+            if ((int)$expected_adj_setoran === 0 && (int)$manual_setoran > 0) {
+                if (!isset($audit_period_zero_expected_rows[$row_key])) {
+                    $audit_period_zero_expected_rows[$row_key] = [
+                        'date' => $row_key,
+                        'rows' => 0,
+                        'actual' => 0
+                    ];
+                }
+                $audit_period_zero_expected_rows[$row_key]['rows'] += 1;
+                $audit_period_zero_expected_rows[$row_key]['actual'] += (int)$manual_setoran;
+            }
         }
     } catch (Exception $e) {
     }
@@ -1759,6 +1791,10 @@ if ($req_show !== 'harian' && isset($db) && $db instanceof PDO) {
 if ($req_show !== 'harian' && !empty($audit_period_rows)) {
     krsort($audit_period_rows);
     $audit_period_rows = array_values($audit_period_rows);
+    if (!empty($audit_period_zero_expected_rows)) {
+        krsort($audit_period_zero_expected_rows);
+        $audit_period_zero_expected_rows = array_values($audit_period_zero_expected_rows);
+    }
 }
 
 $has_audit_rows = !empty($audit_rows);

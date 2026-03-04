@@ -193,6 +193,40 @@ if (!function_exists('table_exists')) {
     }
 }
 
+if (!function_exists('build_reuse_key_map_dashboard')) {
+    function build_reuse_key_map_dashboard(PDO $db, $monthLike) {
+        $map = [];
+        try {
+            if (!table_exists($db, 'voucher_reuse_log')) {
+                return $map;
+            }
+            $stmt = $db->prepare("SELECT username, reuse_date FROM voucher_reuse_log WHERE username != '' AND reuse_date LIKE :m");
+            $stmt->execute([':m' => $monthLike]);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $username = strtolower(trim((string)($row['username'] ?? '')));
+                $reuse_date = trim((string)($row['reuse_date'] ?? ''));
+                if ($username === '' || $reuse_date === '') {
+                    continue;
+                }
+                $map[$username . '|' . $reuse_date] = true;
+            }
+        } catch (Exception $e) {
+        }
+        return $map;
+    }
+}
+
+if (!function_exists('is_reused_voucher_dashboard')) {
+    function is_reused_voucher_dashboard($username, $sale_date, array $reuse_map) {
+        $username = strtolower(trim((string)$username));
+        $sale_date = trim((string)$sale_date);
+        if ($username === '' || $sale_date === '' || empty($reuse_map)) {
+            return false;
+        }
+        return isset($reuse_map[$username . '|' . $sale_date]);
+    }
+}
+
 if (!function_exists('resolve_stats_db_file')) {
     function resolve_stats_db_file($root_dir) {
         $env = $GLOBALS['env'] ?? [];
@@ -259,6 +293,8 @@ if ($load == "live_data") {
             $raw1 = $month . '/%/' . $year;
             $raw2 = '%/' . $month . '/' . $year;
             $raw3 = $monthShort . '/%/' . $year;
+
+            $reuse_map_month = build_reuse_key_map_dashboard($db, $monthLike);
 
             $dayRaw1 = date('m/d/Y', strtotime($today)) . '%';
             $dayRaw2 = date('d/m/Y', strtotime($today)) . '%';
@@ -396,6 +432,9 @@ if ($load == "live_data") {
                 }
 
                 $username = trim((string)($r['username'] ?? ''));
+                if ($username !== '' && is_reused_voucher_dashboard($username, $sale_date, $reuse_map_month)) {
+                    continue;
+                }
                 if ($username !== '') {
                     $user_day_key = $username . '|' . $sale_date;
                     if (isset($seen_user_day[$user_day_key])) {
@@ -612,6 +651,7 @@ if ($load == "live_data") {
 
                         $username = trim((string)($r['username'] ?? ''));
                         if ($username === '') continue;
+                        if (is_reused_voucher_dashboard($username, $sale_date, $reuse_map_month)) continue;
                         $user_day_key = $username . '|' . $sale_date;
                         if (isset($seen_user_day[$user_day_key])) continue;
                         $seen_user_day[$user_day_key] = true;
@@ -639,7 +679,7 @@ if ($load == "live_data") {
                             else $status = 'normal';
                         }
 
-                        $is_laku = !in_array($status, ['rusak', 'retur', 'invalid'], true);
+                        $is_laku = !in_array($status, ['rusak', 'invalid'], true);
                         if ($is_laku) {
                             $unique_laku_users[$username] = true;
                         }
@@ -659,24 +699,43 @@ if ($load == "live_data") {
             $dataResponse['gross_income'] = number_format($sumGrossToday, 0, ",", ".");
             $dataResponse['est_income'] = number_format($estIncome, 0, ",", ".");
 
-            $stmtAudit = $db->prepare("SELECT SUM(selisih_qty) AS ghost_qty, SUM(selisih_setoran) AS selisih
-                FROM audit_rekap_manual WHERE report_date = :d");
-            $stmtAudit->execute([':d' => $today]);
-            $auditRow = $stmtAudit->fetch(PDO::FETCH_ASSOC) ?: [];
-            $ghostQty = (int)($auditRow['ghost_qty'] ?? 0);
-            $selisih = (int)($auditRow['selisih'] ?? 0);
-
+            $ghostQty = 0;
+            $selisih = 0;
             $miss10 = 0;
             $miss30 = 0;
             $sumExpected = 0;
             $sumExpenses = 0;
 
-            $stmtDetail = $db->prepare("SELECT expected_setoran, expenses_amt, user_evidence
+            $stmtDetail = $db->prepare("SELECT report_date, blok_name, expected_setoran, actual_setoran, selisih_qty, refund_amt, kurang_bayar_amt, expenses_amt, user_evidence
                 FROM audit_rekap_manual WHERE report_date = :d");
             $stmtDetail->execute([':d' => $today]);
+            $rows_by_date_cache = [];
+            $expected_by_block_cache = [];
             foreach ($stmtDetail->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                $sumExpected += (int)($row['expected_setoran'] ?? 0);
-                $sumExpenses += (int)($row['expenses_amt'] ?? 0);
+                $ghostQty += (int)($row['selisih_qty'] ?? 0);
+
+                $expected_setoran_row = (int)($row['expected_setoran'] ?? 0);
+                if (function_exists('resolve_audit_expected_setoran')) {
+                    $expected_setoran_row = resolve_audit_expected_setoran($db, $row, $rows_by_date_cache, $expected_by_block_cache);
+                }
+
+                $row_calc = $row;
+                $row_calc['expected_setoran'] = $expected_setoran_row;
+                if (function_exists('calc_audit_adjusted_setoran')) {
+                    [$manual_setoran, $expected_adj_setoran] = calc_audit_adjusted_setoran($row_calc);
+                } else {
+                    $manual_setoran = function_exists('normalize_actual_setoran') ? normalize_actual_setoran($row_calc) : (int)($row['actual_setoran'] ?? 0);
+                    $expected_adj_setoran = $expected_setoran_row;
+                }
+
+                $refund_amt = (int)($row['refund_amt'] ?? 0);
+                $kurang_bayar_amt = (int)($row['kurang_bayar_amt'] ?? 0);
+                $expense_amt = (int)($row['expenses_amt'] ?? 0);
+
+                $sumExpected += (int)$expected_adj_setoran;
+                $sumExpenses += $expense_amt;
+                $selisih += (int)$manual_setoran - (int)$expected_adj_setoran - $refund_amt + $kurang_bayar_amt;
+
                 if (!empty($row['user_evidence'])) {
                     $ev = json_decode((string)$row['user_evidence'], true);
                     if (is_array($ev) && !empty($ev['users']) && is_array($ev['users'])) {
@@ -701,7 +760,7 @@ if ($load == "live_data") {
                 'ghost' => abs($ghostQty),
                 'miss_10' => $miss10,
                 'miss_30' => $miss30,
-                'cash_expected' => number_format($sumSettledIncomeMonth, 0, ",", "."),
+                'cash_expected' => number_format($cashExpected, 0, ",", "."),
                 'last_update' => date('H:i')
             ];
         } catch (Exception $e) {

@@ -910,6 +910,8 @@ function fetch_rows_for_audit(PDO $db, $audit_date) {
         $rows = array_merge($rows, $stmt->fetchAll(PDO::FETCH_ASSOC));
     }
 
+    $primary_rows_count = count($rows);
+
     if ($hasLogin) {
         $stmtLh = $db->prepare("SELECT
             '' AS raw_date,
@@ -958,7 +960,10 @@ function fetch_rows_for_audit(PDO $db, $audit_date) {
         }
     }
 
-    if (empty($rows) && $hasLogin) {
+    if (($primary_rows_count === 0 || empty($rows)) && $hasLogin) {
+        if ($primary_rows_count === 0) {
+            $rows = [];
+        }
         $stmtFallback = $db->prepare("SELECT
             '' AS raw_date,
             '' AS raw_time,
@@ -1036,5 +1041,59 @@ if (!function_exists('rebuild_audit_expected_for_date')) {
             $updated++;
         }
         return $updated;
+    }
+}
+
+if (!function_exists('rebuild_audit_expected_for_period')) {
+    function rebuild_audit_expected_for_period(PDO $db, $period_key, $mode = 'harian') {
+        $mode = strtolower(trim((string)$mode));
+        $period_key = trim((string)$period_key);
+
+        if ($mode === 'harian') {
+            $updated = rebuild_audit_expected_for_date($db, $period_key);
+            return [
+                'dates' => $updated > 0 ? 1 : 0,
+                'blocks' => (int)$updated
+            ];
+        }
+
+        if (!table_exists($db, 'audit_rekap_manual')) {
+            return ['dates' => 0, 'blocks' => 0];
+        }
+
+        if ($mode === 'bulanan') {
+            if (!preg_match('/^\d{4}-\d{2}$/', $period_key)) {
+                return ['dates' => 0, 'blocks' => 0];
+            }
+            $like = $period_key . '%';
+        } elseif ($mode === 'tahunan') {
+            if (!preg_match('/^\d{4}$/', $period_key)) {
+                return ['dates' => 0, 'blocks' => 0];
+            }
+            $like = $period_key . '%';
+        } else {
+            return ['dates' => 0, 'blocks' => 0];
+        }
+
+        $stmtDates = $db->prepare("SELECT DISTINCT report_date FROM audit_rekap_manual WHERE report_date LIKE :p ORDER BY report_date ASC");
+        $stmtDates->execute([':p' => $like]);
+        $dates = $stmtDates->fetchAll(PDO::FETCH_COLUMN, 0) ?: [];
+
+        $updated_dates = 0;
+        $updated_blocks = 0;
+        foreach ($dates as $d) {
+            $d = trim((string)$d);
+            if ($d === '') continue;
+            $updated = rebuild_audit_expected_for_date($db, $d);
+            if ($updated > 0) {
+                $updated_dates++;
+                $updated_blocks += (int)$updated;
+            }
+        }
+
+        return [
+            'dates' => (int)$updated_dates,
+            'blocks' => (int)$updated_blocks
+        ];
     }
 }
