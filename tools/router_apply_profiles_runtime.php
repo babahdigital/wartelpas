@@ -34,8 +34,8 @@ if ($liveKey === '') $liveKey = normalizeRouterValue($env['backup']['secret'] ??
 if ($usageKey === '') $usageKey = normalizeRouterValue($env['backup']['secret'] ?? '');
 $session = normalizeRouterValue($session);
 
-$tmplOnlogin = $root . '/tools/onlogin';
-$tmplOnlogout = $root . '/tools/onlogout';
+$tmplOnlogin = $root . '/tools/onlogin.rsc';
+$tmplOnlogout = $root . '/tools/onlogout.rsc';
 if (!file_exists($tmplOnlogin) || !file_exists($tmplOnlogout)) {
     echo "TEMPLATE|MISSING\n";
     exit(1);

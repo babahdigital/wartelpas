@@ -55,6 +55,7 @@ Dokumen ini mencatat error produksi yang ditemukan pada alur script profile Mikr
   - smoke test runtime MikroTik otomatis setelah deploy:
     - `router_apply_profiles_runtime.php`
     - `router_audit_runtime.php`
+  - jika audit menghasilkan `PROFILE_MISSING_COUNT > 0`, sistem otomatis kirim notifikasi WA melalui `tools/wa_runtime_profile_alert.php` sebelum deploy dihentikan,
   - jika host tidak punya `php`, otomatis fallback menjalankan via container:
     - `docker exec wartelpas php ...`
 

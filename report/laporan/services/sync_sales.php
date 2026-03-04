@@ -73,7 +73,7 @@ if ($secret_token === '') {
     $secret_token = getenv('WARTELPAS_SYNC_TOKEN');
     if ($secret_token === false || trim((string)$secret_token) === '') {
         if (defined('WARTELPAS_SYNC_TOKEN')) {
-            $secret_token = WARTELPAS_SYNC_TOKEN;
+            $secret_token = (string)constant('WARTELPAS_SYNC_TOKEN');
         } else {
             $secret_token = $env['backup']['secret'] ?? '';
         }

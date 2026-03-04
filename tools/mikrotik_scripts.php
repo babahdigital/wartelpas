@@ -56,10 +56,10 @@ $usage_key = $env['security']['usage_ingest']['token'] ?? '';
 if ($live_key === '') $live_key = $env['backup']['secret'] ?? '';
 if ($usage_key === '') $usage_key = $env['backup']['secret'] ?? '';
 
-$tmpl_onlogin = $root_dir . '/tools/onlogin';
-$tmpl_onlogout = $root_dir . '/tools/onlogout';
+$tmpl_onlogin = $root_dir . '/tools/onlogin.rsc';
+$tmpl_onlogout = $root_dir . '/tools/onlogout.rsc';
 if (!file_exists($tmpl_onlogin) || !file_exists($tmpl_onlogout)) {
-    echo "Error: template tools/onlogin atau tools/onlogout tidak ditemukan.\n";
+    echo "Error: template tools/onlogin.rsc atau tools/onlogout.rsc tidak ditemukan.\n";
     exit;
 }
 

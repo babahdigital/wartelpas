@@ -42,6 +42,12 @@
     "body": "⚠️ *L/S {{TYPE}} TELAT*\nTerakhir: {{TIME}}\nSelisih: {{MINUTES}} menit."
   },
   {
+    "id": "runtime_profile_alert",
+    "name": "Alert Runtime Profile",
+    "category": "ls",
+    "body": "🚨 *RUNTIME PROFILE MISMATCH*\nHost: {{HOST}}\nMode: {{MODE}}\nTarget: {{TARGETS}}\nProfile bermasalah: {{MISSING_PROFILES}}\nJumlah mismatch: {{MISSING_COUNT}}\nWaktu: {{TIME}}"
+  },
+  {
     "id": "todo_summary",
     "name": "Ringkasan Todo",
     "category": "todo",

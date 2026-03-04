@@ -14,6 +14,46 @@ if (!function_exists('split_sales_raw')) {
     }
 }
 
+if (!function_exists('normalize_actual_setoran')) {
+    function normalize_actual_setoran($row)
+    {
+        $raw = 0;
+        if (is_array($row)) {
+            if (array_key_exists('actual_setoran', $row)) {
+                $raw = $row['actual_setoran'];
+            } elseif (array_key_exists('manual_setoran', $row)) {
+                $raw = $row['manual_setoran'];
+            }
+        } else {
+            $raw = $row;
+        }
+
+        if (is_int($raw)) {
+            return $raw;
+        }
+        if (is_float($raw)) {
+            return (int)round($raw);
+        }
+        if (is_numeric($raw)) {
+            return (int)$raw;
+        }
+
+        $text = trim((string)$raw);
+        if ($text === '') {
+            return 0;
+        }
+
+        $is_negative = strpos($text, '-') !== false;
+        $digits = preg_replace('/[^0-9]/', '', $text);
+        if ($digits === '' || $digits === null) {
+            return 0;
+        }
+
+        $value = (int)$digits;
+        return $is_negative ? -$value : $value;
+    }
+}
+
 if (!function_exists('ensure_audit_warning_table')) {
     function ensure_audit_warning_table(PDO $db) {
         try {

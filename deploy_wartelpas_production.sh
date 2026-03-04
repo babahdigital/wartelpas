@@ -675,18 +675,22 @@ print_step "Smoke test runtime MikroTik (apply + audit profile)"
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "[DRY-RUN] php $REMOTE_APP/tools/router_apply_profiles_runtime.php"
   echo "[DRY-RUN] php $REMOTE_APP/tools/router_audit_runtime.php"
+  echo "[DRY-RUN] php $REMOTE_APP/tools/wa_runtime_profile_alert.php --missing-count <N> --missing-profiles <profiles> --targets <targets>"
 else
   PHP_ENTRY=()
   APPLY_SCRIPT=""
   AUDIT_SCRIPT=""
+  ALERT_SCRIPT=""
   if command -v php >/dev/null 2>&1; then
     PHP_ENTRY=(php)
     APPLY_SCRIPT="$REMOTE_APP/tools/router_apply_profiles_runtime.php"
     AUDIT_SCRIPT="$REMOTE_APP/tools/router_audit_runtime.php"
+    ALERT_SCRIPT="$REMOTE_APP/tools/wa_runtime_profile_alert.php"
   elif docker ps --format '{{.Names}}' | grep -Fxq "$APP_CONTAINER_NAME"; then
     PHP_ENTRY=(docker exec "$APP_CONTAINER_NAME" php)
     APPLY_SCRIPT="/var/www/html/tools/router_apply_profiles_runtime.php"
     AUDIT_SCRIPT="/var/www/html/tools/router_audit_runtime.php"
+    ALERT_SCRIPT="/var/www/html/tools/wa_runtime_profile_alert.php"
     echo "Info: php host tidak tersedia, fallback smoke test via container $APP_CONTAINER_NAME."
   else
     echo "Error: php CLI host tidak tersedia dan container $APP_CONTAINER_NAME tidak aktif."
@@ -727,6 +731,21 @@ else
     exit 1
   fi
   if (( missing_count > 0 )); then
+    missing_profiles="$(printf '%s\n' "$AUDIT_OUT" | awk -F'|' '/^PROFILE_MISSING\|/ {print $2}' | paste -sd ',' -)"
+    if [[ -z "$missing_profiles" ]]; then
+      missing_profiles="-"
+    fi
+    target_profiles="$(printf '%s\n' "$AUDIT_OUT" | awk -F'|' '/^PROFILE_TARGETS\|/ {print $2; exit}')"
+    if [[ -z "$target_profiles" ]]; then
+      target_profiles="10Menit,30Menit"
+    fi
+
+    alert_host="$(hostname 2>/dev/null || echo '-')"
+    ALERT_OUT="$("${PHP_ENTRY[@]}" "$ALERT_SCRIPT" --missing-count "$missing_count" --missing-profiles "$missing_profiles" --targets "$target_profiles" --host "$alert_host" --mode "deploy_smoke" 2>&1 || true)"
+    if [[ -n "$ALERT_OUT" ]]; then
+      printf '%s\n' "$ALERT_OUT"
+    fi
+
     echo "Error: masih ada profile yang belum memenuhi syarat runtime (count=$missing_count)."
     exit 1
   fi

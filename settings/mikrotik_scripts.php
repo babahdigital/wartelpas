@@ -52,8 +52,8 @@ if ($usage_key === '') $usage_key = $env['backup']['secret'] ?? '';
 
 $script_onlogin = '';
 $script_onlogout = '';
-$tmpl_onlogin = __DIR__ . '/../tools/onlogin';
-$tmpl_onlogout = __DIR__ . '/../tools/onlogout';
+$tmpl_onlogin = __DIR__ . '/../tools/onlogin.rsc';
+$tmpl_onlogout = __DIR__ . '/../tools/onlogout.rsc';
 if (file_exists($tmpl_onlogin) && file_exists($tmpl_onlogout) && $base_url !== '') {
   clearstatcache(true, $tmpl_onlogin);
   clearstatcache(true, $tmpl_onlogout);
