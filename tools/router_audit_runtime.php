@@ -32,12 +32,19 @@ foreach ($profiles as $p) {
     $name = (string)($p['name'] ?? '');
     $onLogin = strtolower((string)($p['on-login'] ?? ''));
     $onLogout = strtolower((string)($p['on-logout'] ?? ''));
-    $okLogin = (strpos($onLogin, '/system script add') !== false)
-        && (strpos($onLogin, 'live_ingest.php') !== false)
-        && (strpos($onLogin, 'usage_ingest.php') !== false);
-    $okLogout = (strpos($onLogout, 'usage_ingest.php') !== false);
+    $hasScriptAdd = (strpos($onLogin, '/system script add') !== false);
+    $hasLiveIngest = (strpos($onLogin, 'live_ingest.php') !== false);
+    $hasUsageIngestLogin = (strpos($onLogin, 'usage_ingest.php') !== false);
+    $hasUsageIngestLogout = (strpos($onLogout, 'usage_ingest.php') !== false);
+    $okLogin = $hasScriptAdd && $hasLiveIngest && $hasUsageIngestLogin;
+    $okLogout = $hasUsageIngestLogout;
     if (!($okLogin && $okLogout)) {
-        $missing[] = $name;
+        $missing[] = $name . '|script_add=' . ($hasScriptAdd ? '1' : '0')
+            . '|live_ingest=' . ($hasLiveIngest ? '1' : '0')
+            . '|usage_login=' . ($hasUsageIngestLogin ? '1' : '0')
+            . '|usage_logout=' . ($hasUsageIngestLogout ? '1' : '0')
+            . '|login_len=' . strlen((string)($p['on-login'] ?? ''))
+            . '|logout_len=' . strlen((string)($p['on-logout'] ?? ''));
     }
 }
 
