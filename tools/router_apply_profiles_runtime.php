@@ -63,6 +63,10 @@ $replace = [
 ];
 $onlogin = renderRouterProfileScript($tmplOnlogin, $replace);
 $onlogout = renderRouterProfileScript($tmplOnlogout, $replace);
+$onloginScriptName = 'wartelpas_onlogin';
+$onlogoutScriptName = 'wartelpas_onlogout';
+$onloginHook = '/system script run ' . $onloginScriptName;
+$onlogoutHook = '/system script run ' . $onlogoutScriptName;
 
 $profile10 = (string)($env['profiles']['profile_10'] ?? '10Menit');
 $profile30 = (string)($env['profiles']['profile_30'] ?? '30Menit');
@@ -77,6 +81,65 @@ if (!$API->connect($iphost, $userhost, decrypt($passwdhost))) {
 echo "CONNECT|OK\n";
 echo 'TARGETS|' . implode(',', $targets) . "\n";
 echo 'SCRIPT_LEN|onlogin=' . strlen($onlogin) . '|onlogout=' . strlen($onlogout) . "\n";
+
+$scripts = $API->comm('/system/script/print', ['.proplist' => '.id,name,source,comment']);
+if (!is_array($scripts)) {
+    $scripts = [];
+}
+
+$upsertScript = static function ($api, array $scripts, $scriptName, $scriptSource, $commentTag) {
+    $scriptName = trim((string)$scriptName);
+    $found = null;
+    foreach ($scripts as $s) {
+        if (strcasecmp((string)($s['name'] ?? ''), $scriptName) === 0) {
+            $found = $s;
+            break;
+        }
+    }
+
+    $res = null;
+    if ($found && !empty($found['.id'])) {
+        $res = $api->comm('/system/script/set', [
+            '.id' => (string)$found['.id'],
+            'name' => $scriptName,
+            'source' => $scriptSource,
+            'comment' => $commentTag,
+        ]);
+    } else {
+        $res = $api->comm('/system/script/add', [
+            'name' => $scriptName,
+            'source' => $scriptSource,
+            'comment' => $commentTag,
+        ]);
+    }
+
+    $status = 'OK';
+    if (is_array($res)) {
+        foreach ($res as $chunk) {
+            if (is_array($chunk) && isset($chunk['!trap'])) {
+                $status = 'TRAP';
+                break;
+            }
+        }
+    }
+    return $status;
+};
+
+$upLogin = $upsertScript($API, $scripts, $onloginScriptName, $onlogin, 'wartelpas-runtime');
+$upLogout = $upsertScript($API, $scripts, $onlogoutScriptName, $onlogout, 'wartelpas-runtime');
+echo 'HOOK_SCRIPT|updated|' . $onloginScriptName . '|status=' . $upLogin . '|len=' . strlen($onlogin) . "\n";
+echo 'HOOK_SCRIPT|updated|' . $onlogoutScriptName . '|status=' . $upLogout . '|len=' . strlen($onlogout) . "\n";
+
+$scriptsVerify = $API->comm('/system/script/print', ['.proplist' => '.id,name,source,comment']);
+if (!is_array($scriptsVerify)) {
+    $scriptsVerify = [];
+}
+foreach ($scriptsVerify as $sv) {
+    $nm = (string)($sv['name'] ?? '');
+    if (strcasecmp($nm, $onloginScriptName) === 0 || strcasecmp($nm, $onlogoutScriptName) === 0) {
+        echo 'HOOK_SCRIPT|verify|' . $nm . '|source_len=' . strlen((string)($sv['source'] ?? '')) . "\n";
+    }
+}
 
 $profiles = $API->comm('/ip/hotspot/user/profile/print', ['.proplist' => '.id,name,on-login,on-logout']);
 if (!is_array($profiles)) {
@@ -119,8 +182,8 @@ foreach ($targets as $name) {
 
     $setRes = $API->comm('/ip/hotspot/user/profile/set', [
         '.id' => $id,
-        'on-login' => $onlogin,
-        'on-logout' => $onlogout,
+        'on-login' => $onloginHook,
+        'on-logout' => $onlogoutHook,
     ]);
 
     $setStatus = 'OK';
