@@ -12,17 +12,27 @@ if (file_exists($envFile)) {
     require $envFile;
 }
 
+if (!function_exists('normalizeRouterValue')) {
+    function normalizeRouterValue($value)
+    {
+        $value = (string)$value;
+        $value = str_replace(["\r", "\n", "\t"], ' ', $value);
+        return trim($value);
+    }
+}
+
 $systemCfg = $env['system'] ?? [];
-$baseUrl = rtrim((string)($systemCfg['base_url'] ?? ''), '/');
-$localBaseUrl = rtrim((string)($systemCfg['local_base_url'] ?? ''), '/');
+$baseUrl = rtrim(normalizeRouterValue($systemCfg['base_url'] ?? ''), '/');
+$localBaseUrl = rtrim(normalizeRouterValue($systemCfg['local_base_url'] ?? ''), '/');
 if ($localBaseUrl === '') {
     $localBaseUrl = $baseUrl;
 }
 
-$liveKey = (string)($env['security']['live_ingest']['token'] ?? '');
-$usageKey = (string)($env['security']['usage_ingest']['token'] ?? '');
-if ($liveKey === '') $liveKey = (string)($env['backup']['secret'] ?? '');
-if ($usageKey === '') $usageKey = (string)($env['backup']['secret'] ?? '');
+$liveKey = normalizeRouterValue($env['security']['live_ingest']['token'] ?? '');
+$usageKey = normalizeRouterValue($env['security']['usage_ingest']['token'] ?? '');
+if ($liveKey === '') $liveKey = normalizeRouterValue($env['backup']['secret'] ?? '');
+if ($usageKey === '') $usageKey = normalizeRouterValue($env['backup']['secret'] ?? '');
+$session = normalizeRouterValue($session);
 
 $tmplOnlogin = $root . '/tools/onlogin';
 $tmplOnlogout = $root . '/tools/onlogout';
@@ -49,8 +59,8 @@ if (!function_exists('renderRouterProfileScript')) {
             }
             $parts[] = $line;
         }
-        $oneLine = trim(preg_replace('/\s+/', ' ', implode(' ', $parts)));
-        return $oneLine;
+        $oneLine = trim((string)preg_replace('/\s+/', ' ', implode(' ', $parts)));
+        return normalizeRouterValue($oneLine);
     }
 }
 
@@ -154,21 +164,31 @@ if (!is_array($scriptsVerify)) {
 }
 $hookLoginVerifyLen = 0;
 $hookLogoutVerifyLen = 0;
+$hookLoginVerifySrc = '';
+$hookLogoutVerifySrc = '';
 foreach ($scriptsVerify as $sv) {
     $nm = (string)($sv['name'] ?? '');
     if (strcasecmp($nm, $onloginScriptName) === 0 || strcasecmp($nm, $onlogoutScriptName) === 0) {
-        $srcLen = strlen((string)($sv['source'] ?? ''));
+        $srcRaw = (string)($sv['source'] ?? '');
+        $srcLen = strlen($srcRaw);
         if (strcasecmp($nm, $onloginScriptName) === 0) {
             $hookLoginVerifyLen = $srcLen;
+            $hookLoginVerifySrc = $srcRaw;
         }
         if (strcasecmp($nm, $onlogoutScriptName) === 0) {
             $hookLogoutVerifyLen = $srcLen;
+            $hookLogoutVerifySrc = $srcRaw;
         }
         echo 'HOOK_SCRIPT|verify|' . $nm . '|source_len=' . $srcLen . "\n";
     }
 }
 
-$hookReady = ($hookLoginVerifyLen >= 500 && $hookLogoutVerifyLen >= 500);
+$hookLoginHasMarkers = (stripos($hookLoginVerifySrc, 'live_ingest.php') !== false)
+    && (stripos($hookLoginVerifySrc, 'usage_ingest.php') !== false);
+$hookLogoutHasMarkers = (stripos($hookLogoutVerifySrc, 'usage_ingest.php') !== false);
+echo 'HOOK_MARKER|onlogin=' . ($hookLoginHasMarkers ? '1' : '0') . '|onlogout=' . ($hookLogoutHasMarkers ? '1' : '0') . "\n";
+
+$hookReady = ($hookLoginVerifyLen >= 500 && $hookLogoutVerifyLen >= 500 && $hookLoginHasMarkers && $hookLogoutHasMarkers);
 echo 'HOOK_MODE|ready=' . ($hookReady ? '1' : '0') . "\n";
 
 $profiles = $API->comm('/ip/hotspot/user/profile/print', ['.proplist' => '.id,name,on-login,on-logout']);
@@ -207,24 +227,45 @@ foreach ($targets as $name) {
 
     $id = (string)$profileRow['.id'];
     $profileName = (string)($profileRow['name'] ?? $name);
-    $oldLoginLen = strlen((string)($profileRow['on-login'] ?? ''));
-    $oldLogoutLen = strlen((string)($profileRow['on-logout'] ?? ''));
+    $currentOnLogin = (string)($profileRow['on-login'] ?? '');
+    $currentOnLogout = (string)($profileRow['on-logout'] ?? '');
+    $oldLoginLen = strlen($currentOnLogin);
+    $oldLogoutLen = strlen($currentOnLogout);
 
     $priceByProfile = (strcasecmp($profileName, $profile30) === 0) ? 20000 : 5000;
     $compactOnLogin = '/system script add name=([/system clock get date]."-|-0-|-".$user."-|-' . $priceByProfile . '") comment=mikhmon';
     $compactOnLogout = ':return;';
 
-    $finalOnLogin = $hookReady ? $onloginHook : $compactOnLogin;
-    $finalOnLogout = $hookReady ? $onlogoutHook : $compactOnLogout;
+    $mode = 'hook';
+    if ($hookReady) {
+        $finalOnLogin = $onloginHook;
+        $finalOnLogout = $onlogoutHook;
+    } else {
+        $hasExistingHooks = (trim($currentOnLogin) !== '' || trim($currentOnLogout) !== '');
+        if ($hasExistingHooks) {
+            $finalOnLogin = $currentOnLogin;
+            $finalOnLogout = $currentOnLogout;
+            $mode = 'preserve';
+        } else {
+            $finalOnLogin = $compactOnLogin;
+            $finalOnLogout = $compactOnLogout;
+            $mode = 'compact';
+        }
+    }
 
-    $setRes = $API->comm('/ip/hotspot/user/profile/set', [
-        '.id' => $id,
-        'on-login' => $finalOnLogin,
-        'on-logout' => $finalOnLogout,
-    ]);
-
-    $setTrap = $extractTrap($setRes);
-    $setStatus = ($setTrap === '' ? 'OK' : 'TRAP');
+    $needsUpdate = ($finalOnLogin !== $currentOnLogin) || ($finalOnLogout !== $currentOnLogout);
+    if ($needsUpdate) {
+        $setRes = $API->comm('/ip/hotspot/user/profile/set', [
+            '.id' => $id,
+            'on-login' => $finalOnLogin,
+            'on-logout' => $finalOnLogout,
+        ]);
+        $setTrap = $extractTrap($setRes);
+        $setStatus = ($setTrap === '' ? 'OK' : 'TRAP');
+    } else {
+        $setTrap = '';
+        $setStatus = 'SKIP';
+    }
 
     $verifyRows = $API->comm('/ip/hotspot/user/profile/print', ['.proplist' => '.id,name,on-login,on-logout']);
     if (!is_array($verifyRows)) {
@@ -246,7 +287,7 @@ foreach ($targets as $name) {
 
     echo 'PROFILE|UPDATED|' . $profileName
         . '|set=' . $setStatus
-        . '|mode=' . ($hookReady ? 'hook' : 'compact')
+        . '|mode=' . $mode
         . '|trap=' . str_replace('|', '/', $setTrap)
         . '|old_login=' . $oldLoginLen
         . '|new_login=' . $newLoginLen
