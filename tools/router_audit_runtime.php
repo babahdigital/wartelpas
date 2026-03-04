@@ -53,4 +53,14 @@ foreach ($missing as $name) {
     echo 'PROFILE_MISSING|' . $name . "\n";
 }
 
+foreach ($profiles as $p) {
+    $name = (string)($p['name'] ?? '');
+    if ($name === '10Menit' || $name === '30Menit') {
+        $ol = str_replace(["\n", "\r", "|"], [' ', ' ', '/'], (string)($p['on-login'] ?? ''));
+        $oo = str_replace(["\n", "\r", "|"], [' ', ' ', '/'], (string)($p['on-logout'] ?? ''));
+        echo 'PROFILE_SNIPPET|' . $name . '|onlogin=' . $ol . "\n";
+        echo 'PROFILE_SNIPPET|' . $name . '|onlogout=' . $oo . "\n";
+    }
+}
+
 $API->disconnect();
