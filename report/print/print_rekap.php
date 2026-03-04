@@ -864,28 +864,6 @@ foreach ($rows as $r) {
     if (!$match) continue;
 
     $comment = (string)($r['comment'] ?? '');
-    $raw_comment = (string)($r['raw_comment'] ?? '');
-    if ($raw_comment !== '') {
-        $raw_date_hint = '';
-        if (!empty($r['lh_last_login_real'])) {
-            $raw_date_hint = substr((string)$r['lh_last_login_real'], 0, 10);
-        }
-        if ($raw_date_hint === '' && !empty($r['lh_login_time_real'])) {
-            $raw_date_hint = substr((string)$r['lh_login_time_real'], 0, 10);
-        }
-        $raw_match = false;
-        if ($raw_date_hint !== '') {
-            if ($req_show === 'harian') $raw_match = ($raw_date_hint === $sale_date);
-            elseif ($req_show === 'bulanan') $raw_match = (strpos((string)$raw_date_hint, $filter_date) === 0);
-            else $raw_match = (strpos((string)$raw_date_hint, $filter_date) === 0);
-        }
-        $raw_low = strtolower($raw_comment);
-        $cmt_low = strtolower($comment);
-        if ($raw_match && (strpos($raw_low, 'retur') !== false || strpos($raw_low, 'rusak') !== false) &&
-            !(strpos($cmt_low, 'retur') !== false || strpos($cmt_low, 'rusak') !== false)) {
-            $comment = $raw_comment;
-        }
-    }
     $status_db = normalize_status_value($r['status'] ?? '');
     $status = resolve_status_from_sources(
         $r['status'] ?? '',
