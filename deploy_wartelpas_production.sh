@@ -7,6 +7,7 @@ SSH_USER_HOST="${SSH_USER_HOST:-abdullah@159.89.192.31}"
 SSH_PORT="${SSH_PORT:-1983}"
 
 REPO_URL="${REPO_URL:-https://github.com/babahdigital/wartelpas.git}"
+DEPLOY_REF="${DEPLOY_REF:-main}"
 REMOTE_BASE="/home/abdullah/lpsaring"
 REMOTE_APP="$REMOTE_BASE/wartelpas"
 REMOTE_BACKUP="$REMOTE_BASE/.wartelpas-runtime-backup"
@@ -145,6 +146,7 @@ ssh -i "$SSH_KEY" -p "$SSH_PORT" "$SSH_USER_HOST" \
   DRY_RUN="$DRY_RUN" \
   STRICT="$STRICT" \
   REPO_URL="$REPO_URL" \
+  DEPLOY_REF="$DEPLOY_REF" \
   REMOTE_BASE="$REMOTE_BASE" \
   REMOTE_APP="$REMOTE_APP" \
   REMOTE_BACKUP="$REMOTE_BACKUP" \
@@ -277,6 +279,21 @@ if [[ "$CLEAN" -eq 1 ]]; then
       echo "Restore: $rel_path"
     fi
   done
+fi
+
+if [[ "$CLEAN" -eq 0 ]]; then
+  print_step "Sinkronisasi source terbaru (tanpa clean)"
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "[DRY-RUN] git -C $REMOTE_APP fetch --all --prune"
+    echo "[DRY-RUN] git -C $REMOTE_APP reset --hard origin/$DEPLOY_REF"
+  else
+    if [[ ! -d "$REMOTE_APP/.git" ]]; then
+      echo "Error: repo tidak ditemukan di $REMOTE_APP (.git missing)"
+      exit 1
+    fi
+    git -C "$REMOTE_APP" fetch --all --prune
+    git -C "$REMOTE_APP" reset --hard "origin/$DEPLOY_REF"
+  fi
 fi
 
 print_step "Validasi file runtime produksi (tanpa fallback .example)"
