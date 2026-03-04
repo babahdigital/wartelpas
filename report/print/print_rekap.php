@@ -938,22 +938,6 @@ foreach ($rows as $r) {
     if (!$match) continue;
 
     $username = $r['username'] ?? '';
-    $raw_key = trim((string)($r['full_raw_data'] ?? ''));
-    $unique_key = '';
-    if ($raw_key !== '') {
-        $unique_key = 'raw|' . $raw_key;
-    } elseif ($username !== '' && $sale_date !== '') {
-        $unique_key = $username . '|' . ($r['sale_datetime'] ?? ($sale_date . ' ' . ($sale_time ?? '')));
-        if ($unique_key === $username . '|') {
-            $unique_key = $username . '|' . $sale_date . '|' . ($sale_time ?? '');
-        }
-    } elseif ($sale_date !== '') {
-        $unique_key = 'date|' . $sale_date . '|' . ($sale_time ?? '');
-    }
-    if ($unique_key !== '') {
-        if (isset($seen_sales[$unique_key])) continue;
-        $seen_sales[$unique_key] = true;
-    }
 
     $comment = (string)($r['comment'] ?? '');
     $status_db = normalize_status_value($r['status'] ?? '');
@@ -1029,6 +1013,23 @@ foreach ($rows as $r) {
         $user_day_key = $username . '|' . $sale_date;
         if (isset($seen_user_day[$user_day_key])) continue;
         $seen_user_day[$user_day_key] = true;
+    }
+
+    $raw_key = trim((string)($r['full_raw_data'] ?? ''));
+    $unique_key = '';
+    if ($raw_key !== '') {
+        $unique_key = 'raw|' . $raw_key;
+    } elseif ($username !== '' && $sale_date !== '') {
+        $unique_key = $username . '|' . ($r['sale_datetime'] ?? ($sale_date . ' ' . ($sale_time ?? '')));
+        if ($unique_key === $username . '|') {
+            $unique_key = $username . '|' . $sale_date . '|' . ($sale_time ?? '');
+        }
+    } elseif ($sale_date !== '') {
+        $unique_key = 'date|' . $sale_date . '|' . ($sale_time ?? '');
+    }
+    if ($unique_key !== '') {
+        if (isset($seen_sales[$unique_key])) continue;
+        $seen_sales[$unique_key] = true;
     }
 
     if (in_array($status, ['rusak', 'retur', 'invalid', 'normal', 'online', 'terpakai'], true) && $username !== '') {
