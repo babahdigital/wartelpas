@@ -34,6 +34,7 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
             $is_operator = function_exists('isOperator') ? isOperator() : false;
             $can_force_sync = $is_super || ($is_operator && function_exists('operator_can') && operator_can('sync_sales_force'));
             $can_todo_ack = $is_super || ($is_operator && function_exists('operator_can') && operator_can('todo_ack'));
+            $can_audit_rebuild = $is_super || ($is_operator && function_exists('operator_can') && operator_can('audit_manual'));
 
             $parse_time = function ($timeStr) use ($today) {
                 $timeStr = trim((string)$timeStr);
@@ -77,6 +78,14 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                     'next' => $todo_next
                 ]);
                 return './tools/todo_ack.php?' . $qs;
+            };
+            $todo_audit_fix_url = function ($dateOverride = null) use ($session) {
+                $fix_date = $dateOverride ?: date('Y-m-d');
+                $qs = http_build_query([
+                    'session' => $session,
+                    'date' => $fix_date
+                ]);
+                return './tools/todo_audit_rebuild.php?' . $qs;
             };
 
             $profile_price_map = $env['pricing']['profile_prices'] ?? [];
@@ -443,15 +452,15 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
             }
 
             if ($audit_rebuild_needed) {
-                $can_rebuild = $is_super || ($is_operator && function_exists('operator_can') && operator_can('audit_manual'));
-                if ($can_rebuild) {
+                if ($can_audit_rebuild) {
                     $todo_list[] = [
                         'id' => 'audit_rebuild_needed',
                         'title' => 'Audit perlu diperbaiki',
                         'desc' => 'Ditemukan selisih audit yang tidak sesuai. Jalankan perbaikan audit agar data sinkron.',
                         'level' => 'warn',
                         'action_label' => 'Perbaiki Audit',
-                        'action_url' => './?report=selling&session=' . urlencode($session) . '&date=' . urlencode($today) . '&audit_rebuild=1',
+                        'action_url' => $todo_audit_fix_url($today),
+                        'action_ajax' => true,
                         'action_target' => '_self'
                     ];
                 }
@@ -767,13 +776,18 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                     }
                     $parts = array_values(array_unique(array_filter($parts)));
                     $blok_list = !empty($parts) ? (' Blok: ' . implode(', ', $parts) . '.') : '';
+                    $zero_action_label = $can_audit_rebuild ? 'Fix Target Sistem' : ('Buka Audit ' . $today_label);
+                    $zero_action_url = $can_audit_rebuild
+                        ? $todo_audit_fix_url($today)
+                        : ('./?report=audit_session&session=' . urlencode($session) . '&show=harian&date=' . urlencode($today));
                     $todo_list[] = [
                         'id' => 'audit_target_zero_' . $today,
                         'title' => 'Target sistem audit kosong',
                         'desc' => 'Ada target sistem 0 namun ada setoran pada audit tanggal ' . $today_label . '.' . $blok_list . ' Jalankan Rebuild Target Sistem.',
                         'level' => 'warn',
-                        'action_label' => 'Buka Audit ' . $today_label,
-                        'action_url' => './?report=audit_session&session=' . urlencode($session) . '&show=harian&date=' . urlencode($today),
+                        'action_label' => $zero_action_label,
+                        'action_url' => $zero_action_url,
+                        'action_ajax' => $can_audit_rebuild,
                         'action_target' => '_self'
                     ];
                 }
@@ -803,13 +817,18 @@ function app_collect_todo_items(array $env, $session = '', $backupKey = '')
                         $blok_list = ' Blok: ' . implode(', ', $parts) . '.';
                     }
                 }
+                $zero_action_label = $can_audit_rebuild ? 'Fix Target Sistem' : ('Buka Audit ' . $rlabel);
+                $zero_action_url = $can_audit_rebuild
+                    ? $todo_audit_fix_url($rdate)
+                    : ('./?report=audit_session&session=' . urlencode($session) . '&show=harian&date=' . urlencode($rdate));
                 $todo_list[] = [
                     'id' => 'audit_target_zero_' . $rdate,
                     'title' => 'Target sistem audit kosong',
                     'desc' => 'Ada target sistem 0 namun ada setoran pada audit tanggal ' . $rlabel . '.' . $blok_list . ' Jalankan Rebuild Target Sistem.',
                     'level' => 'warn',
-                    'action_label' => 'Buka Audit ' . $rlabel,
-                    'action_url' => './?report=audit_session&session=' . urlencode($session) . '&show=harian&date=' . urlencode($rdate),
+                    'action_label' => $zero_action_label,
+                    'action_url' => $zero_action_url,
+                    'action_ajax' => $can_audit_rebuild,
                     'action_target' => '_self'
                 ];
             }
