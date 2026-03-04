@@ -23,8 +23,8 @@ htaccess-copy-txt
 *.example
 *.code-workspace
 
-# Nginx global: abaikan semua kecuali konfigurasi referensi utama
+# Nginx global: abaikan semua kecuali konfigurasi wartelpas
 nginx/**
 !nginx/
 !nginx/conf.d/
-!nginx/conf.d/lpsaring.conf
+!nginx/conf.d/wartelpas.conf
