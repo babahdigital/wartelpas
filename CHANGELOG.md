@@ -8,10 +8,12 @@ Semua perubahan penting yang ter-track untuk repository WartelPas dicatat di fil
 - Menyelaraskan total Gross pada print periodik agar konsisten dengan laporan utama untuk periode bulanan dan tahunan.
 - Menjaga status settlement/pending tetap tampil sebagai informasi operasional tanpa menggeser total Gross periodik.
 - Menguatkan script deploy agar lebih aman pada lingkungan bind-mount, termasuk sinkronisasi ownership dan permission handling best-effort.
+- Menambahkan warning visual pada editor Popup Informasi ketika jadwal selesai sudah lewat, agar operator langsung tahu popup sedang kadaluarsa.
 
 ### Dampak
 - Parity laporan vs print untuk harian/bulanan/tahunan sudah konsisten.
 - Proses deploy lebih tahan terhadap kegagalan non-fatal terkait `chmod/chown` di host produksi.
+- Troubleshooting popup login lebih cepat karena status jadwal expired terlihat langsung di UI admin sebelum simpan.
 
 ### Verifikasi Produksi
 - Restart service dilakukan sebelum validasi akhir.

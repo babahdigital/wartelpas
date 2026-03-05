@@ -2249,6 +2249,9 @@
             '<input id="ann-repeat-day" type="number" min="1" max="31" class="m-pass-input" placeholder="1" />' +
           '</div>' +
         '</div>' +
+        '<div id="ann-schedule-warning" class="m-alert m-alert-danger m-popup-hidden" style="margin-top:6px;">' +
+          '<div>Jadwal popup sudah lewat. Sesuaikan tanggal/jam selesai agar popup tampil lagi.</div>' +
+        '</div>' +
         '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:6px;">' +
           '<label class="m-switch">' +
             '<input type="checkbox" id="ann-enabled" />' +
@@ -2364,6 +2367,7 @@
       var elRepeatDay = document.getElementById('ann-repeat-day');
       var elRepeatValueWrap = document.getElementById('ann-repeat-value-wrap');
       var elRepeatDayWrap = document.getElementById('ann-repeat-day-wrap');
+      var elScheduleWarning = document.getElementById('ann-schedule-warning');
       var preview = document.getElementById('ann-preview');
       var previewImg = preview ? preview.querySelector('img') : null;
 
@@ -2397,6 +2401,66 @@
         } else {
           if (elRepeatValueWrap) elRepeatValueWrap.style.display = 'none';
           if (elRepeatDayWrap) elRepeatDayWrap.style.display = 'none';
+        }
+      }
+
+      function parseDmyToLocalDate(raw) {
+        var str = String(raw || '').trim();
+        var m = str.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+        if (!m) return null;
+        var day = parseInt(m[1], 10);
+        var month = parseInt(m[2], 10) - 1;
+        var year = parseInt(m[3], 10);
+        var dt = new Date(year, month, day, 0, 0, 0, 0);
+        if (dt.getFullYear() !== year || dt.getMonth() !== month || dt.getDate() !== day) return null;
+        return dt;
+      }
+
+      function parseHmToParts(raw) {
+        var str = String(raw || '').trim();
+        var m = str.match(/^(\d{2}):(\d{2})$/);
+        if (!m) return null;
+        var h = parseInt(m[1], 10);
+        var i = parseInt(m[2], 10);
+        if (h < 0 || h > 23 || i < 0 || i > 59) return null;
+        return { h: h, i: i };
+      }
+
+      function isScheduleExpiredNow() {
+        var endDateRaw = (elEnd && elEnd.value || '').trim();
+        if (!endDateRaw) return false;
+        var endDate = parseDmyToLocalDate(endDateRaw);
+        if (!endDate) return false;
+
+        var endHour = 23;
+        var endMinute = 59;
+        var endTimeRaw = (elEndTime && elEndTime.value || '').trim();
+        if (endTimeRaw) {
+          var timeParts = parseHmToParts(endTimeRaw);
+          if (timeParts) {
+            endHour = timeParts.h;
+            endMinute = timeParts.i;
+          }
+        }
+
+        var endAt = new Date(
+          endDate.getFullYear(),
+          endDate.getMonth(),
+          endDate.getDate(),
+          endHour,
+          endMinute,
+          59,
+          999
+        );
+        return Date.now() > endAt.getTime();
+      }
+
+      function updateScheduleWarning() {
+        if (!elScheduleWarning) return;
+        if (isScheduleExpiredNow()) {
+          elScheduleWarning.classList.remove('m-popup-hidden');
+        } else {
+          elScheduleWarning.classList.add('m-popup-hidden');
         }
       }
 
@@ -2445,6 +2509,15 @@
       });
       if (elRepeat) elRepeat.addEventListener('change', updateRepeatFields);
       updateRepeatFields();
+      if (elEnd) {
+        elEnd.addEventListener('input', updateScheduleWarning);
+        elEnd.addEventListener('change', updateScheduleWarning);
+      }
+      if (elEndTime) {
+        elEndTime.addEventListener('input', updateScheduleWarning);
+        elEndTime.addEventListener('change', updateScheduleWarning);
+      }
+      updateScheduleWarning();
 
       if (elImageFile) {
         elImageFile.addEventListener('change', function(){
