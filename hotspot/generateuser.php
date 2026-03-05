@@ -251,10 +251,13 @@ if (!isset($_SESSION["mikhmon"])) {
         $commt = $user . "-" . rand(100, 999) . "-" . date("m.d.y") . "-" . $adcomment;
         $gentemp = $commt . "|~" . $profile . "~" . $getvalid . "~" . $getprice . "!".$getsprice."~" . $timelimit . "~" . $datalimit . "~" . $getlock;
         $gen = '<?php $genu="'.encrypt($gentemp).'";?>';
-        
-        $handle = fopen('./voucher/temp.php', 'w');
-        fwrite($handle, $gen);
-        fclose($handle);
+        $tempVoucherPath = $root_dir . '/voucher/temp.php';
+        $writeTempResult = @file_put_contents($tempVoucherPath, $gen, LOCK_EX);
+        if ($writeTempResult === false && function_exists('app_audit_log')) {
+            app_audit_log('generate_user_tempfile_failed', $adcomment, 'Gagal menulis voucher temp file.', 'warning', [
+                'path' => $tempVoucherPath
+            ]);
+        }
 
         $u = array();
         for ($i = 1; $i <= $qty; $i++) {
