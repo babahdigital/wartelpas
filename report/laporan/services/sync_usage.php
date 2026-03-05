@@ -159,6 +159,65 @@ function uptime_to_seconds_sync($uptime) {
     return $total;
 }
 
+function normalize_profile_key_sync($value) {
+    $value = strtolower(trim((string)$value));
+    if ($value === '') {
+        return '';
+    }
+    return preg_replace('/\s+/', '', $value);
+}
+
+function resolve_profile_price_sync($profileName, array $env) {
+    $profilesCfg = (isset($env['profiles']) && is_array($env['profiles'])) ? $env['profiles'] : [];
+    $pricingCfg = (isset($env['pricing']) && is_array($env['pricing'])) ? $env['pricing'] : [];
+
+    $profile10 = trim((string)($profilesCfg['profile_10'] ?? '10Menit'));
+    $profile30 = trim((string)($profilesCfg['profile_30'] ?? '30Menit'));
+    if ($profile10 === '') {
+        $profile10 = '10Menit';
+    }
+    if ($profile30 === '') {
+        $profile30 = '30Menit';
+    }
+
+    $price10 = (int)($pricingCfg['price_10'] ?? 5000);
+    $price30 = (int)($pricingCfg['price_30'] ?? 20000);
+    if ($price10 <= 0) {
+        $price10 = 5000;
+    }
+    if ($price30 <= 0) {
+        $price30 = 20000;
+    }
+
+    $profilePriceMap = (isset($pricingCfg['profile_prices']) && is_array($pricingCfg['profile_prices'])) ? $pricingCfg['profile_prices'] : [];
+    $targetKey = normalize_profile_key_sync($profileName);
+    if ($targetKey === '') {
+        return $price10;
+    }
+
+    foreach ($profilePriceMap as $mapKey => $mapPrice) {
+        if (normalize_profile_key_sync($mapKey) === $targetKey && (int)$mapPrice > 0) {
+            return (int)$mapPrice;
+        }
+    }
+
+    if ($targetKey === normalize_profile_key_sync($profile30)) {
+        return $price30;
+    }
+    if ($targetKey === normalize_profile_key_sync($profile10)) {
+        return $price10;
+    }
+
+    if (preg_match('/30(menit|m)?/i', $targetKey)) {
+        return $price30;
+    }
+    if (preg_match('/10(menit|m)?/i', $targetKey)) {
+        return $price10;
+    }
+
+    return $price10;
+}
+
 function table_exists_sync(PDO $db, $table) {
     try {
         $stmt = $db->prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=:t");
@@ -286,6 +345,35 @@ try {
             try { $db->exec("ALTER TABLE login_history ADD COLUMN $col $type"); } catch (Exception $e) {}
         }
     }
+
+    $db->exec("CREATE TABLE IF NOT EXISTS live_sales (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        raw_date TEXT,
+        raw_time TEXT,
+        sale_date TEXT,
+        sale_time TEXT,
+        sale_datetime TEXT,
+        username TEXT,
+        profile TEXT,
+        profile_snapshot TEXT,
+        price INTEGER,
+        price_snapshot INTEGER,
+        sprice_snapshot INTEGER,
+        validity TEXT,
+        comment TEXT,
+        blok_name TEXT,
+        status TEXT,
+        is_rusak INTEGER,
+        is_retur INTEGER,
+        is_invalid INTEGER,
+        qty INTEGER,
+        full_raw_data TEXT UNIQUE,
+        sync_status TEXT DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        synced_at DATETIME
+    )");
+    try { $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_live_user_date ON live_sales(username, sale_date)"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE live_sales ADD COLUMN sprice_snapshot INTEGER"); } catch (Exception $e) {}
 } catch (Exception $e) {
     log_sync_usage('DB error: ' . $e->getMessage());
     exit;
@@ -346,12 +434,25 @@ foreach ($active as $a) {
 
 // --- Sync ---
 $now = date('Y-m-d H:i:s');
+$todayDate = date('Y-m-d');
+$stmtSalesExists = $db->prepare("SELECT 1 FROM sales_history WHERE username = :u AND sale_date = :d LIMIT 1");
+$stmtLiveExists = $db->prepare("SELECT 1 FROM live_sales WHERE username = :u AND sale_date = :d LIMIT 1");
+$stmtInsertLiveFallback = $db->prepare("INSERT OR IGNORE INTO live_sales (
+        raw_date, raw_time, sale_date, sale_time, sale_datetime,
+        username, profile, profile_snapshot, price, price_snapshot, sprice_snapshot, validity,
+        comment, blok_name, status, is_rusak, is_retur, is_invalid, qty, full_raw_data
+    ) VALUES (
+        :rd, :rt, :sd, :st, :sdt,
+        :usr, :prof, :prof_snap, :prc, :prc_snap, :sprc_snap, :valid,
+        :cmt, :blok, :status, :is_rusak, :is_retur, :is_invalid, :qty, :raw
+    )");
 $updated = 0;
 foreach ($all_users as $u) {
     $name = $u['name'] ?? '';
     if ($name === '') continue;
 
     $comment = (string)($u['comment'] ?? '');
+    $profileName = trim((string)($u['profile'] ?? ''));
     $disabled = $u['disabled'] ?? 'false';
     $is_active = isset($activeMap[$name]);
 
@@ -362,6 +463,7 @@ foreach ($all_users as $u) {
     $uptime_user = $u['uptime'] ?? '';
     $uptime_active = $is_active ? ($activeMap[$name]['uptime'] ?? '') : '';
     $uptime = $uptime_active != '' ? $uptime_active : $uptime_user;
+    $uptime_sec = uptime_to_seconds_sync($uptime);
 
     $disabled_str = strtolower(trim((string)$disabled));
     $is_disabled = ($disabled_str === 'true' || $disabled_str === 'yes' || $disabled_str === '1');
@@ -407,10 +509,69 @@ foreach ($all_users as $u) {
 
     if ($is_active) {
         if (empty($login_time_real)) {
-            $u_sec = uptime_to_seconds_sync($uptime);
-            $login_time_real = $u_sec > 0 ? date('Y-m-d H:i:s', time() - $u_sec) : $now;
+            $login_time_real = $uptime_sec > 0 ? date('Y-m-d H:i:s', time() - $uptime_sec) : $now;
         }
         $logout_time_real = null;
+    }
+
+    $isVip = function_exists('is_vip_comment') && is_vip_comment($comment);
+    if ($is_active && !$isVip && $uptime_sec <= 180) {
+        $saleTs = $uptime_sec > 0 ? (time() - $uptime_sec) : time();
+        $saleDate = date('Y-m-d', $saleTs);
+        if ($saleDate > $todayDate) {
+            $saleDate = $todayDate;
+        }
+        $saleTime = date('H:i:s', $saleTs);
+        $resolvedPrice = resolve_profile_price_sync($profileName, $env);
+        if ($resolvedPrice > 0 && $saleDate !== '') {
+            $existsSales = false;
+            try {
+                $stmtSalesExists->execute([':u' => $name, ':d' => $saleDate]);
+                $existsSales = (bool)$stmtSalesExists->fetchColumn();
+                if (!$existsSales) {
+                    $stmtLiveExists->execute([':u' => $name, ':d' => $saleDate]);
+                    $existsSales = (bool)$stmtLiveExists->fetchColumn();
+                }
+            } catch (Exception $e) {
+            }
+
+            if (!$existsSales) {
+                $blokFallback = $blok !== '' ? $blok : 'BLOK-UNKNOWN';
+                $ipRaw = ($ip !== '' && $ip !== '-') ? $ip : '-';
+                $macRaw = ($mac !== '' && $mac !== '-') ? $mac : '-';
+                $profileFallback = $profileName !== '' ? $profileName : '-';
+                $rawFallback = $saleDate . "-|-" . $saleTime . "-|-" . $name . "-|-" . $resolvedPrice . "-|-" . $ipRaw . "-|-" . $macRaw . "-|-1d-|-" . $profileFallback . "-|-" . $blokFallback;
+                try {
+                    $stmtInsertLiveFallback->execute([
+                        ':rd' => $saleDate,
+                        ':rt' => $saleTime,
+                        ':sd' => $saleDate,
+                        ':st' => $saleTime,
+                        ':sdt' => $saleDate . ' ' . $saleTime,
+                        ':usr' => $name,
+                        ':prof' => $profileFallback,
+                        ':prof_snap' => $profileFallback,
+                        ':prc' => $resolvedPrice,
+                        ':prc_snap' => $resolvedPrice,
+                        ':sprc_snap' => 0,
+                        ':valid' => '1d',
+                        ':cmt' => 'AUTO_FALLBACK_SYNC_USAGE',
+                        ':blok' => $blokFallback,
+                        ':status' => 'normal',
+                        ':is_rusak' => 0,
+                        ':is_retur' => 0,
+                        ':is_invalid' => 0,
+                        ':qty' => 1,
+                        ':raw' => $rawFallback,
+                    ]);
+                    if ($stmtInsertLiveFallback->rowCount() > 0) {
+                        log_sync_usage("FALLBACK_SALE id=$requestId user={$name} profile={$profileFallback} price={$resolvedPrice} sale_date={$saleDate}");
+                    }
+                } catch (Exception $e) {
+                    log_sync_usage("FALLBACK_SALE_ERROR id=$requestId user={$name} err=" . $e->getMessage());
+                }
+            }
+        }
     }
 
         $stmt = $db->prepare("INSERT INTO login_history (
