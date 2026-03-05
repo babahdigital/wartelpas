@@ -239,6 +239,86 @@ if (!function_exists('resolve_stats_db_file')) {
     }
 }
 
+if (!function_exists('resolve_row_price_dashboard')) {
+    function resolve_row_price_dashboard(array $row) {
+        $price = (int)($row['price_snapshot'] ?? $row['price'] ?? 0);
+        if ($price <= 0) {
+            $price = (int)($row['sprice_snapshot'] ?? 0);
+        }
+        if ($price <= 0) {
+            $raw_comment = (string)($row['comment'] ?? '');
+            $profileHint = (string)($row['profile_snapshot'] ?? ($row['profile'] ?? ($row['validity'] ?? '')));
+            if ($profileHint === '' || $profileHint === '-') {
+                $profileHint = extract_profile_from_comment($raw_comment);
+            }
+            if ($profileHint === '' && function_exists('infer_profile_from_comment')) {
+                $profileHint = (string)infer_profile_from_comment($raw_comment);
+            }
+            if ($profileHint !== '' && function_exists('resolve_price_from_profile')) {
+                $price = (int)resolve_price_from_profile($profileHint);
+            }
+            if ($price <= 0 && function_exists('detect_profile_kind_from_label')) {
+                $kind = (string)detect_profile_kind_from_label($profileHint . ' ' . $raw_comment);
+                if ($kind === '30') {
+                    $price = (int)($GLOBALS['price30'] ?? 0);
+                } else {
+                    $price = (int)($GLOBALS['price10'] ?? 0);
+                }
+            }
+        }
+        if ($price <= 0) {
+            $price = extract_price_from_full_raw_dashboard($row['full_raw_data'] ?? '');
+        }
+        if ($price <= 0) {
+            $price = (int)($GLOBALS['price10'] ?? 0);
+        }
+        return $price;
+    }
+}
+
+if (!function_exists('load_login_history_dashboard_rows')) {
+    function load_login_history_dashboard_rows(PDO $db, $monthKey) {
+        if (!table_exists($db, 'login_history')) {
+            return [];
+        }
+        try {
+            $stmt = $db->prepare("SELECT
+                substr(COALESCE(NULLIF(last_login_real,''), NULLIF(first_login_real,''), NULLIF(login_time_real,''), login_date),1,10) AS sale_date,
+                COALESCE(NULLIF(last_login_real,''), NULLIF(first_login_real,''), NULLIF(login_time_real,''), login_date) AS raw_date,
+                'login' AS src,
+                username,
+                '' AS status,
+                0 AS is_rusak,
+                0 AS is_retur,
+                0 AS is_invalid,
+                raw_comment AS comment,
+                blok_name,
+                validity AS profile,
+                validity AS profile_snapshot,
+                validity,
+                '' AS full_raw_data,
+                CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price,
+                CAST(COALESCE(NULLIF(price,''), 0) AS INTEGER) AS price_snapshot,
+                0 AS sprice_snapshot,
+                1 AS qty,
+                COALESCE(NULLIF(last_status,''), 'used') AS last_status
+                FROM login_history
+                WHERE username != ''
+                  AND COALESCE(NULLIF(last_status,''), 'ready') != 'ready'
+                  AND (
+                    substr(COALESCE(NULLIF(last_login_real,''), NULLIF(first_login_real,''), NULLIF(login_time_real,''), login_date),1,7) = :ym
+                    OR substr(login_date,1,7) = :ym
+                  )
+                  AND instr(lower(COALESCE(raw_comment,'')), 'vip') = 0
+                  AND instr(lower(COALESCE(raw_comment,'')), 'pengelola') = 0");
+            $stmt->execute([':ym' => $monthKey]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Exception $e) {
+            return [];
+        }
+    }
+}
+
 
 // =========================================================
 // BAGIAN KHUSUS: LIVE DATA PROVIDER (JSON)
@@ -299,6 +379,7 @@ if ($load == "live_data") {
             $dayRaw1 = date('m/d/Y', strtotime($today)) . '%';
             $dayRaw2 = date('d/m/Y', strtotime($today)) . '%';
             $dayRaw3 = date('M/d/Y', strtotime($today)) . '%';
+            $monthKey = $year . '-' . $month;
 
             $sumIncome = 0;
             $sumSold = 0;
@@ -342,7 +423,10 @@ if ($load == "live_data") {
                 if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
             }
 
-            $monthKey = $year . '-' . $month;
+            if (empty($rows)) {
+                $rows = load_login_history_dashboard_rows($db, $monthKey);
+            }
+
             $seen_sale_key = [];
             $total_net_month = 0;
             $total_net_today = 0;
@@ -386,36 +470,7 @@ if ($load == "live_data") {
                     continue;
                 }
 
-                $price = (int)($r['price_snapshot'] ?? $r['price'] ?? 0);
-                if ($price <= 0) {
-                    $price = (int)($r['sprice_snapshot'] ?? 0);
-                }
-                if ($price <= 0) {
-                    $profileHint = (string)($r['profile_snapshot'] ?? ($r['profile'] ?? ($r['validity'] ?? '')));
-                    if ($profileHint === '' || $profileHint === '-') {
-                        $profileHint = extract_profile_from_comment($raw_comment);
-                    }
-                    if ($profileHint === '' && function_exists('infer_profile_from_comment')) {
-                        $profileHint = (string)infer_profile_from_comment($raw_comment);
-                    }
-                    if ($profileHint !== '' && function_exists('resolve_price_from_profile')) {
-                        $price = (int)resolve_price_from_profile($profileHint);
-                    }
-                    if ($price <= 0 && function_exists('detect_profile_kind_from_label')) {
-                        $kind = (string)detect_profile_kind_from_label($profileHint . ' ' . $raw_comment);
-                        if ($kind === '30') {
-                            $price = (int)($GLOBALS['price30'] ?? 0);
-                        } else {
-                            $price = (int)($GLOBALS['price10'] ?? 0);
-                        }
-                    }
-                }
-                if ($price <= 0) {
-                    $price = extract_price_from_full_raw_dashboard($r['full_raw_data'] ?? '');
-                }
-                if ($price <= 0) {
-                    $price = (int)($GLOBALS['price10'] ?? 0);
-                }
+                $price = resolve_row_price_dashboard($r);
                 $qty = (int)($r['qty'] ?? 0);
                 if ($qty <= 0) $qty = 1;
                 $line_price = $price * $qty;
@@ -635,6 +690,10 @@ if ($load == "hotspot") {
                 $rowsMerged = array_merge($rowsMerged, $stmt->fetchAll(PDO::FETCH_ASSOC) ?: []);
             }
 
+            if (empty($rowsMerged)) {
+                $rowsMerged = load_login_history_dashboard_rows($db, $monthKey);
+            }
+
             if (table_exists($db, 'audit_rekap_manual')) {
                 try {
                     $stmtAuditIncome = $db->prepare("SELECT report_date, SUM(COALESCE(actual_setoran, 0)) AS actual_total
@@ -727,10 +786,7 @@ if ($load == "hotspot") {
                 $dailyHasPendingLive[$d_day] = true;
             }
 
-            $price = (int)($row['price_snapshot'] ?? $row['price'] ?? 0);
-            if ($price <= 0) $price = (int)($row['sprice_snapshot'] ?? 0);
-            if ($price <= 0) $price = extract_price_from_full_raw_dashboard($row['full_raw_data'] ?? '');
-            if ($price <= 0) $price = (int)($GLOBALS['price10'] ?? 0);
+            $price = resolve_row_price_dashboard($row);
             $qty = (int)($row['qty'] ?? 0);
             if ($qty <= 0) $qty = 1;
 
