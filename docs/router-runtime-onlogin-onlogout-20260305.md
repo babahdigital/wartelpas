@@ -83,10 +83,44 @@ Deploy verifikasi produksi (`--strict --no-build --no-recreate`) lulus dengan ha
 - `74a6218` — hardening backup deploy untuk `db_data` aktif
 - `8cb561e` — fallback smoke test deploy via `php` container
 
-## 5) Kesimpulan
+## 5) Penyempurnaan Final (Update 2026-03-05)
+
+### A. Gap terakhir yang ditemukan saat simulasi API
+- Pada router produksi, command `/ip/hotspot/active/login`:
+  - membutuhkan host IP yang benar-benar ada pada tabel host,
+  - tidak menerima parameter `address`,
+  - dan command `/ip/hotspot/host/login` tidak tersedia.
+- Implikasi: sesi aktif via API bisa terbentuk, tetapi pada jalur tertentu hook `on-login` tidak selalu terpicu seperti login captive portal asli.
+
+### B. Solusi hardening tambahan
+- File: `report/laporan/services/sync_usage.php`
+- Ditambahkan fallback transaksi terjaga untuk menutup gap tersebut:
+  - aktif hanya untuk user online baru (`uptime <= 180 detik`),
+  - hanya non-VIP,
+  - anti-duplicate ketat (`sales_history` + `live_sales`),
+  - harga resolve dari mapping profile runtime (`price_10/price_30/profile_prices`).
+- Tujuan: menjaga pencatatan pendapatan tetap konsisten meskipun hook `on-login` tidak terpicu pada metode simulasi API tertentu.
+
+### C. Hasil retest produksi scoped (wartel only)
+- Scope: hotspot server `wartel`, host subnet `172.16.12.0/24`, profile `10Menit` dan `30Menit`.
+- Hasil utama:
+  - `ACTIVE_COUNT=1` untuk kedua user uji,
+  - `CALL_SYNC_USAGE=ok`,
+  - `SALES_HISTORY_TODAY=2`,
+  - `LIVE_SALES_TODAY=2`,
+  - `LIVE_SALES_PENDING=0`.
+- Cleanup tervalidasi:
+  - user uji dihapus dari router,
+  - post-clean DB: `sales_history=0`, `live_sales=0`, `login_history=0` untuk prefix user uji.
+
+### D. Commit tambahan
+- `35cc060` — guarded fallback sales insertion for fresh online sessions (`sync_usage`).
+
+## 6) Kesimpulan
 
 Alur script profile MikroTik untuk live pendapatan + settlement sudah distabilkan dari sisi:
 - template runtime,
 - pembentukan log fallback script,
 - parser sinkronisasi,
-- dan smoke test otomatis saat deploy.
+- smoke test otomatis saat deploy,
+- serta fallback pencatatan saat jalur API login tidak memicu hook on-login.
