@@ -517,3 +517,4 @@ if (file_exists($tmpl_onlogin) && file_exists($tmpl_onlogout) && $base_url !== '
       }
     }, 3000);
   })();
+</script>

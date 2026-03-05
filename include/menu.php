@@ -861,7 +861,7 @@ if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?sessio
         </div>
     </nav>
 
-    <?php include('./include/info.php'); ?>
+    <?php if (file_exists('./include/info.php')) { include('./include/info.php'); } ?>
 
 <?php } ?>
 

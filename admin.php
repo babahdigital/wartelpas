@@ -425,6 +425,6 @@ if ($id == "login" || ($basename === 'admin.php' && empty($id))) {
 <script src="js/mikhmon.js?t=<?= str_replace(" ","_",date("Y-m-d H:i:s")); ?>"></script>
 <script src="js/ajax_helper.js"></script>
 <?php endif; ?>
-<?php include('./include/info.php'); ?>
+<?php if (file_exists('./include/info.php')) { include('./include/info.php'); } ?>
 </body>
 </html>
