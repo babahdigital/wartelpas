@@ -79,7 +79,11 @@ if ($secret_token === '') {
         }
     }
 }
-if (!isset($_GET['key']) || $_GET['key'] !== $secret_token) {
+$normalizeToken = static function ($value) {
+    return rtrim(trim((string)$value), '=');
+};
+$reqToken = $_GET['key'] ?? ($_POST['key'] ?? '');
+if ($normalizeToken($reqToken) === '' || $normalizeToken($reqToken) !== $normalizeToken($secret_token)) {
     http_response_code(403);
     log_sync_sales('reject=token ip=' . ($_SERVER['REMOTE_ADDR'] ?? '-'));
     die("Error: Token Salah.");
@@ -239,30 +243,104 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
     
     $commentFilter = isset($_GET['comment']) ? trim((string)$_GET['comment']) : 'mikhmon';
     $extract_raw_sales = static function (array $scriptRow) {
-        $is_raw = static function ($value) {
+        $normalize_raw = static function ($value) {
             $value = trim((string)$value);
+            if ($value === '') return '';
+            $value = str_replace('-/-', '-|-', $value);
+            return $value;
+        };
+
+        $is_raw = static function ($value) use ($normalize_raw) {
+            $value = $normalize_raw($value);
             if ($value === '') return false;
-            if (strpos($value, '-|-') === false && strpos($value, '-|') === false) return false;
-            return (
-                preg_match('/^[A-Za-z]{3}\/\d{2}\/\d{4}-\|-?/', $value)
-                || preg_match('/^\d{4}-\d{2}-\d{2}-\|-?/', $value)
-                || preg_match('/^\d{2}\/\d{2}\/\d{4}-\|-?/', $value)
-            ) === 1;
+            $looksLikeDatePrefix = (
+                preg_match('/^[A-Za-z]{3}\/\d{2}\/\d{4}/', $value) === 1
+                || preg_match('/^\d{4}-\d{2}-\d{2}/', $value) === 1
+                || preg_match('/^\d{2}\/\d{2}\/\d{4}/', $value) === 1
+            );
+            if (!$looksLikeDatePrefix) return false;
+            if (substr_count($value, '-') < 8) return false;
+            return true;
         };
 
         $name = (string)($scriptRow['name'] ?? '');
         if ($is_raw($name)) {
-            return $name;
+            return $normalize_raw($name);
         }
 
         $source = (string)($scriptRow['source'] ?? '');
         if ($is_raw($source)) {
-            return $source;
+            return $normalize_raw($source);
         }
 
         $comment = (string)($scriptRow['comment'] ?? '');
         if ($is_raw($comment)) {
-            return $comment;
+            return $normalize_raw($comment);
+        }
+
+        return '';
+    };
+
+    $split_raw_sales_robust = static function ($rawData) {
+        $rawData = (string)$rawData;
+        if (function_exists('split_sales_raw')) {
+            $d = split_sales_raw($rawData);
+            if (count($d) >= 4) {
+                return $d;
+            }
+        }
+
+        $tryDelims = ['-|-', '-/-'];
+        foreach ($tryDelims as $delim) {
+            $d = explode($delim, $rawData);
+            if (count($d) >= 4) {
+                return $d;
+            }
+        }
+
+        if (preg_match('/^(?:[A-Za-z]{3}\/\d{2}\/\d{4}|\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})-(.)-/', $rawData, $m)) {
+            $d = explode('-' . $m[1] . '-', $rawData);
+            if (count($d) >= 4) {
+                return $d;
+            }
+        }
+
+        return explode('-|-', $rawData);
+    };
+
+    $read_script_source = static function ($api, $id) {
+        $id = trim((string)$id);
+        if ($id === '') {
+            return '';
+        }
+
+        $resp = $api->comm('/system/script/get', [
+            '.id' => $id,
+            'value-name' => 'source',
+        ]);
+
+        if (is_array($resp) && isset($resp['ret'])) {
+            return (string)$resp['ret'];
+        }
+        if (is_array($resp) && isset($resp[0]['ret'])) {
+            return (string)$resp[0]['ret'];
+        }
+        if (is_string($resp)) {
+            return $resp;
+        }
+
+        $resp2 = $api->comm('/system/script/get', [
+            'numbers' => $id,
+            'value-name' => 'source',
+        ]);
+        if (is_array($resp2) && isset($resp2['ret'])) {
+            return (string)$resp2['ret'];
+        }
+        if (is_array($resp2) && isset($resp2[0]['ret'])) {
+            return (string)$resp2[0]['ret'];
+        }
+        if (is_string($resp2)) {
+            return $resp2;
         }
 
         return '';
@@ -313,9 +391,27 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
     )");
 
     foreach ($scripts as $s) {
-        $rawData = $extract_raw_sales(is_array($s) ? $s : []);
+        $scriptRow = is_array($s) ? $s : [];
+        $scriptId = (string)($scriptRow['.id'] ?? '');
+
+        $rawData = $extract_raw_sales($scriptRow);
+        if ($rawData === '' && $scriptId !== '') {
+            $fullSource = $read_script_source($API, $scriptId);
+            if ($fullSource !== '') {
+                $scriptRow['source'] = $fullSource;
+                $rawData = $extract_raw_sales($scriptRow);
+            }
+        }
+
         if ($rawData === '') {
             $skip_invalid_format++;
+            if ($debug && count($sample_names) < 5) {
+                $sourceRaw = (string)($scriptRow['source'] ?? '');
+                $sample_names[] = '[invalid_raw] name=' . (string)($scriptRow['name'] ?? '')
+                    . ' source_len=' . strlen($sourceRaw)
+                    . ' has_pipe=' . ((strpos($sourceRaw, '|') !== false) ? '1' : '0')
+                    . ' head_hex=' . bin2hex(substr($sourceRaw, 0, 24));
+            }
             continue;
         }
         if ($debug && count($sample_names) < 5) {
@@ -323,7 +419,7 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
         }
         
         // Pecah Data (Explode)
-        $d = function_exists('split_sales_raw') ? split_sales_raw($rawData) : explode('-|-', $rawData);
+        $d = $split_raw_sales_robust($rawData);
         
         // Pastikan formatnya benar (Minimal ada 4 elemen)
         if (count($d) >= 4) {
@@ -336,9 +432,11 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
             $comment  = isset($d[8]) ? $d[8] : ''; // Komentar
             if (function_exists('is_vip_comment') && is_vip_comment($comment)) {
                 $skip_vip++;
-                $API->write('/system/script/remove', false);
-                $API->write('=.id=' . $s['.id']);
-                $API->read();
+                if ($scriptId !== '') {
+                    $API->write('/system/script/remove', false);
+                    $API->write('=.id=' . $scriptId);
+                    $API->read();
+                }
                 continue;
             }
             $blok_name = '';
@@ -347,9 +445,11 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
             }
             if ($blok_name === '') {
                 $skip_blok++;
-                $API->write('/system/script/remove', false);
-                $API->write('=.id=' . $s['.id']);
-                $API->read();
+                if ($scriptId !== '') {
+                    $API->write('/system/script/remove', false);
+                    $API->write('=.id=' . $scriptId);
+                    $API->read();
+                }
                 continue;
             }
 
@@ -391,9 +491,11 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
                 $dupStmt->execute([':u' => $username, ':d' => $sale_date]);
                 if ($dupStmt->fetchColumn()) {
                     $skip_duplicate++;
-                    $API->write('/system/script/remove', false);
-                    $API->write('=.id=' . $s['.id']);
-                    $API->read();
+                    if ($scriptId !== '') {
+                        $API->write('/system/script/remove', false);
+                        $API->write('=.id=' . $scriptId);
+                        $API->read();
+                    }
                     continue;
                 }
             }
@@ -422,9 +524,11 @@ if ($API->connect($use_ip, $use_user, $use_pass)) {
             
             if ($stmt->execute()) {
                 // JIKA BERHASIL SIMPAN -> HAPUS DARI MIKROTIK
-                $API->write('/system/script/remove', false);
-                $API->write('=.id=' . $s['.id']);
-                $API->read();
+                if ($scriptId !== '') {
+                    $API->write('/system/script/remove', false);
+                    $API->write('=.id=' . $scriptId);
+                    $API->read();
+                }
                 $count++;
             }
         } else {

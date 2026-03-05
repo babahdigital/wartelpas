@@ -11,13 +11,23 @@ set_time_limit(0);
 @ini_set('output_buffering', 'off');
 @ini_set('zlib.output_compression', '0');
 
-if (!isset($_GET['session'])) {
+$altParams = [];
+$queryRaw = trim((string)($_SERVER['QUERY_STRING'] ?? ''));
+if ($queryRaw !== '' && strpos($queryRaw, '=') === false) {
+    $parts = array_values(array_filter(explode('/', trim($queryRaw, '/')), static function ($v) {
+        return $v !== '';
+    }));
+    for ($i = 0; $i + 1 < count($parts); $i += 2) {
+        $altParams[strtolower($parts[$i])] = $parts[$i + 1];
+    }
+}
+
+$session = $_GET['session'] ?? ($_POST['session'] ?? ($altParams['session'] ?? ''));
+if ($session === '') {
     http_response_code(400);
     echo "Missing session";
     exit;
 }
-
-$session = $_GET['session'];
 
 $root_dir = dirname(__DIR__, 3);
 $env = [];
@@ -76,17 +86,24 @@ if ($opt_token === '') {
     $opt_token = getenv('WARTELPAS_SYNC_USAGE_TOKEN');
     if ($opt_token === false || trim((string)$opt_token) === '') {
         if (defined('WARTELPAS_SYNC_USAGE_TOKEN')) {
-            $opt_token = WARTELPAS_SYNC_USAGE_TOKEN;
+            $opt_token = (string)constant('WARTELPAS_SYNC_USAGE_TOKEN');
         } else {
             $opt_token = '';
         }
     }
 }
 if ($opt_token !== '' && (!isset($_GET['key']) || $_GET['key'] !== $opt_token)) {
-    if ($remote_ip === '' || $iphost === '' || $remote_ip !== $iphost) {
-        http_response_code(403);
-        echo "Invalid token";
-        exit;
+    $req_key = $_GET['key'] ?? ($_POST['key'] ?? ($altParams['key'] ?? ''));
+    $normalizeKey = static function ($value) {
+        return rtrim(trim((string)$value), '=');
+    };
+    $isValidToken = ($normalizeKey($req_key) !== '' && $normalizeKey($req_key) === $normalizeKey($opt_token));
+    if (!$isValidToken) {
+        if ($remote_ip === '' || $iphost === '' || $remote_ip !== $iphost) {
+            http_response_code(403);
+            echo "Invalid token";
+            exit;
+        }
     }
 }
 include_once($root_dir . '/lib/routeros_api.class.php');
@@ -441,3 +458,42 @@ foreach ($all_users as $u) {
 }
 $elapsed = round(microtime(true) - $startTime, 3);
 log_sync_usage("DONE id=$requestId updated=$updated elapsed={$elapsed}s");
+
+try {
+    $syncSalesCfg = $env['security']['sync_sales'] ?? [];
+    $syncSalesToken = (string)($syncSalesCfg['token'] ?? '');
+    if ($syncSalesToken === '') {
+        $syncSalesToken = getenv('WARTELPAS_SYNC_TOKEN');
+        if ($syncSalesToken === false || trim((string)$syncSalesToken) === '') {
+            if (defined('WARTELPAS_SYNC_TOKEN')) {
+                $syncSalesToken = (string)constant('WARTELPAS_SYNC_TOKEN');
+            } else {
+                $syncSalesToken = (string)($env['backup']['secret'] ?? '');
+            }
+        }
+    }
+
+    if ($syncSalesToken !== '') {
+        $throttleFile = $logDir . '/sync_sales_from_usage.ts';
+        $nowTs = time();
+        $lastTs = @file_exists($throttleFile) ? (int)@file_get_contents($throttleFile) : 0;
+        if (($nowTs - $lastTs) >= 20) {
+            @file_put_contents($throttleFile, (string)$nowTs);
+            $syncUrl = 'http://127.0.0.1/report/laporan/services/sync_sales.php?key=' . urlencode($syncSalesToken) . '&session=' . urlencode($session);
+            $ctx = stream_context_create([
+                'http' => [
+                    'timeout' => 3,
+                    'ignore_errors' => true,
+                ]
+            ]);
+            @file_get_contents($syncUrl, false, $ctx);
+            log_sync_usage("TRIGGER_SYNC_SALES id=$requestId");
+        } else {
+            log_sync_usage("TRIGGER_SYNC_SALES_SKIP id=$requestId reason=throttle");
+        }
+    } else {
+        log_sync_usage("TRIGGER_SYNC_SALES_SKIP id=$requestId reason=no_token");
+    }
+} catch (Exception $e) {
+    log_sync_usage("TRIGGER_SYNC_SALES_ERROR id=$requestId err=" . $e->getMessage());
+}

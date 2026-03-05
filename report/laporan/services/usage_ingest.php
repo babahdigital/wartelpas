@@ -36,7 +36,31 @@ if (!is_dir($logDir)) {
     @mkdir($logDir, 0755, true);
 }
 
-@file_put_contents($logDir . '/usage_ingest.log', date('c') . " | hit | ip=" . ($_SERVER['REMOTE_ADDR'] ?? '-') . " | qs=" . ($_SERVER['QUERY_STRING'] ?? '') . "\n", FILE_APPEND);
+$rawInput = @file_get_contents('php://input');
+$jsonBody = [];
+if (is_string($rawInput) && trim($rawInput) !== '') {
+    $decoded = json_decode($rawInput, true);
+    if (is_array($decoded)) {
+        $jsonBody = $decoded;
+    }
+}
+
+$pick = static function (array $keys, string $fallback = '') use ($jsonBody) {
+    foreach ($keys as $key) {
+        if (isset($_GET[$key])) {
+            return trim((string)$_GET[$key]);
+        }
+        if (isset($_POST[$key])) {
+            return trim((string)$_POST[$key]);
+        }
+        if (isset($jsonBody[$key])) {
+            return trim((string)$jsonBody[$key]);
+        }
+    }
+    return $fallback;
+};
+
+@file_put_contents($logDir . '/usage_ingest.log', date('c') . " | hit | ip=" . ($_SERVER['REMOTE_ADDR'] ?? '-') . " | method=" . ($_SERVER['REQUEST_METHOD'] ?? '-') . " | body=" . strlen((string)$rawInput) . " | qs=" . ($_SERVER['QUERY_STRING'] ?? '') . "\n", FILE_APPEND);
 
 require_once($root_dir . '/include/config.php');
 
@@ -65,45 +89,49 @@ if ($secret_token === '') {
     $secret_token = getenv('WARTELPAS_INGEST_TOKEN');
     if ($secret_token === false || trim((string)$secret_token) === '') {
         if (defined('WARTELPAS_INGEST_TOKEN')) {
-            $secret_token = WARTELPAS_INGEST_TOKEN;
+            $secret_token = (string)constant('WARTELPAS_INGEST_TOKEN');
         } else {
             $secret_token = $env['backup']['secret'] ?? '';
         }
     }
 }
-if (!isset($_GET['key']) || $_GET['key'] !== $secret_token) {
+$req_key = $pick(['key']);
+$normalizeKey = static function ($value) {
+    return rtrim(trim((string)$value), '=');
+};
+if ($normalizeKey($req_key) === '' || $normalizeKey($req_key) !== $normalizeKey($secret_token)) {
     @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | reject | reason=bad_key | qs=" . ($_SERVER['QUERY_STRING'] ?? '') . "\n", FILE_APPEND);
     http_response_code(403);
     die("Error: Token Salah.");
 }
 
-$session = $_GET['session'] ?? '';
+$session = $pick(['session']);
 if ($session === '' || !isset($data[$session])) {
     @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | reject | reason=missing_session | qs=" . ($_SERVER['QUERY_STRING'] ?? '') . "\n", FILE_APPEND);
     http_response_code(403);
     die("Error: Session tidak valid.");
 }
 
-$event = strtolower(trim($_GET['event'] ?? 'login'));
-$user = trim($_GET['user'] ?? ($_GET['username'] ?? ($_GET['u'] ?? '')));
-$date = trim($_GET['date'] ?? '');
-$time = trim($_GET['time'] ?? '');
-$ip = trim($_GET['ip'] ?? '');
-$mac = trim($_GET['mac'] ?? '');
-$uptime = trim($_GET['uptime'] ?? '');
-$bytes_in_raw = $_GET['bytes_in'] ?? ($_GET['bytes-in'] ?? ($_GET['bi'] ?? ''));
-$bytes_out_raw = $_GET['bytes_out'] ?? ($_GET['bytes-out'] ?? ($_GET['bo'] ?? ''));
-$bytes_total_raw = $_GET['bytes'] ?? ($_GET['bytes_total'] ?? ($_GET['total_bytes'] ?? ''));
+$event = strtolower($pick(['event'], 'login'));
+$user = $pick(['user', 'username', 'u']);
+$date = $pick(['date']);
+$time = $pick(['time']);
+$ip = $pick(['ip']);
+$mac = $pick(['mac']);
+$uptime = $pick(['uptime']);
+$bytes_in_raw = $pick(['bytes_in', 'bytes-in', 'bi']);
+$bytes_out_raw = $pick(['bytes_out', 'bytes-out', 'bo']);
+$bytes_total_raw = $pick(['bytes', 'bytes_total', 'total_bytes']);
 $bytes_in = is_numeric($bytes_in_raw) ? (int)$bytes_in_raw : 0;
 $bytes_out = is_numeric($bytes_out_raw) ? (int)$bytes_out_raw : 0;
 $bytes_total = is_numeric($bytes_total_raw) ? (int)$bytes_total_raw : 0;
 $last_bytes = $bytes_total > 0 ? $bytes_total : ($bytes_in + $bytes_out);
-$comment = trim($_GET['comment'] ?? '');
-$customer_name = trim($_GET['customer_name'] ?? ($_GET['nama'] ?? ''));
-$room_name = trim($_GET['room'] ?? ($_GET['kamar'] ?? ''));
-$meta_blok_name = trim($_GET['blok_name'] ?? ($_GET['blok'] ?? ''));
-$meta_profile_name = trim($_GET['profile_name'] ?? ($_GET['profile'] ?? ''));
-$meta_price_raw = trim($_GET['price'] ?? ($_GET['harga'] ?? ''));
+$comment = $pick(['comment']);
+$customer_name = $pick(['customer_name', 'nama']);
+$room_name = $pick(['room', 'kamar']);
+$meta_blok_name = $pick(['blok_name', 'blok']);
+$meta_profile_name = $pick(['profile_name', 'profile']);
+$meta_price_raw = $pick(['price', 'harga']);
 $meta_price = is_numeric($meta_price_raw) ? (int)$meta_price_raw : 0;
 if ($customer_name !== '') $customer_name = mb_substr($customer_name, 0, 80);
 if ($room_name !== '') $room_name = mb_substr($room_name, 0, 40);
@@ -121,7 +149,7 @@ if ($user === '') {
     exit;
 }
 
-$vip_flag = trim((string)($_GET['vip'] ?? ''));
+$vip_flag = $pick(['vip']);
 if ($vip_flag === '1' || (function_exists('is_vip_comment') && is_vip_comment($comment))) {
     @file_put_contents($logDir . '/usage_ingest.log', date('c') . " | vip skip | user=" . $user . " | qs=" . ($_SERVER['QUERY_STRING'] ?? '') . "\n", FILE_APPEND);
     echo "OK";

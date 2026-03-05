@@ -1,100 +1,48 @@
 # SCRIPT MIKROTIK ON-LOGIN
-# HTTPS-safe: tidak memaksa mode=http agar tidak konflik dengan URL http
+# Versi kompatibel API: tanpa karakter sama-dengan pada source script
 
 :local baseUrl "{{BASE_URL}}";
 :local localBaseUrl "{{LOCAL_BASE_URL}}";
 :local key "{{LIVE_KEY}}";
 :local session "{{SESSION}}";
 :local usageKey "{{USAGE_KEY}}";
+:global wartelpasprice;
+:global wartelpasplabel;
 
-{
-	:local username "$user";
-	:local userip "$address";
-	:local usermac $"mac-address";
+	:local username $user;
+	:local userip $address;
+	:local usermac "-";
 	:local date [/system clock get date];
 	:local time [/system clock get time];
 
-	:if ([:len $username] > 0) do={
-		:local uID [/ip hotspot user find where name="$username"];
-		:local comment "";
-		:local profile "";
-		:if ([:len $uID] > 0) do={
-			:set uID ($uID->0);
-			:do {
-				:set comment [/ip hotspot user get $uID comment];
-				:set profile [/ip hotspot user get $uID profile];
-			} on-error={}
-		} else={
-			:set uID "";
-		}
+	:if ([:len $username] > 0) do {
+		:local price10 "{{PRICE_10}}";
+		:local price30 "{{PRICE_30}}";
+		:local profile10 "{{PROFILE_10}}";
+		:local profile30 "{{PROFILE_30}}";
+		:local price $price10;
+		:local pLabel $profile10;
+		:if ([:len "$wartelpasplabel"] > 0) do { :set pLabel "$wartelpasplabel"; };
+		:if ([:len "$wartelpasprice"] > 0) do { :set price "$wartelpasprice"; } else {
+			:if ($pLabel = $profile30) do { :set price $price30; } else { :set price $price10; };
+		};
+		:local blokInfo "-";
+		:local logTxt ($date . "-|-" . $time . "-|-" . $username . "-|-" . $price . "-|-" . $userip . "-|-" . $usermac . "-|-1d-|-" . $pLabel . "-|-" . $blokInfo);
 
-		:local cmtLower [:tolower $comment];
-		:local isVip false;
-		:if (([:find $cmtLower "vip"] != nil) || ([:find $cmtLower "pengelola"] != nil)) do={ :set isVip true; }
+		:local userKey $username;
+		:if ([:len $userKey] > 12) do { :set userKey [:pick $userKey 0 12]; };
+		:local dateStamp "0000";
+		:if ([:len $date] > 10) do { :set dateStamp ([:pick $date 4 6] . [:pick $date 7 11]); };
+		:local timeStamp "000000";
+		:if ([:len $time] > 7) do { :set timeStamp ([:pick $time 0 2] . [:pick $time 3 5] . [:pick $time 6 8]); };
+		:local macTail "00";
+		:if ([:len $usermac] > 1) do { :set macTail [:pick $usermac ([:len $usermac] - 2) [:len $usermac]]; };
+		:local saleName ("mk-" . $dateStamp . "-" . $timeStamp . "-" . $userKey . "-" . $macTail);
+		/system script add name $saleName source $logTxt comment "mikhmon";
+		:do { /system script run Wartelpas-SyncUsage; } on-error {};
+		:set wartelpasprice "";
+		:set wartelpasplabel "";
 
-		:local blokInfo "";
-		:local posBlok [:find $comment "Blok-"];
-		:if ([:typeof $posBlok] = "nil") do={ :set posBlok [:find $comment "blok-"]; }
-		:if ([:typeof $posBlok] != "nil") do={
-			:local endPos [:find $comment "|" $posBlok];
-			:if ([:typeof $endPos] = "nil") do={ :set endPos [:len $comment]; }
-			:set blokInfo [:pick $comment $posBlok $endPos];
-		} else={
-			:set blokInfo $comment;
-		}
-		:if ([:len $blokInfo] = 0) do={ :set blokInfo "-"; }
-
-		:local price "5000";
-		:local pLabel "10Menit";
-		:if ($profile = "30Menit") do={ :set price "20000"; :set pLabel "30Menit"; }
-		:if ([:find $cmtLower "blok-"] != nil) do={
-			:if ([:find $cmtLower "30"] != nil) do={ :set price "20000"; :set pLabel "30Menit"; }
-			:if ([:find $cmtLower "10"] != nil) do={ :set price "5000"; :set pLabel "10Menit"; }
-		}
-
-		:if (!$isVip) do={
-			:local logTxt ($date . "-|-" . $time . "-|-" . $username . "-|-" . $price . "-|-" . $userip . "-|-" . $usermac . "-|-1d-|-" . $pLabel . "-|-" . $blokInfo);
-			:local userKey $username;
-			:if ([:len $userKey] > 12) do={ :set userKey [:pick $userKey 0 12]; }
-			:local dateStamp "0000";
-			:if ([:len $date] >= 11) do={ :set dateStamp ([:pick $date 4 6] . [:pick $date 7 11]); }
-			:local timeStamp "000000";
-			:if ([:len $time] >= 8) do={ :set timeStamp ([:pick $time 0 2] . [:pick $time 3 5] . [:pick $time 6 8]); }
-			:local macTail "00";
-			:if ([:len $usermac] >= 2) do={ :set macTail [:pick $usermac ([:len $usermac] - 2) [:len $usermac]]; }
-			:local saleName ("mk-" . $dateStamp . "-" . $timeStamp . "-" . $userKey . "-" . $macTail);
-			:local scriptName $logTxt;
-			:if ([:len $scriptName] > 60) do={ :set scriptName $saleName; }
-			:do {
-				/system script add name=$scriptName source=$logTxt comment="mikhmon";
-			} on-error={
-				:local altName ($saleName . "-" . [:len [/system script find where comment="mikhmon"]]);
-				:do {
-					/system script add name=$altName source=$logTxt comment="mikhmon";
-				} on-error={ :log warning "LOGIN: gagal create mikhmon script"; }
-			}
-
-			:local liveUrl ($localBaseUrl . "/report/laporan/services/live_ingest.php");
-			:local liveUrlFallback ($baseUrl . "/report/laporan/services/live_ingest.php");
-			:local postData ("data=" . $logTxt . "&key=" . $key . "&session=" . $session);
-			:do {
-				/tool fetch url=$liveUrl http-method=post http-data=$postData http-header-field="content-type: application/x-www-form-urlencoded" keep-result=no;
-			} on-error={
-				:do {
-					/tool fetch url=$liveUrlFallback http-method=post http-data=$postData http-header-field="content-type: application/x-www-form-urlencoded" keep-result=no check-certificate=no;
-				} on-error={}
-			}
-
-			:local useUrl ($localBaseUrl . "/report/laporan/services/usage_ingest.php?key=" . $usageKey . "&session=" . $session . "&event=login&user=" . $username . "&date=" . $date . "&time=" . $time . "&ip=" . $userip . "&mac=" . $usermac . "&uptime=0s");
-			:local useUrlFallback ($baseUrl . "/report/laporan/services/usage_ingest.php?key=" . $usageKey . "&session=" . $session . "&event=login&user=" . $username . "&date=" . $date . "&time=" . $time . "&ip=" . $userip . "&mac=" . $usermac . "&uptime=0s");
-			:do { /tool fetch url=$useUrl keep-result=no; } on-error={
-				:do { /tool fetch url=$useUrlFallback keep-result=no check-certificate=no; } on-error={}
-			}
-		}
-
-		:if ([:len $uID] > 0) do={
-			:if ([:len $comment] = 0) do={ :set comment ($date . " " . $time); }
-			:do { /ip hotspot user set numbers=$uID comment=$comment mac-address=$usermac; } on-error={}
-		}
-	}
-}
+		:local liveMarker "/report/laporan/services/live_ingest.php";
+		:local usageMarker "/report/laporan/services/usage_ingest.php";
+	};

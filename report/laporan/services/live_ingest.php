@@ -66,24 +66,36 @@ $logWrite = function (string $line) use ($logFile) {
     }
 };
 
+$rawInput = @file_get_contents('php://input');
+$jsonBody = [];
+if (is_string($rawInput) && trim($rawInput) !== '') {
+    $decoded = json_decode($rawInput, true);
+    if (is_array($decoded)) {
+        $jsonBody = $decoded;
+    }
+}
+
 $secret_token = $cfg_live['token'] ?? '';
 if ($secret_token === '') {
     $secret_token = getenv('WARTELPAS_SYNC_TOKEN');
     if ($secret_token === false || trim((string)$secret_token) === '') {
         if (defined('WARTELPAS_SYNC_TOKEN')) {
-            $secret_token = WARTELPAS_SYNC_TOKEN;
+            $secret_token = (string)constant('WARTELPAS_SYNC_TOKEN');
         } else {
             $secret_token = $env['backup']['secret'] ?? '';
         }
     }
 }
-$req_key = $_GET['key'] ?? ($_POST['key'] ?? '');
-if ($req_key === '' || $req_key !== $secret_token) {
+$req_key = $_GET['key'] ?? ($_POST['key'] ?? ($jsonBody['key'] ?? ''));
+$normalizeKey = static function ($value) {
+    return rtrim(trim((string)$value), '=');
+};
+if ($normalizeKey($req_key) === '' || $normalizeKey($req_key) !== $normalizeKey($secret_token)) {
     http_response_code(403);
     die("Error: Token Salah.");
 }
 
-$session = $_GET['session'] ?? ($_POST['session'] ?? '');
+$session = $_GET['session'] ?? ($_POST['session'] ?? ($jsonBody['session'] ?? ''));
 if ($session === '') {
     http_response_code(403);
     die("Error: Session tidak valid.");
@@ -101,21 +113,22 @@ if (!isset($hotspot_server) || $hotspot_server !== $expected_hotspot) {
 }
 
 $raw = '';
-$logWrite(date('c') . " | hit | ip=" . ($_SERVER['REMOTE_ADDR'] ?? '-') . " | qs=" . ($_SERVER['QUERY_STRING'] ?? '') . "\n");
+$logWrite(date('c') . " | hit | ip=" . ($_SERVER['REMOTE_ADDR'] ?? '-') . " | method=" . ($_SERVER['REQUEST_METHOD'] ?? '-') . " | body=" . strlen((string)$rawInput) . " | qs=" . ($_SERVER['QUERY_STRING'] ?? '') . "\n");
 if (isset($_POST['data'])) $raw = trim((string)$_POST['data']);
 if ($raw === '' && isset($_GET['data'])) $raw = trim((string)$_GET['data']);
+if ($raw === '' && isset($jsonBody['data'])) $raw = trim((string)$jsonBody['data']);
 
 if ($raw === '') {
     // fallback dari parameter terpisah
-    $date = $_GET['date'] ?? '';
-    $time = $_GET['time'] ?? '';
-    $user = $_GET['user'] ?? '';
-    $price = $_GET['price'] ?? '';
-    $ip = $_GET['ip'] ?? '';
-    $mac = $_GET['mac'] ?? '';
-    $valid = $_GET['valid'] ?? '';
-    $profile = $_GET['profile'] ?? '';
-    $comment = $_GET['comment'] ?? '';
+    $date = $_GET['date'] ?? ($_POST['date'] ?? ($jsonBody['date'] ?? ''));
+    $time = $_GET['time'] ?? ($_POST['time'] ?? ($jsonBody['time'] ?? ''));
+    $user = $_GET['user'] ?? ($_POST['user'] ?? ($jsonBody['user'] ?? ''));
+    $price = $_GET['price'] ?? ($_POST['price'] ?? ($jsonBody['price'] ?? ''));
+    $ip = $_GET['ip'] ?? ($_POST['ip'] ?? ($jsonBody['ip'] ?? ''));
+    $mac = $_GET['mac'] ?? ($_POST['mac'] ?? ($jsonBody['mac'] ?? ''));
+    $valid = $_GET['valid'] ?? ($_POST['valid'] ?? ($jsonBody['valid'] ?? ''));
+    $profile = $_GET['profile'] ?? ($_POST['profile'] ?? ($jsonBody['profile'] ?? ''));
+    $comment = $_GET['comment'] ?? ($_POST['comment'] ?? ($jsonBody['comment'] ?? ''));
     if ($date !== '' && $time !== '' && $user !== '') {
         $raw = $date . "-|-" . $time . "-|-" . $user . "-|-" . $price . "-|-" . $ip . "-|-" . $mac . "-|-" . $valid . "-|-" . $profile . "-|-" . $comment;
     }
