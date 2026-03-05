@@ -712,24 +712,35 @@ if ($load == "hotspot") {
                 $rowsMerged = array_merge($rowsMerged, $stmt->fetchAll(PDO::FETCH_ASSOC) ?: []);
             }
 
-            $todayIso = date('Y-m-d');
-            $isCurrentMonth = ((int)$filterMonth === (int)date('m') && (int)$filterYear === (int)date('Y'));
-            $hasTodayRows = false;
-            foreach ($rowsMerged as $pr) {
-                $prSaleDate = (string)($pr['sale_date'] ?? '');
-                if ($prSaleDate === '') {
-                    $prSaleDate = norm_date_from_raw_report($pr['raw_date'] ?? '');
-                }
-                if ($prSaleDate === $todayIso) {
-                    $hasTodayRows = true;
-                    break;
-                }
-            }
-
             if (empty($rowsMerged)) {
                 $rowsMerged = load_login_history_dashboard_rows($db, $monthKey);
-            } elseif ($isCurrentMonth && !$hasTodayRows) {
-                $rowsMerged = array_merge($rowsMerged, load_login_history_dashboard_rows($db, $monthKey, $todayIso));
+            } else {
+                $primaryDates = [];
+                foreach ($rowsMerged as $pr) {
+                    $prSaleDate = (string)($pr['sale_date'] ?? '');
+                    if ($prSaleDate === '') {
+                        $prSaleDate = norm_date_from_raw_report($pr['raw_date'] ?? '');
+                    }
+                    if ($prSaleDate !== '' && strpos($prSaleDate, $monthKey) === 0) {
+                        $primaryDates[$prSaleDate] = true;
+                    }
+                }
+
+                $loginFallbackRows = load_login_history_dashboard_rows($db, $monthKey);
+                if (!empty($loginFallbackRows)) {
+                    foreach ($loginFallbackRows as $lr) {
+                        $lrDate = (string)($lr['sale_date'] ?? '');
+                        if ($lrDate === '') {
+                            $lrDate = norm_date_from_raw_report($lr['raw_date'] ?? '');
+                        }
+                        if ($lrDate === '' || strpos($lrDate, $monthKey) !== 0) {
+                            continue;
+                        }
+                        if (!isset($primaryDates[$lrDate])) {
+                            $rowsMerged[] = $lr;
+                        }
+                    }
+                }
             }
 
             if (table_exists($db, 'audit_rekap_manual')) {
