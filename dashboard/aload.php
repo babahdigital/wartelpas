@@ -599,6 +599,7 @@ if ($load == "hotspot") {
 
     $dbFile = resolve_stats_db_file($root);
     $rowsMerged = [];
+    $auditIncomeByDay = [];
     if (file_exists($dbFile)) {
         try {
             $db = new PDO('sqlite:' . $dbFile);
@@ -633,6 +634,27 @@ if ($load == "hotspot") {
                 $stmt->execute([':m' => $monthKey . '%', ':r1' => $raw1, ':r2' => $raw2, ':r3' => $raw3]);
                 $rowsMerged = array_merge($rowsMerged, $stmt->fetchAll(PDO::FETCH_ASSOC) ?: []);
             }
+
+            if (table_exists($db, 'audit_rekap_manual')) {
+                try {
+                    $stmtAuditIncome = $db->prepare("SELECT report_date, SUM(COALESCE(actual_setoran, 0)) AS actual_total
+                        FROM audit_rekap_manual
+                        WHERE report_date LIKE :m
+                        GROUP BY report_date");
+                    $stmtAuditIncome->execute([':m' => $monthKey . '%']);
+                    foreach ($stmtAuditIncome->fetchAll(PDO::FETCH_ASSOC) as $ar) {
+                        $reportDate = trim((string)($ar['report_date'] ?? ''));
+                        if ($reportDate === '' || strpos($reportDate, $monthKey) !== 0) {
+                            continue;
+                        }
+                        $dayNum = (int)substr($reportDate, 8, 2);
+                        if ($dayNum >= 1 && $dayNum <= 31) {
+                            $auditIncomeByDay[$dayNum] = (int)($ar['actual_total'] ?? 0);
+                        }
+                    }
+                } catch (Exception $e) {
+                }
+            }
         } catch (Exception $e) { }
     }
 
@@ -652,6 +674,7 @@ if ($load == "hotspot") {
     $daysInRange = $endDay - $startDay + 1;
     $dailyIncome = array_fill($startDay, $daysInRange, 0);
     $dailyQty = array_fill($startDay, $daysInRange, 0);
+    $dailyHasPendingLive = [];
 
     $seen_sale_key = [];
     foreach ($rowsMerged as $row) {
@@ -700,6 +723,10 @@ if ($load == "hotspot") {
         if ($d_month != $filterMonth || $d_year != $filterYear) continue;
 
         if ($d_day >= $startDay && $d_day <= $endDay) {
+            if (($row['src'] ?? '') === 'live') {
+                $dailyHasPendingLive[$d_day] = true;
+            }
+
             $price = (int)($row['price_snapshot'] ?? $row['price'] ?? 0);
             if ($price <= 0) $price = (int)($row['sprice_snapshot'] ?? 0);
             if ($price <= 0) $price = extract_price_from_full_raw_dashboard($row['full_raw_data'] ?? '');
@@ -729,6 +756,15 @@ if ($load == "hotspot") {
             if (!in_array($status, ['rusak', 'invalid'], true)) {
                 $dailyQty[$d_day] += $qty;
             }
+        }
+    }
+
+    for ($d = $startDay; $d <= $endDay; $d++) {
+        $auditIncome = (int)($auditIncomeByDay[$d] ?? 0);
+        $hasPendingLive = !empty($dailyHasPendingLive[$d]);
+
+        if (!$hasPendingLive && $auditIncome > 0) {
+            $dailyIncome[$d] = $auditIncome;
         }
     }
 
