@@ -277,11 +277,18 @@ if (!function_exists('resolve_row_price_dashboard')) {
 }
 
 if (!function_exists('load_login_history_dashboard_rows')) {
-    function load_login_history_dashboard_rows(PDO $db, $monthKey) {
+    function load_login_history_dashboard_rows(PDO $db, $monthKey, $onlyDate = '') {
         if (!table_exists($db, 'login_history')) {
             return [];
         }
         try {
+            $params = [':ym' => $monthKey];
+            $dateSql = '';
+            if ($onlyDate !== '') {
+                $dateSql = "\n                  AND substr(COALESCE(NULLIF(last_login_real,''), NULLIF(first_login_real,''), NULLIF(login_time_real,''), login_date),1,10) = :d";
+                $params[':d'] = $onlyDate;
+            }
+
             $stmt = $db->prepare("SELECT
                 substr(COALESCE(NULLIF(last_login_real,''), NULLIF(first_login_real,''), NULLIF(login_time_real,''), login_date),1,10) AS sale_date,
                 COALESCE(NULLIF(last_login_real,''), NULLIF(first_login_real,''), NULLIF(login_time_real,''), login_date) AS raw_date,
@@ -309,9 +316,10 @@ if (!function_exists('load_login_history_dashboard_rows')) {
                     substr(COALESCE(NULLIF(last_login_real,''), NULLIF(first_login_real,''), NULLIF(login_time_real,''), login_date),1,7) = :ym
                     OR substr(login_date,1,7) = :ym
                   )
+                                    {$dateSql}
                   AND instr(lower(COALESCE(raw_comment,'')), 'vip') = 0
                   AND instr(lower(COALESCE(raw_comment,'')), 'pengelola') = 0");
-            $stmt->execute([':ym' => $monthKey]);
+                        $stmt->execute($params);
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
             return [];
@@ -423,8 +431,22 @@ if ($load == "live_data") {
                 if ($res) $rows = $res->fetchAll(PDO::FETCH_ASSOC);
             }
 
+            $hasPrimaryToday = false;
+            foreach ($rows as $pr) {
+                $prSaleDate = (string)($pr['sale_date'] ?? '');
+                if ($prSaleDate === '') {
+                    $prSaleDate = norm_date_from_raw_report($pr['raw_date'] ?? '');
+                }
+                if ($prSaleDate === $today) {
+                    $hasPrimaryToday = true;
+                    break;
+                }
+            }
+
             if (empty($rows)) {
                 $rows = load_login_history_dashboard_rows($db, $monthKey);
+            } elseif (!$hasPrimaryToday) {
+                $rows = array_merge($rows, load_login_history_dashboard_rows($db, $monthKey, $today));
             }
 
             $seen_sale_key = [];
@@ -690,8 +712,24 @@ if ($load == "hotspot") {
                 $rowsMerged = array_merge($rowsMerged, $stmt->fetchAll(PDO::FETCH_ASSOC) ?: []);
             }
 
+            $todayIso = date('Y-m-d');
+            $isCurrentMonth = ((int)$filterMonth === (int)date('m') && (int)$filterYear === (int)date('Y'));
+            $hasTodayRows = false;
+            foreach ($rowsMerged as $pr) {
+                $prSaleDate = (string)($pr['sale_date'] ?? '');
+                if ($prSaleDate === '') {
+                    $prSaleDate = norm_date_from_raw_report($pr['raw_date'] ?? '');
+                }
+                if ($prSaleDate === $todayIso) {
+                    $hasTodayRows = true;
+                    break;
+                }
+            }
+
             if (empty($rowsMerged)) {
                 $rowsMerged = load_login_history_dashboard_rows($db, $monthKey);
+            } elseif ($isCurrentMonth && !$hasTodayRows) {
+                $rowsMerged = array_merge($rowsMerged, load_login_history_dashboard_rows($db, $monthKey, $todayIso));
             }
 
             if (table_exists($db, 'audit_rekap_manual')) {
