@@ -414,8 +414,7 @@ if (!empty($router_users)) {
 if ($db) {
   try {
     $stmtSum = $db->query("SELECT username, last_status, raw_comment, blok_name FROM login_history WHERE username IS NOT NULL AND username != ''");
-    $rows = $stmtSum->fetchAll(PDO::FETCH_ASSOC);
-    foreach ($rows as $row) {
+    while ($row = $stmtSum->fetch(PDO::FETCH_ASSOC)) {
       $uname = strtolower($row['username'] ?? '');
       if ($uname === '' || isset($summary_seen_users[$uname])) continue;
       $raw_comment = (string)($row['raw_comment'] ?? '');
@@ -440,7 +439,7 @@ $retur_ref_map = [];
 if ($db) {
   try {
     $stmtRefs = $db->query("SELECT raw_comment FROM login_history WHERE raw_comment IS NOT NULL AND raw_comment != ''");
-    foreach ($stmtRefs->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    while ($row = $stmtRefs->fetch(PDO::FETCH_ASSOC)) {
       $ref_user = extract_retur_user_from_ref($row['raw_comment'] ?? '');
       if ($ref_user !== '') {
         $retur_ref_map[strtolower($ref_user)] = true;
@@ -459,7 +458,7 @@ if ($db) {
       foreach ($all_users as $u) {
         if (!empty($u['name'])) $existing[$u['name']] = true;
       }
-      foreach ($res->fetchAll(PDO::FETCH_ASSOC) as $row) {
+      while ($row = $res->fetch(PDO::FETCH_ASSOC)) {
         $uname = $row['username'] ?? '';
         if ($uname === '' || isset($existing[$uname])) continue;
         $comment = (string)($row['raw_comment'] ?? '');
