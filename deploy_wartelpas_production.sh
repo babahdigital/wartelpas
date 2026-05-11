@@ -3,7 +3,7 @@
 set -euo pipefail
 
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_raspi_ed25519}"
-SSH_USER_HOST="${SSH_USER_HOST:-abdullah@159.89.192.31}"
+SSH_USER_HOST="${SSH_USER_HOST:-abdullah@194.233.80.163}"
 SSH_PORT="${SSH_PORT:-1983}"
 
 REPO_URL="${REPO_URL:-https://github.com/babahdigital/wartelpas.git}"
@@ -126,8 +126,8 @@ require_cmd git
 require_cmd ssh
 
 if [[ "$STRICT" -eq 1 ]]; then
-  if [[ "$SSH_USER_HOST" != "abdullah@159.89.192.31" ]]; then
-    echo "Error strict mode: SSH target harus abdullah@159.89.192.31"
+  if [[ "$SSH_USER_HOST" != "abdullah@194.233.80.163" ]]; then
+    echo "Error strict mode: SSH target harus abdullah@194.233.80.163"
     exit 1
   fi
   if [[ "$SSH_PORT" != "1983" ]]; then
