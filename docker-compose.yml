@@ -81,6 +81,16 @@ services:
     networks:
       - default
       - proxy-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '5'
 
 networks:
   proxy-network:
